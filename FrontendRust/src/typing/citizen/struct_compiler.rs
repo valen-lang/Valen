@@ -147,6 +147,7 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
   override def expect(): ResolveSuccess[T] = this
 }
 */
+#[derive(Debug)]
 pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
     pub x: IResolvingError<'s, 't>,

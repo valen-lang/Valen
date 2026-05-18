@@ -147,7 +147,7 @@ where 's: 't,
             self.drop_since(
                 coutputs, starting_nenv, nenv,
                 &drop_ranges, call_location, life, region,
-                unresultified_undestructed_expressions);
+                unresultified_undestructed_expressions)?;
 
         Ok((new_expr, returns_from_exprs))
     }

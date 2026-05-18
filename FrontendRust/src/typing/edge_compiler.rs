@@ -698,8 +698,14 @@ where 's: 't,
                 .filter(|((_, _), &independent)| independent)
                 .map(|((impl_rune, templata), _)| (impl_rune, *templata))
                 .enumerate()
-                .map(|(_index, (_impl_rune, _impl_placeholder_templata))| {
-                    panic!("Unimplemented: implIndependentRuneToImplPlaceholderAndCasePlaceholder entry")
+                .map(|(index, (impl_rune, impl_placeholder_templata))| {
+                    let case_rune = self.scout_arena.intern_rune(
+                        crate::postparsing::names::IRuneValS::CaseRuneFromImpl(
+                            crate::postparsing::names::CaseRuneFromImplValS { inner_rune: impl_rune }));
+                    let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder_templata);
+                    let case_placeholder = self.create_override_placeholder_mimicking(
+                        coutputs, impl_placeholder_templata, IInDenizenEnvironmentT::from(dispatcher_inner_env), index as i32, case_rune);
+                    (impl_rune, impl_placeholder_id, case_placeholder)
                 })
                 .collect();
         let impl_independent_rune_to_case_placeholder: Vec<(IRuneS<'s>, ITemplataT<'s, 't>)> =

@@ -41,7 +41,24 @@ use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
 use crate::typing::names::names::{INameT, IVarNameT};
 use crate::typing::types::types::{MutabilityT, NeverT};
-use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT, MutabilityTemplataT};
+use crate::interner::StrI;
+use crate::parsing::tests::utils::expect_1;
+use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS, IRuneValS, TopLevelStructDeclarationNameS};
+use crate::solver::solver::{FailedSolve, ISolverError, RuleError, Step};
+use crate::typing::ast::ast::{KindExportT, SignatureValT};
+use crate::typing::compiler_error_humanizer::humanize;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::names::names::{CodeVarNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, IStructTemplateNameT, InterfaceNameValT, InterfaceTemplateNameT, StructNameT, StructNameValT, StructTemplateNameT};
+use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::typing::templata::templata_utils::unapply_simple_name;
+use crate::typing::types::types::{BoolT, InterfaceTTValT, StructTT, StructTTValT};
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
+use std::collections::HashSet;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -1064,10 +1081,6 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     );
     let coutputs = compile.expect_compiler_outputs();
 
-    use crate::parsing::tests::utils::expect_1;
-    use crate::typing::templata::templata_utils::unapply_simple_name;
-    use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
-    use crate::typing::types::types::MutabilityT;
 
     let interfaces_matching: Vec<_> = coutputs.interfaces.iter()
         .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
@@ -1145,10 +1158,6 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     );
     let coutputs = compile.expect_compiler_outputs();
 
-    use crate::parsing::tests::utils::expect_1;
-    use crate::typing::templata::templata_utils::unapply_simple_name;
-    use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
-    use crate::typing::types::types::MutabilityT;
 
     let interfaces_matching: Vec<_> = coutputs.interfaces.iter()
         .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
@@ -1521,10 +1530,6 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
 // mig: fn reports_mismatched_return_type_when_expecting_void
 #[test]
 fn reports_mismatched_return_type_when_expecting_void() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::names::names::*;
-    use crate::typing::types::types::*;
-    use crate::postparsing::names::IFunctionDeclarationNameS;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1575,7 +1580,6 @@ fn reports_mismatched_return_type_when_expecting_void() {
 // mig: fn tests_exporting_function
 #[test]
 fn tests_exporting_function() {
-    use crate::parsing::tests::utils::expect_1;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1611,7 +1615,6 @@ fn tests_exporting_function() {
 // mig: fn tests_exporting_struct
 #[test]
 fn tests_exporting_struct() {
-    use crate::parsing::tests::utils::expect_1;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1647,7 +1650,6 @@ fn tests_exporting_struct() {
 // mig: fn tests_exporting_interface
 #[test]
 fn tests_exporting_interface() {
-    use crate::parsing::tests::utils::expect_1;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3227,7 +3229,6 @@ fn zero_method_anonymous_interface() {
 // mig: fn reports_when_exported_function_depends_on_non_exported_param
 #[test]
 fn reports_when_exported_function_depends_on_non_exported_param() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3261,7 +3262,6 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
 // mig: fn reports_when_exported_function_depends_on_non_exported_return
 #[test]
 fn reports_when_exported_function_depends_on_non_exported_return() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3297,7 +3297,6 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
 // mig: fn reports_when_extern_function_depends_on_non_exported_param
 #[test]
 fn reports_when_extern_function_depends_on_non_exported_param() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3331,7 +3330,6 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
 // mig: fn reports_when_extern_function_depends_on_non_exported_return
 #[test]
 fn reports_when_extern_function_depends_on_non_exported_return() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3365,7 +3363,6 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
 // mig: fn reports_when_exported_struct_depends_on_non_exported_member
 #[test]
 fn reports_when_exported_struct_depends_on_non_exported_member() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3458,9 +3455,6 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
 // mig: fn reports_when_reading_nonexistant_local
 #[test]
 fn reports_when_reading_nonexistant_local() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::postparsing::names::{IImpreciseNameS, CodeNameS};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3495,9 +3489,6 @@ fn reports_when_reading_nonexistant_local() {
 // mig: fn reports_when_mutating_after_moving
 #[test]
 fn reports_when_mutating_after_moving() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3553,7 +3544,6 @@ fn reports_when_mutating_after_moving() {
 // mig: fn tests_export_struct_twice
 #[test]
 fn tests_export_struct_twice() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3595,9 +3585,6 @@ fn tests_export_struct_twice() {
 // mig: fn reports_when_reading_after_moving
 #[test]
 fn reports_when_reading_after_moving() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3653,9 +3640,6 @@ fn reports_when_reading_after_moving() {
 // mig: fn reports_when_moving_from_inside_a_while
 #[test]
 fn reports_when_moving_from_inside_a_while() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3707,10 +3691,6 @@ fn reports_when_moving_from_inside_a_while() {
 // mig: fn cant_subscript_non_subscriptable_type
 #[test]
 fn cant_subscript_non_subscriptable_type() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::types::types::{KindT, StructTT};
-    use crate::typing::names::names::{INameT, IStructTemplateNameT, StructNameT, StructTemplateNameT, IdT};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -3771,30 +3751,6 @@ fn cant_subscript_non_subscriptable_type() {
 // mig: fn humanize_errors
 #[test]
 fn humanize_errors() {
-    use crate::interner::StrI;
-    use crate::postparsing::names::{
-        CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
-        IImpreciseNameValS, INameS, IRuneValS, TopLevelStructDeclarationNameS,
-    };
-    use crate::typing::compiler_error_humanizer::humanize;
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::names::names::{
-        CodeVarNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT,
-        IdValT, INameT, IStructTemplateNameT, IVarNameT, InterfaceNameValT, InterfaceTemplateNameT,
-        StructNameValT, StructTemplateNameT,
-    };
-    use crate::typing::ast::ast::{KindExportT, SignatureValT};
-    use crate::typing::types::types::{InterfaceTTValT, KindT, OwnershipT, RegionT, StructTTValT};
-    use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
-    use crate::typing::typing_interner::TypingInterner;
-    use crate::typing::overload_resolver::FindFunctionFailure;
-    use crate::solver::solver::{FailedSolve, ISolverError, RuleError, Step};
-    use crate::typing::infer::compiler_solver::ITypingPassSolverError;
-    use crate::utils::range::{CodeLocationS, RangeS};
-    use crate::utils::code_hierarchy::FileCoordinateMap;
-    use crate::utils::source_code_utils::{
-        humanize_pos_code_map, line_containing, line_range_containing, lines_between,
-    };
 
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4144,9 +4100,6 @@ fn humanize_errors() {
 // mig: fn report_when_multiple_types_in_array
 #[test]
 fn report_when_multiple_types_in_array() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use std::collections::HashSet;
-    use crate::typing::types::types::{BoolT, RegionT};
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4190,7 +4143,6 @@ fn report_when_multiple_types_in_array() {
 // mig: fn report_when_abstract_method_defined_outside_open_interface
 #[test]
 fn report_when_abstract_method_defined_outside_open_interface() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4228,7 +4180,6 @@ fn report_when_abstract_method_defined_outside_open_interface() {
 // mig: fn report_when_imm_struct_has_varying_member
 #[test]
 fn report_when_imm_struct_has_varying_member() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4269,7 +4220,6 @@ fn report_when_imm_struct_has_varying_member() {
 // mig: fn report_imm_mut_mismatch_for_generic_type
 #[test]
 fn report_imm_mut_mismatch_for_generic_type() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4377,9 +4327,6 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
 // mig: fn report_when_imm_contains_varying_member
 #[test]
 fn report_when_imm_contains_varying_member() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::postparsing::names::{INameS, TopLevelStructDeclarationNameS};
-    use crate::interner::StrI;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4810,7 +4757,6 @@ fn generates_free_function_for_imm_struct() {
 // mig: fn reports_when_exported_ssa_depends_on_non_exported_element
 #[test]
 fn reports_when_exported_ssa_depends_on_non_exported_element() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -4844,7 +4790,6 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
 // mig: fn reports_when_exported_rsa_depends_on_non_exported_element
 #[test]
 fn reports_when_exported_rsa_depends_on_non_exported_element() {
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -5122,10 +5067,6 @@ fn downcast_function_rrbfs() {
     let coutputs = compile.expect_compiler_outputs();
 
     {
-        use crate::parsing::tests::utils::expect_1;
-        use crate::typing::names::names::*;
-        use crate::typing::types::types::*;
-        use crate::typing::templata::templata::ITemplataT;
 
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(fn_name)
@@ -5360,9 +5301,6 @@ fn downcast_with_as() {
     let coutputs = compile.expect_compiler_outputs();
 
     {
-        use crate::typing::names::names::*;
-        use crate::typing::types::types::*;
-        use crate::typing::templata::templata::ITemplataT;
 
         let main_func = coutputs.lookup_function_by_str("main");
         let (as_prototype, as_arg) = crate::collect_only_tnode!(
@@ -5455,10 +5393,6 @@ fn downcast_with_as() {
     }
 
     {
-        use crate::parsing::tests::utils::expect_1;
-        use crate::typing::names::names::*;
-        use crate::typing::types::types::*;
-        use crate::typing::templata::templata::ITemplataT;
 
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
             matches!(f.header.id.local_name, INameT::Function(fn_name)

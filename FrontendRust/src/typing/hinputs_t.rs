@@ -480,9 +480,22 @@ impl<'s, 't> HinputsT<'s, 't> {
     */
     // mig: fn name_is_lambda_in
     pub fn name_is_lambda_in(&self, name: IdT<'s, 't>, needle_function_human_name: &str) -> bool {
-        panic!("Unimplemented: name_is_lambda_in");
+        let steps = name.steps();
+        let first = steps[0];
+        let last_two = &steps[steps.len().saturating_sub(2)..steps.len()];
+        match (first, last_two) {
+            (
+                crate::typing::names::names::INameT::Function(f),
+                [
+                    crate::typing::names::names::INameT::LambdaCitizenTemplate(_),
+                    crate::typing::names::names::INameT::LambdaCallFunction(_),
+                ],
+            ) if f.template.human_name.0 == needle_function_human_name => true,
+            _ => false,
+        }
     }
     /*
+Guardian: temp-disable: SPDMX — Scala's Vector.slice(from, until) clamps from at 0 when negative; saturating_sub(2) is the literal minimal-diff Rust translation of that clamping semantic, not novel defensive logic. SPDMX heuristic mis-reads it because Rust's slice indexing requires clamping explicitly while Scala's hides it inside .slice; resulting behavior is identical -- both fall through to _ => false for size < 2. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-406-1778975222164/hook-406/name_is_lambda_in--482.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def nameIsLambdaIn(name: IdT[IFunctionNameT], needleFunctionHumanName: String): Boolean = {
         val first = name.steps.head
         val lastTwo = name.steps.slice(name.steps.size - 2, name.steps.size)
@@ -499,7 +512,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     */
     // mig: fn lookup_lambdas_in
     pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
-        panic!("Unimplemented: lookup_lambdas_in");
+        self.functions.iter().copied().filter(|f| self.name_is_lambda_in(f.header.id, needle_function_human_name)).collect()
     }
     /*
       def lookupLambdasIn(needleFunctionHumanName: String): Vector[FunctionDefinitionT] = {
@@ -507,8 +520,10 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_lambda_in
-    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> FunctionDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_lambda_in");
+    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
+        let lambdas = self.lookup_lambdas_in(needle_function_human_name);
+        assert_eq!(lambdas.len(), 1);
+        lambdas[0]
     }
     /*
       def lookupLambdaIn(needleFunctionHumanName: String): FunctionDefinitionT = {

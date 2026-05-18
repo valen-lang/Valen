@@ -873,7 +873,7 @@ pub(crate) fn scout_generic_parameter(
 
     GenericParameterDefaultS {
       result_rune: result_rune.rune,
-      rules: rules_to_leave_in_default_argument,
+      rules: self.scout_arena.alloc_slice_from_vec(rules_to_leave_in_default_argument),
     }
   });
 

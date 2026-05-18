@@ -1251,13 +1251,19 @@ where 's: 't,
                 }
             });
         match result {
-            Err(_f) => { panic!("Unimplemented: FailedSolve handling in evaluate_generic_function_from_non_call_solving") }
+            Err(f) => return Err(ICompileErrorT::TypingPassSolverError {
+                range: self.typing_interner.alloc_slice_from_vec(range.clone()),
+                failed_solve: f,
+            }),
             Ok(true) => {}
             Ok(false) => {} // Incomplete, will be detected in checkDefiningConclusionsAndResolve
         }
 
         let inferences = match self.interpret_results(&rune_to_type, &mut solver) {
-            Err(_e) => { panic!("Unimplemented: interpretResults error handling") }
+            Err(e) => return Err(ICompileErrorT::TypingPassSolverError {
+                range: self.typing_interner.alloc_slice_from_vec(range.clone()),
+                failed_solve: e,
+            }),
             Ok(conclusions) => conclusions,
         };
 

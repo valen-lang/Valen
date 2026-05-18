@@ -80,8 +80,11 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
     ICompileErrorT::CantUseReadonlyReferenceAsReadwrite { range: _ } => {
       "Can't make readonly reference into a readwrite one!".to_string()
     }
-    ICompileErrorT::CantReconcileBranchesResults { range: _, then_result: _, else_result: _ } => {
-      panic!("implement: humanize CantReconcileBranchesResults")
+    ICompileErrorT::CantReconcileBranchesResults { range: _, then_result, else_result } => {
+      "If branches return different types: ".to_string()
+        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *then_result })))
+        + " and "
+        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *else_result })))
     }
     ICompileErrorT::CantMoveOutOfMemberT { range: _, name } => {
       format!("Cannot move out of member ({:?})", name)
@@ -951,7 +954,12 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     ITemplataT::Variability(variability) => panic!("implement: humanize_templata Variability"),
     ITemplataT::Integer(value) => panic!("implement: humanize_templata Integer"),
     ITemplataT::Mutability(mutability) => panic!("implement: humanize_templata Mutability"),
-    ITemplataT::Ownership(ownership) => panic!("implement: humanize_templata Ownership"),
+    ITemplataT::Ownership(ownership) => match ownership.ownership {
+      crate::typing::types::types::OwnershipT::Own => "own".to_string(),
+      crate::typing::types::types::OwnershipT::Borrow => "borrow".to_string(),
+      crate::typing::types::types::OwnershipT::Weak => "weak".to_string(),
+      crate::typing::types::types::OwnershipT::Share => "share".to_string(),
+    },
     ITemplataT::Prototype(prototype) => panic!("implement: humanize_templata Prototype"),
     ITemplataT::Coord(coord_templata) => humanize_coord(scout_arena, typing_interner, code_map, coord_templata.coord),
     ITemplataT::Kind(kind_templata) => humanize_kind(scout_arena, typing_interner, code_map, kind_templata.kind, None),

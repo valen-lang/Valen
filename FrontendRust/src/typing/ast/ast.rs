@@ -81,6 +81,7 @@ case class ImplT(
 }
 */
 /// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct KindExportT<'s, 't> {
     pub range: RangeS<'s>,
     pub tyype: KindT<'s, 't>,
@@ -405,13 +406,13 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
 */
 }
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AbstractT;
 /*
 case class AbstractT()
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParameterT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub virtuality: Option<AbstractT>,
@@ -452,7 +453,7 @@ impl<'s, 't> ParameterT<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICalleeCandidate<'s, 't> {
     Function(FunctionCalleeCandidate<'s, 't>),
     Header(&'t HeaderCalleeCandidate<'s, 't>),
@@ -462,7 +463,7 @@ pub enum ICalleeCandidate<'s, 't> {
 sealed trait ICalleeCandidate
 */
 /// Temporary state (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionCalleeCandidate<'s, 't> {
     pub ft: FunctionTemplataT<'s, 't>,
 }
@@ -478,7 +479,7 @@ impl<'s, 't> FunctionCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct HeaderCalleeCandidate<'s, 't> {
     pub header: FunctionHeaderT<'s, 't>,
 }
@@ -494,7 +495,7 @@ impl<'s, 't> HeaderCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
     pub prototype_t: PrototypeT<'s, 't>,
 }
@@ -689,7 +690,7 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum IFunctionAttributeT<'s> {
     Extern(ExternT<'s>),
     Pure,
@@ -708,7 +709,7 @@ pub enum ICitizenAttributeT<'s> {
 sealed trait ICitizenAttributeT
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ExternT<'s> {
     pub package_coord: PackageCoordinate<'s>,
 }
@@ -740,6 +741,7 @@ case object UserFunctionT extends IFunctionAttributeT // Whether it was written 
 */
 }
 /// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct FunctionHeaderT<'s, 't> {
     pub id: IdT<'s, 't>,
     pub attributes: &'t [IFunctionAttributeT<'s>],

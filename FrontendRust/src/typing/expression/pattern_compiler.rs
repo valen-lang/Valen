@@ -471,12 +471,22 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             match &pattern.name {
                 None => (None, input_expr),
                 Some(capture_s) => {
-                    let _local_name_t = self.translate_var_name_step(capture_s.name);
-                    if capture_s.mutate {
-                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — mutate case");
+                    let local_name_t = self.translate_var_name_step(capture_s.name);
+                    let range_list: Vec<RangeS<'s>> =
+                        std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                    let local_t = if capture_s.mutate {
+                        let local_t = match nenv.declared_locals().iter().find(|v| v.name() == local_name_t) {
+                            Some(IVariableT::ReferenceLocal(rlv)) => ILocalVariableT::Reference(*rlv),
+                            _ => panic!("expected ReferenceLocalVariableT in declared_locals"),
+                        };
+                        nenv.mark_local_restackified(local_name_t);
+                        current_instructions.push(self.typing_interner.alloc(
+                            ReferenceExpressionTE::Restackify(RestackifyTE {
+                                variable: local_t,
+                                source_expr: input_expr,
+                            })));
+                        local_t
                     } else {
-                        let range_list: Vec<RangeS<'s>> =
-                            std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                         let (_block_env, block_expr) = nenv.nearest_block_env(self.typing_interner)
                             .expect("Expected nearest block env");
                         let block_se = match block_expr {
@@ -493,17 +503,18 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                                 variable: local_t,
                                 expr: input_expr,
                             })));
-                        let local_lookup = self.typing_interner.alloc(
-                            AddressExpressionTE::LocalLookup(LocalLookupTE {
-                                range: pattern.range,
-                                local_variable: local_t,
-                            }));
-                        let captured_local_alias_te =
-                            self.soft_load(nenv, &range_list, local_lookup, LoadAsP::LoadAsBorrow, region);
-                        let captured_local_alias_te_ref: &'t ReferenceExpressionTE<'s, 't> =
-                            self.typing_interner.alloc(captured_local_alias_te);
-                        (Some(local_t), captured_local_alias_te_ref)
-                    }
+                        local_t
+                    };
+                    let local_lookup = self.typing_interner.alloc(
+                        AddressExpressionTE::LocalLookup(LocalLookupTE {
+                            range: pattern.range,
+                            local_variable: local_t,
+                        }));
+                    let captured_local_alias_te =
+                        self.soft_load(nenv, &range_list, local_lookup, LoadAsP::LoadAsBorrow, region);
+                    let captured_local_alias_te_ref: &'t ReferenceExpressionTE<'s, 't> =
+                        self.typing_interner.alloc(captured_local_alias_te);
+                    (Some(local_t), captured_local_alias_te_ref)
                 }
             };
 
@@ -536,7 +547,9 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                         let ranges: Vec<RangeS<'s>> =
                             std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
-                        result.push(self.drop(snap, coutputs, &ranges, call_location, region, expr_to_destructure_or_drop_or_pass_te));
+                        // Until a test path forces Result conversion through this pattern_compiler site.
+                        result.push(self.drop(snap, coutputs, &ranges, call_location, region, expr_to_destructure_or_drop_or_pass_te)
+                            .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through pattern_compiler drop")));
                     }
                     Some(_) => {
                         // We aren't destructuring it, but we stored it, so just do nothing.

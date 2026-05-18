@@ -57,7 +57,7 @@ import scala.collection.immutable.{HashSet, Map}
 import scala.collection.mutable
 
 */
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ITypingPassSolverError<'s, 't> {
     KindIsNotConcrete { kind: KindT<'s, 't> },
     KindIsNotInterface { kind: KindT<'s, 't> },
@@ -1602,7 +1602,23 @@ where 's: 't,
                 }
             }
             //     case OneOfSR(...) =>
-            IRulexSR::OneOf(_) => { panic!("Unimplemented: solve_rule OneOf"); }
+            IRulexSR::OneOf(r) => {
+                let result = solver_state.get_conclusion(&r.rune.rune).unwrap();
+                let templatas: Vec<ITemplataT<'s, 't>> = r.literals.iter().map(|l| literal_to_templata(*l)).collect();
+                if templatas.contains(&result) {
+                    let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], std::collections::HashMap::new(), vec![]) {
+                        Ok(_) => Ok(()),
+                        Err(e) => {
+                            let error = self.typing_interner.alloc(e);
+                            Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                        }
+                    }
+                } else {
+                    Err(ITypingPassSolverError::OneOfFailed { rule: r })
+                }
+            }
             //     case IsConcreteSR(...) =>
             IRulexSR::IsConcrete(_) => { panic!("Unimplemented: solve_rule IsConcrete"); }
             //     case IsInterfaceSR(...) =>

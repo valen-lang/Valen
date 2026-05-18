@@ -38,6 +38,7 @@ override def hashCode(): Int = vcurious()
   vpass()
 }
 */
+#[derive(Debug)]
 pub enum ICompileErrorT<'s, 't> {
     CouldntNarrowDownCandidates { range: &'t [RangeS<'s>], candidates: &'t [RangeS<'s>] },
     CouldntSolveRuneTypesT { range: &'t [RangeS<'s>], error: RuneTypeSolveError<'s> },

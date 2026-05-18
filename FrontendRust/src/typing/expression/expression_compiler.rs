@@ -942,7 +942,7 @@ where 's: 't,
                 let destruct_exprs_refs =
                     self.unlet_and_drop_all(
                         coutputs, nenv, &range_list, outer_call_location, region,
-                        &reversed_variables_to_destruct);
+                        &reversed_variables_to_destruct)?;
 
                 let get_result_expr = self.unlet_local_without_dropping(
                     nenv, &ILocalVariableT::Reference(result_variable));
@@ -1027,7 +1027,7 @@ where 's: 't,
                             let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                             let range_with_parent: Vec<RangeS<'s>> =
                                 std::iter::once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
-                            self.drop(snap, coutputs, &range_with_parent, outer_call_location, region, undropped_expr_te)
+                            self.drop(snap, coutputs, &range_with_parent, outer_call_location, region, undropped_expr_te)?
                         }
                     };
                     init_exprs_te.push(expr_te);
@@ -1253,6 +1253,24 @@ where 's: 't,
                             panic!("implement: evaluate_expression Dot StaticSizedArray — RangedInternalErrorT: Sequence has no member named");
                         }
                     }
+                    KindT::RuntimeSizedArray(rsa) => {
+                        if dot.member.0.chars().all(|c| c.is_ascii_digit()) {
+                            let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
+                            let index_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                                value: ITemplataT::Integer(index),
+                                bits: 32,
+                                region,
+                            }));
+                            let range_with_parent: Vec<RangeS<'s>> =
+                                std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                            self.typing_interner.alloc(AddressExpressionTE::RuntimeSizedArrayLookup(
+                                self.lookup_in_unknown_sized_array(
+                                    &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa)
+                            ))
+                        } else {
+                            panic!("implement: evaluate_expression Dot RuntimeSizedArray — RangedInternalErrorT: Array has no member named");
+                        }
+                    }
                     _ => panic!("implement: evaluate_expression Dot — non-struct container kind"),
                 };
                 match expr_2.result().coord.kind {
@@ -1419,7 +1437,7 @@ where 's: 't,
                     Some((while_nenv, _)) => {
                         assert!(region == nenv.default_region()); // vcurious
                         let void_literal = self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
-                        let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal);
+                        let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal)?;
                         let break_te = self.typing_interner.alloc(ReferenceExpressionTE::Break(BreakTE { region, _phantom: std::marker::PhantomData }));
                         let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
                         Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::new()))
@@ -1568,7 +1586,11 @@ where 's: 't,
                     self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
                         unconverted_source_expr_2.result().coord, destination_expr_2.result().coord);
                 if !is_convertible {
-                    panic!("implement: LocalMutate — CouldntConvertForMutateT");
+                    return Err(ICompileErrorT::CouldntConvertForMutateT {
+                        range: self.typing_interner.alloc_slice_copy(&range_with_parent),
+                        expected_type: destination_expr_2.result().coord,
+                        actual_type: unconverted_source_expr_2.result().coord,
+                    });
                 }
                 assert!(is_convertible);
                 let converted_source_expr_2 =
@@ -1616,7 +1638,27 @@ where 's: 't,
                 )?;
                 Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromValues(expr_2))), returns_from_elements))
             }
-            IExpressionSE::StaticArrayFromCallable(_) => panic!("implement: evaluate_expression — StaticArrayFromCallable"),
+            IExpressionSE::StaticArrayFromCallable(sa) => {
+                let (callable_te, returns_from_callable) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), sa.callable)?;
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(sa.range).chain(parent_ranges.iter().copied()).collect();
+                let expr_2 = self.evaluate_static_sized_array_from_callable(
+                    coutputs,
+                    IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
+                    region,
+                    &range_with_parent,
+                    outer_call_location,
+                    sa.rules,
+                    sa.maybe_element_type_st.map(|r| r.rune),
+                    sa.size_st.rune,
+                    sa.mutability_st.rune,
+                    sa.variability_st.rune,
+                    callable_te,
+                );
+                Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromCallable(expr_2))), returns_from_callable))
+            }
             IExpressionSE::NewRuntimeSizedArray(_) => panic!("implement: evaluate_expression — NewRuntimeSizedArray"),
             IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
             IExpressionSE::RepeaterPackIterator(_) => panic!("implement: evaluate_expression — RepeaterPackIterator"),
@@ -1653,7 +1695,14 @@ where 's: 't,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
-            IExpressionSE::ConstantFloat(_) => panic!("implement: evaluate_expression — ConstantFloat"),
+            IExpressionSE::ConstantFloat(c) => {
+                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantFloat(ConstantFloatTE {
+                    value: c.value,
+                    region,
+                    _phantom: std::marker::PhantomData,
+                }));
+                Ok((ExpressionTE::Reference(result), HashSet::new()))
+            }
             IExpressionSE::Destruct(_) => panic!("implement: evaluate_expression — Destruct"),
             IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),
             IExpressionSE::Index(index_se) => {
@@ -1711,8 +1760,20 @@ where 's: 't,
                         }));
                         Ok((ExpressionTE::Reference(result), HashSet::new()))
                     }
-                    ITemplataT::Prototype(pt) => {
-                        panic!("implement: evaluate_expression RuneLookup — PrototypeTemplataT")
+                    ITemplataT::Prototype(_pt) => {
+                        let mut tiny_env = nenv.function_environment().make_child_node_environment(
+                            expr_1, life);
+                        let arbitrary_name_t = INameT::Arbitrary(self.typing_interner.intern_arbitrary_name(
+                            crate::typing::names::names::ArbitraryNameT { _phantom: std::marker::PhantomData }));
+                        tiny_env.add_entries(self.scout_arena, self.typing_interner,
+                            &[(arbitrary_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(templata))]);
+                        let arbitrary_imprecise = self.scout_arena.intern_imprecise_name(
+                            IImpreciseNameValS::ArbitraryName(crate::postparsing::names::ArbitraryNameS {}));
+                        let tiny_env_snapshot = tiny_env.snapshot(self.typing_interner);
+                        let expr = self.new_global_function_group_expression(
+                            crate::typing::env::environment::IInDenizenEnvironmentT::Node(tiny_env_snapshot),
+                            coutputs, RegionT {}, arbitrary_imprecise);
+                        Ok((ExpressionTE::Reference(expr), HashSet::new()))
                     }
                     _ => panic!("implement: evaluate_expression RuneLookup — unexpected templata"),
                 }
@@ -3782,23 +3843,23 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
         expr_te: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let snapshot = nenv.snapshot(self.typing_interner);
         let unreversed_variables_to_destruct =
             snapshot.get_live_variables_introduced_since(starting_nenv);
 
         if unreversed_variables_to_destruct.is_empty() {
-            expr_te
+            Ok(expr_te)
         } else {
             match expr_te.result().coord.kind {
                 KindT::Void(_) => {
                     let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
-                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct);
+                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct)?;
                     let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(expr_te);
                     exprs.extend(destroy_expressions);
                     exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData })));
-                    self.consecutive(&exprs)
+                    Ok(self.consecutive(&exprs))
                 }
                 KindT::Never(_) => {
                     // In this case, we want to not drop them, so we can support things like:
@@ -3808,19 +3869,19 @@ where 's: 't,
                     let _destroy_expressions = self.unlet_all_without_dropping(coutputs, nenv, range, &reversed_variables_to_destruct);
                     // Just dont add in the destroyExpressions, let em go.
                     // We did the above simply to mark them as unstackified.
-                    expr_te
+                    Ok(expr_te)
                 }
                 _ => {
                     let (resultified_expr, result_local_variable) = self.resultify_expressions(nenv, life.add(self.typing_interner, 1), expr_te);
                     let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
-                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct);
+                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct)?;
                     let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(resultified_expr);
                     exprs.extend(destroy_expressions);
                     let result_ilocal_variable = ILocalVariableT::Reference(result_local_variable);
                     let unlet_te = self.unlet_local_without_dropping(nenv, &result_ilocal_variable);
                     exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet_te)));
-                    self.consecutive(&exprs)
+                    Ok(self.consecutive(&exprs))
                 }
             }
         }

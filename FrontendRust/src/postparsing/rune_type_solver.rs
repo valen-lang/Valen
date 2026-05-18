@@ -20,6 +20,7 @@ use crate::utils::range::RangeS;
 
 
 // mig: struct RuneTypeSolveError
+#[derive(Debug)]
 pub struct RuneTypeSolveError<'s> {
   pub range: Vec<RangeS<'s>>,
   pub failed_solve: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataType<'s>, IRuneTypeRuleError<'s>>,
@@ -33,6 +34,7 @@ case class RuneTypeSolveError(range: List[RangeS], failedSolve: FailedSolve[IRul
 impl<'s> RuneTypeSolveError<'s> {
 }
 // mig: enum IRuneTypeRuleError
+#[derive(Debug)]
 pub enum IRuneTypeRuleError<'s> {
   FoundCitizenDidntMatchExpectedType(FoundCitizenDidntMatchExpectedType<'s>),
   FoundTemplataDidntMatchExpectedType(FoundTemplataDidntMatchExpectedType<'s>),
@@ -69,6 +71,7 @@ impl<'s> From<IRuneTypingLookupFailedError<'s>> for IRuneTypeRuleError<'s> {
 sealed trait IRuneTypeRuleError
 */
 // mig: struct FoundCitizenDidntMatchExpectedType
+#[derive(Debug)]
 pub struct FoundCitizenDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -85,6 +88,7 @@ case class FoundCitizenDidntMatchExpectedType(
 impl<'s> FoundCitizenDidntMatchExpectedType<'s> {
 }
 // mig: struct FoundTemplataDidntMatchExpectedType
+#[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -103,6 +107,7 @@ case class FoundTemplataDidntMatchExpectedType(
 impl<'s> FoundTemplataDidntMatchExpectedType<'s> {
 }
 // mig: struct NotEnoughArgumentsForGenericCall
+#[derive(Debug)]
 pub struct NotEnoughArgumentsForGenericCall<'s> {
   pub range: Vec<RangeS<'s>>,
   pub index_of_non_defaulting_param: i32,
@@ -120,6 +125,7 @@ case class NotEnoughArgumentsForGenericCall(
 impl<'s> NotEnoughArgumentsForGenericCall<'s> {
 }
 // mig: struct GenericCallArgTypeMismatch
+#[derive(Debug)]
 pub struct GenericCallArgTypeMismatch<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -147,6 +153,7 @@ pub enum IRuneTypingLookupFailedError<'s> {
 sealed trait IRuneTypingLookupFailedError extends IRuneTypeRuleError
 */
 // mig: struct RuneTypingTooManyMatchingTypes
+#[derive(Debug)]
 pub struct RuneTypingTooManyMatchingTypes<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
@@ -173,6 +180,7 @@ fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct RuneTypingCouldntFindType
+#[derive(Debug)]
 pub struct RuneTypingCouldntFindType<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
@@ -199,6 +207,7 @@ fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct FoundTemplataDidntMatchExpectedTypeA
+#[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedTypeA<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,

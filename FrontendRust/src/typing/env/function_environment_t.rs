@@ -1033,7 +1033,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn declared_locals
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn declared_locals(&self) -> &[IVariableT<'s, 't>] {
-    panic!("Unimplemented: declared_locals");
+    &self.declared_locals
   }
 /*
   def declaredLocals: Vector[IVariableT] = nodeEnvironment.declaredLocals
@@ -1102,8 +1102,19 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn mark_local_restackified
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn mark_local_restackified(&mut self, _new_restackified: IVarNameT<'s, 't>) {
-    panic!("Unimplemented: mark_local_restackified");
+  pub fn mark_local_restackified(&mut self, new_restackified: IVarNameT<'s, 't>) {
+    // Verbatim port of NodeEnvironmentT.markLocalRestackified (FunctionEnvironmentT.scala:303-329):
+    assert!(self.get_all_locals().iter().any(|l| l.name() == new_restackified));
+    assert!(!self.restackified_locals.contains(&new_restackified));
+    if self.unstackified_locals.contains(&new_restackified) {
+      // It was an unstackified local, so don't mark it as restackified, just undo the
+      // unstackification.
+      // Even if the local belongs to a parent env, we still mark it restackified here, see UCRTVPE.
+      self.unstackified_locals.retain(|x| *x != new_restackified);
+    } else {
+      // Even if the local belongs to a parent env, we still mark it restackified here, see UCRTVPE.
+      self.restackified_locals.push(new_restackified);
+    }
   }
 /*
   def markLocalRestackified(newMoved: IVarNameT): Unit= {

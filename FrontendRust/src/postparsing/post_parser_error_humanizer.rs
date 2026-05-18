@@ -236,7 +236,7 @@ pub fn humanize_rune<'s>(
 ) -> String {
   use crate::postparsing::names::IRuneS;
   match rune {
-    IRuneS::ImplicitRune(_) => panic!("implement: humanize_rune ImplicitRune"),
+    IRuneS::ImplicitRune(r) => "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(""),
     IRuneS::MagicParamRune(_) => panic!("implement: humanize_rune MagicParamRune"),
     IRuneS::CodeRune(r) => r.name.0.to_string(),
     IRuneS::ArgumentRune(_) => panic!("implement: humanize_rune ArgumentRune"),
@@ -387,9 +387,39 @@ fn humanize_templata_type(
   }
 */
 pub fn humanize_rule<'s>(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'s>,
+  rule: &crate::postparsing::rules::rules::IRulexSR<'s>,
 ) -> String {
-  panic!("Unimplemented humanize_rule");
+  use crate::postparsing::rules::rules::IRulexSR;
+  match rule {
+    IRulexSR::KindComponents(r) => {
+      humanize_rune(r.kind_rune.rune) + " = Kind[" + &humanize_rune(r.mutability_rune.rune) + "]"
+    }
+    IRulexSR::CoordComponents(r) => {
+      humanize_rune(r.result_rune.rune) + " = Ref[" + &humanize_rune(r.ownership_rune.rune) + ", " + &humanize_rune(r.kind_rune.rune) + "]"
+    }
+    IRulexSR::PrototypeComponents(_) => panic!("implement: humanize_rule PrototypeComponents"),
+    IRulexSR::OneOf(_) => panic!("implement: humanize_rule OneOf"),
+    IRulexSR::IsInterface(_) => panic!("implement: humanize_rule IsInterface"),
+    IRulexSR::IsStruct(_) => panic!("implement: humanize_rule IsStruct"),
+    IRulexSR::RefListCompoundMutability(_) => panic!("implement: humanize_rule RefListCompoundMutability"),
+    IRulexSR::DefinitionCoordIsa(_) => panic!("implement: humanize_rule DefinitionCoordIsa"),
+    IRulexSR::CallSiteCoordIsa(_) => panic!("implement: humanize_rule CallSiteCoordIsa"),
+    IRulexSR::CoordSend(_) => panic!("implement: humanize_rule CoordSend"),
+    IRulexSR::CoerceToCoord(_) => panic!("implement: humanize_rule CoerceToCoord"),
+    IRulexSR::MaybeCoercingCall(_) => panic!("implement: humanize_rule MaybeCoercingCall"),
+    IRulexSR::MaybeCoercingLookup(_) => panic!("implement: humanize_rule MaybeCoercingLookup"),
+    IRulexSR::Call(_) => panic!("implement: humanize_rule Call"),
+    IRulexSR::Lookup(_) => panic!("implement: humanize_rule Lookup"),
+    IRulexSR::Literal(_) => panic!("implement: humanize_rule Literal"),
+    IRulexSR::Augment(_) => panic!("implement: humanize_rule Augment"),
+    IRulexSR::Equals(_) => panic!("implement: humanize_rule Equals"),
+    IRulexSR::RuneParentEnvLookup(_) => panic!("implement: humanize_rule RuneParentEnvLookup"),
+    IRulexSR::Pack(_) => panic!("implement: humanize_rule Pack"),
+    IRulexSR::Resolve(_) => panic!("implement: humanize_rule Resolve"),
+    IRulexSR::CallSiteFunc(_) => panic!("implement: humanize_rule CallSiteFunc"),
+    IRulexSR::DefinitionFunc(_) => panic!("implement: humanize_rule DefinitionFunc"),
+    other => panic!("vimpl humanize_rule: {:?}", other),
+  }
 }
 /*
   def humanizeRule(rule: IRulexSR): String = {

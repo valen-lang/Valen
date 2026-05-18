@@ -484,7 +484,9 @@ where 's: 't,
                     let unlet = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(UnletTE {
                         variable: ILocalVariableT::Reference(*v),
                     }));
+                    // Until a test path forces Result conversion through struct_drop_macro.
                     self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT {}, unlet)
+                        .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through struct_drop_macro"))
                 }).collect();
                 let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = vec![destroy];
                 all_exprs.extend(drop_exprs.into_iter());

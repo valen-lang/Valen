@@ -1716,7 +1716,7 @@ where 's: 't,
                             env: package_env_t,
                             impl_: impl_a,
                         });
-                        self.compile_impl(&mut coutputs, LocationInDenizen { path: &[] }, *impl_templata);
+                        self.compile_impl(&mut coutputs, LocationInDenizen { path: &[] }, *impl_templata)?;
                     }
                     _ => {}
                 }
@@ -1745,8 +1745,8 @@ where 's: 't,
                             outer_env: package_env_t,
                             function: function_a,
                         };
-                        self.evaluate_generic_function_from_non_call(
-                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                        let _header = self.evaluate_generic_function_from_non_call(
+                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
                         use crate::postparsing::ast::IFunctionAttributeS;
                         let maybe_extern = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Extern(e) => Some(e), _ => None });
                         match maybe_extern {
@@ -1920,7 +1920,12 @@ where 's: 't,
                                         &[],
                                     )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
-                                        IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from export function"),
+                                        IResolveFunctionResult::ResolveFunctionFailure(failure) => {
+                                            return Err(crate::typing::compiler_error_reporter::ICompileErrorT::TypingPassResolvingError {
+                                                range: self.typing_interner.alloc_slice_copy(&[function_a.range]),
+                                                inner: failure.reason,
+                                            });
+                                        }
                                     };
                                 let export_name = match function_a.name {
                                     IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,

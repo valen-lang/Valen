@@ -34,7 +34,10 @@ where
   use crate::solver::solver::ISolverError;
   let error_body = match &result.error {
     ISolverError::SolverConflict(_c) => panic!("implement: humanize_failed_solve SolverConflict"),
-    ISolverError::SolveIncomplete(_) => panic!("implement: humanize_failed_solve SolveIncomplete"),
+    ISolverError::SolveIncomplete(_) => {
+      let names: Vec<String> = result.unsolved_runes.iter().map(|r| humanize_rune(*r)).collect();
+      format!("Couldn't solve some runes: {}", names.join(", "))
+    }
     ISolverError::RuleError(rule_err) => humanize_rule_error(rule_err.err),
   };
   let _verbose = true;
@@ -119,7 +122,8 @@ where
       .map(|r| format!("Unsolved rule: {}\n", rule_to_string(r)))
       .collect();
     let unsolved_runes_str = if !result.unsolved_runes.is_empty() {
-      panic!("implement: humanize_failed_solve unsolved_runes non-empty")
+      let names: Vec<String> = result.unsolved_runes.iter().map(|r| humanize_rune(*r)).collect();
+      format!("Unsolved runes: {}", names.join(" "))
     } else {
       "".to_string()
     };

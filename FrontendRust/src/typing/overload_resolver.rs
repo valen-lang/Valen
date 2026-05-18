@@ -63,6 +63,7 @@ import scala.collection.immutable.List
 object OverloadResolver {
 
 */
+#[derive(Debug)]
 pub enum IFindFunctionFailureReason<'s, 't> {
     WrongNumberOfArguments { supplied: i32, expected: i32 },
     WrongNumberOfTemplateArguments { supplied: i32, expected: i32 },
@@ -139,7 +140,7 @@ override def hashCode(): Int = vcurious() }
 
 
 */
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct FindFunctionFailure<'s, 't> {
     pub name: IImpreciseNameS<'s>,
     pub args: &'t [CoordT<'s, 't>],
@@ -657,8 +658,8 @@ where 's: 't,
                                             coutputs, calling_env, call_range, call_location, ft,
                                             &explicitly_specified_template_arg_templatas, context_region, args,
                                         )? {
-                                            IEvaluateFunctionResult::EvaluateFunctionFailure(_reason) => {
-                                                panic!("implement: attemptCandidateBanner EvaluateFunctionFailure");
+                                            IEvaluateFunctionResult::EvaluateFunctionFailure(failure) => {
+                                                Ok(Err(IFindFunctionFailureReason::CouldntEvaluateTemplateError { reason: failure.reason }))
                                             }
                                             IEvaluateFunctionResult::EvaluateFunctionSuccess(eval_success) => {
                                                 match self.params_match(
@@ -1444,10 +1445,26 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: &'t ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
+        let func_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
+        let param_filters = vec![
+            callable_te.result().underlying_coord(),
+            crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                region: RegionT,
+                kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+            },
+        ];
+        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], context_region, &param_filters, &[], false)
+            .unwrap_or_else(|_e| panic!("Unimplemented: get_array_generator_prototype — propagated ICompileErrorT"))
+        {
+            Err(_e) => panic!("CouldntFindFunctionToCallT"),
+            Ok(sfs) => sfs.prototype,
+        }
     }
 /*
   def getArrayGeneratorPrototype(

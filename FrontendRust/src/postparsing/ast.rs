@@ -680,7 +680,7 @@ override def hashCode(): Int = vcurious()
   vassert(pattern.coordRune.nonEmpty)
 }
 */
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractSP<'s> {
   pub range: RangeS<'s>,
   pub is_internal_method: bool,
@@ -772,7 +772,7 @@ case object ReadOnlyRegionS extends IRegionMutabilityS
 case object ImmutableRegionS extends IRegionMutabilityS
 case object AdditiveRegionS extends IRegionMutabilityS
 */
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
   CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
@@ -819,7 +819,7 @@ Guardian: disable-all
 }
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RegionGenericParameterTypeS {
   pub mutability: IRegionMutabilityS,
 }
@@ -837,7 +837,7 @@ impl RegionGenericParameterTypeS {
 }
 /* Guardian: disable-all */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CoordGenericParameterTypeS<'s> {
   pub coord_region: Option<RuneUsage<'s>>,
   pub kind_mutable: bool,
@@ -864,7 +864,7 @@ impl CoordGenericParameterTypeS<'_> {
 }
 /* Guardian: disable-all */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS<'s> {
   pub tyype: ITemplataType<'s>,
 }
@@ -886,7 +886,7 @@ case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericPara
 }
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterS<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -908,10 +908,10 @@ case class GenericParameterS(
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
-  pub rules: Vec<&'s IRulexSR<'s>>,
+  pub rules: &'s [&'s IRulexSR<'s>],
 }
 /*
 case class GenericParameterDefaultS(

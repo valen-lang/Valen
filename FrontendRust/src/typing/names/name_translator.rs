@@ -406,6 +406,10 @@ where 's: 't,
                 IVarNameT::MagicParam(self.typing_interner.intern_magic_param_name(
                     MagicParamNameT { code_location2: self.translate_code_location(code_location), _phantom: std::marker::PhantomData }))
             }
+            IVarNameS::SelfName => {
+                IVarNameT::Self_(self.typing_interner.intern_self_name(
+                    SelfNameT { _phantom: std::marker::PhantomData }))
+            }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", std::mem::discriminant(&name));
             }

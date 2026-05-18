@@ -204,7 +204,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       (_, Some(function_name)) => self.scout_arena.intern_name(INameValS::FunctionDeclaration(
         IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
           name: self.scout_arena.intern_str(function_name.str().as_str()),
-          code_location: Self::eval_pos(file_coordinate, function_name.range().begin()),
+          code_location: Self::eval_pos(file_coordinate, function.range.begin()),
         }),
       )),
       (IFunctionParent::ParentFunction { .. }, None) => self.scout_arena.intern_name(
@@ -1792,10 +1792,6 @@ fn create_magic_parameters(
     assert!(
       function_p.header.generic_parameters.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_MEMBER_GENERIC_PARAMETERS_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
-      function_p.header.template_rules.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
     );
     if let Some(params) = &function_p.header.params {
       if !params.params.iter().any(|param| param.virtuality.is_some()) {

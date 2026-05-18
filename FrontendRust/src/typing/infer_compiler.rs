@@ -70,6 +70,7 @@ case class CompleteDefineSolve(
     runeToBound: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT])
 
 */
+#[derive(Debug)]
 pub enum IConclusionResolveError<'s, 't> {
     CouldntFindImplForConclusionResolve {
         range: &'t [RangeS<'s>],
@@ -102,6 +103,7 @@ case class CouldntFindFunctionForConclusionResolve(range: List[RangeS], fff: Fin
 case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends IConclusionResolveError
 
 */
+#[derive(Debug)]
 pub enum IResolvingError<'s, 't> {
     ResolvingSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
     ResolvingResolveConclusionError(Box<IConclusionResolveError<'s, 't>>),
@@ -116,6 +118,7 @@ case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS,
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
 */
+#[derive(Debug)]
 pub enum IDefiningError<'s, 't> {
     DefiningSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
     DefiningResolveConclusionError(IConclusionResolveError<'s, 't>),
@@ -598,7 +601,7 @@ where 's: 't,
                 .filter(|(_rune, citizen)| citizens_from_calls.contains(citizen))
                 .collect();
 
-        let mut reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> = HashMap::new();
+        let mut reachable_bounds: Vec<(IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>)> = Vec::new();
         for (rune, citizen) in include_reachable_bounds_for_runes_with_citizens.into_iter() {
             let citizen_tt = match citizen {
                 KindT::Struct(s) => ICitizenTT::Struct(s),
@@ -640,10 +643,13 @@ where 's: 't,
                 citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
                     citizen_rune_to_reachable_prototype.into_iter()),
             });
-            reachable_bounds.insert(rune, result);
+            reachable_bounds.push((rune, result));
         }
 
-        let env_with_conclusions = self.import_reachable_bounds(envs.original_calling_env, &reachable_bounds);
+        // Per IIIOZ: `import_reachable_bounds` only does lookups, not iteration-into-output, so a transient HashMap is fine here.
+        let reachable_bounds_map: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
+            reachable_bounds.iter().copied().collect();
+        let env_with_conclusions = self.import_reachable_bounds(envs.original_calling_env, &reachable_bounds_map);
 
         // Check all template calls
         for rule in rules.iter() {
@@ -689,10 +695,13 @@ where 's: 't,
                 _ => {}
             }
         }
-        let rune_to_prototype: HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> =
-            runes_and_prototypes.iter().copied().collect();
-        if rune_to_prototype.len() < runes_and_prototypes.len() {
-            panic!("vwat: duplicate rune in runesAndPrototypes");
+        {
+            let mut seen: std::collections::HashSet<IRuneS<'s>> = std::collections::HashSet::new();
+            for (rune, _) in runes_and_prototypes.iter() {
+                if !seen.insert(*rune) {
+                    panic!("vwat: duplicate rune in runesAndPrototypes");
+                }
+            }
         }
 
         let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
@@ -705,21 +714,24 @@ where 's: 't,
                 }
                 _ => None,
             }).collect();
-        let rune_to_impl: HashMap<IRuneS<'s>, IdT<'s, 't>> =
-            runes_and_impls.iter().copied().collect();
-        if rune_to_impl.len() < runes_and_impls.len() {
-            panic!("vwat: duplicate rune in runesAndImpls");
+        {
+            let mut seen: std::collections::HashSet<IRuneS<'s>> = std::collections::HashSet::new();
+            for (rune, _) in runes_and_impls.iter() {
+                if !seen.insert(*rune) {
+                    panic!("vwat: duplicate rune in runesAndImpls");
+                }
+            }
         }
 
         let instantiation_bound_args = self.typing_interner.alloc(
             InstantiationBoundArgumentsT {
                 rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(
-                    rune_to_prototype.into_iter().map(|(k, v)| (k, *v))),
+                    runes_and_prototypes.into_iter().map(|(k, v)| (k, *v))),
                 rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
                     reachable_bounds.into_iter()
                         .filter(|(_, v)| !v.citizen_rune_to_reachable_prototype.is_empty())),
                 rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(
-                    rune_to_impl.into_iter()),
+                    runes_and_impls.into_iter()),
             });
 
         Ok(Ok(CompleteResolveSolve {

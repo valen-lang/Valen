@@ -91,7 +91,9 @@ where 's: 't,
         let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
         let env_in_denizen: IInDenizenEnvironmentT<'s, 't> =
             IInDenizenEnvironmentT::Node(snapshot);
-        let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te);
+        // Until a test forces Result conversion through make_temporary_local_defer.
+        let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te)
+            .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through make_temporary_local_defer"));
         assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
         DeferTE::new(self.typing_interner.alloc(let_expr_2), self.typing_interner.alloc(destruct_expr_2))
     }
@@ -146,7 +148,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Vec<&'t ReferenceExpressionTE<'s, 't>> {
+    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<&'t ReferenceExpressionTE<'s, 't>>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         variables.iter().map(|variable| {
             let unlet = self.unlet_local_without_dropping(nenv, variable);
             let unlet_ref = &*self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet));
@@ -210,7 +212,11 @@ where 's: 't,
         let addressible = self.determine_if_local_is_addressible(mutable, local_variable_a);
 
         let local_var = if addressible {
-            panic!("implement: make_user_local_variable — addressible local");
+            ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
+                name: var_id,
+                variability,
+                coord: reference_type2,
+            })
         } else {
             ILocalVariableT::Reference(ReferenceLocalVariableT {
                 name: var_id,

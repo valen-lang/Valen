@@ -883,6 +883,17 @@ fn scout_expression(
           (stackFrame0, NormalResult(vale.postparsing.ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
         }
         */
+    IExpressionPE::ConstantFloat(constant_float) => Ok((
+      stack_frame.clone(),
+      IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::ConstantFloat(crate::postparsing::expressions::ConstantFloatSE {
+          range: PostParser::eval_range(&file_coordinate, constant_float.range),
+          value: constant_float.value,
+        })),
+      }),
+      VariableUses::<'s>::empty(),
+      VariableUses::<'s>::empty(),
+    )),
         /*
         case ConstantFloatPE(range,value) => (stackFrame0, NormalResult(ConstantFloatSE(evalRange(range), value)), noVariableUses, noVariableUses)
         */

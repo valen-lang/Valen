@@ -357,8 +357,8 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
     pub fn variability(&self) -> VariabilityT {
         match self {
             AddressExpressionTE::LocalLookup(e) => e.variability(),
-            AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: variability StaticSizedArrayLookup"),
-            AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: variability RuntimeSizedArrayLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(e) => e.variability,
+            AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.variability,
             AddressExpressionTE::ReferenceMemberLookup(e) => e.variability,
             AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: variability AddressMemberLookup"),
         }
@@ -971,7 +971,13 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> RestackifyTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: self.source_expr.result().coord.region,
+            kind: crate::typing::types::types::KindT::Void(crate::typing::types::types::VoidT),
+        } }
+    }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, sourceExpr.result.coord.region, VoidT()))
 }
@@ -1637,7 +1643,13 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConstantFloatTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: self.region,
+            kind: crate::typing::types::types::KindT::Float(crate::typing::types::types::FloatT),
+        } }
+    }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, region, FloatT()))
 }
@@ -1670,7 +1682,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> LocalLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> {
+    pub fn result(&self) -> AddressResultT<'s, 't> {
         AddressResultT { coord: self.local_variable.coord() }
     }
 /*
@@ -1948,7 +1960,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> AddressMemberLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.result_type2 } }
 /*
   override def result = AddressResultT(resultType2)
 }
@@ -2282,7 +2294,17 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{CoordT, KindT, MutabilityT, OwnershipT};
+        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+        let ownership = match self.array_type.mutability() {
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+            ITemplataT::Placeholder(_) => panic!("Unimplemented: StaticArrayFromCallableTE result PlaceholderTemplataT"),
+            _ => panic!("vwat"),
+        };
+        ReferenceResultT { coord: CoordT { ownership, region: self.region, kind: KindT::StaticSizedArray(self.array_type) } }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(

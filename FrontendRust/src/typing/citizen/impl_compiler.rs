@@ -66,6 +66,7 @@ case class IsParent(
   implId: IdT[IImplNameT]
 ) extends IsParentResult
 */
+#[derive(Debug)]
 pub struct IsntParent<'s, 't> {
     pub candidates: Vec<IResolvingError<'s, 't>>,
 }
@@ -359,7 +360,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
-    ) {
+    ) -> Result<(), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         use crate::typing::env::environment::{child_of, TemplatasStoreBuilder};
         use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
         use crate::postparsing::itemplatatype::ITemplataType;
@@ -452,9 +453,15 @@ where 's: 't,
             None => panic!("vwat: interface_kind_rune not in inferences"),
             Some(ITemplataT::Kind(k)) => match k.kind {
                 KindT::Interface(i) => i,
-                _ => panic!("CantImplNonInterface: expected InterfaceTT"),
+                _ => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CantImplNonInterface {
+                    range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
+                    templata: ITemplataT::Kind(*k),
+                }),
             },
-            Some(_) => panic!("CantImplNonInterface: expected KindTemplataT"),
+            Some(other) => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CantImplNonInterface {
+                range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
+                templata: *other,
+            }),
         };
         let super_interface_template_id = self.get_interface_template(super_interface.id);
 
@@ -528,6 +535,7 @@ where 's: 't,
         coutputs.declare_type_outer_env(impl_template_id, impl_outer_env_iden);
         coutputs.declare_type_inner_env(impl_template_id, impl_inner_env_iden);
         coutputs.add_impl(self.typing_interner.alloc(impl_t));
+        Ok(())
     }
 /*
   // This will just figure out the struct template and interface template,

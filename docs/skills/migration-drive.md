@@ -52,7 +52,7 @@ Here's what I want you to do:
 
 Notes:
 
-* **Write escalations to `for-tl.md`.** Whenever you escalate to the TL (scaffolding gap, SPDMX skeleton, lifetime error, choice between alternatives, anything in the bullets below that says "stop and escalate"), write the escalation into `for-tl.md` at the repo root rather than only saying it in chat. Append a new section with a timestamp/heading, then include all the context the TL needs (file paths, line numbers, Scala counterpart, error message, options you considered). The TL reads `for-tl.md` to pick up escalations between turns. You can still mention in chat that you escalated, but `for-tl.md` is the source of truth — chat history is ephemeral, the file is not.
+* **Write escalations to `for-tl.md`.** Whenever you escalate to the TL (scaffolding gap, SPDMX skeleton, lifetime error, choice between alternatives, anything in the bullets below that says "stop and escalate"), write the escalation into `for-tl.md` at the repo root rather than only saying it in chat. Append a new section with a timestamp/heading, then include all the context the TL needs (file paths, line numbers, Scala counterpart, error message, options you considered). The TL reads `for-tl.md` to pick up escalations between turns. You can still mention in chat that you escalated, but `for-tl.md` is the source of truth — chat history is ephemeral, the file is not. **When you escalate, stop — don't keep driving the test in parallel; wait for the TL response in `for-jr.md`. Never defer or skip a test to move on to another one; if you can't solve it, escalate and wait.**
 
 * **When the architect says just "z," check for `for-jr.md` at the repo root; if it exists, read it (it's the TL's response to your escalation), apply the instructions, and then delete the file.**
 
@@ -67,6 +67,8 @@ Notes:
 * **Before escalating "X doesn't exist," grep for it.** Rust names often diverge from Scala (operators like `def +` become `fn add`, `object simpleNameT.unapply` becomes `fn unapply_simple_name`, etc.). Scan the type's `impl` blocks, sibling modules (e.g. `templata_utils.rs` for `TemplataUtils.scala`), and the audit-trail `/* ... */` for a renamed counterpart before declaring something missing.
 
 * Before escalating an `as_foo_name()` helper, grep for `TryFrom<INameT> for IFooT` — the documented `+T` erasure pattern uses `.try_into().unwrap()`.
+
+* **Don't escalate to add a polymorphic method on `INameT`.** When porting `id.localName.fooBar` where Scala's `id` is statically `IdT[ISubTraitNameT]`, the Rust port is `ISubTraitNameT::try_from(id.local_name).unwrap().foo_bar()` — narrow at the use site (§6.0 +T erasure), then call the per-variant method that already exists on the sub-enum. The wide `INameT` doesn't get the method; check the Scala static type of `id` to find the right sub-trait.
 
 * **When citing a Scala method on a sealed trait, check parent traits too.** `sealed trait ISubKindTT extends KindT` inherits every `def` on `KindT` — the Scala source for an "ISubKindTT method" may actually live on `KindT`. Cite the parent in the escalation so the TL can find it.
 

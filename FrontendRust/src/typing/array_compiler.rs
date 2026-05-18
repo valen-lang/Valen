@@ -80,11 +80,98 @@ where 's: 't,
         size_rune_a: IRuneS<'s>,
         mutability_rune: IRuneS<'s>,
         variability_rune: IRuneS<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: &'t ReferenceExpressionTE<'s, 't>,
     ) -> StaticArrayFromCallableTE<'s, 't> {
-        panic!("Unimplemented: evaluate_static_sized_array_from_callable");
+        use crate::postparsing::itemplatatype::CoordTemplataType;
+        use crate::postparsing::rune_type_solver::solve_rune_type;
+        use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
+        use crate::typing::templata::templata::{expect_integer, expect_mutability, expect_variability};
+
+        let rune_typing_env = self.create_rune_type_solver_env(calling_env);
+
+        let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
+        initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
+        initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
+        initially_known_runes.insert(variability_rune, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
+        if let Some(rune) = maybe_element_type_rune_a {
+            initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        }
+        let rune_a_to_type_with_implicitly_coercing_lookups_s =
+            solve_rune_type(
+                self.scout_arena,
+                self.opts.global_options.sanity_check,
+                &rune_typing_env,
+                parent_ranges.to_vec(),
+                false,
+                rules_with_implicitly_coercing_lookups_s,
+                &[],
+                true,
+                initially_known_runes,
+            ).unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — HigherTypingInferError"));
+
+        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+            &rune_typing_env,
+            self.scout_arena,
+            &mut rune_a_to_type,
+            &mut rule_builder,
+            rules_with_implicitly_coercing_lookups_s.to_vec(),
+        ) {
+            Err(_e) => panic!("implement: evaluate_static_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT"),
+            Ok(()) => {}
+        }
+        let rules_a = rule_builder;
+
+        let initial_knowns: &[InitialKnown<'s, 't>] = &[];
+        let initial_sends = &[];
+
+        let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
+        let envs = InferEnv {
+            original_calling_env: calling_env,
+            parent_ranges: parent_ranges_t,
+            call_location,
+            self_env: IEnvironmentT::from(calling_env),
+            context_region: region,
+        };
+        let mut solver_state = self.make_solver_state(
+            envs, coutputs, &rules_a, &rune_a_to_type, parent_ranges, initial_knowns, initial_sends);
+        match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
+            Err(_f) => panic!("implement: evaluate_static_sized_array_from_callable — TypingPassSolverError"),
+            Ok(true) => {}
+            Ok(false) => {}
+        }
+        let CompleteResolveSolve { conclusions: templatas, .. } =
+            self.check_resolving_conclusions_and_resolve(
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_a, &[], &mut solver_state)
+            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_static_sized_array_from_callable"))
+            .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — TypingPassResolvingError"));
+
+        let size = expect_integer(templatas.get(&size_rune_a).copied().expect("vassertSome: sizeRuneA not in templatas"));
+        let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
+        let variability = expect_variability(templatas.get(&variability_rune).copied().expect("vassertSome: variabilityRune not in templatas"));
+        let prototype = self.get_array_generator_prototype(
+            coutputs, calling_env, parent_ranges, call_location, callable_te, region);
+        let ssa_mt = self.resolve_static_sized_array(
+            mutability, variability, size, prototype.return_type, region);
+
+        if let Some(element_type_rune_a) = maybe_element_type_rune_a {
+            let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
+            if prototype.return_type != expected_element_type {
+                panic!("implement: evaluate_static_sized_array_from_callable — UnexpectedArrayElementType");
+            }
+        }
+
+        StaticArrayFromCallableTE {
+            array_type: self.typing_interner.alloc(ssa_mt),
+            region,
+            generator: callable_te,
+            generator_method: prototype,
+        }
     }
 /*
+Guardian: temp-disable: SPDMX — Both deviations are direct mirrors of the in-file twin evaluate_static_sized_array_from_values (array_compiler.rs:381-498): pre-populating initially_known_runes for size/mutability/variability (lines 403-409) and the make_solver_state/incrementally_solve/check_resolving_conclusions_and_resolve triple (lines 460-471) are the established Rust adaptation of solveForResolving in this file. Same author, same shape; this is the precedent. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-680-1778981807111/hook-680/evaluate_static_sized_array_from_callable--71.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateStaticSizedArrayFromCallable(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,

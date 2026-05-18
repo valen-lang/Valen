@@ -446,7 +446,7 @@ where
 {
   collect_if(pred, out, NodeRefS::GenericParameterDefault(default));
   visit_rune(pred, out, &default.result_rune);
-  for rule in &default.rules {
+  for rule in default.rules {
     visit_rulex(pred, out, rule);
   }
 }

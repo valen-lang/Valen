@@ -55,16 +55,18 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         type_2: CoordT<'s, 't>,
-    ) -> StampFunctionSuccess<'s, 't> {
+    ) -> Result<StampFunctionSuccess<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let name = self.scout_arena.intern_imprecise_name(
             crate::postparsing::names::IImpreciseNameValS::CodeName(
                 crate::postparsing::names::CodeNameS { name: self.keywords.drop }));
         let args = &[type_2];
-        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true)
-            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from find_function in get_drop_function"))
+        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true)?
         {
-            Err(_e) => panic!("CouldntFindFunctionToCallT"),
-            Ok(x) => x,
+            Err(e) => Err(crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT {
+                range: self.typing_interner.alloc_slice_copy(call_range),
+                fff: e,
+            }),
+            Ok(x) => Ok(x),
         }
     }
 /*
@@ -98,7 +100,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         undestructed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result().coord;
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
@@ -107,7 +109,7 @@ where 's: 't,
             }
             (OwnershipT::Own, _) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
-                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT {}, result_coord);
+                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT {}, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
                 let result_tt = destructor_prototype.return_type;
                 self.typing_interner.alloc(ReferenceExpressionTE::FunctionCall(FunctionCallTE {
@@ -129,7 +131,7 @@ where 's: 't,
                 panic!("Unexpected return type for drop autocall.\nReturn: {:?}\nParam: {:?}", result_expr_2.result().coord.kind, undestructed_expr_2.result().coord);
             }
         }
-        result_expr_2
+        Ok(result_expr_2)
     }
 /*
   def drop(
