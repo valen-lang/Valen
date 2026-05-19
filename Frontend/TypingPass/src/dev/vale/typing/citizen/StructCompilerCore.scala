@@ -11,7 +11,7 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.postparsing._
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
-import dev.vale.typing.ast.{ICitizenAttributeT, SealedT}
+import dev.vale.typing.ast.{ExternT, ICitizenAttributeT, SealedT}
 import dev.vale.typing.{CompileErrorExceptionT, CompilerOutputs, ImmStructCantHaveVaryingMember, RangedInternalErrorT, TypingPassOptions, env}
 import dev.vale.typing.{ast, _}
 import dev.vale.typing.env._
@@ -163,6 +163,7 @@ class StructCompilerCore(
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
     attrs.map({
       case SealedS => SealedT
+      case ExternS(p) => ExternT(p)
       case MacroCallS(_, _, _) => vwat() // Should have been processed
       case x => vimpl(x.toString)
     })

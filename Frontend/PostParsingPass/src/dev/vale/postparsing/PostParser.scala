@@ -756,6 +756,7 @@ class PostParser(
   def translateCitizenAttributes(file: FileCoordinate, denizenName: INameS, attrsP: Vector[IAttributeP]): Vector[ICitizenAttributeS] = {
     attrsP.map({
       case ExportAttributeP(_) => ExportS(file.packageCoordinate)
+      case ExternAttributeP(_) => ExternS(file.packageCoordinate)
       case SealedAttributeP(_) => SealedS
       case MacroCallP(range, dontCall, NameP(_, str)) => MacroCallS(PostParser.evalRange(file, range), dontCall, str)
       case x => vimpl(x.toString)

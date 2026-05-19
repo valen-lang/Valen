@@ -100,6 +100,10 @@ object FunctionVivem {
       case """__vbi_lessThanOrEqI64""" => VivemExterns.lessThanOrEqI64
       case """__vbi_modI64""" => VivemExterns.modI64
       case """TruncateI64ToI32""" => VivemExterns.truncateI64ToI32
+      case """VecOuterNew<i32>""" => VivemExterns.newVec(_, ref, _)
+      case """Vec.new<i32>""" => VivemExterns.newVec(_, ref, _)
+      case """Vec.with_capacity<i32>""" => VivemExterns.newVecWithCapacity(_, ref, _)
+      case """Vec.capacity<i32>""" => VivemExterns.vecCapacity(_, ref, _)
       case _ => vimpl(ref.id.fullyQualifiedName)
     }
   }

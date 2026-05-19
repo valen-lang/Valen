@@ -137,6 +137,9 @@ case class FloatV(value: Double) extends PrimitiveKindV {
 case class StrV(value: String) extends PrimitiveKindV {
   override def tyype = RRKind(StrHT())
 }
+case class OpaqueV(opaqueHT: OpaqueHT) extends PrimitiveKindV {
+  override def tyype = RRKind(opaqueHT)
+}
 
 case class StructInstanceV(
     structH: StructDefinitionH,

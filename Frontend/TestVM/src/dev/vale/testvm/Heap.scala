@@ -20,6 +20,11 @@ class AdapterForExterns(
     heap.dereference(reference)
   }
 
+  def newOpaque(opaqueHT: CoordH[OpaqueHT]):
+  ReferenceV = {
+    heap.newOpaque(opaqueHT)
+  }
+
   def addAllocationForReturn(ownership: OwnershipH, location: LocationH, kind: KindV): ReferenceV = {
     val ref = heap.add(ownership, location, kind)
 //    heap.incrementReferenceRefCount(ResultToObjectReferrer(callId), ref) // incrementing because putting it in a return
@@ -558,6 +563,7 @@ class Heap(in_vivemDout: PrintStream) {
     kind match {
       case VoidV => vivemDout.print("void")
       case IntV(value, _) => vivemDout.print(value)
+      case OpaqueV(_) => vivemDout.print("opaque")
       case BoolV(value) => vivemDout.print(value)
       case StrV(value) => vivemDout.print(value)
       case FloatV(value) => vivemDout.print(value)
@@ -595,6 +601,15 @@ class Heap(in_vivemDout: PrintStream) {
         MemberToObjectReferrer(MemberAddressV(reference.allocId, index), memberReference.ownership),
         memberReference)
     })
+
+    vivemDout.print(" o" + reference.num + "=")
+    printKind(instance)
+    reference
+  }
+
+  def newOpaque(opaqueCoordHT: CoordH[OpaqueHT]): ReferenceV = {
+    val instance = OpaqueV(opaqueCoordHT.kind)
+    val reference = add(opaqueCoordHT.ownership, opaqueCoordHT.location, instance)
 
     vivemDout.print(" o" + reference.num + "=")
     printKind(instance)
@@ -685,6 +700,11 @@ class Heap(in_vivemDout: PrintStream) {
     (actualKind, expectedType) match {
       case (IntV(_, actualBits), IntHT(expectedBits)) => {
         if (actualBits != expectedBits) {
+          vfail("Expected " + expectedType + " but was " + actualKind)
+        }
+      }
+      case (OpaqueV(a), b @ OpaqueHT(_, _, _)) => {
+        if (a != b) {
           vfail("Expected " + expectedType + " but was " + actualKind)
         }
       }

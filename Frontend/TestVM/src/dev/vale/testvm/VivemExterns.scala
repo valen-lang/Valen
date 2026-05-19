@@ -461,4 +461,37 @@ object VivemExterns {
     val IntV(value, 64) = memory.dereference(args(0))
     memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(value.toFloat))
   }
+
+  def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
+    vassert(args.size == 0)
+    val opaqueCoord =
+      prototype.returnType match {
+        case CoordH(own, loc, s @ OpaqueHT(_, _, _)) => CoordH(own, loc, s)
+      }
+    memory.newOpaque(opaqueCoord)
+  }
+
+  def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
+    vassert(args.size == 1)
+    // This whole function only exists for testing purposes
+    memory.dereference(args(0)) match {
+      case IntV(42, 64) =>
+    }
+
+    val opaqueCoord =
+      prototype.returnType match {
+        case CoordH(own, loc, s@OpaqueHT(_, _, _)) => CoordH(own, loc, s)
+      }
+    memory.newOpaque(opaqueCoord)
+  }
+
+  def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
+    vassert(args.size == 1)
+    memory.dereference(args(0)) match {
+      case OpaqueV(_) =>
+    }
+
+    // This whole function just exists for testing, there are some tests that feed 42 in to newVecWithCapacity
+    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(42, 64))
+  }
 }
