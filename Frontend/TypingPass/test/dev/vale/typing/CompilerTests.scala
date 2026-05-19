@@ -2084,9 +2084,12 @@ class CompilerTests extends FunSuite with Matchers {
     val compile = CompilerTestCompilation.test(
       """
         |struct Vec<T> {
-        |  func make(t T) bool { true }
+        |  func make(t &T) bool { true }
         |}
-        |exported func main() bool { return Vec<int>.make(42); }
+        |exported func main() bool {
+        |  x = 42;
+        |  return Vec<int>.make(&x);
+        |}
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
