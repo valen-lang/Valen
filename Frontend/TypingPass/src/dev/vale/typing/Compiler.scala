@@ -1154,7 +1154,7 @@ class Compiler(
                               IdT(
                                 packageCoord,
                                 steps,
-                                interner.intern(ExternFunctionNameT(humanName, params))),
+                                interner.intern(ExternFunctionNameT(humanName, templateArgs, params))),
                               returnType)
                           }
                           case other => vwat(other)

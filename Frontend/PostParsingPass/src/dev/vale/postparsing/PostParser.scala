@@ -717,7 +717,8 @@ class PostParser(
     val internalMethodsS =
       internalMethodsP.toVector.map(method => {
         functionScout.scoutInterfaceMember(
-          ParentInterface(
+          ParentCitizen(
+            false,
             structEnv,
             genericParametersS.toVector,
             allRulesS,
@@ -894,7 +895,8 @@ class PostParser(
     val internalMethodsS =
       internalMethodsP.map(method => {
         functionScout.scoutInterfaceMember(
-          ParentInterface(
+          ParentCitizen(
+            true,
             interfaceEnv,
             genericParametersS.toVector,
             rulesS,

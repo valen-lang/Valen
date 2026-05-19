@@ -1,6 +1,6 @@
 package dev.vale.typing.macros
 
-import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl}
+import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl, vpass}
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
@@ -27,6 +27,9 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
     maybeRetCoord: Option[CoordT]):
   (FunctionHeaderT, ReferenceExpressionTE) = {
     val returnReferenceType2 = vassertSome(maybeRetCoord)
+    if (!params2.exists(_.virtuality == Some(AbstractT()))) {
+      vpass()
+    }
     vassert(params2.exists(_.virtuality == Some(AbstractT())))
     val header =
       FunctionHeaderT(

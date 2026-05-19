@@ -1367,7 +1367,7 @@ class Instantiator(
           RegionCollapserIndividual.collapsePrototype(actualPrototypeS)
         (actualPrototypeS, actualDesiredPrototypeC)
       }
-      case IdT(_, _, ExternFunctionNameT(_, _)) => {
+      case IdT(_, _, ExternFunctionNameT(_, _, _)) => {
         if (opts.sanityCheck) {
           vassert(Collector.all(desiredPrototypeS, { case KindPlaceholderTemplateNameT(_, _) => }).isEmpty)
         }
@@ -2229,7 +2229,10 @@ class Instantiator(
             SoftLoadIE(innerCE, targetOwnership, RegionCollapserIndividual.collapseCoord(resultIT))
           (resultIT, resultCE)
         }
-        case ExternFunctionCallTE(prototype2, args) => {
+        case ExternFunctionCallTE(prototype2, maybeInheritance, args) => {
+          // AFTERM: This is where we would use maybeInheritance to properly query the rustc tcx for the right function
+          // to call. For now, we do nothing...
+          // DO NOT SUBMIT mention arcana.
           val (prototypeI, prototypeC) =
             translatePrototype(
               denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, prototype2)
@@ -3571,9 +3574,11 @@ class Instantiator(
             index),
           translateFunctionName(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, inner))
       }
-      case ExternFunctionNameT(humanName, parameters) => {
+      case ExternFunctionNameT(humanName, templateArgs, parameters) => {
         ExternFunctionNameI(
-          humanName, parameters.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
+          humanName,
+          templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)),
+          parameters.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
       }
       case FunctionBoundNameT(FunctionBoundTemplateNameT(humanName), templateArgs, params) => {
         FunctionBoundNameI(

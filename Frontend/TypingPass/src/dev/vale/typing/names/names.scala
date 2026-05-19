@@ -338,6 +338,7 @@ case class ExternNameT(
 
 case class ExternFunctionNameT(
   humanName: StrI,
+  templateArgs: Vector[ITemplataT[ITemplataType]],
   parameters: Vector[CoordT]
 ) extends IFunctionNameT with IFunctionTemplateNameT {
   override def template: IFunctionTemplateNameT = this
@@ -348,8 +349,6 @@ case class ExternFunctionNameT(
     templateArgs: Vector[ITemplataT[ITemplataType]],
     params: Vector[CoordT]):
   IFunctionNameT = this
-
-  override def templateArgs: Vector[ITemplataT[ITemplataType]] = Vector.empty
 }
 
 case class FunctionNameT(

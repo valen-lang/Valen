@@ -360,7 +360,7 @@ class FunctionCompilerCore(
       maybeOrigin: Option[FunctionTemplataT]):
   (FunctionHeaderT) = {
     env.id.localName match {
-      case FunctionNameT(FunctionTemplateNameT(humanName, _), Vector(), params) => {
+      case FunctionNameT(FunctionTemplateNameT(humanName, _), templateParams, params) => {
         val header =
           ast.FunctionHeaderT(
             env.id,
@@ -370,7 +370,7 @@ class FunctionCompilerCore(
             returnType2,
             maybeOrigin)
 
-        val externFunctionId = IdT(env.id.packageCoord, Vector.empty, interner.intern(ExternFunctionNameT(humanName, params)))
+        val externFunctionId = IdT(env.id.packageCoord, env.id.initSteps, interner.intern(ExternFunctionNameT(humanName, templateParams, params)))
         val externPrototype = PrototypeT[ExternFunctionNameT](externFunctionId, header.returnType)
 
         coutputs.addInstantiationBounds(
@@ -382,11 +382,22 @@ class FunctionCompilerCore(
 
         val argLookups =
           header.params.zipWithIndex.map({ case (param2, index) => ArgLookupTE(index, param2.tyype) })
+
+        val maybeInheritance =
+          header.id.initId(interner) match {
+            case IdT(paackage, initSteps, ctn : ICitizenTemplateNameT) => {
+              val containerId = IdT(paackage, initSteps, ctn)
+              val citizen = coutputs.lookupCitizen(containerId)
+              Some(GenericParametersInheritance(ctn, citizen.genericParamTypes.size))
+            }
+            case _ => None
+          }
+
         val function2 =
           FunctionDefinitionT(
             header,
             InstantiationBoundArgumentsT.make[FunctionBoundNameT, ImplBoundNameT](Map(), Map(), Map()),
-            ReturnTE(ExternFunctionCallTE(externPrototype, argLookups)))
+            ReturnTE(ExternFunctionCallTE(externPrototype, maybeInheritance, argLookups)))
 
         coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
         coutputs.addFunction(function2)
