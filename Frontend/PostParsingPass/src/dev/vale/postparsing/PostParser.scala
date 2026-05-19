@@ -718,7 +718,7 @@ class PostParser(
       internalMethodsP.toVector.map(method => {
         functionScout.scoutInterfaceMember(
           ParentCitizen(
-            false,
+            false,  // not an interface — struct internal methods don't require virtual self
             structEnv,
             genericParametersS.toVector,
             allRulesS,
@@ -896,7 +896,7 @@ class PostParser(
       internalMethodsP.map(method => {
         functionScout.scoutInterfaceMember(
           ParentCitizen(
-            true,
+            true,  // interface internal methods do require virtual self
             interfaceEnv,
             genericParametersS.toVector,
             rulesS,

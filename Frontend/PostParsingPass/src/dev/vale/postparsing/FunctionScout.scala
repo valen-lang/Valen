@@ -388,7 +388,9 @@ class FunctionScout(
       })
 
     val (maybeBody1, variableUses, extraGenericParamsFromBodyS, maybeClosureParam, magicParams) =
-      if (maybeParent match { case ParentCitizen(_, _, _, _, _) => true case _ => false }) {
+      if (maybeParent match { case ParentCitizen(true, _, _, _, _) => true case _ => false }) {
+        // Only true interface members get an implicit abstract body — struct internal methods
+        // with no body would have been rejected earlier as a parse error.
         val bodyS = AbstractBodyS
         (bodyS, noVariableUses, Vector(), None, Vector())
       } else if (attrsP.collectFirst({ case AbstractAttributeP(_) => }).nonEmpty) {

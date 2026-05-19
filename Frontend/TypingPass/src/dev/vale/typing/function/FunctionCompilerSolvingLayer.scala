@@ -353,7 +353,7 @@ class FunctionCompilerSolvingLayer(
     val rules = callSiteRules
     val runeToType = function.runeToType
     val invocationRange = callRange
-    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
+    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs) ++ containerRuneInitialKnowns
     val includeReachableBoundsForRunes =
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 

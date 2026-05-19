@@ -2074,6 +2074,23 @@ class CompilerTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
   }
 
+  // Minimal repro of the callsite rune-type-solver bug exposed by the named-arg channel.
+  // The method references its container's T in one param (so higher-typing can solve T)
+  // but has a trivial bool return and bool body, keeping the function's own solve simple.
+  // Isolates the failure to the CALLSITE rune-type-solver step, which gets
+  // MaybeCoercingLookupSR(int_rune, "int") and EqualsSR(T, int_rune) but no expected-type
+  // seed for int_rune (because container args flow through the named-arg channel, not positional).
+  test("Namespace method call only inherits container generic (minimal callsite rune-type repro)") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct Vec<T> {
+        |  func make(t T) bool { true }
+        |}
+        |exported func main() bool { return Vec<int>.make(42); }
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
   test("Namespace method call with both container and method generic args") {
     val compile = CompilerTestCompilation.test(
       """

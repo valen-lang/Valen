@@ -285,10 +285,20 @@ class OverloadResolver(
         // specified template args! (The rest of the rule-typing happened back in the astronomer,
         // this is the one time we delay it, see MDRTCUT).
 
-        // There might be less explicitly specified template args than there are types, and that's
-        // fine. Hopefully the rest will be figured out by the rule evaluator.
+        // Args supplied through receivingRuneToExplicitTemplateArgRune (the named channel for
+        // container template args) also need their callsite rune seeded with the expected type,
+        // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
+        val receivingRuneToType: Map[IRuneS, ITemplataType] =
+          function.genericParameters.map(gp => gp.rune.rune -> gp.tyype.tyype).toMap
+        val callsiteRuneToType: Map[IRuneS, ITemplataType] =
+          receivingRuneToExplicitTemplateArgRune.flatMap({ case (receivingRune, callsiteRune) =>
+            receivingRuneToType.get(receivingRune.rune).map(callsiteRune.rune -> _)
+          }).toMap
         val explicitTemplateArgRuneToType =
-          positionalExplicitTemplateArgRunesS.zip(identifyingRuneTemplataTypes).toMap
+            callsiteRuneToType ++
+            // There might be less explicitly specified template args than there are types, and that's
+            // fine. Hopefully the rest will be figured out by the rule evaluator.
+            positionalExplicitTemplateArgRunesS.zip(identifyingRuneTemplataTypes).toMap
 
 
         val runeTypeSolveEnv =
