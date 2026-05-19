@@ -353,11 +353,7 @@ class FunctionScout(
         }
         case Some(retTypePT) => {
           templexScout.translateMaybeTypeIntoMaybeRune(
-            maybeParent match {
-              case FunctionNoParent() => functionEnv
-              case ParentFunction(_) => functionEnv
-              case ParentCitizen(_, interfaceEnv, _, _, _) => interfaceEnv
-            },
+            functionEnv,
             lidb.child(),
             PostParser.evalRange(myStackFrameWithoutParams.file, retRange),
             ruleBuilder,
@@ -386,6 +382,9 @@ class FunctionScout(
         case ParentFunction(_) => Vector()
         case ParentCitizen(_, _, interfaceGenericParams, _, _) => interfaceGenericParams
       })
+    extraGenericParamsFromParentS.foreach(gp => {
+      runeToExplicitType += ((gp.rune.rune, gp.tyype.tyype))
+    })
 
     val (maybeBody1, variableUses, extraGenericParamsFromBodyS, maybeClosureParam, magicParams) =
       if (maybeParent match { case ParentCitizen(true, _, _, _, _) => true case _ => false }) {
