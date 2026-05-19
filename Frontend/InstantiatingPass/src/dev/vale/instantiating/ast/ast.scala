@@ -55,7 +55,6 @@ case class FunctionExternI(prototype: PrototypeI[cI]) {
 }
 
 case class KindExternI(struct: StructIT[cI]) {
-  vpass()
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 

@@ -285,7 +285,6 @@ case class CaseFunctionFromImplTemplateNameI[+R <: IRegionsModeI](
 }
 
 sealed trait IVarNameI[+R <: IRegionsModeI] extends INameI[R]
-//case class OpaqueMemberNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
 case class TypingPassBlockResultVarNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
 case class TypingPassFunctionResultVarNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
 case class TypingPassTemporaryVarNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
@@ -326,13 +325,6 @@ case class ExternFunctionNameI[+R <: IRegionsModeI](
   parameters: Vector[CoordI[R]]
 ) extends IFunctionNameI[R] with IFunctionTemplateNameI[R] {
   override def template: IFunctionTemplateNameI[R] = this
-
-//  override def makeFunctionName(
-//    interner: Interner,
-//    keywords: Keywords,
-//    templateArgs: Vector[ITemplataI[R]],
-//    params: Vector[CoordI]):
-//  IFunctionNameI = this
 }
 
 case class FunctionNameIX[+R <: IRegionsModeI](

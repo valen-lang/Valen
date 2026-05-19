@@ -68,8 +68,6 @@ case class StructMemberI(
 }
 
 sealed trait IMemberTypeI  {
-//  def reference: CoordI[cI]
-
   def expectReferenceMember(): ReferenceMemberTypeI = {
     this match {
       case r @ ReferenceMemberTypeI(_) => r
@@ -84,7 +82,6 @@ sealed trait IMemberTypeI  {
   }
 }
 
-//case class OpaqueMemberTypeI() extends IMemberTypeI
 case class AddressMemberTypeI(reference: CoordI[cI]) extends IMemberTypeI
 case class ReferenceMemberTypeI(reference: CoordI[cI]) extends IMemberTypeI
 

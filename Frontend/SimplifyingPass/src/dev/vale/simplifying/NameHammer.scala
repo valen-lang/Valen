@@ -76,9 +76,6 @@ object NameHammer {
           simplifyName(localName))
   }
 
-  // Under the UFCS-flat typing-pass model, citizen steps in initSteps are template-form
-  // (no per-step args), and all type args live on the leaf function step. The Rust-shape
-  // projection (RustShapeProjector) re-attaches args to the citizen step for Rust output.
   def simplifyName(name: INameI[cI]): SimpleIdStep = {
     name match {
       case StructNameI(StructTemplateNameI(humanName), templateArgs) =>

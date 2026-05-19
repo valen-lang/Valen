@@ -110,7 +110,6 @@ object InstantiatedHumanizer {
     containingRegion: Option[ITemplataI[R]] = None):
   String = {
     name match {
-//      case OpaqueMemberNameI() => "oq"
       case AnonymousSubstructConstructorNameI(template, templateArgs, parameters) => {
         humanizeName(codeMap, template) +
           "<" + templateArgs.map(humanizeTemplata(codeMap, _)).mkString(",") + ">" +

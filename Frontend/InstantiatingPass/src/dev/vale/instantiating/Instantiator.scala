@@ -317,16 +317,6 @@ class Instantiator(
         functionExportsC,
         monouts.kindExterns.map(x => x.struct -> x).toMap,
         monouts.functionExterns.toVector)
-//        monouts.structs.values
-//            .filter(_.attributes.exists({ case ExternI(_) => true case _ => false }))
-//            .map(_.instantiatedCitizen)
-//            .map(KindExternI)
-//            .toVector,
-//        monouts.functions.values
-//            .filter(_.header.attributes.exists({ case ExternI(_) => true case _ => false }))
-//            .map(_.header.toPrototype)
-//            .map(FunctionExternI)
-//            .toVector)
 
     resultHinputs
   }
@@ -339,8 +329,6 @@ class Instantiator(
   def translateExportName(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
-      // DO NOT SUBMIT mention everywhere a link to a doc that explains the purpose of the
-      // outer map with a few examples
     substitutions: Map[IdT[IPlaceholderNameT], ITemplataI[sI]],
     perspectiveRegionT: RegionT,
     exportNameT: ExportNameT):
@@ -1257,12 +1245,6 @@ class Instantiator(
     member: IStructMemberT):
   StructMemberI = {
     member match {
-//      case OpaqueStructMemberT() => {
-//        StructMemberI(
-//          OpaqueMemberNameI(),
-//          FinalI,
-//          OpaqueMemberTypeI())
-//      }
       case NormalStructMemberT(name, variability, tyype) => {
         val (memberSubjectiveIT, memberTypeI) =
           tyype match {
