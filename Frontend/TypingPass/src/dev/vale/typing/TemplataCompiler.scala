@@ -95,8 +95,7 @@ object TemplataCompiler {
   }
 
   // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules.
-  // Safe because prediction has no argument inference to conflict with. The connecting
-  // EqualsSR is already inside `x.rules` (Option 1: defaults are self-contained).
+  // Safe because prediction has no actual arguments being inferred that could conflict.
   def assemblePredictRules(genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
     genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
       if (index >= numExplicitTemplateArgs) {

@@ -119,9 +119,6 @@ class StructCompilerGenericArgsLayer(
       val runesForPrediction =
         (interfaceA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
-      // Include default-only runeToType entries — those runes appear in the predict
-      // rules (via assemblePredictRules) but aren't in the parent's main runeToType
-      // since defaults are self-contained per Option 1.
       val defaultsRuneToType =
         interfaceA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =
@@ -192,7 +189,6 @@ class StructCompilerGenericArgsLayer(
       val runesForPrediction =
         (structA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
-      // Include default-only runeToType entries (Option 1: defaults are self-contained).
       val defaultsRuneToType =
         structA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =

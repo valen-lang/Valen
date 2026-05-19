@@ -386,9 +386,6 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                // Register default-only runes (e.g. resultRune) alongside committing the
-                // default's rules — per Option 1, defaults are self-contained; their runes
-                // are no longer hoisted into the parent's runeToType at scout time.
                 solverState.commitStep[ITypingPassSolverError](
                   false, Vector(), Map(), defaultRules.rules, defaultRules.runeToType.keySet).getOrDie()
                 true

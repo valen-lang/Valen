@@ -58,15 +58,15 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 //    index
 //  }
 
-  // `newRunes` extends allRunes mid-solve, used when incrementally committing rules
-  // that introduce previously-unknown runes (e.g. default-only runes that travel inside
-  // GenericParameterDefaultS rather than being pre-registered via initial runeToType).
-  // Defaults to empty for callers that aren't introducing new runes.
   def commitStep[ErrType](
       complex: Boolean,
       solvedRuleIndices: Vector[Int],
       conclusions: Map[Rune, Conclusion],
       newRules: Vector[Rule],
+      // `newRunes` extends allRunes mid-solve, used when incrementally committing rules
+      // that introduce previously-unknown runes (e.g. default-only runes that travel inside
+      // GenericParameterDefaultS, see DRSINI).
+      // DO NOT SUBMIT undefault this param
       newRunes: Set[Rune] = Set.empty):
   Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
     allRunes = allRunes ++ newRunes
