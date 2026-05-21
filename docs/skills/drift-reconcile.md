@@ -171,6 +171,30 @@ Format an escalation in `for-tl.md` as:
 **Blocker:** <what's stopping you — lifetime error, NRDX, cross-file refs, etc.>
 ```
 
+Always lead with the `## drift-reconcile:` heading — `for-tl.md` is shared
+with the `migration-drive` workflow, so the prefix tells the TL which
+workflow this escalation belongs to.
+
+## The `z` Protocol
+
+When the architect types just `z` in chat, that's the signal to **check for
+`for-jr.md` at the repo root**; if it exists, read it (it's the TL's response
+to a previous escalation), apply the instructions, and then delete the file.
+Same shape as `migration-drive` — the two workflows share both files.
+
+After applying:
+- If the response unblocks a specific drift-reconcile escalation, continue
+  the loop on that file.
+- If the response includes a new instruction (e.g. "skip this file for
+  now," "use approach X for this pattern going forward"), update your
+  in-progress notes (e.g. `tmp/drift-reconcile-progress.md`) so future
+  sessions inherit the guidance.
+
+**When you escalate, stop driving the current file** — don't open another
+file in parallel, don't skip to a different divergence. Wait for the TL
+response in `for-jr.md` before continuing. Never defer or skip a divergence
+to move on; if you can't solve it, escalate and wait.
+
 ## Verification Before Moving On
 
 After reconciling a file:
