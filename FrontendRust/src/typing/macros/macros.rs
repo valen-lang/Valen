@@ -1,3 +1,20 @@
+use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::env::function_environment_t::FunctionEnvironmentT;
+use crate::interner::StrI;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::utils::range::RangeS;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::higher_typing::ast::FunctionA;
+use crate::typing::ast::ast::ParameterT;
+use crate::typing::types::types::CoordT;
+use crate::typing::ast::ast::FunctionHeaderT;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::names::names::IdT;
+use crate::higher_typing::ast::StructA;
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::higher_typing::ast::InterfaceA;
 /*
 package dev.vale.typing.macros
 
@@ -44,17 +61,17 @@ trait IFunctionBodyMacro {
 impl FunctionBodyMacro {
     pub fn generate_function_body<'s, 'ctx, 't>(
         &self,
-        compiler: &crate::typing::compiler::Compiler<'s, 'ctx, 't>,
-        coutputs: &mut crate::typing::compiler_outputs::CompilerOutputs<'s, 't>,
-        env: &'t crate::typing::env::function_environment_t::FunctionEnvironmentT<'s, 't>,
-        generator_id: crate::interner::StrI<'s>,
-        life: crate::typing::ast::ast::LocationInFunctionEnvironmentT<'s, 't>,
-        call_range: &[crate::utils::range::RangeS<'s>],
-        call_location: crate::postparsing::ast::LocationInDenizen<'s>,
-        origin_function: Option<&'s crate::higher_typing::ast::FunctionA<'s>>,
-        param_coords: &[crate::typing::ast::ast::ParameterT<'s, 't>],
-        maybe_ret_coord: Option<crate::typing::types::types::CoordT<'s, 't>>,
-    ) -> Result<(crate::typing::ast::ast::FunctionHeaderT<'s, 't>, crate::typing::ast::expressions::ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>>
+        compiler: &Compiler<'s, 'ctx, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&'s FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>>
     where 's: 't,
     {
         match self {
@@ -104,10 +121,10 @@ trait IOnStructDefinedMacro {
 impl OnStructDefinedMacro {
     pub fn get_struct_sibling_entries<'s, 'ctx, 't>(
         &self,
-        compiler: &crate::typing::compiler::Compiler<'s, 'ctx, 't>,
-        struct_name: crate::typing::names::names::IdT<'s, 't>,
-        struct_a: &'s crate::higher_typing::ast::StructA<'s>,
-    ) -> Vec<(crate::typing::names::names::IdT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)>
+        compiler: &Compiler<'s, 'ctx, 't>,
+        struct_name: IdT<'s, 't>,
+        struct_a: &'s StructA<'s>,
+    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
     where 's: 't,
     {
         match self {
@@ -137,10 +154,10 @@ trait IOnInterfaceDefinedMacro {
 impl OnInterfaceDefinedMacro {
     pub fn get_interface_sibling_entries<'s, 'ctx, 't>(
         &self,
-        compiler: &crate::typing::compiler::Compiler<'s, 'ctx, 't>,
-        interface_name: crate::typing::names::names::IdT<'s, 't>,
-        interface_a: &'s crate::higher_typing::ast::InterfaceA<'s>,
-    ) -> Vec<(crate::typing::names::names::IdT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)>
+        compiler: &Compiler<'s, 'ctx, 't>,
+        interface_name: IdT<'s, 't>,
+        interface_a: &'s InterfaceA<'s>,
+    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)>
     where 's: 't,
     {
         match self {

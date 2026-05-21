@@ -9,6 +9,9 @@ use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::names::names::CodeVarNameT;
+use crate::interner::StrI;
 
 // mig: struct CompilerLambdaTests
 pub struct CompilerLambdaTests;
@@ -106,8 +109,8 @@ fn lambda_with_one_magic_arg() {
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
-        crate::typing::test::traverse::NodeRefT::Parameter(
+        NodeRefT::FunctionDefinition(lambda),
+        NodeRefT::Parameter(
             ParameterT {
                 virtuality: None,
                 tyype: CoordT {
@@ -289,10 +292,10 @@ fn lambda_with_a_type_specified_param() {
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
-        crate::typing::test::traverse::NodeRefT::Parameter(
+        NodeRefT::FunctionDefinition(lambda),
+        NodeRefT::Parameter(
             ParameterT {
-                name: IVarNameT::CodeVar(c),
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 virtuality: None,
                 tyype: CoordT {
                     ownership: OwnershipT::Share,
@@ -301,14 +304,16 @@ fn lambda_with_a_type_specified_param() {
                 },
                 ..
             }
-        ) if c.name.0 == "a" => Some(())
+        ) => Some(())
     );
     assert!(coutputs.name_is_lambda_in(lambda.header.id, "main"));
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(FunctionCallTE { callable, .. })
-            if coutputs.name_is_lambda_in(callable.id, "main") => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE { callable, .. }) => {
+            assert!(coutputs.name_is_lambda_in(callable.id, "main"));
+            Some(())
+        }
     );
 }
 /*

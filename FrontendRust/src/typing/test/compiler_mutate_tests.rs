@@ -17,6 +17,9 @@ use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, Pa
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
 use std::collections::HashMap;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::names::names::StructNameT;
+use crate::typing::overload_resolver::FindFunctionFailure;
 
 /*
 package dev.vale.typing
@@ -74,11 +77,11 @@ fn test_mutating_a_local_var() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Mutate(MutateTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Mutate(MutateTE {
             destination_expr: AddressExpressionTE::LocalLookup(LocalLookupTE {
                 local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: IVarNameT::CodeVar(c),
+                    name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                     variability: VariabilityT::Varying,
                     ..
                 }),
@@ -88,12 +91,12 @@ fn test_mutating_a_local_var() {
                 value: ITemplataT::Integer(4),
                 ..
             }),
-        }) if c.name.0 == "a" => Some(())
+        }) => Some(())
     );
 
     let lookup: &LocalLookupTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LocalLookup(l) => Some(l)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LocalLookup(l) => Some(l)
     );
     let result_coord = lookup.result().coord;
     assert_eq!(result_coord, CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
@@ -135,8 +138,8 @@ fn test_mutable_member_permission() {
     let main = coutputs.lookup_function_by_str("main");
 
     let lookup: &ReferenceMemberLookupTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(l) => Some(l)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ReferenceMemberLookup(l) => Some(l)
     );
     let result_coord = lookup.result().coord;
     // See RMLRMO, it should result in the same type as the member.
@@ -191,8 +194,8 @@ fn local_set_upcasts() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Mutate(MutateTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Mutate(MutateTE {
             source_expr: ReferenceExpressionTE::Upcast(_),
             ..
         }) => Some(())
@@ -244,8 +247,8 @@ fn expr_set_upcasts() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Mutate(MutateTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Mutate(MutateTE {
             source_expr: ReferenceExpressionTE::Upcast(_),
             ..
         }) => Some(())
@@ -297,16 +300,15 @@ fn reports_when_we_try_to_mutate_an_imm_struct() {
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
-                INameT::Struct(s) => match s.template {
-                    IStructTemplateNameT::StructTemplate(t) if t.human_name.0 == "Vec3" => {
-                        assert!(s.template_args.is_empty());
-                    }
-                    _ => panic!("expected StructTemplateNameT(\"Vec3\")"),
-                },
-                _ => panic!("expected StructNameT"),
+                INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Vec3"), .. }),
+                    template_args: &[],
+                    ..
+                }) => {}
+                _ => panic!("expected Struct(StructTemplateNameT(\"Vec3\"))"),
             }
             match member_name {
-                IVarNameT::CodeVar(c) if c.name.0 == "x" => {}
+                IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }) => {}
                 _ => panic!("expected CodeVarNameT(\"x\")"),
             }
         }
@@ -354,16 +356,15 @@ fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
-                INameT::Struct(s) => match s.template {
-                    IStructTemplateNameT::StructTemplate(t) if t.human_name.0 == "Vec3" => {
-                        assert!(s.template_args.is_empty());
-                    }
-                    _ => panic!("expected StructTemplateNameT(\"Vec3\")"),
-                },
-                _ => panic!("expected StructNameT"),
+                INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Vec3"), .. }),
+                    template_args: &[],
+                    ..
+                }) => {}
+                _ => panic!("expected Struct(StructTemplateNameT(\"Vec3\"))"),
             }
             match member_name {
-                IVarNameT::CodeVar(c) if c.name.0 == "x" => {}
+                IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }) => {}
                 _ => panic!("expected CodeVarNameT(\"x\")"),
             }
         }
@@ -664,7 +665,7 @@ fn humanize_errors() {
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CouldntFindTypeT { range: tz_slice, name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("Spaceship") })) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
-        ICompileErrorT::CouldntFindFunctionToCallT { range: tz_slice, fff: crate::typing::overload_resolver::FindFunctionFailure {
+        ICompileErrorT::CouldntFindFunctionToCallT { range: tz_slice, fff: FindFunctionFailure {
             name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("") })),
             args: &[], rejected_callee_to_reason: &[],
         } }).is_empty());

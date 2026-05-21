@@ -21,6 +21,12 @@ use crate::typing::types::types::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::solver::solver::{FailedSolve, ISolverError, RuleError, SolveIncomplete};
 use crate::solver::simple_solver_state::SimpleSolverState;
+use crate::typing::types::types::{ISubKindTT, ISuperKindTT};
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::typing::citizen::impl_compiler::IsntParent;
+use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::typing::names::names::ImplBoundNameValT;
+use crate::typing::names::names::IdValT;
 
 /*
 package dev.vale.typing
@@ -74,12 +80,12 @@ case class CompleteDefineSolve(
 pub enum IConclusionResolveError<'s, 't> {
     CouldntFindImplForConclusionResolve {
         range: &'t [RangeS<'s>],
-        fail: crate::typing::citizen::impl_compiler::IsntParent<'s, 't>,
+        fail: IsntParent<'s, 't>,
     },
     CouldntFindKindForConclusionResolve(ResolveFailure<'s, 't, KindT<'s, 't>>),
     CouldntFindFunctionForConclusionResolve {
         range: &'t [RangeS<'s>],
-        fff: crate::typing::overload_resolver::FindFunctionFailure<'s, 't>,
+        fff: FindFunctionFailure<'s, 't>,
     },
     ReturnTypeConflictInConclusionResolve {
         range: &'t [RangeS<'s>],
@@ -1265,12 +1271,12 @@ where 's: 't,
                             other => panic!("vwat: expected ImplBoundNameT in isa implName local_name, got {:?}", other),
                         };
                         let impl_bound_name = self.typing_interner.intern_impl_bound_name(
-                            crate::typing::names::names::ImplBoundNameValT {
+                            ImplBoundNameValT {
                                 template: impl_bound_name_t.template,
                                 template_args: impl_bound_name_t.template_args,
                             }
                         );
-                        let impl_id = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+                        let impl_id = self.typing_interner.intern_id(IdValT {
                             package_coord: isa_templata.impl_name.package_coord,
                             init_steps: isa_templata.impl_name.init_steps,
                             local_name: INameT::ImplBound(impl_bound_name),
@@ -1461,8 +1467,6 @@ where 's: 't,
         c: CallSiteCoordIsaSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        use crate::typing::types::types::{ISubKindTT, ISuperKindTT};
-        use crate::typing::citizen::impl_compiler::IsParentResult;
         let CallSiteCoordIsaSR { range, result_rune, sub_rune, super_rune } = c;
         let sub_coord = match conclusions.get(&sub_rune.rune) {
             Some(ITemplataT::Coord(ct)) => ct.coord,

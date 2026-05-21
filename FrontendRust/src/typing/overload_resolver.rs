@@ -21,6 +21,22 @@ use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
+use crate::typing::env::environment::ILookupContext;
+use crate::postparsing::rune_type_solver::TemplataLookupResult;
+use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
+use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
+use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+use crate::postparsing::names::CodeNameS;
+use crate::typing::env::environment::{IInDenizenEnvironmentT};
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::infer_compiler::IResolvingError;
+use crate::typing::infer_compiler::IDefiningError;
+use crate::typing::typing_interner::TypingInterner;
+use crate::scout_arena::ScoutArena;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::IntT;
 
 /*
 package dev.vale.typing
@@ -77,9 +93,9 @@ pub enum IFindFunctionFailureReason<'s, 't> {
     SpecificParamVirtualityDoesntMatch { index: i32 },
     Outscored,
     RuleTypeSolveFailure { reason: RuneTypeSolveError<'s> },
-    InferFailure { reason: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, crate::typing::infer::compiler_solver::ITypingPassSolverError<'s, 't>> },
-    FindFunctionResolveFailure { reason: crate::typing::infer_compiler::IResolvingError<'s, 't> },
-    CouldntEvaluateTemplateError { reason: crate::typing::infer_compiler::IDefiningError<'s, 't> },
+    InferFailure { reason: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>> },
+    FindFunctionResolveFailure { reason: IResolvingError<'s, 't> },
+    CouldntEvaluateTemplateError { reason: IDefiningError<'s, 't> },
 }
 /*
   sealed trait IFindFunctionFailureReason
@@ -513,8 +529,8 @@ where 's: 't,
         // Rust adaptation (SPDMX-B): named struct required since Rust has no anonymous classes
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             calling_env: IInDenizenEnvironmentT<'s, 't>,
-            typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
-            scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
+            typing_interner: &'a TypingInterner<'s, 't>,
+            scout_arena: &'a ScoutArena<'s>,
         }
         impl<'a, 's, 't> IRuneTypeSolverEnv<'s> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             fn lookup(
@@ -522,8 +538,6 @@ where 's: 't,
                 range: RangeS<'s>,
                 name_s: IImpreciseNameS<'s>,
             ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
-                use crate::typing::env::environment::ILookupContext;
-                use crate::postparsing::rune_type_solver::{IRuneTypeSolverLookupResult, TemplataLookupResult, IRuneTypingLookupFailedError, RuneTypingCouldntFindType};
                 let mut filter = std::collections::HashSet::new();
                 filter.insert(ILookupContext::TemplataLookupContext);
                 match self.calling_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
@@ -599,9 +613,6 @@ where 's: 't,
                                 rules_without_implicit_coercions_a.iter().fold(
                                     (Vec::new(), Vec::new()),
                                     |(mut previous_conclusions, mut remaining_rules), rule| {
-                                        use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
-                                        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
-                                        use crate::typing::env::environment::ILookupContext;
                                         match rule {
                                             IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                                                 let name = self.scout_arena.intern_imprecise_name(
@@ -1449,15 +1460,14 @@ where 's: 't,
         callable_te: ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> &'t PrototypeT<'s, 't> {
-        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
         let func_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![
             callable_te.result().underlying_coord(),
-            crate::typing::types::types::CoordT {
-                ownership: crate::typing::types::types::OwnershipT::Share,
+            CoordT {
+                ownership: OwnershipT::Share,
                 region: RegionT,
-                kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+                kind: KindT::Int(IntT { bits: 32 }),
             },
         ];
         match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], context_region, &param_filters, &[], false)
@@ -1506,8 +1516,6 @@ where 's: 't,
         element_type: CoordT<'s, 't>,
         context_region: RegionT,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
-        use crate::typing::env::environment::{IInDenizenEnvironmentT};
         let func_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![callable_te.result().underlying_coord(), element_type];

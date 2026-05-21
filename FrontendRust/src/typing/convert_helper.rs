@@ -6,6 +6,8 @@ use crate::typing::env::environment::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::compiler::Compiler;
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::typing::ast::expressions::UpcastTE;
 
 /*
 package dev.vale.typing
@@ -246,11 +248,10 @@ where 's: 't,
         source_sub_kind: ISubKindTT<'s, 't>,
         target_super_kind: ISuperKindTT<'s, 't>,
     ) -> ReferenceExpressionTE<'s, 't> {
-        use crate::typing::citizen::impl_compiler::IsParentResult;
         match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
             IsParentResult::IsParent(is_parent) => {
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
-                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(crate::typing::ast::expressions::UpcastTE {
+                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(UpcastTE {
                     inner_expr: source_expr,
                     target_super_kind,
                     impl_name: is_parent.impl_id,

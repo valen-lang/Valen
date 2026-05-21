@@ -17,6 +17,33 @@ use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
 use std::collections::HashMap;
+use crate::typing::types::types::{KindPlaceholderT, KindT};
+use crate::typing::names::names::IInstantiationNameT;
+use crate::typing::names::names::{ISuperKindNameT, ITemplateNameT};
+use crate::typing::names::names::{INameValT, IdValT};
+use crate::typing::names::names::StructNameValT;
+use crate::typing::names::names::INameT;
+use crate::typing::types::types::StructTTValT;
+use crate::typing::names::names::FunctionBoundNameT;
+use crate::typing::names::names::ImplBoundNameT;
+use crate::typing::names::names::InterfaceNameValT;
+use crate::typing::types::types::InterfaceTTValT;
+use crate::typing::names::names::IPlaceholderNameT;
+use crate::typing::names::names::IFunctionNameT;
+use crate::typing::ast::ast::PrototypeValT;
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::postparsing::itemplatatype::KindTemplataType;
+use crate::postparsing::itemplatatype::CoordTemplataType;
+use crate::postparsing::ast::IGenericParameterTypeS;
+use crate::postparsing::ast::CoordGenericParameterTypeS;
+use crate::scout_arena::ScoutArena;
+use crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult;
+use crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError;
+use crate::postparsing::rune_type_solver::TemplataLookupResult;
+use crate::typing::env::environment::ILookupContext;
+use crate::typing::templata::templata::ITemplataT;
+use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
+use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
 
 /*
 package dev.vale.typing
@@ -158,7 +185,6 @@ where 's: 't,
         &self,
         impl_placeholder: ITemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        use crate::typing::types::types::{KindPlaceholderT, KindT};
         match impl_placeholder {
             ITemplataT::Placeholder(pt) => pt.id,
             ITemplataT::Kind(kt) => match kt.kind {
@@ -480,7 +506,6 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        use crate::typing::names::names::IInstantiationNameT;
         let last = IInstantiationNameT::try_from(id.local_name)
             .unwrap_or_else(|_| panic!("get_sub_kind_template: unexpected local_name {:?}", id.local_name));
         let template_name = INameT::from(last.template());
@@ -507,7 +532,6 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        use crate::typing::names::names::{ISuperKindNameT, ITemplateNameT};
         let last = ISuperKindNameT::try_from(id.local_name)
             .unwrap_or_else(|_| panic!("get_super_kind_template: unexpected local_name {:?}", id.local_name));
         let template_name = INameT::from(ITemplateNameT::from(last.template()));
@@ -832,7 +856,6 @@ where 's: 't,
             KindT::Void(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
             KindT::Never(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
             KindT::RuntimeSizedArray(rsa) => {
-                use crate::typing::names::names::{INameValT, IdValT};
                 let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.mutability)),
@@ -852,7 +875,6 @@ where 's: 't,
                 ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(new_rsa) }))
             }
             KindT::StaticSizedArray(ssa) => {
-                use crate::typing::names::names::{INameValT, IdValT};
                 let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.mutability)),
@@ -978,8 +1000,6 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         struct_tt: &'t StructTT<'s, 't>,
     ) -> &'t StructTT<'s, 't> {
-        use crate::typing::names::names::{INameValT, StructNameValT, INameT, IdValT};
-        use crate::typing::types::types::StructTTValT;
         let id = struct_tt.id;
         let new_local_name = match id.local_name {
             INameT::AnonymousSubstruct(_) => panic!("implement: substituteTemplatasInStruct — AnonymousSubstructNameT"),
@@ -1085,8 +1105,6 @@ where 's: 't,
                 x
             }
             IBoundArgumentsSource::UseBoundsFromContainer { instantiation_bound_params: container_instantiation_bound_params, instantiation_bound_arguments: container_instantiation_bound_args } => {
-                use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
-                use crate::typing::names::names::{INameT, FunctionBoundNameT, ImplBoundNameT};
                 let container_func_bound_to_bound_arg: std::collections::HashMap<PrototypeT<'s, 't>, PrototypeT<'s, 't>> =
                     container_instantiation_bound_args.rune_to_bound_prototype.iter()
                         .map(|(rune, container_func_bound_arg)| {
@@ -1327,7 +1345,6 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> InstantiationBoundArgumentsT<'s, 't> {
-        use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
         let rune_to_bound_prototype = interner.alloc_index_map_from_iter(
             bound_args.rune_to_bound_prototype.iter().map(|(rune, func_bound_arg)| {
                 (*rune, *Self::substitute_templatas_in_prototype(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, func_bound_arg))
@@ -1399,8 +1416,6 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         interface_tt: &'t InterfaceTT<'s, 't>,
     ) -> &'t InterfaceTT<'s, 't> {
-        use crate::typing::names::names::{INameValT, InterfaceNameValT, INameT, IdValT};
-        use crate::typing::types::types::InterfaceTTValT;
         let id = interface_tt.id;
         let new_local_name = match id.local_name {
             INameT::Interface(interface_name_t) => {
@@ -1488,7 +1503,6 @@ where 's: 't,
             ITemplataT::Coord(c) => ITemplataT::Coord(interner.alloc(CoordTemplataT { coord: Compiler::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, c.coord) })),
             ITemplataT::Kind(k) => Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, k.kind),
             ITemplataT::Placeholder(p) => {
-                use crate::typing::names::names::IPlaceholderNameT;
                 let pn = IPlaceholderNameT::try_from(p.id.local_name).unwrap();
                 if p.id.init_id(interner) == needle_template_name {
                     new_substituting_templatas[pn.index() as usize]
@@ -1556,9 +1570,6 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         original_prototype: &'t PrototypeT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        use crate::typing::names::names::{IFunctionNameT, IdValT};
-        use crate::typing::ast::ast::PrototypeValT;
-        use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
         let package_coord = original_prototype.id.package_coord;
         let init_steps = original_prototype.id.init_steps;
         let func_name = IFunctionNameT::try_from(original_prototype.id.local_name).unwrap();
@@ -2113,14 +2124,14 @@ where
     's: 't,
 {
     parent_env: IInDenizenEnvironmentT<'s, 't>,
-    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
-    scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
+    typing_interner: &'a TypingInterner<'s, 't>,
+    scout_arena: &'a ScoutArena<'s>,
 }
 /*
 Guardian: disable-all
 */
 
-impl<'a, 's, 't> crate::postparsing::rune_type_solver::IRuneTypeSolverEnv<'s>
+impl<'a, 's, 't> IRuneTypeSolverEnv<'s>
 for TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
@@ -2128,42 +2139,42 @@ where
     fn lookup(
         &self,
         range: RangeS<'s>,
-        name_s: crate::postparsing::names::IImpreciseNameS<'s>,
+        name_s: IImpreciseNameS<'s>,
     ) -> Result<
-        crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult<'s>,
-        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError<'s>,
+        IRuneTypeSolverLookupResult<'s>,
+        IRuneTypingLookupFailedError<'s>,
     > {
         match name_s {
-            crate::postparsing::names::IImpreciseNameS::LambdaStructImpreciseName(_) => {
+            IImpreciseNameS::LambdaStructImpreciseName(_) => {
                 // Scala: vregionmut() // Take out with regions
                 // Lambdas look up their struct as a KindTemplata in their environment, they don't
                 // look up the origin template by name. (Scala comment from astronomizeLambda.)
-                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
-                    crate::postparsing::rune_type_solver::TemplataLookupResult {
-                        templata: crate::postparsing::itemplatatype::ITemplataType::KindTemplataType(
-                            crate::postparsing::itemplatatype::KindTemplataType {},
+                Ok(IRuneTypeSolverLookupResult::Templata(
+                    TemplataLookupResult {
+                        templata: ITemplataType::KindTemplataType(
+                            KindTemplataType {},
                         ),
                     },
                 ))
             }
             _ => {
                 let mut filter = std::collections::HashSet::new();
-                filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
+                filter.insert(ILookupContext::TemplataLookupContext);
                 match self.parent_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
-                    Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
-                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
-                            crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
-                                tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                    Some(ITemplataT::StructDefinition(t)) => {
+                        Ok(IRuneTypeSolverLookupResult::Citizen(
+                            CitizenRuneTypeSolverLookupResult {
+                                tyype: ITemplataType::TemplateTemplataType(
                                     t.origin_struct.tyype,
                                 ),
                                 generic_params: t.origin_struct.generic_parameters,
                             },
                         ))
                     }
-                    Some(crate::typing::templata::templata::ITemplataT::InterfaceDefinition(t)) => {
-                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
-                            crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
-                                tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                    Some(ITemplataT::InterfaceDefinition(t)) => {
+                        Ok(IRuneTypeSolverLookupResult::Citizen(
+                            CitizenRuneTypeSolverLookupResult {
+                                tyype: ITemplataType::TemplateTemplataType(
                                     t.origin_interface.tyype,
                                 ),
                                 generic_params: t.origin_interface.generic_parameters,
@@ -2171,15 +2182,15 @@ where
                         ))
                     }
                     Some(x) => {
-                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
-                            crate::postparsing::rune_type_solver::TemplataLookupResult {
+                        Ok(IRuneTypeSolverLookupResult::Templata(
+                            TemplataLookupResult {
                                 templata: x.tyype(self.scout_arena),
                             },
                         ))
                     }
                     None => Err(
-                        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
-                            crate::postparsing::rune_type_solver::RuneTypingCouldntFindType {
+                        IRuneTypingLookupFailedError::CouldntFindType(
+                            RuneTypingCouldntFindType {
                                 range,
                                 name: name_s,
                             },
@@ -2253,7 +2264,6 @@ where 's: 't,
             }
             (_, KindT::Struct(_)) => return false,
             (_, KindT::Interface(_)) => {
-                use crate::typing::citizen::impl_compiler::IsParentResult;
                 let source_sub_kind = ISubKindTT::try_from(source_type).unwrap_or_else(|_| panic!("vfail: source is not ISubKindTT: {:?}", source_type));
                 let target_super_kind = ISuperKindTT::try_from(target_type).unwrap_or_else(|_| panic!("vfail: target is not ISuperKindTT: {:?}", target_type));
                 match self.is_parent(coutputs, calling_env, parent_ranges, call_location, source_sub_kind, target_super_kind) {
@@ -2789,8 +2799,6 @@ where 's: 't,
         current_height: Option<i32>,
         register_with_compiler_outputs: bool,
     ) -> ITemplataT<'s, 't> {
-        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, CoordTemplataType};
-        use crate::postparsing::ast::{IGenericParameterTypeS, CoordGenericParameterTypeS, IRegionMutabilityS};
         let rune_type = *rune_to_type.get(&generic_param.rune.rune).unwrap();
         let rune = generic_param.rune.rune;
         match rune_type {

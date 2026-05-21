@@ -10,6 +10,11 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::types::types::{CoordT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::typing::names::names::IFunctionNameT;
+use crate::typing::env::environment::IInDenizenEnvironmentT;
 
 /*
 package dev.vale.typing.macros
@@ -60,9 +65,6 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        use crate::typing::types::types::{CoordT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
-        use crate::typing::templata::templata::ITemplataT;
-        use crate::typing::citizen::impl_compiler::IsParentResult;
 
         let header = FunctionHeaderT {
             id: env.id,
@@ -72,7 +74,6 @@ where 's: 't,
             maybe_origin_function_templata: Some(env.templata()),
         };
 
-        use crate::typing::names::names::IFunctionNameT;
         let local_name: IFunctionNameT<'s, 't> = env.id.local_name.try_into().expect("vassertSome: local_name as IFunctionNameT");
         let target_kind = match local_name.template_args().first().expect("vassertSome: templateArgs.headOption") {
             ITemplataT::Coord(c) => c.coord.kind,
@@ -102,7 +103,6 @@ where 's: 't,
             Err(_) => panic!("vwat"),
         };
 
-        use crate::typing::env::environment::IInDenizenEnvironmentT;
         let impl_id = match self.is_parent(
             coutputs,
             IInDenizenEnvironmentT::from(env),

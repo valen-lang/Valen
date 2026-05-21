@@ -10,6 +10,11 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::env::environment::get_imprecise_name;
+use crate::typing::types::types::RegionT;
+use crate::typing::templata::templata::FunctionTemplataT;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::env::environment::IInDenizenEnvironmentT;
 
 /*
 package dev.vale.typing.macros
@@ -47,10 +52,7 @@ where 's: 't,
         origin_function: Option<&'s FunctionA<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
-        use crate::typing::env::environment::get_imprecise_name;
-        use crate::typing::types::types::RegionT;
-        use crate::typing::templata::templata::FunctionTemplataT;
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let return_reference_type2 = maybe_ret_coord.expect("vassertSome: maybeRetCoord");
         assert!(params2.iter().any(|p| p.virtuality == Some(AbstractT)));
@@ -71,7 +73,7 @@ where 's: 't,
         let imprecise_name = get_imprecise_name(self.scout_arena, env.id.local_name)
             .expect("vassertSome: TemplatasStore.getImpreciseName env.id.localName");
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
-        let env_as_iindenizen = self.typing_interner.alloc(crate::typing::env::environment::IInDenizenEnvironmentT::Function(env));
+        let env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Function(env));
         let prototype = match self.find_function(
             *env_as_iindenizen,
             coutputs,

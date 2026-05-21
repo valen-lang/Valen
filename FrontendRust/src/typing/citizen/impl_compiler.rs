@@ -20,6 +20,22 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::higher_typing::ast::*;
 use crate::interner::Interner;
+use crate::typing::infer_compiler::include_rule_in_call_site_solve;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::typing::env::environment::TemplatasStoreBuilder;
+use crate::typing::env::environment::child_of;
+use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
+use crate::utils::arena_index_map::ArenaIndexMap;
+use std::marker::PhantomData;
+use crate::typing::infer_compiler::CompleteResolveSolve;
+use crate::typing::types::types::{KindT, InterfaceTT};
+use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
+use crate::postparsing::names::{IImpreciseNameValS, ImplSubCitizenImpreciseNameValS};
+use crate::typing::env::environment::{get_imprecise_name, ILookupContext};
+use crate::typing::templata::templata::{ImplDefinitionTemplataT, IsaTemplataT};
+use crate::typing::types::types::ICitizenTT;
+use crate::postparsing::names::ImplImpreciseNameValS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 /*
 package dev.vale.typing.citizen
@@ -99,8 +115,6 @@ where 's: 't,
         initial_knowns: &[InitialKnown<'s, 't>],
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
     ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
-        use crate::typing::infer_compiler::include_rule_in_call_site_solve;
-        use crate::postparsing::itemplatatype::ITemplataType;
 
         let parent_env = impl_templata.env;
         let impl_a = impl_templata.impl_;
@@ -114,7 +128,6 @@ where 's: 't,
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
 
         let outer_env_store = {
-            use crate::typing::env::environment::TemplatasStoreBuilder;
             let store = TemplatasStoreBuilder::new(impl_template_id);
             store.build_in(self.typing_interner)
         };
@@ -242,8 +255,6 @@ where 's: 't,
         initial_knowns: &[InitialKnown<'s, 't>],
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        use crate::typing::infer_compiler::include_rule_in_call_site_solve;
-        use crate::postparsing::itemplatatype::ITemplataType;
 
         let parent_env = impl_templata.env;
         let impl_a = impl_templata.impl_;
@@ -257,7 +268,6 @@ where 's: 't,
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
 
         let outer_env_store = {
-            use crate::typing::env::environment::TemplatasStoreBuilder;
             let store = TemplatasStoreBuilder::new(impl_template_id);
             store.build_in(self.typing_interner)
         };
@@ -360,12 +370,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
-    ) -> Result<(), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
-        use crate::typing::env::environment::{child_of, TemplatasStoreBuilder};
-        use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
-        use crate::postparsing::itemplatatype::ITemplataType;
-        use crate::utils::arena_index_map::ArenaIndexMap;
-        use std::marker::PhantomData;
+    ) -> Result<(), ICompileErrorT<'s, 't>> {
 
         let parent_env = impl_templata.env;
         let impl_a = impl_templata.impl_;
@@ -453,12 +458,12 @@ where 's: 't,
             None => panic!("vwat: interface_kind_rune not in inferences"),
             Some(ITemplataT::Kind(k)) => match k.kind {
                 KindT::Interface(i) => i,
-                _ => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CantImplNonInterface {
+                _ => return Err(ICompileErrorT::CantImplNonInterface {
                     range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
                     templata: ITemplataT::Kind(*k),
                 }),
             },
-            Some(other) => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CantImplNonInterface {
+            Some(other) => return Err(ICompileErrorT::CantImplNonInterface {
                 range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
                 templata: *other,
             }),
@@ -1010,9 +1015,6 @@ where 's: 't,
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
         child: ICitizenTT<'s, 't>,
     ) -> Result<InterfaceTT<'s, 't>, IResolvingError<'s, 't>> {
-        use crate::typing::infer_compiler::CompleteResolveSolve;
-        use crate::typing::types::types::{KindT, InterfaceTT};
-        use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
 
         let initial_knowns = vec![
             InitialKnown {
@@ -1077,10 +1079,6 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         sub_kind: ISubKindTT<'s, 't>,
     ) -> Vec<ISuperKindTT<'s, 't>> {
-        use crate::postparsing::names::{IImpreciseNameValS, ImplSubCitizenImpreciseNameValS};
-        use crate::typing::env::environment::{get_imprecise_name, ILookupContext};
-        use crate::typing::templata::templata::{ImplDefinitionTemplataT, IsaTemplataT};
-        use crate::typing::types::types::ICitizenTT;
         let sub_kind_id = sub_kind.id();
         let sub_kind_template_name = self.get_sub_kind_template(sub_kind_id);
         let sub_kind_env = coutputs.get_outer_env_for_type(parent_ranges, sub_kind_template_name);
@@ -1209,9 +1207,6 @@ where 's: 't,
         sub_kind_tt: ISubKindTT<'s, 't>,
         super_kind_tt: ISuperKindTT<'s, 't>,
     ) -> IsParentResult<'s, 't> {
-        use crate::postparsing::names::{IImpreciseNameValS, ImplImpreciseNameValS};
-        use crate::typing::env::environment::{get_imprecise_name, ILookupContext};
-        use crate::typing::templata::templata::{ImplDefinitionTemplataT, IsaTemplataT};
 
         let super_kind_imprecise_name = match get_imprecise_name(self.scout_arena, super_kind_tt.id().local_name) {
             None => return IsParentResult::IsntParent(IsntParent { candidates: vec![] }),

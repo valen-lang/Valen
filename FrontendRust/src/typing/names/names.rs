@@ -12,6 +12,7 @@ use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_va
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
 use crate::Keywords;
+use INameValT::*;
 
 /*
 package dev.vale.typing.names
@@ -4091,7 +4092,6 @@ impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<INameValT<'s, 't, 't>> for INameVal
 where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &INameValT<'s, 't, 't>) -> bool {
-        use INameValT::*;
         match (self.0, key) {
             // 15 transient variants: delegate to per-concrete Query wrapper.
             (Impl(a), Impl(b)) => ImplNameValQuery(a).equivalent(b),

@@ -17,6 +17,14 @@ use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::*;
 use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::postparsing::itemplatatype::CoordTemplataType;
+use crate::postparsing::rune_type_solver::solve_rune_type;
+use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
+use crate::typing::templata::templata::{expect_integer, expect_mutability, expect_variability};
+use std::collections::HashSet;
+use crate::typing::types::types::KindT;
+use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
+use crate::typing::templata::templata::expect_coord_templata;
 
 /*
 package dev.vale.typing
@@ -82,10 +90,6 @@ where 's: 't,
         variability_rune: IRuneS<'s>,
         callable_te: ReferenceExpressionTE<'s, 't>,
     ) -> StaticArrayFromCallableTE<'s, 't> {
-        use crate::postparsing::itemplatatype::CoordTemplataType;
-        use crate::postparsing::rune_type_solver::solve_rune_type;
-        use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
-        use crate::typing::templata::templata::{expect_integer, expect_mutability, expect_variability};
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
@@ -479,11 +483,6 @@ where 's: 't,
         exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
         region: RegionT,
     ) -> Result<StaticArrayFromValuesTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::postparsing::itemplatatype::CoordTemplataType;
-        use crate::postparsing::rune_type_solver::solve_rune_type;
-        use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
-        use crate::typing::templata::templata::{expect_mutability, expect_variability};
-        use std::collections::HashSet;
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
@@ -722,8 +721,6 @@ where 's: 't,
         callable_te: ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> Result<DestroyStaticSizedArrayIntoFunctionTE<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::types::types::KindT;
-        use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
         let array_tt = match arr_te.result().coord.kind {
             KindT::StaticSizedArray(s) => s,
             other => panic!("Destroying a non-array with a callable! Destroying: {:?}", other),
@@ -1270,7 +1267,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     fn get_array_element_type(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
-        use crate::typing::templata::templata::expect_coord_templata;
         let coord_templata = expect_coord_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
         coord_templata.coord
     }

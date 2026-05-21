@@ -6,6 +6,9 @@ use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::types::types::{CoordT, KindT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::names::CodeNameS;
 
 /*
 package dev.vale.typing.function
@@ -55,14 +58,14 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         type_2: CoordT<'s, 't>,
-    ) -> Result<StampFunctionSuccess<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<StampFunctionSuccess<'s, 't>, ICompileErrorT<'s, 't>> {
         let name = self.scout_arena.intern_imprecise_name(
-            crate::postparsing::names::IImpreciseNameValS::CodeName(
-                crate::postparsing::names::CodeNameS { name: self.keywords.drop }));
+            IImpreciseNameValS::CodeName(
+                CodeNameS { name: self.keywords.drop }));
         let args = &[type_2];
         match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true)?
         {
-            Err(e) => Err(crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT {
+            Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
                 range: self.typing_interner.alloc_slice_copy(call_range),
                 fff: e,
             }),
@@ -100,7 +103,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         undestructed_expr_2: ReferenceExpressionTE<'s, 't>,
-    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result().coord;
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,

@@ -20,6 +20,18 @@ use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::solver::solver::*;
+use crate::typing::infer_compiler::{InferEnv, InitialKnown};
+use crate::typing::names::names::IStructTemplateNameT;
+use crate::typing::types::types::{StructTTValT, RegionT};
+use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use crate::typing::infer_compiler::InitialSend;
+use crate::typing::infer_compiler::include_rule_in_call_site_solve;
+use crate::typing::types::types::InterfaceTTValT;
+use crate::typing::infer_compiler::include_rule_in_definition_solve;
+use crate::postparsing::ast::GenericParameterS;
+use crate::typing::names::names::IdValT;
 
 /*
 package dev.vale.typing.citizen
@@ -66,13 +78,6 @@ where 's: 't,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
-        use crate::typing::infer_compiler::{InferEnv, InitialKnown};
-        use crate::typing::names::names::IStructTemplateNameT;
-        use crate::typing::types::types::{StructTTValT, RegionT};
-        use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
-        use crate::postparsing::itemplatatype::ITemplataType;
-        use std::collections::HashMap;
-        use std::marker::PhantomData;
 
         let declaring_env = struct_templata.declaring_env;
         let struct_a = struct_templata.origin_struct;
@@ -224,7 +229,6 @@ where 's: 't,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> InterfaceTT<'s, 't> {
-        use crate::typing::infer_compiler::{InferEnv, InitialKnown};
         let InterfaceDefinitionTemplataT { declaring_env, origin_interface: interface_a } = interface_templata;
         let interface_template_name = self.translate_interface_name(*interface_a.name);
 
@@ -249,7 +253,7 @@ where 's: 't,
         // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
         // just to populate any generic parameter default values.
 
-        let context_region = crate::typing::types::types::RegionT;
+        let context_region = RegionT;
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -365,8 +369,6 @@ where 's: 't,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> StructTT<'s, 't> {
-        use crate::typing::infer_compiler::{InferEnv, InitialKnown, InitialSend};
-        use crate::typing::infer_compiler::include_rule_in_call_site_solve;
         let StructDefinitionTemplataT { declaring_env, origin_struct: struct_a } = struct_templata;
         let struct_template_name = self.translate_struct_name(struct_a.name);
 
@@ -511,12 +513,6 @@ where 's: 't,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
-        use crate::typing::infer_compiler::InferEnv;
-        use crate::typing::types::types::{InterfaceTTValT, RegionT};
-        use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
-        use crate::postparsing::itemplatatype::ITemplataType;
-        use std::collections::HashMap;
-        use std::marker::PhantomData;
 
         let declaring_env = interface_templata.declaring_env;
         let interface_a = interface_templata.origin_interface;
@@ -525,9 +521,9 @@ where 's: 't,
         // We no longer assume this:
         //   vassert(templateArgs.size == structA.genericParameters.size)
         // because we have default generic arguments now.
-        let initial_knowns: Vec<crate::typing::infer_compiler::InitialKnown<'s, 't>> =
+        let initial_knowns: Vec<InitialKnown<'s, 't>> =
             interface_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
-                crate::typing::infer_compiler::InitialKnown { rune: generic_param.rune, templata: *template_arg }
+                InitialKnown { rune: generic_param.rune, templata: *template_arg }
             }).collect();
 
         let call_site_rules = self.assemble_call_site_rules(
@@ -652,9 +648,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
-        use std::collections::HashMap;
-        use std::marker::PhantomData;
-        use crate::typing::infer_compiler::{InferEnv, include_rule_in_definition_solve};
         let declaring_env = struct_templata.declaring_env;
         let struct_a = struct_templata.origin_struct;
         let struct_template_name = self.translate_struct_name(struct_a.name);
@@ -681,10 +674,10 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![struct_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: crate::typing::types::types::RegionT,
+            context_region: RegionT,
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[], &[]);
-        let get_first_unsolved = |generic_parameters: &'s [&'s crate::postparsing::ast::GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
+        let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
             self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
         };
         match self.incrementally_solve(envs, coutputs, &mut solver, |coutputs, solver_state| {
@@ -733,7 +726,7 @@ where 's: 't,
             struct_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_struct_name(*struct_template_id, &template_args);
         let id_steps = id.steps();
-        let inner_env_id = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+        let inner_env_id = self.typing_interner.intern_id(IdValT {
             package_coord: id.package_coord,
             init_steps: &id_steps,
             local_name: id.local_name,
@@ -874,9 +867,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
-        use std::collections::HashMap;
-        use std::marker::PhantomData;
-        use crate::typing::infer_compiler::{InferEnv, include_rule_in_definition_solve};
         let declaring_env = interface_templata.declaring_env;
         let interface_a = interface_templata.origin_interface;
         let interface_template_name = self.translate_interface_name(*interface_a.name);
@@ -898,10 +888,10 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![interface_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: crate::typing::types::types::RegionT,
+            context_region: RegionT,
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &all_ranges, &[], &[]);
-        let get_first_unsolved = |generic_parameters: &'s [&'s crate::postparsing::ast::GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
+        let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
             self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
         };
         match self.incrementally_solve(envs, coutputs, &mut solver, |coutputs, solver_state| {
@@ -950,7 +940,7 @@ where 's: 't,
             interface_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_interface_name(*interface_template_id, &template_args);
         let id_steps = id.steps();
-        let inner_env_id = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+        let inner_env_id = self.typing_interner.intern_id(IdValT {
             package_coord: id.package_coord,
             init_steps: &id_steps,
             local_name: id.local_name,
@@ -1124,7 +1114,7 @@ where 's: 't,
         };
         let new_local_name = struct_template_name.make_struct_name(self.typing_interner, template_args);
         let steps = template_name.steps();
-        *self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+        *self.typing_interner.intern_id(IdValT {
             package_coord: template_name.package_coord,
             init_steps: &steps,
             local_name: new_local_name,
@@ -1156,7 +1146,7 @@ where 's: 't,
         };
         let new_local_name = interface_template_name.make_interface_name(self.typing_interner, template_args);
         let steps = template_name.steps();
-        *self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+        *self.typing_interner.intern_id(IdValT {
             package_coord: template_name.package_coord,
             init_steps: &steps,
             local_name: new_local_name,

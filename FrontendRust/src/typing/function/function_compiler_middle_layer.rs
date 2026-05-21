@@ -17,6 +17,8 @@ use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compiler::Compiler;
 use crate::typing::typing_interner::MustIntern;
+use crate::typing::types::types::KindT;
+use crate::typing::ast::ast::AbstractT;
 
 /*
 package dev.vale.typing.function
@@ -99,7 +101,6 @@ where 's: 't,
         match maybe_virtuality {
             None => Ok(None),
             Some(abstract_sp) => {
-                use crate::typing::types::types::KindT;
                 let interface_tt = match param_kind {
                     KindT::Interface(i) => i,
                     _ => panic!("RangedInternalErrorT: Can only have virtual parameters for interfaces"),
@@ -117,7 +118,7 @@ where 's: 't,
                         }
                     }
                 }
-                Ok(Some(crate::typing::ast::ast::AbstractT))
+                Ok(Some(AbstractT))
             }
         }
     }
@@ -297,7 +298,6 @@ where 's: 't,
         function1: &FunctionA<'s>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // Check preconditions
         // function1.runeToType.keySet.foreach(rune => {
         //   vassert(

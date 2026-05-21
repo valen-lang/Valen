@@ -13,6 +13,34 @@ use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::types::types::{MutabilityT, OwnershipT, StructTT, VariabilityT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
+use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
+use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
+use crate::typing::types::types::StructTTValT;
+use crate::typing::compiler_outputs::DeferredActionT;
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::templata::templata::{ITemplataT, expect_mutability};
+use crate::typing::hinputs_t::make;
+use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+use crate::parsing::ast::IMacroInclusionP;
+use std::collections::HashSet;
+use crate::typing::names::names::IInterfaceTemplateNameT;
+use crate::typing::types::types::InterfaceTTValT;
+use std::marker::PhantomData;
+use crate::postparsing::names::RuneNameS;
+use crate::typing::templata::conversions::evaluate_variability;
+use crate::typing::names::names::*;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::ast::citizens::ReferenceMemberTypeT;
+use crate::postparsing::names::INameValS;
+use crate::postparsing::names::IFunctionDeclarationNameValS;
+use crate::postparsing::names::FunctionNameS;
+use crate::postparsing::names::INameS;
+use crate::typing::ast::citizens::AddressMemberTypeT;
+use crate::postparsing::ast::MacroCallS;
+use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::postparsing::names::IStructDeclarationNameS;
+use crate::typing::ast::ast::PrototypeT;
 
 /*
 package dev.vale.typing.citizen
@@ -63,16 +91,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         struct_a: &'s StructA<'s>,
     ) -> Result<(), ICompileErrorT<'s, 't>> {
-        use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
-        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
-        use crate::typing::types::types::StructTTValT;
-        use crate::typing::compiler_outputs::DeferredActionT;
-        use crate::typing::env::i_env_entry::IEnvEntryT;
-        use crate::typing::templata::templata::{ITemplataT, expect_mutability};
-        use crate::typing::hinputs_t::make;
-        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
-        use crate::parsing::ast::IMacroInclusionP;
-        use std::collections::HashSet;
 
         let template_args = IInstantiationNameT::try_from(struct_runes_env.id.local_name)
             .unwrap()
@@ -115,8 +133,8 @@ where 's: 't,
             None => panic!("vwat: no mutability rune found"),
         };
 
-        let default_called_macros: Vec<crate::postparsing::ast::MacroCallS<'s>> = vec![
-            crate::postparsing::ast::MacroCallS {
+        let default_called_macros: Vec<MacroCallS<'s>> = vec![
+            MacroCallS {
                 range: struct_a.range,
                 include: IMacroInclusionP::CallMacro,
                 macro_name: self.keywords.derive_struct_drop,
@@ -153,20 +171,20 @@ where 's: 't,
 
         let members_vec = self.make_struct_members(struct_inner_env_ref, coutputs, struct_a.members);
 
-        if mutability == ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }) {
+        if mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) {
             for (index, member) in members_vec.iter().enumerate() {
                 let member_s = &struct_a.members[index];
                 let member_range = member_s.range();
                 let member_name = match member_s {
-                    crate::postparsing::ast::IStructMemberS::NormalStructMember(m) => m.name.0,
-                    crate::postparsing::ast::IStructMemberS::VariadicStructMember(_) => "(unnamed)",
+                    IStructMemberS::NormalStructMember(m) => m.name.0,
+                    IStructMemberS::VariadicStructMember(_) => "(unnamed)",
                 };
                 let member_range_with_parent: Vec<RangeS<'s>> =
                     std::iter::once(member_range).chain(parent_ranges.iter().copied()).collect();
                 let member_range_t = self.typing_interner.alloc_slice_copy(&member_range_with_parent);
                 let struct_name_s = match &struct_a.name {
-                    crate::postparsing::names::IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
-                        crate::postparsing::names::INameS::TopLevelStructDeclaration(n),
+                    IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
+                        INameS::TopLevelStructDeclaration(n),
                     other => panic!("implement: struct_name_s for non-TopLevelStructDeclarationName: {:?}", other),
                 };
                 match member {
@@ -407,14 +425,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Result<&'t InterfaceDefinitionT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::names::names::{IInstantiationNameT, IInterfaceTemplateNameT, IdValT, INameT};
-        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
-        use crate::typing::types::types::InterfaceTTValT;
-        use crate::typing::env::i_env_entry::IEnvEntryT;
-        use crate::typing::templata::templata::{ITemplataT, expect_mutability};
-        use crate::typing::hinputs_t::make;
-        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
-        use std::collections::HashSet;
 
         let template_args = IInstantiationNameT::try_from(interface_runes_env.id.local_name)
             .unwrap()
@@ -458,11 +468,9 @@ where 's: 't,
             None => panic!("vwat: no mutability rune found for interface"),
         };
 
-        let mut internal_methods: Vec<(crate::typing::ast::ast::PrototypeT<'s, 't>, usize)> = Vec::new();
+        let mut internal_methods: Vec<(PrototypeT<'s, 't>, usize)> = Vec::new();
         for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
             if let IEnvEntryT::Function(function_a) = entry {
-                use crate::typing::templata::templata::FunctionTemplataT;
-                use crate::typing::env::environment::IEnvironmentT;
                 let outer_env_ienv = IEnvironmentT::from(outer_env);
                 let header = self.evaluate_generic_function_from_non_call_for_header(
                     coutputs, parent_ranges, call_location,
@@ -608,15 +616,10 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         member: IStructMemberS<'s>,
     ) -> IStructMemberT<'s, 't> {
-        use std::collections::HashSet;
-        use std::marker::PhantomData;
-        use crate::postparsing::names::{RuneNameValS, RuneNameS};
-        use crate::typing::templata::conversions::evaluate_variability;
-        use crate::typing::env::environment::ILookupContext;
         let type_rune_s = (*member.type_rune()).rune;
         let type_templata = match env.lookup_nearest_with_imprecise_name(
             self.scout_arena.intern_imprecise_name(
-                crate::postparsing::names::IImpreciseNameValS::RuneName(RuneNameValS { rune: type_rune_s })
+                IImpreciseNameValS::RuneName(RuneNameValS { rune: type_rune_s })
             ),
             {
                 let mut s = HashSet::new();
@@ -630,18 +633,18 @@ where 's: 't,
         };
         let variability_t = evaluate_variability(member.variability());
         match member {
-            crate::postparsing::ast::IStructMemberS::NormalStructMember(n) => {
+            IStructMemberS::NormalStructMember(n) => {
                 let coord = match type_templata {
-                    crate::typing::templata::templata::ITemplataT::Coord(c) => c.coord,
+                    ITemplataT::Coord(c) => c.coord,
                     _ => panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS"),
                 };
-                IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
+                IStructMemberT::Normal(NormalStructMemberT {
                     name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name, _phantom: PhantomData })),
                     variability: variability_t,
-                    tyype: crate::typing::ast::citizens::IMemberTypeT::Reference(crate::typing::ast::citizens::ReferenceMemberTypeT { reference: coord }),
+                    tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                 })
             }
-            crate::postparsing::ast::IStructMemberS::VariadicStructMember(_) => panic!("Unimplemented: make_struct_member VariadicStructMemberS"),
+            IStructMemberS::VariadicStructMember(_) => panic!("Unimplemented: make_struct_member VariadicStructMemberS"),
         }
     }
 /*
@@ -694,13 +697,8 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
-        use crate::typing::names::names::*;
-        use crate::typing::templata::templata::*;
-        use crate::typing::types::types::*;
 
         let is_mutable = members.iter().any(|m| {
-            use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT};
             if m.variability == VariabilityT::Varying {
                 true
             } else {
@@ -768,9 +766,6 @@ where 's: 't,
                 _phantom: std::marker::PhantomData,
             }));
 
-        use crate::postparsing::names::{INameValS, IFunctionDeclarationNameValS, FunctionNameS, INameS, IFunctionDeclarationNameS};
-        use crate::typing::env::i_env_entry::IEnvEntryT;
-        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT};
 
         let drop_name_s = self.scout_arena.intern_name(
             INameValS::FunctionDeclaration(
@@ -844,7 +839,6 @@ where 's: 't,
             weakable: false,
             mutability: ITemplataT::Mutability(MutabilityTemplataT { mutability }),
             members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|m| {
-                use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
                 let tyype = match &m.tyype {
                     IMemberTypeT::Address(a) => IMemberTypeT::Address(AddressMemberTypeT { reference: a.reference }),
                     IMemberTypeT::Reference(r) => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: r.reference }),
@@ -864,8 +858,6 @@ where 's: 't,
 
         // Always evaluate a drop, drops only capture borrows so there should always be a drop defined
         // on all members.
-        use std::collections::HashSet;
-        use crate::typing::env::environment::ILookupContext;
         let drop_function_templata = {
             let inner_env: IEnvironmentT = IEnvironmentT::Citizen(struct_inner_env);
             match inner_env.lookup_nearest_with_name(

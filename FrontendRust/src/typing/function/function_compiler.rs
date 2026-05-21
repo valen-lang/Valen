@@ -14,6 +14,15 @@ use crate::typing::env::environment::ILookupContext;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use std::collections::HashSet;
 use crate::utils::range::RangeS;
+use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+use crate::typing::env::function_environment_t::{IVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
+use crate::typing::templata::templata::PrototypeTemplataT;
+use crate::postparsing::names::IRuneS;
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
+use crate::typing::infer_compiler::IDefiningError;
+use crate::typing::infer_compiler::IResolvingError;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::overload_resolver::IFindFunctionFailureReason;
 
 /*
 package dev.vale.typing.function
@@ -100,9 +109,9 @@ trait IEvaluateFunctionResult
 
 */
 pub struct EvaluateFunctionSuccess<'s, 't> {
-    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
-    pub instantiation_bound_args: &'t crate::typing::hinputs_t::InstantiationBoundArgumentsT<'s, 't>,
+    pub prototype: &'t PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
 case class EvaluateFunctionSuccess(
@@ -113,7 +122,7 @@ case class EvaluateFunctionSuccess(
 
 */
 pub struct EvaluateFunctionFailure<'s, 't> {
-    pub reason: crate::typing::infer_compiler::IDefiningError<'s, 't>,
+    pub reason: IDefiningError<'s, 't>,
 }
 /*
 case class EvaluateFunctionFailure(
@@ -130,9 +139,9 @@ trait IDefineFunctionResult
 
 */
 pub struct DefineFunctionSuccess<'s, 't> {
-    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
-    pub instantiation_bound_params: &'t crate::typing::hinputs_t::InstantiationBoundArgumentsT<'s, 't>,
+    pub prototype: &'t PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
 case class DefineFunctionSuccess(
@@ -143,7 +152,7 @@ case class DefineFunctionSuccess(
 
 */
 pub struct DefineFunctionFailure<'s, 't> {
-    pub reason: crate::typing::infer_compiler::IDefiningError<'s, 't>,
+    pub reason: IDefiningError<'s, 't>,
 }
 /*
 case class DefineFunctionFailure(
@@ -161,8 +170,8 @@ trait IResolveFunctionResult
 
 */
 pub struct ResolveFunctionSuccess<'s, 't> {
-    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub prototype: &'t PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 /*
 case class ResolveFunctionSuccess(
@@ -172,7 +181,7 @@ case class ResolveFunctionSuccess(
 
 */
 pub struct ResolveFunctionFailure<'s, 't> {
-    pub reason: crate::typing::infer_compiler::IResolvingError<'s, 't>,
+    pub reason: IResolvingError<'s, 't>,
 }
 /*
 case class ResolveFunctionFailure(
@@ -190,8 +199,8 @@ trait IStampFunctionResult
 
 */
 pub struct StampFunctionSuccess<'s, 't> {
-    pub prototype: &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
-    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub prototype: &'t PrototypeT<'s, 't>,
+    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 /*
 case class StampFunctionSuccess(
@@ -201,7 +210,7 @@ case class StampFunctionSuccess(
 
 */
 pub struct StampFunctionFailure<'s, 't> {
-    pub reason: crate::typing::overload_resolver::IFindFunctionFailureReason<'s, 't>,
+    pub reason: IFindFunctionFailureReason<'s, 't>,
 }
 /*
 case class StampFunctionFailure(
@@ -242,7 +251,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let env = function_templata.outer_env;
         let function = function_templata.function;
         if function.is_light() {
@@ -613,8 +621,6 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         name: IVarNameS<'s>,
     ) -> &'t NormalStructMemberT<'s, 't> {
-        use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
-        use crate::typing::env::function_environment_t::{IVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
         let translated_name = self.translate_var_name_step(name);
         let (variability, tyype) = match env.get_variable(translated_name).unwrap() {
             IVariableT::ReferenceLocal(ReferenceLocalVariableT { variability, coord, .. }) => {

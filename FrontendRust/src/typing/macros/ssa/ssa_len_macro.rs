@@ -10,6 +10,8 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::types::types::{KindT, RegionT};
+use crate::typing::templata::templata::ITemplataT;
 
 /*
 package dev.vale.typing.macros.ssa
@@ -51,8 +53,6 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        use crate::typing::types::types::{KindT, RegionT};
-        use crate::typing::templata::templata::ITemplataT;
         let header = FunctionHeaderT {
             id: env.id,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),

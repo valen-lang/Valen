@@ -28,6 +28,15 @@ use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::citizen::struct_compiler::ResolveFailure;
 use crate::typing::templata::conversions::evaluate_ownership;
 use crate::parsing::ast::ast::OwnershipP;
+use crate::typing::templata::templata::KindTemplataT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::templata::conversions::evaluate_mutability;
+use crate::typing::templata::conversions::evaluate_variability;
+use crate::typing::typing_interner::TypingInterner;
+use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::templata::templata::OwnershipTemplataT;
+use crate::typing::templata::templata::VariabilityTemplataT;
 
 /*
 package dev.vale.typing.infer
@@ -818,7 +827,7 @@ pub fn sanity_check_conclusion<'s, 't>(
 */
 fn complex_solve<'s, 'ctx, 't, 'a>(
     compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &'a TypingInterner<'s, 't>,
     state: &mut CompilerOutputs<'s, 't>,
     env: InferEnv<'s, 't>,
     solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -841,7 +850,7 @@ where 's: 't,
 */
 fn complex_solve_inner<'s, 'ctx, 't, 'a>(
     compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &'a TypingInterner<'s, 't>,
     state: &mut CompilerOutputs<'s, 't>,
     env: InferEnv<'s, 't>,
     solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -911,10 +920,8 @@ where 's: 't,
                     v
                 };
                 if possible_coords.is_empty() {
-                    use crate::typing::templata::templata::KindTemplataT;
                     Some(Ok((*receiver, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: receiver_instantiation_kind })))))
                 } else {
-                    use crate::typing::types::types::OwnershipT;
                     let ownerships: std::collections::HashSet<OwnershipT> = possible_coords.iter().map(|c| c.ownership).collect();
                     let ownership = match ownerships.len() {
                         0 => panic!("vwat: no ownerships in possible_coords"),
@@ -924,7 +931,6 @@ where 's: 't,
                             return Some(Err(ISolverError::RuleError(RuleError { err: ITypingPassSolverError::ReceivingDifferentOwnerships { params }, _phantom: std::marker::PhantomData })));
                         }
                     };
-                    use crate::typing::templata::templata::CoordTemplataT;
                     Some(Ok((*receiver, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT {
                         coord: CoordT { ownership, region: RegionT {}, kind: receiver_instantiation_kind },
                     })))))
@@ -1043,7 +1049,7 @@ where 's: 't,
 */
 fn solve_receives<'s, 'ctx, 't>(
     compiler: &Compiler<'s, 'ctx, 't>,
-    typing_interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &TypingInterner<'s, 't>,
     state: &mut CompilerOutputs<'s, 't>,
     env: InferEnv<'s, 't>,
     senders: Vec<(IRuneS<'s>, CoordT<'s, 't>)>,
@@ -1157,7 +1163,7 @@ where 's: 't,
 */
 fn narrow<'s, 'ctx, 't, 'a>(
     compiler: &'a Compiler<'s, 'ctx, 't>,
-    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &'a TypingInterner<'s, 't>,
     env: InferEnv<'s, 't>,
     state: &mut CompilerOutputs<'s, 't>,
     kinds: HashSet<KindT<'s, 't>>,
@@ -2333,7 +2339,7 @@ where 's: 't,
                                 let element_rune = arg_runes[1];
                                 let mut conclusions = HashMap::new();
                                 conclusions.insert(mutability_rune.rune, rsa_tt.mutability());
-                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: rsa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: rsa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -2364,7 +2370,7 @@ where 's: 't,
                                 conclusions.insert(size_rune.rune, ssa_tt.size());
                                 conclusions.insert(mutability_rune.rune, ssa_tt.mutability());
                                 conclusions.insert(variability_rune.rune, ssa_tt.variability());
-                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: ssa_tt.element_type() })));
+                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: ssa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
@@ -2863,11 +2869,10 @@ where 's: 't,
 
 */
 fn literal_to_templata<'s, 't>(literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
-    use crate::typing::templata::conversions::{evaluate_mutability, evaluate_ownership, evaluate_variability};
     match literal {
-        ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
-        ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(crate::typing::templata::templata::OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
-        ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(crate::typing::templata::templata::VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
+        ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
+        ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
+        ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
         ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
         ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
         ILiteralSL::BoolLiteral(_) => panic!("Unimplemented: literal_to_templata BoolLiteral"),

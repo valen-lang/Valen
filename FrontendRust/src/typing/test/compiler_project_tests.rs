@@ -5,6 +5,29 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+use crate::builtins::builtins::get_code_map;
+use crate::compile_options::GlobalOptions;
+use crate::instantiating::InstantiatorCompilationOptions;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::typing::compilation::TypingPassCompilation;
+use std::sync::Arc;
+use crate::utils::range::CodeLocationS;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::FunctionNameValT;
+use crate::typing::names::names::IdValT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::LambdaCitizenTemplateNameT;
+use crate::typing::names::names::LambdaCitizenNameT;
+use crate::typing::types::types::StructTTValT;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::RegionT;
+use crate::typing::types::types::KindT;
+use crate::typing::names::names::LambdaCallFunctionTemplateNameValT;
+use crate::typing::names::names::LambdaCallFunctionNameValT;
+use crate::typing::names::names::StructTemplateNameT;
+use crate::interner::StrI;
 /*
 package dev.vale.typing
 
@@ -43,26 +66,26 @@ fn function_has_correct_name() {
     let id = {
         let typing_interner = &compile.typing_interner;
         let package_coord = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
-        let main_loc = crate::utils::range::CodeLocationS {
+        let main_loc = CodeLocationS {
             file: scout_arena.intern_file_coordinate(package_coord, "test.vale"),
             offset: 0,
         };
         let main_template_name = typing_interner.intern_function_template_name(
-            crate::typing::names::names::FunctionTemplateNameT {
+            FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
                 _phantom: std::marker::PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
-            crate::typing::names::names::FunctionNameValT {
+            FunctionNameValT {
                 template: main_template_name,
                 template_args: &[],
                 parameters: &[],
             });
-        *typing_interner.intern_id(crate::typing::names::names::IdValT {
+        *typing_interner.intern_id(IdValT {
             package_coord,
             init_steps: &[],
-            local_name: crate::typing::names::names::INameT::Function(main_name),
+            local_name: INameT::Function(main_name),
         })
     };
     let coutputs = compile.expect_compiler_outputs();
@@ -107,57 +130,57 @@ fn lambda_has_correct_name() {
         let typing_interner = &compile.typing_interner;
         let package_coord = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
         let file_coord = scout_arena.intern_file_coordinate(package_coord, "test.vale");
-        let main_loc = crate::utils::range::CodeLocationS { file: file_coord, offset: 0 };
+        let main_loc = CodeLocationS { file: file_coord, offset: 0 };
         let main_template_name = typing_interner.intern_function_template_name(
-            crate::typing::names::names::FunctionTemplateNameT {
+            FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
                 _phantom: std::marker::PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
-            crate::typing::names::names::FunctionNameValT {
+            FunctionNameValT {
                 template: main_template_name,
                 template_args: &[],
                 parameters: &[],
             });
-        let lambda_loc = crate::utils::range::CodeLocationS { file: file_coord, offset: 23 };
+        let lambda_loc = CodeLocationS { file: file_coord, offset: 23 };
         let lambda_citizen_template_name = typing_interner.intern_lambda_citizen_template_name(
-            crate::typing::names::names::LambdaCitizenTemplateNameT {
+            LambdaCitizenTemplateNameT {
                 code_location: lambda_loc,
                 _phantom: std::marker::PhantomData,
             });
         let lambda_citizen_name = typing_interner.intern_lambda_citizen_name(
-            crate::typing::names::names::LambdaCitizenNameT { template: lambda_citizen_template_name });
-        let lambda_citizen_id = typing_interner.intern_id(crate::typing::names::names::IdValT {
+            LambdaCitizenNameT { template: lambda_citizen_template_name });
+        let lambda_citizen_id = typing_interner.intern_id(IdValT {
             package_coord,
-            init_steps: &[crate::typing::names::names::INameT::Function(main_name)],
-            local_name: crate::typing::names::names::INameT::LambdaCitizen(lambda_citizen_name),
+            init_steps: &[INameT::Function(main_name)],
+            local_name: INameT::LambdaCitizen(lambda_citizen_name),
         });
         let lambda_struct = typing_interner.intern_struct_tt(
-            crate::typing::types::types::StructTTValT { id: *lambda_citizen_id });
-        let lambda_share_coord = crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
-            region: crate::typing::types::types::RegionT,
-            kind: crate::typing::types::types::KindT::Struct(lambda_struct),
+            StructTTValT { id: *lambda_citizen_id });
+        let lambda_share_coord = CoordT {
+            ownership: OwnershipT::Share,
+            region: RegionT,
+            kind: KindT::Struct(lambda_struct),
         };
         let lambda_func_template_name = typing_interner.intern_lambda_call_function_template_name(
-            crate::typing::names::names::LambdaCallFunctionTemplateNameValT {
+            LambdaCallFunctionTemplateNameValT {
                 code_location: lambda_loc,
                 param_types: &[lambda_share_coord],
             });
         let lambda_func_name = typing_interner.intern_lambda_call_function_name(
-            crate::typing::names::names::LambdaCallFunctionNameValT {
+            LambdaCallFunctionNameValT {
                 template: lambda_func_template_name,
                 template_args: &[],
                 parameters: &[lambda_share_coord],
             });
-        *typing_interner.intern_id(crate::typing::names::names::IdValT {
+        *typing_interner.intern_id(IdValT {
             package_coord,
             init_steps: &[
-                crate::typing::names::names::INameT::Function(main_name),
-                crate::typing::names::names::INameT::LambdaCitizenTemplate(lambda_citizen_template_name),
+                INameT::Function(main_name),
+                INameT::LambdaCitizenTemplate(lambda_citizen_template_name),
             ],
-            local_name: crate::typing::names::names::INameT::LambdaCallFunction(lambda_func_name),
+            local_name: INameT::LambdaCallFunction(lambda_func_name),
         })
     };
     let coutputs = compile.expect_compiler_outputs();
@@ -213,12 +236,14 @@ fn struct_has_correct_name() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let struct_ = coutputs.lookup_struct_by_str("MyStruct");
-    match (struct_.template_name.init_steps, struct_.template_name.local_name) {
-        (
-            [],
-            crate::typing::names::names::INameT::StructTemplate(t),
-        ) if t.human_name.0 == "MyStruct" => {
-            assert!(struct_.template_name.package_coord.is_test());
+    match struct_.template_name {
+        IdT {
+            package_coord: x,
+            init_steps: [],
+            local_name: INameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
+            ..
+        } => {
+            assert!(x.is_test());
         }
         _ => panic!("struct.templateName didn't match expected pattern"),
     }
@@ -249,12 +274,6 @@ fn struct_has_correct_name() {
 // or target-side RSA/SSA both return false.
 #[test]
 fn typing_pass_array_type_convertible() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -307,12 +326,6 @@ fn typing_pass_array_type_convertible() {
 // ArgLookup(1)))) for the `===` builtin.
 #[test]
 fn typing_pass_uses_same_instance() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -361,12 +374,6 @@ fn typing_pass_uses_same_instance() {
 
 #[test]
 fn typing_pass_ssa_destructure() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -417,12 +424,6 @@ fn typing_pass_ssa_destructure() {
 // enclosing function scope.
 #[test]
 fn typing_pass_closure_var_mutate() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -473,12 +474,6 @@ fn typing_pass_closure_var_mutate() {
 // at ExpressionCompiler.scala:869-876 (case TupleSE) + SequenceCompiler.scala.
 #[test]
 fn typing_pass_tuple_literal() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -528,12 +523,6 @@ fn typing_pass_tuple_literal() {
 // ExpressionCompiler.scala:1387-1429 (case DestructSE).
 #[test]
 fn typing_pass_destruct_struct() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -585,12 +574,6 @@ fn typing_pass_destruct_struct() {
 // compiler_test_compilation.
 #[test]
 fn typing_pass_on_roguelike() {
-    use crate::builtins::builtins::get_code_map;
-    use crate::compile_options::GlobalOptions;
-    use crate::instantiating::InstantiatorCompilationOptions;
-    use crate::tests::tests::get_package_to_resource_resolver;
-    use crate::typing::compilation::TypingPassCompilation;
-    use std::sync::Arc;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

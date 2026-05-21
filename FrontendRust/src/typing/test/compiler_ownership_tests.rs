@@ -12,6 +12,8 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::names::names::CodeVarNameT;
 
 /*
 package dev.vale.typing
@@ -396,14 +398,14 @@ fn restackify() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Restackify(RestackifyTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                name: IVarNameT::CodeVar(c),
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),
             ..
-        }) if c.name.0 == "ship" => Some(())
+        }) => Some(())
     );
 }
 /*
@@ -436,14 +438,14 @@ fn loop_restackify() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Restackify(RestackifyTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                name: IVarNameT::CodeVar(c),
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),
             ..
-        }) if c.name.0 == "ship" => Some(())
+        }) => Some(())
     );
 }
 /*
@@ -476,14 +478,14 @@ fn destructure_restackify() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Restackify(RestackifyTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                name: IVarNameT::CodeVar(c),
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("ship"), .. }),
                 ..
             }),
             ..
-        }) if c.name.0 == "ship" => Some(())
+        }) => Some(())
     );
 }
 /*

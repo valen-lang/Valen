@@ -2,6 +2,7 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 use crate::typing::templata::templata::ITemplataT;
+use crate::typing::typing_interner::MustIntern;
 
 /*
 package dev.vale.typing.types
@@ -347,7 +348,7 @@ object contentsStaticSizedArrayTT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
-  pub _must_intern: crate::typing::typing_interner::MustIntern,
+  pub _must_intern: MustIntern,
 }
 /*
 case class StaticSizedArrayTT(
@@ -429,7 +430,7 @@ pub struct StaticSizedArrayTTValT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
-  pub _must_intern: crate::typing::typing_interner::MustIntern,
+  pub _must_intern: MustIntern,
 }
 /*
 case class RuntimeSizedArrayTT(
@@ -632,7 +633,7 @@ impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTT<'s, 't> {
   pub id: IdT<'s, 't>,
-  pub _must_intern: crate::typing::typing_interner::MustIntern,
+  pub _must_intern: MustIntern,
 }
 /*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
@@ -654,7 +655,7 @@ pub struct StructTTValT<'s, 't> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
   pub id: IdT<'s, 't>,
-  pub _must_intern: crate::typing::typing_interner::MustIntern,
+  pub _must_intern: MustIntern,
 }
 /*
 case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperKindTT {
@@ -676,7 +677,7 @@ pub struct InterfaceTTValT<'s, 't> {
 pub struct OverloadSetT<'s, 't> {
   pub env: IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
-  pub _must_intern: crate::typing::typing_interner::MustIntern,
+  pub _must_intern: MustIntern,
 }
 /*
 // Represents a bunch of functions that have the same name.

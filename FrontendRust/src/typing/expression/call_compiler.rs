@@ -11,6 +11,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::templata::templata::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 /*
 package dev.vale.typing.expression
@@ -58,7 +59,7 @@ where 's: 't,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match callable_expr.result().coord.kind {
             KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
             KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
@@ -84,7 +85,7 @@ where 's: 't,
                         &[],
                         false)?
                 {
-                    Err(e) => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT {
+                    Err(e) => return Err(ICompileErrorT::CouldntFindFunctionToCallT {
                         range: self.typing_interner.alloc_slice_copy(range),
                         fff: e,
                     }),
@@ -244,7 +245,7 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_callable_unborrowed_expr_2: ReferenceExpressionTE<'s, 't>,
         given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         // Whether we're given a borrow or an own, the call itself will be given a borrow.
         let given_callable_borrow_expr_2: ReferenceExpressionTE<'s, 't> =
             match given_callable_unborrowed_expr_2.result().coord {
@@ -501,7 +502,7 @@ where 's: 't,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
-    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let call_expr =
             self.evaluate_call(
                 coutputs,

@@ -59,6 +59,30 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
 use std::collections::HashSet;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::ast::expressions::ConstantIntTE;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::ast::citizens::IStructMemberT;
+use crate::typing::ast::citizens::NormalStructMemberT;
+use crate::typing::types::types::VariabilityT;
+use crate::typing::ast::citizens::IMemberTypeT;
+use crate::typing::ast::citizens::ReferenceMemberTypeT;
+use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::types::types::KindPlaceholderT;
+use crate::typing::names::names::KindPlaceholderNameT;
+use crate::typing::names::names::KindPlaceholderTemplateNameT;
+use crate::postparsing::names::IRuneS;
+use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::names::names::InterfaceNameT;
+use crate::typing::types::types::ISuperKindTT;
+use crate::typing::types::types::InterfaceTT;
+use crate::typing::ast::expressions::SoftLoadTE;
+use crate::typing::ast::expressions::AddressExpressionTE;
+use crate::typing::ast::expressions::LetAndLendTE;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -134,10 +158,10 @@ fn hardcoding_negative_numbers() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(
-            crate::typing::ast::expressions::ConstantIntTE {
-                value: crate::typing::templata::templata::ITemplataT::Integer(-3),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(
+            ConstantIntTE {
+                value: ITemplataT::Integer(-3),
                 ..
             }
         ) => Some(())
@@ -207,14 +231,16 @@ fn tests_panic_return_type() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let let_normal: &LetNormalTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetNormal(l) => Some(l)
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Never(NeverT { from_break: false }), .. },
+                ..
+            }),
+            ..
+        }) => Some(())
     );
-    match let_normal.variable {
-        ILocalVariableT::Reference(ReferenceLocalVariableT { coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Never(NeverT { from_break: false }), .. }, .. }) => {}
-        _ => panic!("Expected LetNormalTE with ReferenceLocalVariableT(_,_,CoordT(ShareT,_,NeverT(false))), got {:?}", let_normal.variable),
-    }
 }
 /*
   test("Tests panic return type") {
@@ -254,14 +280,14 @@ fn taking_an_argument_and_returning_it() {
     let main = coutputs.lookup_function_by_str("main");
 
     let param: &ParameterT = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Parameter(p) => Some(p)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Parameter(p) => Some(p)
     );
     assert!(param.tyype == CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
 
     let lookup: &LocalLookupTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LocalLookup(l) => Some(l)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LocalLookup(l) => Some(l)
     );
     match lookup.local_variable.name() {
         IVarNameT::CodeVar(c) => assert!(c.name.as_str() == "a"),
@@ -307,32 +333,32 @@ fn tests_adding_two_numbers() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(
-            crate::typing::ast::expressions::ConstantIntTE {
-                value: crate::typing::templata::templata::ITemplataT::Integer(2),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(
+            ConstantIntTE {
+                value: ITemplataT::Integer(2),
                 ..
             }
         ) => Some(())
     );
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(
-            crate::typing::ast::expressions::ConstantIntTE {
-                value: crate::typing::templata::templata::ITemplataT::Integer(3),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(
+            ConstantIntTE {
+                value: ITemplataT::Integer(3),
                 ..
             }
         ) => Some(())
     );
 
-    let func_call: &crate::typing::ast::expressions::FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(call) => Some(call)
+    let func_call: &FunctionCallTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(call) => Some(call)
     );
 
     match func_call.callable.id.local_name {
-        crate::typing::names::names::INameT::Function(fname) => {
+        INameT::Function(fname) => {
             assert!(fname.template.human_name.as_str() == "+");
         }
         _ => panic!("Expected function name for + operator"),
@@ -341,13 +367,13 @@ fn tests_adding_two_numbers() {
     assert_eq!(func_call.args.len(), 2);
     match (&func_call.args[0], &func_call.args[1]) {
         (
-            crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(c1),
-            crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(c2)
+            ReferenceExpressionTE::ConstantInt(c1),
+            ReferenceExpressionTE::ConstantInt(c2)
         ) => {
             match (&c1.value, &c2.value) {
                 (
-                    crate::typing::templata::templata::ITemplataT::Integer(2),
-                    crate::typing::templata::templata::ITemplataT::Integer(3)
+                    ITemplataT::Integer(2),
+                    ITemplataT::Integer(3)
                 ) => {}
                 _ => panic!("Expected ConstantInt(2) and ConstantInt(3)"),
             }
@@ -512,16 +538,21 @@ exported func main() int {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let _drop_call: &crate::typing::ast::expressions::FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(call) => {
-            match call.callable.id.local_name {
-                crate::typing::names::names::INameT::Function(fname) => {
-                    if fname.template.human_name.as_str() == "drop" { Some(call) } else { None }
-                }
-                _ => None,
-            }
-        }
+    let _drop_call: &FunctionCallTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(call @ FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            },
+            ..
+        }) => Some(call)
     );
 }
 /*
@@ -543,6 +574,7 @@ exported func main() int {
 */
 // mig: fn custom_destructor
 #[test]
+// LOOK HERE
 fn custom_destructor() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -569,19 +601,22 @@ fn custom_destructor() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(
-            crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT {
-                    id: crate::typing::names::names::IdT {
-                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(
+            FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                            ..
+                        }),
                         ..
                     },
                     ..
                 },
                 ..
             }
-        ) if fn_name.template.human_name == "drop" => Some(())
+        ) => Some(())
     );
 }
 /*
@@ -629,23 +664,17 @@ exported func main() void {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let let_normal: &crate::typing::ast::expressions::LetNormalTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetNormal(ln) => {
-            match ln.variable {
-                crate::typing::env::function_environment_t::ILocalVariableT::Reference(ref rlv) => {
-                    match rlv.name {
-                        crate::typing::names::names::IVarNameT::CodeVar(ref cv) => {
-                            if cv.name.as_str() == "b" { Some(ln) } else { None }
-                        }
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
-        }
+    let let_normal: &LetNormalTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(ln @ LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("b"), .. }),
+                ..
+            }),
+            ..
+        }) => Some(ln)
     );
-    assert_eq!(let_normal.variable.coord().ownership, crate::typing::types::types::OwnershipT::Borrow);
+    assert_eq!(let_normal.variable.coord().ownership, OwnershipT::Borrow);
 }
 /*
   test("Make constraint reference") {
@@ -874,6 +903,7 @@ fn test_taking_a_callable_param() {
 */
 // mig: fn simple_struct
 #[test]
+// LOOK HERE
 fn simple_struct() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -900,21 +930,21 @@ fn simple_struct() {
     // Check the struct was made
     let my_struct_def = coutputs.structs.iter().find(|def| {
         matches!(def.template_name.local_name,
-            crate::typing::names::names::INameT::StructTemplate(st)
-            if st.human_name == "MyStruct"
+            INameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. })
         ) && def.template_name.init_steps.is_empty()
     }).unwrap();
-    assert!(matches!(my_struct_def.mutability, crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable })));
+    assert!(matches!(my_struct_def.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })));
     assert_eq!(my_struct_def.members.len(), 1);
     assert!(matches!(&my_struct_def.members[0],
-        crate::typing::ast::citizens::IStructMemberT::Normal(nm)
-        if matches!(nm.name, IVarNameT::CodeVar(cvn) if cvn.name == "a")
-            && matches!(nm.variability, crate::typing::types::types::VariabilityT::Final)
-            && matches!(nm.tyype, crate::typing::ast::citizens::IMemberTypeT::Reference(
-                crate::typing::ast::citizens::ReferenceMemberTypeT {
+        IStructMemberT::Normal(NormalStructMemberT {
+            name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+            variability: VariabilityT::Final,
+            tyype: IMemberTypeT::Reference(
+                ReferenceMemberTypeT {
                     reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }
                 }
-            ))
+            ),
+        })
     ));
 
     // Check there's a constructor
@@ -924,19 +954,24 @@ fn simple_struct() {
     ));
     assert_eq!(constructor.header.params.len(), 1);
     assert!(matches!(constructor.header.params[0],
-        ParameterT { tyype: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }, .. }
+        ParameterT {
+            name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+            virtuality: None,
+            tyype: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. },
+            ..
+        }
     ));
 
     // Check that we call the constructor
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(
-            crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT { .. },
-                args: [crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(
-                    crate::typing::ast::expressions::ConstantIntTE {
-                        value: crate::typing::templata::templata::ITemplataT::Integer(7),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(
+            FunctionCallTE {
+                callable: PrototypeT { .. },
+                args: [ReferenceExpressionTE::ConstantInt(
+                    ConstantIntTE {
+                        value: ITemplataT::Integer(7),
                         ..
                     }
                 )],
@@ -992,6 +1027,7 @@ fn simple_struct() {
 */
 // mig: fn calls_destructor_on_local_var
 #[test]
+// LOOK HERE
 fn calls_destructor_on_local_var() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1017,23 +1053,26 @@ fn calls_destructor_on_local_var() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(
-            crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT {
-                    id: crate::typing::names::names::IdT {
-                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(
+            FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                            ..
+                        }),
                         ..
                     },
                     ..
                 },
                 ..
             }
-        ) if fn_name.template.human_name == "drop" => Some(())
+        ) => Some(())
     );
     let all_calls = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(_fpc) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(_fpc) => Some(())
     );
     assert_eq!(all_calls.len(), 2);
 }
@@ -1292,6 +1331,7 @@ fn stamps_an_interface_template_via_a_function_return() {
 */
 // mig: fn reads_a_struct_member
 #[test]
+// LOOK HERE
 fn reads_a_struct_member() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1320,15 +1360,16 @@ fn reads_a_struct_member() {
     let main = coutputs.lookup_function_by_str("main");
     // check for the member access
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(
-            crate::typing::ast::expressions::ReferenceMemberLookupTE {
-                member_name: IVarNameT::CodeVar(cvn),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ReferenceMemberLookup(
+            ReferenceMemberLookupTE {
+                struct_expr: ReferenceExpressionTE::SoftLoad(SoftLoadTE { target_ownership: OwnershipT::Borrow, .. }),
+                member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
                 member_reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. },
-                variability: crate::typing::types::types::VariabilityT::Final,
+                variability: VariabilityT::Final,
                 ..
             }
-        ) if cvn.name == "a" => Some(())
+        ) => Some(())
     );
 }
 /*
@@ -1361,6 +1402,7 @@ fn reads_a_struct_member() {
 */
 // mig: fn automatically_drops_struct
 #[test]
+// LOOK HERE
 fn automatically_drops_struct() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1386,31 +1428,37 @@ fn automatically_drops_struct() {
     let main = coutputs.lookup_function_by_str("main");
     // check for the call to drop
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(
-            crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT {
-                    id: crate::typing::names::names::IdT {
-                        init_steps: [crate::typing::names::names::INameT::StructTemplate(st)],
-                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(
+            FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        init_steps: [INameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. })],
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                            template_args: &[],
+                            parameters: [CoordT {
+                                ownership: OwnershipT::Own,
+                                kind: KindT::Struct(StructTT {
+                                    id: IdT {
+                                        local_name: INameT::Struct(StructNameT {
+                                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyStruct"), .. }),
+                                            ..
+                                        }),
+                                        ..
+                                    },
+                                    ..
+                                }),
+                                ..
+                            }],
+                            ..
+                        }),
                         ..
                     },
                     return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. },
                 },
                 ..
             }
-        ) if st.human_name == "MyStruct"
-        && fn_name.template.human_name == "drop"
-        && fn_name.template_args.is_empty()
-        && matches!(fn_name.parameters,
-            [CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. }]
-            if matches!(stt.id.local_name,
-                crate::typing::names::names::INameT::Struct(sn)
-                if matches!(sn.template,
-                    crate::typing::names::names::IStructTemplateNameT::StructTemplate(st2)
-                    if st2.human_name == "MyStruct"
-                )
-            )
         ) => Some(())
     );
 }
@@ -1462,38 +1510,38 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
-        crate::typing::names::names::InterfaceTemplateNameT {
+        InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
             _phantom: std::marker::PhantomData,
         });
     let template_args_vec = vec![
-        crate::typing::templata::templata::ITemplataT::Coord(
-            compile.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT {
+        ITemplataT::Coord(
+            compile.typing_interner.alloc(CoordTemplataT {
                 coord: CoordT {
                     ownership: OwnershipT::Share,
-                    region: crate::typing::types::types::RegionT,
+                    region: RegionT,
                     kind: KindT::Int(IntT { bits: 32 }),
                 },
             })
         ),
     ];
     let interface_name = compile.typing_interner.intern_interface_name(
-        crate::typing::names::names::InterfaceNameValT {
+        InterfaceNameValT {
             template: interface_template_name,
             template_args: &template_args_vec,
         });
     let test_tld = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
     let interface_id = compile.typing_interner.intern_id(
-        crate::typing::names::names::IdValT {
+        IdValT {
             package_coord: test_tld,
             init_steps: &[],
-            local_name: crate::typing::names::names::INameT::Interface(interface_name),
+            local_name: INameT::Interface(interface_name),
         });
     let interface_tt = compile.typing_interner.intern_interface_tt(
-        crate::typing::types::types::InterfaceTTValT { id: *interface_id });
+        InterfaceTTValT { id: *interface_id });
     let expected_coord = CoordT {
         ownership: OwnershipT::Borrow,
-        region: crate::typing::types::types::RegionT,
+        region: RegionT,
         kind: KindT::Interface(interface_tt),
     };
 
@@ -1684,6 +1732,7 @@ fn tests_exporting_interface() {
 */
 // mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
+// LOOK HERE
 fn tests_single_expression_and_single_statement_functions_returns() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1705,18 +1754,25 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     assert!(matches!(moo.header.return_type,
-        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. }
-        if matches!(stt.id.local_name,
-            crate::typing::names::names::INameT::Struct(sn)
-            if matches!(sn.template,
-                crate::typing::names::names::IStructTemplateNameT::StructTemplate(st)
-                if st.human_name == "MyThing"
-            )
-        ) && stt.id.init_steps.is_empty()
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MyThing"), .. }),
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }
     ));
     let main = coutputs.lookup_function_by_str("main");
     assert!(matches!(main.header.return_type,
-        CoordT { kind: KindT::Void(_), .. }
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. }
     ));
 }
 /*
@@ -1742,6 +1798,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
 */
 // mig: fn tests_calling_a_templated_struct_s_constructor
 #[test]
+// LOOK HERE
 fn tests_calling_a_templated_struct_s_constructor() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1766,7 +1823,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
     let coutputs = compile.expect_compiler_outputs();
 
     coutputs.lookup_struct_by_template_name(
-        crate::typing::names::names::StructTemplateNameT {
+        StructTemplateNameT {
             human_name: scout_arena.intern_str("MySome"),
             _phantom: std::marker::PhantomData,
         });
@@ -1774,71 +1831,94 @@ fn tests_calling_a_templated_struct_s_constructor() {
     let constructor = coutputs.lookup_function_by_str("MySome");
     let header = &constructor.header;
     let fn_name = match header.id.local_name {
-        crate::typing::names::names::INameT::Function(fn_name) => fn_name,
+        INameT::Function(fn_name) => fn_name,
         _ => panic!("expected Function local_name"),
     };
     assert_eq!(fn_name.template.human_name, "MySome");
     assert_eq!(fn_name.template_args.len(), 1);
     let template_arg_coord = match fn_name.template_args[0] {
-        crate::typing::templata::templata::ITemplataT::Coord(ct) => ct.coord,
+        ITemplataT::Coord(ct) => ct.coord,
         _ => panic!("expected Coord template arg"),
     };
     assert!(matches!(template_arg_coord,
-        CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. }
-        if matches!(kp.id.local_name,
-            crate::typing::names::names::INameT::KindPlaceholder(kpn)
-            if kpn.template.index == 0
-            && matches!(kpn.template.rune,
-                crate::postparsing::names::IRuneS::CodeRune(cr) if cr.name == "T"
-            )
-        )
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::KindPlaceholder(KindPlaceholderT {
+                id: IdT {
+                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                        template: KindPlaceholderTemplateNameT {
+                            index: 0,
+                            rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T") }),
+                            ..
+                        },
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }
     ));
     assert!(matches!(fn_name.parameters,
-        [CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp2), .. }]
-        if matches!(kp2.id.local_name,
-            crate::typing::names::names::INameT::KindPlaceholder(kpn2)
-            if kpn2.template.index == 0
-        )
+        [CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::KindPlaceholder(KindPlaceholderT {
+                id: IdT {
+                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                        template: KindPlaceholderTemplateNameT { index: 0, .. },
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }]
     ));
     assert_eq!(header.attributes.len(), 0);
     assert_eq!(header.params.len(), 1);
     assert!(matches!(&header.params[0],
         ParameterT {
-            name: crate::typing::names::names::IVarNameT::CodeVar(cv),
+            name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("value"), .. }),
             virtuality: None,
             tyype: CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(_), .. },
             ..
-        } if cv.name == "value"
+        }
     ));
     assert!(matches!(header.return_type,
         CoordT {
             ownership: OwnershipT::Own,
-            kind: KindT::Struct(stt),
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("MySome"), .. }),
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
             ..
-        } if matches!(stt.id.local_name,
-            crate::typing::names::names::INameT::Struct(sn)
-            if matches!(sn.template,
-                crate::typing::names::names::IStructTemplateNameT::StructTemplate(st)
-                if st.human_name == "MySome"
-            )
-        )
+        }
     ));
 
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(
-            crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT {
-                    id: crate::typing::names::names::IdT {
-                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(
+            FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("MySome"), .. },
+                            ..
+                        }),
                         ..
                     },
                     ..
                 },
                 ..
             }
-        ) if fn_name.template.human_name == "MySome" => Some(())
+        ) => Some(())
     );
 }
 /*
@@ -1897,6 +1977,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
 */
 // mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
+// LOOK HERE
 fn tests_upcasting_from_a_struct_to_an_interface() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1916,29 +1997,29 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetNormal(l)
-            if matches!(&l.variable,
-                ILocalVariableT::Reference(ReferenceLocalVariableT {
-                    name: crate::typing::names::names::IVarNameT::CodeVar(cv),
-                    variability: crate::typing::types::types::VariabilityT::Final,
-                    coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Interface(_), .. },
-                }) if cv.name == "x"
-            ) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+                variability: VariabilityT::Final,
+                coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Interface(_), .. },
+            }),
+            ..
+        }) => Some(())
     );
 
-    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u) => Some(u)
+    let upcast: &UpcastTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(u) => Some(u)
     );
 
     let upcast_result_coord = upcast.result().coord;
     match upcast_result_coord {
         CoordT { ownership: OwnershipT::Own, kind: KindT::Interface(stt), .. } => {
             match stt.id.local_name {
-                crate::typing::names::names::INameT::Interface(
-                    crate::typing::names::names::InterfaceNameT {
-                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                INameT::Interface(
+                    InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee, .. },
                         template_args: &[],
                         ..
                     }
@@ -1957,11 +2038,11 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     match inner_coord {
         CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. } => {
             match stt.id.local_name {
-                crate::typing::names::names::INameT::Struct(sn) => {
+                INameT::Struct(sn) => {
                     assert!(stt.id.init_steps.is_empty());
                     assert!(stt.id.package_coord.is_test());
                     match sn.template {
-                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
+                        IStructTemplateNameT::StructTemplate(tmpl) => {
                             assert_eq!(tmpl.human_name, "MyStruct");
                         }
                         other => panic!("inner coord struct template: {:?}", other),
@@ -1990,6 +2071,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 */
 // mig: fn tests_calling_a_virtual_function
 #[test]
+// LOOK HERE
 fn tests_calling_a_virtual_function() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2008,59 +2090,55 @@ fn tests_calling_a_virtual_function() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u)
-            if matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            ..
-                        }
-                    )
-                    if human_namee == "Car"
-                )
-            ) => Some(u)
-    );
-
-    match upcast.inner_expr.result().coord.kind {
-        KindT::Struct(stt) => {
-            match stt.id.local_name {
-                crate::typing::names::names::INameT::Struct(sn) => {
-                    match sn.template {
-                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
-                            assert_eq!(tmpl.human_name, "Toyota");
-                        }
-                        other => panic!("inner expr struct template: {:?}", other),
-                    }
-                }
-                other => panic!("inner expr local_name: {:?}", other),
-            }
-        }
-        other => panic!("inner expr kind: {:?}", other),
-    }
-
-    match upcast.result().coord.kind {
-        KindT::Interface(it) => {
-            match it.id.local_name {
-                crate::typing::names::names::INameT::Interface(
-                    crate::typing::names::names::InterfaceNameT {
-                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                        template_args: &[],
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(u @ UpcastTE {
+            target_super_kind: ISuperKindTT::Interface(InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("Car"), .. },
                         ..
-                    }
-                ) => {
-                    assert_eq!(human_namee, "Car");
-                    assert!(it.id.init_steps.is_empty());
-                    assert!(it.id.package_coord.is_test());
-                }
-                other => panic!("upcast result local_name: {:?}", other),
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }) => {
+            match u.inner_expr.result().coord.kind {
+                KindT::Struct(StructTT {
+                    id: IdT {
+                        local_name: INameT::Struct(StructNameT {
+                            template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Toyota"), .. }),
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }) => {}
+                other => panic!("inner expr kind: {:?}", other),
             }
+            match u.result().coord.kind {
+                KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        package_coord: pc,
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("Car"), .. },
+                            template_args: &[],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }) => {
+                    assert!(pc.is_test());
+                }
+                other => panic!("upcast result kind: {:?}", other),
+            }
+            Some(())
         }
-        other => panic!("upcast result kind: {:?}", other),
-    }
+    );
 }
 /*
   test("Tests calling a virtual function") {
@@ -2081,6 +2159,7 @@ fn tests_calling_a_virtual_function() {
 */
 // mig: fn tests_upcasting_has_the_right_stuff
 #[test]
+// LOOK HERE
 fn tests_upcasting_has_the_right_stuff() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2099,29 +2178,29 @@ fn tests_upcasting_has_the_right_stuff() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u)
-            if matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            ..
-                        }
-                    )
-                    if human_namee == "Car"
-                )
-            ) => Some(u)
+    let upcast: &UpcastTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(u @ UpcastTE {
+            target_super_kind: ISuperKindTT::Interface(InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("Car"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }) => Some(u)
     );
 
     match upcast.inner_expr.result().coord.kind {
         KindT::Struct(stt) => {
             match stt.id.local_name {
-                crate::typing::names::names::INameT::Struct(sn) => {
+                INameT::Struct(sn) => {
                     match sn.template {
-                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
+                        IStructTemplateNameT::StructTemplate(tmpl) => {
                             assert_eq!(tmpl.human_name, "Toyota");
                         }
                         other => panic!("inner expr struct template: {:?}", other),
@@ -2136,9 +2215,9 @@ fn tests_upcasting_has_the_right_stuff() {
     match upcast.result().coord.kind {
         KindT::Interface(it) => {
             match it.id.local_name {
-                crate::typing::names::names::INameT::Interface(
-                    crate::typing::names::names::InterfaceNameT {
-                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                INameT::Interface(
+                    InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee, .. },
                         ..
                     }
                 ) => {
@@ -2180,6 +2259,7 @@ fn tests_upcasting_has_the_right_stuff() {
 */
 // mig: fn tests_calling_a_virtual_function_through_a_borrow_ref
 #[test]
+// LOOK HERE
 fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2199,19 +2279,23 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(f)
-            if matches!(f.callable.id.local_name,
-                crate::typing::names::names::INameT::Function(
-                    crate::typing::names::names::FunctionNameT {
-                        template: crate::typing::names::names::FunctionTemplateNameT { human_name, .. },
-                        ..
-                    }
-                )
-                if human_name == "doCivicDance"
-            ) && matches!(f.callable.return_type,
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }
-            ) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(
+                        FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("doCivicDance"), .. },
+                            ..
+                        }
+                    ),
+                    ..
+                },
+                return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. },
+                ..
+            },
+            ..
+        }) => Some(())
     );
 }
 /*
@@ -2302,21 +2386,21 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let destroys = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Destroy(_) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Destroy(_) => Some(())
     );
     assert_eq!(destroys.len(), 0);
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(
-            crate::typing::ast::expressions::ReferenceMemberLookupTE {
-                struct_expr: crate::typing::ast::expressions::ReferenceExpressionTE::SoftLoad(
-                    crate::typing::ast::expressions::SoftLoadTE {
-                        expr: crate::typing::ast::expressions::AddressExpressionTE::LocalLookup(
-                            crate::typing::ast::expressions::LocalLookupTE {
-                                local_variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(
-                                    crate::typing::env::function_environment_t::ReferenceLocalVariableT {
-                                        variability: crate::typing::types::types::VariabilityT::Final,
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ReferenceMemberLookup(
+            ReferenceMemberLookupTE {
+                struct_expr: ReferenceExpressionTE::SoftLoad(
+                    SoftLoadTE {
+                        expr: AddressExpressionTE::LocalLookup(
+                            LocalLookupTE {
+                                local_variable: ILocalVariableT::Reference(
+                                    ReferenceLocalVariableT {
+                                        variability: VariabilityT::Final,
                                         coord: CoordT { kind: KindT::Struct(_), .. },
                                         ..
                                     }
@@ -2327,11 +2411,11 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
                         target_ownership: OwnershipT::Borrow,
                     }
                 ),
-                member_name: crate::typing::names::names::IVarNameT::CodeVar(
-                    crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }
+                member_name: IVarNameT::CodeVar(
+                    CodeVarNameT { name: StrI("x"), .. }
                 ),
                 member_reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. },
-                variability: crate::typing::types::types::VariabilityT::Final,
+                variability: VariabilityT::Final,
                 ..
             }
         ) => Some(())
@@ -2484,6 +2568,7 @@ fn test_borrow_ref() {
 */
 // mig: fn tests_calling_a_function_with_an_upcast
 #[test]
+// LOOK HERE
 fn tests_calling_a_function_with_an_upcast() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2511,20 +2596,20 @@ fn tests_calling_a_function_with_an_upcast() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u)
-            if matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            ..
-                        }
-                    )
-                    if human_namee == "ISpaceship"
-                )
-            ) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(UpcastTE {
+            target_super_kind: ISuperKindTT::Interface(InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("ISpaceship"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }) => Some(())
     );
 }
 /*
@@ -2552,6 +2637,7 @@ fn tests_calling_a_function_with_an_upcast() {
 */
 // mig: fn tests_calling_a_templated_function_with_an_upcast
 #[test]
+// LOOK HERE
 fn tests_calling_a_templated_function_with_an_upcast() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2579,20 +2665,20 @@ fn tests_calling_a_templated_function_with_an_upcast() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u)
-            if matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            ..
-                        }
-                    )
-                    if human_namee == "ISpaceship"
-                )
-            ) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(UpcastTE {
+            target_super_kind: ISuperKindTT::Interface(InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("ISpaceship"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }) => Some(())
     );
 }
 /*
@@ -2621,6 +2707,7 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 */
 // mig: fn tests_upcast_with_generics_has_the_right_stuff
 #[test]
+// LOOK HERE
 fn tests_upcast_with_generics_has_the_right_stuff() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2648,20 +2735,20 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
     let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u)
-            if matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            ..
-                        }
-                    )
-                    if human_namee == "ISpaceship"
-                )
-            ) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(UpcastTE {
+            target_super_kind: ISuperKindTT::Interface(InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("ISpaceship"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        }) => Some(())
     );
 }
 /*
@@ -2748,6 +2835,7 @@ fn tests_a_foreach_for_a_linked_list() {
 */
 // mig: fn test_return_from_inside_if_destroys_locals
 #[test]
+// LOOK HERE
 fn test_return_from_inside_if_destroys_locals() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2777,21 +2865,35 @@ fn test_return_from_inside_if_destroys_locals() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let destructor_calls = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(fpc)
-            if matches!(fpc.callable.id.local_name,
-                crate::typing::names::names::INameT::Function(fn_name)
-                if fn_name.template.human_name == "drop"
-                && matches!(fn_name.parameters,
-                    [crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Own, kind: crate::typing::types::types::KindT::Struct(stt), .. }]
-                    if matches!(stt.id.local_name,
-                        crate::typing::names::names::INameT::Struct(sn)
-                        if matches!(sn.template, crate::typing::names::names::IStructTemplateNameT::StructTemplate(st) if st.human_name == "Marine")
-                    )
-                )
-            ) && matches!(fpc.callable.id.init_steps,
-                [crate::typing::names::names::INameT::StructTemplate(st)] if st.human_name == "Marine"
-            ) => Some(fpc)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(fpc @ FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("drop"), .. },
+                        parameters: [CoordT {
+                            ownership: OwnershipT::Own,
+                            kind: KindT::Struct(StructTT {
+                                id: IdT {
+                                    local_name: INameT::Struct(StructNameT {
+                                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Marine"), .. }),
+                                        ..
+                                    }),
+                                    ..
+                                },
+                                ..
+                            }),
+                            ..
+                        }],
+                        ..
+                    }),
+                    init_steps: [INameT::StructTemplate(StructTemplateNameT { human_name: StrI("Marine"), .. })],
+                    ..
+                },
+                ..
+            },
+            ..
+        }) => Some(fpc)
     );
     assert_eq!(destructor_calls.len(), 2);
 }
@@ -3107,8 +3209,8 @@ fn test_return() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Return(_) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Return(_) => Some(())
     );
 }
 /*
@@ -3145,24 +3247,24 @@ fn test_return_from_inside_if() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let returns = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Return(_) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Return(_) => Some(())
     );
     assert_eq!(returns.len(), 2);
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(
-            crate::typing::ast::expressions::ConstantIntTE {
-                value: crate::typing::templata::templata::ITemplataT::Integer(7),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(
+            ConstantIntTE {
+                value: ITemplataT::Integer(7),
                 ..
             }
         ) => Some(())
     );
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(
-            crate::typing::ast::expressions::ConstantIntTE {
-                value: crate::typing::templata::templata::ITemplataT::Integer(9),
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(
+            ConstantIntTE {
+                value: ITemplataT::Integer(9),
                 ..
             }
         ) => Some(())
@@ -3423,9 +3525,9 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetAndLend(
-            crate::typing::ast::expressions::LetAndLendTE {
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetAndLend(
+            LetAndLendTE {
                 target_ownership: OwnershipT::Borrow,
                 ..
             }
@@ -4279,11 +4381,11 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
-        crate::typing::names::names::InterfaceTemplateNameT {
+        InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
             _phantom: std::marker::PhantomData,
         });
-    let struct_template_name = crate::typing::names::names::StructTemplateNameT {
+    let struct_template_name = StructTemplateNameT {
         human_name: scout_arena.intern_str("MySome"),
         _phantom: std::marker::PhantomData,
     };
@@ -4435,9 +4537,9 @@ fn tests_calling_an_abstract_function() {
 
     coutputs.functions.iter().find(|f| {
         matches!(f.header.id.local_name,
-            crate::typing::names::names::INameT::Function(
-                crate::typing::names::names::FunctionNameT {
-                    template: crate::typing::names::names::FunctionTemplateNameT { human_name, .. },
+            INameT::Function(
+                FunctionNameT {
+                    template: FunctionTemplateNameT { human_name, .. },
                     ..
                 }
             )
@@ -4482,28 +4584,28 @@ fn test_struct_default_generic_argument_in_type() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("MyStruct");
     let tyype = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::StructDefinition(moo),
-        crate::typing::test::traverse::NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
+        NodeRefT::StructDefinition(moo),
+        NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
     );
     match tyype {
         CoordT {
             ownership: OwnershipT::Own,
-            kind: KindT::Struct(crate::typing::types::types::StructTT {
-                id: crate::typing::names::names::IdT {
-                    local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
-                        template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(
-                            crate::typing::names::names::StructTemplateNameT {
-                                human_name: crate::interner::StrI("MyHashSet"),
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(
+                            StructTemplateNameT {
+                                human_name: StrI("MyHashSet"),
                                 ..
                             }
                         ),
                         template_args: [
-                            crate::typing::templata::templata::ITemplataT::Coord(
-                                crate::typing::templata::templata::CoordTemplataT {
+                            ITemplataT::Coord(
+                                CoordTemplataT {
                                     coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. }
                                 }
                             ),
-                            crate::typing::templata::templata::ITemplataT::Integer(5),
+                            ITemplataT::Integer(5),
                         ],
                         ..
                     }),
@@ -4667,8 +4769,8 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let destroys = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Destroy(_) => Some(())
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Destroy(_) => Some(())
     );
     assert_eq!(destroys.len(), 0);
 }
@@ -4936,6 +5038,7 @@ fn test_array_push_pop_len_capacity_drop() {
 */
 // mig: fn upcast_generic
 #[test]
+// LOOK HERE
 fn upcast_generic() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -4973,21 +5076,24 @@ fn upcast_generic() {
     let do_upcast = coutputs.lookup_function_by_str("doUpcast");
 
     crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(do_upcast),
-        crate::typing::test::traverse::NodeRefT::Upcast(u) => {
+        NodeRefT::FunctionDefinition(do_upcast),
+        NodeRefT::Upcast(u) => {
             assert!(matches!(u.inner_expr.result().coord.kind, KindT::KindPlaceholder(_)));
             assert!(matches!(u.target_super_kind,
-                crate::typing::types::types::ISuperKindTT::Interface(it)
-                if matches!(it.id.local_name,
-                    crate::typing::names::names::INameT::Interface(
-                        crate::typing::names::names::InterfaceNameT {
-                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
-                            template_args: &[],
-                            ..
-                        }
-                    )
-                    if it.id.init_steps.is_empty() && human_namee == "IShip"
-                )
+                ISuperKindTT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(
+                            InterfaceNameT {
+                                template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                                template_args: &[],
+                                ..
+                            }
+                        ),
+                        ..
+                    },
+                    ..
+                })
             ));
             Some(())
         }
@@ -5032,6 +5138,7 @@ fn upcast_generic() {
 */
 // mig: fn downcast_function_rrbfs
 #[test]
+// LOOK HERE
 fn downcast_function_rrbfs() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -5069,16 +5176,16 @@ fn downcast_function_rrbfs() {
     {
 
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
-            matches!(f.header.id.local_name, INameT::Function(fn_name)
-                if fn_name.template.human_name.as_str() == "as"
-                && fn_name.parameters.len() == 1
-                && matches!(fn_name.parameters[0].ownership, OwnershipT::Borrow)
-            )
+            matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
+                template: FunctionTemplateNameT { human_name: StrI("as"), .. },
+                parameters: [CoordT { ownership: OwnershipT::Borrow, .. }],
+                ..
+            }))
         }).copied().collect();
         let as_func = expect_1(&as_funcs);
         let as_ = crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(as_func),
-            crate::typing::test::traverse::NodeRefT::AsSubtype(as_) => Some(as_)
+            NodeRefT::FunctionDefinition(as_func),
+            NodeRefT::AsSubtype(as_) => Some(as_)
         );
         let source_expr = as_.source_expr;
         let target_subtype = as_.target_type;
@@ -5271,6 +5378,7 @@ fn downcast_function_rrbfs() {
 // AFTERM: doublecheck this
 // mig: fn downcast_with_as
 #[test]
+// LOOK HERE
 fn downcast_with_as() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -5304,13 +5412,22 @@ fn downcast_with_as() {
 
         let main_func = coutputs.lookup_function_by_str("main");
         let (as_prototype, as_arg) = crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main_func),
-            crate::typing::test::traverse::NodeRefT::FunctionCall(c)
-                if matches!(c.callable.id.local_name,
-                    INameT::Function(fn_name)
-                    if fn_name.template.human_name.as_str() == "as"
-                ) && c.args.len() == 1 && c.callable.id.init_steps.is_empty()
-                => Some((c.callable, c.args[0]))
+            NodeRefT::FunctionDefinition(main_func),
+            NodeRefT::FunctionCall(c @ FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("as"), .. },
+                            ..
+                        }),
+                        init_steps: &[],
+                        ..
+                    },
+                    ..
+                },
+                args: [_],
+                ..
+            }) => Some((c.callable, c.args[0]))
         );
 
         let (as_prototype_template_args, as_prototype_params, as_prototype_return) =
@@ -5373,6 +5490,40 @@ fn downcast_with_as() {
                     INameT::Interface(in_) => {
                         assert_eq!(in_.template.human_namee.as_str(), "Result");
                         assert!(it.id.init_steps.is_empty());
+                        assert_eq!(in_.template_args.len(), 2);
+                        match in_.template_args[0] {
+                            ITemplataT::Coord(c) => {
+                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
+                                match c.coord.kind {
+                                    KindT::Struct(stt) => {
+                                        match stt.id.local_name {
+                                            INameT::Struct(sn) => match sn.template {
+                                                IStructTemplateNameT::StructTemplate(t) => assert_eq!(t.human_name.as_str(), "Raza"),
+                                                other => panic!("result first generic arg struct template: {:?}", other),
+                                            },
+                                            other => panic!("result first generic arg struct local_name: {:?}", other),
+                                        }
+                                    }
+                                    other => panic!("result first generic arg kind: {:?}", other),
+                                }
+                            }
+                            other => panic!("result first generic arg: {:?}", other),
+                        }
+                        match in_.template_args[1] {
+                            ITemplataT::Coord(c) => {
+                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
+                                match c.coord.kind {
+                                    KindT::Interface(it2) => {
+                                        match it2.id.local_name {
+                                            INameT::Interface(in2) => assert_eq!(in2.template.human_namee.as_str(), "IShip"),
+                                            other => panic!("result second generic arg interface local_name: {:?}", other),
+                                        }
+                                    }
+                                    other => panic!("result second generic arg kind: {:?}", other),
+                                }
+                            }
+                            other => panic!("result second generic arg: {:?}", other),
+                        }
                     }
                     other => panic!("return kind local_name: {:?}", other),
                 }
@@ -5395,16 +5546,16 @@ fn downcast_with_as() {
     {
 
         let as_funcs: Vec<_> = coutputs.functions.iter().filter(|f| {
-            matches!(f.header.id.local_name, INameT::Function(fn_name)
-                if fn_name.template.human_name.as_str() == "as"
-                && fn_name.parameters.len() == 1
-                && matches!(fn_name.parameters[0].ownership, OwnershipT::Borrow)
-            )
+            matches!(f.header.id.local_name, INameT::Function(FunctionNameT {
+                template: FunctionTemplateNameT { human_name: StrI("as"), .. },
+                parameters: [CoordT { ownership: OwnershipT::Borrow, .. }],
+                ..
+            }))
         }).copied().collect();
         let as_func = expect_1(&as_funcs);
         let as_ = crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(as_func),
-            crate::typing::test::traverse::NodeRefT::AsSubtype(as_) => Some(as_)
+            NodeRefT::FunctionDefinition(as_func),
+            NodeRefT::AsSubtype(as_) => Some(as_)
         );
         let source_expr = as_.source_expr;
         let target_subtype = as_.target_type;
@@ -5680,28 +5831,28 @@ fn test_struct_default_generic_argument_in_call() {
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     let variable = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
-        crate::typing::test::traverse::NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
+        NodeRefT::FunctionDefinition(moo),
+        NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
     );
     match variable.coord() {
         CoordT {
             ownership: OwnershipT::Own,
-            kind: KindT::Struct(crate::typing::types::types::StructTT {
-                id: crate::typing::names::names::IdT {
-                    local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
-                        template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(
-                            crate::typing::names::names::StructTemplateNameT {
-                                human_name: crate::interner::StrI("MyHashSet"),
+            kind: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(
+                            StructTemplateNameT {
+                                human_name: StrI("MyHashSet"),
                                 ..
                             }
                         ),
                         template_args: [
-                            crate::typing::templata::templata::ITemplataT::Coord(
-                                crate::typing::templata::templata::CoordTemplataT {
+                            ITemplataT::Coord(
+                                CoordTemplataT {
                                     coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. }
                                 }
                             ),
-                            crate::typing::templata::templata::ITemplataT::Integer(5),
+                            ITemplataT::Integer(5),
                         ],
                         ..
                     }),

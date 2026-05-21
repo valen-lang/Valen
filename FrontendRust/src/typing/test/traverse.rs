@@ -46,6 +46,8 @@ use crate::typing::types::types::{
     CoordT, InterfaceTT, KindPlaceholderT, KindT, OverloadSetT, RuntimeSizedArrayTT,
     StaticSizedArrayTT, StructTT,
 };
+use crate::typing::types::types::ICitizenTT;
+use crate::typing::types::types::ISuperKindTT;
 
 pub enum NodeRefT<'s, 't> {
     // ---- Top-level ----
@@ -434,14 +436,14 @@ where
 fn visit_kind_citizen<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    c: &'t crate::typing::types::types::ICitizenTT<'s, 't>,
+    c: &'t ICitizenTT<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     match c {
-        crate::typing::types::types::ICitizenTT::Struct(s) => visit_struct_tt(pred, out, s),
-        crate::typing::types::types::ICitizenTT::Interface(i) => visit_interface_tt(pred, out, i),
+        ICitizenTT::Struct(s) => visit_struct_tt(pred, out, s),
+        ICitizenTT::Interface(i) => visit_interface_tt(pred, out, i),
     }
 }
 
@@ -1130,14 +1132,14 @@ where
 fn visit_super_kind<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    s: &'t crate::typing::types::types::ISuperKindTT<'s, 't>,
+    s: &'t ISuperKindTT<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     match s {
-        crate::typing::types::types::ISuperKindTT::Interface(i) => visit_interface_tt(pred, out, i),
-        crate::typing::types::types::ISuperKindTT::KindPlaceholder(p) => {
+        ISuperKindTT::Interface(i) => visit_interface_tt(pred, out, i),
+        ISuperKindTT::KindPlaceholder(p) => {
             visit_kind_placeholder(pred, out, p)
         }
     }

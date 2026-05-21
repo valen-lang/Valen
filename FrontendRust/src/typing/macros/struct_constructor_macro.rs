@@ -14,6 +14,16 @@ use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::higher_typing::ast::*;
+use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
+use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::typing::names::names::IdValT;
+use std::collections::HashMap;
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::names::IFunctionDeclarationNameS;
 
 /*
 package dev.vale.typing.macros
@@ -71,14 +81,6 @@ where 's: 't,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
-        use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
-        use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
-        use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
-        use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
-        use crate::utils::arena_index_map::ArenaIndexMap;
-        use crate::typing::names::names::IdValT;
-        use std::collections::HashMap;
 
         if struct_a.members.iter().any(|m| matches!(m, IStructMemberS::VariadicStructMember(_))) {
             // Dont generate constructors for variadic structs, not supported yet.
@@ -168,9 +170,9 @@ where 's: 't,
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let params_slice = self.scout_arena.alloc_slice_from_vec(params);
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let function_a = self.scout_arena.alloc(crate::higher_typing::ast::FunctionA::new(
+        let function_a = self.scout_arena.alloc(FunctionA::new(
             struct_a.range,
-            crate::postparsing::names::IFunctionDeclarationNameS::ConstructorName(
+            IFunctionDeclarationNameS::ConstructorName(
                 &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen })
             ),
             &[],

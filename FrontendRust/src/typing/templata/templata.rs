@@ -11,6 +11,8 @@ use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
+use crate::scout_arena::ScoutArena;
+use crate::higher_typing::ast::CitizenA;
 
 /*
 package dev.vale.typing.templata
@@ -226,7 +228,7 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
   // Rust adaptation (SPDMX-B): takes &ScoutArena because the TemplateTemplataType
   // arms construct a fresh slice of param ITemplataType values per call;
   // Scala uses GC-backed Vector and doesn't need an arena parameter.
-  pub fn tyype(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>) -> ITemplataType<'s> {
+  pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
       ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
@@ -574,7 +576,7 @@ impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
   */
 }
 impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
-  pub fn origin_citizen(&self) -> &'s dyn crate::higher_typing::ast::CitizenA<'s> {
+  pub fn origin_citizen(&self) -> &'s dyn CitizenA<'s> {
     panic!("Unimplemented: origin_citizen");
   }
   /*

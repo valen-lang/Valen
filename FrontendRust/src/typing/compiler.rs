@@ -38,6 +38,37 @@ use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
+use crate::typing::types::types::ISubKindTT;
+use crate::typing::types::types::ICitizenTT;
+use crate::typing::names::names::{PredictedFunctionTemplateNameT, PredictedFunctionNameValT};
+use crate::typing::ast::ast::PrototypeValT;
+use crate::typing::names::names::FunctionBoundTemplateNameT;
+use crate::typing::names::names::FunctionBoundNameValT;
+use crate::typing::names::names::{ImplBoundTemplateNameT, ImplBoundNameValT};
+use crate::typing::templata::templata::IsaTemplataT;
+use crate::typing::names::names::ExportTemplateNameT;
+use crate::typing::names::names::ExportNameT;
+use crate::typing::env::environment::ExportEnvironmentT;
+use crate::typing::citizen::struct_compiler::IResolveOutcome;
+use crate::postparsing::names::IStructDeclarationNameS;
+use crate::postparsing::ast::IFunctionAttributeS;
+use crate::typing::names::names::ExternTemplateNameT;
+use crate::typing::names::names::ExternNameT;
+use crate::typing::names::names::ExternFunctionNameValT;
+use crate::typing::env::environment::ExternEnvironmentT;
+use crate::typing::function::function_compiler::IResolveFunctionResult;
+use crate::postparsing::names::IFunctionDeclarationNameS;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::parsing::ast::ast::IMacroInclusionP;
+use crate::typing::types::types::StaticSizedArrayTT;
+use crate::typing::types::types::RuntimeSizedArrayTT;
+use crate::typing::types::types::StructTT;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::names::CodeNameS;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::typing::env::function_environment_t::FunctionEnvironmentT;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::ast::ParameterT;
 
 /*
 package dev.vale.typing
@@ -461,7 +492,6 @@ where 's: 't,
     ) -> bool {
         match kind {
             KindT::KindPlaceholder(kp) => {
-                use crate::typing::types::types::ISubKindTT;
                 self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
                     ISubKindTT::KindPlaceholder(kp))
             }
@@ -470,12 +500,10 @@ where 's: 't,
             KindT::Never(_) => true,
             KindT::StaticSizedArray(_) => false,
             KindT::Struct(s) => {
-                use crate::typing::types::types::ISubKindTT;
                 self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
                     ISubKindTT::Struct(s))
             }
             KindT::Interface(i) => {
-                use crate::typing::types::types::ISubKindTT;
                 self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
                     ISubKindTT::Interface(i))
             }
@@ -583,7 +611,7 @@ where 's: 't,
         size: ITemplataT<'s, 't>,
         element: CoordT<'s, 't>,
         region: RegionT,
-    ) -> crate::typing::types::types::StaticSizedArrayTT<'s, 't> {
+    ) -> StaticSizedArrayTT<'s, 't> {
         self.resolve_static_sized_array(mutability, variability, size, element, region)
     }
     /*
@@ -610,7 +638,7 @@ where 's: 't,
         element: CoordT<'s, 't>,
         array_mutability: ITemplataT<'s, 't>,
         region: RegionT,
-    ) -> crate::typing::types::types::RuntimeSizedArrayTT<'s, 't> {
+    ) -> RuntimeSizedArrayTT<'s, 't> {
         self.resolve_runtime_sized_array(element, array_mutability, region)
     }
     /*
@@ -654,7 +682,6 @@ where 's: 't,
         actual_citizen_ref: KindT<'s, 't>,
         expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
-        use crate::typing::types::types::ICitizenTT;
         match actual_citizen_ref {
             KindT::RuntimeSizedArray(_) => matches!(expected_citizen_templata, ITemplataT::RuntimeSizedArrayTemplate(_)),
             KindT::StaticSizedArray(_) => matches!(expected_citizen_templata, ITemplataT::StaticSizedArrayTemplate(_)),
@@ -691,7 +718,6 @@ where 's: 't,
         descendant: KindT<'s, 't>,
         include_self: bool,
     ) -> std::collections::HashSet<KindT<'s, 't>> {
-        use crate::typing::types::types::ISubKindTT;
         let mut result: std::collections::HashSet<KindT<'s, 't>> = std::collections::HashSet::new();
         if include_self {
             result.insert(descendant);
@@ -731,7 +757,7 @@ where 's: 't,
     pub fn struct_is_closure(
         &self,
         _state: &mut CompilerOutputs<'s, 't>,
-        _struct_tt: crate::typing::types::types::StructTT<'s, 't>,
+        _struct_tt: StructTT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: struct_is_closure");
     }
@@ -753,8 +779,6 @@ where 's: 't,
         param_coords: &'t [CoordT<'s, 't>],
         return_coord: CoordT<'s, 't>,
     ) -> PrototypeTemplataT<'s, 't> {
-        use crate::typing::names::names::{PredictedFunctionTemplateNameT, PredictedFunctionNameValT, IdValT};
-        use crate::typing::ast::ast::PrototypeValT;
         let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
         let pred_name = self.typing_interner.intern_predicted_function_name(PredictedFunctionNameValT { template: tmpl, template_args: &[], parameters: param_coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::PredictedFunction(pred_name));
@@ -793,9 +817,6 @@ where 's: 't,
         coords: &'t [CoordT<'s, 't>],
         return_type: CoordT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        use crate::typing::names::names::{FunctionBoundTemplateNameT, FunctionBoundNameValT, IdValT};
-        use crate::typing::ast::ast::PrototypeValT;
-        use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
         let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
         let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: tmpl, template_args: &[], parameters: coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::FunctionBound(bound_name));
@@ -848,9 +869,7 @@ where 's: 't,
         range: RangeS<'s>,
         sub_kind: KindT<'s, 't>,
         super_kind: KindT<'s, 't>,
-    ) -> crate::typing::templata::templata::IsaTemplataT<'s, 't> {
-        use crate::typing::names::names::{ImplBoundTemplateNameT, ImplBoundNameValT};
-        use crate::typing::templata::templata::IsaTemplataT;
+    ) -> IsaTemplataT<'s, 't> {
         let tmpl = self.typing_interner.intern_impl_bound_template_name(
             ImplBoundTemplateNameT { code_location_s: range.begin, _phantom: std::marker::PhantomData });
         let bound_name = self.typing_interner.intern_impl_bound_name(
@@ -915,8 +934,8 @@ where 's: 't,
             ranges,
             call_location,
             self.scout_arena.intern_imprecise_name(
-                crate::postparsing::names::IImpreciseNameValS::CodeName(
-                    crate::postparsing::names::CodeNameS { name })),
+                IImpreciseNameValS::CodeName(
+                    CodeNameS { name })),
             &[],
             &[],
             context_region,
@@ -1044,13 +1063,13 @@ Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws
         _call_range: &[RangeS<'s>],
         _call_location: LocationInDenizen<'s>,
         _function_name: IImpreciseNameS<'s>,
-        _explicit_template_arg_rules_s: &[crate::postparsing::rules::rules::IRulexSR<'s>],
+        _explicit_template_arg_rules_s: &[IRulexSR<'s>],
         _explicit_template_arg_runes_s: &[IRuneS<'s>],
         _context_region: RegionT,
         _args: &[CoordT<'s, 't>],
         _extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         _exact: bool,
-    ) -> crate::typing::function::function_compiler::StampFunctionSuccess<'s, 't> {
+    ) -> StampFunctionSuccess<'s, 't> {
         panic!("Unimplemented: scout_expected_function_for_prototype");
     }
     /*
@@ -1131,12 +1150,12 @@ Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws
     pub fn generate_function(
         &self,
         _generator: IFunctionGenerator,
-        _full_env: &'t crate::typing::env::function_environment_t::FunctionEnvironmentT<'s, 't>,
+        _full_env: &'t FunctionEnvironmentT<'s, 't>,
         _coutputs: &mut CompilerOutputs<'s, 't>,
-        _life: crate::typing::ast::ast::LocationInFunctionEnvironmentT<'s, 't>,
+        _life: LocationInFunctionEnvironmentT<'s, 't>,
         _call_range: &[RangeS<'s>],
         _origin_function: Option<&'s FunctionA<'s>>,
-        _param_coords: &[crate::typing::ast::ast::ParameterT<'s, 't>],
+        _param_coords: &[ParameterT<'s, 't>],
         _maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         panic!("Unimplemented: generate_function");
@@ -1531,13 +1550,6 @@ where 's: 't,
                         match maybe_export {
                             None => {}
                             Some(export_s) => {
-                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
-                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
-                                use crate::typing::types::types::RegionT;
-                                use crate::typing::citizen::struct_compiler::IResolveOutcome;
-                                use crate::typing::types::types::KindT;
-                                use crate::postparsing::names::IStructDeclarationNameS;
-                                use std::marker::PhantomData;
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: struct_a.range.begin,
                                     _phantom: PhantomData,
@@ -1613,12 +1625,6 @@ where 's: 't,
                         match maybe_export {
                             None => {}
                             Some(_export_s) => {
-                                use std::marker::PhantomData;
-                                use crate::typing::types::types::KindT;
-                                use crate::typing::citizen::struct_compiler::IResolveOutcome;
-                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
-                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
-                                use crate::typing::types::types::RegionT;
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: interface_a.range.begin,
                                     _phantom: PhantomData,
@@ -1747,17 +1753,10 @@ where 's: 't,
                         };
                         let _header = self.evaluate_generic_function_from_non_call(
                             &mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
-                        use crate::postparsing::ast::IFunctionAttributeS;
                         let maybe_extern = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Extern(e) => Some(e), _ => None });
                         match maybe_extern {
                             None => {}
                             Some(_extern_s) => {
-                                use crate::typing::names::names::{ExternTemplateNameT, ExternNameT, ExternFunctionNameValT, IdValT};
-                                use crate::typing::env::environment::{ExternEnvironmentT, TemplatasStoreBuilder};
-                                use crate::typing::types::types::RegionT;
-                                use crate::typing::function::function_compiler::IResolveFunctionResult;
-                                use crate::postparsing::names::IFunctionDeclarationNameS;
-                                use std::marker::PhantomData;
 
                                 let extern_name = match function_a.name {
                                     IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
@@ -1860,12 +1859,6 @@ where 's: 't,
                         match maybe_export {
                             None => {}
                             Some(_export_s) => {
-                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
-                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
-                                use crate::typing::types::types::RegionT;
-                                use crate::typing::function::function_compiler::IResolveFunctionResult;
-                                use crate::postparsing::names::IFunctionDeclarationNameS;
-                                use std::marker::PhantomData;
 
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: function_a.range.begin,
@@ -1921,7 +1914,7 @@ where 's: 't,
                                     )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
                                         IResolveFunctionResult::ResolveFunctionFailure(failure) => {
-                                            return Err(crate::typing::compiler_error_reporter::ICompileErrorT::TypingPassResolvingError {
+                                            return Err(ICompileErrorT::TypingPassResolvingError {
                                                 range: self.typing_interner.alloc_slice_copy(&[function_a.range]),
                                                 inner: failure.reason,
                                             });
@@ -1950,13 +1943,6 @@ where 's: 't,
         // packageToProgramA.flatMap({ case (packageCoord, programA) => ... programA.exports.foreach(...) })
         for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
             for export in program_a.exports.iter() {
-                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT, PackageTopLevelNameT};
-                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
-                use crate::typing::types::types::RegionT;
-                use crate::typing::types::types::KindT;
-                use crate::typing::infer_compiler::InferEnv;
-                use crate::postparsing::itemplatatype::ITemplataType;
-                use std::marker::PhantomData;
 
                 let package_top_level_name = self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
                 let package_id_steps: Vec<INameT<'s, 't>> = vec![];
@@ -2875,8 +2861,6 @@ where 's: 't,
         struct_name_t: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::ast::MacroCallS;
-        use crate::parsing::ast::ast::IMacroInclusionP;
 
         let macro1 = self.scout_arena.alloc(MacroCallS {
             range: struct_a.range,
@@ -2931,8 +2915,6 @@ where 's: 't,
         _interface_name_t: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::ast::MacroCallS;
-        use crate::parsing::ast::ast::IMacroInclusionP;
 
         let macro1 = self.scout_arena.alloc(MacroCallS {
             range: interface_a.range,
@@ -2993,7 +2975,6 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         attributes: &[&'s ICitizenAttributeS<'s>],
     ) -> Vec<T> {
-        use crate::parsing::ast::ast::IMacroInclusionP;
         let macros_to_call: Vec<&'s MacroCallS<'s>> =
             attributes.iter().fold(default_called_macros.to_vec(), |macros_to_call, attr| {
                 match attr {

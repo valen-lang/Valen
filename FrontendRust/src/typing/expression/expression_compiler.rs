@@ -19,6 +19,30 @@ use crate::parsing::ast::*;
 use std::collections::{HashMap, HashSet};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+use crate::typing::env::environment::ILookupContext;
+use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
+use crate::typing::env::environment::IEnvironmentT;
+use crate::typing::env::environment::IInDenizenEnvironmentT;
+use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+use crate::typing::citizen::struct_compiler::IResolveOutcome;
+use crate::typing::function::function_compiler::IResolveFunctionResult;
+use crate::typing::types::types::{CoordT, OwnershipT, KindT, ISubKindTT, ISuperKindTT, InterfaceTTValT};
+use crate::typing::citizen::impl_compiler::IsParentResult;
+use crate::typing::names::names::ArbitraryNameT;
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::postparsing::names::ArbitraryNameS;
+use crate::postparsing::rune_type_solver::RuneTypeSolver;
+use crate::typing::env::function_environment_t::NodeEnvironmentBox;
+use crate::typing::typing_interner::TypingInterner;
+use crate::scout_arena::ScoutArena;
+use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult;
+use crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError;
+use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
+use crate::postparsing::rune_type_solver::TemplataLookupResult;
+use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
 
 /*
 package dev.vale.typing.expression
@@ -628,7 +652,6 @@ where 's: 't,
         // Note, this is where the unordered closuredNames set becomes ordered.
         let lookup_expressions2: Vec<ExpressionTE<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
-                use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
                 match member {
                     IStructMemberT::Variadic(_) => panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)"),
                     IStructMemberT::Normal(NormalStructMemberT { name: member_name, tyype, .. }) => {
@@ -1741,7 +1764,6 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
             IExpressionSE::Destruct(destruct_se) => {
-                use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
                 let (inner_expr_2, returns_from_array_expr) =
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, destruct_se.inner)?;
@@ -1835,14 +1857,14 @@ where 's: 't,
                         let mut tiny_env = nenv.function_environment().make_child_node_environment(
                             expr_1, life);
                         let arbitrary_name_t = INameT::Arbitrary(self.typing_interner.intern_arbitrary_name(
-                            crate::typing::names::names::ArbitraryNameT { _phantom: std::marker::PhantomData }));
+                            ArbitraryNameT { _phantom: std::marker::PhantomData }));
                         tiny_env.add_entries(self.scout_arena, self.typing_interner,
-                            &[(arbitrary_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(templata))]);
+                            &[(arbitrary_name_t, IEnvEntryT::Templata(templata))]);
                         let arbitrary_imprecise = self.scout_arena.intern_imprecise_name(
-                            IImpreciseNameValS::ArbitraryName(crate::postparsing::names::ArbitraryNameS {}));
+                            IImpreciseNameValS::ArbitraryName(ArbitraryNameS {}));
                         let tiny_env_snapshot = tiny_env.snapshot(self.typing_interner);
                         let expr = self.new_global_function_group_expression(
-                            crate::typing::env::environment::IInDenizenEnvironmentT::Node(tiny_env_snapshot),
+                            IInDenizenEnvironmentT::Node(tiny_env_snapshot),
                             coutputs, RegionT {}, arbitrary_imprecise);
                         Ok((ExpressionTE::Reference(expr), HashSet::new()))
                     }
@@ -1858,7 +1880,6 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
             IExpressionSE::OutsideLoad(outside_load) => {
-                use crate::typing::env::environment::ILookupContext;
                 let mut lookup_filter = std::collections::HashSet::new();
                 lookup_filter.insert(ILookupContext::ExpressionLookupContext);
                 let templatas_from_env = nenv.lookup_all_with_imprecise_name(outside_load.name, &lookup_filter, self.typing_interner);
@@ -3028,13 +3049,6 @@ where 's: 't,
         context_region: RegionT,
         contained_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>) {
-        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
-        use crate::typing::env::environment::{IEnvironmentT, IInDenizenEnvironmentT, ILookupContext};
-        use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
-        use crate::typing::citizen::struct_compiler::IResolveOutcome;
-        use crate::typing::function::function_compiler::IResolveFunctionResult;
-        use crate::typing::types::types::{CoordT, OwnershipT, KindT, ISubKindTT, ISuperKindTT, InterfaceTTValT};
-        use crate::typing::citizen::impl_compiler::IsParentResult;
 
         let opt_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.opt }));
@@ -3226,13 +3240,6 @@ where 's: 't,
         contained_success_coord: CoordT<'s, 't>,
         contained_fail_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>) {
-        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
-        use crate::typing::env::environment::{IEnvironmentT, IInDenizenEnvironmentT, ILookupContext};
-        use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
-        use crate::typing::citizen::struct_compiler::IResolveOutcome;
-        use crate::typing::function::function_compiler::IResolveFunctionResult;
-        use crate::typing::types::types::{CoordT, OwnershipT, KindT, ISubKindTT, ISuperKindTT, InterfaceTTValT};
-        use crate::typing::citizen::impl_compiler::IsParentResult;
 
         let result_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.result }));
@@ -3772,7 +3779,7 @@ where 's: 't,
             IInDenizenEnvironmentT::Node(snapshot);
         let rune_type_solve_env = self.create_rune_type_solver_env(env_ref);
 
-        let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {
+        let rune_type_solver = RuneTypeSolver {
             scout_arena: self.scout_arena,
         };
         let mut range_list = vec![range_s];
@@ -3913,7 +3920,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
         expr_te: ReferenceExpressionTE<'s, 't>,
-    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let snapshot = nenv.snapshot(self.typing_interner);
         let unreversed_variables_to_destruct =
             snapshot.get_live_variables_introduced_since(starting_nenv);
@@ -4081,15 +4088,15 @@ struct LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
 {
-    nenv: &'a crate::typing::env::function_environment_t::NodeEnvironmentBox<'s, 't>,
-    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
-    scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
+    nenv: &'a NodeEnvironmentBox<'s, 't>,
+    typing_interner: &'a TypingInterner<'s, 't>,
+    scout_arena: &'a ScoutArena<'s>,
 }
 /*
 Guardian: disable-all
 */
 
-impl<'a, 's, 't> crate::postparsing::rune_type_solver::IRuneTypeSolverEnv<'s>
+impl<'a, 's, 't> IRuneTypeSolverEnv<'s>
     for LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
@@ -4097,28 +4104,28 @@ where
     fn lookup(
         &self,
         range: RangeS<'s>,
-        name_s: crate::postparsing::names::IImpreciseNameS<'s>,
+        name_s: IImpreciseNameS<'s>,
     ) -> Result<
-        crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult<'s>,
-        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError<'s>,
+        IRuneTypeSolverLookupResult<'s>,
+        IRuneTypingLookupFailedError<'s>,
     > {
         let mut filter = std::collections::HashSet::new();
-        filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
+        filter.insert(ILookupContext::TemplataLookupContext);
         match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter, self.typing_interner) {
-            Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
-                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
-                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
-                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+            Some(ITemplataT::StructDefinition(t)) => {
+                Ok(IRuneTypeSolverLookupResult::Citizen(
+                    CitizenRuneTypeSolverLookupResult {
+                        tyype: ITemplataType::TemplateTemplataType(
                             t.origin_struct.tyype,
                         ),
                         generic_params: t.origin_struct.generic_parameters,
                     },
                 ))
             }
-            Some(crate::typing::templata::templata::ITemplataT::InterfaceDefinition(t)) => {
-                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
-                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
-                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+            Some(ITemplataT::InterfaceDefinition(t)) => {
+                Ok(IRuneTypeSolverLookupResult::Citizen(
+                    CitizenRuneTypeSolverLookupResult {
+                        tyype: ITemplataType::TemplateTemplataType(
                             t.origin_interface.tyype,
                         ),
                         generic_params: t.origin_interface.generic_parameters,
@@ -4126,15 +4133,15 @@ where
                 ))
             }
             Some(x) => {
-                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
-                    crate::postparsing::rune_type_solver::TemplataLookupResult {
+                Ok(IRuneTypeSolverLookupResult::Templata(
+                    TemplataLookupResult {
                         templata: x.tyype(self.scout_arena),
                     },
                 ))
             }
             None => Err(
-                crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
-                    crate::postparsing::rune_type_solver::RuneTypingCouldntFindType {
+                IRuneTypingLookupFailedError::CouldntFindType(
+                    RuneTypingCouldntFindType {
                         range,
                         name: name_s,
                     },

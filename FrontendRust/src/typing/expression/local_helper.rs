@@ -16,6 +16,9 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use crate::interner::Interner;
+use crate::typing::names::names::TypingPassTemporaryVarNameT;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
 
 /*
 package dev.vale.typing.expression
@@ -53,7 +56,7 @@ where 's: 't,
 {
     pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'s, 't>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
         let var_id = self.typing_interner.intern_typing_pass_temporary_var_name(
-            crate::typing::names::names::TypingPassTemporaryVarNameT { life });
+            TypingPassTemporaryVarNameT { life });
         let rlv = ReferenceLocalVariableT { name: var_id.into(), variability: VariabilityT::Final, coord };
         nenv.add_variable(IVariableT::ReferenceLocal(rlv));
         rlv
@@ -148,7 +151,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<ReferenceExpressionTE<'s, 't>>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<ReferenceExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         variables.iter().map(|variable| {
             let unlet = self.unlet_local_without_dropping(nenv, variable);
             let unlet_ref = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(unlet));
@@ -212,7 +215,7 @@ where 's: 't,
         let addressible = self.determine_if_local_is_addressible(mutable, local_variable_a);
 
         let local_var = if addressible {
-            ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
+            ILocalVariableT::Addressible(AddressibleLocalVariableT {
                 name: var_id,
                 variability,
                 coord: reference_type2,

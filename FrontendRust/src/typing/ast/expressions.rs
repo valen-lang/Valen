@@ -6,6 +6,13 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::ast::ast::*;
+use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, VoidT};
+use crate::typing::types::types::IntT;
+use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+use crate::typing::types::types::MutabilityT;
+use crate::typing::types::types::RegionT;
+use crate::typing::types::types::BoolT;
+use crate::typing::types::types::FloatT;
 
 /*
 package dev.vale.typing.ast
@@ -861,7 +868,6 @@ impl<'s, 't> WhileTE<'s, 't> {
     // computed val. Rust has no class-body computed fields, so the same computation
     // lives in this constructor and the result is stored on the struct.
     pub fn new(block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
-        use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, VoidT};
         let result_coord = match block.result().coord.kind {
             KindT::Void(_) => block.result().coord,
             KindT::Never(NeverT { from_break: true }) => CoordT {
@@ -972,10 +978,10 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> RestackifyTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
+        ReferenceResultT { coord: CoordT {
+            ownership: OwnershipT::Share,
             region: self.source_expr.result().coord.region,
-            kind: crate::typing::types::types::KindT::Void(crate::typing::types::types::VoidT),
+            kind: KindT::Void(VoidT),
         } }
     }
 /*
@@ -1085,7 +1091,6 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> BreakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{OwnershipT, CoordT, KindT, NeverT};
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Never(NeverT { from_break: true }) } }
     }
 /*
@@ -1421,10 +1426,10 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> where 's: 't, {
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: crate::typing::types::types::CoordT {
-                ownership: crate::typing::types::types::OwnershipT::Share,
-                region: crate::typing::types::types::RegionT,
-                kind: crate::typing::types::types::KindT::Bool(crate::typing::types::types::BoolT),
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: RegionT,
+                kind: KindT::Bool(BoolT),
             },
         }
     }
@@ -1652,10 +1657,10 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> ConstantFloatTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
+        ReferenceResultT { coord: CoordT {
+            ownership: OwnershipT::Share,
             region: self.region,
-            kind: crate::typing::types::types::KindT::Float(crate::typing::types::types::FloatT),
+            kind: KindT::Float(FloatT),
         } }
     }
 /*
@@ -1873,7 +1878,6 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> ArrayLengthTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{OwnershipT, CoordT, KindT, IntT};
         ReferenceResultT {
             coord: CoordT {
                 ownership: OwnershipT::Share,
@@ -2239,8 +2243,6 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
-        use crate::typing::types::types::{MutabilityT, OwnershipT, CoordT, KindT};
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
@@ -2303,8 +2305,6 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{CoordT, KindT, MutabilityT, OwnershipT};
-        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
@@ -2387,7 +2387,6 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> where 's: 't, {
 }
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{OwnershipT, CoordT, KindT, VoidT};
         ReferenceResultT {
             coord: CoordT {
                 ownership: OwnershipT::Share,
@@ -2501,7 +2500,6 @@ case class RuntimeSizedArrayCapacityTE(
 */
 impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{OwnershipT, CoordT, KindT, IntT};
         ReferenceResultT {
             coord: CoordT {
                 ownership: OwnershipT::Share,
@@ -2534,7 +2532,6 @@ case class PushRuntimeSizedArrayTE(
 */
 impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::types::types::{OwnershipT, CoordT, KindT, VoidT};
         ReferenceResultT {
             coord: CoordT {
                 ownership: OwnershipT::Share,
@@ -2896,8 +2893,6 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
-        use crate::typing::types::types::{MutabilityT, OwnershipT, CoordT, KindT};
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,

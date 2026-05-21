@@ -485,10 +485,10 @@ impl<'s, 't> HinputsT<'s, 't> {
         let last_two = &steps[steps.len().saturating_sub(2)..steps.len()];
         match (first, last_two) {
             (
-                crate::typing::names::names::INameT::Function(f),
+                INameT::Function(f),
                 [
-                    crate::typing::names::names::INameT::LambdaCitizenTemplate(_),
-                    crate::typing::names::names::INameT::LambdaCallFunction(_),
+                    INameT::LambdaCitizenTemplate(_),
+                    INameT::LambdaCallFunction(_),
                 ],
             ) if f.template.human_name.0 == needle_function_human_name => true,
             _ => false,

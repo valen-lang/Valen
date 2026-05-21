@@ -1,3 +1,9 @@
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::utils::code_hierarchy::{self, IPackageResolver};
+use super::compiler_test_compilation::compiler_test_compilation;
 /*
 package dev.vale.typing
 
@@ -37,12 +43,6 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 // mig: fn upcasting_with_generic_bounds
 #[test]
 fn upcasting_with_generic_bounds() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::utils::code_hierarchy::{self, IPackageResolver};
-    use super::compiler_test_compilation::compiler_test_compilation;
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();

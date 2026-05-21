@@ -15,6 +15,15 @@ use crate::typing::env::function_environment_t::{
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::{IdT, INameT, IInstantiationNameT, ITemplateNameT};
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
+use crate::interner::StrI;
+use crate::typing::macros::macros::FunctionBodyMacro;
+use crate::typing::templata::templata::InterfaceDefinitionTemplataT;
+use crate::typing::templata::templata::ImplDefinitionTemplataT;
+use crate::postparsing::names::ImplImpreciseNameValS;
+use crate::postparsing::names::ImplSubCitizenImpreciseNameValS;
+use crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS;
+use crate::typing::types::types::KindT;
 
 /*
 package dev.vale.typing.env
@@ -535,7 +544,7 @@ where 's: 't,
   pub name_to_top_level_environment:
     &'t [(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)],
   pub name_to_function_body_macro:
-    ArenaIndexMap<'t, crate::interner::StrI<'s>, crate::typing::macros::macros::FunctionBodyMacro>,
+    ArenaIndexMap<'t, StrI<'s>, FunctionBodyMacro>,
   pub builtins: &'t TemplatasStoreT<'s, 't>,
 }
 /*
@@ -661,12 +670,12 @@ where 's: 't,
         }))
     }
     IEnvEntryT::Interface(interface_a) => {
-        ITemplataT::InterfaceDefinition(interner.alloc(crate::typing::templata::templata::InterfaceDefinitionTemplataT {
+        ITemplataT::InterfaceDefinition(interner.alloc(InterfaceDefinitionTemplataT {
             declaring_env: defining_env,
             origin_interface: interface_a,
         }))
     }
-    IEnvEntryT::Impl(impl_a) => ITemplataT::ImplDefinition(interner.alloc(crate::typing::templata::templata::ImplDefinitionTemplataT {
+    IEnvEntryT::Impl(impl_a) => ITemplataT::ImplDefinition(interner.alloc(ImplDefinitionTemplataT {
         env: defining_env,
         impl_: impl_a,
     })),
@@ -900,20 +909,20 @@ where 's: 't,
         IEnvEntryT::Impl(impl_a) => {
           let sub = impl_a.sub_citizen_imprecise_name;
           let sup = impl_a.super_interface_imprecise_name;
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub, super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub, super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
         }
         IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
           let sub_local_name = match isa.sub_kind {
-            crate::typing::types::types::KindT::Struct(stt) => stt.id.local_name,
-            crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
-            crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+            KindT::Struct(stt) => stt.id.local_name,
+            KindT::Interface(itt) => itt.id.local_name,
+            KindT::KindPlaceholder(kp) => kp.id.local_name,
             _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
           };
           let super_local_name = match isa.super_kind {
-            crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
-            crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+            KindT::Interface(itt) => itt.id.local_name,
+            KindT::KindPlaceholder(kp) => kp.id.local_name,
             _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
           };
           let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
@@ -923,9 +932,9 @@ where 's: 't,
           if let Some(key_imprecise) = get_imprecise_name(scout_arena, *name) {
             self.imprecise_to_entries.entry(key_imprecise).or_insert_with(Vec::new).push(*entry);
           }
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise }))).or_insert_with(Vec::new).push(*entry);
-          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
         }
         _ => {
           if let Some(imprecise) = get_imprecise_name(scout_arena, *name) {
@@ -1058,14 +1067,14 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
           }
           IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
             let sub_local_name = match isa.sub_kind {
-              crate::typing::types::types::KindT::Struct(stt) => stt.id.local_name,
-              crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
-              crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+              KindT::Struct(stt) => stt.id.local_name,
+              KindT::Interface(itt) => itt.id.local_name,
+              KindT::KindPlaceholder(kp) => kp.id.local_name,
               _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
             };
             let super_local_name = match isa.super_kind {
-              crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
-              crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+              KindT::Interface(itt) => itt.id.local_name,
+              KindT::KindPlaceholder(kp) => kp.id.local_name,
               _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
             };
             let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
@@ -1076,9 +1085,9 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
             if let Some(key_imprecise) = get_imprecise_name(scout_arena, *key) {
               entries.push((key_imprecise, *value));
             }
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise })), *value));
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise })), *value));
-            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise })), *value));
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise })), *value));
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise })), *value));
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise })), *value));
             entries
           }
           _ => {
@@ -1994,7 +2003,6 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
     lookup_with_imprecise_name_inner(
       IEnvironmentT::General(self), self.templatas, IEnvironmentT::from(self.parent_env), name, lookup_filter, get_only_nearest, interner)
   }

@@ -18,6 +18,11 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
+use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+use crate::typing::env::function_environment_t::{IVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::templata::templata::KindTemplataT;
 
 /*
 package dev.vale.typing.function
@@ -399,7 +404,6 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function: &'s FunctionA<'s>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let function_template_name = self.translate_generic_function_name(function.name);
         let function_name_local: INameT<'s, 't> = match function_template_name {
             IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
@@ -751,11 +755,6 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         closure_struct_ref: StructTT<'s, 't>,
     ) -> (Vec<IVariableT<'s, 't>>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>) {
-        use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
-        use crate::typing::env::function_environment_t::{IVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
-        use crate::typing::env::i_env_entry::IEnvEntryT;
-        use crate::typing::templata_compiler::IBoundArgumentsSource;
-        use crate::typing::templata::templata::KindTemplataT;
         let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
         let substituter = self.get_placeholder_substituter(
             self.opts.global_options.sanity_check,

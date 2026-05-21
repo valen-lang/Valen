@@ -5,6 +5,44 @@ use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::typing::names::names::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::ICitizenAttributeS;
+use crate::postparsing::ast::SealedS;
+use crate::postparsing::rules::rules::LookupSR;
+use crate::postparsing::rules::rules::CallSR;
+use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType};
+use crate::typing::names::names::IdValT;
+use crate::higher_typing::ast::ImplA;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::rules::rules::CoerceToCoordSR;
+use crate::postparsing::rules::rules::AugmentSR;
+use crate::postparsing::names::{IRuneValS, AnonymousSubstructMethodInheritedRuneValS};
+use crate::postparsing::names::AnonymousSubstructVoidKindRuneS;
+use crate::postparsing::names::AnonymousSubstructVoidCoordRuneS;
+use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::itemplatatype::CoordTemplataType;
+use crate::utils::range::RangeS;
+use crate::postparsing::rules::rules::PackSR;
+use crate::postparsing::rules::rules::DefinitionFuncSR;
+use crate::postparsing::rules::rules::CallSiteFuncSR;
+use crate::postparsing::rules::rules::ResolveSR;
+use crate::postparsing::itemplatatype::{PackTemplataType, PrototypeTemplataType};
+use crate::parsing::ast::ast::OwnershipP;
+use crate::postparsing::ast::ParameterS;
+use crate::postparsing::itemplatatype::OwnershipTemplataType;
+use crate::postparsing::itemplatatype::FunctionTemplataType;
+use crate::postparsing::rules::rules::CoordComponentsSR;
+use crate::postparsing::ast::{GenericParameterS, IBodyS, CodeBodyS, LocationInDenizen, AbstractSP};
+use crate::postparsing::expressions::{BodySE, BlockSE, IExpressionSE, FunctionCallSE, DotSE, LocalLoadSE, LocalS, IVariableUseCertainty};
+use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
+use crate::parsing::ast::ast::LoadAsP;
+use crate::postparsing::names::AnonymousSubstructMemberRuneS;
+use crate::parsing::ast::VariabilityP;
+use crate::postparsing::names::INameS;
+use crate::postparsing::ast::IGenericParameterTypeS;
+use crate::postparsing::ast::CoordGenericParameterTypeS;
+use crate::postparsing::ast::IStructMemberS;
+use crate::postparsing::names::IStructDeclarationNameS;
 
 /*
 package dev.vale.typing.macros
@@ -72,18 +110,12 @@ where 's: 't,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::ast::{ICitizenAttributeS, SealedS, NormalStructMemberS};
         use crate::postparsing::names::{
             IRuneValS, AnonymousSubstructTemplateNameS, AnonymousSubstructImplDeclarationNameS,
             AnonymousSubstructTemplateRuneS, AnonymousSubstructKindRuneS,
             AnonymousSubstructParentInterfaceTemplateRuneS, AnonymousSubstructParentInterfaceKindRuneS,
             IImplDeclarationNameS,
         };
-        use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
-        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType};
-        use crate::typing::names::names::IdValT;
-        use crate::higher_typing::ast::ImplA;
-        use crate::utils::arena_index_map::ArenaIndexMap;
 
         if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
             return vec![];
@@ -92,25 +124,25 @@ where 's: 't,
         let member_runes: Vec<RuneUsage<'s>> =
             interface_a.internal_methods.iter().enumerate().map(|(_index, method)| {
                 let rune = self.scout_arena.intern_rune(
-                    IRuneValS::AnonymousSubstructMemberRune(crate::postparsing::names::AnonymousSubstructMemberRuneS {
+                    IRuneValS::AnonymousSubstructMemberRune(AnonymousSubstructMemberRuneS {
                         interface: *interface_a.name,
                         method: method.name,
                     }));
-                RuneUsage { range: crate::utils::range::RangeS::new(method.range.begin, method.range.begin), rune }
+                RuneUsage { range: RangeS::new(method.range.begin, method.range.begin), rune }
             }).collect();
         let members: Vec<NormalStructMemberS<'s>> =
             interface_a.internal_methods.iter().zip(member_runes.iter()).enumerate().map(|(index, (method, rune))| {
                 NormalStructMemberS {
                     range: method.range,
                     name: self.scout_arena.intern_str(&index.to_string()),
-                    variability: crate::parsing::ast::VariabilityP::Final,
+                    variability: VariabilityP::Final,
                     type_rune: *rune,
                 }
             }).collect();
 
         let struct_name_s = AnonymousSubstructTemplateNameS { interface_name: *interface_a.name };
         let struct_name_s_ref = self.scout_arena.alloc(struct_name_s);
-        let struct_local_name = self.translate_name_step(crate::postparsing::names::INameS::AnonymousSubstructTemplateName(struct_name_s_ref));
+        let struct_local_name = self.translate_name_step(INameS::AnonymousSubstructTemplateName(struct_name_s_ref));
         let struct_name_t_steps = interface_name.init_steps.to_vec();
         let struct_name_t = *self.typing_interner.intern_id(IdValT {
             package_coord: interface_name.package_coord,
@@ -339,7 +371,6 @@ where 's: 't,
         rule: IRulexSR<'s>,
         func: impl Fn(IRuneS<'s>) -> IRuneS<'s>,
     ) -> IRulexSR<'s> {
-        use crate::postparsing::rules::rules::{LookupSR, CoerceToCoordSR};
         match rule {
             IRulexSR::Lookup(x) => IRulexSR::Lookup(LookupSR {
                 range: x.range,
@@ -368,7 +399,6 @@ where 's: 't,
             }),
             IRulexSR::Literal(_) => panic!("implement: map_runes_anonymous_interface Literal"),
             IRulexSR::Augment(x) => {
-                use crate::postparsing::rules::rules::AugmentSR;
                 IRulexSR::Augment(AugmentSR {
                     range: x.range,
                     result_rune: RuneUsage { range: x.result_rune.range, rune: func(x.result_rune.rune) },
@@ -378,7 +408,6 @@ where 's: 't,
             }
             IRulexSR::MaybeCoercingCall(_) => panic!("implement: map_runes_anonymous_interface MaybeCoercingCall"),
             IRulexSR::Call(x) => {
-                use crate::postparsing::rules::rules::CallSR;
                 let new_args: Vec<RuneUsage<'s>> = x.args.iter()
                     .map(|ru| RuneUsage { range: ru.range, rune: func(ru.rune) })
                     .collect();
@@ -444,7 +473,6 @@ where 's: 't,
         method: &'s FunctionA<'s>,
         rune: IRuneS<'s>,
     ) -> IRuneS<'s> {
-        use crate::postparsing::names::{IRuneValS, AnonymousSubstructMethodInheritedRuneValS};
         self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructMethodInheritedRune(
             AnonymousSubstructMethodInheritedRuneValS {
                 interface: *interface_a.name,
@@ -473,16 +501,12 @@ where 's: 't,
         members: &[NormalStructMemberS<'s>],
         struct_template_name_s: AnonymousSubstructTemplateNameS<'s>,
     ) -> &'s StructA<'s> {
-        use crate::postparsing::names::{IRuneValS, AnonymousSubstructVoidKindRuneS, AnonymousSubstructVoidCoordRuneS, CodeNameS, IImpreciseNameValS};
-        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, CoordTemplataType};
-        use crate::postparsing::rules::rules::{IRulexSR, LookupSR, CoerceToCoordSR};
-        use crate::utils::range::RangeS;
 
         let range = |n: i32| RangeS::internal(self.scout_arena, n);
-        let use_rune = |n: i32, rune: crate::postparsing::names::IRuneS<'s>| RuneUsage { range: range(n), rune };
+        let use_rune = |n: i32, rune: IRuneS<'s>| RuneUsage { range: range(n), rune };
 
         let mut rules_builder: Vec<IRulexSR<'s>> = Vec::new();
-        let mut rune_to_type: Vec<(crate::postparsing::names::IRuneS<'s>, ITemplataType<'s>)> = Vec::new();
+        let mut rune_to_type: Vec<(IRuneS<'s>, ITemplataType<'s>)> = Vec::new();
 
         for rule in interface_a.rules.iter() {
             rules_builder.push(*rule);
@@ -512,16 +536,16 @@ where 's: 't,
             kind_rune: use_rune(-64002, void_kind_rune),
         }));
 
-        let mut struct_generic_params: Vec<&'s crate::postparsing::ast::GenericParameterS<'s>> = Vec::new();
+        let mut struct_generic_params: Vec<&'s GenericParameterS<'s>> = Vec::new();
         for gp in interface_a.generic_parameters.iter() {
             struct_generic_params.push(*gp);
         }
         for mr in member_runes.iter() {
-            let gp = self.scout_arena.alloc(crate::postparsing::ast::GenericParameterS {
+            let gp = self.scout_arena.alloc(GenericParameterS {
                 range: mr.range,
                 rune: *mr,
-                tyype: crate::postparsing::ast::IGenericParameterTypeS::CoordGenericParameterType(
-                    crate::postparsing::ast::CoordGenericParameterTypeS {
+                tyype: IGenericParameterTypeS::CoordGenericParameterType(
+                    CoordGenericParameterTypeS {
                         coord_region: None,
                         kind_mutable: true,
                         region_mutable: false,
@@ -541,9 +565,6 @@ where 's: 't,
             AnonymousSubstructDropBoundParamsListRuneS,
             AnonymousSubstructDropBoundPrototypeRuneS,
         };
-        use crate::postparsing::rules::rules::{AugmentSR, PackSR, CallSR, DefinitionFuncSR, CallSiteFuncSR, ResolveSR};
-        use crate::postparsing::itemplatatype::{PackTemplataType, PrototypeTemplataType};
-        use crate::parsing::ast::ast::OwnershipP;
         for ((internal_method, member_rune), _method_index) in
             interface_a.internal_methods.iter().zip(member_runes.iter()).zip(0i32..) {
             let internal_method = *internal_method;
@@ -614,7 +635,7 @@ where 's: 't,
                 let coord_type_ref = self.scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {}));
                 rune_to_type.push((method_params_list_rune.rune, ITemplataType::PackTemplataType(PackTemplataType { element_type: coord_type_ref })));
 
-                let interface_params: Vec<&'s crate::postparsing::ast::ParameterS<'s>> = internal_method.params.iter()
+                let interface_params: Vec<&'s ParameterS<'s>> = internal_method.params.iter()
                     .filter(|p| p.virtuality.is_some())
                     .collect();
                 assert_eq!(interface_params.len(), 1, "vassertOne");
@@ -789,23 +810,23 @@ where 's: 't,
         param_types.extend(member_coord_types);
         let param_types_slice = self.scout_arena.alloc_slice_from_vec(param_types);
         let kind_type = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
-        let tyype = crate::postparsing::itemplatatype::TemplateTemplataType {
+        let tyype = TemplateTemplataType {
             param_types: param_types_slice,
             return_type: kind_type,
         };
 
         let header_rune_to_type = self.scout_arena.alloc_index_map_from_iter(rune_to_type);
         let header_rules_slice = self.scout_arena.alloc_slice_from_vec(rules_builder);
-        let members_rune_to_type = self.scout_arena.alloc_index_map::<crate::postparsing::names::IRuneS<'s>, ITemplataType<'s>>();
+        let members_rune_to_type = self.scout_arena.alloc_index_map::<IRuneS<'s>, ITemplataType<'s>>();
         let member_rules_slice: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
         let generic_params_slice = self.scout_arena.alloc_slice_from_vec(struct_generic_params);
-        let attributes_slice: &'s [crate::postparsing::ast::ICitizenAttributeS<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
-        let members_slice: &'s [crate::postparsing::ast::IStructMemberS<'s>] = self.scout_arena.alloc_slice_from_vec(
-            members.iter().map(|m| crate::postparsing::ast::IStructMemberS::NormalStructMember(*m)).collect::<Vec<_>>());
+        let attributes_slice: &'s [ICitizenAttributeS<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
+        let members_slice: &'s [IStructMemberS<'s>] = self.scout_arena.alloc_slice_from_vec(
+            members.iter().map(|m| IStructMemberS::NormalStructMember(*m)).collect::<Vec<_>>());
 
         let struct_a = StructA::new(
             interface_a.range,
-            crate::postparsing::names::IStructDeclarationNameS::AnonymousSubstructTemplateName(
+            IStructDeclarationNameS::AnonymousSubstructTemplateName(
                 *self.scout_arena.alloc(struct_template_name_s)),
             attributes_slice,
             false,
@@ -1048,13 +1069,6 @@ where 's: 't,
             IFunctionDeclarationNameValS, ForwarderFunctionDeclarationNameValS,
             INameS, IRuneS,
         };
-        use crate::postparsing::ast::ParameterS;
-        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, CoordTemplataType, OwnershipTemplataType, FunctionTemplataType, TemplateTemplataType};
-        use crate::postparsing::rules::rules::{IRulexSR, RuneUsage, CoordComponentsSR, LookupSR, CallSR};
-        use crate::postparsing::ast::{GenericParameterS, IBodyS, CodeBodyS, LocationInDenizen, AbstractSP};
-        use crate::postparsing::expressions::{BodySE, BlockSE, IExpressionSE, FunctionCallSE, DotSE, LocalLoadSE, LocalS, IVariableUseCertainty};
-        use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
-        use crate::parsing::ast::ast::LoadAsP;
 
         let struct_type = struct_.tyype;
         let method_range = method.range;

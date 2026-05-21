@@ -13,6 +13,7 @@ use crate::typing::ast::expressions::*;
 use crate::typing::hinputs_t::*;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::typing::names::names::IdValQuery;
 
 /*
 package dev.vale.typing.ast
@@ -628,7 +629,7 @@ impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<SignatureValT<'s, 't, 't>> for Sign
 where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &SignatureValT<'s, 't, 't>) -> bool {
-        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+        IdValQuery(&self.0.id).equivalent(&key.id)
     }
     /* Guardian: disable-all */
 }
@@ -1071,7 +1072,7 @@ impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<PrototypeValT<'s, 't, 't>> for Prot
 where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &PrototypeValT<'s, 't, 't>) -> bool {
-        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+        IdValQuery(&self.0.id).equivalent(&key.id)
             && self.0.return_type == key.return_type
     }
     /* Guardian: disable-all */

@@ -22,6 +22,7 @@ use crate::higher_typing::ast::*;
 use crate::higher_typing::ast::FunctionA;
 use crate::typing::citizen::struct_compiler::*;
 use crate::utils::code_hierarchy::FileCoordinate;
+use crate::typing::types::types::OwnershipT;
 
 /*
 package dev.vale.typing
@@ -955,10 +956,10 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
     ITemplataT::Integer(value) => panic!("implement: humanize_templata Integer"),
     ITemplataT::Mutability(mutability) => panic!("implement: humanize_templata Mutability"),
     ITemplataT::Ownership(ownership) => match ownership.ownership {
-      crate::typing::types::types::OwnershipT::Own => "own".to_string(),
-      crate::typing::types::types::OwnershipT::Borrow => "borrow".to_string(),
-      crate::typing::types::types::OwnershipT::Weak => "weak".to_string(),
-      crate::typing::types::types::OwnershipT::Share => "share".to_string(),
+      OwnershipT::Own => "own".to_string(),
+      OwnershipT::Borrow => "borrow".to_string(),
+      OwnershipT::Weak => "weak".to_string(),
+      OwnershipT::Share => "share".to_string(),
     },
     ITemplataT::Prototype(prototype) => panic!("implement: humanize_templata Prototype"),
     ITemplataT::Coord(coord_templata) => humanize_coord(scout_arena, typing_interner, code_map, coord_templata.coord),

@@ -3,6 +3,19 @@ use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
+use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, MacroSelfKindTemplateRuneS, MacroSelfKindRuneS, MacroSelfCoordRuneS, IVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
+use crate::postparsing::ast::{ParameterS, IBodyS, AbstractBodyS};
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
+use crate::utils::range::{RangeS, CodeLocationS};
+use std::collections::HashMap;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::TopLevelCitizenDeclarationNameS;
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::AbstractSP;
 
 /*
 package dev.vale.typing.macros.citizen
@@ -48,14 +61,6 @@ where 's: 't,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, MacroSelfKindTemplateRuneS, MacroSelfKindRuneS, MacroSelfCoordRuneS, IVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
-        use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
-        use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
-        use crate::postparsing::ast::{ParameterS, IBodyS, AbstractBodyS};
-        use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
-        use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
-        use crate::utils::range::{RangeS, CodeLocationS};
-        use std::collections::HashMap;
 
         let range = |n: i32| -> RangeS<'s> {
             let loc = CodeLocationS::internal(self.scout_arena, n);
@@ -75,7 +80,7 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_(-64002, void_kind_rune_s),
-            name: self.scout_arena.intern_imprecise_name(crate::postparsing::names::IImpreciseNameValS::CodeName(crate::postparsing::names::CodeNameS { name: self.keywords.void })),
+            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
         let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
         rune_to_type.insert(void_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
@@ -86,7 +91,7 @@ where 's: 't,
         }));
 
         let interface_name_range = interface_a.name.range;
-        let interface_citizen_name = crate::postparsing::names::TopLevelCitizenDeclarationNameS::from(interface_a.name);
+        let interface_citizen_name = TopLevelCitizenDeclarationNameS::from(interface_a.name);
         let interface_imprecise_name = interface_citizen_name.get_imprecise_name(self.scout_arena);
 
         let self_kind_template_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroSelfKindTemplateRune(MacroSelfKindTemplateRuneS {}));
@@ -133,7 +138,7 @@ where 's: 't,
         let mut rune_to_type_map = self.scout_arena.alloc_index_map();
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let drop_function_a = self.scout_arena.alloc(crate::higher_typing::ast::FunctionA::new(
+        let drop_function_a = self.scout_arena.alloc(FunctionA::new(
             interface_a.range,
             name_s,
             &[],
@@ -142,7 +147,7 @@ where 's: 't,
             rune_to_type_map,
             self.scout_arena.alloc_slice_from_vec(vec![ParameterS::new(
                 range(-1340),
-                Some(crate::postparsing::ast::AbstractSP { range: range(-64002), is_internal_method: true }),
+                Some(AbstractSP { range: range(-64002), is_internal_method: true }),
                 false,
                 AtomSP {
                     range: range(-1340),

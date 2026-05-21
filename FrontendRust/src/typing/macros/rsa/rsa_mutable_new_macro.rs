@@ -10,6 +10,11 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS, CodeRuneS, IRuneValS};
+use crate::typing::env::environment::{ILookupContext, IInDenizenEnvironmentT};
+use crate::typing::templata::templata::{ITemplataT, expect_mutability};
+use crate::typing::types::types::RegionT;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.macros.rsa
@@ -62,11 +67,6 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS, CodeRuneS, IRuneValS};
-        use crate::typing::env::environment::{ILookupContext, IInDenizenEnvironmentT};
-        use crate::typing::templata::templata::{ITemplataT, expect_mutability};
-        use crate::typing::types::types::RegionT;
-        use std::collections::HashSet;
 
         let header = FunctionHeaderT {
             id: env.id,

@@ -27,6 +27,8 @@ use crate::higher_typing::ast::*;
 use crate::solver::solver::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
+use crate::typing::infer_compiler::IConclusionResolveError;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 
 /*
 package dev.vale.typing.function
@@ -760,7 +762,7 @@ where 's: 't,
 
                         match &generic_param.default {
                             Some(default_rules) => {
-                                match solver_state.commit_step::<crate::typing::infer::compiler_solver::ITypingPassSolverError>(
+                                match solver_state.commit_step::<ITypingPassSolverError>(
                                     false, vec![], std::collections::HashMap::new(),
                                     default_rules.rules.iter().map(|r| **r).collect(),
                                 ) {
@@ -1166,7 +1168,6 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let function = near_env.function;
 
         let mut range: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
@@ -1271,7 +1272,6 @@ where 's: 't,
             envs, coutputs, &range, call_location, &definition_rules, &param_and_return_runes, &inferences,
         ) {
             Err(f) => {
-                use crate::typing::infer_compiler::IConclusionResolveError;
                 match f {
                     IConclusionResolveError::CouldntFindFunctionForConclusionResolve { .. } => panic!("TypingPassDefiningError: CouldntFindFunctionForConclusionResolve"),
                     IConclusionResolveError::ReturnTypeConflictInConclusionResolve { .. } => panic!("TypingPassDefiningError: ReturnTypeConflictInConclusionResolve"),

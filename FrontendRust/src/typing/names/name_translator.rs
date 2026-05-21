@@ -5,6 +5,7 @@ use crate::postparsing::names::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler::Compiler;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.names
@@ -250,7 +251,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn translate_name_step(&self, name: INameS<'s>) -> INameT<'s, 't> {
-        use std::marker::PhantomData;
         match name {
             INameS::LambdaStructDeclaration(_) => panic!("Unimplemented: translate_name_step LambdaStructDeclaration"),
             INameS::LetName(_) => panic!("Unimplemented: translate_name_step LetNameS"),

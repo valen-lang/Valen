@@ -1022,7 +1022,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
         id: IdT<'s, 't>,
         exported_name: StrI<'s>,
-        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
+        interner: &TypingInterner<'s, 't>,
     ) {
         let export = interner.alloc(KindExportT { range, tyype: kind, id, exported_name });
         self.kind_exports.push(export);
@@ -1042,7 +1042,7 @@ where 's: 't,
         function: &'t PrototypeT<'s, 't>,
         export_id: IdT<'s, 't>,
         exported_name: StrI<'s>,
-        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
+        interner: &TypingInterner<'s, 't>,
     ) {
         assert!(self.get_instantiation_bounds(interner, function.id).is_some());
         let export = interner.alloc(FunctionExportT { range, prototype: *function, export_id, exported_name });
@@ -1081,7 +1081,7 @@ where 's: 't,
         extern_placeholdered_id: IdT<'s, 't>,
         function: &'t PrototypeT<'s, 't>,
         exported_name: StrI<'s>,
-        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
+        interner: &TypingInterner<'s, 't>,
     ) {
         let function_extern = interner.alloc(FunctionExternT { range, extern_placeholdered_id, prototype: *function, extern_name: exported_name });
         self.function_externs.push(function_extern);

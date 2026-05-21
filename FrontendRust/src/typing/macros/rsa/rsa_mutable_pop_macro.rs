@@ -10,6 +10,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::types::types::KindT;
 
 /*
 package dev.vale.typing.macros.rsa
@@ -71,7 +72,7 @@ where 's: 't,
                         coord: param_coords[0].tyype,
                     }));
                     let element_type = match array_expr.result().coord.kind {
-                        crate::typing::types::types::KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
+                        KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
                         other => panic!("vwat: {:?}", other),
                     };
                     self.typing_interner.alloc(PopRuntimeSizedArrayTE { array_expr, element_type })

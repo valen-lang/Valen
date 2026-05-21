@@ -1,3 +1,77 @@
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
+use crate::interner::StrI;
+use crate::postparsing::names::{IImpreciseNameS, CodeNameS};
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::names::names::{IFunctionNameT, INameT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::{CoordT, KindT, OwnershipT};
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::ConstantIntTE;
+use crate::typing::types::types::IntT;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::typing::ast::expressions::BlockTE;
+use crate::typing::ast::expressions::ConsecutorTE;
+use crate::typing::ast::expressions::ReturnTE;
+use crate::typing::ast::expressions::VoidLiteralTE;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
+use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS};
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::rules::rules::{CoordComponentsSR, IRulexSR, KindComponentsSR, RuneUsage};
+use crate::solver::solver::{FailedSolve, ISolverError, RuleError, SolveIncomplete, Step};
+use crate::typing::ast::ast::SignatureT;
+use crate::typing::compiler_error_humanizer::humanize;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::names::names::FunctionNameValT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::IdValT;
+use crate::typing::names::names::InterfaceNameValT;
+use crate::typing::names::names::InterfaceTemplateNameT;
+use crate::typing::names::names::IStructTemplateNameT;
+use crate::typing::names::names::KindPlaceholderNameT;
+use crate::typing::names::names::KindPlaceholderTemplateNameT;
+use crate::typing::names::names::StructNameValT;
+use crate::typing::names::names::StructTemplateNameT;
+use crate::typing::templata::templata::OwnershipTemplataT;
+use crate::typing::types::types::InterfaceTTValT;
+use crate::typing::types::types::RegionT;
+use crate::typing::types::types::StructTTValT;
+use crate::typing::ast::expressions::UpcastTE;
+use crate::postparsing::names::{IStructDeclarationNameS, TopLevelStructDeclarationNameS};
+use crate::higher_typing::ast::StructA;
+use crate::solver::solver::SolverConflict;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::StructNameT;
+use crate::typing::templata::templata::StructDefinitionTemplataT;
+use crate::typing::templata::templata::KindTemplataT;
+use crate::typing::types::types::StructTT;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::test::traverse::NodeRefT;
+use crate::postparsing::names::INameValS;
+use crate::postparsing::names::IFunctionDeclarationNameValS;
+use crate::postparsing::names::FunctionNameS;
+use crate::postparsing::names::DenizenDefaultRegionRuneS;
+use crate::typing::names::names::ExportTemplateNameT;
+use crate::typing::names::names::ExportNameT;
+use crate::typing::ast::ast::KindExportT;
+use crate::utils::code_hierarchy::FileCoordinate;
+use crate::postparsing::names::ImplicitRuneValS;
+use crate::typing::types::types::ISuperKindTT;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::FunctionBoundNameT;
+use crate::typing::names::names::FunctionBoundTemplateNameT;
+use crate::typing::types::types::KindPlaceholderT;
 /*
 package dev.vale.typing
 
@@ -42,13 +116,6 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 // mig: fn test_simple_generic_function
 #[test]
 fn test_simple_generic_function() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -79,17 +146,6 @@ fn test_simple_generic_function() {
 // mig: fn test_lacking_drop_function
 #[test]
 fn test_lacking_drop_function() {
-    use bumpalo::Bump;
-    use crate::interner::StrI;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::postparsing::names::{IImpreciseNameS, CodeNameS};
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::overload_resolver::FindFunctionFailure;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -121,17 +177,6 @@ fn test_lacking_drop_function() {
 // mig: fn test_having_drop_function_concept_function
 #[test]
 fn test_having_drop_function_concept_function() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::FunctionCallTE;
-    use crate::typing::names::names::{IFunctionNameT, INameT};
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::types::types::{CoordT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -162,37 +207,36 @@ fn test_having_drop_function_concept_function() {
     }
 
     // Make sure it calls drop, and that it has the right placeholders
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(bork),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) => Some(c)
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(bork),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::FunctionBound(FunctionBoundNameT {
+                        template: FunctionBoundTemplateNameT { human_name: StrI("drop"), .. },
+                        template_args: &[],
+                        parameters: &[CoordT {
+                            ownership: OwnershipT::Own,
+                            kind: KindT::KindPlaceholder(KindPlaceholderT {
+                                id: IdT {
+                                    init_steps: &[INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("bork"), .. })],
+                                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                        template: KindPlaceholderTemplateNameT { index: 0, .. },
+                                    }),
+                                    ..
+                                },
+                            }),
+                            ..
+                        }],
+                        ..
+                    }),
+                    ..
+                },
+                return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. },
+            },
+            ..
+        }) => Some(())
     );
-    let prototype = call.callable;
-    match prototype.id.local_name {
-        INameT::FunctionBound(fbn) => {
-            assert_eq!(fbn.template.human_name.0, "drop");
-            assert_eq!(fbn.template_args.len(), 0);
-            assert_eq!(fbn.parameters.len(), 1);
-            match fbn.parameters[0] {
-                CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. } => {
-                    assert_eq!(kp.id.init_steps.len(), 1);
-                    match kp.id.init_steps[0] {
-                        INameT::FunctionTemplate(ft) => assert_eq!(ft.human_name.0, "bork"),
-                        _ => panic!("expected FunctionTemplate init_step"),
-                    }
-                    match kp.id.local_name {
-                        INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                        _ => panic!("expected KindPlaceholder local_name"),
-                    }
-                }
-                _ => panic!("expected Own KindPlaceholder param"),
-            }
-        }
-        _ => panic!("expected FunctionBound local_name"),
-    }
-    match prototype.return_type {
-        CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. } => {}
-        _ => panic!("expected Share Void return_type"),
-    }
 }
 /*
 Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses the +T erasure pattern (design v3 §6.0) where `IdT.local_name: INameT` is widened and use sites narrow via `TryFrom<INameT>` — precedents at infer_compiler.rs:618, templata_compiler.rs:277/1564, overload_resolver.rs:716, ast.rs:1027. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1232-1779031866703/hook-1232/test_having_drop_function_concept_function--123.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
@@ -238,17 +282,6 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunc
 // mig: fn test_calling_a_generic_function_with_a_concept_function
 #[test]
 fn test_calling_a_generic_function_with_a_concept_function() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::{FunctionCallTE, ReferenceExpressionTE, ConstantIntTE};
-    use crate::typing::names::names::INameT;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -264,39 +297,27 @@ fn test_calling_a_generic_function_with_a_concept_function() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) => Some(c)
-    );
-    let prototype = call.callable;
-    match prototype.id.local_name {
-        INameT::Function(fn_name) => {
-            assert_eq!(fn_name.template.human_name.0, "bork");
-            assert_eq!(fn_name.template_args.len(), 1);
-            match fn_name.template_args[0] {
-                ITemplataT::Coord(ct) => match ct.coord {
-                    CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. } => {}
-                    _ => panic!("expected Share Int32 template arg"),
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("bork"), .. },
+                        template_args: &[ITemplataT::Coord(CoordTemplataT {
+                            coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. },
+                        })],
+                        parameters: &[CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }],
+                        ..
+                    }),
+                    ..
                 },
-                _ => panic!("expected Coord template arg"),
-            }
-            assert_eq!(fn_name.parameters.len(), 1);
-            match fn_name.parameters[0] {
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. } => {}
-                _ => panic!("expected Share Int32 param"),
-            }
-        }
-        _ => panic!("expected Function local_name"),
-    }
-    match prototype.return_type {
-        CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. } => {}
-        _ => panic!("expected Share Int32 return_type"),
-    }
-    assert_eq!(call.args.len(), 1);
-    match call.args[0] {
-        ReferenceExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => {}
-        _ => panic!("expected ConstantIntTE(3, 32)"),
-    }
+                return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. },
+            },
+            args: &[ReferenceExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. })],
+            ..
+        }) => Some(())
+    );
 }
 /*
   test("Test calling a generic function with a concept function") {
@@ -330,16 +351,6 @@ fn test_calling_a_generic_function_with_a_concept_function() {
 // mig: fn test_rune_type_in_generic_param
 #[test]
 fn test_rune_type_in_generic_param() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::names::names::IFunctionNameT;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::postparsing::itemplatatype::ITemplataType;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -380,13 +391,6 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunc
 // mig: fn test_single_parameter_function
 #[test]
 fn test_single_parameter_function() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -422,17 +426,6 @@ fn test_single_parameter_function() {
 // mig: fn test_calling_a_generic_function_with_a_drop_concept_function
 #[test]
 fn test_calling_a_generic_function_with_a_drop_concept_function() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::{BlockTE, ConsecutorTE, ReferenceExpressionTE, ReturnTE, VoidLiteralTE};
-    use crate::typing::names::names::INameT;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::types::types::{CoordT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -478,7 +471,7 @@ fn test_calling_a_generic_function_with_a_drop_concept_function() {
             match template_arg_coord {
                 CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. } => match stt.id.local_name {
                     INameT::Struct(sn) => match sn.template {
-                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(st) => assert_eq!(st.human_name.0, "Mork"),
+                        IStructTemplateNameT::StructTemplate(st) => assert_eq!(st.human_name.0, "Mork"),
                         _ => panic!("expected StructTemplate"),
                     },
                     _ => panic!("expected Struct local_name"),
@@ -540,25 +533,6 @@ fn test_calling_a_generic_function_with_a_drop_concept_function() {
 // mig: fn humanize_errors
 #[test]
 fn humanize_errors() {
-    use bumpalo::Bump;
-    use crate::interner::StrI;
-    use crate::keywords::Keywords;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::typing_interner::TypingInterner;
-    use crate::utils::range::{CodeLocationS, RangeS};
-    use crate::utils::code_hierarchy::FileCoordinateMap;
-    use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
-    use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS};
-    use crate::postparsing::ast::LocationInDenizenBuilder;
-    use crate::postparsing::rules::rules::{CoordComponentsSR, IRulexSR, KindComponentsSR, RuneUsage};
-    use crate::solver::solver::{FailedSolve, ISolverError, RuleError, SolveIncomplete, Step};
-    use crate::typing::ast::ast::SignatureT;
-    use crate::typing::compiler_error_humanizer::humanize;
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::infer::compiler_solver::ITypingPassSolverError;
-    use crate::typing::names::names::{FunctionNameValT, FunctionTemplateNameT, IdValT, INameT, InterfaceNameValT, InterfaceTemplateNameT, IStructTemplateNameT, KindPlaceholderNameT, KindPlaceholderTemplateNameT, StructNameValT, StructTemplateNameT};
-    use crate::typing::templata::templata::{ITemplataT, OwnershipTemplataT};
-    use crate::typing::types::types::{CoordT, InterfaceTTValT, KindT, OwnershipT, RegionT, StructTTValT};
 
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -574,8 +548,8 @@ fn humanize_errors() {
     let main_func_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
     let main_func_name = typing_interner.intern_function_name(FunctionNameValT { template: main_func_template, template_args: &[], parameters: &[] });
     let _func_name = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(main_func_name) });
-    let denizen_name_s = scout_arena.intern_name(crate::postparsing::names::INameValS::FunctionDeclaration(crate::postparsing::names::IFunctionDeclarationNameValS::FunctionName(crate::postparsing::names::FunctionNameS { name: scout_arena.intern_str("main"), code_location: tz_code_loc })));
-    let denizen_default_region_rune_s = crate::postparsing::names::DenizenDefaultRegionRuneS { denizen_name: denizen_name_s };
+    let denizen_name_s = scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::FunctionName(FunctionNameS { name: scout_arena.intern_str("main"), code_location: tz_code_loc })));
+    let denizen_default_region_rune_s = DenizenDefaultRegionRuneS { denizen_name: denizen_name_s };
     let kpt_name = typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::DenizenDefaultRegionRune(scout_arena.alloc(denizen_default_region_rune_s)), _phantom: std::marker::PhantomData });
     let kp_name = typing_interner.intern_kind_placeholder_name(KindPlaceholderNameT { template: kpt_name });
     let mut region_init_steps: Vec<INameT> = func_template_id.init_steps.to_vec();
@@ -626,18 +600,18 @@ fn humanize_errors() {
     let myfunc_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(myfunc_name) });
     let _firefly_signature = SignatureT { id: *myfunc_id };
 
-    let export_template_name = typing_interner.intern_export_template_name(crate::typing::names::names::ExportTemplateNameT { code_loc: tz[0].begin, _phantom: std::marker::PhantomData });
-    let firefly_export_name = typing_interner.intern_export_name(crate::typing::names::names::ExportNameT { template: export_template_name, region: RegionT {} });
+    let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin, _phantom: std::marker::PhantomData });
+    let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT {} });
     let firefly_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(firefly_export_name) });
-    let _firefly_export = crate::typing::ast::ast::KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
-    let serenity_export_name = typing_interner.intern_export_name(crate::typing::names::names::ExportNameT { template: export_template_name, region: RegionT {} });
+    let _firefly_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
+    let serenity_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT {} });
     let serenity_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(serenity_export_name) });
-    let _serenity_export = crate::typing::ast::ast::KindExportT { range: tz[0], tyype: firefly_kind, id: *serenity_export_id, exported_name: scout_arena.intern_str("Serenity") };
+    let _serenity_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *serenity_export_id, exported_name: scout_arena.intern_str("Serenity") };
 
     let code_str = "Hello I am A large piece Of code [that has An error]";
     let filenames_and_sources = FileCoordinateMap::test(&scout_arena, code_str.to_string());
 
-    let test_file = crate::utils::code_hierarchy::FileCoordinate::test(&scout_arena);
+    let test_file = FileCoordinate::test(&scout_arena);
     let make_loc = |pos: i32| CodeLocationS { file: scout_arena.alloc(test_file), offset: pos };
     let make_range = |begin: i32, end: i32| RangeS { begin: make_loc(begin), end: make_loc(end) };
 
@@ -651,7 +625,7 @@ fn humanize_errors() {
     let rune_an = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("An") }));
     let rune_of = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("Of") }));
     let mut lid_builder = LocationInDenizenBuilder::new(vec![7]);
-    let implicit_rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(crate::postparsing::names::ImplicitRuneValS::new(lid_builder.borrow_val())));
+    let implicit_rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lid_builder.borrow_val())));
 
     let unsolved_rules: Vec<IRulexSR> = vec![
         IRulexSR::CoordComponents(CoordComponentsSR {
@@ -814,15 +788,6 @@ fn make_range(begin: i32, end: i32) {
 // mig: fn simple_int_rule
 #[test]
 fn simple_int_rule() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::ConstantIntTE;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -838,9 +803,8 @@ fn simple_int_rule() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(ci)
-            if matches!(ci, ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
 }
 /*
@@ -860,15 +824,6 @@ fn simple_int_rule() {
 // mig: fn equals_transitive
 #[test]
 fn equals_transitive() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::ConstantIntTE;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -884,9 +839,8 @@ fn equals_transitive() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(ci)
-            if matches!(ci, ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
 }
 /*
@@ -906,15 +860,6 @@ fn equals_transitive() {
 // mig: fn one_of
 #[test]
 fn one_of() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::ConstantIntTE;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -930,9 +875,8 @@ fn one_of() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::ConstantInt(ci)
-            if matches!(ci, ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
 }
 /*
@@ -952,14 +896,6 @@ fn one_of() {
 // mig: fn components
 #[test]
 fn components() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::types::types::{CoordT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1001,15 +937,6 @@ fn components() {
 // mig: fn prototype_rule_call_via_rune
 #[test]
 fn prototype_rule_call_via_rune() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::FunctionCallTE;
-    use crate::typing::names::names::INameT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1025,8 +952,8 @@ fn prototype_rule_call_via_rune() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) => Some(c)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c) => Some(c)
     );
     assert_eq!(crate::typing::templata::templata_utils::unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
@@ -1052,15 +979,6 @@ fn prototype_rule_call_via_rune() {
 // mig: fn prototype_rule_call_directly
 #[test]
 fn prototype_rule_call_directly() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::FunctionCallTE;
-    use crate::typing::names::names::INameT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1076,8 +994,8 @@ fn prototype_rule_call_directly() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) => Some(c)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c) => Some(c)
     );
     assert_eq!(crate::typing::templata::templata_utils::unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
@@ -1103,13 +1021,6 @@ fn prototype_rule_call_directly() {
 // mig: fn send_struct_to_struct
 #[test]
 fn send_struct_to_struct() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1142,13 +1053,6 @@ fn send_struct_to_struct() {
 // mig: fn send_struct_to_interface
 #[test]
 fn send_struct_to_interface() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1183,16 +1087,6 @@ fn send_struct_to_interface() {
 // mig: fn assume_most_specific_generic_param
 #[test]
 fn assume_most_specific_generic_param() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::FunctionCallTE;
-    use crate::typing::types::types::{CoordT, KindT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1206,12 +1100,11 @@ fn assume_most_specific_generic_param() {
     let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let calls: Vec<&FunctionCallTE> = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) if c.args.len() == 1 => Some(c)
+    let call: &FunctionCallTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c @ FunctionCallTE { args: [_], .. }) => Some(c)
     );
-    assert!(!calls.is_empty(), "expected at least one FunctionCallTE(_, Vector(arg), _)");
-    let arg = calls[0].args[0];
+    let arg = call.args[0];
     match arg.result().coord {
         CoordT { kind: KindT::Struct(_), .. } => {}
         _ => panic!("expected Struct arg"),
@@ -1244,15 +1137,8 @@ fn assume_most_specific_generic_param() {
 */
 // mig: fn assume_most_specific_common_ancestor
 #[test]
+// LOOK HERE
 fn assume_most_specific_common_ancestor() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::{FunctionCallTE, UpcastTE};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1268,25 +1154,26 @@ fn assume_most_specific_common_ancestor() {
     let coutputs = compile.expect_compiler_outputs();
     let _moo = coutputs.lookup_function_by_str("moo");
     let main = coutputs.lookup_function_by_str("main");
-    let calls: Vec<&FunctionCallTE> = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) if c.args.len() == 2 => Some(c)
+    let _call: &FunctionCallTE = crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c @ FunctionCallTE { args: [_, _], .. }) => Some({
+            let fn_name = match c.callable.id.local_name {
+                INameT::Function(fn_name) => fn_name,
+                _ => panic!("expected Function local_name"),
+            };
+            match fn_name.template_args[0] {
+                ITemplataT::Coord(ct) => match ct.coord {
+                    CoordT { kind: KindT::Interface(_), .. } => {}
+                    _ => panic!("expected Interface template arg"),
+                },
+                _ => panic!("expected Coord template arg"),
+            }
+            c
+        })
     );
-    assert!(!calls.is_empty(), "expected FunctionCallTE with 2 args");
-    let fn_name = match calls[0].callable.id.local_name {
-        crate::typing::names::names::INameT::Function(fn_name) => fn_name,
-        _ => panic!("expected Function local_name"),
-    };
-    match fn_name.template_args[0] {
-        crate::typing::templata::templata::ITemplataT::Coord(ct) => match ct.coord {
-            crate::typing::types::types::CoordT { kind: crate::typing::types::types::KindT::Interface(_), .. } => {}
-            _ => panic!("expected Interface template arg"),
-        },
-        _ => panic!("expected Coord template arg"),
-    }
     let upcasts: Vec<&UpcastTE> = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::Upcast(u) => Some(u)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(u) => Some(u)
     );
     assert_eq!(upcasts.len(), 2);
 }
@@ -1325,17 +1212,6 @@ Guardian: temp-disable: SPDMX — In Scala, `prototype.id` is statically `IdT[IF
 // mig: fn descendant_satisfying_call
 #[test]
 fn descendant_satisfying_call() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::{FunctionCallTE, ReferenceExpressionTE};
-    use crate::typing::names::names::INameT;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1365,8 +1241,8 @@ fn descendant_satisfying_call() {
     }
     let main = coutputs.lookup_function_by_str("main");
     let calls: Vec<&FunctionCallTE> = crate::collect_where_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) => Some(c)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c) => Some(c)
     );
     let _moo_call = calls.iter().find(|c| {
         let is_moo = match c.callable.id.local_name {
@@ -1380,7 +1256,7 @@ fn descendant_satisfying_call() {
             _ => return false,
         };
         match upcast.target_super_kind {
-            crate::typing::types::types::ISuperKindTT::Interface(itt) => match itt.id.local_name {
+            ISuperKindTT::Interface(itt) => match itt.id.local_name {
                 INameT::Interface(in_) => {
                     in_.template.human_namee.0 == "IShip" && match in_.template_args {
                         [ITemplataT::Coord(ct)] => matches!(ct.coord, CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }),
@@ -1429,16 +1305,6 @@ Guardian: temp-disable: SPDMX — Scala field IS `humanNamee` (double 'e') on `I
 // mig: fn reports_incomplete_solve
 #[test]
 fn reports_incomplete_solve() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::postparsing::names::IRuneS;
-    use crate::solver::solver::ISolverError;
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1455,7 +1321,7 @@ fn reports_incomplete_solve() {
         ICompileErrorT::TypingPassSolverError { failed_solve, .. } => {
             assert!(failed_solve.unsolved_rules.is_empty(), "expected empty unsolved_rules");
             assert!(matches!(failed_solve.error, ISolverError::SolveIncomplete(_)));
-            let expected_n_rune = IRuneS::CodeRune(scout_arena.alloc(crate::postparsing::names::CodeRuneS {
+            let expected_n_rune = IRuneS::CodeRune(scout_arena.alloc(CodeRuneS {
                 name: scout_arena.intern_str("N"),
             }));
             let unsolved_set: std::collections::HashSet<_> = failed_solve.unsolved_runes.iter().copied().collect();
@@ -1487,13 +1353,6 @@ fn reports_incomplete_solve() {
 // mig: fn stamps_an_interface_template_via_a_function_return
 #[test]
 fn stamps_an_interface_template_via_a_function_return() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1536,14 +1395,6 @@ fn stamps_an_interface_template_via_a_function_return() {
 // mig: fn pointer_becomes_share_if_kind_is_immutable
 #[test]
 fn pointer_becomes_share_if_kind_is_immutable() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::types::types::OwnershipT;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1583,22 +1434,6 @@ fn pointer_becomes_share_if_kind_is_immutable() {
 // mig: fn detects_conflict_between_types
 #[test]
 fn detects_conflict_between_types() {
-    use bumpalo::Bump;
-    use crate::interner::StrI;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::postparsing::names::{IStructDeclarationNameS, TopLevelStructDeclarationNameS};
-    use crate::higher_typing::ast::StructA;
-    use crate::scout_arena::ScoutArena;
-    use crate::solver::solver::{FailedSolve, ISolverError, SolverConflict, RuleError};
-    use crate::typing::compiler_error_reporter::ICompileErrorT;
-    use crate::typing::infer::compiler_solver::ITypingPassSolverError;
-    use crate::typing::names::names::{INameT, IdT, StructNameT, IStructTemplateNameT, StructTemplateNameT};
-    use crate::typing::templata::templata::{ITemplataT, StructDefinitionTemplataT, KindTemplataT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::typing::types::types::{KindT, StructTT};
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1652,16 +1487,6 @@ fn detects_conflict_between_types() {
 // mig: fn can_match_kind_templata_type_against_struct_env_entry_struct_templata
 #[test]
 fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::names::names::INameT;
-    use crate::typing::templata::templata::{CoordTemplataT, ITemplataT};
-    use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1709,18 +1534,8 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunc
 */
 // mig: fn can_destructure_and_assemble_static_sized_array
 #[test]
+// LOOK HERE
 fn can_destructure_and_assemble_static_sized_array() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::ast::expressions::FunctionCallTE;
-    use crate::typing::names::names::INameT;
-    use crate::typing::templata::templata::ITemplataT;
-    use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT};
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1743,9 +1558,13 @@ fn can_destructure_and_assemble_static_sized_array() {
     };
     match swap_template_args.last().unwrap() {
         ITemplataT::Coord(ct) => match ct.coord {
-            CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. } => match kp.id.local_name {
-                INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                _ => panic!("expected KindPlaceholder local_name"),
+            CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. } => match kp.id {
+                IdT {
+                    init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("swap"), .. })],
+                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, .. } }),
+                    ..
+                } => {}
+                _ => panic!("expected KindPlaceholder local_name inside swap init_step"),
             },
             _ => panic!("expected Own KindPlaceholder coord"),
         },
@@ -1754,8 +1573,20 @@ fn can_destructure_and_assemble_static_sized_array() {
 
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::FunctionCall(c) if matches!(c.callable.id.local_name, INameT::Function(fn_name) if fn_name.template.human_name.0 == "swap") => Some(c)
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(c @ FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("swap"), .. },
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            },
+            ..
+        }) => Some(c)
     );
     let call_template_args = match call.callable.id.local_name {
         INameT::Function(fn_name) => fn_name.template_args,
@@ -1808,13 +1639,6 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` and `call.callable.id` a
 // mig: fn test_equivalent_identifying_runes_in_functions
 #[test]
 fn test_equivalent_identifying_runes_in_functions() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1849,13 +1673,6 @@ fn test_equivalent_identifying_runes_in_functions() {
 // mig: fn iragp_test_equivalent_identifying_runes_in_struct
 #[test]
 fn iragp_test_equivalent_identifying_runes_in_struct() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-    use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-    use std::collections::HashMap;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

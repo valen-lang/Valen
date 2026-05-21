@@ -19,6 +19,8 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
+use std::marker::PhantomData;
+use crate::postparsing::ast::ICitizenAttributeS;
 
 /*
 package dev.vale.typing.citizen
@@ -219,7 +221,6 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> () {
-        use std::marker::PhantomData;
         let declaring_env = struct_templata.declaring_env;
         let struct_a = struct_templata.origin_struct;
         let struct_template_id = self.resolve_struct_template(
@@ -311,7 +312,6 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> () {
-        use std::marker::PhantomData;
         let declaring_env = interface_templata.declaring_env;
         let interface_a = interface_templata.origin_interface;
         let interface_template_id = self.resolve_interface_template(
@@ -334,7 +334,7 @@ where 's: 't,
         // whether it's allowed to be virtual on this interface.
         coutputs.declare_type_sealed(
             *interface_template_id,
-            interface_a.attributes.iter().any(|a| matches!(a, crate::postparsing::ast::ICitizenAttributeS::Sealed(_))),
+            interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))),
         );
         // Build internal method entries for the outer env
         let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =

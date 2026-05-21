@@ -19,6 +19,24 @@ use crate::interner::Interner;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::function::function_compiler::IDefineFunctionResult;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
+use crate::typing::types::types::{KindPlaceholderT, KindT, RegionT};
+use crate::typing::templata::templata::PlaceholderTemplataT;
+use crate::typing::env::environment::child_of;
+use crate::typing::infer_compiler::InitialKnown;
+use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::postparsing::rules::rules::RuneUsage;
+use crate::utils::range::CodeLocationS;
+use crate::postparsing::names::{IRuneValS, DispatcherRuneFromImplValS};
+use crate::typing::names::names::{INameT, IPlaceholderNameT};
+use crate::typing::names::names::IImplTemplateNameT;
+use crate::typing::templata::templata::expect_coord_templata;
+use crate::typing::names::names::IdValT;
+use crate::typing::templata::templata::KindTemplataT;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::types::types::CoordT;
+use crate::postparsing::names::CaseRuneFromImplValS;
+use crate::typing::infer_compiler::CompleteResolveSolve;
 
 /*
 package dev.vale.typing
@@ -359,10 +377,6 @@ where 's: 't,
         index: i32,
         rune: IRuneS<'s>,
     ) -> ITemplataT<'s, 't> {
-        use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
-        use crate::typing::types::types::{KindPlaceholderT, KindT, RegionT};
-        use crate::typing::templata::templata::PlaceholderTemplataT;
-        use crate::typing::env::environment::child_of;
 
         let placeholder_name = self.typing_interner.intern_kind_placeholder_name(KindPlaceholderNameT {
             template: self.typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT {
@@ -374,7 +388,7 @@ where 's: 't,
         let placeholder_id_ref = dispatcher_outer_env.id().add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
         let placeholder_id = *placeholder_id_ref;
         let placeholder_template_id = self.get_placeholder_template(placeholder_id);
-        let placeholder_template_id_ref = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+        let placeholder_template_id_ref = self.typing_interner.intern_id(IdValT {
             package_coord: placeholder_template_id.package_coord,
             init_steps: placeholder_template_id.init_steps,
             local_name: placeholder_template_id.local_name,
@@ -401,7 +415,7 @@ where 's: 't,
                     let original_placeholder_template_id = self.get_placeholder_template(kp.id);
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
                     coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
-                    ITemplataT::Kind(self.typing_interner.alloc(crate::typing::templata::templata::KindTemplataT {
+                    ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT {
                         kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                     }))
                 }
@@ -412,8 +426,8 @@ where 's: 't,
                     let original_placeholder_template_id = self.get_placeholder_template(kp.id);
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
                     coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
-                    ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT {
-                        coord: crate::typing::types::types::CoordT {
+                    ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
+                        coord: CoordT {
                             ownership: ct.coord.ownership,
                             region: RegionT {},
                             kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
@@ -519,10 +533,6 @@ where 's: 't,
         abstract_function_prototype: PrototypeT<'s, 't>,
         abstract_index: i32,
     ) -> Result<OverrideT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::infer_compiler::InitialKnown;
-        use crate::typing::templata_compiler::IBoundArgumentsSource;
-        use crate::postparsing::rules::rules::RuneUsage;
-        use crate::utils::range::CodeLocationS;
 
         let abstract_func_template_id = self.get_function_template(abstract_function_prototype.id);
         let abstract_function_param_unsubstituted_types = abstract_function_prototype.param_types();
@@ -572,8 +582,6 @@ where 's: 't,
                 .map(|(templata, _)| *templata)
                 .enumerate()
                 .map(|(impl_placeholder_index, impl_placeholder)| {
-                    use crate::postparsing::names::{IRuneValS, DispatcherRuneFromImplValS};
-                    use crate::typing::names::names::{INameT, IPlaceholderNameT};
                     let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder);
                     let impl_placeholder_local_name = IPlaceholderNameT::try_from(impl_placeholder_id.local_name)
                         .unwrap_or_else(|_| panic!("vwat: expected IPlaceholderNameT for impl placeholder local_name"));
@@ -581,7 +589,6 @@ where 's: 't,
                     // Sanity check we're in an impl template, we're about to replace it with a function template
                     match impl_placeholder_id.init_steps.last() {
                         Some(name) => {
-                            use crate::typing::names::names::IImplTemplateNameT;
                             IImplTemplateNameT::try_from(*name).unwrap_or_else(|_| panic!("vwat: last init step should be IImplTemplateNameT, got {:?}", name));
                         }
                         None => panic!("vwat: last init step should be IImplTemplateNameT, got None"),
@@ -655,7 +662,6 @@ where 's: 't,
             origin_function_templata.function.params.iter()
                 .map(|p| p.pattern.coord_rune.unwrap().rune)
                 .map(|rune| {
-                    use crate::typing::templata::templata::expect_coord_templata;
                     let templata = *dispatcher_inner_inferences.get(&rune)
                         .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));
                     expect_coord_templata(templata).coord
@@ -700,8 +706,8 @@ where 's: 't,
                 .enumerate()
                 .map(|(index, (impl_rune, impl_placeholder_templata))| {
                     let case_rune = self.scout_arena.intern_rune(
-                        crate::postparsing::names::IRuneValS::CaseRuneFromImpl(
-                            crate::postparsing::names::CaseRuneFromImplValS { inner_rune: impl_rune }));
+                        IRuneValS::CaseRuneFromImpl(
+                            CaseRuneFromImplValS { inner_rune: impl_rune }));
                     let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder_templata);
                     let case_placeholder = self.create_override_placeholder_mimicking(
                         coutputs, impl_placeholder_templata, IInDenizenEnvironmentT::from(dispatcher_inner_env), index as i32, case_rune);
@@ -837,7 +843,7 @@ where 's: 't,
             impl_t.templata,
         );
         let (impl_conclusions, _impl_instantiation_bound_args_unused) = match resolve_result {
-            Ok(crate::typing::infer_compiler::CompleteResolveSolve { conclusions, rune_to_bound }) => {
+            Ok(CompleteResolveSolve { conclusions, rune_to_bound }) => {
                 (conclusions, rune_to_bound)
             }
             Err(_e) => panic!("Unimplemented: TypingPassResolvingError from resolveImpl"),

@@ -15,6 +15,18 @@ use crate::typing::templata::templata::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, SelfKindTemplateRuneS, SelfKindRuneS, SelfCoordRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
+use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
+use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS};
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
+use crate::utils::range::CodeLocationS;
+use std::collections::HashMap;
+use crate::postparsing::itemplatatype::*;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::names::CodeNameS;
+use crate::higher_typing::ast::FunctionA;
 
 /*
 package dev.vale.typing.macros.citizen
@@ -66,14 +78,6 @@ where 's: 't,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, SelfKindTemplateRuneS, SelfKindRuneS, SelfCoordRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
-        use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
-        use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
-        use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS};
-        use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
-        use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
-        use crate::utils::range::{RangeS, CodeLocationS};
-        use std::collections::HashMap;
 
         let range = |n: i32| -> RangeS<'s> {
             let loc = CodeLocationS::internal(self.scout_arena, n);
@@ -93,7 +97,7 @@ where 's: 't,
         rules.push(IRulexSR::Lookup(LookupSR {
             range: range(-1672147),
             rune: use_(-64002, void_kind_rune_s),
-            name: self.scout_arena.intern_imprecise_name(crate::postparsing::names::IImpreciseNameValS::CodeName(crate::postparsing::names::CodeNameS { name: self.keywords.void })),
+            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void })),
         }));
         let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
         rune_to_type.insert(void_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
@@ -147,7 +151,7 @@ where 's: 't,
         let mut rune_to_type_map = self.scout_arena.alloc_index_map();
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
         let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
-        let drop_function_a = self.scout_arena.alloc(crate::higher_typing::ast::FunctionA::new(
+        let drop_function_a = self.scout_arena.alloc(FunctionA::new(
             struct_a.range,
             name_s,
             &[],
@@ -277,11 +281,6 @@ where 's: 't,
         drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
         struct_range: RangeS<'s>,
     ) -> FunctionA<'s> {
-        use crate::postparsing::ast::{ParameterS, GeneratedBodyS, IBodyS};
-        use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
-        use crate::postparsing::rules::rules::{RuneUsage, IRulexSR, LookupSR, CoerceToCoordSR};
-        use crate::postparsing::itemplatatype::*;
-        use crate::utils::range::CodeLocationS;
 
         let internal_range = |n: i32| {
             let loc = CodeLocationS::internal(self.scout_arena, n);

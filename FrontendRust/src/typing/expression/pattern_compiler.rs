@@ -22,6 +22,7 @@ use crate::parsing::ast::LoadAsP;
 use crate::postparsing::expressions::IExpressionSE;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use crate::postparsing::names::IRuneValS;
 
 /*
 package dev.vale.typing.expression
@@ -296,7 +297,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             sender_rune: RuneUsage {
                                 range: pattern.range,
                                 rune: self.scout_arena.intern_rune(
-                                    crate::postparsing::names::IRuneValS::PatternInputRune(PatternInputRuneS {
+                                    IRuneValS::PatternInputRune(PatternInputRuneS {
                                         code_loc: pattern.range.begin,
                                     })),
                             },
