@@ -1,11 +1,18 @@
 use crate::interner::StrI;
 use crate::higher_typing::ast::*;
-use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
+  IntegerTemplataType, KindTemplataType, LocationTemplataType,
+  MutabilityTemplataType, OwnershipTemplataType, PrototypeTemplataType,
+  StringTemplataType, TemplateTemplataType, VariabilityTemplataType,
+};
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
+use crate::scout_arena::ScoutArena;
+use crate::higher_typing::ast::CitizenA;
 
 /*
 package dev.vale.typing.templata
@@ -193,7 +200,7 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 */
 // Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
 // Interned payloads behind &'t; scalar variants inline. See @WVSBIZ for why.
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),
@@ -216,6 +223,53 @@ pub enum ITemplataT<'s, 't> {
   ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
   ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
   Location(LocationTemplataT),
+}
+impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): takes &ScoutArena because the TemplateTemplataType
+  // arms construct a fresh slice of param ITemplataType values per call;
+  // Scala uses GC-backed Vector and doesn't need an arena parameter.
+  pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
+    match self {
+      ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
+      ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
+      ITemplataT::Placeholder(p) => p.tyype,
+      ITemplataT::Mutability(_) => ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+      ITemplataT::Variability(_) => ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+      ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
+      ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+      ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
+      ITemplataT::String(_) => ITemplataType::StringTemplataType(StringTemplataType {}),
+      ITemplataT::Prototype(_) => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
+      ITemplataT::Isa(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
+      ITemplataT::ImplDefinition(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
+      ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
+      ITemplataT::CoordList(_) => panic!("Unimplemented: tyype on CoordList"),
+      ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
+        param_types: scout_arena.alloc_slice_copy(&[
+          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        ]),
+        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+      }),
+      ITemplataT::StaticSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
+        param_types: scout_arena.alloc_slice_copy(&[
+          ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+          ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        ]),
+        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+      }),
+      ITemplataT::Function(_) => panic!("Unimplemented: tyype on Function"),
+      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
+      // In Compiler, StructTemplatas are templates, even if they have zero arguments.
+      ITemplataT::StructDefinition(s) => ITemplataType::TemplateTemplataType(s.origin_struct.tyype),
+      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
+      // In Compiler, InterfaceTemplatas are templates, even if they have zero arguments.
+      ITemplataT::InterfaceDefinition(i) => ITemplataType::TemplateTemplataType(i.origin_interface.tyype),
+      ITemplataT::ExternFunction(_) => panic!("Unimplemented: tyype on ExternFunction"),
+    }
+  }
 }
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {
@@ -297,10 +351,25 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 */
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
-  pub outer_env: &'t IEnvironmentT<'s, 't>,
+  pub outer_env: IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
+}
+impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    self.function.range == other.function.range
+      && self.function.name == other.function.name
+  }
+  /* Guardian: disable-all */
+}
+impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.function.range.hash(state);
+    self.function.name.hash(state);
+  }
+  /* Guardian: disable-all */
 }
 /*
 case class FunctionTemplataT(
@@ -352,22 +421,36 @@ case class FunctionTemplataT(
   }
 
 */
-/*
-
-
+impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
+  pub fn get_template_name(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: get_template_name");
+  }
+  /*
   def getTemplateName(): IdT[INameT] = {
     vimpl()
 //    outerEnv.fullName.addStep(nameTranslator.translateFunctionNameToTemplateName(function.name))
   }
-
+  */
+}
+impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
+  pub fn debug_string(&self) -> String {
+    panic!("Unimplemented: debug_string");
+  }
+  /*
   def debugString: String = outerEnv.id + ":" + function.name
+  */
+}
+/*
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'t IEnvironmentT<'s, 't>,
+  pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
 }
 /*
@@ -483,8 +566,24 @@ pub enum CitizenDefinitionTemplataT<'s, 't> {
 }
 /*
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
+*/
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
+  pub fn declaring_env(&self) -> IEnvironmentT<'s, 't> {
+    panic!("Unimplemented: declaring_env");
+  }
+  /*
   def declaringEnv: IEnvironmentT
+  */
+}
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
+  pub fn origin_citizen(&self) -> &'s dyn CitizenA<'s> {
+    panic!("Unimplemented: origin_citizen");
+  }
+  /*
   def originCitizen: CitizenA
+  */
+}
+/*
 }
 */
 /*
@@ -503,10 +602,13 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'t IEnvironmentT<'s, 't>,
+  pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
 }
 /*
@@ -565,10 +667,13 @@ case class InterfaceDefinitionTemplataT(
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
-  pub env: &'t IEnvironmentT<'s, 't>,
+  pub env: IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
 }
 /*
@@ -745,11 +850,12 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
   override def tyype: ITemplataType = vfail()
 }
 */
-// FunctionHeaderT doesn't derive Debug yet; treat the header as an opaque ptr.
+// FunctionHeaderT doesn't derive Debug yet; render by content (id) for @IIIOZ
+// cross-run determinism — pointer addresses vary across runs due to ASLR.
 impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("ExternFunctionTemplataT")
-      .field("header", &(self.header as *const _))
+      .field("header_id", &self.header.id)
       .finish()
   }
   /* Guardian: disable-all */

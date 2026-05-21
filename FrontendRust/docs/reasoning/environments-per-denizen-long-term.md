@@ -1,6 +1,6 @@
 # Reasoning: Typing-Pass Arenas — Why Today's Design, and Where It's Heading
 
-The current typing-pass arena model (single `'t` interner for the whole pass, envs allocated into `'t` via builder → freeze, slice-based `TemplatasStoreT`) is described in `FrontendRust/docs/architecture/typing-pass-arenas.md`. This doc records *why* that's the migration choice, what's wrong with it long-term, the empirical audit that justifies the target design, the target itself, and further future direction toward LSP.
+The current typing-pass arena model (single `'t` interner for the whole pass, envs allocated into `'t` via builder/Box pattern, `TemplatasStoreT` using `ArenaIndexMap`) is described in `docs/architecture/typing-pass-design-v3.md` Part 1. This doc records *why* that's the migration choice, what's wrong with it long-term, the empirical audit that justifies the target design, the target itself, and further future direction toward LSP.
 
 ## TL;DR
 
@@ -243,8 +243,7 @@ The following are left to the future designer who actually implements LSP mode:
 
 ## See also
 
-- `FrontendRust/docs/architecture/typing-pass-arenas.md` — current (migration-phase) typing-pass arena architecture, with a pointer here for the target direction.
-- `quest.md` Part 3 — original arena-env design. Migration-phase spec.
+- `docs/architecture/typing-pass-design-v3.md` Part 1 — current (migration-phase) typing-pass arena architecture.
 - `FrontendRust/docs/migration/handoff-slab-4.md` — Slab 4 handoff implementing the migration-phase arena design.
 - `FrontendRust/docs/reasoning/arena-deterministic-maps.md` — why arena-backed maps don't exist for us; part of why envs-in-arena forces slice-based `TemplatasStoreT`.
 - `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` — sister doc recording a similar "chosen for migration, alternatives deferred post-migration" decision for `IdT`.

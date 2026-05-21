@@ -24,7 +24,7 @@ Access: `typing_interner.intern_name(...)`, `typing_interner.intern_id(...)`, `t
 
 The typing arena's lifetime ordering: `'s` outlives `'t` (`where 's: 't` on every typing-pass type). Scout arena must not drop until the typing arena (and anything holding its `&'t` refs — e.g. `HinputsT` consumed by the instantiator) is done.
 
-See `FrontendRust/docs/architecture/typing-pass-arenas.md` for the typing pass's arena architecture.
+See `docs/architecture/typing-pass-design-v3.md` Part 1 for the typing pass's arena architecture.
 
 ## Data Flow
 
@@ -52,7 +52,15 @@ At the parser->postparser boundary, `StrI<'p>` values are re-interned into `'s` 
 
 ## Key Invariant
 
-Arena-allocated structs are **immutable after construction**. Data is built using mutable heap collections, then frozen into the arena. See `docs/usage/arenas.md` for the pattern.
+**Nothing in an arena is ever mutated.** Arenas are append-only-immutable: once a value is allocated, no field, slice element, or interior cell ever changes again. This is absolute, not a guideline.
+
+If a value needs to mutate, it does *not* go in the arena. Three alternatives, depending on the lifecycle:
+
+- **Box pattern.** Vec-backed mutation buffer outside the arena, with `snapshot(interner)` to freeze the current state into the arena as a fresh `&'t T`. Used by `NodeEnvironmentBox` and `TemplatasStoreBuilder`.
+- **Non-arena container.** Owns its own heap collections, lives outside the arena entirely, dies at pass end. Used by `CompilerOutputs`.
+- **By-value.** Owned `T` on the stack, mutated freely, then moved into final position (often as the input to an arena-allocating call).
+
+Data is built using one of these mutable forms, then frozen into the arena. See `docs/usage/arenas.md` for the pattern.
 
 ## Transient vs Permanent
 

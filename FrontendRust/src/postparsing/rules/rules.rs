@@ -73,8 +73,6 @@ trait IRulexSR {
 // V: why cloneable?
 // VA: It shouldn't be. Clone is derived but never called anywhere. IRulexSR is Clone-without-Copy
 // VA: (ATDCX violation). It's always stored as &'s [IRulexSR<'s>] in output structs. Safe to remove Clone.
-// VA: Also: GenericParameterDefaultS.rules is Vec<&'s IRulexSR<'s>> instead of &'s [IRulexSR<'s>],
-// VA: inconsistent with every other rule-holding struct (potential AASSNCMCX violation).
 
 impl<'s> IRulexSR<'s> {
   pub fn range<'r>(&'r self) -> &'r RangeS<'s> {

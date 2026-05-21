@@ -69,6 +69,6 @@ The monomorphic approach is the one least likely to cause mapping friction durin
 
 ## See also
 
-- `quest.md` §6.3 — original generic-IdT design.
+- `docs/architecture/typing-pass-design-v3.md` §6.3 — current `IdT` design.
 - `docs/reasoning/deferred-slice-interning.md` — `'tmp`-lifetime pattern used by `IdValT`.
 - `src/typing/names/names.rs` — current `IdT` definition.

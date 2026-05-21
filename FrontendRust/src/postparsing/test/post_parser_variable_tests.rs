@@ -13,6 +13,9 @@ use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::postparsing::test::traverse::NodeRefS;
+use crate::postparsing::post_parser::VariableNameAlreadyExists;
+use crate::postparsing::expressions::BlockSE;
 
 /*
 package dev.vale.postparsing
@@ -174,8 +177,8 @@ fn typeless_local_has_no_coord_rune() {
   );
   let main = program1.lookup_function("main");
   let local = crate::collect_only_snode!(
-    crate::postparsing::test::traverse::NodeRefS::Function(main),
-    crate::postparsing::test::traverse::NodeRefS::Expression(IExpressionSE::Let(
+    NodeRefS::Function(main),
+    NodeRefS::Expression(IExpressionSE::Let(
       let_se @ LetSE { .. }
     )) => Some(let_se)
   );
@@ -204,7 +207,7 @@ fn reports_defining_same_name_variable() {
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(
-      crate::postparsing::post_parser::VariableNameAlreadyExists {
+      VariableNameAlreadyExists {
         name: IVarNameS::CodeVarName(StrI("x")),
         ..
       },
@@ -1795,8 +1798,8 @@ exported func main() int {
   }
 */
 fn extract_lambda_block_from_main<'s>(
-  body: &'s crate::postparsing::ast::IBodyS<'s>,
-) -> &'s crate::postparsing::expressions::BlockSE<'s> {
+  body: &'s IBodyS<'s>,
+) -> &'s BlockSE<'s> {
   let code_body = cast!(body, IBodyS::CodeBody);
   let block = code_body.body.block;
   let exprs: &[&IExpressionSE] = match block.expr {
@@ -1816,7 +1819,7 @@ fn extract_lambda_block_from_main<'s>(
 
 fn try_extract_block_from_lambda_call<'s>(
   fc: &FunctionCallSE<'s>,
-) -> Option<&'s crate::postparsing::expressions::BlockSE<'s>> {
+) -> Option<&'s BlockSE<'s>> {
   let inner = match fc.callable_expr {
     IExpressionSE::Ownershipped(OwnershippedSE { inner_expr, .. }) => inner_expr,
     IExpressionSE::Function(func_se) => return extract_block_from_func_se(func_se),
@@ -1830,7 +1833,7 @@ fn try_extract_block_from_lambda_call<'s>(
 
 fn extract_block_from_func_se<'s>(
   func_se: &FunctionSE<'s>,
-) -> Option<&'s crate::postparsing::expressions::BlockSE<'s>> {
+) -> Option<&'s BlockSE<'s>> {
   let code_body = match &func_se.function.body {
     IBodyS::CodeBody(c) => c,
     _ => return None,
@@ -1840,7 +1843,7 @@ fn extract_block_from_func_se<'s>(
 
 fn extract_block_from_lambda_call<'s>(
   fc: &FunctionCallSE<'s>,
-) -> &'s crate::postparsing::expressions::BlockSE<'s> {
+) -> &'s BlockSE<'s> {
   try_extract_block_from_lambda_call(fc).expect("callable is not lambda")
 }
 #[test]

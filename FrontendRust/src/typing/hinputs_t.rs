@@ -23,13 +23,16 @@ use crate::typing::ast::citizens::{CitizenDefinitionT, InterfaceDefinitionT, Str
 use crate::typing::names::names::{
     FunctionTemplateNameT, INameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
 };
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::arena_index_map::ArenaIndexMap;
 // mig: struct InstantiationReachableBoundArgumentsT
-#[derive(Clone)]
+/// Arena-allocated (see @TFITCX)
+// Structural-equality opt-in: Scala uses case-class `==` on this type via
+// `vassert(existing == instantiationBoundArgs)` in addInstantiationBounds.
+// TFITCX/IEOIBZ ptr-eq is for identity types; this is a value-bag.
+#[derive(PartialEq, Eq)]
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
-    pub citizen_rune_to_reachable_prototype: Vec<(
-        IRuneS<'s>,
-        &'t PrototypeT<'s, 't>,
-    )>,
+    pub citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
 }
 /*
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
@@ -41,16 +44,19 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 object InstantiationBoundArgumentsT {
 */
 // mig: fn make
+// Rust adaptation (SPDMX-B): interner threaded so the resulting InstantiationBoundArgumentsT
+// is arena-allocated and shared by &'t reference (no Clone, per AASSNCMCX).
 pub fn make<'s, 't>(
-    rune_to_bound_prototype: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)>,
-    rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
+    interner: &TypingInterner<'s, 't>,
+    rune_to_bound_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>,
+    rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>)>,
     rune_to_bound_impl: Vec<(IRuneS<'s>, IdT<'s, 't>)>,
-) -> InstantiationBoundArgumentsT<'s, 't> {
-    InstantiationBoundArgumentsT {
-        rune_to_bound_prototype,
-        rune_to_citizen_rune_to_reachable_prototype,
-        rune_to_bound_impl,
-    }
+) -> &'t InstantiationBoundArgumentsT<'s, 't> {
+    interner.alloc(InstantiationBoundArgumentsT {
+        rune_to_bound_prototype: interner.alloc_index_map_from_iter(rune_to_bound_prototype.into_iter()),
+        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(rune_to_citizen_rune_to_reachable_prototype.into_iter()),
+        rune_to_bound_impl: interner.alloc_index_map_from_iter(rune_to_bound_impl.into_iter()),
+    })
 }
 /*
   def make[BF <: IFunctionNameT, BI <: IImplNameT](
@@ -66,20 +72,15 @@ pub fn make<'s, 't>(
 }
 */
 // mig: struct InstantiationBoundArgumentsT
-#[derive(Clone)]
+/// Arena-allocated (see @TFITCX)
+// Structural-equality opt-in: Scala uses case-class `==` on this type via
+// `vassert(existing == instantiationBoundArgs)` in addInstantiationBounds.
+// TFITCX/IEOIBZ ptr-eq is for identity types; this is a value-bag.
+#[derive(PartialEq, Eq)]
 pub struct InstantiationBoundArgumentsT<'s, 't> {
-    pub rune_to_bound_prototype: Vec<(
-        IRuneS<'s>,
-        &'t PrototypeT<'s, 't>,
-    )>,
-    pub rune_to_citizen_rune_to_reachable_prototype: Vec<(
-        IRuneS<'s>,
-        InstantiationReachableBoundArgumentsT<'s, 't>,
-    )>,
-    pub rune_to_bound_impl: Vec<(
-        IRuneS<'s>,
-        IdT<'s, 't>,
-    )>,
+    pub rune_to_bound_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
+    pub rune_to_citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
+    pub rune_to_bound_impl: ArenaIndexMap<'t, IRuneS<'s>, IdT<'s, 't>>,
 }
 /*
 case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
@@ -109,6 +110,7 @@ impl<'s, 't> InstantiationBoundArgumentsT<'s, 't> {
 */
 }
 // mig: struct HinputsT
+/// Temporary state (see @TFITCX)
 pub struct HinputsT<'s, 't> {
     pub interfaces: Vec<&'t InterfaceDefinitionT<'s, 't>>,
     pub structs: Vec<&'t StructDefinitionT<'s, 't>>,
@@ -116,16 +118,16 @@ pub struct HinputsT<'s, 't> {
 
     pub interface_to_edge_blueprints: HashMap<
         IdT<'s, 't>,
-        InterfaceEdgeBlueprintT<'s, 't>,
+        &'t InterfaceEdgeBlueprintT<'s, 't>,
     >,
     pub interface_to_sub_citizen_to_edge: HashMap<
         IdT<'s, 't>,
-        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>,
     >,
 
     pub instantiation_name_to_instantiation_bounds: HashMap<
         IdT<'s, 't>,
-        InstantiationBoundArgumentsT<'s, 't>,
+        &'t InstantiationBoundArgumentsT<'s, 't>,
     >,
 
     pub kind_exports: Vec<&'t KindExportT<'s, 't>>,
@@ -135,7 +137,7 @@ pub struct HinputsT<'s, 't> {
 
     pub sub_citizen_to_interface_to_edge: HashMap<
         IdT<'s, 't>,
-        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>,
     >,
 }
 /*
@@ -190,7 +192,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct(&self, struct_id: IdT) -> StructDefinitionT {
+    pub fn lookup_struct(&self, struct_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct");
     }
     /*
@@ -199,7 +201,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template
-    pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
+    pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template");
     }
     /*
@@ -208,7 +210,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template
-    pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template");
     }
     /*
@@ -217,7 +219,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_impl_by_template
-    pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT {
+    pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT<'s, 't> {
         panic!("Unimplemented: lookup_impl_by_template");
     }
     /*
@@ -226,7 +228,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface
-    pub fn lookup_interface(&self, interface_id: IdT) -> InterfaceDefinitionT {
+    pub fn lookup_interface(&self, interface_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface");
     }
     /*
@@ -235,8 +237,14 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_edge
-    pub fn lookup_edge(&self, impl_id: IdT) -> EdgeT {
-        panic!("Unimplemented: lookup_edge");
+    pub fn lookup_edge(&self, impl_id: IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
+        let matches: Vec<&&'t EdgeT<'s, 't>> = self.interface_to_sub_citizen_to_edge
+            .values()
+            .flat_map(|m| m.values())
+            .filter(|edge| edge.edge_id == impl_id)
+            .collect();
+        assert!(matches.len() == 1, "vassertOne: expected exactly one edge for impl_id {:?}, got {}", impl_id, matches.len());
+        *matches[0]
     }
     /*
       def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
@@ -244,7 +252,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn get_instantiation_bound_args
-    pub fn get_instantiation_bound_args(&self, instantiation_name: IdT) -> InstantiationBoundArgumentsT {
+    pub fn get_instantiation_bound_args(&self, instantiation_name: IdT<'s, 't>) -> &'t InstantiationBoundArgumentsT<'s, 't> {
         panic!("Unimplemented: get_instantiation_bound_args");
     }
     /*
@@ -253,7 +261,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template_id
-    pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT) -> StructDefinitionT {
+    pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template_id");
     }
     /*
@@ -262,7 +270,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_id
-    pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template_id");
     }
     /*
@@ -271,7 +279,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_citizen_by_template_id
-    pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT) -> CitizenDefinitionT {
+    pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT<'s, 't>) -> CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_citizen_by_template_id");
     }
     /*
@@ -287,8 +295,25 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template_name
-    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
-        panic!("Unimplemented: lookup_struct_by_template_name");
+    // Rust adaptation: Scala's `_.templateName.localName == structTemplateName`
+    // compares directly because Scala's covariant `templateName.localName`
+    // narrows to `IStructTemplateNameT`. Rust's `template_name.local_name`
+    // stays in the wide `INameT` enum, so we must extract the struct-template
+    // case before structural comparison. `vassertOne` is inlined as a match on
+    // the result count.
+    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
+        let matches: Vec<&'t StructDefinitionT<'s, 't>> = self.structs.iter()
+            .filter(|s| match s.template_name.local_name {
+                INameT::StructTemplate(t) => *t == struct_template_name,
+                _ => false,
+            })
+            .copied()
+            .collect();
+        match matches.len() {
+            1 => matches[0],
+            0 => panic!("lookup_struct_by_template_name: not found: {:?}", struct_template_name),
+            _ => panic!("lookup_struct_by_template_name: multiple found: {:?}", struct_template_name),
+        }
     }
     /*
       def lookupStructByTemplateName(structTemplateName: StructTemplateNameT): StructDefinitionT = {
@@ -296,8 +321,10 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_name
-    pub fn lookup_interface_by_template_name(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
-        panic!("Unimplemented: lookup_interface_by_template_name");
+    pub fn lookup_interface_by_template_name(&self, interface_template_name: &'t InterfaceTemplateNameT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
+        self.interfaces.iter().copied()
+            .find(|i| i.template_name.local_name == INameT::InterfaceTemplate(interface_template_name))
+            .unwrap_or_else(|| panic!("lookup_interface_by_template_name: not found"))
     }
     /*
       def lookupInterfaceByTemplateName(interfaceTemplateName: InterfaceTemplateNameT): InterfaceDefinitionT = {
@@ -305,7 +332,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_signature(&self, signature: SignatureT) -> Option<FunctionDefinitionT> {
+    pub fn lookup_function_by_signature(&self, signature: SignatureT<'s, 't>) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_function_by_signature");
     }
     /*
@@ -314,7 +341,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<FunctionDefinitionT> {
+    pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_function_by_template");
     }
     /*
@@ -323,7 +350,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_human_name(&self, human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
+    pub fn lookup_function_by_str(&self, human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
         let matches: Vec<_> = self.functions.iter().filter(|f| {
             match &f.header.id.local_name {
                 INameT::Function(func_name) if func_name.template.human_name.as_str() == human_name => true,
@@ -354,8 +381,19 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct_by_human_name(&self, human_name: &str) -> StructDefinitionT {
-        panic!("Unimplemented: lookup_struct_by_human_name");
+    pub fn lookup_struct_by_str(&self, human_name: &str) -> &'t StructDefinitionT<'s, 't> {
+        let matches: Vec<_> = self.structs.iter().filter(|s| {
+            match &s.template_name.local_name {
+                INameT::StructTemplate(t) if t.human_name.as_str() == human_name => true,
+                _ => false,
+            }
+        }).copied().collect();
+        if matches.is_empty() {
+            panic!("Struct \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
     /*
       def lookupStruct(humanName: String): StructDefinitionT = {
@@ -374,8 +412,12 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_impl
-    pub fn lookup_impl(&self, sub_citizen_tt: IdT, interface_tt: IdT) -> EdgeT {
-        panic!("Unimplemented: lookup_impl");
+    pub fn lookup_impl(&self, sub_citizen_tt: IdT<'s, 't>, interface_tt: IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
+        self.interface_to_sub_citizen_to_edge
+            .get(&interface_tt)
+            .unwrap_or_else(|| panic!("lookup_impl: interface not found"))
+            .get(&sub_citizen_tt)
+            .unwrap_or_else(|| panic!("lookup_impl: sub citizen not found"))
     }
     /*
       def lookupImpl(
@@ -388,8 +430,19 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface
-    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> InterfaceDefinitionT {
-        panic!("Unimplemented: lookup_interface_by_human_name");
+    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> &'t InterfaceDefinitionT<'s, 't> {
+        let matches: Vec<_> = self.interfaces.iter().filter(|i| {
+            match &i.template_name.local_name {
+                INameT::InterfaceTemplate(t) if t.human_namee.as_str() == human_name => true,
+                _ => false,
+            }
+        }).copied().collect();
+        if matches.is_empty() {
+            panic!("Interface \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
     /*
       def lookupInterface(humanName: String): InterfaceDefinitionT = {
@@ -408,7 +461,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_user_function
-    pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT {
+    pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_user_function");
     }
     /*
@@ -426,10 +479,23 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn name_is_lambda_in
-    pub fn name_is_lambda_in(&self, name: IdT, needle_function_human_name: &str) -> bool {
-        panic!("Unimplemented: name_is_lambda_in");
+    pub fn name_is_lambda_in(&self, name: IdT<'s, 't>, needle_function_human_name: &str) -> bool {
+        let steps = name.steps();
+        let first = steps[0];
+        let last_two = &steps[steps.len().saturating_sub(2)..steps.len()];
+        match (first, last_two) {
+            (
+                INameT::Function(f),
+                [
+                    INameT::LambdaCitizenTemplate(_),
+                    INameT::LambdaCallFunction(_),
+                ],
+            ) if f.template.human_name.0 == needle_function_human_name => true,
+            _ => false,
+        }
     }
     /*
+Guardian: temp-disable: SPDMX — Scala's Vector.slice(from, until) clamps from at 0 when negative; saturating_sub(2) is the literal minimal-diff Rust translation of that clamping semantic, not novel defensive logic. SPDMX heuristic mis-reads it because Rust's slice indexing requires clamping explicitly while Scala's hides it inside .slice; resulting behavior is identical -- both fall through to _ => false for size < 2. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-406-1778975222164/hook-406/name_is_lambda_in--482.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def nameIsLambdaIn(name: IdT[IFunctionNameT], needleFunctionHumanName: String): Boolean = {
         val first = name.steps.head
         val lastTwo = name.steps.slice(name.steps.size - 2, name.steps.size)
@@ -445,8 +511,8 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_lambdas_in
-    pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<FunctionDefinitionT> {
-        panic!("Unimplemented: lookup_lambdas_in");
+    pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
+        self.functions.iter().copied().filter(|f| self.name_is_lambda_in(f.header.id, needle_function_human_name)).collect()
     }
     /*
       def lookupLambdasIn(needleFunctionHumanName: String): Vector[FunctionDefinitionT] = {
@@ -454,8 +520,10 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_lambda_in
-    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> FunctionDefinitionT {
-        panic!("Unimplemented: lookup_lambda_in");
+    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
+        let lambdas = self.lookup_lambdas_in(needle_function_human_name);
+        assert_eq!(lambdas.len(), 1);
+        lambdas[0]
     }
     /*
       def lookupLambdaIn(needleFunctionHumanName: String): FunctionDefinitionT = {
@@ -463,8 +531,8 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn get_all_user_functions
-    pub fn get_all_user_functions(&self) -> Vec<FunctionDefinitionT> {
-        panic!("Unimplemented: get_all_user_functions");
+    pub fn get_all_user_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
+        self.functions.iter().copied().filter(|f| f.header.is_user_function()).collect()
     }
     /*
       // def getAllNonExternFunctions: Iterable[FunctionDefinitionT] = {

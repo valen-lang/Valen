@@ -10,6 +10,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 /*
 package dev.vale.typing.macros.rsa
@@ -44,13 +45,13 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         env: &FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         origin_function: Option<&FunctionA<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         panic!("Unimplemented: generate_function_body_rsa_drop_into");
     }
 /*

@@ -7,6 +7,7 @@ use crate::parsing::parse_utils::try_skip_past_equals_while;
 use crate::parsing::parse_utils::try_skip_past_keyword_while;
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::templex_parser::TemplexParser;
+use crate::parse_arena::ParseArena;
 /*
 package dev.vale.parsing
 
@@ -642,7 +643,7 @@ impl<'p, 's> ScrambleIterator<'p, 's> {
 */
 
 pub struct ExpressionParser<'p, 'ctx> {
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   pub keywords: &'ctx Keywords<'p>,
 }
 /*
@@ -1437,7 +1438,7 @@ where
   */
 
   pub fn new(
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     keywords: &'ctx Keywords<'p>,
   ) -> Self {
     ExpressionParser { parse_arena, keywords }

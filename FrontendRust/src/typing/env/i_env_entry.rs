@@ -14,7 +14,7 @@ import dev.vale.typing.types.InterfaceTT
 import dev.vale.vpass
 */
 
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, Debug)]
 pub enum IEnvEntryT<'s, 't>
 where 's: 't,

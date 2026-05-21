@@ -13,23 +13,89 @@ Your job: add a Rust placeholder stub right below each `// mig:` comment, keepin
 
 **IMPORTANT: Use the EXACT name from the `// mig:` comment.** Do NOT add suffixes like `Mig`, `Placeholder`, `New`, etc. Do NOT rename anything to avoid name collisions with existing code. Name collisions are expected and intentional -- the reconcile step will fix them.
 
+# Step 0: Read the pass migration policy
+
+Before emitting anything, find the `migration-policy.md` for this pass by walking up from the target file's directory. If only the template at `FrontendRust/docs/migration/migration-policy.md` is found (and no per-pass override exists), STOP and report "no per-pass migration-policy.md found; need one before placehold can run." Do not fall back to generic defaults — generic defaults produced the ~32 orphan-fn / wrong-lifetime / missing-interner cleanup burden documented in TL.md for the typing pass.
+
+Read the policy in full. The sections you use here:
+ * **Lifetimes** + default `where` clause — applied to every `struct`/`enum`/`trait`/`impl` opening.
+ * **Interner type** — added as the first parameter on any `fn` whose Scala body intern-allocates (look for `interner.intern(` / `arena.alloc(` patterns in the Scala body).
+ * **Default collection types** — for translating `Vector`/`Map`/`Set` literals in stub signatures.
+ * **String type** — for translating `String` in stub signatures.
+ * **Sealed-trait policy** — how to emit `// mig: enum Foo`.
+ * **Abstract-def dispatcher policy** — what to emit for enum-impl methods.
+ * **`equals`/`hashCode`/`unapply` policy** — emit marker stubs, not real `fn`s.
+ * **Identity equality policy** — what `derive`s / impl blocks to emit alongside the type.
+ * **`case object` policy** — how to integrate unit variants into a parent enum.
+ * **`MustIntern` seal policy** — whether to emit the seal field on structs.
+ * **Arena-classification doc-comment** — emit above every struct/enum.
+ * **Default fn skeleton** — `whole-panic` body unless the policy whitelists the fn for iteration-skeleton.
+
+# Walking the file
+
+Walk the `// mig:` comments top to bottom. Each marker is independent — there is no stack-tracking or nesting. Every `// mig: fn` emits a free-floating, module-scope stub. `// mig: impl Foo` markers emit **nothing** (they are left in place as markers only); methods are not nested inside impl blocks at this stage.
+
+A **separate later pass** (see `.claude/agents/slice-impl-wrap.md`) is responsible for wrapping each module-scope `fn` in its own dedicated `impl<…> Foo<…> { fn … }` block (one impl per method, matching the style in `FrontendRust/src/typing/`). This placehold step must not do that wrapping itself — keep stubs flat.
+
 # What to generate for each mig type
 
 ## `// mig: struct Foo`
 
-Generate a `pub struct` with members guessed from the Scala `case class` / `class` parameters below. Do not add any derives.
+Generate a `pub struct` with members guessed from the Scala `case class` / `class` parameters below. Apply:
+ * The policy's **arena-classification doc-comment** above the struct (`/// Arena-allocated`, `/// Temporary state`, or `/// Polyvalue`).
+ * The policy's **lifetimes** on the struct (e.g. `pub struct Foo<'s, 't>`).
+ * The policy's **MustIntern seal** field if this struct is classified as interned (`pub _must_intern: MustIntern,`).
+ * The policy's **identity-equality directive** as a `#[derive(...)]` line above the struct (or an `impl PartialEq` block below, if identity is `ptr::eq`-based). For non-interned types, derive `PartialEq, Eq, Hash`; for interned, emit the `impl PartialEq for Foo` via `ptr::eq` below the struct.
+ * Field types translated via the policy's **default collection types** + **string type** sections.
+
+## `// mig: enum Foo`
+
+Generate a `pub enum Foo<'s, 't> { /* variants */ }` per the policy's **sealed-trait policy**. For `enum-with-arena-refs`, each variant looks like `Variant1(&'t Variant1Payload<'s, 't>)`. For `case object Bar` inside the trait, emit `Bar(())` per the policy's **case object policy** (unit variant, no separate struct).
+
+Above the enum: emit the policy's arena-classification doc-comment + the policy's derive directive (Polyvalue enums get `#[derive(PartialEq, Eq, Hash, Clone, Copy)]`).
 
 ## `// mig: impl Foo`
 
-Generate just the opening of an `impl` block: `impl<...> Foo<...> {}`. Try to guess the correct generic parameters from the Scala class.
+Emit **nothing for the impl wrapper itself** — leave the `// mig: impl Foo` marker as a comment-only marker; do not generate any `impl` block (no opener, no closer, no empty `{}`).
+
+However, if `Foo` corresponds to a previously-emitted `// mig: enum Foo` whose Scala `sealed trait` body has abstract `def`s, emit a **module-scope dispatcher fn** for each one per the policy's "Abstract-def dispatcher policy":
+
+```rust
+/* Guardian: disable-all */
+pub fn method(this: &Foo<'s, 't>, /* args from policy */) -> /* return from policy */ {
+    match this {
+        _ => panic!("Unimplemented: Foo::method dispatch"),
+    }
+}
+```
+
+The dispatcher is module-scope (the `impl`-wrapping pass will later wrap it in `impl<...> Foo<...> { ... }`). The `/* Guardian: disable-all */` annotation is mandatory — these dispatchers have no 1:1 Scala counterpart.
 
 ## `// mig: trait Foo`
 
-Generate an empty `pub trait Foo {}` or trait with method stubs.
+Generate an empty `pub trait Foo {}` or trait with method stubs. Apply the policy's lifetimes. Only used when the policy's sealed-trait policy is `trait-with-impls`.
 
 ## `// mig: fn foo`
 
-Generate a function stub with `panic!("Unimplemented: foo");`. Infer the signature (parameters, return type) from the Scala `def` below. If the Scala code below is a `test("...")`, add `#[test]` and use `panic!("Unmigrated test: foo");`.
+Always emit a module-scope stub: `pub fn foo(…) -> … { panic!("Unimplemented: foo"); }`. Do NOT nest inside any impl block — methods originally inside a Scala `class` body become free-floating module-scope `pub fn`s here. If the Scala def takes `self`/`this` implicitly (i.e. it was an instance method on a class), translate that to an explicit first parameter named `self_` (or appropriately typed) — do NOT use `&self`, since there is no surrounding impl.
+
+Signature inference:
+ * Translate Scala types via the policy's collection/string rules.
+ * If the Scala body intern-allocates (look for `interner.intern(` / `arena.alloc(` / `new FooT(...)` patterns in the body), thread the policy's **Interner type** as the first parameter, named `interner`. Above the fn emit:
+   ```rust
+   // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+   // arena-allocates where Scala used GC.
+   ```
+ * If the Scala code is `test("…")`, emit `#[test]` and `panic!("Unmigrated test: foo");` at module scope (tests never go inside an impl).
+
+If the `// mig: fn` is suffixed `(realized-by-impl PartialEq)`, `(realized-by-impl Hash)`, or `(realized-by-TryFrom)`, do NOT emit a `pub fn`. Instead emit a marker stub per the policy's equals/hashCode/unapply policy:
+
+```rust
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for FooT` below.)
+```
+
+(Leave the Scala `/* */` block in place after the marker, as usual.)
 
 ## `// mig: const FOO`
 
@@ -42,8 +108,8 @@ Generate a `const` with a placeholder value.
  * **Keep every `// mig:` comment in place.** Add the Rust stub right below it; do not remove or replace the comment.
  * Infer signatures from the Scala code below each mig comment. Guessing is fine.
  * Convert Scala names to snake_case for function names.
- * Convert Scala types to Rust equivalents where obvious (e.g. `String` → `&str` or `String`, `Vector[X]` → `Vec<X>`, `Map[K,V]` → `HashMap<K,V>`, `Option[T]` → `Option<T>`, `Unit` → `()`).
- * For `impl` and `trait`, place the closing `}` after the last method, before the Scala closing `}`.
+ * Convert Scala types to Rust equivalents **via the policy's collection/string sections** (NOT via generic `String → &str` / `Vector → Vec` defaults, which are wrong for arena passes). `Option[T]` → `Option<T>` and `Unit` → `()` are always fine.
+ * For `trait`, generate an empty `pub trait Foo {}`. For `impl`, emit nothing (leave the marker as a comment).
 
 # Restrictions
 

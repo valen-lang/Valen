@@ -91,7 +91,7 @@ pub struct BoolPT {
 case class BoolPT(range: RangeL, value: Boolean) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 //case class BorrowPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -224,7 +224,7 @@ impl<'p> InterpretedPT<'p> {
 }
 /*
 //case class NullablePT(range: Range, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 case class InterpretedPT(range: RangeL, maybeOwnership: Option[OwnershipPT], maybeRegion: Option[RegionRunePT], inner: ITemplexPT) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious();
   override def hashCode(): Int = vcurious()

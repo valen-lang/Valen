@@ -768,7 +768,10 @@ pub fn is_light(&self) -> bool {
 */
 // mig: fn is_lambda
 pub fn is_lambda(&self) -> bool {
-    panic!("Unimplemented: is_lambda");
+    match &self.name {
+        IFunctionDeclarationNameS::LambdaDeclarationName(_) => true,
+        _ => false,
+    }
 }
 }
 /*

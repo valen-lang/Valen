@@ -13,6 +13,7 @@ use crate::Keywords;
 // VA: coerces to &'ctx Keywords<'p> at all existing call sites — no signature changes needed.
 // VA: All other ~110 fields are StrI<'a> (Copy), so no other blockers.
 use std::collections::HashMap;
+use crate::parse_arena::ParseArena;
 /*
 package dev.vale.parsing
 
@@ -49,7 +50,7 @@ object ParseAndExplore {
 
 // From ParseAndExplore.scala lines 35-101: parseAndExplore
 pub fn parse_and_explore<'p, 'ctx, D, F, R, HandleParsedDenizen, FileHandler>(
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   _opts: GlobalOptions,
   parser: &Parser<'p, 'ctx>,

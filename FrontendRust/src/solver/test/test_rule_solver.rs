@@ -8,10 +8,11 @@ import scala.collection.immutable.Map
 */
 use super::test_rules::*;
 use crate::solver::{ISolverError, RuleError, SimpleSolverState};
+use crate::scout_arena::ScoutArena;
 
 // mig: struct TestRuleSolver
 pub struct TestRuleSolver<'ctx, 's> {
-    pub scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
+    pub scout_arena: &'ctx ScoutArena<'s>,
 }
 /*
 object TestRuleSolver {

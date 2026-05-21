@@ -94,7 +94,7 @@ sealed trait ITemplataI[+R <: IRegionsModeI] {
 //case class RegionTemplataI[+R <: IRegionsModeI](pureHeight: Int) extends ITemplataI[R] {
 //  vpass()
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
+//override def hashCode(): Int = hash;
 //
 //}
 
@@ -124,7 +124,7 @@ case class CoordTemplataI[+R <: IRegionsModeI](
 //    case _ =>
 //  }
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
+//override def hashCode(): Int = hash;
 //}
 case class KindTemplataI[+R <: IRegionsModeI](kind: KindIT[R]) extends ITemplataI[R] {
   val hash = runtime.ScalaRunTime._hashCode(this)

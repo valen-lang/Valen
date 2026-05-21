@@ -1,3 +1,18 @@
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::typing::ast::ast::ParameterT;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::names::names::CodeVarNameT;
+use crate::interner::StrI;
+
 // mig: struct CompilerLambdaTests
 pub struct CompilerLambdaTests;
 
@@ -41,9 +56,25 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 */
 // mig: fn simple_lambda
 #[test]
-#[ignore]
 fn simple_lambda() {
-    panic!("Unmigrated test: simple_lambda");
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nexported func main() int { return { 7 }(); }\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let expected = CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) };
+    assert_eq!(coutputs.lookup_lambda_in("main").header.return_type, expected);
+    assert_eq!(coutputs.lookup_function_by_str("main").header.return_type, expected);
 }
 /*
   test("Simple lambda") {
@@ -60,10 +91,42 @@ fn simple_lambda() {
 */
 // mig: fn lambda_with_one_magic_arg
 #[test]
-#[ignore]
 fn lambda_with_one_magic_arg() {
-    panic!("Unmigrated test: lambda_with_one_magic_arg");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nexported func main() int { return {_}(3); }\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambda = coutputs.lookup_lambda_in("main");
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(lambda),
+        NodeRefT::Parameter(
+            ParameterT {
+                virtuality: None,
+                tyype: CoordT {
+                    ownership: OwnershipT::Share,
+                    kind: KindT::Int(IntT { bits: 32 }),
+                    ..
+                },
+                ..
+            }
+        ) => Some(())
+    );
+    assert_eq!(
+        coutputs.lookup_lambda_in("main").header.return_type,
+        CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) },
+    );
+}
 /*
   test("Lambda with one magic arg") {
     val compile =
@@ -83,10 +146,25 @@ fn lambda_with_one_magic_arg() {
 */
 // mig: fn lambda_is_reused
 #[test]
-#[ignore]
 fn lambda_is_reused() {
-    panic!("Unmigrated test: lambda_is_reused");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nexported func main() {\n  lam = x => x;\n  lam(4);\n  lam(7);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambdas = coutputs.lookup_lambdas_in("main");
+    assert_eq!(lambdas.len(), 1);
+}
 /*
   test("Lambda is reused") {
     // Since we call it with an int both times, the template generic should only generate one generic.
@@ -109,10 +187,25 @@ fn lambda_is_reused() {
 */
 // mig: fn lambda_called_with_different_types
 #[test]
-#[ignore]
 fn lambda_called_with_different_types() {
-    panic!("Unmigrated test: lambda_called_with_different_types");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nexported func main() {\n  lam = x => x;\n  lam(4);\n  lam(true);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambdas = coutputs.lookup_lambdas_in("main");
+    assert_eq!(lambdas.len(), 2);
+}
 /*
   test("Lambda called with different types") {
     // Since we call it with an int both times, the template generic should only generate one generic.
@@ -135,10 +228,25 @@ fn lambda_called_with_different_types() {
 */
 // mig: fn curried_lambda
 #[test]
-#[ignore]
 fn curried_lambda() {
-    panic!("Unmigrated test: curried_lambda");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nexported func main() {\n  lam = x => y => 7;\n  lam(true)(4);\n  lam(true)(\"hello\");\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambdas = coutputs.lookup_lambdas_in("main");
+    assert_eq!(lambdas.len(), 3);
+}
 /*
   test("Curried lambda") {
     val compile = CompilerTestCompilation.test(
@@ -165,10 +273,49 @@ fn curried_lambda() {
 */
 // mig: fn lambda_with_a_type_specified_param
 #[test]
-#[ignore]
 fn lambda_with_a_type_specified_param() {
-    panic!("Unmigrated test: lambda_with_a_type_specified_param");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.arith.*;\nexported func main() int {\n  return (a int) => {+(a,a)}(3);\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambda = coutputs.lookup_lambda_in("main");
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(lambda),
+        NodeRefT::Parameter(
+            ParameterT {
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("a"), .. }),
+                virtuality: None,
+                tyype: CoordT {
+                    ownership: OwnershipT::Share,
+                    kind: KindT::Int(IntT { bits: 32 }),
+                    ..
+                },
+                ..
+            }
+        ) => Some(())
+    );
+    assert!(coutputs.name_is_lambda_in(lambda.header.id, "main"));
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE { callable, .. }) => {
+            assert!(coutputs.name_is_lambda_in(callable.id, "main"));
+            Some(())
+        }
+    );
+}
 /*
   test("Lambda with a type specified param") {
     val compile = CompilerTestCompilation.test(
@@ -193,10 +340,24 @@ fn lambda_with_a_type_specified_param() {
 */
 // mig: fn tests_lambda_and_concept_function
 #[test]
-#[ignore]
 fn tests_lambda_and_concept_function() {
-    panic!("Unmigrated test: tests_lambda_and_concept_function");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.print.*;\nimport v.builtins.drop.*;\nimport v.builtins.str.*;\n\nfunc moo<X, F>(x X, f F)\nwhere func(&F, &X)void, func drop(X)void, func drop(F)void {\n  f(&x);\n}\nexported func main() {\n  moo(\"hello\", { print(_); });\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
 /*
   test("Tests lambda and concept function") {
     val compile = CompilerTestCompilation.test(
@@ -218,10 +379,24 @@ fn tests_lambda_and_concept_function() {
 */
 // mig: fn lambda_inside_different_function_with_same_name
 #[test]
-#[ignore]
 fn lambda_inside_different_function_with_same_name() {
-    panic!("Unmigrated test: lambda_inside_different_function_with_same_name");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport printutils.*;\n\nfunc helperFunc(x int) {\n  { print(x); }();\n}\nfunc helperFunc(x str) {\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
 /*
   test("Lambda inside different function with same name") {
     // This originally didn't work because both helperFunc(:Int) and helperFunc(:Str)
@@ -248,10 +423,24 @@ fn lambda_inside_different_function_with_same_name() {
 */
 // mig: fn lambda_inside_template
 #[test]
-#[ignore]
 fn lambda_inside_template() {
-    panic!("Unmigrated test: lambda_inside_template");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.drop.*;\nimport printutils.*;\n\nfunc helperFunc<T>(x T)\nwhere func print(&T)void, func drop(T)void\n{\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
 /*
   test("Lambda inside template") {
     // This originally didn't work because both helperFunc<int> and helperFunc<Str>
@@ -278,10 +467,26 @@ fn lambda_inside_template() {
 */
 // mig: fn curried_lambda_inside_template
 #[test]
-#[ignore]
 fn curried_lambda_inside_template() {
-    panic!("Unmigrated test: curried_lambda_inside_template");
-} 
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(4);\n  helper(\"bork\");\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let lambdas = coutputs.lookup_lambdas_in("helper");
+    assert_eq!(lambdas.len(), 2);
+}
 /*
   test("Curried lambda inside template") {
     val compile = CompilerTestCompilation.test(

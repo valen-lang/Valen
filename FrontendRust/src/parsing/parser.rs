@@ -12,6 +12,11 @@ use crate::parsing::templex_parser::TemplexParser;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
 use std::collections::HashMap;
+use crate::parsing::parse_and_explore;
+use crate::parsing::parsed_loader;
+use crate::parsing::vonifier::ParserVonifier;
+use crate::von::printer::VonPrinter;
+use crate::parse_arena::ParseArena;
 
 /*
 package dev.vale.parsing
@@ -37,7 +42,7 @@ type ParseResult<T> = Result<T, ParseError>;
 /// Matches Scala's Parser class
 pub struct Parser<'p, 'ctx> {
   // VV: crate::
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   pub templex_parser: TemplexParser<'p, 'ctx>,
   pub pattern_parser: PatternParser<'p, 'ctx>,
@@ -232,7 +237,7 @@ where
   */
 
   pub fn new(
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     keywords: &'ctx Keywords<'p>,
   ) -> Self {
     let templex_parser = TemplexParser::new(parse_arena, keywords);
@@ -1618,7 +1623,7 @@ where
 // Arena is passed in by reference, caller owns it
 pub struct ParserCompilation<'p, 'ctx> {
   opts: GlobalOptions,
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   packages_to_build: Vec<&'p PackageCoordinate<'p>>,
   package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
@@ -1644,7 +1649,7 @@ where
   // From Parser.scala lines 699-706
   pub fn new(
     opts: GlobalOptions,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     keywords: &'ctx Keywords<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
@@ -1718,7 +1723,6 @@ where
     let vale_only_resolver = ValeOnlyResolver { inner: resolver };
 
     // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
-    use crate::parsing::parse_and_explore;
     let parser = Parser::new(self.parse_arena, self.keywords);
     parse_and_explore::parse_and_explore(
             self.parse_arena,
@@ -1741,9 +1745,6 @@ where
                 
                 // From Parser.scala lines 759-764: Sanity check
                 if self.opts.sanity_check {
-                    use crate::parsing::parsed_loader;
-                    use crate::parsing::vonifier::ParserVonifier;
-                    use crate::von::printer::VonPrinter;
 
                     let json = VonPrinter::new().print(&ParserVonifier::vonify_file(&file));
                     let loaded_file = parsed_loader::load(self.parse_arena, &json).unwrap_or_else(|e| {

@@ -1,4 +1,5 @@
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
@@ -75,8 +76,8 @@ where 's: 't,
         &self,
         parent_fate: &mut FunctionEnvironmentBuilder<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
-        parent_ranges: &[RangeS<'s>],
+        life: LocationInFunctionEnvironmentT<'s, 't>,
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         block_1: &'s BlockSE<'s>,
@@ -125,16 +126,16 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
         block_se: &'s BlockSE<'s>,
-    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+    ) -> Result<(ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
             self.evaluate_and_coerce_to_reference_expression(
-                coutputs, nenv, life.add(0), parent_ranges,
-                call_location, region, block_se.expr);
+                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,
+                call_location, region, block_se.expr)?;
 
         let unresultified_undestructed_expressions =
             unnevered_unresultified_undestructed_root_expression;
@@ -146,9 +147,9 @@ where 's: 't,
             self.drop_since(
                 coutputs, starting_nenv, nenv,
                 &drop_ranges, call_location, life, region,
-                unresultified_undestructed_expressions);
+                unresultified_undestructed_expressions)?;
 
-        (new_expr, returns_from_exprs)
+        Ok((new_expr, returns_from_exprs))
     }
 /*
   def evaluateBlockStatements(

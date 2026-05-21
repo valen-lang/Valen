@@ -11,6 +11,9 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::hinputs_t::*;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::typing::names::names::IdValQuery;
 
 /*
 package dev.vale.typing.ast
@@ -48,8 +51,8 @@ pub struct ImplT<'s, 't> {
     pub sub_citizen: ICitizenTT<'s, 't>,
     pub super_interface: InterfaceTT<'s, 't>,
     pub super_interface_template_id: IdT<'s, 't>,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub rune_index_to_independence: Vec<bool>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+    pub rune_index_to_independence: &'t [bool],
 }
 /*
 case class ImplT(
@@ -79,6 +82,7 @@ case class ImplT(
 }
 */
 /// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct KindExportT<'s, 't> {
     pub range: RangeS<'s>,
     pub tyype: KindT<'s, 't>,
@@ -197,7 +201,7 @@ impl<'s, 't> FunctionExternT<'s, 't> {
 /// Arena-allocated (see @TFITCX)
 pub struct InterfaceEdgeBlueprintT<'s, 't> {
     pub interface: IdT<'s, 't>,
-    pub super_family_root_headers: Vec<(PrototypeT<'s, 't>, i32)>,
+    pub super_family_root_headers: &'t [(PrototypeT<'s, 't>, i32)],
 }
 /*
 case class InterfaceEdgeBlueprintT(
@@ -221,12 +225,12 @@ impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> {
 /// Arena-allocated (see @TFITCX)
 pub struct OverrideT<'s, 't> {
     pub dispatcher_call_id: IdT<'s, 't>,
-    pub impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)>,
-    pub impl_placeholder_to_case_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)>,
-    pub dispatcher_and_case_placeholdered_impl_reachable_prototypes: HashMap<IRuneS<'s>, HashMap<IRuneS<'s>, PrototypeT<'s, 't>>>,
+    pub impl_placeholder_to_dispatcher_placeholder: &'t [(IdT<'s, 't>, ITemplataT<'s, 't>)],
+    pub impl_placeholder_to_case_placeholder: &'t [(IdT<'s, 't>, ITemplataT<'s, 't>)],
+    pub dispatcher_and_case_placeholdered_impl_reachable_prototypes: ArenaIndexMap<'t, IRuneS<'s>, ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>>,
     pub case_id: IdT<'s, 't>,
     pub override_prototype: PrototypeT<'s, 't>,
-    pub dispatcher_instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+    pub dispatcher_instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
 case class OverrideT(
@@ -273,8 +277,8 @@ pub struct EdgeT<'s, 't> {
     pub edge_id: IdT<'s, 't>,
     pub sub_citizen: ICitizenTT<'s, 't>,
     pub super_interface: IdT<'s, 't>,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub abstract_func_to_override_func: HashMap<IdT<'s, 't>, OverrideT<'s, 't>>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+    pub abstract_func_to_override_func: ArenaIndexMap<'t, IdT<'s, 't>, &'t OverrideT<'s, 't>>,
 }
 /*
 case class EdgeT(
@@ -317,8 +321,8 @@ impl<'s, 't> EdgeT<'s, 't> {
 }
 /// Arena-allocated (see @TFITCX)
 pub struct FunctionDefinitionT<'s, 't> {
-    pub header: FunctionHeaderT<'s, 't>,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+    pub header: &'t FunctionHeaderT<'s, 't>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     pub body: ReferenceExpressionTE<'s, 't>,
 }
 /*
@@ -344,7 +348,7 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> where 's: 't, {
     fn new(
         header: FunctionHeaderT<'s, 't>,
         instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-        body: &'t ReferenceExpressionTE<'s, 't>,
+        body: ReferenceExpressionTE<'s, 't>,
     ) -> FunctionDefinitionT<'s, 't> { panic!("Unimplemented: FunctionDefinitionT::new"); }
 /*
   // We always end a function with a ret, whose result is a Never.
@@ -365,28 +369,29 @@ fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) ->
   def unapply(f: FunctionDefinitionT): Option[IFunctionNameT] = Some(f.header.id.localName)
 }
 */
-/// Temporary state (see @TFITCX)
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocationInFunctionEnvironmentT<'s> {
-    pub path: Vec<i32>,
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LocationInFunctionEnvironmentT<'s, 't> {
+    pub path: &'t [i32],
     pub _phantom: std::marker::PhantomData<&'s ()>,
 }
 /*
 // A unique location in a function. Environment is in the name so it spells LIFE!
 case class LocationInFunctionEnvironmentT(path: Vector[Int]) {
 */
-impl<'s> LocationInFunctionEnvironmentT<'s> {
+impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 }
-impl<'s> LocationInFunctionEnvironmentT<'s> {
-    pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentT<'s> {
-        let mut new_path = self.path.clone();
+impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
+    // Rust adaptation (SPDMX-B): interner needed to allocate &'t [i32] slice for arena-immutable storage.
+    pub fn add(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'s, 't> {
+        let mut new_path: Vec<i32> = self.path.to_vec();
         new_path.push(sub_location);
-        LocationInFunctionEnvironmentT { path: new_path, _phantom: std::marker::PhantomData }
+        LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path), _phantom: std::marker::PhantomData }
     }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {
@@ -394,7 +399,7 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {
   }
 */
 }
-impl<'s> LocationInFunctionEnvironmentT<'s> {
+impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     fn to_string(&self) -> String { panic!("Unimplemented: to_string"); }
 /*
   override def toString: String = path.mkString(".")
@@ -402,13 +407,13 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {
 */
 }
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AbstractT;
 /*
 case class AbstractT()
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParameterT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub virtuality: Option<AbstractT>,
@@ -449,6 +454,7 @@ impl<'s, 't> ParameterT<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICalleeCandidate<'s, 't> {
     Function(FunctionCalleeCandidate<'s, 't>),
     Header(&'t HeaderCalleeCandidate<'s, 't>),
@@ -458,6 +464,7 @@ pub enum ICalleeCandidate<'s, 't> {
 sealed trait ICalleeCandidate
 */
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionCalleeCandidate<'s, 't> {
     pub ft: FunctionTemplataT<'s, 't>,
 }
@@ -473,6 +480,7 @@ impl<'s, 't> FunctionCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct HeaderCalleeCandidate<'s, 't> {
     pub header: FunctionHeaderT<'s, 't>,
 }
@@ -488,6 +496,7 @@ impl<'s, 't> HeaderCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
     pub prototype_t: PrototypeT<'s, 't>,
 }
@@ -516,8 +525,8 @@ impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {
 //  header: FunctionHeaderT
 //) extends IValidCalleeCandidate {
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
+//override def hashCode(): Int = hash;
+//override def equals(obj: Any): Boolean = vcurious();
 //
 //  override def range: Option[RangeS] = header.maybeOriginFunctionTemplata.map(_.function.range)
 //  override def paramTypes: Vector[CoordT] = header.paramTypes.toVector
@@ -528,7 +537,7 @@ override def equals(obj: Any): Boolean = vcurious();
 //  prototype: PrototypeTemplataT[IFunctionNameT]
 //) extends IValidCalleeCandidate {
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
+//override def hashCode(): Int = hash;
 //  override def equals(obj: Any): Boolean = {
 //    val that = obj.asInstanceOf[ValidPrototypeTemplataCalleeCandidate]
 //    if (that == null) {
@@ -548,8 +557,8 @@ override def hashCode(): Int = hash;
 ////  function: FunctionTemplataT
 ////) extends IValidCalleeCandidate {
 ////  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
+//override def hashCode(): Int = hash;
+//override def equals(obj: Any): Boolean = vcurious();
 ////
 ////  override def range: Option[RangeS] = banner.maybeOriginFunctionTemplata.map(_.function.range)
 ////  override def paramTypes: Vector[CoordT] = banner.paramTypes.toVector
@@ -620,7 +629,7 @@ impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<SignatureValT<'s, 't, 't>> for Sign
 where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &SignatureValT<'s, 't, 't>) -> bool {
-        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+        IdValQuery(&self.0.id).equivalent(&key.id)
     }
     /* Guardian: disable-all */
 }
@@ -650,7 +659,11 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionBannerT<'s, 't> {
-    fn same(&self, that: &FunctionBannerT<'s, 't>) -> bool { panic!("Unimplemented: same"); }
+    pub fn same(&self, that: &FunctionBannerT<'s, 't>) -> bool {
+        let self_func = self.origin_function_templata.map(|t| t.function as *const _);
+        let that_func = that.origin_function_templata.map(|t| t.function as *const _);
+        self_func == that_func && self.name == that.name
+    }
 /*
   def same(that: FunctionBannerT): Boolean = {
     originFunctionTemplata.map(_.function) == that.originFunctionTemplata.map(_.function) && name == that.name
@@ -678,7 +691,7 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum IFunctionAttributeT<'s> {
     Extern(ExternT<'s>),
     Pure,
@@ -697,7 +710,7 @@ pub enum ICitizenAttributeT<'s> {
 sealed trait ICitizenAttributeT
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct ExternT<'s> {
     pub package_coord: PackageCoordinate<'s>,
 }
@@ -729,13 +742,23 @@ case object UserFunctionT extends IFunctionAttributeT // Whether it was written 
 */
 }
 /// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
 pub struct FunctionHeaderT<'s, 't> {
     pub id: IdT<'s, 't>,
-    pub attributes: Vec<IFunctionAttributeT<'s>>,
-    pub params: Vec<ParameterT<'s, 't>>,
+    pub attributes: &'t [IFunctionAttributeT<'s>],
+    pub params: &'t [ParameterT<'s, 't>],
     pub return_type: CoordT<'s, 't>,
     pub maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
 }
+/*
+case class FunctionHeaderT(
+  // This one little name field can illuminate much of how the compiler works, see UINIT.
+  id: IdT[IFunctionNameT],
+  attributes: Vector[IFunctionAttributeT],
+  params: Vector[ParameterT],
+  returnType: CoordT,
+  maybeOriginFunctionTemplata: Option[FunctionTemplataT]) {
+*/
 
 // Identity equality per @IEOIBZ — `FunctionHeaderT` is arena-allocated.
 impl<'s, 't> PartialEq for FunctionHeaderT<'s, 't> {
@@ -747,15 +770,6 @@ impl<'s, 't> std::hash::Hash for FunctionHeaderT<'s, 't> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
     /* Guardian: disable-all */
 }
-/*
-case class FunctionHeaderT(
-  // This one little name field can illuminate much of how the compiler works, see UINIT.
-  id: IdT[IFunctionNameT],
-  attributes: Vector[IFunctionAttributeT],
-  params: Vector[ParameterT],
-  returnType: CoordT,
-  maybeOriginFunctionTemplata: Option[FunctionTemplataT]) {
-*/
 impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
@@ -860,7 +874,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn is_user_function(&self) -> bool { panic!("Unimplemented: is_user_function"); }
+    pub fn is_user_function(&self) -> bool { self.attributes.contains(&IFunctionAttributeT::UserFunction) }
 /*
   def isUserFunction = attributes.contains(UserFunctionT)
 */
@@ -888,7 +902,17 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn get_abstract_interface(&self) -> Option<&InterfaceTT<'s, 't>> { panic!("Unimplemented: get_abstract_interface"); }
+    pub fn get_abstract_interface(&self) -> Option<InterfaceTT<'s, 't>> {
+        let abstract_interfaces: Vec<InterfaceTT<'s, 't>> =
+            self.params.iter().filter_map(|param| {
+                match param {
+                    ParameterT { virtuality: Some(AbstractT), tyype: CoordT { kind: KindT::Interface(ir), .. }, .. } => Some(**ir),
+                    _ => None,
+                }
+            }).collect();
+        assert!(abstract_interfaces.len() <= 1);
+        abstract_interfaces.into_iter().next()
+    }
 /*
   def getAbstractInterface: Option[InterfaceTT] = {
     val abstractInterfaces =
@@ -901,7 +925,13 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn get_virtual_index(&self) -> Option<i32> { panic!("Unimplemented: get_virtual_index"); }
+    pub fn get_virtual_index(&self) -> Option<usize> {
+        let indices: Vec<usize> = self.params.iter().enumerate()
+            .filter_map(|(index, p)| if p.virtuality.is_some() { Some(index) } else { None })
+            .collect();
+        assert!(indices.len() <= 1);
+        indices.into_iter().next()
+    }
 /*
   def getVirtualIndex: Option[Int] = {
     val indices =
@@ -920,7 +950,9 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn to_banner(&self) -> FunctionBannerT<'s, 't> { panic!("Unimplemented: to_banner"); }
+    pub fn to_banner(&self) -> FunctionBannerT<'s, 't> {
+        FunctionBannerT { origin_function_templata: self.maybe_origin_function_templata, name: self.id }
+    }
 /*
   def toBanner: FunctionBannerT = FunctionBannerT(maybeOriginFunctionTemplata, id)
 */
@@ -994,7 +1026,11 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
+    pub fn param_types(&self) -> &'t [CoordT<'s, 't>] {
+        IFunctionNameT::try_from(self.id.local_name)
+            .unwrap_or_else(|_| panic!("param_types called on non-function name: {:?}", self.id.local_name))
+            .parameters()
+    }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
@@ -1036,7 +1072,7 @@ impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<PrototypeValT<'s, 't, 't>> for Prot
 where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &PrototypeValT<'s, 't, 't>) -> bool {
-        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+        IdValQuery(&self.0.id).equivalent(&key.id)
             && self.0.return_type == key.return_type
     }
     /* Guardian: disable-all */

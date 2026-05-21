@@ -1,3 +1,5 @@
+/* Guardian: disable-all */
+
 // Test-only traversal helper for the typing pass. Mirrors `src/postparsing/test/traverse.rs`.
 //
 // Scala uses `Collector.only` (in `Frontend/Utils/.../Collector.scala`) which walks
@@ -13,7 +15,10 @@ use crate::typing::ast::ast::{
     ICitizenAttributeT, IFunctionAttributeT, InterfaceEdgeBlueprintT, KindExportT, KindExternT,
     OverrideT, ParameterT, PrototypeT, SignatureT,
 };
-use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, StructDefinitionT};
+use crate::typing::ast::citizens::{
+    AddressMemberTypeT, IMemberTypeT, IStructMemberT, InterfaceDefinitionT, ReferenceMemberTypeT,
+    StructDefinitionT,
+};
 use crate::typing::ast::expressions::{
     AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
@@ -41,6 +46,8 @@ use crate::typing::types::types::{
     CoordT, InterfaceTT, KindPlaceholderT, KindT, OverloadSetT, RuntimeSizedArrayTT,
     StaticSizedArrayTT, StructTT,
 };
+use crate::typing::types::types::ICitizenTT;
+use crate::typing::types::types::ISuperKindTT;
 
 pub enum NodeRefT<'s, 't> {
     // ---- Top-level ----
@@ -55,9 +62,9 @@ pub enum NodeRefT<'s, 't> {
     InstantiationBoundArguments(&'t InstantiationBoundArgumentsT<'s, 't>),
 
     // ---- Expression hierarchy ----
-    Expression(&'t ExpressionTE<'s, 't>),
-    ReferenceExpression(&'t ReferenceExpressionTE<'s, 't>),
-    AddressExpression(&'t AddressExpressionTE<'s, 't>),
+    Expression(ExpressionTE<'s, 't>),
+    ReferenceExpression(ReferenceExpressionTE<'s, 't>),
+    AddressExpression(AddressExpressionTE<'s, 't>),
 
     // 48 reference expression variants
     LetAndLend(&'t LetAndLendTE<'s, 't>),
@@ -146,12 +153,14 @@ pub enum NodeRefT<'s, 't> {
     // ---- Names + envs (trait-level only; we do not enumerate sub-variants) ----
     Name(&'t INameT<'s, 't>),
     VarName(&'t IVarNameT<'s, 't>),
-    Environment(&'t IEnvironmentT<'s, 't>),
+    Environment(IEnvironmentT<'s, 't>),
 
     // ---- Auxiliaries (trait-level only) ----
     FunctionAttribute(&'t IFunctionAttributeT<'s>),
     CitizenAttribute(&'t ICitizenAttributeT<'s>),
     StructMember(&'t IStructMemberT<'s, 't>),
+    ReferenceMemberType(&'t ReferenceMemberTypeT<'s, 't>),
+    AddressMemberType(&'t AddressMemberTypeT<'s, 't>),
     LocalVariable(&'t ILocalVariableT<'s, 't>),
 
     // ---- Override / Edge children ----
@@ -227,7 +236,7 @@ where
 }
 
 pub fn collect_in_reference_expression<'s, 't, T, F>(
-    e: &'t ReferenceExpressionTE<'s, 't>,
+    e: ReferenceExpressionTE<'s, 't>,
     predicate: &F,
 ) -> Vec<T>
 where
@@ -240,7 +249,7 @@ where
 }
 
 pub fn collect_in_address_expression<'s, 't, T, F>(
-    e: &'t AddressExpressionTE<'s, 't>,
+    e: AddressExpressionTE<'s, 't>,
     predicate: &F,
 ) -> Vec<T>
 where
@@ -338,9 +347,9 @@ fn visit_function_definition<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::FunctionDefinition(f));
-    visit_function_header(pred, out, &f.header);
-    visit_instantiation_bound_arguments(pred, out, &f.instantiation_bound_params);
-    visit_reference_expression(pred, out, &f.body);
+    visit_function_header(pred, out, f.header);
+    visit_instantiation_bound_arguments(pred, out, f.instantiation_bound_params);
+    visit_reference_expression(pred, out, f.body);
 }
 
 fn visit_function_header<'s, 't, T, F>(
@@ -353,10 +362,10 @@ fn visit_function_header<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::FunctionHeader(h));
     visit_id(pred, out, &h.id);
-    for attr in &h.attributes {
+    for attr in h.attributes {
         visit_function_attribute(pred, out, attr);
     }
-    for param in &h.params {
+    for param in h.params {
         visit_parameter(pred, out, param);
     }
     visit_coord(pred, out, &h.return_type);
@@ -376,14 +385,14 @@ fn visit_struct_definition<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::StructDefinition(s));
     visit_id(pred, out, &s.template_name);
     visit_struct_tt(pred, out, &s.instantiated_citizen);
-    for attr in &s.attributes {
+    for attr in s.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
     visit_templata(pred, out, &s.mutability);
-    for member in &s.members {
+    for member in s.members {
         visit_struct_member(pred, out, member);
     }
-    visit_instantiation_bound_arguments(pred, out, &s.instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, s.instantiation_bound_params);
 }
 
 fn visit_interface_definition<'s, 't, T, F>(
@@ -398,12 +407,12 @@ fn visit_interface_definition<'s, 't, T, F>(
     visit_id(pred, out, &i.template_name);
     visit_interface_tt(pred, out, &i.instantiated_interface);
     visit_interface_tt(pred, out, &i.ref_);
-    for attr in &i.attributes {
+    for attr in i.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
     visit_templata(pred, out, &i.mutability);
-    visit_instantiation_bound_arguments(pred, out, &i.instantiation_bound_params);
-    for (proto, _idx) in &i.internal_methods {
+    visit_instantiation_bound_arguments(pred, out, i.instantiation_bound_params);
+    for (proto, _idx) in i.internal_methods {
         visit_prototype(pred, out, proto);
     }
 }
@@ -417,7 +426,7 @@ where
     visit_id(pred, out, &e.edge_id);
     visit_kind_citizen(pred, out, &e.sub_citizen);
     visit_id(pred, out, &e.super_interface);
-    visit_instantiation_bound_arguments(pred, out, &e.instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, e.instantiation_bound_params);
     for (id, ovr) in &e.abstract_func_to_override_func {
         visit_id(pred, out, id);
         visit_override(pred, out, ovr);
@@ -427,14 +436,14 @@ where
 fn visit_kind_citizen<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    c: &'t crate::typing::types::types::ICitizenTT<'s, 't>,
+    c: &'t ICitizenTT<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     match c {
-        crate::typing::types::types::ICitizenTT::Struct(s) => visit_struct_tt(pred, out, s),
-        crate::typing::types::types::ICitizenTT::Interface(i) => visit_interface_tt(pred, out, i),
+        ICitizenTT::Struct(s) => visit_struct_tt(pred, out, s),
+        ICitizenTT::Interface(i) => visit_interface_tt(pred, out, i),
     }
 }
 
@@ -445,17 +454,17 @@ where
 {
     collect_if(pred, out, NodeRefT::Override(o));
     visit_id(pred, out, &o.dispatcher_call_id);
-    for (id, t) in &o.impl_placeholder_to_dispatcher_placeholder {
+    for (id, t) in o.impl_placeholder_to_dispatcher_placeholder {
         visit_id(pred, out, id);
         visit_templata(pred, out, t);
     }
-    for (id, t) in &o.impl_placeholder_to_case_placeholder {
+    for (id, t) in o.impl_placeholder_to_case_placeholder {
         visit_id(pred, out, id);
         visit_templata(pred, out, t);
     }
     visit_id(pred, out, &o.case_id);
     visit_prototype(pred, out, &o.override_prototype);
-    visit_instantiation_bound_arguments(pred, out, &o.dispatcher_instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, o.dispatcher_instantiation_bound_params);
 }
 
 fn visit_interface_edge_blueprint<'s, 't, T, F>(
@@ -468,7 +477,7 @@ fn visit_interface_edge_blueprint<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::InterfaceEdgeBlueprint(b));
     visit_id(pred, out, &b.interface);
-    for (proto, _idx) in &b.super_family_root_headers {
+    for (proto, _idx) in b.super_family_root_headers {
         visit_prototype(pred, out, proto);
     }
 }
@@ -509,7 +518,7 @@ fn visit_instantiation_bound_arguments<'s, 't, T, F>(
 // Expression hierarchy visitors
 // ============================================================================
 
-fn visit_expression_te<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, e: &'t ExpressionTE<'s, 't>)
+fn visit_expression_te<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -524,7 +533,7 @@ where
 fn visit_reference_expression<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    e: &'t ReferenceExpressionTE<'s, 't>,
+    e: ReferenceExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -611,7 +620,7 @@ fn visit_reference_expression<'s, 't, T, F>(
 fn visit_address_expression<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    e: &'t AddressExpressionTE<'s, 't>,
+    e: AddressExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -795,7 +804,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Consecutor(x));
     for e in x.exprs {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
 }
 
@@ -806,7 +815,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Tuple(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
     visit_coord(pred, out, &x.result_reference);
 }
@@ -821,7 +830,7 @@ fn visit_static_array_from_values<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::StaticArrayFromValues(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
     visit_coord(pred, out, &x.result_reference);
     visit_static_sized_array_tt(pred, out, x.array_type);
@@ -936,7 +945,7 @@ fn visit_interface_function_call<'s, 't, T, F>(
     visit_prototype(pred, out, x.super_function_prototype);
     visit_coord(pred, out, &x.result_reference);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
 }
 
@@ -951,7 +960,7 @@ fn visit_extern_function_call<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::ExternFunctionCall(x));
     visit_prototype(pred, out, x.prototype2);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
 }
 
@@ -963,7 +972,7 @@ where
     collect_if(pred, out, NodeRefT::FunctionCall(x));
     visit_prototype(pred, out, x.callable);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
     visit_coord(pred, out, &x.return_type);
 }
@@ -987,7 +996,7 @@ where
     visit_struct_tt(pred, out, x.struct_tt);
     visit_coord(pred, out, &x.result_reference);
     for a in x.args {
-        visit_expression_te(pred, out, a);
+        visit_expression_te(pred, out, *a);
     }
 }
 
@@ -1123,14 +1132,14 @@ where
 fn visit_super_kind<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    s: &'t crate::typing::types::types::ISuperKindTT<'s, 't>,
+    s: &'t ISuperKindTT<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
     match s {
-        crate::typing::types::types::ISuperKindTT::Interface(i) => visit_interface_tt(pred, out, i),
-        crate::typing::types::types::ISuperKindTT::KindPlaceholder(p) => {
+        ISuperKindTT::Interface(i) => visit_interface_tt(pred, out, i),
+        ISuperKindTT::KindPlaceholder(p) => {
             visit_kind_placeholder(pred, out, p)
         }
     }
@@ -1578,6 +1587,27 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::StructMember(m));
+    match m {
+        IStructMemberT::Normal(n) => visit_member_type(pred, out, &n.tyype),
+        IStructMemberT::Variadic(_) => {}
+    }
+}
+
+fn visit_member_type<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, m: &'t IMemberTypeT<'s, 't>)
+where
+    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
+    's: 't,
+{
+    match m {
+        IMemberTypeT::Reference(r) => {
+            collect_if(pred, out, NodeRefT::ReferenceMemberType(r));
+            visit_coord(pred, out, &r.reference);
+        }
+        IMemberTypeT::Address(a) => {
+            collect_if(pred, out, NodeRefT::AddressMemberType(a));
+            visit_coord(pred, out, &a.reference);
+        }
+    }
 }
 
 fn visit_local_variable<'s, 't, T, F>(
@@ -1655,8 +1685,8 @@ where
         NodeRefT::FunctionDefinition(f) => visit_function_definition(predicate, &mut out, f),
         NodeRefT::StructDefinition(s) => visit_struct_definition(predicate, &mut out, s),
         NodeRefT::InterfaceDefinition(i) => visit_interface_definition(predicate, &mut out, i),
-        NodeRefT::ReferenceExpression(e) => visit_reference_expression(predicate, &mut out, e),
-        NodeRefT::AddressExpression(e) => visit_address_expression(predicate, &mut out, e),
+        NodeRefT::ReferenceExpression(e) => visit_reference_expression(predicate, &mut out, *e),
+        NodeRefT::AddressExpression(e) => visit_address_expression(predicate, &mut out, *e),
         NodeRefT::Templata(t) => visit_templata(predicate, &mut out, t),
         NodeRefT::Kind(k) => visit_kind(predicate, &mut out, k),
         NodeRefT::Coord(c) => visit_coord(predicate, &mut out, c),

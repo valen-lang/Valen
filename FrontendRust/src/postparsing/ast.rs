@@ -14,6 +14,7 @@ use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
+use crate::scout_arena::ScoutArena;
 
 /*
 package dev.vale.postparsing
@@ -375,7 +376,7 @@ pub enum IStructMemberS<'s> {
   VariadicStructMember(VariadicStructMemberS<'s>),
 }
 
-impl IStructMemberS<'_> {
+impl<'s> IStructMemberS<'s> {
   pub fn range(&self) -> RangeS<'_> {
     match self {
       IStructMemberS::NormalStructMember(m) => m.range.clone(),
@@ -392,7 +393,7 @@ impl IStructMemberS<'_> {
   }
   /* Guardian: disable-all */
 
-  pub fn type_rune(&self) -> &RuneUsage<'_> {
+  pub fn type_rune(&self) -> &RuneUsage<'s> {
     match self {
       IStructMemberS::NormalStructMember(m) => &m.type_rune,
       IStructMemberS::VariadicStructMember(m) => &m.type_rune,
@@ -680,7 +681,7 @@ override def hashCode(): Int = vcurious()
   vassert(pattern.coordRune.nonEmpty)
 }
 */
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractSP<'s> {
   pub range: RangeS<'s>,
   pub is_internal_method: bool,
@@ -772,7 +773,7 @@ case object ReadOnlyRegionS extends IRegionMutabilityS
 case object ImmutableRegionS extends IRegionMutabilityS
 case object AdditiveRegionS extends IRegionMutabilityS
 */
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
   CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
@@ -819,7 +820,7 @@ Guardian: disable-all
 }
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RegionGenericParameterTypeS {
   pub mutability: IRegionMutabilityS,
 }
@@ -837,7 +838,7 @@ impl RegionGenericParameterTypeS {
 }
 /* Guardian: disable-all */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CoordGenericParameterTypeS<'s> {
   pub coord_region: Option<RuneUsage<'s>>,
   pub kind_mutable: bool,
@@ -864,7 +865,7 @@ impl CoordGenericParameterTypeS<'_> {
 }
 /* Guardian: disable-all */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS<'s> {
   pub tyype: ITemplataType<'s>,
 }
@@ -886,7 +887,7 @@ case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericPara
 }
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterS<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -908,10 +909,10 @@ case class GenericParameterS(
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 */
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
-  pub rules: Vec<&'s IRulexSR<'s>>,
+  pub rules: &'s [&'s IRulexSR<'s>],
 }
 /*
 case class GenericParameterDefaultS(
@@ -1118,7 +1119,7 @@ impl LocationInDenizenBuilder {
   // V: this feels weird. theres nothing guaranteeing that this LocationInDenizen will actually land anywhere,
   // in which case we're just leaking those allocations. i think we need a LocationInDenizenVal.
   // maybe LocationInDenizenVal can even be a stack-based linked list.
-  pub fn consume_in_arena<'x>(&mut self, arena: &crate::scout_arena::ScoutArena<'x>) -> LocationInDenizen<'x> {
+  pub fn consume_in_arena<'x>(&mut self, arena: &ScoutArena<'x>) -> LocationInDenizen<'x> {
     assert!(
       !self.consumed,
       "Location in denizen was already used for something, add a .child() somewhere."

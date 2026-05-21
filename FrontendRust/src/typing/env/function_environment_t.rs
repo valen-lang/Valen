@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use crate::higher_typing::ast::FunctionA;
+use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
@@ -60,8 +61,8 @@ case class BuildingFunctionEnvironmentWithClosuredsT(
 */
 // mig: fn templata
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  pub fn templata(&self) -> FunctionTemplataT<'s, 't> {
-    panic!("Unimplemented: templata");
+  pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
+    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)
@@ -147,9 +148,10 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     lookup_with_imprecise_name_inner(
-      IEnvironmentT::BuildingWithClosureds(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
+      IEnvironmentT::BuildingWithClosureds(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -275,10 +277,11 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> wh
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     // EnvironmentHelper.lookupWithImpreciseNameInner(this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
     lookup_with_imprecise_name_inner(
-      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -305,7 +308,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s, 't>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub declared_locals: &'t [IVariableT<'s, 't>],
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
@@ -389,7 +392,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: override fn id
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn id(&self) -> IdT<'s, 't> {
-    panic!("Unimplemented: id");
+    self.parent_function_env.id
   }
   /*
     override def id: IdT[IFunctionNameT] = parentFunctionEnv.id
@@ -411,8 +414,14 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    let parent: IEnvironmentT<'s, 't> = match self.parent_node_env {
+        Some(p) => IEnvironmentT::Node(p),
+        None => IEnvironmentT::Function(self.parent_function_env),
+    };
+    lookup_with_name_inner(
+        IEnvironmentT::Node(self), &self.templatas, parent, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -428,13 +437,20 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    let parent: IEnvironmentT<'s, 't> = match self.parent_node_env {
+        Some(p) => IEnvironmentT::Node(p),
+        None => IEnvironmentT::Function(self.parent_function_env),
+    };
+    lookup_with_imprecise_name_inner(
+        IEnvironmentT::Node(self), &self.templatas, parent, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -451,7 +467,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn global_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
-    panic!("Unimplemented: global_env");
+    self.parent_function_env.global_env
   }
   /*
     def globalEnv: GlobalEnvironment = parentFunctionEnv.globalEnv
@@ -471,7 +487,17 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_variable
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn get_variable(&self, name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
-    panic!("Unimplemented: get_variable");
+    match self.declared_locals.iter().find(|v| v.name() == name) {
+      Some(v) => Some(*v),
+      None => {
+        match self.parent_node_env {
+          Some(p) => p.get_variable(name),
+          None => {
+            self.parent_function_env.closured_locals.iter().find(|v| v.name() == name).copied()
+          }
+        }
+      }
+    }
   }
   /*
     def getVariable(name: IVarNameT): Option[IVariableT] = {
@@ -651,7 +677,20 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     &self,
     earlier_node_env: &NodeEnvironmentT<'s, 't>,
   ) -> (Vec<IVarNameT<'s, 't>>, Vec<IVarNameT<'s, 't>>) {
-    panic!("Unimplemented: get_effects_since");
+    assert!(std::ptr::eq(self.parent_function_env, earlier_node_env.parent_function_env));
+    let earlier_node_env_declared_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env.declared_locals.iter().map(|v| v.name()).collect();
+    let earlier_node_env_unstackified: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env.unstackified_locals.iter().copied().collect();
+    let earlier_node_env_live_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env_declared_locals.difference(&earlier_node_env_unstackified).copied().collect();
+    let live_locals_introduced_since_earlier: std::collections::HashSet<IVarNameT<'s, 't>> =
+        self.declared_locals.iter().map(|v| v.name()).filter(|x| !earlier_node_env_live_locals.contains(x)).collect();
+    let unstackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+        self.unstackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
+    let restackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+        self.restackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
+    (unstackified_ancestor_locals, restackified_ancestor_locals)
   }
   /*
     // Gets the effects that this environment had on the outside world (on its parent
@@ -732,13 +771,26 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   */
 }
 // mig: fn make_child
+// Rust adaptation (SPDMX-B): NodeEnvironmentT is arena-allocated; Scala used GC.
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child(
     &'t self,
+    interner: &TypingInterner<'s, 't>,
     node: &'s IExpressionSE<'s>,
     maybe_new_default_region: Option<RegionT>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: make_child");
+    let empty_templatas = TemplatasStoreBuilder::new(&self.parent_function_env.id).build_in(interner);
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: Some(self),
+      node,
+      life: self.life.clone(),
+      templatas: empty_templatas,
+      declared_locals: self.declared_locals, // See WTHPFE.
+      unstackified_locals: self.unstackified_locals, // See WTHPFE
+      restackified_locals: self.restackified_locals,
+      default_region: maybe_new_default_region.unwrap_or(self.default_region), // See WTHPFE.
+    })
   }
   /*
     def makeChild(
@@ -809,22 +861,29 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn nearest_block_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
-  pub fn nearest_block_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_block_env");
+  pub fn nearest_block_env(&'t self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    match self.node {
+        IExpressionSE::Block(_) => Some((self, self.node)),
+        _ => self.parent_node_env.and_then(|p| p.nearest_block_env()),
+    }
   }
-  /*
+/*
     def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
       node match {
         case b @ BlockSE(_, _, _) => Some((this, b))
         case _ => parentNodeEnv.flatMap(_.nearestBlockEnv())
       }
     }
-  */
+*/
 }
 // mig: fn nearest_loop_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
-  pub fn nearest_loop_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_loop_env");
+  pub fn nearest_loop_env(&'t self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    match self.node {
+        IExpressionSE::While(_) => Some((self, self.node)),
+        IExpressionSE::Map(_) => Some((self, self.node)),
+        _ => self.parent_node_env.and_then(|p| p.nearest_loop_env()),
+    }
   }
   /*
     def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
@@ -865,7 +924,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s, 't>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
   pub declared_locals: Vec<IVariableT<'s, 't>>,
   pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
@@ -875,6 +934,27 @@ where 's: 't,
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
 */
+// mig: fn new
+// (Realizes Scala's case-class 1-arg apply `NodeEnvironmentBox(nodeEnvironment)`.
+//  Rust adaptation (SPDMX-B): Box stores fields out-of-arena (Vec instead of &'t [..])
+//  per design v3 §3.3, so wrapping a `&'t NodeEnvironmentT` requires copying slice
+//  fields into owned Vecs. The inverse of `snapshot`.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn new(node_env: &'t NodeEnvironmentT<'s, 't>) -> Self {
+    NodeEnvironmentBox {
+      parent_function_env: node_env.parent_function_env,
+      parent_node_env: node_env.parent_node_env,
+      node: node_env.node,
+      life: node_env.life.clone(),
+      templatas_builder: TemplatasStoreBuilder::from_store(&node_env.templatas),
+      declared_locals: node_env.declared_locals.to_vec(),
+      unstackified_locals: node_env.unstackified_locals.to_vec(),
+      restackified_locals: node_env.restackified_locals.to_vec(),
+      default_region: node_env.default_region,
+    }
+  }
+}
+/* Guardian: disable-all */
 // mig: override fn eq
 // (No Rust impl — Box deliberately doesn't impl PartialEq, mirroring Scala's vcurious panic-on-call. Misuse fails at compile time, which is strictly stronger than Scala's runtime vfail.)
 /*
@@ -923,7 +1003,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn id
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn id(&self) -> IdT<'s, 't> {
-    panic!("Unimplemented: id");
+    self.parent_function_env.id
   }
 /*
   def id: IdT[IFunctionNameT] = nodeEnvironment.parentFunctionEnv.id
@@ -959,7 +1039,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn declared_locals
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn declared_locals(&self) -> &[IVariableT<'s, 't>] {
-    panic!("Unimplemented: declared_locals");
+    &self.declared_locals
   }
 /*
   def declaredLocals: Vector[IVariableT] = nodeEnvironment.declaredLocals
@@ -968,7 +1048,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn unstackifieds
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn unstackifieds(&self) -> &[IVarNameT<'s, 't>] {
-    panic!("Unimplemented: unstackifieds");
+    &self.unstackified_locals
   }
 /*
   def unstackifieds: Set[IVarNameT] = nodeEnvironment.unstackifiedLocals
@@ -986,7 +1066,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn function_environment
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn function_environment(&self) -> &'t FunctionEnvironmentT<'s, 't> {
-    panic!("Unimplemented: function_environment");
+    self.parent_function_env
   }
 /*
   def functionEnvironment = nodeEnvironment.parentFunctionEnv
@@ -1028,8 +1108,19 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn mark_local_restackified
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn mark_local_restackified(&mut self, _new_restackified: IVarNameT<'s, 't>) {
-    panic!("Unimplemented: mark_local_restackified");
+  pub fn mark_local_restackified(&mut self, new_restackified: IVarNameT<'s, 't>) {
+    // Verbatim port of NodeEnvironmentT.markLocalRestackified (FunctionEnvironmentT.scala:303-329):
+    assert!(self.get_all_locals().iter().any(|l| l.name() == new_restackified));
+    assert!(!self.restackified_locals.contains(&new_restackified));
+    if self.unstackified_locals.contains(&new_restackified) {
+      // It was an unstackified local, so don't mark it as restackified, just undo the
+      // unstackification.
+      // Even if the local belongs to a parent env, we still mark it restackified here, see UCRTVPE.
+      self.unstackified_locals.retain(|x| *x != new_restackified);
+    } else {
+      // Even if the local belongs to a parent env, we still mark it restackified here, see UCRTVPE.
+      self.restackified_locals.push(new_restackified);
+    }
   }
 /*
   def markLocalRestackified(newMoved: IVarNameT): Unit= {
@@ -1039,8 +1130,13 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn get_variable
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn get_variable(&self, _name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
-    panic!("Unimplemented: get_variable");
+  // AFTERM: remove the needless snapshot — transcribe the inner's `def getVariable`
+  // body directly off the Box's fields (declared_locals / parent_node_env /
+  // parent_function_env.closured_locals), drop the interner parameter, and update
+  // call sites. See `get_all_locals` / `get_all_unstackified_locals` below for
+  // the precedent pattern in this file.
+  pub fn get_variable(&self, name: IVarNameT<'s, 't>, interner: &TypingInterner<'s, 't>) -> Option<IVariableT<'s, 't>> {
+    self.snapshot(interner).get_variable(name)
   }
 /*
   def getVariable(name: IVarNameT): Option[IVariableT] = {
@@ -1076,12 +1172,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn lookup_nearest_with_imprecise_name
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
-    _name_s: IImpreciseNameS<'s>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_nearest_with_imprecise_name");
+    let node_env = self.snapshot(interner);
+    IEnvironmentT::Node(node_env).lookup_nearest_with_imprecise_name(name_s, lookup_filter.clone(), interner)
   }
 /*
   def lookupNearestWithImpreciseName(
@@ -1114,12 +1213,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn lookup_all_with_imprecise_name
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
-    _name_s: IImpreciseNameS<'s>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_all_with_imprecise_name");
+    let node_env = self.snapshot(interner);
+    IEnvironmentT::Node(node_env).lookup_all_with_imprecise_name(name_s, lookup_filter.clone(), interner)
   }
 /*
   def lookupAllWithImpreciseName( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext]): Array[ITemplataT[ITemplataType]] = {
@@ -1149,6 +1251,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
     _name_s: IImpreciseNameS<'s>,
     _lookup_filter: &std::collections::HashSet<ILookupContext>,
     _get_only_nearest: bool,
+    _interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
   }
@@ -1175,13 +1278,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 */
 }
 // mig: fn make_child
+// Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentT is arena-allocated.
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn make_child(
     &self,
-    _node: &'s IExpressionSE<'s>,
-    _maybe_new_default_region: Option<RegionT>,
+    interner: &TypingInterner<'s, 't>,
+    node: &'s IExpressionSE<'s>,
+    maybe_new_default_region: Option<RegionT>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: make_child");
+    self.snapshot(interner).make_child(interner, node, maybe_new_default_region)
   }
 /*
   def makeChild(
@@ -1210,12 +1315,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn add_entries
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): scout_arena threaded because TemplatasStoreBuilder.add_entries
+  // needs it to maintain the imprecise-name lookup cache.
   pub fn add_entries(
     &mut self,
+    scout_arena: &ScoutArena<'s>,
     _interner: &TypingInterner<'s, 't>,
-    _new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
+    new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
   ) {
-    panic!("Unimplemented: add_entries");
+    self.templatas_builder.add_entries(scout_arena, new_entries.to_vec());
   }
 /*
   def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): Unit= {
@@ -1225,8 +1333,14 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn nearest_block_env
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn nearest_block_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_block_env");
+  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
+  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
+  pub fn nearest_block_env(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    let snap = self.snapshot(interner);
+    snap.nearest_block_env()
   }
 /*
   def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
@@ -1236,8 +1350,14 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn nearest_loop_env
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn nearest_loop_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_loop_env");
+  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
+  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
+  pub fn nearest_loop_env(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    let snap = self.snapshot(interner);
+    snap.nearest_loop_env()
   }
 /*
   def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
@@ -1318,7 +1438,19 @@ impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
 // mig: override fn root_compiling_denizen_env
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
-    panic!("Unimplemented: root_compiling_denizen_env");
+    if self.is_root_compiling_denizen {
+        IInDenizenEnvironmentT::Function(self)
+    } else {
+        match self.parent_env {
+            IEnvironmentT::Package(_) => panic!("vwat: root_compiling_denizen_env parent is Package"),
+            _ => {
+                match IInDenizenEnvironmentT::try_from(self.parent_env) {
+                    Ok(parent_in_denizen_env) => parent_in_denizen_env.root_compiling_denizen_env(),
+                    Err(_) => panic!("vwat: root_compiling_denizen_env parent is not IInDenizenEnvironmentT"),
+                }
+            }
+        }
+    }
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
@@ -1342,8 +1474,8 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn templata
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
-  pub fn templata(&self) -> FunctionTemplataT<'s, 't> {
-    panic!("Unimplemented: templata");
+  pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
+    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)
@@ -1407,8 +1539,10 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    lookup_with_name_inner(
+      IEnvironmentT::Function(self), self.templatas, self.parent_env, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -1429,9 +1563,10 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     lookup_with_imprecise_name_inner(
-      IEnvironmentT::Function(self), self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
+      IEnvironmentT::Function(self), self.templatas, self.parent_env, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -1450,7 +1585,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child_node_environment(
     &'t self,
     node: &'s IExpressionSE<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
+    life: LocationInFunctionEnvironmentT<'s, 't>,
   ) -> NodeEnvironmentBox<'s, 't> {
     // See WTHPFE, if this is a lambda, we let our blocks start with
     // locals from the parent function.
@@ -1687,7 +1822,12 @@ sealed trait IVariableT  {
 // mig: fn name
 impl<'s, 't> IVariableT<'s, 't> where 's: 't {
   pub fn name(&self) -> IVarNameT<'s, 't> {
-    panic!("Unimplemented: name");
+    match self {
+      IVariableT::AddressibleLocal(v) => v.name,
+      IVariableT::ReferenceLocal(v) => v.name,
+      IVariableT::AddressibleClosure(v) => v.name,
+      IVariableT::ReferenceClosure(v) => v.name,
+    }
   }
   /*
     def name: IVarNameT
@@ -1755,6 +1895,15 @@ impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
   // any mutates/moves/borrows.
   */
 }
+impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
+  pub fn variability(&self) -> VariabilityT {
+    match self {
+      ILocalVariableT::Addressible(a) => a.variability,
+      ILocalVariableT::Reference(r) => r.variability,
+    }
+  }
+}
+/* Guardian: disable-all */
 // mig: struct AddressibleLocalVariableT
 // mig: impl AddressibleLocalVariableT
 /// Value-type (see @TFITCX)
@@ -1970,6 +2119,7 @@ impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't
 }
 
 // mig: fn lookup_with_name_inner
+// Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
 pub fn lookup_with_name_inner<'s, 't>(
   requesting_env: IEnvironmentT<'s, 't>,
   templatas: &TemplatasStoreT<'s, 't>,
@@ -1977,10 +2127,18 @@ pub fn lookup_with_name_inner<'s, 't>(
   name: INameT<'s, 't>,
   lookup_filter: &HashSet<ILookupContext>,
   get_only_nearest: bool,
+  interner: &TypingInterner<'s, 't>,
 ) -> Vec<ITemplataT<'s, 't>>
 where 's: 't,
 {
-  panic!("Unimplemented: lookup_with_name_inner");
+  let result: Vec<ITemplataT<'s, 't>> = templatas.lookup_with_name_inner(requesting_env, name, lookup_filter, interner).into_iter().collect();
+  if !result.is_empty() && get_only_nearest {
+    result
+  } else {
+    let mut combined = result;
+    combined.extend(parent.lookup_with_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+    combined
+  }
 }
 /*
   def lookupWithNameInner(
@@ -2002,6 +2160,7 @@ where 's: 't,
 
 */
 // mig: fn lookup_with_imprecise_name_inner
+// Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
 pub fn lookup_with_imprecise_name_inner<'s, 't>(
   requesting_env: IEnvironmentT<'s, 't>,
   templatas: &TemplatasStoreT<'s, 't>,
@@ -2009,15 +2168,16 @@ pub fn lookup_with_imprecise_name_inner<'s, 't>(
   name: IImpreciseNameS<'s>,
   lookup_filter: &HashSet<ILookupContext>,
   get_only_nearest: bool,
+  interner: &TypingInterner<'s, 't>,
 ) -> Vec<ITemplataT<'s, 't>>
 where 's: 't,
 {
-  let result = templatas.lookup_with_imprecise_name_inner(requesting_env, name, lookup_filter);
+  let result = templatas.lookup_with_imprecise_name_inner(requesting_env, name, lookup_filter, interner);
   if !result.is_empty() && get_only_nearest {
     result
   } else {
     let mut combined = result;
-    combined.extend(parent.lookup_with_imprecise_name_inner(name, lookup_filter.clone(), get_only_nearest));
+    combined.extend(parent.lookup_with_imprecise_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
     combined
   }
 }

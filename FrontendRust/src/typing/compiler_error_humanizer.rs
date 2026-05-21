@@ -2,6 +2,8 @@ use crate::utils::range::{RangeS, CodeLocationS};
 use crate::interner::Interner;
 use crate::postparsing::*;
 use crate::postparsing::names::*;
+use crate::scout_arena::ScoutArena;
+use crate::typing::typing_interner::TypingInterner;
 use crate::postparsing::rules::rules::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
@@ -20,6 +22,7 @@ use crate::higher_typing::ast::*;
 use crate::higher_typing::ast::FunctionA;
 use crate::typing::citizen::struct_compiler::*;
 use crate::utils::code_hierarchy::FileCoordinate;
+use crate::typing::types::types::OwnershipT;
 
 /*
 package dev.vale.typing
@@ -48,10 +51,218 @@ import dev.vale.typing.citizen.ResolveFailure
 
 object CompilerErrorHumanizer {
 */
-pub fn humanize<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT<'s, 't>) -> String {
-  panic!("Unimplemented: humanize");
+pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: ICompileErrorT<'s, 't>) -> String {
+  let error_str_body = match &err {
+    ICompileErrorT::TypingPassDefiningError { range: _, inner } => {
+      humanize_defining_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner)
+    }
+    ICompileErrorT::TypingPassResolvingError { range: _, inner } => {
+      humanize_resolving_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, inner)
+    }
+    ICompileErrorT::RangedInternalErrorT { range: _, message } => {
+      format!("Internal error: {}", message)
+    }
+    ICompileErrorT::CouldntFindOverrideT { range, fff } => {
+      format!("Couldn't find an override:\n{}",
+        humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff))
+    }
+    ICompileErrorT::NewImmRSANeedsCallable { range: _ } => {
+      "To make an immutable runtime-sized array, need two params: capacity int, plus lambda to populate that many elements.".to_string()
+    }
+    ICompileErrorT::CouldntSolveRuneTypesT { range: _, error: _ } => {
+      panic!("implement: humanize CouldntSolveRuneTypesT")
+    }
+    ICompileErrorT::UnexpectedArrayElementType { range: _, expected_type: _, actual_type: _ } => {
+      panic!("implement: humanize UnexpectedArrayElementType")
+    }
+    ICompileErrorT::IndexedArrayWithNonInteger { range: _, types: _ } => {
+      panic!("implement: humanize IndexedArrayWithNonInteger")
+    }
+    ICompileErrorT::CantUseReadonlyReferenceAsReadwrite { range: _ } => {
+      "Can't make readonly reference into a readwrite one!".to_string()
+    }
+    ICompileErrorT::CantReconcileBranchesResults { range: _, then_result, else_result } => {
+      "If branches return different types: ".to_string()
+        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *then_result })))
+        + " and "
+        + &humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *else_result })))
+    }
+    ICompileErrorT::CantMoveOutOfMemberT { range: _, name } => {
+      format!("Cannot move out of member ({:?})", name)
+    }
+    ICompileErrorT::CantMutateFinalMember { range: _, struct_, member_name } => {
+      format!("Cannot mutate final member '{}' of container {}",
+        printable_var_name(*member_name),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: KindT::Struct(typing_interner.intern_struct_tt(StructTTValT { id: struct_.id })) }))))
+    }
+    ICompileErrorT::CantMutateFinalElement { range: _, coord: _ } => {
+      panic!("implement: humanize CantMutateFinalElement")
+    }
+    ICompileErrorT::LambdaReturnDoesntMatchInterfaceConstructor { range: _ } => {
+      "Argument function return type doesn't match interface method param".to_string()
+    }
+    ICompileErrorT::CantUseUnstackifiedLocal { range: _, local_id } => {
+      format!("Can't use local that was already moved: {}",
+        humanize_name(scout_arena, typing_interner, code_map, INameT::from(*local_id), None))
+    }
+    ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { range: _, local_id } => {
+      format!("Can't move a local ({:?}) from inside a while loop.", local_id)
+    }
+    ICompileErrorT::CannotSubscriptT { range: _, tyype } => {
+      format!("Cannot subscript type: {}!",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *tyype }))))
+    }
+    ICompileErrorT::CouldntConvertForReturnT { range: _, expected_type, actual_type } => {
+      format!("Couldn't convert {} to expected return type {}",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *actual_type }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *expected_type }))))
+    }
+    ICompileErrorT::CouldntConvertForMutateT { range: _, expected_type, actual_type } => {
+      format!("Mutate couldn't convert {:?} to expected destination type {:?}", actual_type, expected_type)
+    }
+    ICompileErrorT::CouldntFindMemberT { range: _, member_name } => {
+      format!("Couldn't find member {}!", member_name)
+    }
+    ICompileErrorT::CouldntEvaluatImpl { range: _, eff } => {
+      format!("Couldn't evaluate impl statement:\n{}",
+        humanize_candidate_and_failed_solve(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, eff))
+    }
+    ICompileErrorT::BodyResultDoesntMatch { range: _, function_name, expected_return_type, result_type } => {
+      format!("Function {} return type {} doesn't match body's result: {}",
+        printable_name(scout_arena, typing_interner, code_map, INameS::FunctionDeclaration(scout_arena.alloc(*function_name))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *expected_return_type }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *result_type }))))
+    }
+    ICompileErrorT::CouldntFindIdentifierToLoadT { range: _, name } => {
+      format!("Couldn't find anything named `{}`!", crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*name))
+    }
+    ICompileErrorT::NonReadonlyReferenceFoundInPureFunctionParameter { range: _, param_name } => {
+      format!("Parameter `{:?}` should be readonly, because it's in a pure function.", param_name)
+    }
+    ICompileErrorT::CouldntFindTypeT { range: _, name } => {
+      format!("Couldn't find any type named `{:?}`!", name)
+    }
+    ICompileErrorT::CouldntNarrowDownCandidates { range: _, candidates } => {
+      let parts: Vec<String> = candidates.iter().map(|range| {
+        format!("\n{}: \n  {}", code_map(range.begin), line_containing(range.begin))
+      }).collect();
+      format!("Multiple candidates for call:{}", parts.join(""))
+    }
+    ICompileErrorT::ImmStructCantHaveVaryingMember { range: _, struct_name, member_name } => {
+      format!("Immutable struct (\"{}\") cannot have varying member (\"{}\").",
+        printable_name(scout_arena, typing_interner, code_map, *struct_name), member_name)
+    }
+    ICompileErrorT::ImmStructCantHaveMutableMember { range: _, struct_name, member_name } => {
+      format!("Immutable struct (\"{}\") cannot have mutable member (\"{}\").",
+        printable_name(scout_arena, typing_interner, code_map, *struct_name), member_name)
+    }
+    ICompileErrorT::WrongNumberOfDestructuresError { range: _, actual_num, expected_num } => {
+      format!("Wrong number of receivers; receiving {} but should be {}.", actual_num, expected_num)
+    }
+    ICompileErrorT::CantDowncastUnrelatedTypes { range: _, source_kind, target_kind, candidates: _ } => {
+      format!("Can't downcast `{}` to unrelated `{}`",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *source_kind }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *target_kind }))))
+    }
+    ICompileErrorT::CantDowncastToInterface { range: _, target_kind } => {
+      format!("Can't downcast to an interface ({:?}) yet.", target_kind)
+    }
+    ICompileErrorT::ArrayElementsHaveDifferentTypes { range: _, types: _ } => {
+      panic!("implement: humanize ArrayElementsHaveDifferentTypes")
+    }
+    ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { range: _, paackage, signature, non_exported_kind } => {
+      format!("Exported function:\n{}\ndepends on kind:\n{}\nthat wasn't exported from package {}",
+        humanize_signature(scout_arena, typing_interner, code_map, **signature),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
+        crate::utils::source_code_utils::humanize_package(paackage))
+    }
+    ICompileErrorT::TypeExportedMultipleTimes { range: _, paackage: _, exports } => {
+      let parts: Vec<String> = exports.iter().map(|export| {
+        let pos_str = code_map(export.range.begin);
+        let line = line_containing(export.range.begin);
+        format!("\n  {}: {}", pos_str, line)
+      }).collect();
+      format!("Type exported multiple times:{}", parts.join(""))
+    }
+    ICompileErrorT::ExternFunctionDependedOnNonExportedKind { range: _, paackage, signature, non_exported_kind } => {
+      format!("Extern function {:?} depends on kind {:?} that wasn't exported from package {:?}",
+        signature, non_exported_kind, paackage)
+    }
+    ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { range: _, paackage, exported_kind, non_exported_kind } => {
+      format!("Exported kind {:?} depends on kind {:?} that wasn't exported from package {:?}",
+        exported_kind, non_exported_kind, paackage)
+    }
+    ICompileErrorT::InitializedWrongNumberOfElements { range: _, expected_num_elements, num_elements_initialized } => {
+      format!("Supplied {} elements, but expected {}.", num_elements_initialized, expected_num_elements)
+    }
+    ICompileErrorT::CouldntFindFunctionToCallT { range, fff } => {
+      humanize_find_function_failure(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, range.to_vec(), fff)
+    }
+    ICompileErrorT::CouldntEvaluateFunction { range: _, eff } => {
+      format!("Couldn't evaluate function:\n{}",
+        humanize_defining_error(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, eff))
+    }
+    ICompileErrorT::FunctionAlreadyExists { old_function_range, new_function_range: _, signature } => {
+      format!("Function {} already exists! Previous declaration at:\n{}",
+        humanize_id(scout_arena, typing_interner, code_map, *signature, None),
+        code_map(old_function_range.begin))
+    }
+    ICompileErrorT::AbstractMethodOutsideOpenInterface { range: _ } => {
+      "Open (non-sealed) interfaces can't have abstract methods defined outside the interface.".to_string()
+    }
+    ICompileErrorT::IfConditionIsntBoolean { range: _, actual_type } => {
+      format!("If condition should be a bool, but was: {:?}", actual_type)
+    }
+    ICompileErrorT::WhileConditionIsntBoolean { range: _, actual_type } => {
+      format!("If condition should be a bool, but was: {:?}", actual_type)
+    }
+    ICompileErrorT::CantMoveFromGlobal { range: _, name: _ } => {
+      panic!("implement: humanize CantMoveFromGlobal")
+    }
+    ICompileErrorT::CantImplNonInterface { range: _, templata } => {
+      format!("Can't extend a non-interface: {:?}", templata)
+    }
+    ICompileErrorT::NonCitizenCantImpl { range: _, templata: _ } => {
+      panic!("implement: humanize NonCitizenCantImpl")
+    }
+    ICompileErrorT::TypingPassSolverError { range: _, failed_solve } => {
+      humanize_candidate_and_failed_solve(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, failed_solve)
+    }
+    ICompileErrorT::HigherTypingInferError { range: _, err: _ } => {
+      panic!("implement: humanize HigherTypingInferError")
+    }
+    ICompileErrorT::TooManyTypesWithNameT { range: _, name: _ } => {
+      panic!("implement: humanize TooManyTypesWithNameT")
+    }
+    ICompileErrorT::NotEnoughGenericArgs { range: _ } => {
+      panic!("implement: humanize NotEnoughGenericArgs")
+    }
+    ICompileErrorT::ImplSubCitizenNotFound { range: _, name: _ } => {
+      panic!("implement: humanize ImplSubCitizenNotFound")
+    }
+    ICompileErrorT::ImplSuperInterfaceNotFound { range: _, name: _ } => {
+      panic!("implement: humanize ImplSuperInterfaceNotFound")
+    }
+    ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile { range: _, local_id: _ } => {
+      panic!("implement: humanize CantRestackifyOutsideLocalFromInsideWhile")
+    }
+    ICompileErrorT::CouldntEvaluateStruct { range: _, eff: _ } => {
+      panic!("implement: humanize CouldntEvaluateStruct")
+    }
+    ICompileErrorT::CouldntEvaluateInterface { range: _, eff: _ } => {
+      panic!("implement: humanize CouldntEvaluateInterface")
+    }
+  };
+  // err.range.reverse.map(range => { ... }).mkString("") + errorStrBody + "\n"
+  let prefix: String = err.range().iter().rev().map(|range| {
+    let pos_str = code_map(range.begin);
+    let line_contents = line_containing(range.begin);
+    format!("At {}:\n{}\n", pos_str, line_contents)
+  }).collect::<Vec<_>>().join("");
+  format!("{}{}\n", prefix, error_str_body)
 }
 /*
+Guardian: temp-disable: SPDMX — Scala's `+ signature + " depends on kind " + nonExportedKind + " ... " + paackage` invokes toString() on each value. Rust has no Display impl on SignatureT/KindT/PackageCoordinate — `{:?}` (Debug) is the nearest-equivalent for value-types with no Display, as noted in for-jr.md. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-065-1778966274458/hook-065/humanize--53.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanize(
       verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -241,7 +452,7 @@ pub fn humanize<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> Strin
     errorStrBody + "\n"
   }
 */
-pub fn humanize_defining_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError<'s, 't>) -> String {
+pub fn humanize_defining_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: &IDefiningError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_defining_error");
 }
 /*
@@ -267,6 +478,7 @@ pub fn humanize_resolve_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLoc
   panic!("Unimplemented: humanize_resolve_failure");
 }
 /*
+Guardian: temp-disable: SPDMX — SPDMX Exception B: threading scout_arena and typing_interner is required by Rust arena/lifetime rules for downstream calls once this stub is filled in — the params are added now so the call graph compiles. `humanize` (already has these params) calls this function; the params must match. Same pattern as `humanize` itself in this file. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-069-1778966448948/hook-069/humanize_defining_error--442.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeResolveFailure(
     verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -279,7 +491,7 @@ pub fn humanize_resolve_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLoc
     humanizeResolvingError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
   }
 */
-pub fn humanize_resolving_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: IResolvingError<'s, 't>) -> String {
+pub fn humanize_resolving_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: &IResolvingError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_resolving_error");
 }
 /*
@@ -306,6 +518,7 @@ pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocati
   panic!("Unimplemented: humanize_failed_solve");
 }
 /*
+Guardian: temp-disable: SPDMX — SPDMX Exception B: scout_arena and typing_interner are required by Rust arena/lifetime rules for arena-allocating CoordTemplataT/KindTemplataT/IFunctionDeclarationNameS once this stub is filled in. `humanize` calls this with these params; signatures must match for the call graph to compile. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-072-1778966568386/hook-072/humanize_resolving_error--481.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeFailedSolve(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -343,8 +556,26 @@ pub fn humanize_conclusion_resolve_error<'s, 't>(verbose: bool, code_map: &dyn F
     }
   }
 */
-pub fn humanize_find_function_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS<'s>>, fff: FindFunctionFailure<'s, 't>) -> String {
-  panic!("Unimplemented: humanize_find_function_failure");
+pub fn humanize_find_function_failure<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, invocation_range: Vec<RangeS<'s>>, fff: &FindFunctionFailure<'s, 't>) -> String {
+  let FindFunctionFailure { name, args, rejected_callee_to_reason } = fff;
+  let args_str = args.iter().map(|tyype| {
+    humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *tyype })))
+  }).collect::<Vec<_>>().join(", ");
+  let tail = if rejected_callee_to_reason.is_empty() {
+    "No function with that name exists.\n".to_string()
+  } else {
+    let parts = rejected_callee_to_reason.iter().enumerate().map(|(index, (candidate, reason))| {
+      format!("Candidate {} (of {}): {}{}\n\n",
+        index + 1, rejected_callee_to_reason.len(),
+        humanize_candidate(scout_arena, typing_interner, code_map, line_range_containing, candidate),
+        humanize_rejection_reason(scout_arena, typing_interner, verbose, code_map, lines_between, line_range_containing, line_containing, &invocation_range, reason))
+    }).collect::<Vec<_>>().join("");
+    format!("Rejected candidates:\n\n{}", parts)
+  };
+  format!("Couldn't find a suitable function {}({}). {}",
+    crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*name),
+    args_str,
+    tail)
 }
 /*
   def humanizeFindFunctionFailure(
@@ -390,8 +621,17 @@ pub fn humanize_banner(code_map: &dyn Fn(CodeLocationS) -> String, banner: Funct
     }
   }
 */
-fn printable_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameS) -> String {
-  panic!("Unimplemented: printable_name");
+fn printable_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: INameS<'s>) -> String {
+  match name {
+    INameS::VarName(n) => panic!("implement: printable_name VarName"),
+    INameS::TopLevelStructDeclaration(n) => n.name.0.to_string(),
+    INameS::TopLevelInterfaceDeclaration(n) => n.name.0.to_string(),
+    INameS::FunctionDeclaration(n) => match n {
+      IFunctionDeclarationNameS::FunctionName(fn_name) => format!("{}: {}", code_map(fn_name.code_location), fn_name.name.0),
+      _ => panic!("implement: printable_name FunctionDeclaration other"),
+    },
+    _ => panic!("implement: printable_name other"),
+  }
 }
 /*
   private def printableName(
@@ -435,8 +675,11 @@ fn printable_id<'s, 't>(id: IdT<'s, 't>) -> String {
     }
   }
 */
-fn printable_var_name(name: IVarNameT) -> String {
-  panic!("Unimplemented: printable_var_name");
+fn printable_var_name<'s, 't>(name: IVarNameT<'s, 't>) -> String {
+  match name {
+    IVarNameT::CodeVar(n) => n.name.0.to_string(),
+    _ => panic!("implement: printable_var_name other"),
+  }
 }
 /*
   private def printableVarName(
@@ -455,7 +698,7 @@ fn get_file(function_a: FunctionA) -> FileCoordinate {
     functionA.range.file
   }
 */
-fn humanize_rejection_reason<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS<'s>>, reason: IFindFunctionFailureReason<'s, 't>) -> String {
+fn humanize_rejection_reason<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, invocation_range: &Vec<RangeS<'s>>, reason: &IFindFunctionFailureReason<'s, 't>) -> String {
   panic!("Unimplemented: humanize_rejection_reason");
 }
 /*
@@ -514,8 +757,39 @@ fn humanize_rejection_reason<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocati
     })
   }
 */
-pub fn humanize_rule_error<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: ITypingPassSolverError<'s, 't>) -> String {
-  panic!("Unimplemented: humanize_rule_error");
+pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, error: ITypingPassSolverError<'s, 't>) -> String {
+  match error {
+    ITypingPassSolverError::IsaFailed { .. } => panic!("implement: humanize_rule_error IsaFailed"),
+    ITypingPassSolverError::BadIsaSubKind { .. } => panic!("implement: humanize_rule_error BadIsaSubKind"),
+    ITypingPassSolverError::CantGetComponentsOfPlaceholderPrototype { .. } => panic!("implement: humanize_rule_error CantGetComponentsOfPlaceholderPrototype"),
+    ITypingPassSolverError::ReturnTypeConflict { .. } => panic!("implement: humanize_rule_error ReturnTypeConflict"),
+    ITypingPassSolverError::CantShareMutable { .. } => panic!("implement: humanize_rule_error CantShareMutable"),
+    ITypingPassSolverError::BadIsaSuperKind { .. } => panic!("implement: humanize_rule_error BadIsaSuperKind"),
+    ITypingPassSolverError::SendingNonIdenticalKinds { .. } => panic!("implement: humanize_rule_error SendingNonIdenticalKinds"),
+    ITypingPassSolverError::SendingNonCitizen { .. } => panic!("implement: humanize_rule_error SendingNonCitizen"),
+    ITypingPassSolverError::CantCheckPlaceholder { .. } => panic!("implement: humanize_rule_error CantCheckPlaceholder"),
+    ITypingPassSolverError::CouldntFindFunction { .. } => panic!("implement: humanize_rule_error CouldntFindFunction"),
+    ITypingPassSolverError::CouldntResolveKind { .. } => panic!("implement: humanize_rule_error CouldntResolveKind"),
+    ITypingPassSolverError::WrongNumberOfTemplateArgs { .. } => panic!("implement: humanize_rule_error WrongNumberOfTemplateArgs"),
+    ITypingPassSolverError::LookupFailed { .. } => panic!("implement: humanize_rule_error LookupFailed"),
+    ITypingPassSolverError::KindIsNotConcrete { kind } => {
+      "Expected kind to be concrete, but was not. Kind: ".to_string() + &humanize_kind(scout_arena, typing_interner, code_map, kind, None)
+    }
+    ITypingPassSolverError::OneOfFailed { .. } => panic!("implement: humanize_rule_error OneOfFailed"),
+    ITypingPassSolverError::KindIsNotInterface { .. } => panic!("implement: humanize_rule_error KindIsNotInterface"),
+    ITypingPassSolverError::CallResultIsntCallable { .. } => panic!("implement: humanize_rule_error CallResultIsntCallable"),
+    ITypingPassSolverError::CallResultWasntExpectedType { .. } => panic!("implement: humanize_rule_error CallResultWasntExpectedType"),
+    ITypingPassSolverError::OwnershipDidntMatch { .. } => panic!("implement: humanize_rule_error OwnershipDidntMatch"),
+    ITypingPassSolverError::ReceivingDifferentOwnerships { .. } => panic!("implement: humanize_rule_error ReceivingDifferentOwnerships"),
+    ITypingPassSolverError::NoAncestorsSatisfyCall { .. } => panic!("implement: humanize_rule_error NoAncestorsSatisfyCall"),
+    ITypingPassSolverError::KindIsNotStruct { .. } => panic!("implement: humanize_rule_error KindIsNotStruct"),
+    ITypingPassSolverError::CouldntFindImpl { .. } => panic!("implement: humanize_rule_error CouldntFindImpl"),
+    ITypingPassSolverError::CantSharePlaceholder { .. } => panic!("implement: humanize_rule_error CantSharePlaceholder"),
+    ITypingPassSolverError::NoCommonAncestors { .. } => panic!("implement: humanize_rule_error NoCommonAncestors"),
+    ITypingPassSolverError::CantDetermineNarrowestKind { .. } => panic!("implement: humanize_rule_error CantDetermineNarrowestKind"),
+    ITypingPassSolverError::FunctionDoesntHaveName { .. } => panic!("implement: humanize_rule_error FunctionDoesntHaveName"),
+    ITypingPassSolverError::InternalSolverError { .. } => panic!("implement: humanize_rule_error InternalSolverError"),
+  }
 }
 /*
   def humanizeRuleError(
@@ -602,10 +876,25 @@ pub fn humanize_rule_error<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, l
     }
   }
 */
-pub fn humanize_candidate_and_failed_solve<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
-  panic!("Unimplemented: humanize_candidate_and_failed_solve");
+pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, result: &FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
+  let (text, _line_begins) = crate::solver::solver_error_humanizer::humanize_failed_solve(
+    |loc| code_map(*loc),
+    |a, b| lines_between(*a, *b),
+    |loc| line_range_containing(*loc),
+    |loc| line_containing(*loc),
+    |rune| crate::postparsing::post_parser_error_humanizer::humanize_rune(rune),
+    |t| humanize_templata(scout_arena, typing_interner, &|loc| code_map(loc), t),
+    |err| humanize_rule_error(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, err),
+    |rule: &IRulexSR<'s>| *rule.range(),
+    |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| (u.rune, u.range)).collect(),
+    |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
+    |rule: &IRulexSR<'s>| crate::postparsing::post_parser_error_humanizer::humanize_rule(rule),
+    result,
+  );
+  text
 }
 /*
+Guardian: temp-disable: SPDMX — SPDMX Exception B: scout_arena and typing_interner are needed to arena-allocate CoordTemplataT/KindTemplataT once this stub is filled in. `humanize` already has these params and calls this function; the signatures must match for the call graph to compile. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-076-1778966699959/hook-076/humanize_candidate_and_failed_solve--805.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeCandidateAndFailedSolve(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
@@ -630,7 +919,7 @@ pub fn humanize_candidate_and_failed_solve<'s, 't>(code_map: &dyn Fn(CodeLocatio
     text
   }
 */
-pub fn humanize_candidate(code_map: &dyn Fn(CodeLocationS) -> String, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, candidate: ICalleeCandidate) -> String {
+pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, candidate: &ICalleeCandidate<'s, 't>) -> String {
   panic!("Unimplemented: humanize_candidate");
 }
 /*
@@ -657,10 +946,32 @@ pub fn humanize_candidate(code_map: &dyn Fn(CodeLocationS) -> String, line_range
     }
   }
 */
-pub fn humanize_templata<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, templata: ITemplataT<'s, 't>) -> String {
-  panic!("Unimplemented: humanize_templata");
+pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, templata: ITemplataT<'s, 't>) -> String {
+  match templata {
+    ITemplataT::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
+    ITemplataT::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
+    ITemplataT::InterfaceDefinition(_) => panic!("implement: humanize_templata InterfaceDefinition"),
+    ITemplataT::StructDefinition(_) => panic!("implement: humanize_templata StructDefinition"),
+    ITemplataT::Variability(variability) => panic!("implement: humanize_templata Variability"),
+    ITemplataT::Integer(value) => panic!("implement: humanize_templata Integer"),
+    ITemplataT::Mutability(mutability) => panic!("implement: humanize_templata Mutability"),
+    ITemplataT::Ownership(ownership) => match ownership.ownership {
+      OwnershipT::Own => "own".to_string(),
+      OwnershipT::Borrow => "borrow".to_string(),
+      OwnershipT::Weak => "weak".to_string(),
+      OwnershipT::Share => "share".to_string(),
+    },
+    ITemplataT::Prototype(prototype) => panic!("implement: humanize_templata Prototype"),
+    ITemplataT::Coord(coord_templata) => humanize_coord(scout_arena, typing_interner, code_map, coord_templata.coord),
+    ITemplataT::Kind(kind_templata) => humanize_kind(scout_arena, typing_interner, code_map, kind_templata.kind, None),
+    ITemplataT::CoordList(coords) => panic!("implement: humanize_templata CoordList"),
+    ITemplataT::String(value) => panic!("implement: humanize_templata String"),
+    ITemplataT::Placeholder(_) => panic!("implement: humanize_templata Placeholder"),
+    _ => panic!("implement: humanize_templata other"),
+  }
 }
 /*
+Guardian: temp-disable: SPDMX — Scala's `humanizeKind(codeMap, kind)` uses the default `containingRegion: Option[RegionT] = None`. Rust has no default parameters, so passing `None` explicitly is the required Rust counterpart to Scala's default-argument call — it's not novel logic, it's the mandatory Rust adaptation of a Scala default param. — FrontendRust/guardian-logs/request-150-1778968631296/hook-150/humanize_templata--880.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeTemplata(
     codeMap: CodeLocationS => String,
     templata: ITemplataT[ITemplataType]):
@@ -714,8 +1025,16 @@ pub fn humanize_templata<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, tem
     }
   }
 */
-fn humanize_coord(code_map: &dyn Fn(CodeLocationS) -> String, coord: CoordT) -> String {
-  panic!("Unimplemented: humanize_coord");
+fn humanize_coord<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, coord: CoordT<'s, 't>) -> String {
+  let CoordT { ownership, region, kind } = coord;
+  let ownership_str = match ownership {
+    OwnershipT::Own => "",
+    OwnershipT::Share => "",
+    OwnershipT::Borrow => "&",
+    OwnershipT::Weak => "&&",
+  };
+  let kind_str = humanize_kind(scout_arena, typing_interner, code_map, kind, Some(region));
+  format!("{}{}", ownership_str, kind_str)
 }
 /*
   private def humanizeCoord(
@@ -735,8 +1054,22 @@ fn humanize_coord(code_map: &dyn Fn(CodeLocationS) -> String, coord: CoordT) -> 
     ownershipStr + kindStr
   }
 */
-fn humanize_kind(code_map: &dyn Fn(CodeLocationS) -> String, kind: KindT, containing_region: Option<RegionT>) -> String {
-  panic!("Unimplemented: humanize_kind");
+fn humanize_kind<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, kind: KindT<'s, 't>, containing_region: Option<RegionT>) -> String {
+  match kind {
+    KindT::Int(IntT { bits }) => format!("i{}", bits),
+    KindT::Bool(_) => "bool".to_string(),
+    KindT::KindPlaceholder(name) => format!("Kind${}", humanize_id(scout_arena, typing_interner, code_map, name.id, None)),
+    KindT::Str(_) => "str".to_string(),
+    KindT::Never(_) => "never".to_string(),
+    KindT::Void(_) => "void".to_string(),
+    KindT::Float(_) => "float".to_string(),
+    KindT::OverloadSet(s) => format!("(overloads: {})",
+      crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*s.name)),
+    KindT::Interface(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
+    KindT::Struct(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
+    KindT::RuntimeSizedArray(rsa) => panic!("implement: humanize_kind RuntimeSizedArray"),
+    KindT::StaticSizedArray(ssa) => panic!("implement: humanize_kind StaticSizedArray"),
+  }
 }
 /*
   private def humanizeKind(
@@ -777,10 +1110,15 @@ fn humanize_kind(code_map: &dyn Fn(CodeLocationS) -> String, kind: KindT, contai
     }
   }
 */
-pub fn humanize_id<'s, 't, T: Copy + 't>(code_map: &dyn Fn(CodeLocationS) -> String, name: IdT<'s, 't>, containing_region: Option<RegionT>) -> String
+pub fn humanize_id<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: IdT<'s, 't>, containing_region: Option<RegionT>) -> String
 where 's: 't,
 {
-  panic!("Unimplemented: humanize_id");
+  let prefix = if !name.init_steps.is_empty() {
+    name.init_steps.iter().map(|n| humanize_name(scout_arena, typing_interner, code_map, *n, None)).collect::<Vec<_>>().join(".") + "."
+  } else {
+    "".to_string()
+  };
+  prefix + &humanize_name(scout_arena, typing_interner, code_map, name.local_name, containing_region)
 }
 /*
   def humanizeId[T <: INameT](
@@ -796,8 +1134,65 @@ where 's: 't,
       humanizeName(codeMap, name.localName, containingRegion)
   }
 */
-pub fn humanize_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameT, containing_region: Option<RegionT>) -> String {
-  panic!("Unimplemented: humanize_name");
+pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, name: INameT<'s, 't>, containing_region: Option<RegionT>) -> String {
+  match name {
+    INameT::AnonymousSubstructConstructor(n) => panic!("implement: humanize_name AnonymousSubstructConstructor"),
+    INameT::AnonymousSubstructConstructorTemplate(n) => panic!("implement: humanize_name AnonymousSubstructConstructorTemplate"),
+    INameT::Self_(_) => "self".to_string(),
+    INameT::OverrideDispatcherTemplate(n) => panic!("implement: humanize_name OverrideDispatcherTemplate"),
+    INameT::OverrideDispatcher(n) => panic!("implement: humanize_name OverrideDispatcher"),
+    INameT::Iterator(n) => panic!("implement: humanize_name Iterator"),
+    INameT::Iterable(n) => panic!("implement: humanize_name Iterable"),
+    INameT::IterationOption(n) => panic!("implement: humanize_name IterationOption"),
+    INameT::ImplTemplate(n) => panic!("implement: humanize_name ImplTemplate"),
+    INameT::ForwarderFunction(n) => panic!("implement: humanize_name ForwarderFunction"),
+    INameT::ForwarderFunctionTemplate(n) => panic!("implement: humanize_name ForwarderFunctionTemplate"),
+    INameT::MagicParam(n) => panic!("implement: humanize_name MagicParam"),
+    INameT::ClosureParam(n) => panic!("implement: humanize_name ClosureParam"),
+    INameT::ConstructingMember(n) => panic!("implement: humanize_name ConstructingMember"),
+    INameT::TypingPassBlockResultVar(n) => panic!("implement: humanize_name TypingPassBlockResultVar"),
+    INameT::TypingPassFunctionResultVar(n) => panic!("implement: humanize_name TypingPassFunctionResultVar"),
+    INameT::TypingPassTemporaryVar(n) => panic!("implement: humanize_name TypingPassTemporaryVar"),
+    INameT::FunctionBoundTemplate(n) => n.human_name.0.to_string(),
+    INameT::LambdaCallFunctionTemplate(n) => panic!("implement: humanize_name LambdaCallFunctionTemplate"),
+    INameT::LambdaCitizenTemplate(n) => panic!("implement: humanize_name LambdaCitizenTemplate"),
+    INameT::LambdaCallFunction(n) => panic!("implement: humanize_name LambdaCallFunction"),
+    INameT::FunctionBound(n) => panic!("implement: humanize_name FunctionBound"),
+    INameT::KindPlaceholder(n) => humanize_name(scout_arena, typing_interner, code_map, INameT::KindPlaceholderTemplate(n.template), None),
+    INameT::KindPlaceholderTemplate(n) => panic!("implement: humanize_name KindPlaceholderTemplate"),
+    INameT::CodeVar(n) => n.name.0.to_string(),
+    INameT::LambdaCitizen(n) => panic!("implement: humanize_name LambdaCitizen"),
+    INameT::FunctionTemplate(n) => n.human_name.0.to_string(),
+    INameT::ExternFunction(n) => n.human_name.0.to_string(),
+    INameT::Function(n) => {
+      humanize_name(scout_arena, typing_interner, code_map, INameT::FunctionTemplate(n.template), None) +
+        &humanize_generic_args(scout_arena, typing_interner, code_map, n.template_args, containing_region) +
+        &(if !n.parameters.is_empty() {
+          "(".to_string() + &n.parameters.iter().map(|p| humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *p })))).collect::<Vec<_>>().join(", ") + ")"
+        } else {
+          "".to_string()
+        })
+    }
+    INameT::Struct(sn) => {
+      let template_name = match sn.template {
+        IStructTemplateNameT::LambdaCitizenTemplate(n) => INameT::LambdaCitizenTemplate(n),
+        IStructTemplateNameT::StructTemplate(n) => INameT::StructTemplate(n),
+        IStructTemplateNameT::AnonymousSubstructTemplate(n) => INameT::AnonymousSubstructTemplate(n),
+      };
+      humanize_name(scout_arena, typing_interner, code_map, template_name, None) +
+        &humanize_generic_args(scout_arena, typing_interner, code_map, sn.template_args, containing_region)
+    }
+    INameT::Interface(sn) => {
+      humanize_name(scout_arena, typing_interner, code_map, INameT::InterfaceTemplate(sn.template), None) +
+        &humanize_generic_args(scout_arena, typing_interner, code_map, sn.template_args, containing_region)
+    }
+    INameT::AnonymousSubstruct(n) => panic!("implement: humanize_name AnonymousSubstruct"),
+    INameT::AnonymousSubstructTemplate(n) => panic!("implement: humanize_name AnonymousSubstructTemplate"),
+    INameT::StructTemplate(n) => n.human_name.0.to_string(),
+    INameT::InterfaceTemplate(n) => n.human_namee.0.to_string(),
+    INameT::NonKindNonRegionPlaceholder(n) => panic!("implement: humanize_name NonKindNonRegionPlaceholder"),
+    _ => panic!("implement: humanize_name other"),
+  }
 }
 /*
   def humanizeName(
@@ -894,8 +1289,21 @@ pub fn humanize_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameT, c
     }
   }
 */
-fn humanize_generic_args<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, template_args: Vec<ITemplataT<'s, 't>>, containing_region: Option<RegionT>) -> String {
-  panic!("Unimplemented: humanize_generic_args");
+fn humanize_generic_args<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, template_args: &[ITemplataT<'s, 't>], containing_region: Option<RegionT>) -> String {
+  if template_args.is_empty() {
+    "".to_string()
+  } else {
+    let init = &template_args[..template_args.len() - 1];
+    let last = template_args.last().unwrap();
+    let last_str = match containing_region {
+      None => humanize_templata(scout_arena, typing_interner, code_map, *last),
+      Some(_) => "_".to_string(),
+    };
+    let parts = init.iter().map(|t| humanize_templata(scout_arena, typing_interner, code_map, *t))
+      .chain(std::iter::once(last_str))
+      .collect::<Vec<_>>().join(", ");
+    format!("<{}>", parts)
+  }
 }
 /*
   private def humanizeGenericArgs(
@@ -919,10 +1327,11 @@ fn humanize_generic_args<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, tem
       })
   }
 */
-pub fn humanize_signature(code_map: &dyn Fn(CodeLocationS) -> String, signature: SignatureT) -> String {
-  panic!("Unimplemented: humanize_signature");
+pub fn humanize_signature<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, signature: SignatureT<'s, 't>) -> String {
+  humanize_id(scout_arena, typing_interner, code_map, signature.id, None)
 }
 /*
+Guardian: temp-disable: SPDMX — Scala's `humanizeId(codeMap, signature.id)` uses the default `containingRegion: Option[RegionT] = None`. Rust has no default parameters, so passing `None` explicitly is the required Rust counterpart to Scala's default-argument call — identical pattern already temp-disabled in `humanize_templata` in this same file. — FrontendRust/guardian-logs/request-236-1778970443346/hook-236/humanize_signature--1273.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeSignature(codeMap: CodeLocationS => String, signature: SignatureT): String = {
     humanizeId(codeMap, signature.id)
   }

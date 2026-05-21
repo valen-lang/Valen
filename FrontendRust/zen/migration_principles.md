@@ -11,6 +11,8 @@ Figure out where the Rust version's logic doesn't match the scala version's logi
 
 Ensure that all Rust code/test requirements exactly match the old Scala code/test requirements.
 
+**Architect-level escape hatch.** When the Scala carries dead-weight machinery whose mutation/dispatch surface is unused on the call paths being ported (`FunctionEnvironmentBoxT`'s `setReturnType`/`addEntry` mutators on read-only paths is the canonical case), don't write the Rust without it and add a "diverges from Scala" note — those rot, and reviewers can't verify the divergence. Instead, edit the Scala source first to match what the Rust will become, update the Rust audit-trail `/* ... */` blocks to reflect the new Scala, then make the Rust change. Only valid when the wrapper is unused on the ported paths (verify with `grep`), the replacement is design-doc-blessed, and SCPX `--check-all` still passes after. **TL/architect-level only — juniors must escalate.**
+
 
 # P2: Rust Code Should Be Above its Scala Code (RCSBASC)
 

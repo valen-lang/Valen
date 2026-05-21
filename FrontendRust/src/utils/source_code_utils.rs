@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap};
 use crate::utils::range::{CodeLocationS, RangeS};
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 // Mirrors SourceCodeUtils.scala:humanizePos(humanizedFilePath, source, pos)
 pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
@@ -34,7 +35,7 @@ import scala.collection.mutable.ArrayBuffer
 object SourceCodeUtils {
 */
 // mig: fn humanize_package
-fn humanize_package<'a>(package_coord: &'a crate::utils::code_hierarchy::PackageCoordinate<'a>) -> String {
+pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
   for p in package_coord.packages.iter() {
     result.push('.');

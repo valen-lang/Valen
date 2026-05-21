@@ -11,15 +11,19 @@ import dev.vale.postparsing.rules._
 import scala.collection.immutable.Map
 */
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType};
-use crate::postparsing::names::{IRuneS, IImpreciseNameS};
+use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
+use crate::postparsing::itemplatatype::*;
+use std::collections::HashMap;
+use crate::postparsing::itemplatatype::ImplTemplataType;
 
 
 // mig: struct RuneTypeSolveError
+#[derive(Debug)]
 pub struct RuneTypeSolveError<'s> {
   pub range: Vec<RangeS<'s>>,
   pub failed_solve: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataType<'s>, IRuneTypeRuleError<'s>>,
@@ -33,6 +37,7 @@ case class RuneTypeSolveError(range: List[RangeS], failedSolve: FailedSolve[IRul
 impl<'s> RuneTypeSolveError<'s> {
 }
 // mig: enum IRuneTypeRuleError
+#[derive(Debug)]
 pub enum IRuneTypeRuleError<'s> {
   FoundCitizenDidntMatchExpectedType(FoundCitizenDidntMatchExpectedType<'s>),
   FoundTemplataDidntMatchExpectedType(FoundTemplataDidntMatchExpectedType<'s>),
@@ -69,6 +74,7 @@ impl<'s> From<IRuneTypingLookupFailedError<'s>> for IRuneTypeRuleError<'s> {
 sealed trait IRuneTypeRuleError
 */
 // mig: struct FoundCitizenDidntMatchExpectedType
+#[derive(Debug)]
 pub struct FoundCitizenDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -85,6 +91,7 @@ case class FoundCitizenDidntMatchExpectedType(
 impl<'s> FoundCitizenDidntMatchExpectedType<'s> {
 }
 // mig: struct FoundTemplataDidntMatchExpectedType
+#[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -103,6 +110,7 @@ case class FoundTemplataDidntMatchExpectedType(
 impl<'s> FoundTemplataDidntMatchExpectedType<'s> {
 }
 // mig: struct NotEnoughArgumentsForGenericCall
+#[derive(Debug)]
 pub struct NotEnoughArgumentsForGenericCall<'s> {
   pub range: Vec<RangeS<'s>>,
   pub index_of_non_defaulting_param: i32,
@@ -120,6 +128,7 @@ case class NotEnoughArgumentsForGenericCall(
 impl<'s> NotEnoughArgumentsForGenericCall<'s> {
 }
 // mig: struct GenericCallArgTypeMismatch
+#[derive(Debug)]
 pub struct GenericCallArgTypeMismatch<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -147,6 +156,7 @@ pub enum IRuneTypingLookupFailedError<'s> {
 sealed trait IRuneTypingLookupFailedError extends IRuneTypeRuleError
 */
 // mig: struct RuneTypingTooManyMatchingTypes
+#[derive(Debug)]
 pub struct RuneTypingTooManyMatchingTypes<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
@@ -173,6 +183,7 @@ fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct RuneTypingCouldntFindType
+#[derive(Debug)]
 pub struct RuneTypingCouldntFindType<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
@@ -199,6 +210,7 @@ fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct FoundTemplataDidntMatchExpectedTypeA
+#[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedTypeA<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
@@ -508,10 +520,14 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   IRuneTypeRuleError<'s>,
 >> {
 
-  use crate::postparsing::itemplatatype::*;
 
   match rule {
-    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in rune_type solve_rule"),
+    IRulexSR::KindComponents(x) => {
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        (x.mutability_rune.rune.clone(), ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})),
+      ].into_iter().collect(), vec![])
+    }
     IRulexSR::CoordComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
@@ -556,8 +572,23 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
-    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in rune_type solve_rule"),
-    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in rune_type solve_rule"),
+    IRulexSR::DefinitionCoordIsa(x) => {
+        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+            (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})),
+            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        ].into_iter().collect(), vec![])
+    }
+    IRulexSR::CallSiteCoordIsa(x) => {
+        let mut conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = [
+            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        ].into_iter().collect();
+        if let Some(result_rune) = &x.result_rune {
+            conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {}));
+        }
+        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![])
+    }
     IRulexSR::OneOf(x) => {
       let types: std::collections::HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
       if types.len() > 1 {
@@ -593,8 +624,18 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::Literal(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![])
     }
-    IRulexSR::Lookup(_) => {
-      panic!("solve_rule LookupSR not yet migrated");
+    IRulexSR::Lookup(x) => {
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), x.name.clone()) {
+            Err(_e) => panic!("LookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      let tyype = match actual_lookup_result {
+        IRuneTypeSolverLookupResult::Primitive(p) => p.tyype,
+        IRuneTypeSolverLookupResult::Templata(t) => t.templata,
+        IRuneTypeSolverLookupResult::Citizen(c) => c.tyype,
+      };
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), tyype)].into_iter().collect(), vec![])
     }
     IRulexSR::MaybeCoercingLookup(x) => {
       let actual_lookup_result =
@@ -606,8 +647,15 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![])
     }
-    IRulexSR::RuneParentEnvLookup(_) => {
-      panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
+    IRulexSR::RuneParentEnvLookup(x) => {
+      let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), lookup_name) {
+            Err(_e) => panic!("RuneParentEnvLookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![])
     }
     IRulexSR::Augment(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
@@ -782,7 +830,6 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   ITemplataType<'s>,
   IRuneTypeRuleError<'s>,
 >> {
-  use crate::postparsing::itemplatatype::*;
   let expected_type = solver_state.get_conclusion(&rune.rune).expect("lookup_rune_type: no conclusion for rune");
   match actual_lookup_result {
     IRuneTypeSolverLookupResult::Primitive(p) => {
@@ -792,8 +839,22 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         _ => panic!("lookup_rune_type Primitive error path not yet migrated"),
       }
     }
-    IRuneTypeSolverLookupResult::Templata(_t) => {
-      panic!("lookup_rune_type Templata not yet migrated");
+    IRuneTypeSolverLookupResult::Templata(t) => {
+      let actual_type = t.templata;
+      match (&actual_type, &expected_type) {
+        (x, y) if x == y => {} // Matches, so is fine
+        (ITemplataType::KindTemplataType(_), ITemplataType::CoordTemplataType(_)) => {} // Will convert, so is fine
+        (ITemplataType::TemplateTemplataType(tt), ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_))
+            if tt.param_types.is_empty()
+                && matches!(tt.return_type, ITemplataType::KindTemplataType(_) | ITemplataType::CoordTemplataType(_)) => {
+          // Then it's an implicit call.
+          match check_generic_call(vec![_range.clone()], &[], &[]) {
+            Ok(()) => {},
+            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+          }
+        }
+        _ => panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated"),
+      }
     }
     IRuneTypeSolverLookupResult::Citizen(c) => {
       match &expected_type {
@@ -889,7 +950,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 
 
 
-  use std::collections::HashMap;
 
   // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
   // For now, with no rules in the simple test case, this is empty.
@@ -904,10 +964,33 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
             Err(_e) => {
               panic!("LookupSR pre-computation error path not yet migrated");
             }
-            Ok(_result) => {
-              // Complex coercion logic for different lookup result types.
-              // For now, panic if we actually hit a lookup (the simple test has none).
-              panic!("LookupSR pre-computation not yet fully migrated");
+            Ok(result) => {
+              let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {
+                // We don't know whether we'll coerce this into a kind or a coord.
+                IRuneTypeSolverLookupResult::Primitive(p) => {
+                  match &p.tyype {
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Citizen(c) => {
+                  match &c.tyype {
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() && matches!(&*t.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Templata(t) => {
+                  match &t.templata {
+                    ITemplataType::TemplateTemplataType(tt) if tt.param_types.is_empty() && matches!(&*tt.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+              };
+              for (k, v) in entries {
+                map.insert(k, v);
+              }
             }
           }
         }

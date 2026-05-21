@@ -1,5 +1,10 @@
-import stdlib.collections.hashmap.*;
-import stdlib.stdin.*;
+import hashmap.*;
+import list.*;
+import array.each.*;
+import printutils.*;
+import string.*;
+
+extern func getch() int;
 
 // roguelike.vale - A simple Roguelike game, made in Vale.
 //
@@ -57,7 +62,7 @@ func display(
       if (rowI == playerRow and cellI == playerCol) {
         set charToPrint = "@";
       } else {
-        goblins.keys().each(&(key) => {
+        goblins.keys().drop_into(&(key) => {
           maybeGoblin = goblins.get(key);
           goblin = (maybeGoblin).get(); // TODO try getting rid of this ^, doesnt wanna find the get function
 
@@ -164,7 +169,7 @@ exported func main() int {
     }
 
     killedGoblin = false;
-    goblins.keys().each(&(key) => {
+    goblins.keys().drop_into(&(key) => {
       if (goblinAt(&goblins, key, newPlayerRow, newPlayerCol)) {
         goblins.remove(key);
         set killedGoblin = true;
@@ -177,7 +182,7 @@ exported func main() int {
       }
     }
 
-    if (len(goblins.keys()) == 0) {
+    if (goblins.len() == 0) {
       println("You win!");
       set running = false;
     }

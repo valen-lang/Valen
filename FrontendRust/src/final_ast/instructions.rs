@@ -676,8 +676,8 @@ override def equals(obj: Any): Boolean = vcurious();
 //  exprs: Vector[ExpressionH[KindH]],
 //) extends ExpressionH[KindH] {
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
+//override def hashCode(): Int = hash;
+//override def equals(obj: Any): Boolean = vcurious();
 //  // We should simplify these away
 //  vassert(exprs.nonEmpty)
 //
@@ -1067,8 +1067,8 @@ case class AsSubtypeH(
   resultType: CoordH[InterfaceHT],
   // Function to give a ref to to make a Some(ref) {
   // val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
+  // override def hashCode(): Int = hash;
+  // override def equals(obj: Any): Boolean = vcurious(); }
   someConstructor: PrototypeH,
   // Function to make a None of the right type
   noneConstructor: PrototypeH,

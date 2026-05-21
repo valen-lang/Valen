@@ -28,41 +28,55 @@ pub enum CitizenDefinitionT<'s, 't> {
 /*
 trait CitizenDefinitionT {
 */
-fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't> {
-    panic!("Unimplemented: template_name");
+impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
+    pub fn template_name(&self) -> IdT<'s, 't> {
+        match self {
+            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: template_name Struct"),
+            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: template_name Interface"),
+        }
+    }
+    /*
+      def templateName: IdT[ICitizenTemplateNameT]
+    */
+    pub fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
+        match self {
+            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: generic_param_types Struct"),
+            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: generic_param_types Interface"),
+        }
+    }
+    /*
+      def genericParamTypes: Vector[ITemplataType]
+    */
+    pub fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
+        match self {
+            CitizenDefinitionT::Struct(s) => ICitizenTT::Struct(&s.instantiated_citizen),
+            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: instantiated_citizen Interface"),
+        }
+    }
+    /*
+      def instantiatedCitizen: ICitizenTT
+    */
+    pub fn default_region(&self) -> RegionT {
+        match self {
+            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: default_region Struct"),
+            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: default_region Interface"),
+        }
+    }
+    /*
+      def defaultRegion: RegionT
+    }
+    */
 }
-/*
-  def templateName: IdT[ICitizenTemplateNameT]
-*/
-fn citizen_definition_generic_param_types<'s>() -> Vec<ITemplataType<'s>> {
-    panic!("Unimplemented: generic_param_types");
-}
-/*
-  def genericParamTypes: Vector[ITemplataType]
-*/
-fn citizen_definition_instantiated_citizen<'s, 't>() -> ICitizenTT<'s, 't> {
-    panic!("Unimplemented: instantiated_citizen");
-}
-/*
-  def instantiatedCitizen: ICitizenTT
-*/
-fn citizen_definition_default_region() -> RegionT {
-    panic!("Unimplemented: default_region");
-}
-/*
-  def defaultRegion: RegionT
-}
-*/
 /// Arena-allocated (see @TFITCX)
 pub struct StructDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_citizen: StructTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s>>,
+    pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
-    pub members: Vec<IStructMemberT<'s, 't>>,
+    pub members: &'t [IStructMemberT<'s, 't>],
     pub is_closure: bool,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
 case class StructDefinitionT(
@@ -121,8 +135,16 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> StructDefinitionT<'s, 't> {
-    fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
-        panic!("Unimplemented: get_member_and_index");
+    pub fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
+        for (index, member) in self.members.iter().enumerate() {
+            match member {
+                IStructMemberT::Normal(m) if &m.name == needle_name => {
+                    return Some((m, index));
+                }
+                _ => {}
+            }
+        }
+        None
     }
 /*
   def getMemberAndIndex(needleName: IVarNameT): Option[(NormalStructMemberT, Int)] = {
@@ -146,13 +168,18 @@ pub enum IStructMemberT<'s, 't> {
 /*
 sealed trait IStructMemberT {
 */
-fn struct_member_name<'s, 't>() -> IVarNameT<'s, 't> {
-    panic!("Unimplemented: struct_member_name");
+impl<'s, 't> IStructMemberT<'s, 't> where 's: 't {
+    pub fn name(&self) -> &IVarNameT<'s, 't> {
+        match self {
+            IStructMemberT::Normal(m) => &m.name,
+            IStructMemberT::Variadic(m) => &m.name,
+        }
+    }
+    /*
+      def name: IVarNameT
+    }
+    */
 }
-/*
-  def name: IVarNameT
-}
-*/
 /// Arena-allocated (see @TFITCX)
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
@@ -190,35 +217,46 @@ pub enum IMemberTypeT<'s, 't> {
 /*
 sealed trait IMemberTypeT  {
 */
-fn member_type_reference<'s, 't>() -> CoordT<'s, 't> {
-    panic!("Unimplemented: member_type_reference");
-}
-/*
-  def reference: CoordT
-*/
-fn member_type_expect_reference_member<'s, 't>() -> ReferenceMemberTypeT<'s, 't> {
-    panic!("Unimplemented: expect_reference_member");
-}
-/*
-  def expectReferenceMember(): ReferenceMemberTypeT = {
-    this match {
-      case r @ ReferenceMemberTypeT(_) => r
-      case a @ AddressMemberTypeT(_) => vfail("Expected reference member, was address member!")
+impl<'s, 't> IMemberTypeT<'s, 't> where 's: 't {
+    pub fn reference(&self) -> CoordT<'s, 't> {
+        match self {
+            IMemberTypeT::Address(m) => m.reference,
+            IMemberTypeT::Reference(m) => m.reference,
+        }
     }
-  }
-*/
-fn member_type_expect_address_member<'s, 't>() -> AddressMemberTypeT<'s, 't> {
-    panic!("Unimplemented: expect_address_member");
-}
-/*
-  def expectAddressMember(): AddressMemberTypeT = {
-    this match {
-      case r @ ReferenceMemberTypeT(_) => vfail("Expected reference member, was address member!")
-      case a @ AddressMemberTypeT(_) => a
+    /*
+      def reference: CoordT
+    */
+    pub fn expect_reference_member(&self) -> &ReferenceMemberTypeT<'s, 't> {
+        match self {
+            IMemberTypeT::Reference(r) => r,
+            IMemberTypeT::Address(_) => panic!("Expected reference member, was address member!"),
+        }
     }
-  }
+    /*
+      def expectReferenceMember(): ReferenceMemberTypeT = {
+        this match {
+          case r @ ReferenceMemberTypeT(_) => r
+          case a @ AddressMemberTypeT(_) => vfail("Expected reference member, was address member!")
+        }
+      }
+    */
+    pub fn expect_address_member(&self) -> &AddressMemberTypeT<'s, 't> {
+        match self {
+            IMemberTypeT::Reference(_) => panic!("Expected address member, was reference member!"),
+            IMemberTypeT::Address(a) => a,
+        }
+    }
+    /*
+      def expectAddressMember(): AddressMemberTypeT = {
+        this match {
+          case r @ ReferenceMemberTypeT(_) => vfail("Expected reference member, was address member!")
+          case a @ AddressMemberTypeT(_) => a
+        }
+      }
+    }
+    */
 }
-*/
 /// Arena-allocated (see @TFITCX)
 pub struct AddressMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
@@ -238,11 +276,11 @@ pub struct InterfaceDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_interface: InterfaceTT<'s, 't>,
     pub ref_: InterfaceTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s>>,
+    pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub internal_methods: Vec<(PrototypeT<'s, 't>, usize)>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+    pub internal_methods: &'t [(PrototypeT<'s, 't>, usize)],
 }
 /*
 case class InterfaceDefinitionT(

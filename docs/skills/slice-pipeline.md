@@ -17,6 +17,14 @@ So please run them as agents. Do not make edits yourself, do not use the Edit to
 
 # Steps
 
+## Step 0: Verify the pass migration policy exists
+
+The pipeline is pass-aware. Each pass needs a `migration-policy.md` next to its source root (walking up from the target file). If none exists, STOP and tell the user — running without one produces the cleanup burden documented in `FrontendRust/docs/migration/migration-policy.md` and TL.md §"Cleaning Up After The Slice Pipeline."
+
+Check by walking up from the target file's directory. Do NOT accept `FrontendRust/docs/migration/migration-policy.md` as a match — that is the template/canonical-example, not a real per-pass policy.
+
+If found, paste the full policy path into the spawn prompt for each subsequent agent so they can read it.
+
 ## Step 1: slice-start
 
 Apply the slice-start agent. Read `.claude/agents/slice-start.md` and follow its instructions on the file.
@@ -59,6 +67,29 @@ Apply the slice-reconcile-delete agent. Read `.claude/agents/slice-reconcile-del
 
 This deletes everything marked `// old, obsolete`.
 
+## Step 7: slice-impl-wrap
+
+Apply the slice-impl-wrap agent. Read `.claude/agents/slice-impl-wrap.md` and follow its instructions on the file.
+
+This wraps each module-scope `pub fn` stub in its own dedicated `impl<'s, 't> Foo<'s, 't> { fn ... }` block (one impl per method, matching the style in `FrontendRust/src/typing/`), using the `// mig: impl Foo` markers as receiver-type anchors. Per-fn `<'s, 't>` generics are stripped (the impl provides them — see TL.md §143).
+
+This step runs **after** reconcile (Steps 4–6) so that any old Rust definitions copied into stubs by reconcile-copy get wrapped together with the fresh stubs.
+
+## Step 8: SCPX verification
+
+After all prior steps, verify the Scala-comment audit trail is structurally intact. Run:
+
+```bash
+cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all > ./tmp/slice-pipeline-scpx.txt 2>&1
+```
+
+Then check the output: it must report `All N files OK` for some N. If any file fails SCPX, STOP and report the failing file + reason — the pipeline output is not safe to commit until SCPX is green. Common causes:
+ * A Rust definition landed between a struct and its `/* */` block (the user's known issue #2).
+ * A `// mig: fn` was placed at module scope where its impl wrap should sit between the Rust fn and the Scala `/* */` block.
+ * An emitted impl block has its closing `}` in the wrong position.
+
+If SCPX is green: also do a `cargo check --manifest-path FrontendRust/Cargo.toml --lib > ./tmp/slice-pipeline-check.txt 2>&1` and report the error count. Pre-existing warnings are fine; new compile errors mean placehold produced something rustc rejects.
+
 # When done
 
-Say "done" and give a brief summary of what was done at each step.
+Say "done" and give a brief summary of what was done at each step, including the SCPX result and the post-pipeline cargo-check error count.

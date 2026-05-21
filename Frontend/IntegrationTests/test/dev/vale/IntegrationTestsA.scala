@@ -32,6 +32,14 @@ import scala.collection.immutable.List
 
 
 class IntegrationTestsA extends FunSuite with Matchers {
+  test("Roguelike typing pass") {
+    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"), true)
+    compile.getCompilerOutputs() match {
+      case Ok(_) =>
+      case Err(e) => { println("DIAG-RAW-ERR: " + e); throw new RuntimeException("compile failed") }
+    }
+  }
+
   //  test("Scratch scratch") {
   //    val compile =
   //      RunCompilation.test(

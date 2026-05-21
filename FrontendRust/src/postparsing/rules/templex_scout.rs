@@ -26,6 +26,8 @@ use crate::postparsing::rules::rules::{
   CallSiteFuncSR, DefinitionFuncSR, PackSR, ResolveSR,
 };
 use std::collections::HashMap;
+use crate::interner::StrI;
+use crate::postparsing::itemplatatype::CoordTemplataType;
 /*
 package dev.vale.postparsing.rules
 
@@ -540,7 +542,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let range_s = PostParser::eval_range(file, func.range);
         let params_range_s = PostParser::eval_range(file, func.params_range);
         let NameP(_, name_p) = &func.name;
-        let name: crate::interner::StrI<'s> = scout_arena.intern_str(name_p.as_str());
+        let name: StrI<'s> = scout_arena.intern_str(name_p.as_str());
         let params_s: Vec<RuneUsage<'s>> =
           func.parameters.iter().map(|param_p| {
             translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
@@ -975,7 +977,7 @@ pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutAr
     );
     rune_to_explicit_type.insert(
       result_rune.rune.clone(),
-      ITemplataType::CoordTemplataType(crate::postparsing::itemplatatype::CoordTemplataType {}),
+      ITemplataType::CoordTemplataType(CoordTemplataType {}),
     );
     Some(result_rune)
   }

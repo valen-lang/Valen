@@ -141,7 +141,7 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 **Purpose:** Step-by-step methodology for LLM-driven workflows like migration audits, slice pipelines, or batch parity checks.
 
-**Discovery:** Lives in `docs/skills/`. Referenced by skill definitions in `.claude/skills/`.
+**Discovery:** Lives in `docs/skills/<skill-name>.md`. Referenced from `.claude/skills/<skill-name>/SKILL.md` as a symlink (`SKILL.md → ../../../docs/skills/<skill-name>.md`) so Claude Code's skill loader finds it while the source of truth stays in `docs/`.
 
 **Location:** `docs/skills/<skill-name>.md`
 
@@ -163,11 +163,12 @@ A shield that satisfies none of these is invisible — neither humans nor Guardi
 
 ## Symlink Conventions
 
-Categories #2 (Usage) and #6 (Architecture) are symlinked into `.claude/rules/` so Claude auto-loads them when editing nearby files. The symlink directory structure mirrors the source `docs/` structure:
+Categories #2 (Usage) and #6 (Architecture) are symlinked into `.claude/rules/` so Claude auto-loads them when editing nearby files. Category #8 (Skills) is symlinked into `.claude/skills/` so Claude Code's skill loader finds it. The symlink directory structure mirrors the source `docs/` structure:
 
 ```
 .claude/rules/postparser/usage/interning.mdc  -->  ../../../FrontendRust/src/postparsing/docs/usage/interning.md
 .claude/rules/postparser/architecture/arenas.mdc  -->  ../../../FrontendRust/src/postparsing/docs/architecture/arenas.md
+.claude/skills/migrate-diagnoser/SKILL.md  -->  ../../../docs/skills/migrate-diagnoser.md
 ```
 
 Shields (#4) are NOT symlinked. They are listed in `CLAUDE.md` as plain markdown links with descriptions pulled from shield frontmatter, so they are visible for reference but not auto-loaded into context.

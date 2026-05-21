@@ -20,6 +20,12 @@ use crate::postparsing::rules::rules::{
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::templex_scout::translate_templex;
 use std::collections::{HashMap, HashSet};
+use crate::postparsing::itemplatatype::ImplTemplataType;
+use crate::postparsing::rules::rules::DefinitionCoordIsaSR;
+use crate::postparsing::rules::rules::CallSiteCoordIsaSR;
+use crate::postparsing::rules::rules::PackSR;
+use crate::postparsing::rules::rules::KindComponentsSR;
+use crate::postparsing::rules::rules::PrototypeComponentsSR;
 /*
 package dev.vale.postparsing.rules
 
@@ -191,9 +197,38 @@ fn translate_rulex<'s, 'p>(
           rune: arg_rune.rune,
         }
       } else if name.str() == keywords.implements {
+        assert_eq!(args.len(), 2, "POSTPARSER_IMPLEMENTS_ARGS_LEN");
+        let struct_rune = translate_rulex(scout_arena, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), &args[0]);
+        rune_to_explicit_type.push((struct_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        let interface_rune = translate_rulex(scout_arena, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), &args[1]);
+        rune_to_explicit_type.push((interface_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})));
+
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+        };
+        rune_to_explicit_type.push((result_rune_s.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})));
+
         // Only appears in definition; filtered out when solving call site
+        builder.push(IRulexSR::DefinitionCoordIsa(DefinitionCoordIsaSR {
+          range: PostParser::eval_range(file, *range),
+          result_rune: result_rune_s.clone(),
+          sub_rune: struct_rune.clone(),
+          super_rune: interface_rune.clone(),
+        }));
         // Only appears in call site; filtered out when solving definition
-        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_IMPLEMENTS_NOT_YET_IMPLEMENTED")
+        builder.push(IRulexSR::CallSiteCoordIsa(CallSiteCoordIsaSR {
+          range: PostParser::eval_range(file, *range),
+          result_rune: Some(result_rune_s),
+          sub_rune: struct_rune.clone(),
+          super_rune: interface_rune,
+        }));
+
+        RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: struct_rune.rune,
+        }
       } else if name.str() == keywords.ref_list_compound_mutability {
         panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REF_LIST_COMPOUND_MUTABILITY_NOT_YET_IMPLEMENTED")
       } else if name.str() == keywords.refs {
@@ -207,7 +242,7 @@ fn translate_rulex<'s, 'p>(
           range: PostParser::eval_range(file, *range),
           rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
-        builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
+        builder.push(IRulexSR::Pack(PackSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune.clone(),
           members: scout_arena.alloc_slice_from_vec(arg_runes),
@@ -297,7 +332,26 @@ fn translate_rulex<'s, 'p>(
           }));
         }
         ITypePR::KindType => {
-          panic!("POSTPARSER_COMPONENTS_KIND_TYPE_NOT_YET_IMPLEMENTED")
+          if components.len() != 1 {
+            panic!("Kind rule should have one component! Found: {}", components.len())
+          }
+          let mut translate_child_lidb = lidb.child();
+          let component_usages = translate_rulexes(
+            scout_arena,
+            keywords,
+            env,
+            &mut translate_child_lidb,
+            builder,
+            rune_to_explicit_type,
+            context_region,
+            components,
+          );
+          let mutability_rune = component_usages[0].clone();
+          builder.push(IRulexSR::KindComponents(KindComponentsSR {
+            range: PostParser::eval_range(file, *range),
+            kind_rune: rune.clone(),
+            mutability_rune,
+          }));
         }
         ITypePR::PrototypeType => {
           if components.len() != 2 {
@@ -316,7 +370,7 @@ fn translate_rulex<'s, 'p>(
           );
           let params_rune = component_usages[0].clone();
           let return_rune = component_usages[1].clone();
-          builder.push(IRulexSR::PrototypeComponents(crate::postparsing::rules::rules::PrototypeComponentsSR {
+          builder.push(IRulexSR::PrototypeComponents(PrototypeComponentsSR {
             range: PostParser::eval_range(file, *range),
             result_rune: rune.clone(),
             params_rune,
@@ -581,15 +635,56 @@ fn get_rune_kind_template<'s>(
 /*
 }
 */
+struct Equivalencies<'s> {
+  rune_to_kind_equivalent_runes: HashMap<IRuneS<'s>, HashSet<IRuneS<'s>>>,
+}
 /*
 class Equivalencies(rules: IndexedSeq[IRulexSR]) {
   val runeToKindEquivalentRunes: mutable.HashMap[IRuneS, mutable.HashSet[IRuneS]] = mutable.HashMap()
 */
+impl<'s> Equivalencies<'s> {
+  fn mark_kind_equivalent(&mut self, rune_a: IRuneS<'s>, rune_b: IRuneS<'s>) {
+    self.rune_to_kind_equivalent_runes.entry(rune_a).or_default().insert(rune_b);
+    self.rune_to_kind_equivalent_runes.entry(rune_b).or_default().insert(rune_a);
+  }
+}
 /*
   def markKindEquivalent(runeA: IRuneS, runeB: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElseUpdate(runeA, mutable.HashSet()) += runeB
     runeToKindEquivalentRunes.getOrElseUpdate(runeB, mutable.HashSet()) += runeA
   }
+*/
+impl<'s> Equivalencies<'s> {
+  fn new(rules_s: &[IRulexSR<'s>]) -> Self {
+    let mut this = Self { rune_to_kind_equivalent_runes: HashMap::new() };
+    for rule in rules_s {
+      match rule {
+        IRulexSR::CoordComponents(r) => this.mark_kind_equivalent(r.result_rune.rune, r.kind_rune.rune),
+        IRulexSR::KindComponents(_) => {}
+        IRulexSR::Equals(r) => this.mark_kind_equivalent(r.left.rune, r.right.rune),
+        IRulexSR::Call(_) => {}
+        IRulexSR::MaybeCoercingCall(_) => {}
+        IRulexSR::CallSiteCoordIsa(_) => {}
+        IRulexSR::DefinitionCoordIsa(_) => {}
+        IRulexSR::CoordSend(_) => {}
+        IRulexSR::Augment(r) => this.mark_kind_equivalent(r.result_rune.rune, r.inner_rune.rune),
+        IRulexSR::Literal(_) => {}
+        IRulexSR::MaybeCoercingLookup(_) => {}
+        IRulexSR::CoerceToCoord(r) => this.mark_kind_equivalent(r.coord_rune.rune, r.kind_rune.rune),
+        IRulexSR::OneOf(_) => {}
+        IRulexSR::CallSiteFunc(_) => {}
+        IRulexSR::DefinitionFunc(_) => {}
+        IRulexSR::Resolve(_) => {}
+        IRulexSR::Pack(_) => {}
+        IRulexSR::PrototypeComponents(_) => {}
+        IRulexSR::RefListCompoundMutability(_) => {}
+        _ => panic!("implement: Equivalencies::new unhandled rule"),
+      }
+    }
+    this
+  }
+}
+/*
   rules.foreach({
     case CoordComponentsSR(_, resultRune, _, kindRune) => markKindEquivalent(resultRune.rune, kindRune.rune)
     case KindComponentsSR(_, resultRune, _) =>
@@ -615,20 +710,23 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     case other => vimpl(other)
   })
 */
-fn mark_kind_equivalent<'s>(
-  _rules_s: &[IRulexSR<'s>],
-  _rune_a: IRuneS<'s>,
-  _rune_b: IRuneS<'s>,
-) {
-  panic!("Unimplemented mark_kind_equivalent");
-}
-fn find_transitively_equivalent_into<'s>(
-  _rules_s: &[IRulexSR<'s>],
-  _rune_to_kind_equivalent_runes: &HashMap<IRuneS<'s>, Vec<IRuneS<'s>>>,
-  _found_so_far: &mut HashSet<IRuneS<'s>>,
-  _rune: IRuneS<'s>,
-) {
-  panic!("Unimplemented find_transitively_equivalent_into");
+impl<'s> Equivalencies<'s> {
+  fn find_transitively_equivalent_into(
+    &self,
+    found_so_far: &mut HashSet<IRuneS<'s>>,
+    rune: IRuneS<'s>,
+  ) {
+    let equivalents: Vec<IRuneS<'s>> = self.rune_to_kind_equivalent_runes
+      .get(&rune)
+      .map(|s| s.iter().copied().collect())
+      .unwrap_or_default();
+    for r in equivalents {
+      if !found_so_far.contains(&r) {
+        found_so_far.insert(r);
+        self.find_transitively_equivalent_into(found_so_far, r);
+      }
+    }
+  }
 }
 /*
   private def findTransitivelyEquivalentInto(foundSoFar: mutable.HashSet[IRuneS], rune: IRuneS): Unit = {
@@ -640,11 +738,13 @@ fn find_transitively_equivalent_into<'s>(
     })
   }
 */
-fn get_kind_equivalent_runes<'s>(
-  _rules_s: &[IRulexSR<'s>],
-  _rune: IRuneS<'s>,
-) -> HashSet<IRuneS<'s>> {
-  panic!("Unimplemented get_kind_equivalent_runes");
+impl<'s> Equivalencies<'s> {
+  fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> HashSet<IRuneS<'s>> {
+    let mut set = HashSet::new();
+    set.insert(rune);
+    self.find_transitively_equivalent_into(&mut set, rune);
+    set
+  }
 }
 /*
   // MIGALLOW: getKindEquivalentRunes -> get_kind_equivalent_runes
@@ -655,14 +755,13 @@ fn get_kind_equivalent_runes<'s>(
     set.toSet
   }
 */
-fn get_kind_equivalent_runes_iter<'s, I>(
-  _rules_s: &[IRulexSR<'s>],
-  _runes: I,
-) -> HashSet<IRuneS<'s>>
-where
-  I: Iterator<Item = IRuneS<'s>>,
-{
-  panic!("Unimplemented get_kind_equivalent_runes_iter");
+impl<'s> Equivalencies<'s> {
+  fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> HashSet<IRuneS<'s>>
+  where
+    I: Iterator<Item = IRuneS<'s>>,
+  {
+    runes.flat_map(|r| self.get_kind_equivalent_runes(r)).collect()
+  }
 }
 /*
   // MIGALLOW: getKindEquivalentRunes -> get_kind_equivalent_runes_iter
@@ -675,3 +774,19 @@ where
 /*
 }
 */
+
+// Rust adaptation: callers in the typing pass have `&[IRulexSR<'s>]` but no
+// `Equivalencies` instance (Scala constructed one ad-hoc at each call site:
+// `new Equivalencies(rulesS).getKindEquivalentRunes(runes)`). This free fn
+// preserves the call-site shape; it constructs the Equivalencies internally
+// and delegates.
+pub fn get_kind_equivalent_runes_iter<'s, I>(
+  rules_s: &[IRulexSR<'s>],
+  runes: I,
+) -> HashSet<IRuneS<'s>>
+where
+  I: Iterator<Item = IRuneS<'s>>,
+{
+  Equivalencies::new(rules_s).get_kind_equivalent_runes_iter(runes)
+}
+/* */

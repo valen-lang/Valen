@@ -43,6 +43,8 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use indexmap::IndexSet;
+use crate::parsing::ast::BlockPE;
+use crate::postparsing::expressions::LocalS;
 /*
 package dev.vale.postparsing
 
@@ -204,7 +206,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       (_, Some(function_name)) => self.scout_arena.intern_name(INameValS::FunctionDeclaration(
         IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
           name: self.scout_arena.intern_str(function_name.str().as_str()),
-          code_location: Self::eval_pos(file_coordinate, function_name.range().begin()),
+          code_location: Self::eval_pos(file_coordinate, function.range.begin()),
         }),
       )),
       (IFunctionParent::ParentFunction { .. }, None) => self.scout_arena.intern_name(
@@ -1479,7 +1481,7 @@ fn create_magic_parameters(
   lidb: &mut LocationInDenizenBuilder,
   lambda_magic_param_names: Vec<IVarNameS<'s>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
-) -> Vec<crate::postparsing::ast::ParameterS<'s>> {
+) -> Vec<ParameterS<'s>> {
   lambda_magic_param_names
     .into_iter()
     .map(|magic_param_name| {
@@ -1487,7 +1489,7 @@ fn create_magic_parameters(
         IVarNameS::MagicParamName(c) => c.clone(),
         _ => panic!("POSTPARSER_CREATE_MAGIC_PARAMS_EXPECTED_MAGIC_PARAM_NAME"),
       };
-      let magic_param_range = crate::utils::range::RangeS::new(
+      let magic_param_range = RangeS::new(
         code_location.clone(),
         code_location.clone(),
       );
@@ -1570,11 +1572,11 @@ fn create_magic_parameters(
     parent_stack_frame: Option<StackFrame<'s>>,
     lidb: &mut LocationInDenizenBuilder,
     context_region: IRuneS<'s>,
-    body0: &crate::parsing::ast::BlockPE<'p>,
+    body0: &BlockPE<'p>,
     initial_declarations: VariableDeclarations<'s>,
   ) -> Result<
     (
-      &'s crate::postparsing::expressions::BodySE<'s>,
+      &'s BodySE<'s>,
       VariableUses<'s>,
       Vec<IVarNameS<'s>>,
     ),
@@ -1598,32 +1600,9 @@ fn create_magic_parameters(
             body0.inner,
             LoadAsP::Use,
           )?;
-        let expr_without_constructing_without_void: &'s IExpressionSE<'s> = match inner_expr {
-          IExpressionSE::Consecutor(consecutor) => {
-            let exprs: Vec<&'s IExpressionSE<'s>> = {
-              let mut v: Vec<_> = consecutor.exprs.iter().copied().collect();
-              while matches!(v.last(), Some(IExpressionSE::Void(_))) {
-                v.pop();
-              }
-              v
-            };
-            assert!(
-              !exprs.is_empty(),
-              "POSTPARSER_SCOUT_BODY_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
-            );
-            if exprs.len() == 1 {
-              exprs.into_iter().next().unwrap()
-            } else {
-              &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-                exprs: self.scout_arena.alloc_slice_from_vec(exprs),
-              }))
-            }
-          }
-          other => other,
-        };
         Ok((
           stack_frame2,
-          expr_without_constructing_without_void,
+          inner_expr,
           inner_self_uses,
           inner_child_uses,
         ))
@@ -1653,9 +1632,9 @@ fn create_magic_parameters(
         name: magic_param_name.clone(),
       })
       .collect();
-    let magic_param_locals: Vec<crate::postparsing::expressions::LocalS<'s>> = magic_param_vars
+    let magic_param_locals: Vec<LocalS<'s>> = magic_param_vars
       .iter()
-      .map(|declared| crate::postparsing::expressions::LocalS {
+      .map(|declared| LocalS {
         var_name: declared.name.clone(),
         self_borrowed: self_uses.is_borrowed(&declared.name),
         self_moved: self_uses.is_moved(&declared.name),
@@ -1797,7 +1776,7 @@ fn create_magic_parameters(
   pub(crate) fn scout_interface_member(
     &self,
     file_coordinate: &'s FileCoordinate<'s>,
-    function_p: &crate::parsing::ast::FunctionP<'p>,
+    function_p: &FunctionP<'p>,
     parent_interface_env: &IEnvironmentS<'s>,
     interface_generic_params: &'s [&'s GenericParameterS<'s>],
     interface_rules: &[IRulexSR<'s>],
@@ -1815,10 +1794,6 @@ fn create_magic_parameters(
     assert!(
       function_p.header.generic_parameters.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_MEMBER_GENERIC_PARAMETERS_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
-      function_p.header.template_rules.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
     );
     if let Some(params) = &function_p.header.params {
       if !params.params.iter().any(|param| param.virtuality.is_some()) {

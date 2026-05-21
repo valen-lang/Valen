@@ -1934,6 +1934,7 @@ fn load_templex<'p>(
       ),
       return_type: &*parse_arena.alloc(load_templex(parse_arena,get_object_field(jobj, "returnType"))),
     }),
+    "OwnershipT" => ITemplexPT::Ownership(load_ownership_pt(parse_arena, jobj)),
     other => panic!("Not implemented: load_templex {}", other),
   }
 }

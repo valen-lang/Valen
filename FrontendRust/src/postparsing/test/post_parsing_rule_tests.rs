@@ -11,6 +11,7 @@ use crate::postparsing::post_parser::PostParser;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::postparsing::post_parser::ICompileErrorS;
 /*
 package dev.vale.postparsing
 
@@ -78,7 +79,7 @@ fn compile_for_error<'s, 'ctx, 'p>(
   _keywords: &'ctx crate::Keywords<'s>,
   _parse_arena: &'ctx ParseArena<'p>,
   _code: &str,
-) -> crate::postparsing::post_parser::ICompileErrorS<'s>
+) -> ICompileErrorS<'s>
 where 'p: 's,
 {
   panic!("Unimplemented: compile_for_error");

@@ -17,6 +17,7 @@ pub mod pass_manager;
 pub mod postparsing;
 pub mod simplifying;
 pub mod typing;
+pub mod tests;
 pub mod utils;
 pub mod von;
 #[path = "solver/lib.rs"]

@@ -2,6 +2,21 @@
 use std::hash::{Hash, Hasher};
 
 /// Value-type (see @TFITCX)
+///
+/// PtrKey wraps a `&'t T` and hashes/compares by the *outer* pointer address —
+/// i.e. where in memory the wrapped `T` lives, not the content of `T`.
+///
+/// **Use only for `T` whose identity is by-address** per @IEOIBZ — that is,
+/// `/// Arena-allocated` types where two distinct allocations are distinct things
+/// (e.g. `IEnvironmentT`, `FunctionA`, `FunctionHeaderT`, expression nodes).
+///
+/// **Do not use for types with canonical content-based Hash/Eq.** `IdT`,
+/// `SignatureT`, `PrototypeT`, and other Interned/Value-types already implement
+/// content-canonical Hash/Eq via interner-deduplicated inner pointers — wrapping
+/// them in `PtrKey` is redundant for canonical-ref insertions and **incorrect**
+/// when constructed from a by-value Copy of the type held in a struct field
+/// (the outer address differs from the canonical interner ref). Use the bare
+/// type as the map key instead.
 pub struct PtrKey<'t, T: ?Sized>(pub &'t T);
 
 impl<'t, T: ?Sized> PartialEq for PtrKey<'t, T> {

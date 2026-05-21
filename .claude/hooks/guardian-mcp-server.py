@@ -22,7 +22,9 @@ TOOL_SCHEMA = {
     "description": (
         "Temporarily disable a Guardian shield check for a specific function. "
         "Use this after Guardian has denied your edit and you believe the denial "
-        "is a false positive. You MUST cite the .verdict.md file path from the denial message. "
+        "is a false positive. You MUST cite the .verdict.md file path from the denial message; "
+        "Guardian derives the definition name, shield code, and supporting artifact paths "
+        "from that verdict file. "
         "Guardian will verify the denial happened and insert a temp-disable comment "
         "into the function's post-comment block. The human will review and remove "
         "temp-disables during code review. Your reason should be 1-3 sentences on one line. "
@@ -37,14 +39,6 @@ TOOL_SCHEMA = {
                 "type": "string",
                 "description": "Absolute path to the source file containing the function"
             },
-            "definition_name": {
-                "type": "string",
-                "description": "Name of the function/struct/enum definition"
-            },
-            "shield_code": {
-                "type": "string",
-                "description": "The shield code from the denial (e.g. FFFLX, NECX)"
-            },
             "verdict_file": {
                 "type": "string",
                 "description": "Path to the .verdict.md file cited in the denial message"
@@ -56,17 +50,9 @@ TOOL_SCHEMA = {
             "shield_file": {
                 "type": "string",
                 "description": "Path to the shield .md file from the denial message (the Shield: path)"
-            },
-            "context_file": {
-                "type": "string",
-                "description": "Path to the contextified diff file from the denial message (the Context: path)"
-            },
-            "referenced_defs_file": {
-                "type": "string",
-                "description": "Path to the referenced_defs.txt file from the denial message (the ReferencedDefs: path)"
             }
         },
-        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file", "context_file", "referenced_defs_file"]
+        "required": ["file_path", "verdict_file", "reason", "shield_file"]
     }
 }
 
@@ -119,13 +105,9 @@ def handle_tools_call(msg):
     args = params.get("arguments", {})
     payload = json.dumps({
         "file_path": args.get("file_path", ""),
-        "definition_name": args.get("definition_name", ""),
-        "shield_code": args.get("shield_code", ""),
         "verdict_file": args.get("verdict_file", ""),
         "reason": args.get("reason", ""),
         "shield_file": args.get("shield_file", ""),
-        "context_file": args.get("context_file", ""),
-        "referenced_defs_file": args.get("referenced_defs_file", ""),
     }).encode("utf-8")
 
     try:
