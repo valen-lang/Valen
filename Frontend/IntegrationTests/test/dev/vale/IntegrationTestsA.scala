@@ -373,6 +373,30 @@ class IntegrationTestsA extends FunSuite with Matchers {
     }
   }
 
+  test("Extern method on generic extern struct returns expected value") {
+    // Validates the FunctionExternT genericParameterInheritance plumbing — the typing-pass
+    // chain through Compiler.scala → FunctionCompilerCore → CompilerOutputs → HinputsT, and
+    // Instantiator's linear-scan lookup of inheritance counts when collecting generic externs
+    // at callsites. Vivem matches on the humanized fullyQualifiedName (not the wire-format
+    // SimpleId), so the wire-format reshape is exercised separately in HammerTests; this
+    // test catches regressions in the call-path plumbing that downstream needs.
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm {
+        |  extern func with_capacity(c i64) Vec<T>;
+        |  extern func capacity(self Vec<T>) i64;
+        |}
+        |exported func main() i64 {
+        |  v = Vec<int>.with_capacity(42i64);
+        |  return v.capacity();
+        |}
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
+  }
+
   // Known failure 2020-08-20
   // The reason this isnt working:
   // The InterfaceCall2 instruction is only ever created as part of an abstract function's body.

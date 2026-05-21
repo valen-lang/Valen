@@ -184,7 +184,7 @@ class Instantiator(
       })
 
     val nonGenericFuncExternsC =
-      functionExternsT.flatMap({ case FunctionExternT(range, externPlaceholderedIdT, prototypeT, externedName) =>
+      functionExternsT.flatMap({ case FunctionExternT(range, externPlaceholderedIdT, prototypeT, externedName, maybeInheritance) =>
         val isGeneric = prototypeT.id.localName.templateArgs.nonEmpty
         if (isGeneric) {
           // We don't handle generic externs yet, that comes later when we see what instantiations are actually needed.
@@ -212,7 +212,7 @@ class Instantiator(
               perspectiveRegionT,
               prototypeT)
           Collector.all(prototypeC, { case PlaceholderTemplataT(_, _) => vwat() })
-          Some(FunctionExternI(prototypeC))
+          Some(FunctionExternI(prototypeC, maybeInheritance.map(_.numInheritedGenericParameters).getOrElse(0)))
         }
       })
 
@@ -2221,10 +2221,7 @@ class Instantiator(
             SoftLoadIE(innerCE, targetOwnership, RegionCollapserIndividual.collapseCoord(resultIT))
           (resultIT, resultCE)
         }
-        case ExternFunctionCallTE(prototype2, maybeInheritance, args) => {
-          // AFTERM: This is where we would use maybeInheritance to properly query the rustc tcx for the right function
-          // to call. For now, we do nothing...
-          // DO NOT SUBMIT mention arcana.
+        case ExternFunctionCallTE(prototype2, args) => {
           val (prototypeI, prototypeC) =
             translatePrototype(
               denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, prototype2)
@@ -2237,8 +2234,22 @@ class Instantiator(
           // Only generic externs need to be collected here. Non-generic externs are translated
           // up-front before the main instantiating loop.
           prototype2.id.localName match {
-            case dev.vale.typing.names.ExternFunctionNameT(_, templateArgs, _) if templateArgs.nonEmpty =>
-              monouts.functionExterns += FunctionExternI(prototypeC)
+            case dev.vale.typing.names.ExternFunctionNameT(humanName, templateArgs, _) if templateArgs.nonEmpty =>
+              // Linear-scan functionExternsT for the matching definition record to recover
+              // numInheritedGenericParameters. Key on (packageCoord, initSteps, humanName),
+              // which is stable across definition (placeholder templateArgs) and callsite
+              // (concrete templateArgs).
+              val numInherited =
+                hinputs.functionExterns.find(fe =>
+                  fe.prototype.id.packageCoord == prototype2.id.packageCoord &&
+                  fe.prototype.id.initSteps == prototype2.id.initSteps &&
+                  (fe.prototype.id.localName match {
+                    case dev.vale.typing.names.ExternFunctionNameT(hn, _, _) => hn == humanName
+                    case _ => false
+                  }))
+                  .flatMap(_.genericParameterInheritance.map(_.numInheritedGenericParameters))
+                  .getOrElse(0)
+              monouts.functionExterns += FunctionExternI(prototypeC, numInherited)
             case _ =>
           }
 

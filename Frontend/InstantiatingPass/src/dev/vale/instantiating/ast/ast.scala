@@ -49,7 +49,14 @@ override def hashCode(): Int = vcurious()
 //
 //}
 
-case class FunctionExternI(prototype: PrototypeI[cI]) {
+case class FunctionExternI(
+    prototype: PrototypeI[cI],
+    // How many of the function's trailing generic-arg slots were inherited from a parent
+    // citizen template, per @PRIIROZ (0 = no inheritance / top-level extern). Hammer uses
+    // this to reshape the wire-format SimpleId so container template args land on the
+    // citizen step (e.g. Vec<i32>::capacity rather than Vec::capacity<i32>), which is
+    // what the Backend's rustifySimpleId expects per @SMLRZ.
+    numInheritedGenericParameters: Int) {
   vpass()
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }

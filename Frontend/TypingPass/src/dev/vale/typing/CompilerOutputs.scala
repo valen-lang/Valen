@@ -452,8 +452,15 @@ case class CompilerOutputs() {
     kindExterns += KindExternT(kind, packageCoord, exportedName)
   }
 
-  def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
-    functionExterns += FunctionExternT(range, externPlaceholderedId, function, exportedName)
+  def addFunctionExtern(
+      range: RangeS,
+      externPlaceholderedId: IdT[ExternNameT],
+      function: PrototypeT[IFunctionNameT],
+      exportedName: StrI,
+      genericParameterInheritance: Option[GenericParametersInheritance]): Unit = {
+    functionExterns +=
+      FunctionExternT(
+        range, externPlaceholderedId, function, exportedName, genericParameterInheritance)
   }
 
   def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {

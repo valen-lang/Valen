@@ -1076,74 +1076,6 @@ class Compiler(
                   functionCompiler.evaluateGenericFunctionFromNonCall(
                       coutputs, List(), LocationInDenizen(Vector()), templata)
 
-                  functionA.attributes.collectFirst({ case e @ ExternS(_) => e }) match {
-                    case None =>
-                    case Some(ExternS(packageCoord)) => {
-                      val externName =
-                        functionA.name match {
-                          case FunctionNameS(name, range) => name
-                          case other => vwat(other)
-                        }
-
-                      val templateName = interner.intern(ExternTemplateNameT(functionA.range.begin))
-                      val templateId = IdT(packageId.packageCoord, Vector(), templateName)
-
-                      val regionPlaceholder = RegionT(DefaultRegionT)
-                      val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT(DefaultRegionT)))
-                      val placeholderedExternId = templateId.copy(localName = placeholderedExternName)
-                      val externPlaceholderedWrapperPrototype = header.toPrototype
-
-//                      val externPerspectivedParams =
-//                        header.params.map(_.tyype).map(typeT => {
-//                          TemplataCompiler.substituteTemplatasInCoord(
-//                            coutputs,
-//                            interner,
-//                            keywords,
-//                            TemplataCompiler.getTemplate(header.id),
-//                            Vector(regionPlaceholder),
-//                            InheritBoundsFromTypeItself,
-//                            typeT)
-//                        })
-//                      val externPerspectivedReturn =
-//                        TemplataCompiler.substituteTemplatasInCoord(
-//                          coutputs,
-//                          interner,
-//                          keywords,
-//                          TemplataCompiler.getTemplate(header.id),
-//                          Vector(regionPlaceholder),
-//                          InheritBoundsFromTypeItself,
-//                          header.returnType)
-//                      val externFunctionId =
-//                        IdT(
-//                          packageCoord,
-//                          Vector.empty,
-//                          interner.intern(ExternFunctionNameT(
-//                            externName, externPerspectivedParams)))
-//                      val externPrototype = PrototypeT(externFunctionId, externPerspectivedReturn)
-
-                      // We don't actually want to call the wrapper function, we want to call the extern.
-                      // The extern's prototype is always similar to the wrapper function, so we do
-                      // a straightforward replace of the names.
-                      // We don't have to worry about placeholders, they're already phrased in terms
-                      // of the calling FunctionExternT.
-                      val externPrototype =
-                        externPlaceholderedWrapperPrototype match {
-                          case PrototypeT(IdT(packageCoord, steps, FunctionNameT(FunctionTemplateNameT(humanName, codeLocation), templateArgs, params)), returnType) => {
-                            PrototypeT(
-                              IdT(
-                                packageCoord,
-                                steps,
-                                interner.intern(ExternFunctionNameT(humanName, templateArgs, params))),
-                              returnType)
-                          }
-                          case other => vwat(other)
-                        }
-
-                      coutputs.addFunctionExtern(
-                        functionA.range, placeholderedExternId, externPrototype, externName)
-                    }
-                  }
-
                   val maybeExport =
                     functionA.attributes.collectFirst { case e@ExportS(_) => e }
                   maybeExport match {
@@ -1516,11 +1448,19 @@ class Compiler(
       (Vector(functionExtern.prototype.returnType) ++ functionExtern.prototype.paramTypes)
         .foreach(paramType => {
           if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
-            val isExternKind = paramType.kind match {
-              case StructTT(id) => coutputs.lookupStruct(id).attributes.exists(_.isInstanceOf[ExternT])
-              case _ => false
-            }
-            if (!isExternKind) {
+            val kindIsFineInExternFunc =
+              paramType.kind match {
+                case StructTT(id) => coutputs.lookupStruct(id).attributes.exists(_.isInstanceOf[ExternT])
+                // Method-own and container-inherited template params surface here as
+                // placeholders at definition time (e.g. `extern func bar<C>(c C)` inside
+                // `extern struct Foo<A>` has C and A as KindPlaceholderTs in the wrapper
+                // prototype). Placeholders are substitution slots, not concrete types; the
+                // actual concrete kind for each monomorphization is what matters for ABI,
+                // and gets checked at instantiation.
+                case KindPlaceholderT(_) => true
+                case _ => false
+              }
+            if (!kindIsFineInExternFunc) {
               throw CompileErrorExceptionT(
                 ExternFunctionDependedOnNonExportedKind(
                   List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))

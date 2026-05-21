@@ -1048,27 +1048,20 @@ class CompilerTests extends FunSuite with Matchers {
     compile.expectCompilerOutputs()
   }
 
-  test("Top-level extern function has None genericParameterInheritance") {
+  test("Top-level extern function's FunctionExternT has None genericParameterInheritance") {
     val compile = CompilerTestCompilation.test(
       """
         |exported struct Firefly imm { }
         |extern func moo() &Firefly;
         |""".stripMargin)
+    val interner = compile.interner
     val coutputs = compile.expectCompilerOutputs()
-    val moo = coutputs.lookupFunction("moo")
-    moo.body match {
-      case ReturnTE(ExternFunctionCallTE(_, maybeInheritance, _)) => {
-        vassert(maybeInheritance.isEmpty)
-      }
-    }
+    val externs = coutputs.functionExterns
+    val moo = externs.find(_.externName == interner.intern(StrI("moo"))).get
+    vassert(moo.genericParameterInheritance.isEmpty)
   }
 
-  ignore("Extern func inside extern struct has Some genericParameterInheritance pointing to container") {
-    // Blocked on PR 3.6 (differentiate struct vs interface internal-method scouting).
-    // Today, struct internal methods route through FunctionScout.scoutInterfaceMember
-    // with ParentInterface, which throws InterfaceMethodNeedsSelf for any method
-    // without an AbstractP param. Once PR 3.6 lands, struct internals get their own
-    // scouting path and this test exercises the Some branch in makeExternFunction.
+  test("Extern func inside extern struct's FunctionExternT has Some genericParameterInheritance pointing to container") {
     val compile = CompilerTestCompilation.test(
       """
         |extern struct Vec<T> imm {
@@ -1077,14 +1070,23 @@ class CompilerTests extends FunSuite with Matchers {
         |""".stripMargin)
     val interner = compile.interner
     val coutputs = compile.expectCompilerOutputs()
-    val withCapacity = coutputs.lookupFunction("with_capacity")
-    withCapacity.body match {
-      case ReturnTE(ExternFunctionCallTE(_, Some(GenericParametersInheritance(citizenTemplate, num)), _)) => {
-        citizenTemplate match {
-          case StructTemplateNameT(StrI("Vec")) =>
-        }
-        vassert(num == 1)
-      }
+    val externs = coutputs.functionExterns
+    val withCapacity = externs.find(_.externName == interner.intern(StrI("with_capacity"))).get
+    withCapacity.genericParameterInheritance match {
+      case Some(GenericParametersInheritance(num)) => vassert(num == 1)
+    }
+  }
+
+  test("ExternFunctionCallTE no longer carries genericParameterInheritance") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |exported struct Firefly imm { }
+        |extern func moo() &Firefly;
+        |""".stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+    val moo = coutputs.lookupFunction("moo")
+    moo.body match {
+      case ReturnTE(ExternFunctionCallTE(_, _)) =>
     }
   }
 

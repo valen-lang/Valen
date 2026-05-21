@@ -617,12 +617,12 @@ override def hashCode(): Int = vcurious()
 //     }
 // This doesn't apply to top-level functions.
 case class GenericParametersInheritance(
-    // Name of the containing citizen.
-    inheritedFromCitizen: ICitizenTemplateNameT,
     // The above `with_capacity` actually lowers to a `fn with_capacity<T>`.
     // This int is how many generic parameters were inherited from the containing struct.
-    // Later passes do like to know whether a generic parameter was inherited, to enable Rust interop.
-    // DO NOT SUBMIT mention arcana here
+    // Later passes do like to know whether a generic parameter was inherited, to enable Rust
+    // interop. The container's template name isn't stored here; if a downstream consumer
+    // ever needs it, recompute via `prototype.id.initId(interner)` (the same pattern that
+    // populates this field at the definition site in FunctionCompilerCore.makeExternFunction).
     numInheritedGenericParameters: Int,
 )
 // DO NOT SUBMIT turn the below into an arcana.
@@ -636,10 +636,6 @@ case class GenericParametersInheritance(
 
 case class ExternFunctionCallTE(
   prototype2: PrototypeT[ExternFunctionNameT],
-  // None if this was a top-level function; not inside a struct.
-  // Some if this was a function declared inside a struct.
-  // DO NOT SUBMIT mention arcana here
-  genericParameterInheritance: Option[GenericParametersInheritance],
   args: Vector[ReferenceExpressionTE]
 ) extends ReferenceExpressionTE {
   override def equals(obj: Any): Boolean = vcurious();

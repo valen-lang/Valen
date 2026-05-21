@@ -282,10 +282,6 @@ class Hammer(interner: Interner, keywords: Keywords) {
 //      hamuts.addKindExtern(kindH, packageCoordinate, exportName)
 //    })
 
-    // Extern IDs are simplified to Rust paths via NameHammer.simplifyId. The extern function's
-    // leaf name (ExternFunctionNameI) carries its full templateArgs (own + inherited from
-    // any containing citizen) — matching the shape of normal function names. ValeRuster can
-    // recover the own/inherited split at callsites from ExternFunctionCallTE.genericParameterInheritance.
     kindExterns.foreach({ case (struct, KindExternI(_)) =>
       val exportName = mangleStruct(struct.id)
       val exportSimplifiedId = NameHammer.simplifyId(struct.id)
@@ -293,7 +289,7 @@ class Hammer(interner: Interner, keywords: Keywords) {
       hamuts.addKindExtern(opaqueH, exportSimplifiedId, exportName)
     })
 
-    functionExterns.foreach({ case FunctionExternI(prototype) =>
+    functionExterns.foreach({ case FunctionExternI(prototype, numInherited) =>
       // Non-rust externs (stdlib's fsqrt etc.) use humanName directly so the user-written
       // `#include "stdlib/fsqrt.h"` and the generated header path agree. Rust externs use
       // "" because ValeRuster reads exportSimplifiedId instead of exportName.
@@ -306,7 +302,26 @@ class Hammer(interner: Interner, keywords: Keywords) {
             case other => vwat(other)
           }
         }
-      val exportSimplifiedId = NameHammer.simplifyId(prototype.id)
+      val rawSimpleId = NameHammer.simplifyId(prototype.id)
+      val exportSimplifiedId =
+        if (numInherited == 0) {
+          rawSimpleId
+        } else {
+          // Per @PRIIROZ, inherited generic params come AFTER own ones in the leaf step's
+          // templateArgs (e.g. `zork<N, K, V>` where N is own and K, V are inherited).
+          // Move the trailing `numInherited` args off the leaf step onto the immediately
+          // preceding (parent citizen) step, producing e.g. `[..., Vec<i32>, capacity]`
+          // instead of `[..., Vec, capacity<i32>]`. This is the shape Backend's
+          // rustifySimpleId expects per @SMLRZ.
+          val steps = rawSimpleId.steps
+          val leaf = steps.last
+          val parentIdx = steps.length - 2
+          val parent = steps(parentIdx)
+          val (own, inherited) = leaf.templateArgs.splitAt(leaf.templateArgs.size - numInherited)
+          val newParent = SimpleIdStep(parent.name, parent.templateArgs ++ inherited)
+          val newLeaf = SimpleIdStep(leaf.name, own)
+          SimpleId(steps.updated(parentIdx, newParent).updated(steps.length - 1, newLeaf))
+        }
       val prototypeH = typeHammer.translatePrototype(hinputs, hamuts, prototype)
       hamuts.addFunctionExtern(prototypeH, exportSimplifiedId, exportName)
     })
