@@ -2,12 +2,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Read|Glob|Grep|WebFetch|WebSearch",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"decision\":\"allow\"}'",
-            "timeout": 5000
+            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh 7879 || exit 2"
           }
         ]
       },
@@ -16,8 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Sylvan/Luz/hooks/validate-readonly/target/release/validate-readonly",
-            "timeout": 5000
+            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh 7879 || exit 2"
           }
         ]
       }
