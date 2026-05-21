@@ -2275,38 +2275,32 @@ fn tests_upcasting_has_the_right_stuff() {
     );
 
     match upcast.inner_expr.result().coord.kind {
-        KindT::Struct(stt) => {
-            match stt.id.local_name {
-                INameT::Struct(sn) => {
-                    match sn.template {
-                        IStructTemplateNameT::StructTemplate(tmpl) => {
-                            assert_eq!(tmpl.human_name, "Toyota");
-                        }
-                        other => panic!("inner expr struct template: {:?}", other),
-                    }
-                }
-                other => panic!("inner expr local_name: {:?}", other),
-            }
-        }
+        KindT::Struct(StructTT {
+            id: IdT {
+                local_name: INameT::Struct(StructNameT {
+                    template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Toyota"), .. }),
+                    ..
+                }),
+                ..
+            },
+            ..
+        }) => {}
         other => panic!("inner expr kind: {:?}", other),
     }
-
     match upcast.result().coord.kind {
-        KindT::Interface(it) => {
-            match it.id.local_name {
-                INameT::Interface(
-                    InterfaceNameT {
-                        template: InterfaceTemplateNameT { human_namee, .. },
-                        ..
-                    }
-                ) => {
-                    assert_eq!(human_namee, "Car");
-                    assert!(it.id.init_steps.is_empty());
-                    assert!(it.id.package_coord.is_test());
-                }
-                other => panic!("upcast result local_name: {:?}", other),
-            }
-        }
+        KindT::Interface(InterfaceTT {
+            id: IdT {
+                package_coord: x,
+                init_steps: &[],
+                local_name: INameT::Interface(InterfaceNameT {
+                    template: InterfaceTemplateNameT { human_namee: StrI("Car"), .. },
+                    template_args: &[],
+                    ..
+                }),
+                ..
+            },
+            ..
+        }) => assert!(x.is_test()),
         other => panic!("upcast result kind: {:?}", other),
     }
 
@@ -5286,103 +5280,107 @@ fn downcast_function_rrbfs() {
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
-        assert_eq!(source_expr.result().coord.ownership, OwnershipT::Borrow);
-        match source_expr.result().coord.kind {
-            KindT::KindPlaceholder(kp) => {
-                assert_eq!(kp.id.init_steps.len(), 1);
-                match kp.id.init_steps[0] {
-                    INameT::FunctionTemplate(ftn) => assert_eq!(ftn.human_name.as_str(), "as"),
-                    ref other => panic!("source_expr init_steps[0]: {:?}", other),
-                }
-                match kp.id.local_name {
-                    INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 1),
-                    other => panic!("source_expr kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("source_expr kind: {:?}", other),
-        }
-
-        match target_subtype.kind {
-            KindT::KindPlaceholder(kp) => {
-                assert_eq!(kp.id.init_steps.len(), 1);
-                match kp.id.init_steps[0] {
-                    INameT::FunctionTemplate(ftn) => assert_eq!(ftn.human_name.as_str(), "as"),
-                    ref other => panic!("target_subtype init_steps[0]: {:?}", other),
-                }
-                match kp.id.local_name {
-                    INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                    other => panic!("target_subtype kind placeholder local_name: {:?}", other),
-                }
-            }
-            KindT::Struct(stt) => {
-                match stt.id.local_name {
-                    INameT::Struct(sn) => match sn.template {
-                        IStructTemplateNameT::StructTemplate(t) => assert_eq!(t.human_name.as_str(), "Raza"),
-                        other => panic!("target_subtype struct template: {:?}", other),
+        match source_expr.result().coord {
+            CoordT {
+                ownership: OwnershipT::Borrow,
+                kind: KindT::KindPlaceholder(KindPlaceholderT {
+                    id: IdT {
+                        init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                            template: KindPlaceholderTemplateNameT { index: 1, .. },
+                        }),
+                        ..
                     },
-                    other => panic!("target_subtype struct local_name: {:?}", other),
-                }
-            }
-            other => panic!("target_subtype kind: {:?}", other),
+                    ..
+                }),
+                ..
+            } => {}
+            //case CoordT(BorrowT, InterfaceTT(FullNameT(_, Vector(), InterfaceNameT(InterfaceTemplateNameT(StrI("IShip")), Vector())))) =>
+            other => panic!("sourceExpr.result.coord: {:?}", other),
         }
-
-        assert_eq!(result_opt_type.ownership, OwnershipT::Own);
-        match result_opt_type.kind {
-            KindT::Interface(it) => {
-                match it.id.local_name {
-                    INameT::Interface(in_) => {
-                        assert_eq!(in_.template.human_namee.as_str(), "Result");
-                        assert!(it.id.init_steps.is_empty());
-                        assert_eq!(in_.template_args.len(), 2);
-                        let first_generic_arg = in_.template_args[0];
-                        let second_generic_arg = in_.template_args[1];
-                        match first_generic_arg {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::KindPlaceholder(kp) => {
-                                        assert_eq!(kp.id.init_steps.len(), 1);
-                                        match kp.id.init_steps[0] {
-                                            INameT::FunctionTemplate(ftn) => assert_eq!(ftn.human_name.as_str(), "as"),
-                                            ref other => panic!("firstGenericArg init_steps[0]: {:?}", other),
-                                        }
-                                        match kp.id.local_name {
-                                            INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                                            other => panic!("result first generic arg kind local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result first generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result first generic arg: {:?}", other),
-                        }
-                        match second_generic_arg {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::KindPlaceholder(kp) => {
-                                        assert_eq!(kp.id.init_steps.len(), 1);
-                                        match kp.id.init_steps[0] {
-                                            INameT::FunctionTemplate(ftn) => assert_eq!(ftn.human_name.as_str(), "as"),
-                                            ref other => panic!("secondGenericArg init_steps[0]: {:?}", other),
-                                        }
-                                        match kp.id.local_name {
-                                            INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 1),
-                                            other => panic!("result second generic arg kind local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result second generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result second generic arg: {:?}", other),
-                        }
-                    }
-                    other => panic!("result_opt_type kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("result_opt_type kind: {:?}", other),
+        match target_subtype.kind {
+            KindT::KindPlaceholder(KindPlaceholderT {
+                id: IdT {
+                    init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                        template: KindPlaceholderTemplateNameT { index: 0, .. },
+                    }),
+                    ..
+                },
+                ..
+            }) => {}
+            KindT::Struct(StructTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                        template_args: &[],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }) => {}
+            other => panic!("targetSubtype.kind: {:?}", other),
         }
-
+        let (first_generic_arg, second_generic_arg) = match result_opt_type {
+            CoordT {
+                ownership: OwnershipT::Own,
+                kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                            template_args: [first, second],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            } => (first, second),
+            other => panic!("resultOptType: {:?}", other),
+        };
+        // They should both be pointers, since we dont really do borrows in structs yet
+        match first_generic_arg {
+            ITemplataT::Coord(CoordTemplataT {
+                coord: CoordT {
+                    ownership: OwnershipT::Borrow,
+                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+                        id: IdT {
+                            init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                template: KindPlaceholderTemplateNameT { index: 0, .. },
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                }
+            }) => {}
+            other => panic!("firstGenericArg: {:?}", other),
+        }
+        match second_generic_arg {
+            ITemplataT::Coord(CoordTemplataT {
+                coord: CoordT {
+                    ownership: OwnershipT::Borrow,
+                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+                        id: IdT {
+                            init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                template: KindPlaceholderTemplateNameT { index: 1, .. },
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                }
+            }) => {}
+            other => panic!("secondGenericArg: {:?}", other),
+        }
         assert_eq!(ok_constructor.id.local_name.parameters()[0], target_subtype);
         assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result().coord);
     }
@@ -5529,110 +5527,132 @@ fn downcast_with_as() {
                 other => panic!("expected Function name: {:?}", other),
             };
 
-        assert_eq!(as_prototype_template_args.len(), 2);
-        match as_prototype_template_args[0] {
-            ITemplataT::Coord(c) => {
-                assert_eq!(c.coord.ownership, OwnershipT::Own);
-                match c.coord.kind {
-                    KindT::Struct(stt) => {
-                        match stt.id.local_name {
-                            INameT::Struct(sn) => match sn.template {
-                                IStructTemplateNameT::StructTemplate(t) => assert_eq!(t.human_name.as_str(), "Raza"),
-                                other => panic!("template arg 0 struct template: {:?}", other),
-                            },
-                            other => panic!("template arg 0 kind local_name: {:?}", other),
-                        }
-                    }
-                    other => panic!("template arg 0 kind: {:?}", other),
-                }
-            }
-            other => panic!("template arg 0: {:?}", other),
+        match as_prototype_template_args {
+            [
+                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                    ownership: OwnershipT::Own,
+                    kind: KindT::Struct(StructTT {
+                        id: IdT {
+                            init_steps: &[],
+                            local_name: INameT::Struct(StructNameT {
+                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                                template_args: &[],
+                                ..
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                }}),
+                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                    ownership: OwnershipT::Own,
+                    kind: KindT::Interface(InterfaceTT {
+                        id: IdT {
+                            init_steps: &[],
+                            local_name: INameT::Interface(InterfaceNameT {
+                                template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                                template_args: &[],
+                                ..
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                }}),
+            ] => {}
+            other => panic!("asPrototypeTemplateArgs: {:?}", other),
         }
-        match as_prototype_template_args[1] {
-            ITemplataT::Coord(c) => {
-                assert_eq!(c.coord.ownership, OwnershipT::Own);
-                match c.coord.kind {
-                    KindT::Interface(it) => {
-                        match it.id.local_name {
-                            INameT::Interface(in_) => assert_eq!(in_.template.human_namee.as_str(), "IShip"),
-                            other => panic!("template arg 1 kind local_name: {:?}", other),
-                        }
-                    }
-                    other => panic!("template arg 1 kind: {:?}", other),
-                }
-            }
-            other => panic!("template arg 1: {:?}", other),
+        match as_prototype_params {
+            [CoordT {
+                ownership: OwnershipT::Borrow,
+                kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                            template_args: &[],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            }] => {}
+            other => panic!("asPrototypeParams: {:?}", other),
         }
-
-        assert_eq!(as_prototype_params.len(), 1);
-        assert_eq!(as_prototype_params[0].ownership, OwnershipT::Borrow);
-        match as_prototype_params[0].kind {
-            KindT::Interface(it) => {
-                match it.id.local_name {
-                    INameT::Interface(in_) => assert_eq!(in_.template.human_namee.as_str(), "IShip"),
-                    other => panic!("param 0 kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("param 0 kind: {:?}", other),
+        match as_prototype_return {
+            CoordT {
+                ownership: OwnershipT::Own,
+                kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                            template_args: [
+                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                    ownership: OwnershipT::Borrow,
+                                    kind: KindT::Struct(StructTT {
+                                        id: IdT {
+                                            init_steps: &[],
+                                            local_name: INameT::Struct(StructNameT {
+                                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                                                template_args: &[],
+                                                ..
+                                            }),
+                                            ..
+                                        },
+                                        ..
+                                    }),
+                                    ..
+                                }}),
+                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                    ownership: OwnershipT::Borrow,
+                                    kind: KindT::Interface(InterfaceTT {
+                                        id: IdT {
+                                            init_steps: &[],
+                                            local_name: INameT::Interface(InterfaceNameT {
+                                                template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                                                template_args: &[],
+                                                ..
+                                            }),
+                                            ..
+                                        },
+                                        ..
+                                    }),
+                                    ..
+                                }}),
+                            ],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            } => {}
+            other => panic!("asPrototypeReturn: {:?}", other),
         }
-
-        assert_eq!(as_prototype_return.ownership, OwnershipT::Own);
-        match as_prototype_return.kind {
-            KindT::Interface(it) => {
-                match it.id.local_name {
-                    INameT::Interface(in_) => {
-                        assert_eq!(in_.template.human_namee.as_str(), "Result");
-                        assert!(it.id.init_steps.is_empty());
-                        assert_eq!(in_.template_args.len(), 2);
-                        match in_.template_args[0] {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::Struct(stt) => {
-                                        match stt.id.local_name {
-                                            INameT::Struct(sn) => match sn.template {
-                                                IStructTemplateNameT::StructTemplate(t) => assert_eq!(t.human_name.as_str(), "Raza"),
-                                                other => panic!("result first generic arg struct template: {:?}", other),
-                                            },
-                                            other => panic!("result first generic arg struct local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result first generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result first generic arg: {:?}", other),
-                        }
-                        match in_.template_args[1] {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::Interface(it2) => {
-                                        match it2.id.local_name {
-                                            INameT::Interface(in2) => assert_eq!(in2.template.human_namee.as_str(), "IShip"),
-                                            other => panic!("result second generic arg interface local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result second generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result second generic arg: {:?}", other),
-                        }
-                    }
-                    other => panic!("return kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("return kind: {:?}", other),
-        }
-
-        assert_eq!(as_arg.result().coord.ownership, OwnershipT::Borrow);
-        match as_arg.result().coord.kind {
-            KindT::Interface(it) => {
-                match it.id.local_name {
-                    INameT::Interface(in_) => assert_eq!(in_.template.human_namee.as_str(), "IShip"),
-                    other => panic!("as_arg kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("as_arg kind: {:?}", other),
+        match as_arg.result().coord {
+            CoordT {
+                ownership: OwnershipT::Borrow,
+                kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("IShip"), .. },
+                            template_args: &[],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            } => {}
+            other => panic!("asArg.result.coord: {:?}", other),
         }
     }
 
@@ -5656,89 +5676,95 @@ fn downcast_with_as() {
         let ok_constructor = as_.ok_constructor;
         let err_constructor = as_.err_constructor;
 
-        assert_eq!(source_expr.result().coord.ownership, OwnershipT::Borrow);
-        match source_expr.result().coord.kind {
-            KindT::KindPlaceholder(kp) => {
-                match kp.id.init_steps {
-                    [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })] => {}
-                    other => panic!("source_expr kp init_steps: {:?}", other),
-                }
-                match kp.id.local_name {
-                    INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 1),
-                    other => panic!("source_expr kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("source_expr kind: {:?}", other),
-        }
-
-        match target_subtype.kind {
-            KindT::KindPlaceholder(kp) => {
-                match kp.id.init_steps {
-                    [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })] => {}
-                    other => panic!("target_subtype kp init_steps: {:?}", other),
-                }
-                match kp.id.local_name {
-                    INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                    other => panic!("target_subtype kind placeholder local_name: {:?}", other),
-                }
-            }
-            KindT::Struct(stt) => {
-                match stt.id.local_name {
-                    INameT::Struct(sn) => match sn.template {
-                        IStructTemplateNameT::StructTemplate(t) => assert_eq!(t.human_name.as_str(), "Raza"),
-                        other => panic!("target_subtype struct template: {:?}", other),
+        match source_expr.result().coord {
+            CoordT {
+                ownership: OwnershipT::Borrow,
+                kind: KindT::KindPlaceholder(KindPlaceholderT {
+                    id: IdT {
+                        init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                        local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                            template: KindPlaceholderTemplateNameT { index: 1, .. },
+                        }),
+                        ..
                     },
-                    other => panic!("target_subtype struct local_name: {:?}", other),
-                }
-            }
-            other => panic!("target_subtype kind: {:?}", other),
+                    ..
+                }),
+                ..
+            } => {}
+            //case CoordT(BorrowT, InterfaceTT(FullNameT(_, Vector(), InterfaceNameT(InterfaceTemplateNameT(StrI("IShip")), Vector())))) =>
+            other => panic!("sourceExpr.result.coord: {:?}", other),
         }
-
-        assert_eq!(result_opt_type.ownership, OwnershipT::Own);
-        match result_opt_type.kind {
-            KindT::Interface(it) => {
-                match it.id.local_name {
-                    INameT::Interface(in_) => {
-                        assert_eq!(in_.template.human_namee.as_str(), "Result");
-                        assert!(it.id.init_steps.is_empty());
-                        assert_eq!(in_.template_args.len(), 2);
-                        match in_.template_args[0] {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::KindPlaceholder(kp) => {
-                                        match kp.id.local_name {
-                                            INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 0),
-                                            other => panic!("result first generic arg kind local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result first generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result first generic arg: {:?}", other),
-                        }
-                        match in_.template_args[1] {
-                            ITemplataT::Coord(c) => {
-                                assert_eq!(c.coord.ownership, OwnershipT::Borrow);
-                                match c.coord.kind {
-                                    KindT::KindPlaceholder(kp) => {
-                                        match kp.id.local_name {
-                                            INameT::KindPlaceholder(kpn) => assert_eq!(kpn.template.index, 1),
-                                            other => panic!("result second generic arg kind local_name: {:?}", other),
-                                        }
-                                    }
-                                    other => panic!("result second generic arg kind: {:?}", other),
-                                }
-                            }
-                            other => panic!("result second generic arg: {:?}", other),
-                        }
-                    }
-                    other => panic!("result_opt_type kind local_name: {:?}", other),
-                }
-            }
-            other => panic!("result_opt_type kind: {:?}", other),
+        match target_subtype.kind {
+            KindT::KindPlaceholder(KindPlaceholderT {
+                id: IdT {
+                    init_steps: [INameT::FunctionTemplate(FunctionTemplateNameT { human_name: StrI("as"), .. })],
+                    local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                        template: KindPlaceholderTemplateNameT { index: 0, .. },
+                    }),
+                    ..
+                },
+                ..
+            }) => {}
+            KindT::Struct(StructTT {
+                id: IdT {
+                    init_steps: &[],
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }),
+                        template_args: &[],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }) => {}
+            other => panic!("targetSubtype.kind: {:?}", other),
         }
-
+        match result_opt_type {
+            CoordT {
+                ownership: OwnershipT::Own,
+                kind: KindT::Interface(InterfaceTT {
+                    id: IdT {
+                        init_steps: &[],
+                        local_name: INameT::Interface(InterfaceNameT {
+                            template: InterfaceTemplateNameT { human_namee: StrI("Result"), .. },
+                            template_args: [
+                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                    ownership: OwnershipT::Borrow,
+                                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+                                        id: IdT {
+                                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                                template: KindPlaceholderTemplateNameT { index: 0, .. },
+                                            }),
+                                            ..
+                                        },
+                                        ..
+                                    }),
+                                    ..
+                                }}),
+                                ITemplataT::Coord(CoordTemplataT { coord: CoordT {
+                                    ownership: OwnershipT::Borrow,
+                                    kind: KindT::KindPlaceholder(KindPlaceholderT {
+                                        id: IdT {
+                                            local_name: INameT::KindPlaceholder(KindPlaceholderNameT {
+                                                template: KindPlaceholderTemplateNameT { index: 1, .. },
+                                            }),
+                                            ..
+                                        },
+                                        ..
+                                    }),
+                                    ..
+                                }}),
+                            ],
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            } => {}
+            other => panic!("resultOptType: {:?}", other),
+        }
         assert_eq!(ok_constructor.id.local_name.parameters()[0], target_subtype);
         assert_eq!(err_constructor.id.local_name.parameters()[0], source_expr.result().coord);
     }
