@@ -14,6 +14,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::parse_arena::ParseArena;
 
 /*
 package dev.vale.simplifying
@@ -80,7 +81,7 @@ where
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: FullCompilationOptions,

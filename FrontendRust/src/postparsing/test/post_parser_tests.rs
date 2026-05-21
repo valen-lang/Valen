@@ -20,6 +20,15 @@ use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLooku
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
+use crate::postparsing::ast::IBodyS;
+use crate::parsing::ast::MutabilityP;
+use crate::postparsing::ast::IGenericParameterTypeS;
+use crate::postparsing::expressions::ConstantBoolSE;
+use crate::postparsing::ast::ParameterS;
+use crate::postparsing::rules::RuneUsage;
+use crate::postparsing::expressions::ConsecutorSE;
+use crate::postparsing::post_parser::VariableNameAlreadyExists;
+use crate::postparsing::post_parser::RuneExplicitTypeConflictS;
 
 /*
 package dev.vale.postparsing
@@ -181,7 +190,7 @@ fn lookup_plus() {
     "exported func main() int { return +(3, 4); }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
@@ -227,7 +236,7 @@ fn test_struct() {
         literal: ILiteralSL::MutabilityLiteral(mutability_literal),
         ..
       }
-    ) if mutability_literal.mutability == crate::parsing::ast::MutabilityP::Mutable
+    ) if mutability_literal.mutability == MutabilityP::Mutable
       && literal_rule.rune == imoo.mutability_rune => Some(())
   );
   
@@ -303,7 +312,7 @@ fn lambda() {
     "exported func main() int { return {_ + _}(4, 6); }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   let lambda = match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
@@ -316,11 +325,11 @@ fn lambda() {
             }),
           arg_exprs:
             [
-              IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE {
+              IExpressionSE::ConstantInt(ConstantIntSE {
                 value: 4,
                 ..
               }),
-              IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE {
+              IExpressionSE::ConstantInt(ConstantIntSE {
                 value: 6,
                 ..
               }),
@@ -334,14 +343,14 @@ fn lambda() {
 
   let (first_generic_param, second_generic_param) = expect_2(lambda.generic_params);
   match &first_generic_param.tyype {
-    crate::postparsing::ast::IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
+    IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
       assert_eq!(coord_type.coord_region, None);
       assert!(!coord_type.region_mutable);
     }
     _ => panic!("expected first lambda generic param to be a CoordGenericParameterType"),
   }
   match &second_generic_param.tyype {
-    crate::postparsing::ast::IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
+    IGenericParameterTypeS::CoordGenericParameterType(coord_type) => {
       assert_eq!(coord_type.coord_region, None);
       assert!(!coord_type.region_mutable);
     }
@@ -512,7 +521,7 @@ fn method_call() {
     "exported func main() int { return true.shout(); }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   crate::collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
@@ -520,13 +529,13 @@ fn method_call() {
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
             IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-                name: crate::interner::StrI("shout"),
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("shout"),
               }),
               ..
             }),
           arg_exprs:
-            [IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE {
+            [IExpressionSE::ConstantBool(ConstantBoolSE {
               value: true,
               ..
             })],
@@ -561,7 +570,7 @@ fn moving_method_call() {
     "exported func main() int { x = 4; return (x).shout(); }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   crate::collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
@@ -569,14 +578,14 @@ fn moving_method_call() {
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
             IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-                name: crate::interner::StrI("shout"),
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("shout"),
               }),
               ..
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
-              name: IVarNameS::CodeVarName(crate::interner::StrI("x")),
+              name: IVarNameS::CodeVarName(StrI("x")),
               target_ownership: LoadAsP::Use,
               ..
             })],
@@ -644,7 +653,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
   );
   let main = program.lookup_function("main");
 
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   let block = &code_body.body.block;
   let things = cast!(&block.expr, IExpressionSE::Consecutor).exprs;
   let thing_nodes = things
@@ -659,17 +668,17 @@ fn function_with_magic_lambda_and_regular_lambda() {
 
   let (_, first_lambda_second_param) = expect_2(first_lambda.function.params);
   match first_lambda_second_param {
-    crate::postparsing::ast::ParameterS {
+    ParameterS {
       pre_checked: false,
       pattern:
-        crate::postparsing::patterns::AtomSP {
+        AtomSP {
           name:
-            Some(crate::postparsing::patterns::CaptureS {
+            Some(CaptureS {
               name: IVarNameS::MagicParamName(_),
               mutate: false,
             }),
           coord_rune:
-            Some(crate::postparsing::rules::RuneUsage {
+            Some(RuneUsage {
               rune: IRuneS::MagicParamRune(_),
               ..
             }),
@@ -683,17 +692,17 @@ fn function_with_magic_lambda_and_regular_lambda() {
 
   let (_, second_lambda_second_param) = expect_2(second_lambda.function.params);
   match second_lambda_second_param {
-    crate::postparsing::ast::ParameterS {
+    ParameterS {
       pre_checked: false,
       pattern:
-        crate::postparsing::patterns::AtomSP {
+        AtomSP {
           name:
-            Some(crate::postparsing::patterns::CaptureS {
-              name: IVarNameS::CodeVarName(crate::interner::StrI("a")),
+            Some(CaptureS {
+              name: IVarNameS::CodeVarName(StrI("a")),
               mutate: false,
             }),
           coord_rune:
-            Some(crate::postparsing::rules::RuneUsage {
+            Some(RuneUsage {
               rune: IRuneS::ImplicitRune(_),
               ..
             }),
@@ -746,13 +755,13 @@ fn constructing_members() {
     }",
   );
   let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&mystruct.body, IBodyS::CodeBody);
   let block = &code_body.body.block;
 
   match &block.locals[..] {
     [
-      crate::postparsing::expressions::LocalS {
-        var_name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+      LocalS {
+        var_name: IVarNameS::ConstructingMemberName(StrI("x")),
         self_borrowed: IVariableUseCertainty::NotUsed,
         self_moved: IVariableUseCertainty::Used,
         self_mutated: IVariableUseCertainty::NotUsed,
@@ -760,8 +769,8 @@ fn constructing_members() {
         child_moved: IVariableUseCertainty::NotUsed,
         child_mutated: IVariableUseCertainty::NotUsed,
       },
-      crate::postparsing::expressions::LocalS {
-        var_name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+      LocalS {
+        var_name: IVarNameS::ConstructingMemberName(StrI("y")),
         self_borrowed: IVariableUseCertainty::NotUsed,
         self_moved: IVariableUseCertainty::Used,
         self_mutated: IVariableUseCertainty::NotUsed,
@@ -774,7 +783,7 @@ fn constructing_members() {
   }
 
   let exprs = match block.expr {
-    IExpressionSE::Consecutor(crate::postparsing::expressions::ConsecutorSE { exprs }) => exprs,
+    IExpressionSE::Consecutor(ConsecutorSE { exprs }) => exprs,
     _ => panic!("expected consecutor in constructing_members"),
   };
   let expr_nodes = exprs
@@ -785,18 +794,18 @@ fn constructing_members() {
   let _ = crate::collect_only_snodes!(
     &expr_nodes,
     NodeRefS::Expression(
-      IExpressionSE::Let(crate::postparsing::expressions::LetSE {
+      IExpressionSE::Let(LetSE {
         pattern:
-          crate::postparsing::patterns::AtomSP {
+          AtomSP {
             name:
-              Some(crate::postparsing::patterns::CaptureS {
-                name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+              Some(CaptureS {
+                name: IVarNameS::ConstructingMemberName(StrI("x")),
                 mutate: false,
               }),
             destructure: None,
             ..
           },
-        expr: IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 4, .. }),
+        expr: IExpressionSE::ConstantInt(ConstantIntSE { value: 4, .. }),
         ..
       })
     ) => Some(())
@@ -805,18 +814,18 @@ fn constructing_members() {
   let _ = crate::collect_only_snodes!(
     &expr_nodes,
     NodeRefS::Expression(
-      IExpressionSE::Let(crate::postparsing::expressions::LetSE {
+      IExpressionSE::Let(LetSE {
         pattern:
-          crate::postparsing::patterns::AtomSP {
+          AtomSP {
             name:
-              Some(crate::postparsing::patterns::CaptureS {
-                name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+              Some(CaptureS {
+                name: IVarNameS::ConstructingMemberName(StrI("y")),
                 mutate: false,
               }),
             destructure: None,
             ..
           },
-        expr: IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE { value: true, .. }),
+        expr: IExpressionSE::ConstantBool(ConstantBoolSE { value: true, .. }),
         ..
       })
     ) => Some(())
@@ -828,19 +837,19 @@ fn constructing_members() {
       IExpressionSE::FunctionCall(FunctionCallSE {
         callable_expr:
           IExpressionSE::OutsideLoad(OutsideLoadSE {
-            name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-              name: crate::interner::StrI("MyStruct"),
+            name: IImpreciseNameS::CodeName(CodeNameS {
+              name: StrI("MyStruct"),
             }),
             ..
           }),
         arg_exprs: [
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+            name: IVarNameS::ConstructingMemberName(StrI("x")),
             target_ownership: LoadAsP::Use,
             ..
           }),
           IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+            name: IVarNameS::ConstructingMemberName(StrI("y")),
             target_ownership: LoadAsP::Use,
             ..
           }),
@@ -1036,7 +1045,7 @@ fn test_loading_from_member() {
     }",
   );
   let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&mystruct.body, IBodyS::CodeBody);
   match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
@@ -1091,7 +1100,7 @@ fn test_loading_from_member_2() {
     }",
   );
   let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&mystruct.body, IBodyS::CodeBody);
   match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
@@ -1152,7 +1161,7 @@ fn constructing_members_borrowing_another_member() {
     }",
   );
   let main = program.lookup_function("MyStruct");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   let block = &code_body.body.block;
 
   match &*block.locals {
@@ -1287,12 +1296,12 @@ fn foreach() {
     }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   let root_expr = code_body.body.block.expr;
 
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Local(crate::postparsing::expressions::LocalS {
+    NodeRefS::Local(LocalS {
       var_name: IVarNameS::IterableName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
@@ -1304,7 +1313,7 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Local(crate::postparsing::expressions::LocalS {
+    NodeRefS::Local(LocalS {
       var_name: IVarNameS::IteratorName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::NotUsed,
@@ -1316,7 +1325,7 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Local(crate::postparsing::expressions::LocalS {
+    NodeRefS::Local(LocalS {
       var_name: IVarNameS::IterationOptionName(_),
       self_borrowed: IVariableUseCertainty::Used,
       self_moved: IVariableUseCertainty::Used,
@@ -1328,8 +1337,8 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Local(crate::postparsing::expressions::LocalS {
-      var_name: IVarNameS::CodeVarName(crate::interner::StrI("i")),
+    NodeRefS::Local(LocalS {
+      var_name: IVarNameS::CodeVarName(StrI("i")),
       self_borrowed: IVariableUseCertainty::NotUsed,
       self_moved: IVariableUseCertainty::NotUsed,
       self_mutated: IVariableUseCertainty::NotUsed,
@@ -1341,10 +1350,10 @@ fn foreach() {
 
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Expression(IExpressionSE::Let(crate::postparsing::expressions::LetSE {
-      pattern: crate::postparsing::patterns::AtomSP {
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
         name:
-          Some(crate::postparsing::patterns::CaptureS {
+          Some(CaptureS {
             name: IVarNameS::IterableName(_),
             mutate: false,
           }),
@@ -1354,8 +1363,8 @@ fn foreach() {
       },
       expr:
         IExpressionSE::OutsideLoad(OutsideLoadSE {
-          name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-            name: crate::interner::StrI("myList"),
+          name: IImpreciseNameS::CodeName(CodeNameS {
+            name: StrI("myList"),
           }),
           maybe_template_args: None,
           target_ownership: LoadAsP::Use,
@@ -1366,10 +1375,10 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Expression(IExpressionSE::Let(crate::postparsing::expressions::LetSE {
-      pattern: crate::postparsing::patterns::AtomSP {
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
         name:
-          Some(crate::postparsing::patterns::CaptureS {
+          Some(CaptureS {
             name: IVarNameS::IteratorName(_),
             mutate: false,
           }),
@@ -1381,8 +1390,8 @@ fn foreach() {
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
             IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-                name: crate::interner::StrI("begin"),
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("begin"),
               }),
               maybe_template_args: None,
               target_ownership: LoadAsP::LoadAsBorrow,
@@ -1405,10 +1414,10 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Expression(IExpressionSE::Let(crate::postparsing::expressions::LetSE {
-      pattern: crate::postparsing::patterns::AtomSP {
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
         name:
-          Some(crate::postparsing::patterns::CaptureS {
+          Some(CaptureS {
             name: IVarNameS::IterationOptionName(_),
             mutate: false,
           }),
@@ -1420,8 +1429,8 @@ fn foreach() {
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
             IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-                name: crate::interner::StrI("next"),
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("next"),
               }),
               maybe_template_args: None,
               target_ownership: LoadAsP::LoadAsBorrow,
@@ -1443,8 +1452,8 @@ fn foreach() {
     NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
       callable_expr:
         IExpressionSE::OutsideLoad(OutsideLoadSE {
-          name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-            name: crate::interner::StrI("isEmpty"),
+          name: IImpreciseNameS::CodeName(CodeNameS {
+            name: StrI("isEmpty"),
           }),
           ..
         }),
@@ -1463,11 +1472,11 @@ fn foreach() {
   );
   crate::collect_only_snode!(
     NodeRefS::Expression(root_expr),
-    NodeRefS::Expression(IExpressionSE::Let(crate::postparsing::expressions::LetSE {
-      pattern: crate::postparsing::patterns::AtomSP {
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
         name:
-          Some(crate::postparsing::patterns::CaptureS {
-            name: IVarNameS::CodeVarName(crate::interner::StrI("i")),
+          Some(CaptureS {
+            name: IVarNameS::CodeVarName(StrI("i")),
             mutate: false,
           }),
         coord_rune: None,
@@ -1478,8 +1487,8 @@ fn foreach() {
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
             IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
-                name: crate::interner::StrI("get"),
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("get"),
               }),
               maybe_template_args: None,
               target_ownership: LoadAsP::LoadAsBorrow,
@@ -1588,7 +1597,7 @@ fn this_isnt_special_if_was_explicit_param() {
     }",
   );
   let moo = program.lookup_function("moo");
-  let code_body = cast!(&moo.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&moo.body, IBodyS::CodeBody);
   let function_call = crate::collect_only_snode!(
     NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
@@ -1704,8 +1713,8 @@ fn reports_when_we_forget_set() {
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(
-      crate::postparsing::post_parser::VariableNameAlreadyExists {
-        name: IVarNameS::CodeVarName(crate::interner::StrI("x")),
+      VariableNameAlreadyExists {
+        name: IVarNameS::CodeVarName(StrI("x")),
         ..
       },
     ) => {}
@@ -1800,9 +1809,9 @@ fn report_type_mismatch() {
   );
   match &err {
     ICompileErrorS::RuneExplicitTypeConflictS(
-      crate::postparsing::post_parser::RuneExplicitTypeConflictS {
-        rune: IRuneS::CodeRune(crate::postparsing::names::CodeRuneS {
-          name: crate::interner::StrI("N"),
+      RuneExplicitTypeConflictS {
+        rune: IRuneS::CodeRune(CodeRuneS {
+          name: StrI("N"),
         }),
         ..
       },
@@ -1841,7 +1850,7 @@ fn foreach_expr() {
     }",
   );
   let main = program.lookup_function("main");
-  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
   let root_expr = code_body.body.block.expr;
 
   let map_exprs = crate::collect_where_snode!(
@@ -1880,7 +1889,7 @@ fn destruct_expression() {
     "struct MyStruct { a int; }\nexported func main() { m = MyStruct(7); destruct m; }",
   );
   let main = program.lookup_function("main");
-  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let _code_body = cast!(&main.body, IBodyS::CodeBody);
   // Just ensure scout completed without panicking.
 }
 
@@ -1902,7 +1911,7 @@ fn and_or_expression() {
     "exported func main() bool { return true and false or true; }",
   );
   let main = program.lookup_function("main");
-  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let _code_body = cast!(&main.body, IBodyS::CodeBody);
 }
 
 // NOVEL CODE — TDD reproducer for the TuplePE expression scout panic
@@ -1922,7 +1931,7 @@ fn tuple_expression() {
     "exported func main() { x = (3, 4); }",
   );
   let main = program.lookup_function("main");
-  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let _code_body = cast!(&main.body, IBodyS::CodeBody);
 }
 
 // NOVEL CODE — TDD reproducer for the StrInterpolatePE expression scout
@@ -1942,6 +1951,6 @@ fn str_interpolate_expression() {
     "exported func main() str { return \"\"; }",
   );
   let main = program.lookup_function("main");
-  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let _code_body = cast!(&main.body, IBodyS::CodeBody);
   // Just ensure scout completed without panicking.
 }

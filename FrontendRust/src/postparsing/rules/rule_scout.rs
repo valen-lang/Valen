@@ -20,6 +20,12 @@ use crate::postparsing::rules::rules::{
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::templex_scout::translate_templex;
 use std::collections::{HashMap, HashSet};
+use crate::postparsing::itemplatatype::ImplTemplataType;
+use crate::postparsing::rules::rules::DefinitionCoordIsaSR;
+use crate::postparsing::rules::rules::CallSiteCoordIsaSR;
+use crate::postparsing::rules::rules::PackSR;
+use crate::postparsing::rules::rules::KindComponentsSR;
+use crate::postparsing::rules::rules::PrototypeComponentsSR;
 /*
 package dev.vale.postparsing.rules
 
@@ -202,17 +208,17 @@ fn translate_rulex<'s, 'p>(
           range: PostParser::eval_range(file, *range),
           rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
-        rune_to_explicit_type.push((result_rune_s.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {})));
+        rune_to_explicit_type.push((result_rune_s.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})));
 
         // Only appears in definition; filtered out when solving call site
-        builder.push(IRulexSR::DefinitionCoordIsa(crate::postparsing::rules::rules::DefinitionCoordIsaSR {
+        builder.push(IRulexSR::DefinitionCoordIsa(DefinitionCoordIsaSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune_s.clone(),
           sub_rune: struct_rune.clone(),
           super_rune: interface_rune.clone(),
         }));
         // Only appears in call site; filtered out when solving definition
-        builder.push(IRulexSR::CallSiteCoordIsa(crate::postparsing::rules::rules::CallSiteCoordIsaSR {
+        builder.push(IRulexSR::CallSiteCoordIsa(CallSiteCoordIsaSR {
           range: PostParser::eval_range(file, *range),
           result_rune: Some(result_rune_s),
           sub_rune: struct_rune.clone(),
@@ -236,7 +242,7 @@ fn translate_rulex<'s, 'p>(
           range: PostParser::eval_range(file, *range),
           rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
-        builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
+        builder.push(IRulexSR::Pack(PackSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune.clone(),
           members: scout_arena.alloc_slice_from_vec(arg_runes),
@@ -341,7 +347,7 @@ fn translate_rulex<'s, 'p>(
             components,
           );
           let mutability_rune = component_usages[0].clone();
-          builder.push(IRulexSR::KindComponents(crate::postparsing::rules::rules::KindComponentsSR {
+          builder.push(IRulexSR::KindComponents(KindComponentsSR {
             range: PostParser::eval_range(file, *range),
             kind_rune: rune.clone(),
             mutability_rune,
@@ -364,7 +370,7 @@ fn translate_rulex<'s, 'p>(
           );
           let params_rune = component_usages[0].clone();
           let return_rune = component_usages[1].clone();
-          builder.push(IRulexSR::PrototypeComponents(crate::postparsing::rules::rules::PrototypeComponentsSR {
+          builder.push(IRulexSR::PrototypeComponents(PrototypeComponentsSR {
             range: PostParser::eval_range(file, *range),
             result_rune: rune.clone(),
             params_rune,

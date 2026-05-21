@@ -87,7 +87,7 @@ where
 /// Main generic lexing function with import-driven package discovery
 /// From LexAndExplore.scala lines 43-150
 pub fn lex_and_explore<'p, 'ctx, D, F, R>(
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   packages: Vec<&'p PackageCoordinate<'p>>,
   resolver: &R,

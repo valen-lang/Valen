@@ -1,6 +1,15 @@
 use crate::postparsing::names::{INameS, IVarNameS};
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::utils::range::{CodeLocationS, RangeS};
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::names::IRuneS;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::rules::rules::ILiteralSL;
+use crate::parsing::ast::MutabilityP;
+use crate::parsing::ast::VariabilityP;
+use crate::parsing::ast::OwnershipP;
+use crate::postparsing::rules::rules::RuneUsage;
 /*
 package dev.vale.postparsing
 
@@ -201,9 +210,8 @@ fn humanize_name<'s>(name: INameS<'s>) -> String {
   }
 */
 pub fn humanize_imprecise_name<'s>(
-  name: crate::postparsing::names::IImpreciseNameS<'s>,
+  name: IImpreciseNameS<'s>,
 ) -> String {
-  use crate::postparsing::names::IImpreciseNameS;
   match name {
     IImpreciseNameS::ArbitraryName(_) => "_arby".to_string(),
     IImpreciseNameS::SelfName(_) => "_Self".to_string(),
@@ -232,9 +240,8 @@ pub fn humanize_imprecise_name<'s>(
   }
 */
 pub fn humanize_rune<'s>(
-  rune: crate::postparsing::names::IRuneS<'s>,
+  rune: IRuneS<'s>,
 ) -> String {
-  use crate::postparsing::names::IRuneS;
   match rune {
     IRuneS::ImplicitRune(r) => "_".to_string() + &r.lid.path.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(""),
     IRuneS::MagicParamRune(_) => panic!("implement: humanize_rune MagicParamRune"),
@@ -362,7 +369,7 @@ pub fn humanize_rune<'s>(
   }
 */
 fn humanize_templata_type(
-  _tyype: &crate::postparsing::itemplatatype::ITemplataType,
+  _tyype: &ITemplataType,
 ) -> String {
   panic!("Unimplemented humanize_templata_type");
 }
@@ -387,9 +394,8 @@ fn humanize_templata_type(
   }
 */
 pub fn humanize_rule<'s>(
-  rule: &crate::postparsing::rules::rules::IRulexSR<'s>,
+  rule: &IRulexSR<'s>,
 ) -> String {
-  use crate::postparsing::rules::rules::IRulexSR;
   match rule {
     IRulexSR::KindComponents(r) => {
       humanize_rune(r.kind_rune.rune) + " = Kind[" + &humanize_rune(r.mutability_rune.rune) + "]"
@@ -472,7 +478,7 @@ pub fn humanize_rule<'s>(
   }
 */
 fn humanize_literal(
-  _literal: &crate::postparsing::rules::rules::ILiteralSL,
+  _literal: &ILiteralSL,
 ) -> String {
   panic!("Unimplemented humanize_literal");
 }
@@ -489,7 +495,7 @@ fn humanize_literal(
   }
 */
 fn humanize_mutability(
-  _p: crate::parsing::ast::MutabilityP,
+  _p: MutabilityP,
 ) -> String {
   panic!("Unimplemented humanize_mutability");
 }
@@ -502,7 +508,7 @@ fn humanize_mutability(
   }
 */
 fn humanize_variability(
-  _p: crate::parsing::ast::VariabilityP,
+  _p: VariabilityP,
 ) -> String {
   panic!("Unimplemented humanize_variability");
 }
@@ -515,7 +521,7 @@ fn humanize_variability(
   }
 */
 fn humanize_ownership(
-  _p: crate::parsing::ast::OwnershipP,
+  _p: OwnershipP,
 ) -> String {
   panic!("Unimplemented humanize_ownership");
 }
@@ -530,7 +536,7 @@ fn humanize_ownership(
   }
 */
 fn humanize_region<'s>(
-  _r: &crate::postparsing::rules::rules::RuneUsage<'s>,
+  _r: &RuneUsage<'s>,
 ) -> String {
   panic!("Unimplemented humanize_region");
 }

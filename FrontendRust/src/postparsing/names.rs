@@ -3,6 +3,7 @@ use crate::scout_arena::ScoutArena;
 use crate::postparsing::ast::{LocationInDenizen, LocationInDenizenVal};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
+use IRuneValS::*;
 /*
 package dev.vale.postparsing
 
@@ -342,7 +343,6 @@ impl<'s> IFunctionDeclarationNameS<'s> {
 
   /// Convert to value form for interning. Clones through refs.
   pub fn to_val(&self) -> IFunctionDeclarationNameValS<'s> {
-    use crate::postparsing::names::ForwarderFunctionDeclarationNameValS;
     match self {
       IFunctionDeclarationNameS::FunctionName(x) => {
         IFunctionDeclarationNameValS::FunctionName(x.clone())
@@ -1231,7 +1231,6 @@ impl<'a, 's, 'tmp> std::hash::Hash for RuneValQuery<'a, 's, 'tmp> {
 
 impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a, 's, 'tmp> {
   fn equivalent(&self, key: &IRuneValS<'s, 's>) -> bool {
-    use IRuneValS::*;
     match (self.0, key) {
       // 7 lid variants: compare path contents
       (ImplicitRune(a), ImplicitRune(b)) => a.lid().path() == b.lid().path(),

@@ -14,6 +14,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::parsing::vonifier::ParserVonifier;
+use crate::von::printer::VonPrinter;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 /*
 package dev.vale.passmanager
 
@@ -675,7 +678,7 @@ where
   // Note: Builtins are needed but we don't have builtins_dir available yet.
   // For now, create an empty builtins map. This will need to be fixed when
   // builtins are actually required for parsing.
-  let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
+  let builtins_code_map = FileCoordinateMap::<String>::new();
 
   // From PassManager.scala line 235: Add BUILTIN package coordinate
   let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
@@ -745,8 +748,6 @@ where
   };
   // From PassManager.scala lines 271-279: Write VPST files if requested
   if opts.output_vpst {
-    use crate::parsing::vonifier::ParserVonifier;
-    use crate::von::printer::VonPrinter;
 
     for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
       // From PassManager.scala line 273

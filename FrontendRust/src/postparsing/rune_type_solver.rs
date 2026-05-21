@@ -17,6 +17,9 @@ use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
+use crate::postparsing::itemplatatype::*;
+use std::collections::HashMap;
+use crate::postparsing::itemplatatype::ImplTemplataType;
 
 
 // mig: struct RuneTypeSolveError
@@ -517,7 +520,6 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   IRuneTypeRuleError<'s>,
 >> {
 
-  use crate::postparsing::itemplatatype::*;
 
   match rule {
     IRulexSR::KindComponents(x) => {
@@ -572,7 +574,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     }
     IRulexSR::DefinitionCoordIsa(x) => {
         solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
-            (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {})),
+            (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})),
             (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
             (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         ].into_iter().collect(), vec![])
@@ -583,7 +585,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
             (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         ].into_iter().collect();
         if let Some(result_rune) = &x.result_rune {
-            conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {}));
+            conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {}));
         }
         solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![])
     }
@@ -828,7 +830,6 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   ITemplataType<'s>,
   IRuneTypeRuleError<'s>,
 >> {
-  use crate::postparsing::itemplatatype::*;
   let expected_type = solver_state.get_conclusion(&rune.rune).expect("lookup_rune_type: no conclusion for rune");
   match actual_lookup_result {
     IRuneTypeSolverLookupResult::Primitive(p) => {
@@ -949,7 +950,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 
 
 
-  use std::collections::HashMap;
 
   // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
   // For now, with no rules in the simple test case, this is empty.

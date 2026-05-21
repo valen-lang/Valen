@@ -10,6 +10,19 @@ class SolverTests extends FunSuite with Matchers with Collector {
 */
 use crate::solver::{SimpleSolverState, FailedSolve, ISolverError, make_solver_state};
 use super::test_rules::TestRule;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use crate::utils::range::RangeS;
+use bumpalo::Bump;
+use super::test_rules::Literal;
+use super::test_rules::Equals;
+use super::test_rules::OneOf;
+use super::test_rules::CoordComponents;
+use super::test_rules::Pack;
+use super::test_rules::Send;
+use super::test_rules::Call;
+use super::test_rules::Lookup;
+use crate::scout_arena::ScoutArena;
 // mig: const complex_rule_set
 const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
 /*
@@ -149,8 +162,6 @@ fn advance(
 // mig: fn simple_int_rule
     #[test]
     fn simple_int_rule() {
-        use super::test_rules::{Literal, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal { rune: -1, value: "1337".to_string() }),
@@ -170,8 +181,6 @@ fn advance(
 // mig: fn equals_transitive
     #[test]
     fn equals_transitive() {
-        use super::test_rules::{Equals, Literal, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Equals(Equals {
@@ -201,8 +210,6 @@ fn advance(
 // mig: fn incomplete_solve
     #[test]
     fn incomplete_solve() {
-        use super::test_rules::{OneOf, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![TestRule::OneOf(OneOf {
             coord_rune: -1,
@@ -223,8 +230,6 @@ fn advance(
 // mig: fn half_complete_solve
     #[test]
     fn half_complete_solve() {
-        use super::test_rules::{Literal, OneOf, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::OneOf(OneOf {
@@ -254,8 +259,6 @@ fn advance(
 // mig: fn one_of
     #[test]
     fn one_of() {
-        use super::test_rules::{Literal, OneOf, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::OneOf(OneOf {
@@ -284,8 +287,6 @@ fn advance(
 // mig: fn solves_a_components_rule
     #[test]
     fn solves_a_components_rule() {
-        use super::test_rules::{CoordComponents, Literal, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::CoordComponents(CoordComponents {
@@ -326,8 +327,6 @@ fn advance(
 // mig: fn reverse_solve_a_components_rule
     #[test]
     fn reverse_solve_a_components_rule() {
-        use super::test_rules::{CoordComponents, Literal, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::CoordComponents(CoordComponents {
@@ -363,8 +362,6 @@ fn advance(
 // mig: fn test_infer_pack
     #[test]
     fn test_infer_pack() {
-        use super::test_rules::{Literal, Pack, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal { rune: -1, value: "1337".to_string() }),
@@ -398,8 +395,6 @@ fn advance(
 // mig: fn test_infer_pack_from_result
     #[test]
     fn test_infer_pack_from_result() {
-        use super::test_rules::{Literal, Pack, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -434,8 +429,6 @@ fn advance(
 // mig: fn test_infer_pack_from_empty_result
     #[test]
     fn test_infer_pack_from_empty_result() {
-        use super::test_rules::{Literal, Pack, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -464,8 +457,6 @@ fn advance(
 // mig: fn test_cant_solve_empty_pack
     #[test]
     fn test_cant_solve_empty_pack() {
-        use super::test_rules::{Pack, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![TestRule::Pack(Pack {
             result_rune: -3,
@@ -486,8 +477,6 @@ fn advance(
 // mig: fn complex_rule_set
     #[test]
     fn complex_rule_set() {
-        use super::test_rules::{CoordComponents, Equals, Literal, OneOf, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -540,8 +529,6 @@ fn advance(
 // mig: fn test_receiving_struct_to_struct
     #[test]
     fn test_receiving_struct_to_struct() {
-        use super::test_rules::{Literal, Send, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -575,9 +562,7 @@ fn advance(
 // mig: fn test_receive_struct_from_sent_interface
     #[test]
     fn test_receive_struct_from_sent_interface() {
-        use super::test_rules::{Literal, Send, TestRule};
 
-        use std::collections::HashSet;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -660,8 +645,6 @@ fn advance(
 // mig: fn test_receive_interface_from_sent_struct
     #[test]
     fn test_receive_interface_from_sent_struct() {
-        use super::test_rules::{Literal, Send, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -702,8 +685,6 @@ fn advance(
     // Tests @CSCDSRZ: complex solve infers the receiver kind from senders.
     #[test]
     fn test_complex_solve_most_specific_ancestor() {
-        use super::test_rules::{Literal, Send, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -739,8 +720,6 @@ fn advance(
     // Tests @CSCDSRZ: complex solve finds the common ancestor of multiple senders.
     #[test]
     fn test_complex_solve_calculate_common_ancestor() {
-        use super::test_rules::{Literal, Send, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -787,8 +766,6 @@ fn advance(
     // Tests @CSCDSRZ: complex solve picks a descendant that satisfies a call constraint.
     #[test]
     fn test_complex_solve_descendant_satisfying_call() {
-        use super::test_rules::{Call, Literal, Send, TestRule};
-        use std::collections::HashMap;
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -840,12 +817,9 @@ fn advance(
 // mig: fn partial_solve
     #[test]
     fn partial_solve() {
-        use super::test_rules::{Call, Literal, TestRule};
-        use crate::utils::range::RangeS;
-        use bumpalo::Bump;
 
         let scout_bump = Bump::new();
-        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+        let scout_arena = ScoutArena::new(&scout_bump);
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal { rune: -2, value: "A".to_string() }),
             TestRule::Call(Call {
@@ -943,8 +917,6 @@ fn advance(
 // mig: fn predicting
     #[test]
     fn predicting() {
-        use super::test_rules::TestRule;
-        use std::collections::HashMap;
 
         let predictions = solve_with_puzzler(Box::new(|rule: &TestRule| match rule {
             TestRule::Lookup(_) => vec![],
@@ -992,12 +964,10 @@ fn advance(
     fn solve_with_puzzler(
         puzzler: Box<dyn Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>>,
     ) -> std::collections::HashMap<i64, String> {
-        use super::test_rules::{Call, Lookup, Literal, TestRule};
 
-        use bumpalo::Bump;
 
         let scout_bump = Bump::new();
-        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+        let scout_arena = ScoutArena::new(&scout_bump);
         let rules: Vec<TestRule> = vec![
             TestRule::Lookup(Lookup {
                 rune: -1,
@@ -1082,7 +1052,6 @@ fn advance(
 // mig: fn test_conflict
     #[test]
     fn test_conflict() {
-        use super::test_rules::{Literal, TestRule};
 
 
         let rules: Vec<TestRule> = vec![
@@ -1124,11 +1093,9 @@ fn advance(
         rules: Vec<super::test_rules::TestRule>,
     ) -> FailedSolve<TestRule, i64, String, String> {
 
-        use bumpalo::Bump;
-        use std::collections::HashMap;
 
         let scout_bump = Bump::new();
-        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+        let scout_arena = ScoutArena::new(&scout_bump);
         let all_runes: Vec<i64> = {
             let mut v: Vec<i64> = rules.iter().flat_map(|r| r.all_runes()).collect();
             v.sort();
@@ -1192,10 +1159,9 @@ fn advance(
         initially_known_runes: std::collections::HashMap<i64, String>,
     ) -> std::collections::HashMap<i64, String> {
 
-        use bumpalo::Bump;
 
         let scout_bump = Bump::new();
-        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+        let scout_arena = ScoutArena::new(&scout_bump);
         let all_runes_from_rules: std::collections::HashSet<i64> =
             rules.iter().flat_map(|r| r.all_runes()).collect();
         let all_runes: Vec<i64> = {

@@ -29,6 +29,13 @@ use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use bumpalo::Bump;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use crate::postparsing::names::IImpreciseNameValS::*;
+use crate::postparsing::names::{ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS};
+use IRuneValS::*;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::names::AnonymousSubstructImplDeclarationNameS;
+use crate::postparsing::names::AnonymousSubstructTemplateNameS;
+use crate::postparsing::names::RuneValQuery;
 
 #[derive(Clone)]
 struct FileCoordLookupKey<'s> {
@@ -94,13 +101,13 @@ impl<'s> ScoutArena<'s> {
   }
 
   /// Create an empty ArenaIndexMap allocated in this arena.
-  pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> crate::utils::arena_index_map::ArenaIndexMap<'s, K, V> {
-    crate::utils::arena_index_map::ArenaIndexMap::new_in(self.bump)
+  pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'s, K, V> {
+    ArenaIndexMap::new_in(self.bump)
   }
 
   /// Create an ArenaIndexMap from an iterator, allocated in this arena.
-  pub fn alloc_index_map_from_iter<K: std::hash::Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> crate::utils::arena_index_map::ArenaIndexMap<'s, K, V> {
-    crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(iter, self.bump)
+  pub fn alloc_index_map_from_iter<K: std::hash::Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> ArenaIndexMap<'s, K, V> {
+    ArenaIndexMap::from_iter_in(iter, self.bump)
   }
 
   // --- String interning ---
@@ -183,7 +190,6 @@ impl<'s> ScoutArena<'s> {
   }
 
   fn alloc_imprecise_name_canonical(&self, val: IImpreciseNameValS<'s>) -> IImpreciseNameS<'s> {
-    use crate::postparsing::names::IImpreciseNameValS::*;
     match val {
       CodeName(p) => IImpreciseNameS::CodeName(self.bump.alloc(p)),
       IterableName(p) => IImpreciseNameS::IterableName(self.bump.alloc(p)),
@@ -266,7 +272,7 @@ impl<'s> ScoutArena<'s> {
       }
       INameValS::ImplDeclaration(p) => INameS::ImplDeclaration(self.bump.alloc(p)),
       INameValS::AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS { interface }) => {
-        let payload = crate::postparsing::names::AnonymousSubstructImplDeclarationNameS { interface: interface.clone() };
+        let payload = AnonymousSubstructImplDeclarationNameS { interface: interface.clone() };
         INameS::AnonymousSubstructImplDeclaration(self.bump.alloc(payload))
       }
       INameValS::ExportAsName(p) => INameS::ExportAsName(self.bump.alloc(p)),
@@ -275,7 +281,7 @@ impl<'s> ScoutArena<'s> {
       INameValS::TopLevelInterfaceDeclaration(p) => INameS::TopLevelInterfaceDeclaration(self.bump.alloc(p)),
       INameValS::LambdaStructDeclaration(p) => INameS::LambdaStructDeclaration(self.bump.alloc(p)),
       INameValS::AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameValS { interface_name }) => {
-        let payload = crate::postparsing::names::AnonymousSubstructTemplateNameS { interface_name: interface_name.clone() };
+        let payload = AnonymousSubstructTemplateNameS { interface_name: interface_name.clone() };
         INameS::AnonymousSubstructTemplateName(self.bump.alloc(payload))
       }
       INameValS::RuneName(v) => {
@@ -294,7 +300,6 @@ impl<'s> ScoutArena<'s> {
   }
 
   fn alloc_function_declaration_name_canonical(&self, val: IFunctionDeclarationNameValS<'s>) -> IFunctionDeclarationNameS<'s> {
-    use crate::postparsing::names::{ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS};
     match val {
       IFunctionDeclarationNameValS::FunctionName(p) => IFunctionDeclarationNameS::FunctionName(p),
       IFunctionDeclarationNameValS::LambdaDeclarationName(p) => IFunctionDeclarationNameS::LambdaDeclarationName(p),
@@ -329,7 +334,7 @@ impl<'s> ScoutArena<'s> {
   pub fn intern_rune<'tmp>(&self, val: IRuneValS<'s, 'tmp>) -> IRuneS<'s> {
     {
       let inner = self.inner.borrow();
-      let query = crate::postparsing::names::RuneValQuery(&val);
+      let query = RuneValQuery(&val);
       if let Some(existing) = inner.rune_val_to_ref.get(&query) {
         return existing.clone();  // HIT — zero allocation
       }
@@ -345,7 +350,6 @@ impl<'s> ScoutArena<'s> {
   /// canonical IRuneS and a stored key IRuneValS<'s, 's>.
   /// Per @DSAUIMZ, this is where lid slices get arena-allocated — only on intern miss.
   fn alloc_rune_canonical<'tmp>(&self, val: IRuneValS<'s, 'tmp>) -> (IRuneValS<'s, 's>, IRuneS<'s>) {
-    use IRuneValS::*;
     match val {
       // ── 7 lid variants: promote LocationInDenizenVal → LocationInDenizen ──
       ImplicitRune(v) => {

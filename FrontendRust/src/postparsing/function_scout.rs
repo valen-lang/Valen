@@ -43,6 +43,8 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use indexmap::IndexSet;
+use crate::parsing::ast::BlockPE;
+use crate::postparsing::expressions::LocalS;
 /*
 package dev.vale.postparsing
 
@@ -1479,7 +1481,7 @@ fn create_magic_parameters(
   lidb: &mut LocationInDenizenBuilder,
   lambda_magic_param_names: Vec<IVarNameS<'s>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
-) -> Vec<crate::postparsing::ast::ParameterS<'s>> {
+) -> Vec<ParameterS<'s>> {
   lambda_magic_param_names
     .into_iter()
     .map(|magic_param_name| {
@@ -1487,7 +1489,7 @@ fn create_magic_parameters(
         IVarNameS::MagicParamName(c) => c.clone(),
         _ => panic!("POSTPARSER_CREATE_MAGIC_PARAMS_EXPECTED_MAGIC_PARAM_NAME"),
       };
-      let magic_param_range = crate::utils::range::RangeS::new(
+      let magic_param_range = RangeS::new(
         code_location.clone(),
         code_location.clone(),
       );
@@ -1570,11 +1572,11 @@ fn create_magic_parameters(
     parent_stack_frame: Option<StackFrame<'s>>,
     lidb: &mut LocationInDenizenBuilder,
     context_region: IRuneS<'s>,
-    body0: &crate::parsing::ast::BlockPE<'p>,
+    body0: &BlockPE<'p>,
     initial_declarations: VariableDeclarations<'s>,
   ) -> Result<
     (
-      &'s crate::postparsing::expressions::BodySE<'s>,
+      &'s BodySE<'s>,
       VariableUses<'s>,
       Vec<IVarNameS<'s>>,
     ),
@@ -1630,9 +1632,9 @@ fn create_magic_parameters(
         name: magic_param_name.clone(),
       })
       .collect();
-    let magic_param_locals: Vec<crate::postparsing::expressions::LocalS<'s>> = magic_param_vars
+    let magic_param_locals: Vec<LocalS<'s>> = magic_param_vars
       .iter()
-      .map(|declared| crate::postparsing::expressions::LocalS {
+      .map(|declared| LocalS {
         var_name: declared.name.clone(),
         self_borrowed: self_uses.is_borrowed(&declared.name),
         self_moved: self_uses.is_moved(&declared.name),
@@ -1774,7 +1776,7 @@ fn create_magic_parameters(
   pub(crate) fn scout_interface_member(
     &self,
     file_coordinate: &'s FileCoordinate<'s>,
-    function_p: &crate::parsing::ast::FunctionP<'p>,
+    function_p: &FunctionP<'p>,
     parent_interface_env: &IEnvironmentS<'s>,
     interface_generic_params: &'s [&'s GenericParameterS<'s>],
     interface_rules: &[IRulexSR<'s>],

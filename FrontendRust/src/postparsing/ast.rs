@@ -14,6 +14,7 @@ use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
+use crate::scout_arena::ScoutArena;
 
 /*
 package dev.vale.postparsing
@@ -1118,7 +1119,7 @@ impl LocationInDenizenBuilder {
   // V: this feels weird. theres nothing guaranteeing that this LocationInDenizen will actually land anywhere,
   // in which case we're just leaking those allocations. i think we need a LocationInDenizenVal.
   // maybe LocationInDenizenVal can even be a stack-based linked list.
-  pub fn consume_in_arena<'x>(&mut self, arena: &crate::scout_arena::ScoutArena<'x>) -> LocationInDenizen<'x> {
+  pub fn consume_in_arena<'x>(&mut self, arena: &ScoutArena<'x>) -> LocationInDenizen<'x> {
     assert!(
       !self.consumed,
       "Location in denizen was already used for something, add a .child() somewhere."

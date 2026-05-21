@@ -9,6 +9,7 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
 use crate::parsing::expression_parser::ScrambleIterator;
+use crate::parse_arena::ParseArena;
 /*
 package dev.vale.parsing.templex
 
@@ -28,7 +29,7 @@ type ParseResult<T> = Result<T, ParseError>;
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 pub struct TemplexParser<'p, 'ctx> {
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
 }
 /*
@@ -39,7 +40,7 @@ impl<'p, 'ctx> TemplexParser<'p, 'ctx>
 where
   'p: 'ctx,
 {
-  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
+  pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     TemplexParser {
       parse_arena,
       keywords,

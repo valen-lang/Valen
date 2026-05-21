@@ -2,6 +2,7 @@ use super::ast::*;
 use super::errors::*;
 use super::lexing_iterator::*;
 use crate::Keywords;
+use crate::parse_arena::ParseArena;
 /*
 package dev.vale.lexing
 
@@ -24,7 +25,7 @@ MIGALLOW: Scala didn't need this, it has Either for this.
 /// Vale lexer
 /// Matches Scala's Lexer class
 pub struct Lexer<'p, 'ctx> {
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
 }
 impl<'p, 'ctx> Lexer<'p, 'ctx>
@@ -34,7 +35,7 @@ where
   /*
   class Lexer(interner: Interner, keywords: Keywords) {
   */
-  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
+  pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     Lexer { parse_arena, keywords }
   }
 

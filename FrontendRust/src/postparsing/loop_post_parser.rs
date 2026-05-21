@@ -23,26 +23,26 @@ class LoopPostParser(interner: Interner, keywords: Keywords) {
 */
 
 fn scout_loop<'s, F>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'s>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range_p: crate::lexing::ast::RangeL,
+  _stack_frame0: StackFrame<'s>,
+  _lidb: &mut LocationInDenizenBuilder,
+  _range_p: RangeL,
   _pure: bool,
   _make_contents: F,
 ) -> (
-  crate::postparsing::expressions::BlockSE<'s>,
-  crate::postparsing::variable_uses::VariableUses<'s>,
-  crate::postparsing::variable_uses::VariableUses<'s>,
+  BlockSE<'s>,
+  VariableUses<'s>,
+  VariableUses<'s>,
 )
 where
   F: FnOnce(
-    crate::postparsing::post_parser::StackFrame<'s>,
-    &mut crate::postparsing::ast::LocationInDenizenBuilder,
+    StackFrame<'s>,
+    &mut LocationInDenizenBuilder,
     bool,
   ) -> (
-    crate::postparsing::post_parser::StackFrame<'s>,
-    crate::postparsing::expressions::BlockSE<'s>,
-    crate::postparsing::variable_uses::VariableUses<'s>,
-    crate::postparsing::variable_uses::VariableUses<'s>,
+    StackFrame<'s>,
+    BlockSE<'s>,
+    VariableUses<'s>,
+    VariableUses<'s>,
   ),
 {
   panic!("Unimplemented scout_loop");
@@ -299,7 +299,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
 ) -> Result<
   (
     StackFrame<'s>,
-    &'s crate::postparsing::expressions::IExpressionSE<'s>,
+    &'s IExpressionSE<'s>,
     VariableUses<'s>,
     VariableUses<'s>,
   ),

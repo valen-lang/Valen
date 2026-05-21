@@ -49,6 +49,19 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use std::collections::HashMap;
 use indexmap::IndexSet;
+use crate::parsing::ast::IImpreciseNameP;
+use crate::postparsing::names::{IterableNameS, IteratorNameS, IterationOptionNameS};
+use crate::postparsing::identifiability_solver::IdentifiabilitySolveError;
+use crate::parse_arena::ParseArena;
+use crate::postparsing::ast::FunctionS;
+use crate::parsing::ast::ImplP;
+use crate::parsing::ast::IRulexPR;
+use crate::parsing::ast::ExportAsP;
+use crate::parsing::ast::ImportP;
+use crate::postparsing::rules::rules::ILiteralSL;
+use crate::postparsing::ast::ExportS;
+use crate::postparsing::ast::SealedS;
+use crate::parsing::ast::InterfaceP;
 
 /*
 package dev.vale.postparsing
@@ -280,7 +293,7 @@ override def hashCode(): Int = vcurious() }
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentifyingRunesIncompleteS<'s> {
   pub range: RangeS<'s>,
-  pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'s>,
+  pub error: IdentifiabilitySolveError<'s>,
 }
 /*
 case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
@@ -608,11 +621,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
 pub(crate) fn translate_imprecise_name<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
-  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
-  name: &crate::parsing::ast::IImpreciseNameP<'p>,
-) -> crate::postparsing::names::IImpreciseNameS<'s> {
-  use crate::parsing::ast::IImpreciseNameP;
-  use crate::postparsing::names::{CodeNameS, IImpreciseNameValS, IterableNameS, IteratorNameS, IterationOptionNameS};
+  file: &'s FileCoordinate<'s>,
+  name: &IImpreciseNameP<'p>,
+) -> IImpreciseNameS<'s> {
   match name {
     // Re-intern string from 'p into 's
     IImpreciseNameP::LookupName(n) => scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str(n.str().as_str()) })),
@@ -638,10 +649,10 @@ pub(crate) fn translate_imprecise_name<'s, 'p>(
   }
 */
 fn determine_denizen_type<'s>(
-  _template_result_type: crate::postparsing::itemplatatype::ITemplataType<'s>,
-  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'s>],
-  _rune_a_to_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType<'s>>,
-) -> Result<crate::postparsing::itemplatatype::ITemplataType<'s>, crate::postparsing::names::IRuneS<'s>> {
+  _template_result_type: ITemplataType<'s>,
+  _identifying_runes_s: &[IRuneS<'s>],
+  _rune_a_to_type: &std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+) -> Result<ITemplataType<'s>, IRuneS<'s>> {
   panic!("Unimplemented determine_denizen_type");
 }
 /*
@@ -671,8 +682,8 @@ fn determine_denizen_type<'s>(
 */
 fn get_human_name<'s, 'p>(
   _scout_arena: &ScoutArena<'s>,
-  _templex: &crate::parsing::ast::ITemplexPT<'p>,
-) -> crate::postparsing::names::IImpreciseNameS<'s> {
+  _templex: &ITemplexPT<'p>,
+) -> IImpreciseNameS<'s> {
   panic!("Unimplemented get_human_name");
 }
 /*
@@ -1021,7 +1032,7 @@ pub struct PostParser<'s, 'p, 'ctx> {
   pub scout_arena: &'ctx ScoutArena<'s>,
   pub keywords: &'ctx Keywords<'s>,
   pub keywords_p: &'ctx Keywords<'p>, // Per @PPSPASTNZ, synthetic parser nodes need 'p-interned keyword strings
-  pub parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, // Per @PPSPASTNZ, for allocating synthetic parser AST nodes
+  pub parse_arena: &'ctx ParseArena<'p>, // Per @PPSPASTNZ, for allocating synthetic parser AST nodes
 }
 /*
 class PostParser(
@@ -1041,7 +1052,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     keywords_p: &'ctx Keywords<'p>,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
   ) -> Self {
     Self {
       global_options,
@@ -1079,7 +1090,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }
     }
 
-    let mut implemented_functions: Vec<&'s crate::postparsing::ast::FunctionS<'s>> = Vec::new();
+    let mut implemented_functions: Vec<&'s FunctionS<'s>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelFunction(function_p) = denizen {
         let (function_s, function_uses) =
@@ -1099,7 +1110,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }
     }
 
-    let mut exports: Vec<&'s crate::postparsing::ast::ExportAsS<'s>> = Vec::new();
+    let mut exports: Vec<&'s ExportAsS<'s>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelExportAs(export_as_p) = denizen {
         exports.push(&*self.scout_arena.alloc(self.scout_export_as(file_coordinate, export_as_p)));
@@ -1151,8 +1162,8 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 fn scout_impl(
   &self,
   file: &'s FileCoordinate<'s>,
-  impl0: &crate::parsing::ast::ImplP<'p>,
-) -> Result<crate::postparsing::ast::ImplS<'s>, ICompileErrorS<'s>> {
+  impl0: &ImplP<'p>,
+) -> Result<ImplS<'s>, ICompileErrorS<'s>> {
   let range_s = PostParser::eval_range(file, impl0.range);
 
   match &impl0.interface {
@@ -1175,7 +1186,7 @@ fn scout_impl(
     _ => {}
   }
 
-  let template_rules_p: &[crate::parsing::ast::IRulexPR<'p>] = impl0
+  let template_rules_p: &[IRulexPR<'p>] = impl0
     .template_rules
     .as_ref()
     .map(|template_rules_p| template_rules_p.rules)
@@ -1232,7 +1243,7 @@ fn scout_impl(
       .collect(),
   });
 
-  let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
+  let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   let mut rule_builder = Vec::<IRulexSR<'s>>::new();
   let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
@@ -1241,7 +1252,7 @@ fn scout_impl(
     range_s.end.clone(),
   );
   let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
-    crate::postparsing::names::DenizenDefaultRegionRuneS {
+    DenizenDefaultRegionRuneS {
       denizen_name: self.scout_arena.intern_name(INameValS::ImplDeclaration(impl_name.clone())),
     },
   ));
@@ -1252,8 +1263,8 @@ fn scout_impl(
       rune: default_region_rune_s.clone(),
     },
     tyype: IGenericParameterTypeS::RegionGenericParameterType(
-      crate::postparsing::ast::RegionGenericParameterTypeS {
-        mutability: crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion,
+      RegionGenericParameterTypeS {
+        mutability: IRegionMutabilityS::ReadWriteRegion,
       },
     ),
     default: None,
@@ -1574,9 +1585,9 @@ fn scout_impl(
 */
 fn scout_export_as(
   &self,
-  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
-  export_as_p: &crate::parsing::ast::ExportAsP<'p>,
-) -> crate::postparsing::ast::ExportAsS<'s> {
+  file: &'s FileCoordinate<'s>,
+  export_as_p: &ExportAsP<'p>,
+) -> ExportAsS<'s> {
   let range_s = Self::eval_range(file, export_as_p.range);
   let pos = range_s.begin.clone();
   let export_name = self.scout_arena.intern_name(INameValS::ExportAsName(ExportAsNameS { code_location: pos }));
@@ -1647,9 +1658,9 @@ fn scout_export_as(
 */
 fn scout_import(
   &self,
-  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
-  import_p: &crate::parsing::ast::ImportP<'p>,
-) -> crate::postparsing::ast::ImportS<'s> {
+  file: &'s FileCoordinate<'s>,
+  import_p: &ImportP<'p>,
+) -> ImportS<'s> {
   let _pos = PostParser::eval_pos(file, import_p.range.begin());
 
   ImportS {
@@ -1671,18 +1682,18 @@ fn scout_import(
   }
 */
 fn predict_mutability(
-  _range_s: crate::utils::range::RangeS<'s>,
-  mutability_rune_s: crate::postparsing::names::IRuneS<'s>,
-  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'s>],
-) -> Option<crate::parsing::ast::MutabilityP> {
+  _range_s: RangeS<'s>,
+  mutability_rune_s: IRuneS<'s>,
+  rules_s: &[IRulexSR<'s>],
+) -> Option<MutabilityP> {
   let predicted_mutabilities = rules_s
     .iter()
     .filter_map(|rule| match rule {
-      crate::postparsing::rules::rules::IRulexSR::Literal(literal_rule)
+      IRulexSR::Literal(literal_rule)
         if literal_rule.rune.rune == mutability_rune_s
-          && matches!(literal_rule.literal, crate::postparsing::rules::rules::ILiteralSL::MutabilityLiteral(_)) =>
+          && matches!(literal_rule.literal, ILiteralSL::MutabilityLiteral(_)) =>
       {
-        let crate::postparsing::rules::rules::ILiteralSL::MutabilityLiteral(ref mutability_literal) = literal_rule.literal else {
+        let ILiteralSL::MutabilityLiteral(ref mutability_literal) = literal_rule.literal else {
           unreachable!()
         };
         Some(mutability_literal.mutability)
@@ -1740,10 +1751,10 @@ fn predict_mutability(
         })),
       })
       .collect::<Vec<_>>();
-    let template_rules_p: &[crate::parsing::ast::IRulexPR<'p>] = head
+    let template_rules_p: &[IRulexPR<'p>] = head
       .template_rules
       .as_ref()
-      .map(|x| x.rules as &[crate::parsing::ast::IRulexPR<'p>])
+      .map(|x| x.rules as &[IRulexPR<'p>])
       .unwrap_or(&[]);
     let runes_from_rules =
       get_ordered_rune_declarations_from_rulexes_with_duplicates(&template_rules_p)
@@ -2192,24 +2203,24 @@ Guardian: disable: TUCMPX
   }
 */
 fn translate_citizen_attributes(
-  interner: &crate::scout_arena::ScoutArena<'s>,
-  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
-  _denizen_name: crate::postparsing::names::INameS<'s>,
-  attrs_p: &[crate::parsing::ast::IAttributeP<'p>],
-) -> Vec<crate::postparsing::ast::ICitizenAttributeS<'s>> {
+  interner: &ScoutArena<'s>,
+  file: &'s FileCoordinate<'s>,
+  _denizen_name: INameS<'s>,
+  attrs_p: &[IAttributeP<'p>],
+) -> Vec<ICitizenAttributeS<'s>> {
   attrs_p
     .iter()
     .map(|attr_p| match attr_p {
-      crate::parsing::ast::IAttributeP::ExportAttribute(_) => {
-        crate::postparsing::ast::ICitizenAttributeS::Export(crate::postparsing::ast::ExportS {
+      IAttributeP::ExportAttribute(_) => {
+        ICitizenAttributeS::Export(ExportS {
           package_coordinate: file.package_coord,
         })
       }
-      crate::parsing::ast::IAttributeP::SealedAttribute(_) => {
-        crate::postparsing::ast::ICitizenAttributeS::Sealed(crate::postparsing::ast::SealedS)
+      IAttributeP::SealedAttribute(_) => {
+        ICitizenAttributeS::Sealed(SealedS)
       }
-      crate::parsing::ast::IAttributeP::MacroCall(macro_call_p) => {
-        crate::postparsing::ast::ICitizenAttributeS::MacroCall(crate::postparsing::ast::MacroCallS {
+      IAttributeP::MacroCall(macro_call_p) => {
+        ICitizenAttributeS::MacroCall(MacroCallS {
           range: PostParser::eval_range(file, macro_call_p.range),
           include: macro_call_p.inclusion,
           macro_name: interner.intern_str(macro_call_p.name.str().as_str()),
@@ -2230,18 +2241,18 @@ fn translate_citizen_attributes(
   }
 */
 pub(crate) fn predict_rune_types(
-  scout_arena: &crate::scout_arena::ScoutArena<'s>,
-  range_s: crate::utils::range::RangeS<'s>,
-  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'s>],
-  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType<'s>)>,
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'s>],
+  scout_arena: &ScoutArena<'s>,
+  range_s: RangeS<'s>,
+  _identifying_runes_s: &[IRuneS<'s>],
+  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
+  _rules_s: &[IRulexSR<'s>],
 ) -> Result<
   ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   ICompileErrorS<'s>,
 > {
   let mut grouped_explicit_types = std::collections::HashMap::<
-    crate::postparsing::names::IRuneS<'s>,
-    Vec<crate::postparsing::itemplatatype::ITemplataType<'s>>,
+    IRuneS<'s>,
+    Vec<ITemplataType<'s>>,
   >::new();
   for (rune, explicit_type) in rune_to_explicit_type.iter() {
     grouped_explicit_types
@@ -2253,7 +2264,7 @@ pub(crate) fn predict_rune_types(
   let mut rune_to_explicit_type = scout_arena.alloc_index_map::<IRuneS<'s>, ITemplataType>();
   for (rune, explicit_types) in grouped_explicit_types {
     let mut distinct_explicit_types =
-      Vec::<crate::postparsing::itemplatatype::ITemplataType>::new();
+      Vec::<ITemplataType>::new();
     for explicit_type in explicit_types {
       if !distinct_explicit_types.contains(&explicit_type) {
         distinct_explicit_types.push(explicit_type);
@@ -2356,7 +2367,7 @@ pub(crate) fn check_identifiability(
   fn scout_interface(
     &self,
     file: &'s FileCoordinate<'s>,
-    interface: &crate::parsing::ast::InterfaceP<'p>,
+    interface: &InterfaceP<'p>,
   ) -> Result<InterfaceS<'s>, ICompileErrorS<'s>> {
     let interface_range_s = Self::eval_range(file, interface.range);
     let _body_range_s = Self::eval_range(file, interface.body_range);
@@ -2364,10 +2375,10 @@ pub(crate) fn check_identifiability(
       name: self.scout_arena.intern_str(interface.name.str().as_str()),
       range: Self::eval_range(file, interface.name.range()),
     });
-    let rules_p: &[crate::parsing::ast::IRulexPR<'p>] = interface
+    let rules_p: &[IRulexPR<'p>] = interface
       .template_rules
       .as_ref()
-      .map(|x| x.rules as &[crate::parsing::ast::IRulexPR<'p>])
+      .map(|x| x.rules as &[IRulexPR<'p>])
       .unwrap_or(&[]);
 
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
@@ -2702,7 +2713,7 @@ pub struct ScoutCompilation<'s, 'ctx, 'p> {
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   keywords_p: &'ctx Keywords<'p>,
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   parser_compilation: ParserCompilation<'p, 'ctx>,
   scoutput_cache: Option<FileCoordinateMap<'s, ProgramS<'s>>>,
 }
@@ -2724,7 +2735,7 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,

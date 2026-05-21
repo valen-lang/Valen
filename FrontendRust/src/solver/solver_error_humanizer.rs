@@ -8,6 +8,8 @@ import dev.vale.RangeS
 object SolverErrorHumanizer {
 */
 use crate::utils::range::{CodeLocationS, RangeS};
+use crate::solver::solver::ISolverError;
+use crate::solver::solver::FailedSolve;
 
 // mig: fn humanize_failed_solve
 pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
@@ -22,7 +24,7 @@ pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
   get_rune_usages: impl Fn(&Rule) -> Vec<(RuneId, RangeS<'a>)>,
   rule_to_runes: impl Fn(&Rule) -> Vec<RuneId>,
   rule_to_string: impl Fn(&Rule) -> String,
-  result: &crate::solver::solver::FailedSolve<Rule, RuneId, Conclusion, ErrType>,
+  result: &FailedSolve<Rule, RuneId, Conclusion, ErrType>,
 ) -> (String, Vec<CodeLocationS<'a>>)
 where
   RuneId: Eq + std::hash::Hash + Copy,
@@ -31,7 +33,6 @@ where
   CodeLocationS<'a>: PartialEq + Copy,
   RangeS<'a>: PartialEq + Copy,
 {
-  use crate::solver::solver::ISolverError;
   let error_body = match &result.error {
     ISolverError::SolverConflict(_c) => panic!("implement: humanize_failed_solve SolverConflict"),
     ISolverError::SolveIncomplete(_) => {

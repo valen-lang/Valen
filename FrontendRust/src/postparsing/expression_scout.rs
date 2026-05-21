@@ -32,6 +32,7 @@ use crate::postparsing::rules::templex_scout::translate_templex;
 use crate::postparsing::loop_post_parser::{scout_each, scout_while};
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
+use crate::postparsing::expressions::ConstantFloatSE;
 
 /*
 package dev.vale.postparsing
@@ -886,7 +887,7 @@ fn scout_expression(
     IExpressionPE::ConstantFloat(constant_float) => Ok((
       stack_frame.clone(),
       IScoutResult::NormalResult(NormalResultS {
-        expr: &*self.scout_arena.alloc(IExpressionSE::ConstantFloat(crate::postparsing::expressions::ConstantFloatSE {
+        expr: &*self.scout_arena.alloc(IExpressionSE::ConstantFloat(ConstantFloatSE {
           range: PostParser::eval_range(&file_coordinate, constant_float.range),
           value: constant_float.value,
         })),

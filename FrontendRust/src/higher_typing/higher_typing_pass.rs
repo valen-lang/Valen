@@ -36,6 +36,15 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageC
 use crate::utils::range::RangeS;
 use crate::utils::range::CodeLocationS;
 use std::collections::HashMap;
+use crate::postparsing::rune_type_solver::PrimitiveRuneTypeSolverLookupResult;
+use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
+use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
+use crate::postparsing::names::ImplicitCoercionTemplateRuneValS;
+use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
+use crate::postparsing::rune_type_solver::TemplataLookupResult;
+use crate::postparsing::rune_type_solver::{RuneTypingTooManyMatchingTypes, RuneTypingCouldntFindType};
+use crate::postparsing::rune_type_solver::RuneTypeSolver;
+use crate::parse_arena::ParseArena;
 /*
 package dev.vale.highertyping
 
@@ -168,9 +177,6 @@ object HigherTypingPass {
 
 // mig: fn explicify_lookups
 pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>>) -> Result<(), IRuneTypingLookupFailedError<'s>> {
-  use crate::postparsing::rune_type_solver::{IRuneTypeSolverLookupResult, PrimitiveRuneTypeSolverLookupResult};
-  use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
-  use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
   // Only two rules' results can be coerced: LookupSR and CallSR.
   // Let's look for those and rewrite them to put an explicit coercion in there.
   for rule in all_rules_with_implicitly_coercing_lookups_s {
@@ -376,8 +382,6 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
 */
 // mig: fn coerce_kind_lookup_to_coord
 fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
-  use crate::postparsing::rules::rules::{LookupSR, CoerceToCoordSR};
-  use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
   let kind_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
     range: range.clone(),
     original_coord_rune: result_rune.rune.clone(),
@@ -404,8 +408,6 @@ fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type:
 */
 // mig: fn coerce_kind_template_lookup_to_kind
 fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
-  use crate::postparsing::rules::rules::{LookupSR, CallSR};
-  use crate::postparsing::names::{IRuneValS, ImplicitCoercionTemplateRuneValS};
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
     original_kind_rune: result_rune.rune.clone(),
@@ -433,8 +435,6 @@ fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_
 */
 // mig: fn coerce_kind_template_lookup_to_coord
 fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
-  use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR};
-  use crate::postparsing::names::{IRuneValS, ImplicitCoercionTemplateRuneValS, ImplicitCoercionKindRuneValS};
 
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
@@ -576,7 +576,6 @@ fn imprecise_name_matches_absolute_name(&self, needle_imprecise_name_s: &IImprec
 // See MINAAN for what we're doing here.
 // mig: fn lookup_types
 fn lookup_types(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, needle_imprecise_name_s: &IImpreciseNameS<'s>) -> Vec<IRuneTypeSolverLookupResult<'s>> {
-  use crate::postparsing::rune_type_solver::{PrimitiveRuneTypeSolverLookupResult, CitizenRuneTypeSolverLookupResult, TemplataLookupResult};
 
   match needle_imprecise_name_s {
     IImpreciseNameS::CodeName(_) => {}
@@ -1514,7 +1513,7 @@ fn calculate_rune_types(
       rune_s_to_pre_known_type_a.insert(coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {}));
     }
   }
-  let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {
+  let rune_type_solver = RuneTypeSolver {
     scout_arena: self.scout_arena,
   };
   // Violation: RSMSCPX: Scala passes globalOptions.useOptimizedSolver as 2nd arg to solve; Rust's solve_rune_type omits it
@@ -1662,7 +1661,7 @@ pub fn run_pass(
     let impls: Vec<&'s ImplS<'s>> = programs_s.iter().flat_map(|p| p.impls.iter().copied()).collect();
     let functions: Vec<&'s FunctionS<'s>> = programs_s.iter().flat_map(|p| p.implemented_functions.iter().copied()).collect();
     let exports: Vec<&'s ExportAsS<'s>> = programs_s.iter().flat_map(|p| p.exports.iter().copied()).collect();
-    let imports: Vec<&'s crate::postparsing::ast::ImportS<'s>> = programs_s.iter().flat_map(|p| p.imports.iter().copied()).collect();
+    let imports: Vec<&'s ImportS<'s>> = programs_s.iter().flat_map(|p| p.imports.iter().copied()).collect();
     // Leak vecs into slices since ProgramS holds slices
     let merged = ProgramS {
       structs: structs.leak(),
@@ -1823,7 +1822,7 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
@@ -1958,7 +1957,6 @@ impl<'s, 'ctx, 'env> IRuneTypeSolverEnv<'s> for HigherTypingRuneTypeSolverEnv<'s
     _range: RangeS<'s>,
     name: IImpreciseNameS<'s>,
   ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
-    use crate::postparsing::rune_type_solver::{RuneTypingTooManyMatchingTypes, RuneTypingCouldntFindType};
     self.pass.lookup_type(self.astrouts, self.env, self.range_s.clone(), &name)
       .map_err(|e| match e {
         ILookupFailedErrorA::CouldntFindType(c) => {

@@ -75,7 +75,7 @@ fn type_simple_main_function() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func main() {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -99,7 +99,7 @@ fn type_simple_generic_function() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func moo<T>() where T Ref {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -123,7 +123,7 @@ fn infer_coord_type_from_parameters() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["exported func moo<T>(x T) {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -160,7 +160,7 @@ fn type_simple_struct() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -184,7 +184,7 @@ fn type_simple_generic_struct() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo<T> {\n  bork T;\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -209,7 +209,7 @@ fn template_call_recursively_evaluate() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo<T> {\n  bork T;\n}\nstruct Bork<T> {\n  x Moo<T>;\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -250,7 +250,7 @@ fn type_simple_interface() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -274,7 +274,7 @@ fn type_simple_generic_interface() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo<T> where T Ref {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -298,7 +298,7 @@ fn type_simple_generic_interface_method() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo<T> where T Ref {\n  func bork(virtual self &Moo<T>) int;\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -323,7 +323,7 @@ fn infer_generic_type_through_param_type_template_call() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct List<T> {\n  moo T;\n}\nexported func moo<T>(x List<T>) {\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -363,7 +363,7 @@ fn test_evaluate_pack() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<T RefList>()\nwhere T = Refs(int, bool)\n{\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -405,7 +405,7 @@ fn test_infer_pack_from_result() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<T>()\nwhere func moo(T, bool)str\n{\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -444,7 +444,7 @@ fn test_infer_pack_from_empty_result() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<P RefList>()\nwhere P = Refs(), Prot[P, str]\n{\n}\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -501,7 +501,7 @@ fn type_simple_impl() {
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
-    let parse_arena = crate::parse_arena::ParseArena::new(&parser_arena);
+    let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface IMoo {\n}\nstruct Moo {\n}\nimpl IMoo for Moo;\n".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });

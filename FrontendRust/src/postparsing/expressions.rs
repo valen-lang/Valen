@@ -693,7 +693,7 @@ pub struct OutsideLoadSE<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub name: IImpreciseNameS<'s>,
-  pub maybe_template_args: Option<&'s [crate::postparsing::rules::RuneUsage<'s>]>,
+  pub maybe_template_args: Option<&'s [RuneUsage<'s>]>,
   pub target_ownership: LoadAsP,
 }
 /*

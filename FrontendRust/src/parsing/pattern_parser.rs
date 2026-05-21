@@ -4,6 +4,7 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
+use crate::parse_arena::ParseArena;
 
 /*
 package dev.vale.parsing
@@ -19,7 +20,7 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 pub struct PatternParser<'p, 'ctx> {
-  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
 }
 // V: why is this cloneable?/
@@ -37,7 +38,7 @@ impl<'p, 'ctx> PatternParser<'p, 'ctx>
 where
   'p: 'ctx,
 {
-  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
+  pub fn new(parse_arena: &'ctx ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     PatternParser {
       parse_arena,
       keywords,
