@@ -222,6 +222,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
     Some(filepathToSource)
   }
 
+  // AFTERM: nuke this entire function once we have proper rust interop
   private def invokeValeRusterIfNeeded(
     opts: Options,
     allInputs: Vector[IFrontendInput]):
@@ -278,6 +279,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
     }
   }
 
+  // AFTERM: nuke this entire function once we have proper rust interop
   private def resolveRustPackageContents(
     rustBindingsDir: Option[String],
     packageCoord: PackageCoordinate):
@@ -342,8 +344,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
         keywords,
         Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
         Builtins.getCodeMap(interner, keywords)
-          // Per @RRPGRZ, rust fallback first: resolvePackageContents below always returns
-          // Some(Map.empty) for packages it can't find, which would short-circuit this fallback.
           .or(packageCoord => resolveRustPackageContents(rustBindingsDir, packageCoord))
           .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
         passmanager.FullCompilationOptions(

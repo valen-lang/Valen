@@ -102,6 +102,7 @@ object NameHammer {
   def simplifyKind(value: KindIT[cI]): SimpleId = {
     value match {
       case IntIT(bits) => SimpleId(Vector(SimpleIdStep("i" + bits, Vector())))
+      case StrIT() => SimpleId(Vector(SimpleIdStep("str", Vector())))
       case other => vimpl(other)
     }
   }
