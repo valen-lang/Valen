@@ -1137,7 +1137,6 @@ fn assume_most_specific_generic_param() {
 */
 // mig: fn assume_most_specific_common_ancestor
 #[test]
-// LOOK HERE
 fn assume_most_specific_common_ancestor() {
 
     let parse_bump = Bump::new();
@@ -1534,7 +1533,6 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunc
 */
 // mig: fn can_destructure_and_assemble_static_sized_array
 #[test]
-// LOOK HERE
 fn can_destructure_and_assemble_static_sized_array() {
 
     let parse_bump = Bump::new();

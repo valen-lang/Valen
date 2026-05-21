@@ -576,7 +576,6 @@ exported func main() int {
 */
 // mig: fn custom_destructor
 #[test]
-// LOOK HERE
 fn custom_destructor() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -905,7 +904,6 @@ fn test_taking_a_callable_param() {
 */
 // mig: fn simple_struct
 #[test]
-// LOOK HERE
 fn simple_struct() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1071,7 +1069,6 @@ fn simple_struct() {
 */
 // mig: fn calls_destructor_on_local_var
 #[test]
-// LOOK HERE
 fn calls_destructor_on_local_var() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1375,7 +1372,6 @@ fn stamps_an_interface_template_via_a_function_return() {
 */
 // mig: fn reads_a_struct_member
 #[test]
-// LOOK HERE
 fn reads_a_struct_member() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1446,7 +1442,6 @@ fn reads_a_struct_member() {
 */
 // mig: fn automatically_drops_struct
 #[test]
-// LOOK HERE
 fn automatically_drops_struct() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1777,7 +1772,6 @@ fn tests_exporting_interface() {
 */
 // mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
-// LOOK HERE
 fn tests_single_expression_and_single_statement_functions_returns() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -1845,7 +1839,6 @@ fn tests_single_expression_and_single_statement_functions_returns() {
 */
 // mig: fn tests_calling_a_templated_struct_s_constructor
 #[test]
-// LOOK HERE
 fn tests_calling_a_templated_struct_s_constructor() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2043,7 +2036,6 @@ fn tests_calling_a_templated_struct_s_constructor() {
 */
 // mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
-// LOOK HERE
 fn tests_upcasting_from_a_struct_to_an_interface() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2150,7 +2142,6 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 */
 // mig: fn tests_calling_a_virtual_function
 #[test]
-// LOOK HERE
 fn tests_calling_a_virtual_function() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2238,7 +2229,6 @@ fn tests_calling_a_virtual_function() {
 */
 // mig: fn tests_upcasting_has_the_right_stuff
 #[test]
-// LOOK HERE
 fn tests_upcasting_has_the_right_stuff() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2334,7 +2324,6 @@ fn tests_upcasting_has_the_right_stuff() {
 */
 // mig: fn tests_calling_a_virtual_function_through_a_borrow_ref
 #[test]
-// LOOK HERE
 fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2646,7 +2635,6 @@ fn test_borrow_ref() {
 */
 // mig: fn tests_calling_a_function_with_an_upcast
 #[test]
-// LOOK HERE
 fn tests_calling_a_function_with_an_upcast() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2715,7 +2703,6 @@ fn tests_calling_a_function_with_an_upcast() {
 */
 // mig: fn tests_calling_a_templated_function_with_an_upcast
 #[test]
-// LOOK HERE
 fn tests_calling_a_templated_function_with_an_upcast() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2785,7 +2772,6 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 */
 // mig: fn tests_upcast_with_generics_has_the_right_stuff
 #[test]
-// LOOK HERE
 fn tests_upcast_with_generics_has_the_right_stuff() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -2913,7 +2899,6 @@ fn tests_a_foreach_for_a_linked_list() {
 */
 // mig: fn test_return_from_inside_if_destroys_locals
 #[test]
-// LOOK HERE
 fn test_return_from_inside_if_destroys_locals() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -5116,7 +5101,6 @@ fn test_array_push_pop_len_capacity_drop() {
 */
 // mig: fn upcast_generic
 #[test]
-// LOOK HERE
 fn upcast_generic() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -5218,7 +5202,6 @@ fn upcast_generic() {
 */
 // mig: fn downcast_function_rrbfs
 #[test]
-// LOOK HERE
 fn downcast_function_rrbfs() {
     // Here we had something interesting happen: the complex solve had a race with the thing that
     // populates identifying runes.
@@ -5469,7 +5452,6 @@ fn downcast_function_rrbfs() {
 // AFTERM: doublecheck this
 // mig: fn downcast_with_as
 #[test]
-// LOOK HERE
 fn downcast_with_as() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
