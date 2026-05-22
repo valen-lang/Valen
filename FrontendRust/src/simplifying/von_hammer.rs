@@ -1,3 +1,12 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/VonHammer.scala
+// mig: struct VonHammerH
+pub struct VonHammerH<'h> {
+    pub name_hammer: NameHammerH<'h>,
+    pub type_hammer: TypeHammerH<'h>,
+}
+
+// mig: impl VonHammerH
+/*
 package dev.vale.simplifying
 
 import dev.vale.{CodeLocationS, PackageCoordinate, RangeS, vimpl}
@@ -9,6 +18,14 @@ import dev.vale.postparsing._
 import dev.vale.von.{IVonData, VonArray, VonBool, VonFloat, VonInt, VonMember, VonObject, VonStr}
 
 class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
+*/
+// mig: fn vonify_program
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_program(program: ProgramH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_program");
+    }
+}
+/*
   def vonifyProgram(program: ProgramH): IVonData = {
     val ProgramH(packages) = program
 
@@ -30,7 +47,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
                 ))
             }).toVector))))
   }
+*/
+// mig: fn vonify_package
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_package(package_coord: PackageCoordinate, paackage: PackageH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_package");
+    }
+}
 
+/*
   def vonifyPackage(packageCoord: PackageCoordinate, paackage: PackageH): IVonData = {
     val PackageH(
       interfaces,
@@ -116,7 +141,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
                   VonMember("kind", vonifyKind(kind))))
             })))))
   }
+*/
+// mig: fn vonify_region
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_region(region: RegionH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_region");
+    }
+}
 
+/*
   def vonifyRegion(region: RegionH): IVonData = {
     val RegionH() = region
 
@@ -131,7 +164,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
 //            None,
 //            kinds.map(vonifyKind).toVector))))
   }
+*/
+// mig: fn vonify_struct_h
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_struct_h(ref_: StructHT<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_struct_h");
+    }
+}
 
+/*
   def vonifyStructH(ref: StructHT): IVonData = {
     val StructHT(fullName) = ref
 
@@ -141,7 +182,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       Vector(
         VonMember("name", vonifyName(fullName))))
   }
+*/
+// mig: fn vonify_interface
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_interface(ref_: InterfaceHT<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_interface");
+    }
+}
 
+/*
   def vonifyInterface(ref: InterfaceHT): IVonData = {
     val InterfaceHT(fullName) = ref
 
@@ -151,7 +200,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       Vector(
         VonMember("name", vonifyName(fullName))))
   }
+*/
+// mig: fn vonify_interface_method
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_interface_method(interface_method_h: InterfaceMethodH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_interface_method");
+    }
+}
 
+/*
   def vonifyInterfaceMethod(interfaceMethodH: InterfaceMethodH): IVonData = {
     val InterfaceMethodH(prototype, virtualParamIndex) = interfaceMethodH
 
@@ -162,7 +219,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("prototype", vonifyPrototype(prototype)),
         VonMember("virtualParamIndex", VonInt(virtualParamIndex))))
   }
+*/
+// mig: fn vonify_interface
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_interface_definition(interface: InterfaceDefinitionH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_interface");
+    }
+}
 
+/*
   def vonifyInterface(interface: InterfaceDefinitionH): IVonData = {
     val InterfaceDefinitionH(fullName, weakable, mutability, superInterfaces, prototypes) = interface
 
@@ -177,7 +242,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("superInterfaces", VonArray(None, superInterfaces.map(vonifyInterface).toVector)),
         VonMember("methods", VonArray(None, prototypes.map(vonifyInterfaceMethod).toVector))))
   }
+*/
+// mig: fn vonfiy_struct
+impl<'h> VonHammerH<'h> {
+    pub fn vonfiy_struct(struct_def: StructDefinitionH<'h>) -> IVonData {
+        panic!("Unimplemented: vonfiy_struct");
+    }
+}
 
+/*
   def vonfiyStruct(struct: StructDefinitionH): IVonData = {
     val StructDefinitionH(fullName, weakable, mutability, edges, members) = struct
 
@@ -192,28 +265,60 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("edges", VonArray(None, edges.map(edge => vonifyEdge(edge)).toVector)),
         VonMember("members", VonArray(None, members.map(vonifyStructMember).toVector))))
   }
+*/
+// mig: fn vonify_mutability
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_mutability(mutability: Mutability) -> IVonData {
+        panic!("Unimplemented: vonify_mutability");
+    }
+}
 
+/*
   def vonifyMutability(mutability: Mutability): IVonData = {
     mutability match {
       case Immutable => VonObject("Immutable", None, Vector())
       case Mutable => VonObject("Mutable", None, Vector())
     }
   }
+*/
+// mig: fn vonify_location
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_location(location: LocationH) -> IVonData {
+        panic!("Unimplemented: vonify_location");
+    }
+}
 
+/*
   def vonifyLocation(location: LocationH): IVonData = {
     location match {
       case InlineH => VonObject("Inline", None, Vector())
       case YonderH => VonObject("Yonder", None, Vector())
     }
   }
+*/
+// mig: fn vonify_variability
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_variability(variability: Variability) -> IVonData {
+        panic!("Unimplemented: vonify_variability");
+    }
+}
 
+/*
   def vonifyVariability(variability: Variability): IVonData = {
     variability match {
       case Varying => VonObject("Varying", None, Vector())
       case Final => VonObject("Final", None, Vector())
     }
   }
+*/
+// mig: fn vonify_prototype
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_prototype(prototype: PrototypeH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_prototype");
+    }
+}
 
+/*
   def vonifyPrototype(prototype: PrototypeH): IVonData = {
     val PrototypeH(fullName, params, returnType) = prototype
 
@@ -225,7 +330,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("params", VonArray(None, params.map(vonifyCoord).toVector)),
         VonMember("return", vonifyCoord(returnType))))
   }
+*/
+// mig: fn vonify_coord
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_coord(coord: CoordH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_coord");
+    }
+}
 
+/*
   def vonifyCoord(coord: CoordH[KindHT]): IVonData = {
     val CoordH(ownership, location, kind) = coord
 
@@ -237,7 +350,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("location", vonifyLocation(location)),
         VonMember("kind", vonifyKind(kind))))
   }
+*/
+// mig: fn vonify_edge
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_edge(edge_h: EdgeH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_edge");
+    }
+}
 
+/*
   def vonifyEdge(edgeH: EdgeH): IVonData = {
     val EdgeH(struct, interface, structPrototypesByInterfacePrototype) = edgeH
 
@@ -260,7 +381,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
                   VonMember("override", vonifyPrototype(structPrototype))))
             })))))
   }
+*/
+// mig: fn vonify_ownership
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_ownership(ownership: OwnershipH) -> IVonData {
+        panic!("Unimplemented: vonify_ownership");
+    }
+}
 
+/*
   def vonifyOwnership(ownership: OwnershipH): IVonData = {
     ownership match {
       case OwnH => VonObject("Own", None, Vector())
@@ -271,7 +400,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       case WeakH => VonObject("Weak", None, Vector())
     }
   }
+*/
+// mig: fn vonify_struct_member
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_struct_member(struct_member_h: StructMemberH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_struct_member");
+    }
+}
 
+/*
   def vonifyStructMember(structMemberH: StructMemberH): IVonData = {
     val StructMemberH(name, variability, tyype) = structMemberH
 
@@ -284,7 +421,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("variability", vonifyVariability(variability)),
         VonMember("type", vonifyCoord(tyype))))
   }
+*/
+// mig: fn vonify_runtime_sized_array_definition
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_runtime_sized_array_definition(rsa_def: RuntimeSizedArrayDefinitionHT<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_runtime_sized_array_definition");
+    }
+}
 
+/*
   def vonifyRuntimeSizedArrayDefinition(rsaDef: RuntimeSizedArrayDefinitionHT): IVonData = {
     val RuntimeSizedArrayDefinitionHT(name, mutability, elementType) = rsaDef
     VonObject(
@@ -296,7 +441,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("mutability", vonifyMutability(mutability)),
         VonMember("elementType", vonifyCoord(elementType))))
   }
+*/
+// mig: fn vonify_static_sized_array_definition
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_static_sized_array_definition(ssa_def: StaticSizedArrayDefinitionHT<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_static_sized_array_definition");
+    }
+}
 
+/*
   def vonifyStaticSizedArrayDefinition(ssaDef: StaticSizedArrayDefinitionHT): IVonData = {
     val StaticSizedArrayDefinitionHT(name, size, mutability, variability, elementType) = ssaDef
     VonObject(
@@ -310,7 +463,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("variability", vonifyVariability(variability)),
         VonMember("elementType", vonifyCoord(elementType))))
   }
+*/
+// mig: fn vonify_kind
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_kind(kind: KindHT<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_kind");
+    }
+}
 
+/*
   def vonifyKind(kind: KindHT): IVonData = {
     kind match {
       case NeverHT(_) => VonObject("Never", None, Vector())
@@ -337,7 +498,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       }
     }
   }
+*/
+// mig: fn vonify_function
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_function(function_h: FunctionH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_function");
+    }
+}
 
+/*
   def vonifyFunction(functionH: FunctionH): IVonData = {
     val FunctionH(prototype, _, _, _, body) = functionH
 
@@ -349,7 +518,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         // TODO: rename block to body
         VonMember("block", vonifyExpression(body))))
   }
+*/
+// mig: fn vonify_expression
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_expression(node: ExpressionH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_expression");
+    }
+}
 
+/*
   def vonifyExpression(node: ExpressionH[KindHT]): IVonData = {
     node match {
       case ConstantVoidH() => {
@@ -885,7 +1062,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       }
     }
   }
+*/
+// mig: fn vonify_function_ref
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_function_ref(ref_: FunctionRefH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_function_ref");
+    }
+}
 
+/*
   def vonifyFunctionRef(ref: FunctionRefH): IVonData = {
     val FunctionRefH(prototype) = ref
 
@@ -895,7 +1080,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
       Vector(
         VonMember("prototype", vonifyPrototype(prototype))))
   }
+*/
+// mig: fn vonify_local
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_local(local: Local<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_local");
+    }
+}
 
+/*
   def vonifyLocal(local: Local): IVonData = {
     val Local(id, variability, tyype) = local
 
@@ -907,7 +1100,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("variability", vonifyVariability(variability)),
         VonMember("type", vonifyCoord(tyype))))
   }
+*/
+// mig: fn vonify_variable_id
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_variable_id(id: VariableIdH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_variable_id");
+    }
+}
 
+/*
   def vonifyVariableId(id: VariableIdH): IVonData = {
     val VariableIdH(number, height, maybeName) = id
 
@@ -921,14 +1122,30 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
           "optName",
           vonifyOptional[IdH](maybeName, x => vonifyName(x)))))
   }
+*/
+// mig: fn vonify_optional
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_optional<I>(opt: Option<I>, func: impl Fn(I) -> IVonData) -> IVonData {
+        panic!("Unimplemented: vonify_optional");
+    }
+}
 
+/*
   def vonifyOptional[I](opt: Option[I], func: (I) => IVonData): IVonData = {
     opt match {
       case None => VonObject("None", None, Vector())
       case Some(value) => VonObject("Some", None, Vector(VonMember("value", func(value))))
     }
   }
+*/
+// mig: fn vonify_code_location
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_code_location(code_location: CodeLocation) -> IVonData {
+        panic!("Unimplemented: vonify_code_location");
+    }
+}
 
+/*
   def vonifyCodeLocation(codeLocation: CodeLocation): IVonData = {
     val CodeLocation(file, offset) = codeLocation
     VonObject(
@@ -938,7 +1155,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("file", NameHammer.translateFileCoordinate(file)),
         VonMember("offset", VonInt(offset))))
   }
+*/
+// mig: fn vonify_code_location2
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_code_location2(code_location: CodeLocationS) -> IVonData {
+        panic!("Unimplemented: vonify_code_location2");
+    }
+}
 
+/*
   def vonifyCodeLocation2(codeLocation: CodeLocationS): IVonData = {
     val CodeLocationS(file, offset) = codeLocation
     VonObject(
@@ -948,13 +1173,29 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("file", NameHammer.translateFileCoordinate(file)),
         VonMember("offset", VonInt(offset))))
   }
+*/
+// mig: fn vonify_ranges
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_ranges(ranges: &'h [RangeS]) -> IVonData {
+        panic!("Unimplemented: vonify_ranges");
+    }
+}
 
+/*
   def vonifyRanges(ranges: List[RangeS]): IVonData = {
     VonArray(
       None,
       ranges.map(vonifyRange).toVector)
   }
+*/
+// mig: fn vonify_range
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_range(range: RangeS) -> IVonData {
+        panic!("Unimplemented: vonify_range");
+    }
+}
 
+/*
   def vonifyRange(range: RangeS): IVonData = {
     val RangeS(begin, end) = range
     VonObject(
@@ -964,7 +1205,15 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("begin", NameHammer.translateCodeLocation(begin)),
         VonMember("end", NameHammer.translateCodeLocation(end))))
   }
+*/
+// mig: fn vonify_name
+impl<'h> VonHammerH<'h> {
+    pub fn vonify_name(h: IdH<'h>) -> IVonData {
+        panic!("Unimplemented: vonify_name");
+    }
+}
 
+/*
   def vonifyName(h: IdH): IVonData = {
     val IdH(localName, packageCoordinate, shortenedName, fullyQualifiedName) = h
     VonObject(
@@ -976,3 +1225,4 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("shortenedName", VonStr(shortenedName))))
   }
 }
+*/

@@ -5,6 +5,15 @@ import dev.vale._
 import dev.vale.instantiating.ast._
 
 object InstantiatedHumanizer {
+*/
+// mig: fn humanize_templata
+pub fn humanize_templata<'s, 't, R>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    templata: &'t ITemplataI<'s, 't, R>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_templata");
+}
+/*
   def humanizeTemplata[R <: IRegionsModeI](
     codeMap: CodeLocationS => String,
     templata: ITemplataI[R]):
@@ -54,7 +63,15 @@ object InstantiatedHumanizer {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn humanize_coord
+pub fn humanize_coord<'s, 't, R>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    coord: &'t CoordI<'s, 't, R>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_coord");
+}
+/*
   private def humanizeCoord[R <: IRegionsModeI](
     codeMap: CodeLocationS => String,
     coord: CoordI[R]
@@ -73,7 +90,15 @@ object InstantiatedHumanizer {
     val kindStr = humanizeKind(codeMap, kind)
     ownershipStr + kindStr
   }
-
+*/
+// mig: fn humanize_kind
+pub fn humanize_kind<'s, 't, R>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    kind: &'t KindIT<'s, 't, R>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_kind");
+}
+/*
   private def humanizeKind[R <: IRegionsModeI](
     codeMap: CodeLocationS => String,
     kind: KindIT[R]
@@ -91,7 +116,16 @@ object InstantiatedHumanizer {
       case StaticSizedArrayIT(name) => humanizeId(codeMap, name)
     }
   }
-
+*/
+// mig: fn humanize_id
+pub fn humanize_id<'s, 't, R, I>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    name: &'t IdI<'s, 't, R, I>,
+    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_id");
+}
+/*
   def humanizeId[R <: IRegionsModeI, I <: INameI[R]](
     codeMap: CodeLocationS => String,
     name: IdI[R, I],
@@ -104,7 +138,16 @@ object InstantiatedHumanizer {
     }) +
       humanizeName(codeMap, name.localName, containingRegion)
   }
-
+*/
+// mig: fn humanize_name
+pub fn humanize_name<'s, 't, R, I>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    name: &'t INameI<'s, 't, R, I>,
+    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_name");
+}
+/*
   def humanizeName[R <: IRegionsModeI, I <: INameI[R]](
     codeMap: CodeLocationS => String,
     name: INameI[R],
@@ -186,7 +229,16 @@ object InstantiatedHumanizer {
       case InterfaceTemplateNameI(humanName) => humanName.str
     }
   }
-
+*/
+// mig: fn humanize_generic_args
+pub fn humanize_generic_args<'s, 't, R>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    template_args: &'t [ITemplataI<'s, 't, R>],
+    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_generic_args");
+}
+/*
   private def humanizeGenericArgs[R <: IRegionsModeI](
     codeMap: CodeLocationS => String,
     templateArgs: Vector[ITemplataI[R]],
@@ -207,7 +259,15 @@ object InstantiatedHumanizer {
         ""
       })
   }
-
+*/
+// mig: fn humanize_signature
+pub fn humanize_signature<'s, 't, R>(
+    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    signature: &'t SignatureI<'s, 't, R>,
+) -> StrI<'s> {
+    panic!("Unimplemented: humanize_signature");
+}
+/*
   def humanizeSignature[R <: IRegionsModeI](codeMap: CodeLocationS => String, signature: SignatureI[R]): String = {
     humanizeId(codeMap, signature.id)
   }

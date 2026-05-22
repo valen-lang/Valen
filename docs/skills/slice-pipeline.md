@@ -17,13 +17,25 @@ So please run them as agents. Do not make edits yourself, do not use the Edit to
 
 # Steps
 
-## Step 0: Verify the pass migration policy exists
+## Step -1: Verify the target files are slice-pipeline-ready
 
-The pipeline is pass-aware. Each pass needs a `migration-policy.md` next to its source root (walking up from the target file). If none exists, STOP and tell the user — running without one produces the cleanup burden documented in `FrontendRust/docs/migration/migration-policy.md` and TL.md §"Cleaning Up After The Slice Pipeline."
+Before doing anything else, for each `.rs` file you're about to process:
+ * It must be **registered** in its parent `mod.rs` (or its parent's `pub mod` chain reaches it). If you can't find `pub mod <file_stem>;` (or `#[cfg(test)] pub mod <file_stem>;`) somewhere on the path from `lib.rs` down, the file is unregistered.
+ * It must already be in **wrapped-Scala** shape: first non-blank line should be `// From Frontend/…/<File>.scala` (or similar header comment), second non-blank line `/*`, and the file ends with `*/`. Any Rust definitions live between the header and the opening `/*`, or interleaved with later `*/`...`/*` pairs.
 
-Check by walking up from the target file's directory. Do NOT accept `FrontendRust/docs/migration/migration-policy.md` as a match — that is the template/canonical-example, not a real per-pass policy.
+If either check fails, **STOP and escalate to TL** via `for-tl.md`. The wrap-and-register prep is TL/architect-only work — JR should not attempt it. Symptoms of an unprepped file: raw `package dev.vale.…`, `import dev.vale.…`, or `class …` lines appearing outside `/* */` blocks; these will not compile if registered, and slice-start will produce nonsense if run on them.
 
-If found, paste the full policy path into the spawn prompt for each subsequent agent so they can read it.
+The fix is mechanical (TL wraps each file in `/* */` + adds `pub mod` entries) and takes ~5 minutes per directory; just don't try to do it yourself.
+
+## Step 0: Verify the universal migration policy has a row for this pass
+
+The pipeline is policy-driven by a single universal file: `FrontendRust/docs/migration/migration-policy.md`. Open it and locate the row in the **Per-pass values** table whose **Path prefix** matches the target file's path (e.g. `src/typing/` for typing, `src/simplifying/` for simplifying).
+
+If no row matches, STOP and tell the user — running without one produces the cleanup burden documented in TL.md §"Cleaning Up After The Slice Pipeline." The architect needs to add a row before the pipeline can run.
+
+If the matching row has any `(TBD — defer to architect when first file gets migrated)` cells in columns this pipeline would need, STOP and escalate to the architect for those values.
+
+The subsequent slice agents (`slice-rustify`, `slice-placehold`) read the policy themselves at the same fixed path; no need to pass it into their spawn prompts.
 
 ## Step 1: slice-start
 
@@ -88,8 +100,8 @@ Then check the output: it must report `All N files OK` for some N. If any file f
  * A `// mig: fn` was placed at module scope where its impl wrap should sit between the Rust fn and the Scala `/* */` block.
  * An emitted impl block has its closing `}` in the wrong position.
 
-If SCPX is green: also do a `cargo check --manifest-path FrontendRust/Cargo.toml --lib > ./tmp/slice-pipeline-check.txt 2>&1` and report the error count. Pre-existing warnings are fine; new compile errors mean placehold produced something rustc rejects.
+**Cargo green is NOT a goal of this pipeline.** Placeholder stubs naturally reference types that don't exist yet (upstream-pass output AST, not-yet-migrated cross-pass types, etc.). `cargo check` is expected to be red after the pipeline runs, and that's fine — the next phase (Guardian-enabled real migration) is where stubs get filled in and references resolve as test paths drive the work. Do NOT chase cargo errors during the pipeline; do NOT add `use` statements / scaffold upstream types / add lifetime decoration to make things compile. The pipeline's "done" condition is **SCPX green**, full stop.
 
 # When done
 
-Say "done" and give a brief summary of what was done at each step, including the SCPX result and the post-pipeline cargo-check error count.
+Say "done" and give a brief summary of what was done at each step, including the SCPX result. Don't report cargo state — it isn't load-bearing.

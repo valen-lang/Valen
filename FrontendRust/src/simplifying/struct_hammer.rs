@@ -1,3 +1,5 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/StructHammer.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale._
@@ -7,16 +9,38 @@ import dev.vale.instantiating.ast._
 import scala.collection.immutable.ListMap
 
 
+*/
+// mig: struct StructHammerH
+pub struct StructHammerH<'h> {
+    // TODO: populate fields when simplifying pass is fully migrated
+}
+// mig: impl StructHammerH
+/*
 class StructHammer(
     interner: Interner,
     keywords: Keywords,
     nameHammer: NameHammer,
     translatePrototype: (HinputsI, HamutsBox, PrototypeI[cI]) => PrototypeH,
     translateReference: (HinputsI, HamutsBox, CoordI[cI]) => CoordH[KindHT]) {
+*/
+// mig: fn translate_interfaces
+impl<'h> StructHammerH<'h> {
+    pub fn translate_interfaces() {
+        panic!("Unimplemented: translate_interfaces");
+    }
+}
+/*
   def translateInterfaces(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
     hinputs.interfaces.foreach(interface => translateInterface(hinputs, hamuts, interface.instantiatedInterface))
   }
-
+*/
+// mig: fn translate_interface_methods
+impl<'h> StructHammerH<'h> {
+    pub fn translate_interface_methods() -> Vec<()> {
+        panic!("Unimplemented: translate_interface_methods");
+    }
+}
+/*
   def translateInterfaceMethods(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -34,7 +58,14 @@ class StructHammer(
 
     methodsH
   }
-
+*/
+// mig: fn translate_interface
+impl<'h> StructHammerH<'h> {
+    pub fn translate_interface() {
+        panic!("Unimplemented: translate_interface");
+    }
+}
+/*
   def translateInterface(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -80,11 +111,25 @@ class StructHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_structs
+impl<'h> StructHammerH<'h> {
+    pub fn translate_structs() {
+        panic!("Unimplemented: translate_structs");
+    }
+}
+/*
   def translateStructs(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
     hinputs.structs.foreach(structDefI => translateStructI(hinputs, hamuts, structDefI.instantiatedCitizen))
   }
-
+*/
+// mig: fn translate_struct_i
+impl<'h> StructHammerH<'h> {
+    pub fn translate_struct_i() {
+        panic!("Unimplemented: translate_struct_i");
+    }
+}
+/*
   def translateStructI(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -132,12 +177,26 @@ class StructHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_members
+impl<'h> StructHammerH<'h> {
+    pub fn translate_members() -> Vec<()> {
+        panic!("Unimplemented: translate_members");
+    }
+}
+/*
   def translateMembers(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], members: Vector[StructMemberI]):
   (Vector[StructMemberH]) = {
     members.map(translateMember(hinputs, hamuts, structName, _))
   }
-
+*/
+// mig: fn translate_member
+impl<'h> StructHammerH<'h> {
+    pub fn translate_member() {
+        panic!("Unimplemented: translate_member");
+    }
+}
+/*
   def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], member2: StructMemberI):
   (StructMemberH) = {
     val (variability, memberType) =
@@ -160,7 +219,14 @@ class StructHammer(
       Conversions.evaluateVariability(variability),
       memberType)
   }
-
+*/
+// mig: fn make_box
+impl<'h> StructHammerH<'h> {
+    pub fn make_box() {
+        panic!("Unimplemented: make_box");
+    }
+}
+/*
   def makeBox(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -204,7 +270,14 @@ class StructHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_edges_for_struct
+impl<'h> StructHammerH<'h> {
+    pub fn translate_edges_for_struct() -> Vec<()> {
+        panic!("Unimplemented: translate_edges_for_struct");
+    }
+}
+/*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
       structRefH: StructHT,
@@ -213,7 +286,14 @@ class StructHammer(
     val edges2 = hinputs.interfaceToSubCitizenToEdge.values.flatMap(_.values).filter(_.subCitizen.id == structTT.id)
     translateEdgesForStruct(hinputs, hamuts, structRefH, edges2.toVector)
   }
-
+*/
+// mig: fn translate_edges_for_struct
+impl<'h> StructHammerH<'h> {
+    pub fn translate_edges_for_struct() -> Vec<()> {
+        panic!("Unimplemented: translate_edges_for_struct");
+    }
+}
+/*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
       structRefH: StructHT,
@@ -221,8 +301,14 @@ class StructHammer(
   (Vector[EdgeH]) = {
     edges2.map(e => translateEdge(hinputs, hamuts, structRefH, InterfaceIT(e.superInterface), e))
   }
-
-
+*/
+// mig: fn translate_edge
+impl<'h> StructHammerH<'h> {
+    pub fn translate_edge() {
+        panic!("Unimplemented: translate_edge");
+    }
+}
+/*
   private def translateEdge(hinputs: HinputsI, hamuts: HamutsBox, structRefH: StructHT, interfaceIT: InterfaceIT[cI], edge2: EdgeI):
   (EdgeH) = {
     // Purposefully not trying to translate the entire struct here, because we might hit a circular dependency
@@ -242,12 +328,27 @@ class StructHammer(
     val structPrototypesByInterfacePrototype = ListMap[InterfaceMethodH, PrototypeH](interfacePrototypesH.zip(prototypesH) : _*)
     (EdgeH(structRefH, interfaceRefH, structPrototypesByInterfacePrototype))
   }
-
+*/
+// mig: fn lookup_struct
+impl<'h> StructHammerH<'h> {
+    pub fn lookup_struct() {
+        panic!("Unimplemented: lookup_struct");
+    }
+}
+/*
   def lookupStruct(hinputs: HinputsI, hamuts: HamutsBox, structTT: StructIT[cI]): StructDefinitionI = {
     hinputs.lookupStruct(structTT.id)
   }
-
+*/
+// mig: fn lookup_interface
+impl<'h> StructHammerH<'h> {
+    pub fn lookup_interface() {
+        panic!("Unimplemented: lookup_interface");
+    }
+}
+/*
   def lookupInterface(hinputs: HinputsI, hamuts: HamutsBox, interfaceTT: InterfaceIT[cI]): InterfaceDefinitionI = {
     hinputs.lookupInterface(interfaceTT.id)
   }
 }
+*/

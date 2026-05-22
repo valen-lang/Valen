@@ -1,15 +1,36 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/TypeHammer.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.{BoolHT, CoordH, FloatHT, InlineH, IntHT, KindHT, NeverHT, PrototypeH, RuntimeSizedArrayDefinitionHT, RuntimeSizedArrayHT, StaticSizedArrayDefinitionHT, StaticSizedArrayHT, StrHT, VoidHT, YonderH}
 import dev.vale.{Interner, Keywords, vassert, vfail, vimpl, vregionmut, vwat, finalast => m}
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
-
+*/
+// mig: struct TypeHammerH
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct TypeHammerH<'h> {
+    pub interner: usize, // placeholder
+    pub keywords: usize, // placeholder
+    pub name_hammer: usize, // placeholder
+    pub struct_hammer: usize, // placeholder
+}
+// mig: impl TypeHammerH
+/*
 class TypeHammer(
     interner: Interner,
     keywords: Keywords,
     nameHammer: NameHammer,
     structHammer: StructHammer) {
+*/
+// mig: fn translate_kind
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_kind(&self, hinputs: usize, hamuts: usize, tyype: usize) -> usize {
+        panic!("Unimplemented: translate_kind");
+    }
+}
+/*
   def translateKind(hinputs: HinputsI, hamuts: HamutsBox, tyype: KindIT[cI]):
   (KindHT) = {
     tyype match {
@@ -39,7 +60,14 @@ class TypeHammer(
 //      }
     }
   }
-
+*/
+// mig: fn translate_region
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_region(&self, hinputs: usize, hamuts: usize, region: usize) -> usize {
+        panic!("Unimplemented: translate_region");
+    }
+}
+/*
   def translateRegion(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -47,7 +75,14 @@ class TypeHammer(
   RegionH = {
     RegionH()
   }
-
+*/
+// mig: fn translate_coord
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_coord(&self, hinputs: usize, hamuts: usize, coord: usize) -> usize {
+        panic!("Unimplemented: translate_coord");
+    }
+}
+/*
   def translateCoord(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -71,7 +106,14 @@ class TypeHammer(
     val (innerH) = translateKind(hinputs, hamuts, innerType);
     (CoordH(Conversions.evaluateOwnership(ownership), location, innerH))
   }
-
+*/
+// mig: fn translate_coords
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_coords(&self, hinputs: usize, hamuts: usize, references2: &'h [usize]) -> &'h [usize] {
+        panic!("Unimplemented: translate_coords");
+    }
+}
+/*
   def translateCoords(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -79,13 +121,27 @@ class TypeHammer(
   (Vector[CoordH[KindHT]]) = {
     references2.map(translateCoord(hinputs, hamuts, _))
   }
-
+*/
+// mig: fn check_conversion
+impl<'h> TypeHammerH<'h> {
+    pub fn check_conversion(&self, expected: usize, actual: usize) -> () {
+        panic!("Unimplemented: check_conversion");
+    }
+}
+/*
   def checkConversion(expected: CoordH[KindHT], actual: CoordH[KindHT]): Unit = {
     if (actual != expected) {
       vfail("Expected a " + expected + " but was a " + actual);
     }
   }
-
+*/
+// mig: fn translate_static_sized_array
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_static_sized_array(&self, hinputs: usize, hamuts: usize, ssaIT: usize) -> usize {
+        panic!("Unimplemented: translate_static_sized_array");
+    }
+}
+/*
   def translateStaticSizedArray(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -111,7 +167,14 @@ class TypeHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_runtime_sized_array
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_runtime_sized_array(&self, hinputs: usize, hamuts: usize, rsaIT: usize) -> usize {
+        panic!("Unimplemented: translate_runtime_sized_array");
+    }
+}
+/*
   def translateRuntimeSizedArray(hinputs: HinputsI, hamuts: HamutsBox, rsaIT: RuntimeSizedArrayIT[cI]): RuntimeSizedArrayHT = {
     hamuts.runtimeSizedArrays.get(rsaIT) match {
       case Some(x) => x.kind
@@ -132,7 +195,14 @@ class TypeHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_prototype
+impl<'h> TypeHammerH<'h> {
+    pub fn translate_prototype(&self, hinputs: usize, hamuts: usize, prototype2: usize) -> usize {
+        panic!("Unimplemented: translate_prototype");
+    }
+}
+/*
   def translatePrototype(
     hinputs: HinputsI, hamuts: HamutsBox,
     prototype2: PrototypeI[cI]):
@@ -146,3 +216,4 @@ class TypeHammer(
   }
 
 }
+*/

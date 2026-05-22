@@ -23,11 +23,30 @@ For each `// old, obsolete` comment in the file:
  * **NEVER delete Scala comment blocks** (`/* ... */`).
  * **NEVER delete code that is NOT preceded by `// old, obsolete`.**
 
+# Deletion bounds: where deletion STOPS
+
+This is the most common bug — agents over-extend the deletion range past the definition's true end. Be precise:
+
+ * **For a `struct` / `enum` / `const` / `fn`:** deletion ends at the closing `}` (struct/enum) or `;` (const) or the closing `}` of the fn body. The line containing the closing `}`/`;` is the LAST line you delete.
+ * **For an `impl` block:** deletion ends at the closing `}` of the `impl` itself — the brace at indent level 0 that matches the opening `impl X {`. NOT at the closing brace of any inner method, NOT at the next `// mig:` marker, NOT at the next blank line. **Count brace depth** as you scan downward; you stop only when the depth returns to where it was at the `impl` line (typically 0).
+ * **For a `trait` block:** same as `impl` — match the trait's outer `{` and `}`.
+
+After you delete the last line of the definition (`}` or `;`), **STOP**. Anything below that — blank lines, `/* … */` Scala blocks, other `// mig:` markers, other definitions — is NOT yours to touch.
+
+**Common failure modes to actively avoid:**
+
+ * Treating the next `// mig:` marker as the deletion boundary. ❌ Wrong — the marker's content is unrelated to the obsolete definition.
+ * Treating "the next blank line" as the boundary. ❌ Wrong — blank lines exist inside impl blocks.
+ * Treating "the next `/* … */`" as the boundary. ❌ Wrong — Scala comment blocks below an obsolete impl are stay-content (they're the audit-trail for the migrated definition that lives elsewhere in the file).
+ * Confusing inner-method braces with the outer-impl brace. ❌ Wrong — track brace depth explicitly.
+
+If you cannot unambiguously identify where the marked-obsolete definition ends (e.g. mismatched braces, unclear nesting, multiple plausible closing `}` candidates), STOP and report. Do NOT guess.
+
 # Steps
 
  1. Find every `// old, obsolete` comment in the file.
- 2. For each one, identify the full extent of the definition below it (e.g., for a struct: from `pub struct` to the closing `}`; for an `impl`: from `impl` to the closing `}`).
- 3. Delete the `// old, obsolete` comment and the entire definition.
+ 2. For each one, identify the full extent of the definition below it using the brace-depth-counting rule above. Mentally mark the first line (the `// old, obsolete` itself) and the last line (the closing `}`/`;` of the definition).
+ 3. Delete exactly that range — first line through last line, inclusive. Nothing before, nothing after.
  4. Clean up any extra blank lines left behind (collapse to at most one blank line).
 
 # Rules

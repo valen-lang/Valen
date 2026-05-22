@@ -1,10 +1,19 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/FunctionHammer.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.{FunctionH, Local, PureH, UserFunctionH, VariableIdH}
 import dev.vale.{Keywords, vassert, vfail, vimpl, vwat, finalast => m}
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
+*/
+// mig: struct FunctionHammerH
+pub struct FunctionHammerH<'h> {
+    // TODO: populate fields when FunctionHammer dependencies are migrated
+}
 
+// mig: impl FunctionHammerH
+/*
 class FunctionHammer(
     keywords: Keywords,
     typeHammer: TypeHammer,
@@ -12,7 +21,14 @@ class FunctionHammer(
     structHammer: StructHammer) {
   val expressionHammer =
     new ExpressionHammer(keywords, typeHammer, nameHammer, structHammer, this)
-
+*/
+// mig: fn translate_functions
+impl<'h> FunctionHammerH<'h> {
+    pub fn translate_functions(hinputs: HinputsI, hamuts: HamutsBox, functions: Vec<FunctionDefinitionI>) -> Vec<FunctionRefH> {
+        panic!("Unimplemented: translate_functions");
+    }
+}
+/*
   def translateFunctions(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -25,7 +41,14 @@ class FunctionHammer(
       }
     })
   }
-
+*/
+// mig: fn translate_function
+impl<'h> FunctionHammerH<'h> {
+    pub fn translate_function(hinputs: HinputsI, hamuts: HamutsBox, function: FunctionDefinitionI) -> FunctionRefH {
+        panic!("Unimplemented: translate_function");
+    }
+}
+/*
   def translateFunction(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -78,7 +101,14 @@ class FunctionHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_function_attributes
+impl<'h> FunctionHammerH<'h> {
+    pub fn translate_function_attributes(attributes: Vec<IFunctionAttributeI>) -> Vec<IFunctionAttributeH> {
+        panic!("Unimplemented: translate_function_attributes");
+    }
+}
+/*
   def translateFunctionAttributes(attributes: Vector[IFunctionAttributeI]) = {
     attributes.map({
       case UserFunctionI => UserFunctionH
@@ -87,7 +117,14 @@ class FunctionHammer(
       case x => vimpl(x.toString)
     })
   }
-
+*/
+// mig: fn translate_function_ref
+impl<'h> FunctionHammerH<'h> {
+    pub fn translate_function_ref(hinputs: HinputsI, hamuts: HamutsBox, current_function_header: FunctionHeaderI, prototype: PrototypeI) -> FunctionRefH {
+        panic!("Unimplemented: translate_function_ref");
+    }
+}
+/*
   def translateFunctionRef(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -99,3 +136,4 @@ class FunctionHammer(
     (functionRefH)
   }
 }
+*/

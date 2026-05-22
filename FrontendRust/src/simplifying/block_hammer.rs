@@ -1,3 +1,14 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/BlockHammer.scala
+// mig: struct BlockHammer
+pub struct BlockHammer<'h> {
+    pub expression_hammer: ExpressionHammer<'h>,
+    pub type_hammer: TypeHammer<'h>,
+}
+
+// mig: impl BlockHammer
+// (impl block intentionally not emitted per pass policy.)
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.{BlockH, ImmutabilifyH, ImmutableBorrowH, ImmutableShareH, MutabilifyH, MutableBorrowH, MutableShareH, NeverHT}
@@ -5,6 +16,14 @@ import dev.vale.instantiating.ast._
 import dev.vale.{vassert, vcurious, vfail, vimpl, vwat, finalast => m}
 
 class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
+*/
+// mig: fn translate_block
+impl<'h> BlockHammer<'h> {
+    pub fn translate_block(&self) {
+        panic!("Unimplemented: translate_block");
+    }
+}
+/*
   def translateBlock(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -49,7 +68,15 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
 //    start here, we're returning locals and thats not optimal
     BlockH(exprH)
   }
+*/
+// mig: fn translate_mutabilify
+impl<'h> BlockHammer<'h> {
+    pub fn translate_mutabilify(&self) {
+        panic!("Unimplemented: translate_mutabilify");
+    }
+}
 
+/*
   def translateMutabilify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -76,7 +103,15 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
 
     MutabilifyH(innerHE)
   }
+*/
+// mig: fn translate_immutabilify
+impl<'h> BlockHammer<'h> {
+    pub fn translate_immutabilify(&self) {
+        panic!("Unimplemented: translate_immutabilify");
+    }
+}
 
+/*
   def translateImmutabilify(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -104,3 +139,4 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
     ImmutabilifyH(innerHE)
   }
 }
+*/

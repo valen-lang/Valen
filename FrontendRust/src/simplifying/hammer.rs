@@ -1,3 +1,5 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/Hammer.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale.{Builtins, FileCoordinateMap, IPackageResolver, Interner, Keywords, PackageCoordinate, PackageCoordinateMap, Profiler, Result, finalast, vassert, vcurious, vfail, vwat}
@@ -8,43 +10,171 @@ import dev.vale.instantiating.ast._
 import dev.vale.postparsing.ICompileErrorS
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct FunctionRefH
+pub struct FunctionRefH<'h> {
+    prototype: PrototypeH<'h>,
+    _must_intern: MustIntern,
+}
+// mig: impl FunctionRefH
+/*
 case class FunctionRefH(prototype: PrototypeH) {
   val hash = runtime.ScalaRunTime._hashCode(this)
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for FunctionRefH` below.)
+/*
   override def hashCode(): Int = hash;
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for FunctionRefH` below.)
+/*
 override def equals(obj: Any): Boolean = vcurious();
   //  def functionType = prototype.functionType
+*/
+// mig: fn full_name
+impl<'h> FunctionRefH<'h> {
+    pub fn full_name(prototype: PrototypeH) -> IdH {
+        panic!("Unimplemented: full_name");
+    }
+}
+/*
   def fullName = prototype.id
 }
 
+*/
+// mig: struct LocalsBoxH
+pub struct LocalsBoxH<'h> {
+    inner: LocalsH<'h>,
+}
+// mig: impl LocalsBoxH
+/*
 case class LocalsBox(var inner: Locals) {
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for LocalsBoxH` below.)
+/*
   override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for LocalsBoxH` below.)
+/*
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
-
+*/
+// mig: fn snapshot
+impl<'h> LocalsBoxH<'h> {
+    pub fn snapshot(&self) -> LocalsH {
+        panic!("Unimplemented: snapshot");
+    }
+}
+/*
   def snapshot = inner
-
+*/
+// mig: fn typing_pass_locals
+impl<'h> LocalsBoxH<'h> {
+    pub fn typing_pass_locals(&self) -> ArenaIndexMap<IVarNameI, VariableIdH> {
+        panic!("Unimplemented: typing_pass_locals");
+    }
+}
+/*
   def typingPassLocals: Map[IVarNameI[cI], VariableIdH] = inner.typingPassLocals
+*/
+// mig: fn unstackified_vars
+impl<'h> LocalsBoxH<'h> {
+    pub fn unstackified_vars(&self) -> std::collections::HashSet<VariableIdH> {
+        panic!("Unimplemented: unstackified_vars");
+    }
+}
+/*
   def unstackifiedVars: Set[VariableIdH] = inner.unstackifiedVars
+*/
+// mig: fn locals
+impl<'h> LocalsBoxH<'h> {
+    pub fn locals(&self) -> ArenaIndexMap<VariableIdH, Local> {
+        panic!("Unimplemented: locals");
+    }
+}
+/*
   def locals: Map[VariableIdH, Local] = inner.locals
+*/
+// mig: fn next_local_id_number
+impl<'h> LocalsBoxH<'h> {
+    pub fn next_local_id_number(&self) -> i32 {
+        panic!("Unimplemented: next_local_id_number");
+    }
+}
+/*
   def nextLocalIdNumber: Int = inner.nextLocalIdNumber
-
+*/
+// mig: fn get
+impl<'h> LocalsBoxH<'h> {
+    pub fn get(&self, id: IVarNameI) -> Option<Local> {
+        panic!("Unimplemented: get");
+    }
+}
+/*
   def get(id: IVarNameI[cI]) = inner.get(id)
+*/
+// mig: fn get
+impl<'h> LocalsBoxH<'h> {
+    pub fn get(&self, id: VariableIdH) -> Option<Local> {
+        panic!("Unimplemented: get");
+    }
+}
+/*
   def get(id: VariableIdH) = inner.get(id)
-
+*/
+// mig: fn mark_unstackified
+impl<'h> LocalsBoxH<'h> {
+    pub fn mark_unstackified(&mut self, var_id: IVarNameI) {
+        panic!("Unimplemented: mark_unstackified");
+    }
+}
+/*
   def markUnstackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markUnstackified(varId2)
   }
+*/
+// mig: fn mark_restackified
+impl<'h> LocalsBoxH<'h> {
+    pub fn mark_restackified(&mut self, var_id: IVarNameI) {
+        panic!("Unimplemented: mark_restackified");
+    }
+}
+/*
   def markRestackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markRestackified(varId2)
   }
-
+*/
+// mig: fn mark_unstackified
+impl<'h> LocalsBoxH<'h> {
+    pub fn mark_unstackified(&mut self, var_id_h: VariableIdH) {
+        panic!("Unimplemented: mark_unstackified");
+    }
+}
+/*
   def markUnstackified(varIdH: VariableIdH): Unit = {
     inner = inner.markUnstackified(varIdH)
   }
+*/
+// mig: fn set_next_local_id_number
+impl<'h> LocalsBoxH<'h> {
+    pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
+        panic!("Unimplemented: set_next_local_id_number");
+    }
+}
+/*
   def setNextLocalIdNumber(nextLocalIdNumber: Int): Unit = {
     inner = inner.copy(nextLocalIdNumber = nextLocalIdNumber)
   }
-
+*/
+// mig: fn add_hammer_local
+impl<'h> LocalsBoxH<'h> {
+    pub fn add_hammer_local(&mut self, tyype: CoordH<KindHT>, variability: Variability) -> Local {
+        panic!("Unimplemented: add_hammer_local");
+    }
+}
+/*
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):
@@ -53,7 +183,14 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     inner = newInner
     local
   }
-
+*/
+// mig: fn add_typing_pass_local
+impl<'h> LocalsBoxH<'h> {
+    pub fn add_typing_pass_local(&mut self, var_id: IVarNameI, var_id_name_h: IdH, variability: Variability, tyype: CoordH<KindHT>) -> Local {
+        panic!("Unimplemented: add_typing_pass_local");
+    }
+}
+/*
   def addTypingPassLocal(
     varId2: IVarNameI[cI],
     varIdNameH: IdH,
@@ -70,6 +207,17 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 // This represents the locals for the entire function.
 // Note, some locals will have the same index, that just means they're in
 // different blocks.
+*/
+// mig: struct LocalsH
+pub struct LocalsH<'h> {
+    typing_pass_locals: ArenaIndexMap<'h, IVarNameI<'h>, VariableIdH>,
+    unstackified_vars: std::collections::HashSet<VariableIdH>,
+    locals: ArenaIndexMap<'h, VariableIdH, Local<'h>>,
+    next_local_id_number: i32,
+    _must_intern: MustIntern,
+}
+// mig: impl LocalsH
+/*
 case class Locals(
      // This doesn't have all the locals that are in the locals list, this just
      // has any locals added by typingpass.
@@ -81,9 +229,26 @@ case class Locals(
      locals: Map[VariableIdH, Local],
 
      nextLocalIdNumber: Int) {
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for LocalsH` below.)
+/*
   override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for LocalsH` below.)
+/*
 override def hashCode(): Int = vcurious()
-
+*/
+// mig: fn add_compiler_local
+impl<'h> LocalsH<'h> {
+    pub fn add_compiler_local(&self, interner: &'ctx HammerInterner<'h>, var_id: IVarNameI<'h>, var_id_name_h: IdH<'h>, variability: Variability, tyype: CoordH<KindHT>) -> (LocalsH<'h>, Local<'h>) {
+        // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+        // arena-allocates where Scala used GC.
+        panic!("Unimplemented: add_compiler_local");
+    }
+}
+/*
   def addCompilerLocal(
     varId2: IVarNameI[cI],
     varIdNameH: IdH,
@@ -107,7 +272,16 @@ override def hashCode(): Int = vcurious()
         newLocalIdNumber + 1)
     (newLocals, newLocal)
   }
-
+*/
+// mig: fn add_hammer_local
+impl<'h> LocalsH<'h> {
+    pub fn add_hammer_local(&self, interner: &'ctx HammerInterner<'h>, tyype: CoordH<KindHT>, variability: Variability) -> (LocalsH<'h>, Local<'h>) {
+        // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+        // arena-allocates where Scala used GC.
+        panic!("Unimplemented: add_hammer_local");
+    }
+}
+/*
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):
@@ -124,15 +298,36 @@ override def hashCode(): Int = vcurious()
         newLocalIdNumber + 1)
     (newLocals, newLocal)
   }
-
+*/
+// mig: fn mark_unstackified
+impl<'h> LocalsH<'h> {
+    pub fn mark_unstackified(&self, var_id: IVarNameI) -> LocalsH {
+        panic!("Unimplemented: mark_unstackified");
+    }
+}
+/*
   def markUnstackified(varId2: IVarNameI[cI]): Locals = {
     markUnstackified(typingPassLocals(varId2))
   }
-
+*/
+// mig: fn mark_restackified
+impl<'h> LocalsH<'h> {
+    pub fn mark_restackified(&self, var_id: IVarNameI) -> LocalsH {
+        panic!("Unimplemented: mark_restackified");
+    }
+}
+/*
   def markRestackified(varId2: IVarNameI[cI]): Locals = {
     markRestackified(typingPassLocals(varId2))
   }
-
+*/
+// mig: fn mark_unstackified
+impl<'h> LocalsH<'h> {
+    pub fn mark_unstackified(&self, var_id_h: VariableIdH) -> LocalsH {
+        panic!("Unimplemented: mark_unstackified");
+    }
+}
+/*
   def markUnstackified(varIdH: VariableIdH): Locals = {
     // Make sure it existed and wasnt already unstackified
     vassert(locals.contains(varIdH))
@@ -141,7 +336,14 @@ override def hashCode(): Int = vcurious()
     }
     Locals(typingPassLocals, unstackifiedVars + varIdH, locals, nextLocalIdNumber)
   }
-
+*/
+// mig: fn mark_restackified
+impl<'h> LocalsH<'h> {
+    pub fn mark_restackified(&self, var_id_h: VariableIdH) -> LocalsH {
+        panic!("Unimplemented: mark_restackified");
+    }
+}
+/*
   def markRestackified(varIdH: VariableIdH): Locals = {
     // Make sure it existed and was unstackified
     vassert(locals.contains(varIdH))
@@ -150,19 +352,41 @@ override def hashCode(): Int = vcurious()
     }
     Locals(typingPassLocals, unstackifiedVars - varIdH, locals, nextLocalIdNumber)
   }
-
+*/
+// mig: fn get
+impl<'h> LocalsH<'h> {
+    pub fn get(&self, var_id: IVarNameI) -> Option<Local> {
+        panic!("Unimplemented: get");
+    }
+}
+/*
   def get(varId: IVarNameI[cI]): Option[Local] = {
     typingPassLocals.get(varId) match {
       case None => None
       case Some(index) => Some(locals(index))
     }
   }
-
+*/
+// mig: fn get
+impl<'h> LocalsH<'h> {
+    pub fn get(&self, var_id: VariableIdH) -> Option<Local> {
+        panic!("Unimplemented: get");
+    }
+}
+/*
   def get(varId: VariableIdH): Option[Local] = {
     locals.get(varId)
   }
 }
-
+*/
+// mig: struct HammerH
+pub struct HammerH<'h> {
+    interner: &'h HammerInterner<'h>,
+    keywords: Keywords<'h>,
+    _must_intern: MustIntern,
+}
+// mig: impl HammerH
+/*
 class Hammer(interner: Interner, keywords: Keywords) {
   val nameHammer: NameHammer = new NameHammer()
   val structHammer: StructHammer =
@@ -175,7 +399,16 @@ class Hammer(interner: Interner, keywords: Keywords) {
   val typeHammer: TypeHammer = new TypeHammer(interner, keywords, nameHammer, structHammer)
   val functionHammer = new FunctionHammer(keywords, typeHammer, nameHammer, structHammer)
   val vonHammer = new VonHammer(nameHammer, typeHammer)
-
+*/
+// mig: fn translate
+impl<'h> HammerH<'h> {
+    pub fn translate(&self, interner: &'ctx HammerInterner<'h>, hinputs: HinputsI) -> ProgramH<'h> {
+        // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+        // arena-allocates where Scala used GC.
+        panic!("Unimplemented: translate");
+    }
+}
+/*
   def translate(hinputs: HinputsI): ProgramH = {
     val HinputsI(
     interfaces,
@@ -296,7 +529,12 @@ class Hammer(interner: Interner, keywords: Keywords) {
 }
 
 object Hammer {
-
+*/
+// mig: fn flatten_and_filter_voids
+pub fn flatten_and_filter_voids(unfiltered_exprs_h: &[ExpressionH]) -> Vec<ExpressionH> {
+    panic!("Unimplemented: flatten_and_filter_voids");
+}
+/*
   private def flattenAndFilterVoids(unfilteredExprsHE: Vector[ExpressionH[KindHT]]): Vector[ExpressionH[KindHT]] = {
     val flattenedExprsHE =
       unfilteredExprsHE.flatMap({
@@ -322,7 +560,12 @@ object Hammer {
     vassert(filteredFlattenedExprsHE.nonEmpty)
     filteredFlattenedExprsHE
   }
-
+*/
+// mig: fn consecutive
+pub fn consecutive(unfiltered_exprs_h: &[ExpressionH]) -> ExpressionH {
+    panic!("Unimplemented: consecutive");
+}
+/*
   def consecutive(unfilteredExprsHE: Vector[ExpressionH[KindHT]]): ExpressionH[KindHT] = {
     val filteredFlattenedExprsHE = flattenAndFilterVoids(unfilteredExprsHE)
 
@@ -332,7 +575,12 @@ object Hammer {
       case multiple => ConsecutorH(multiple)
     }
   }
-
+*/
+// mig: fn consecrash
+pub fn consecrash(locals_box: &mut LocalsBoxH, unfiltered_exprs_h: &[ExpressionH]) -> ExpressionH {
+    panic!("Unimplemented: consecrash");
+}
+/*
   // Like consecutive() but for expressions that were meant to go somewhere
   // but then the last one crashes.
   // We store them into locals really just so ConsecutorH doesn't complain
@@ -372,3 +620,4 @@ object Hammer {
   }
 }
 
+*/

@@ -9,15 +9,19 @@ You were pointed at a Rust file with some commented Scala code that has "Scala m
 
 I'd like you to translate every Scala mig slice comment to a "Rust mig slice comment". This means making them look more Rust-ish than Scala-ish.
 
-# Step 0: Read the pass migration policy
+# Step 0: Read the migration policy
 
-Before emitting anything, find the `migration-policy.md` for this pass: walk up from the target file's directory until you find one. If none is found above the file but a `FrontendRust/docs/migration/migration-policy.md` exists, that one is the template-and-canonical-example file; **do not use it as a real policy** — instead STOP and report "no per-pass migration-policy.md found; need one at `<expected-dir>/migration-policy.md` before rustify can run."
+Read `FrontendRust/docs/migration/migration-policy.md` (fixed path, single universal file across all passes). Find the row in its **Per-pass values** table whose **Path prefix** column matches the target file's path. If no row matches, STOP and report: "no migration-policy.md row for pass containing <file>; need an architect-approved row before rustify can run."
 
-Once you have the right policy file, read it in full. The sections you use here:
- * **Type-name suffix** — append this to every translated `class`/`case class`/`sealed trait`/`trait` name unless the name already carries it.
- * **Sealed-trait policy** — determines whether `sealed trait Foo` becomes `// mig: enum Foo` (with dispatcher impl) or `// mig: trait Foo`.
+If a row's column you would need says `(TBD — defer to architect when first file gets migrated)`, STOP and escalate to the architect for that column's value before continuing.
+
+The columns you use here:
+ * **Suffix** — append this to every translated `class`/`case class`/`sealed trait`/`trait` name unless the name already carries it.
+ * **Sealed-trait policy** — determines whether `sealed trait Foo` becomes `// mig: enum FooX` + `// mig: impl FooX` (`enum-with-arena-refs` or `enum-with-box`) or `// mig: trait FooX` (`trait-with-impls`).
+
+And these cross-pass conventions from the policy:
  * **Naming exceptions (SPDMX exception J)** — pre-approved renames that override the default snake_case conversion.
- * **`equals`/`hashCode`/`unapply` policy** — `override def equals/hashCode` mig comments stay as `// mig: fn eq` / `// mig: fn hash_code` but get a "(Realized by `impl ... below`)" marker; slice-placehold will emit the marker stub.
+ * **`equals` / `hashCode` / `unapply` policy** — `override def equals/hashCode` mig comments stay as `// mig: fn eq (realized-by-impl PartialEq)` / `// mig: fn hash_code (realized-by-impl Hash)`; `def unapply` becomes `// mig: fn unapply (realized-by-TryFrom)`. slice-placehold will emit the marker stub.
 
 # Functions
 

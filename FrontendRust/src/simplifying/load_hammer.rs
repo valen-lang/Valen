@@ -1,3 +1,17 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/LoadHammer.scala
+// mig: struct LoadHammerH
+/// Arena-allocated
+#[derive(PartialEq, Eq, Hash)]
+pub struct LoadHammerH<'h> {
+    pub keywords: std::marker::PhantomData<&'h ()>,
+    pub type_hammer: std::marker::PhantomData<&'h ()>,
+    pub name_hammer: std::marker::PhantomData<&'h ()>,
+    pub struct_hammer: std::marker::PhantomData<&'h ()>,
+    pub expression_hammer: std::marker::PhantomData<&'h ()>,
+}
+
+// mig: impl LoadHammerH
+/*
 package dev.vale.simplifying
 
 import dev.vale._
@@ -12,7 +26,14 @@ class LoadHammer(
     nameHammer: NameHammer,
     structHammer: StructHammer,
     expressionHammer: ExpressionHammer) {
-
+*/
+// mig: fn translate_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_load(&self) {
+        panic!("Unimplemented: translate_load");
+    }
+}
+/*
   def translateLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -114,7 +135,14 @@ class LoadHammer(
 
     (loadedAccessH, sourceDeferreds)
   }
-
+*/
+// mig: fn translate_mundane_runtime_sized_array_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_mundane_runtime_sized_array_load(&self) {
+        panic!("Unimplemented: translate_mundane_runtime_sized_array_load");
+    }
+}
+/*
   private def translateMundaneRuntimeSizedArrayLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -165,7 +193,14 @@ class LoadHammer(
 
     (loadedNodeH, arrayDeferreds ++ indexDeferreds)
   }
-
+*/
+// mig: fn translate_mundane_static_sized_array_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_mundane_static_sized_array_load(&self) {
+        panic!("Unimplemented: translate_mundane_static_sized_array_load");
+    }
+}
+/*
   private def translateMundaneStaticSizedArrayLoad(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -215,7 +250,14 @@ class LoadHammer(
 
     (loadedNodeH, arrayDeferreds ++ indexDeferreds)
   }
-
+*/
+// mig: fn translate_addressible_member_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_addressible_member_load(&self) {
+        panic!("Unimplemented: translate_addressible_member_load");
+    }
+}
+/*
   private def translateAddressibleMemberLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -283,7 +325,14 @@ class LoadHammer(
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (loadedNodeH, structDeferreds)
   }
-
+*/
+// mig: fn translate_mundane_member_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_mundane_member_load(&self) {
+        panic!("Unimplemented: translate_mundane_member_load");
+    }
+}
+/*
   private def translateMundaneMemberLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -326,7 +375,14 @@ class LoadHammer(
           nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, memberName)))
     (loadedNode, structDeferreds)
   }
-
+*/
+// mig: fn translate_addressible_local_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_addressible_local_load(&self) {
+        panic!("Unimplemented: translate_addressible_local_load");
+    }
+}
+/*
   def translateAddressibleLocalLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -369,7 +425,14 @@ class LoadHammer(
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (loadedNode, Vector.empty)
   }
-
+*/
+// mig: fn translate_mundane_local_load
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_mundane_local_load(&self) {
+        panic!("Unimplemented: translate_mundane_local_load");
+    }
+}
+/*
   def translateMundaneLocalLoad(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -401,7 +464,14 @@ class LoadHammer(
             hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId)))
     (loadedNode, Vector.empty)
   }
-
+*/
+// mig: fn translate_local_address
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_local_address(&self) {
+        panic!("Unimplemented: translate_local_address");
+    }
+}
+/*
   def translateLocalAddress(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -426,7 +496,14 @@ class LoadHammer(
         nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, localVar.name)))
     loadBoxNode
   }
-
+*/
+// mig: fn translate_member_address
+impl<'h> LoadHammerH<'h> {
+    pub fn translate_member_address(&self) {
+        panic!("Unimplemented: translate_member_address");
+    }
+}
+/*
   // In this, we're basically taking an addressible lookup, in other words,
   // a reference to a box.
   def translateMemberAddress(
@@ -490,7 +567,14 @@ class LoadHammer(
 
     (loadBoxNode, structDeferreds)
   }
-
+*/
+// mig: fn get_borrowed_location
+impl<'h> LoadHammerH<'h> {
+    pub fn get_borrowed_location(&self) {
+        panic!("Unimplemented: get_borrowed_location");
+    }
+}
+/*
   def getBorrowedLocation(memberType: CoordH[KindHT]) = {
     (memberType.ownership, memberType.location) match {
       case (OwnH, _) => YonderH
@@ -499,3 +583,4 @@ class LoadHammer(
     }
   }
 }
+*/

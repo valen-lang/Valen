@@ -1,3 +1,5 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/LetHammer.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast._
@@ -8,14 +10,45 @@ import dev.vale.instantiating.ast._
 object LetHammer {
   val BOX_MEMBER_INDEX: Int = 0
 }
+*/
+// mig: struct LetHammerH
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct LetHammerH<'h> {
+    pub type_hammer: std::marker::PhantomData<&'h ()>,
+    pub name_hammer: std::marker::PhantomData<&'h ()>,
+    pub struct_hammer: std::marker::PhantomData<&'h ()>,
+    pub expression_hammer: std::marker::PhantomData<&'h ()>,
+    pub load_hammer: std::marker::PhantomData<&'h ()>,
+}
 
+// mig: impl LetHammerH
+/*
 class LetHammer(
     typeHammer: TypeHammer,
     nameHammer: NameHammer,
     structHammer: StructHammer,
     expressionHammer: ExpressionHammer,
     loadHammer: LoadHammer) {
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_let
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_let(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        let2: &LetNormalIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_let");
+    }
+}
 
+/*
   def translateLet(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -51,7 +84,25 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackifyNode, deferreds)
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_restackify
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_restackify(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        let2: &RestackifyIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_restackify");
+    }
+}
 
+/*
   def translateRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -87,7 +138,25 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackifyNode, deferreds)
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_let_and_point
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_let_and_point(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        letie: &LetAndLendIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_let_and_point");
+    }
+}
 
+/*
   def translateLetAndPoint(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -117,7 +186,29 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, borrowAccess, deferreds)
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_addressible_let
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_addressible_let(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr_he: &ExpressionH,
+        source_result_pointer_type_h: &CoordH,
+        var_id: &IVarNameI,
+        variability: &VariabilityI,
+        reference: &CoordI,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_addressible_let");
+    }
+}
 
+/*
   private def translateAddressibleLet(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -146,7 +237,29 @@ class LetHammer(
       local,
       Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_addressible_restackify
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_addressible_restackify(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr_he: &ExpressionH,
+        source_result_pointer_type_h: &CoordH,
+        var_id: &IVarNameI,
+        variability: &VariabilityI,
+        reference: &CoordI,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_addressible_restackify");
+    }
+}
 
+/*
   private def translateAddressibleRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -174,7 +287,31 @@ class LetHammer(
       local,
       Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_addressible_let_and_point
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_addressible_let_and_point(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr2: &ReferenceExpressionIE,
+        source_expr_he: &ExpressionH,
+        source_result_pointer_type_h: &CoordH,
+        letie: &LetAndLendIE,
+        var_id: &IVarNameI,
+        variability: &VariabilityI,
+        reference: &CoordI,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_addressible_let_and_point");
+    }
+}
 
+/*
   private def translateAddressibleLetAndPoint(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -203,7 +340,28 @@ class LetHammer(
         letIE.result.ownership)
     ConsecutorH(Vector(stackifyH, borrowAccess))
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_mundane_let
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_mundane_let(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr_he: &ExpressionH,
+        source_result_pointer_type_h: &CoordH,
+        var_id: &IVarNameI,
+        variability: &VariabilityI,
+    ) -> StackifyH {
+        panic!("Unimplemented: translate_mundane_let");
+    }
+}
 
+/*
   private def translateMundaneLet(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -228,7 +386,26 @@ class LetHammer(
         Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
     stackNode
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_mundane_restackify
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_mundane_restackify(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr_he: &ExpressionH,
+        var_id: &IVarNameI,
+    ) -> RestackifyH {
+        panic!("Unimplemented: translate_mundane_restackify");
+    }
+}
 
+/*
   private def translateMundaneRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -251,7 +428,30 @@ class LetHammer(
         Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
     stackNode
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_mundane_let_and_point
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_mundane_let_and_point(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        source_expr2: &ReferenceExpressionIE,
+        source_expr_he: &ExpressionH,
+        source_result_pointer_type_h: &CoordH,
+        letie: &LetAndLendIE,
+        var_id: &IVarNameI,
+        variability: &VariabilityI,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_mundane_let_and_point");
+    }
+}
 
+/*
     private def translateMundaneLetAndPoint(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -287,7 +487,25 @@ class LetHammer(
 
       ConsecutorH(Vector(stackifyH, borrowAccess))
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_unlet
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_unlet(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        unlet2: &UnletIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_unlet");
+    }
+}
 
+/*
   def translateUnlet(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -333,7 +551,25 @@ class LetHammer(
       }
     }
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_destructure_static_sized_array
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_destructure_static_sized_array(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        des2: &DestroyStaticSizedArrayIntoLocalsIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_destructure_static_sized_array");
+    }
+}
 
+/*
   def translateDestructureStaticSizedArray(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -384,7 +620,25 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackNode, sourceExprDeferreds)
   }
+*/
+impl<'h> LetHammerH<'h> {
+    // mig: fn translate_destroy
+    // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
+    // arena-allocates where Scala used GC.
+    pub fn translate_destroy(
+        &self,
+        interner: &'ctx HammerInterner<'h>,
+        hinputs: &HinputsI,
+        hamuts: &mut HamutsBox,
+        current_function_header: &FunctionHeaderI,
+        locals: &mut LocalsBox,
+        des2: &DestroyIE,
+    ) -> ExpressionH {
+        panic!("Unimplemented: translate_destroy");
+    }
+}
 
+/*
   def translateDestroy(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -478,3 +732,4 @@ class LetHammer(
       hinputs, hamuts, currentFunctionHeader, locals, destructureAndUnboxings, sourceExprDeferreds)
   }
 }
+*/

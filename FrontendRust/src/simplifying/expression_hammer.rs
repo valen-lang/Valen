@@ -1,3 +1,15 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/ExpressionHammer.scala
+// mig: struct ExpressionHammerH
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct ExpressionHammerH<'h> {
+    pub block_hammer: BlockHammerH<'h>,
+    pub load_hammer: LoadHammerH<'h>,
+    pub let_hammer: LetHammerH<'h>,
+    pub mutate_hammer: MutateHammerH<'h>,
+}
+// mig: impl ExpressionHammerH
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast._
@@ -17,7 +29,14 @@ class ExpressionHammer(
   val loadHammer = new LoadHammer(keywords, typeHammer, nameHammer, structHammer, this)
   val letHammer = new LetHammer(typeHammer, nameHammer, structHammer, this, loadHammer)
   val mutateHammer = new MutateHammer(keywords, typeHammer, nameHammer, structHammer, this)
-
+*/
+// mig: fn translate
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, expr: &ExpressionI<'h>) -> (ExpressionH<'h, KindHT<'h>>, Vec<ExpressionI<'h>>) {
+        panic!("Unimplemented: translate");
+    }
+}
+/*
   // stackHeight is the number of locals that have been declared in ancestor
   // blocks and previously in this block. It's used to figure out the index of
   // a newly declared local.
@@ -618,7 +637,14 @@ class ExpressionHammer(
       }
     }
   }
-
+*/
+// mig: fn translate_deferreds
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_deferreds(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, original_expr: ExpressionH<'h, KindHT<'h>>, deferreds: Vec<ExpressionI<'h>>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_deferreds");
+    }
+}
+/*
   def translateDeferreds(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -670,7 +696,14 @@ class ExpressionHammer(
     vassert(originalExpr.resultType == result.resultType)
     result
   }
-
+*/
+// mig: fn translate_expressions_until_never
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_expressions_until_never(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, exprs: &[ExpressionI<'h>]) -> (Vec<ExpressionH<'h, KindHT<'h>>>, Vec<ExpressionI<'h>>) {
+        panic!("Unimplemented: translate_expressions_until_never");
+    }
+}
+/*
   def translateExpressionsUntilNever(
     hinputs: HinputsI, hamuts: HamutsBox,
     currentFunctionHeader: FunctionHeaderI,
@@ -700,7 +733,14 @@ class ExpressionHammer(
       case _ => (exprsHE, deferreds)
     }
   }
-
+*/
+// mig: fn translate_expressions_and_deferreds
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_expressions_and_deferreds(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, exprs: &[ExpressionI<'h>]) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_expressions_and_deferreds");
+    }
+}
+/*
   def translateExpressionsAndDeferreds(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -718,7 +758,14 @@ class ExpressionHammer(
       })
     Hammer.consecutive(exprs)
   }
-
+*/
+// mig: fn translate_extern_function_call
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_extern_function_call(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, prototype: &PrototypeI<'h>, args_exprs: &[ReferenceExpressionIE<'h>]) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_extern_function_call");
+    }
+}
+/*
   def translateExternFunctionCall(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -748,7 +795,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, callResultNode, argsDeferreds)
   }
-
+*/
+// mig: fn translate_function_pointer_call
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_function_pointer_call(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, function: &PrototypeI<'h>, args: &[ExpressionI<'h>], result_type: &CoordI<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_function_pointer_call");
+    }
+}
+/*
   def translateFunctionPointerCall(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -789,7 +843,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, callResultNode, argsDeferreds)
   }
-
+*/
+// mig: fn translate_new_mut_runtime_sized_array
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_new_mut_runtime_sized_array(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, construct_array: &NewMutRuntimeSizedArrayIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_new_mut_runtime_sized_array");
+    }
+}
+/*
   def translateNewMutRuntimeSizedArray(
     hinputs: HinputsI, hamuts: HamutsBox,
     currentFunctionHeader: FunctionHeaderI,
@@ -821,7 +882,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, constructArrayCallNode, capacityDeferreds)
   }
-
+*/
+// mig: fn translate_new_imm_runtime_sized_array
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_new_imm_runtime_sized_array(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, construct_array: &NewImmRuntimeSizedArrayIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_new_imm_runtime_sized_array");
+    }
+}
+/*
   def translateNewImmRuntimeSizedArray(
     hinputs: HinputsI, hamuts: HamutsBox,
     currentFunctionHeader: FunctionHeaderI,
@@ -862,7 +930,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, constructArrayCallNode, generatorDeferreds ++ sizeDeferreds)
   }
-
+*/
+// mig: fn translate_static_array_from_callable
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_static_array_from_callable(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, expr_ie: &StaticArrayFromCallableIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_static_array_from_callable");
+    }
+}
+/*
   def translateStaticArrayFromCallable(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -899,7 +974,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, constructArrayCallNode, generatorDeferreds)
   }
-
+*/
+// mig: fn translate_destroy_static_sized_array
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_destroy_static_sized_array(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, das: &DestroyStaticSizedArrayIntoFunctionIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_destroy_static_sized_array");
+    }
+}
+/*
   def translateDestroyStaticSizedArray(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -939,7 +1021,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, destroyStaticSizedArrayCallNode, consumerCallableDeferreds ++ arrayExprDeferreds)
   }
-
+*/
+// mig: fn translate_destroy_imm_runtime_sized_array
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_destroy_imm_runtime_sized_array(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, das: &DestroyImmRuntimeSizedArrayIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
+    }
+}
+/*
   def translateDestroyImmRuntimeSizedArray(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -983,7 +1072,14 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, destroyStaticSizedArrayCallNode, consumerCallableDeferreds ++ arrayExprDeferreds)
   }
-
+*/
+// mig: fn translate_if
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_if(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, parent_locals: &mut LocalsBox<'h>, if_ie: &IfIE<'h>) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_if");
+    }
+}
+/*
   def translateIf(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -1052,7 +1148,14 @@ class ExpressionHammer(
 
     ifCallNode
   }
-
+*/
+// mig: fn translate_while
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_while(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, while_ie: &WhileIE<'h>) -> WhileH<'h> {
+        panic!("Unimplemented: translate_while");
+    }
+}
+/*
   def translateWhile(
     hinputs: HinputsI, hamuts: HamutsBox,
     currentFunctionHeader: FunctionHeaderI,
@@ -1070,7 +1173,14 @@ class ExpressionHammer(
     val whileCallNode = WhileH(expr)
     whileCallNode
   }
-
+*/
+// mig: fn translate_interface_function_call
+impl<'h> ExpressionHammerH<'h> {
+    pub fn translate_interface_function_call(&self, hinputs: &HinputsI<'h>, hamuts: &mut HamutsBox<'h>, current_function_header: &FunctionHeaderI<'h>, locals: &mut LocalsBox<'h>, super_function_prototype: &PrototypeI<'h>, virtual_param_index: i32, result_type: &CoordI<'h>, args_exprs: &[ExpressionI<'h>]) -> ExpressionH<'h, KindHT<'h>> {
+        panic!("Unimplemented: translate_interface_function_call");
+    }
+}
+/*
   def translateInterfaceFunctionCall(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -1113,3 +1223,4 @@ class ExpressionHammer(
       hinputs, hamuts, currentFunctionHeader, locals, callNode, argsDeferreds)
   }
 }
+*/
