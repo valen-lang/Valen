@@ -462,7 +462,9 @@ where
       mutability: maybe_mutability_l,
       identifying_runes: maybe_identifying_runes_l,
       template_rules: maybe_template_rules_l,
-      members: contents,
+      contents_range,
+      members: members_l,
+      methods: methods_l,
     } = struct_l;
 
     // Parse identifying runes
@@ -503,18 +505,18 @@ where
       .transpose()?;
 
     // Parse struct members
-    let iter = ScrambleIterator::new(&contents);
-    let parts = iter.split_on_symbol(';', false);
-    let mut members_vec = Vec::new();
-    for mut part in parts {
-      if !part.at_end() {
-        members_vec.push(self.parse_struct_member(&mut part)?);
-      }
+    let mut contents_vec = Vec::new();
+    for member_l in members_l {
+      let mut iter = ScrambleIterator::new(member_l);
+      contents_vec.push(self.parse_struct_member(&mut iter)?);
+    }
+    for method_l in methods_l {
+      contents_vec.push(IStructContent::StructMethod(self.parse_function(*method_l, true)?));
     }
 
     let members = StructMembersP {
-      range: contents.range,
-      contents: self.parse_arena.alloc_slice_from_vec(members_vec),
+      range: contents_range,
+      contents: self.parse_arena.alloc_slice_from_vec(contents_vec),
     };
 
     Ok(StructP::<'p> {
@@ -525,7 +527,7 @@ where
       identifying_runes: maybe_identifying_runes,
       template_rules: maybe_template_rules,
       maybe_default_region_rune: None,
-      body_range: contents.range,
+      body_range: contents_range,
       members,
     })
   }
@@ -534,7 +536,7 @@ where
     def parseStruct(functionL: StructL):
     Result[StructP, IParseError] = {
       Profiler.frame(() => {
-        val StructL(structRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, contentsL) = functionL
+        val StructL(structRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, contentsRange, membersL, methodsL) = functionL
 
         val maybeIdentifyingRunes =
           maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
@@ -584,15 +586,23 @@ where
 
         val membersP =
           StructMembersP(
-            contentsL.range,
-            U.map[ScrambleIterator, IStructContent](
-              new ScrambleIterator(contentsL).splitOnSymbol(';', false),
+            contentsRange,
+            U.map[ScrambleLE, IStructContent](
+              membersL,
               member => {
-                parseStructMember(member) match {
+                parseStructMember(new ScrambleIterator(member)) match {
                   case Err(e) => return Err(e)
                   case Ok(x) => x
                 }
-              }).toVector)
+              }).toVector ++
+              U.map[FunctionL, IStructContent](
+                methodsL,
+                methodL => {
+                  parseFunction(methodL, true) match {
+                    case Err(e) => return Err(e)
+                    case Ok(x) => StructMethodP(x)
+                  }
+                }).toVector)
 
         val maybeDefaultRegionP = vregionmut(None)
 
@@ -605,7 +615,7 @@ where
             maybeIdentifyingRunes,
             maybeTemplateRulesP,
             maybeDefaultRegionP,
-            contentsL.range,
+            contentsRange,
             membersP)
         Ok(struct)
       })
@@ -1436,6 +1446,11 @@ where
               None
             }
           })
+        maybeReturnTypeP match {
+          case Some(FuncPT(range, _, _, _, _)) =>
+            return Err(FuncBoundWithoutWhere(range.begin))
+          case _ =>
+        }
         val returnP = FunctionReturnP(RangeL(returnBeginPos, returnEndPos), maybeReturnTypeP)
 
         val maybeRulesP =

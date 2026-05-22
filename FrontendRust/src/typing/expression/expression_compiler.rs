@@ -55,7 +55,7 @@ import dev.vale.parsing.ast.{LoadAsBorrowP, LoadAsP, LoadAsWeakP, MoveP, UseP}
 import dev.vale.postparsing.patterns.AtomSP
 import dev.vale.postparsing.rules.{IRulexSR, RuneParentEnvLookupSR, RuneUsage}
 import dev.vale.postparsing._
-import dev.vale.typing.{ArrayCompiler, CannotSubscriptT, CantMoveFromGlobal, CantMutateFinalElement, CantMutateFinalMember, CantReconcileBranchesResults, CantUnstackifyOutsideLocalFromInsideWhile, CantUseUnstackifiedLocal, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, CouldntConvertForMutateT, CouldntConvertForReturnT, CouldntFindIdentifierToLoadT, CouldntFindMemberT, HigherTypingInferError, IfConditionIsntBoolean, InferCompiler, OverloadResolver, RangedInternalErrorT, SequenceCompiler, TemplataCompiler, TypingPassOptions, ast, templata}
+import dev.vale.typing.{ArrayCompiler, CannotSubscriptT, CantMutateFinalElement, CantMutateFinalMember, CantReconcileBranchesResults, CantUnstackifyOutsideLocalFromInsideWhile, CantUseUnstackifiedLocal, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, CouldntConvertForMutateT, CouldntConvertForReturnT, CouldntFindIdentifierToLoadT, CouldntFindMemberT, HigherTypingInferError, IfConditionIsntBoolean, InferCompiler, OverloadResolver, RangedInternalErrorT, SequenceCompiler, TemplataCompiler, TypingPassOptions, ast, templata}
 import dev.vale.typing.ast.{AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, BlockTE, BorrowToWeakTE, BreakTE, ConstantBoolTE, ConstantFloatTE, ConstantIntTE, ConstantStrTE, ConstructTE, DestroyTE, ExpressionT, IfTE, LetNormalTE, LocalLookupTE, LocationInFunctionEnvironmentT, MutateTE, PrototypeT, ReferenceExpressionTE, ReferenceMemberLookupTE, ReinterpretTE, ReturnTE, RuntimeSizedArrayLookupTE, StaticSizedArrayLookupTE, VoidLiteralTE, WhileTE}
 import dev.vale.typing.citizen.{ImplCompiler, IsParent, IsntParent, StructCompiler}
 import dev.vale.typing.env._
@@ -331,7 +331,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
@@ -386,7 +386,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val name2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
         val borrowExpr =
           localHelper.borrowSoftLoad(
@@ -420,7 +420,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val borrowExpr =
           localHelper.borrowSoftLoad(
             coutputs,
@@ -485,7 +485,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup AddressibleClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
@@ -515,7 +515,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup ReferenceClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &rcv.name));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
@@ -574,7 +574,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closureParamVarName2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
 
         val borrowExpr =
@@ -607,7 +607,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closuredVarsStructDef = coutputs.lookupStruct(closuredVarsStructRef.id)
 
         vassert(closuredVarsStructDef.members.map(_.name).contains(varName))
@@ -1865,7 +1865,7 @@ where 's: 't,
                         let tiny_env_snapshot = tiny_env.snapshot(self.typing_interner);
                         let expr = self.new_global_function_group_expression(
                             IInDenizenEnvironmentT::Node(tiny_env_snapshot),
-                            coutputs, RegionT {}, arbitrary_imprecise);
+                            coutputs, RegionT { region: IRegionT::Default }, arbitrary_imprecise);
                         Ok((ExpressionTE::Reference(expr), HashSet::new()))
                     }
                     _ => panic!("implement: evaluate_expression RuneLookup — unexpected templata"),
@@ -2485,7 +2485,7 @@ where 's: 't,
                   .addEntries(interner, Vector(ArbitraryNameT() -> TemplataEnvEntry(pt)))
               val expr =
                 newGlobalFunctionGroupExpression(
-                  tinyEnv, coutputs, RegionT(), interner.intern(ArbitraryNameS()))
+                  tinyEnv, coutputs, RegionT(DefaultRegionT), interner.intern(ArbitraryNameS()))
               (expr, Set())
             }
           }
@@ -2577,7 +2577,7 @@ where 's: 't,
                 } else if (commonAncestors.size > 1) {
                   throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, s"More than one common ancestor of two branches of if:\n${a}\n${b}"))
                 } else {
-                  CoordT(ownership, RegionT(), commonAncestors.head)
+                  CoordT(ownership, RegionT(DefaultRegionT), commonAncestors.head)
                 }
               }
               case (a, b) => {
@@ -2688,7 +2688,7 @@ where 's: 't,
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
               bodyExpressionsWithResult.result.coord
             }
@@ -2709,7 +2709,7 @@ where 's: 't,
               outerCallLocation,
               region,
               newGlobalFunctionGroupExpression(
-                callEnv, coutputs, vregionmut(RegionT()), interner.intern(CodeNameS(keywords.List))),
+                callEnv, coutputs, vregionmut(RegionT(DefaultRegionT)), interner.intern(CodeNameS(keywords.List))),
               Vector(RuneParentEnvLookupSR(range, RuneUsage(range, SelfRuneS()))),
               Vector(SelfRuneS()),
               Vector())
@@ -2734,7 +2734,7 @@ where 's: 't,
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
 
               // We store the iteration result in a local because the loop body will have
@@ -2753,7 +2753,7 @@ where 's: 't,
                   range :: parentRanges,
                   outerCallLocation,
                   region,
-                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(), interner.intern(CodeNameS(keywords.add))),
+                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(DefaultRegionT), interner.intern(CodeNameS(keywords.add))),
                   Vector(),
                   Vector(),
                   Vector(
@@ -3095,6 +3095,7 @@ where 's: 't,
             &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
             context_region,
             &[contained_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option some_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
@@ -3120,6 +3121,7 @@ where 's: 't,
             none_constructor_templata,
             &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
             context_region,
+            &[],
             &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option none_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
@@ -3177,7 +3179,7 @@ Guardian: temp-disable: SPDMX — `evaluate_generic_light_function_from_call_for
         callLocation,
         interfaceTemplata,
         Vector(CoordTemplataT(containedCoord))).expect().kind
-    val ownOptCoord = CoordT(OwnT, RegionT(), optInterfaceRef)
+    val ownOptCoord = CoordT(OwnT, RegionT(DefaultRegionT), optInterfaceRef)
 
     val someConstructorTemplata =
       nenv.lookupNearestWithImpreciseName(interner.intern(CodeNameS(keywords.Some)), Set(ExpressionLookupContext)).toList match {
@@ -3292,6 +3294,7 @@ where 's: 't,
             ],
             region,
             &[contained_success_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result ok_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
@@ -3333,6 +3336,7 @@ where 's: 't,
             ],
             region,
             &[contained_fail_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result err_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
