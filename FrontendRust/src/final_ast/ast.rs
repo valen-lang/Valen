@@ -1,3 +1,22 @@
+// From Frontend/FinalAST/src/dev/vale/finalast/ast.scala
+//
+// H-side output AST types for the simplifying (hammer) pass. Mirrors
+// src/instantiating/ast/ast.rs pattern: Temporary-state structs hold real
+// fields where downstream code uses them; otherwise bare-placeholder
+// PhantomData shells with `<'s, 'h>` lifetimes for forward compatibility.
+//
+// IdH is currently a bare-placeholder (same precedent as IdI in instantiating);
+// real fields restored when slice-pipeline reaches it.
+
+#[allow(unused_imports)]
+use std::marker::PhantomData;
+
+use crate::interner::StrI;
+use crate::final_ast::types::*;
+use crate::final_ast::instructions::ExpressionH;
+use crate::simplifying::hammer_interner::MustIntern;
+use crate::utils::arena_index_map::ArenaIndexMap;
+
 /*
 package dev.vale.finalast
 
@@ -301,3 +320,171 @@ case class IdH(
 //  }
 //}
 */
+
+// mig: case class RegionH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RegionH;
+
+// mig: case class Export
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct Export<'s, 'h> where 's: 'h {
+    pub name_h: &'h IdH<'s, 'h>,
+    pub exported_name: StrI<'s>,
+}
+
+// mig: case class PackageH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
+// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
+#[derive(Copy, Clone, Debug)]
+pub struct PackageH<'s, 'h> where 's: 'h {
+    pub interfaces: &'h [InterfaceDefinitionH<'s, 'h>],
+    pub structs: &'h [StructDefinitionH<'s, 'h>],
+    pub functions: &'h [FunctionH<'s, 'h>],
+    pub static_sized_arrays: &'h [StaticSizedArrayDefinitionHT<'s, 'h>],
+    pub runtime_sized_arrays: &'h [RuntimeSizedArrayDefinitionHT<'s, 'h>],
+    pub export_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
+    pub export_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
+    pub extern_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
+    pub extern_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
+}
+
+// mig: case class ProgramH
+/// Temporary state
+pub struct ProgramH<'s, 'h> where 's: 'h {
+    pub packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, PackageH<'s, 'h>>,
+}
+
+// mig: case class StructDefinitionH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because the edges field's EdgeH transitively
+// holds an ArenaIndexMap (which lacks those impls). Matches Scala's `vcurious`.
+#[derive(Copy, Clone, Debug)]
+pub struct StructDefinitionH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub weakable: bool,
+    pub mutability: Mutability,
+    pub edges: &'h [EdgeH<'s, 'h>],
+    pub members: &'h [StructMemberH<'s, 'h>],
+}
+
+// mig: case class StructMemberH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructMemberH<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub variability: Variability,
+    pub tyype: CoordH<'s, 'h>,
+}
+
+// mig: case class InterfaceDefinitionH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub weakable: bool,
+    pub mutability: Mutability,
+    pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
+    pub methods: &'h [InterfaceMethodH<'s, 'h>],
+}
+
+// mig: case class InterfaceMethodH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
+    pub prototype_h: &'h PrototypeH<'s, 'h>,
+    pub virtual_param_index: i32,
+}
+
+// mig: case class EdgeH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
+// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
+#[derive(Copy, Clone, Debug)]
+pub struct EdgeH<'s, 'h> where 's: 'h {
+    pub struct_: &'h StructHT<'s, 'h>,
+    pub interface: &'h InterfaceHT<'s, 'h>,
+    pub struct_prototypes_by_interface_method: &'h ArenaIndexMap<'h, InterfaceMethodH<'s, 'h>, &'h PrototypeH<'s, 'h>>,
+}
+
+// mig: sealed trait IFunctionAttributeH + case objects UserFunctionH, PureH
+/// Polyvalue
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IFunctionAttributeH {
+    UserFunctionH,
+    PureH,
+}
+
+// mig: case class FunctionH
+/// Temporary state
+//
+// Drops PartialEq/Eq/Hash because the `body: ExpressionH` field opts out
+// (per typing-pass parity — Scala uses `vcurious` on FunctionH).
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionH<'s, 'h> where 's: 'h {
+    pub prototype: &'h PrototypeH<'s, 'h>,
+    pub is_abstract: bool,
+    pub is_extern: bool,
+    pub attributes: &'h [IFunctionAttributeH],
+    pub body: ExpressionH<'s, 'h>,
+}
+
+// mig: case class PrototypeH
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub params: &'h [CoordH<'s, 'h>],
+    pub return_type: CoordH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class PrototypeH (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeHValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub params: &'h [CoordH<'s, 'h>],
+    pub return_type: CoordH<'s, 'h>,
+}
+
+// mig: case class IdH
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IdH<'s, 'h> where 's: 'h {
+    pub local_name: StrI<'s>,
+    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub shortened_name: StrI<'s>,
+    pub fully_qualified_name: StrI<'s>,
+    pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
+    _phantom_h: PhantomData<&'h ()>,
+}
+
+// mig: case class IdH (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IdHValH<'s, 'h> where 's: 'h {
+    pub local_name: StrI<'s>,
+    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub shortened_name: StrI<'s>,
+    pub fully_qualified_name: StrI<'s>,
+    _phantom_h: PhantomData<&'h ()>,
+}
+
+// --- Auxiliary types referenced by hammer files ---
+
+// FunctionRefH lives in Scala's `Hammer.scala`, but it's a pure data type
+// (just a wrapper around a PrototypeH ref) so we colocate it with the H-side
+// AST here. Not interned in Scala (no `MustIntern` needed).
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionRefH<'s, 'h> where 's: 'h {
+    pub prototype: &'h PrototypeH<'s, 'h>,
+}
+
+// VariableIdH and Local live in instructions.rs (per Scala instructions.scala layout).

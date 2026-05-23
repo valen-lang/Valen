@@ -1,3 +1,10 @@
+use crate::interner::StrI;
+use crate::utils::range::CodeLocationS;
+use crate::instantiating::ast::types::{CoordI, KindIT};
+use crate::instantiating::ast::names::{IdI, INameI};
+use crate::instantiating::ast::templata::ITemplataI;
+use crate::instantiating::ast::ast::SignatureI;
+
 /*
 package dev.vale.instantiating
 
@@ -7,9 +14,9 @@ import dev.vale.instantiating.ast._
 object InstantiatedHumanizer {
 */
 // mig: fn humanize_templata
-pub fn humanize_templata<'s, 't, R>(
+pub fn humanize_templata<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    templata: &'t ITemplataI<'s, 't, R>,
+    templata: &'i ITemplataI<'s, 'i, R>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_templata");
 }
@@ -65,9 +72,9 @@ pub fn humanize_templata<'s, 't, R>(
   }
 */
 // mig: fn humanize_coord
-pub fn humanize_coord<'s, 't, R>(
+pub fn humanize_coord<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    coord: &'t CoordI<'s, 't, R>,
+    coord: &'i CoordI<'s, 'i, R>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_coord");
 }
@@ -92,9 +99,9 @@ pub fn humanize_coord<'s, 't, R>(
   }
 */
 // mig: fn humanize_kind
-pub fn humanize_kind<'s, 't, R>(
+pub fn humanize_kind<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    kind: &'t KindIT<'s, 't, R>,
+    kind: &'i KindIT<'s, 'i, R>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_kind");
 }
@@ -118,10 +125,10 @@ pub fn humanize_kind<'s, 't, R>(
   }
 */
 // mig: fn humanize_id
-pub fn humanize_id<'s, 't, R, I>(
+pub fn humanize_id<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    name: &'t IdI<'s, 't, R, I>,
-    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+    name: &'i IdI<'s, 'i, R>,
+    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_id");
 }
@@ -140,10 +147,10 @@ pub fn humanize_id<'s, 't, R, I>(
   }
 */
 // mig: fn humanize_name
-pub fn humanize_name<'s, 't, R, I>(
+pub fn humanize_name<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    name: &'t INameI<'s, 't, R, I>,
-    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+    name: &'i INameI<'s, 'i, R>,
+    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_name");
 }
@@ -231,10 +238,10 @@ pub fn humanize_name<'s, 't, R, I>(
   }
 */
 // mig: fn humanize_generic_args
-pub fn humanize_generic_args<'s, 't, R>(
+pub fn humanize_generic_args<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    template_args: &'t [ITemplataI<'s, 't, R>],
-    containing_region: Option<&'t ITemplataI<'s, 't, R>>,
+    template_args: &'i[ITemplataI<'s, 'i, R>],
+    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_generic_args");
 }
@@ -261,9 +268,9 @@ pub fn humanize_generic_args<'s, 't, R>(
   }
 */
 // mig: fn humanize_signature
-pub fn humanize_signature<'s, 't, R>(
+pub fn humanize_signature<'s, 'i, R>(
     code_map: fn(&CodeLocationS) -> StrI<'s>,
-    signature: &'t SignatureI<'s, 't, R>,
+    signature: &'i SignatureI<'s, 'i, R>,
 ) -> StrI<'s> {
     panic!("Unimplemented: humanize_signature");
 }

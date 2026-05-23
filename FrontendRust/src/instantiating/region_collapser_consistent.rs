@@ -10,7 +10,7 @@ object RegionCollapserConsistent {
 
 */
 // mig: fn collapse_prototype
-pub fn collapse_prototype(map: &std::collections::HashMap<i32, i32>, prototype: &PrototypeI<'s, 't>) -> PrototypeI<'s, 't> { panic!("Unimplemented: collapse_prototype"); }
+pub fn collapse_prototype() { panic!("Unimplemented: collapse_prototype"); }
 /*
   def collapsePrototype(map: Map[Int, Int], prototype: PrototypeI[sI]): PrototypeI[nI] = {
     val PrototypeI(id, returnType) = prototype
@@ -21,7 +21,7 @@ pub fn collapse_prototype(map: &std::collections::HashMap<i32, i32>, prototype: 
 
 */
 // mig: fn collapse_id
-pub fn collapse_id<T, Y>(map: &std::collections::HashMap<i32, i32>, id: &IdI<'s, 't, T>, func: impl Fn(&T) -> Y) -> IdI<'s, 't, Y> { panic!("Unimplemented: collapse_id"); }
+pub fn collapse_id() { panic!("Unimplemented: collapse_id"); }
 /*
   def collapseId[T <: INameI[sI], Y <: INameI[nI]](
       map: Map[Int, Int],
@@ -37,7 +37,7 @@ pub fn collapse_id<T, Y>(map: &std::collections::HashMap<i32, i32>, id: &IdI<'s,
 
 */
 // mig: fn collapse_function_id
-pub fn collapse_function_id(map: &std::collections::HashMap<i32, i32>, id: &IdI<'s, 't, IFunctionNameI<'s, 't>>) -> IdI<'s, 't, IFunctionNameI<'s, 't>> { panic!("Unimplemented: collapse_function_id"); }
+pub fn collapse_function_id() { panic!("Unimplemented: collapse_function_id"); }
 /*
   def collapseFunctionId(
       map: Map[Int, Int],
@@ -51,7 +51,7 @@ pub fn collapse_function_id(map: &std::collections::HashMap<i32, i32>, id: &IdI<
 
 */
 // mig: fn collapse_function_name
-pub fn collapse_function_name(map: &std::collections::HashMap<i32, i32>, name: &IFunctionNameI<'s, 't>) -> IFunctionNameI<'s, 't> { panic!("Unimplemented: collapse_function_name"); }
+pub fn collapse_function_name() { panic!("Unimplemented: collapse_function_name"); }
 /*
   def collapseFunctionName(
       map: Map[Int, Int],
@@ -120,7 +120,7 @@ pub fn collapse_function_name(map: &std::collections::HashMap<i32, i32>, name: &
 
 */
 // mig: fn collapse_var_name
-pub fn collapse_var_name(name: &IVarNameI<'s, 't>) -> IVarNameI<'s, 't> { panic!("Unimplemented: collapse_var_name"); }
+pub fn collapse_var_name() { panic!("Unimplemented: collapse_var_name"); }
 /*
   def collapseVarName(
     name: IVarNameI[sI]):
@@ -135,7 +135,7 @@ pub fn collapse_var_name(name: &IVarNameI<'s, 't>) -> IVarNameI<'s, 't> { panic!
 
 */
 // mig: fn collapse_name
-pub fn collapse_name(map: &std::collections::HashMap<i32, i32>, name: &INameI<'s, 't>) -> INameI<'s, 't> { panic!("Unimplemented: collapse_name"); }
+pub fn collapse_name() { panic!("Unimplemented: collapse_name"); }
 /*
   def collapseName(
       map: Map[Int, Int],
@@ -161,7 +161,7 @@ pub fn collapse_name(map: &std::collections::HashMap<i32, i32>, name: &INameI<'s
 
 */
 // mig: fn collapse_coord_templata
-pub fn collapse_coord_templata(map: &std::collections::HashMap<i32, i32>, templata: &CoordTemplataI<'s, 't>) -> CoordTemplataI<'s, 't> { panic!("Unimplemented: collapse_coord_templata"); }
+pub fn collapse_coord_templata() { panic!("Unimplemented: collapse_coord_templata"); }
 /*
   def collapseCoordTemplata(
       map: Map[Int, Int],
@@ -173,7 +173,7 @@ pub fn collapse_coord_templata(map: &std::collections::HashMap<i32, i32>, templa
 
 */
 // mig: fn collapse_templata
-pub fn collapse_templata(map: &std::collections::HashMap<i32, i32>, templata: &ITemplataI<'s, 't>) -> ITemplataI<'s, 't> { panic!("Unimplemented: collapse_templata"); }
+pub fn collapse_templata() { panic!("Unimplemented: collapse_templata"); }
 /*
   def collapseTemplata(
     map: Map[Int, Int],
@@ -192,7 +192,7 @@ pub fn collapse_templata(map: &std::collections::HashMap<i32, i32>, templata: &I
 
 */
 // mig: fn collapse_region_templata
-pub fn collapse_region_templata(map: &std::collections::HashMap<i32, i32>, templata: &RegionTemplataI<'s, 't>) -> RegionTemplataI<'s, 't> { panic!("Unimplemented: collapse_region_templata"); }
+pub fn collapse_region_templata() { panic!("Unimplemented: collapse_region_templata"); }
 /*
   def collapseRegionTemplata(
     map: Map[Int, Int],
@@ -204,7 +204,7 @@ pub fn collapse_region_templata(map: &std::collections::HashMap<i32, i32>, templ
 
 */
 // mig: fn collapse_coord
-pub fn collapse_coord(map: &std::collections::HashMap<i32, i32>, coord: &CoordI<'s, 't>) -> CoordI<'s, 't> { panic!("Unimplemented: collapse_coord"); }
+pub fn collapse_coord() { panic!("Unimplemented: collapse_coord"); }
 /*
   def collapseCoord(
       map: Map[Int, Int],
@@ -216,7 +216,7 @@ pub fn collapse_coord(map: &std::collections::HashMap<i32, i32>, coord: &CoordI<
 
 */
 // mig: fn collapse_kind
-pub fn collapse_kind(map: &std::collections::HashMap<i32, i32>, kind: &KindIT<'s, 't>) -> KindIT<'s, 't> { panic!("Unimplemented: collapse_kind"); }
+pub fn collapse_kind() { panic!("Unimplemented: collapse_kind"); }
 /*
   def collapseKind(
       map: Map[Int, Int],
@@ -238,7 +238,7 @@ pub fn collapse_kind(map: &std::collections::HashMap<i32, i32>, kind: &KindIT<'s
 
 */
 // mig: fn collapse_runtime_sized_array
-pub fn collapse_runtime_sized_array(map: &std::collections::HashMap<i32, i32>, rsa: &RuntimeSizedArrayIT<'s, 't>) -> RuntimeSizedArrayIT<'s, 't> { panic!("Unimplemented: collapse_runtime_sized_array"); }
+pub fn collapse_runtime_sized_array() { panic!("Unimplemented: collapse_runtime_sized_array"); }
 /*
   def collapseRuntimeSizedArray(
     map: Map[Int, Int],
@@ -261,7 +261,7 @@ pub fn collapse_runtime_sized_array(map: &std::collections::HashMap<i32, i32>, r
 
 */
 // mig: fn collapse_static_sized_array
-pub fn collapse_static_sized_array(map: &std::collections::HashMap<i32, i32>, ssa: &StaticSizedArrayIT<'s, 't>) -> StaticSizedArrayIT<'s, 't> { panic!("Unimplemented: collapse_static_sized_array"); }
+pub fn collapse_static_sized_array() { panic!("Unimplemented: collapse_static_sized_array"); }
 /*
   def collapseStaticSizedArray(
     map: Map[Int, Int],
@@ -286,7 +286,7 @@ pub fn collapse_static_sized_array(map: &std::collections::HashMap<i32, i32>, ss
 
 */
 // mig: fn collapse_citizen
-pub fn collapse_citizen(map: &std::collections::HashMap<i32, i32>, citizen: &ICitizenIT<'s, 't>) -> ICitizenIT<'s, 't> { panic!("Unimplemented: collapse_citizen"); }
+pub fn collapse_citizen() { panic!("Unimplemented: collapse_citizen"); }
 /*
   def collapseCitizen(
       map: Map[Int, Int],
@@ -300,7 +300,7 @@ pub fn collapse_citizen(map: &std::collections::HashMap<i32, i32>, citizen: &ICi
 
 */
 // mig: fn collapse_citizen_id
-pub fn collapse_citizen_id(map: &std::collections::HashMap<i32, i32>, impl_id: &IdI<'s, 't, ICitizenNameI<'s, 't>>) -> IdI<'s, 't, ICitizenNameI<'s, 't>> { panic!("Unimplemented: collapse_citizen_id"); }
+pub fn collapse_citizen_id() { panic!("Unimplemented: collapse_citizen_id"); }
 /*
   def collapseCitizenId(
       map: Map[Int, Int],
@@ -314,7 +314,7 @@ pub fn collapse_citizen_id(map: &std::collections::HashMap<i32, i32>, impl_id: &
 
 */
 // mig: fn collapse_citizen_name
-pub fn collapse_citizen_name(map: &std::collections::HashMap<i32, i32>, citizen_name: &ICitizenNameI<'s, 't>) -> ICitizenNameI<'s, 't> { panic!("Unimplemented: collapse_citizen_name"); }
+pub fn collapse_citizen_name() { panic!("Unimplemented: collapse_citizen_name"); }
 /*
   def collapseCitizenName(
       map: Map[Int, Int],
@@ -328,7 +328,7 @@ pub fn collapse_citizen_name(map: &std::collections::HashMap<i32, i32>, citizen_
 
 */
 // mig: fn collapse_struct_name
-pub fn collapse_struct_name(map: &std::collections::HashMap<i32, i32>, struct_name: &IStructNameI<'s, 't>) -> IStructNameI<'s, 't> { panic!("Unimplemented: collapse_struct_name"); }
+pub fn collapse_struct_name() { panic!("Unimplemented: collapse_struct_name"); }
 /*
   def collapseStructName(
       map: Map[Int, Int],
@@ -353,7 +353,7 @@ pub fn collapse_struct_name(map: &std::collections::HashMap<i32, i32>, struct_na
 
 */
 // mig: fn collapse_struct_id
-pub fn collapse_struct_id(map: &std::collections::HashMap<i32, i32>, struct_id: &IdI<'s, 't, IStructNameI<'s, 't>>) -> IdI<'s, 't, IStructNameI<'s, 't>> { panic!("Unimplemented: collapse_struct_id"); }
+pub fn collapse_struct_id() { panic!("Unimplemented: collapse_struct_id"); }
 /*
   def collapseStructId(
     map: Map[Int, Int],
@@ -367,7 +367,7 @@ pub fn collapse_struct_id(map: &std::collections::HashMap<i32, i32>, struct_id: 
 
 */
 // mig: fn collapse_interface_name
-pub fn collapse_interface_name(map: &std::collections::HashMap<i32, i32>, interface_name: &IInterfaceNameI<'s, 't>) -> IInterfaceNameI<'s, 't> { panic!("Unimplemented: collapse_interface_name"); }
+pub fn collapse_interface_name() { panic!("Unimplemented: collapse_interface_name"); }
 /*
   def collapseInterfaceName(
       map: Map[Int, Int],
@@ -384,7 +384,7 @@ pub fn collapse_interface_name(map: &std::collections::HashMap<i32, i32>, interf
 
 */
 // mig: fn collapse_interface_id
-pub fn collapse_interface_id(map: &std::collections::HashMap<i32, i32>, interface_id: &IdI<'s, 't, IInterfaceNameI<'s, 't>>) -> IdI<'s, 't, IInterfaceNameI<'s, 't>> { panic!("Unimplemented: collapse_interface_id"); }
+pub fn collapse_interface_id() { panic!("Unimplemented: collapse_interface_id"); }
 /*
   def collapseInterfaceId(
       map: Map[Int, Int],
@@ -398,7 +398,7 @@ pub fn collapse_interface_id(map: &std::collections::HashMap<i32, i32>, interfac
 
 */
 // mig: fn collapse_export_id
-pub fn collapse_export_id(map: &std::collections::HashMap<i32, i32>, struct_id: &IdI<'s, 't, ExportNameI<'s, 't>>) -> IdI<'s, 't, ExportNameI<'s, 't>> { panic!("Unimplemented: collapse_export_id"); }
+pub fn collapse_export_id() { panic!("Unimplemented: collapse_export_id"); }
 /*
   def collapseExportId(
     map: Map[Int, Int],
@@ -416,7 +416,7 @@ pub fn collapse_export_id(map: &std::collections::HashMap<i32, i32>, struct_id: 
 
 */
 // mig: fn collapse_extern_id
-pub fn collapse_extern_id(map: &std::collections::HashMap<i32, i32>, struct_id: &IdI<'s, 't, ExternNameI<'s, 't>>) -> IdI<'s, 't, ExternNameI<'s, 't>> { panic!("Unimplemented: collapse_extern_id"); }
+pub fn collapse_extern_id() { panic!("Unimplemented: collapse_extern_id"); }
 /*
   def collapseExternId(
     map: Map[Int, Int],
@@ -434,7 +434,7 @@ pub fn collapse_extern_id(map: &std::collections::HashMap<i32, i32>, struct_id: 
 
 */
 // mig: fn collapse_citizen_template_name
-pub fn collapse_citizen_template_name(citizen_name: &ICitizenTemplateNameI<'s, 't>) -> ICitizenTemplateNameI<'s, 't> { panic!("Unimplemented: collapse_citizen_template_name"); }
+pub fn collapse_citizen_template_name() { panic!("Unimplemented: collapse_citizen_template_name"); }
 /*
   def collapseCitizenTemplateName(
       citizenName: ICitizenTemplateNameI[sI]):
@@ -451,7 +451,7 @@ pub fn collapse_citizen_template_name(citizen_name: &ICitizenTemplateNameI<'s, '
 
 */
 // mig: fn collapse_struct_template_name
-pub fn collapse_struct_template_name(struct_name: &IStructTemplateNameI<'s, 't>) -> IStructTemplateNameI<'s, 't> { panic!("Unimplemented: collapse_struct_template_name"); }
+pub fn collapse_struct_template_name() { panic!("Unimplemented: collapse_struct_template_name"); }
 /*
   def collapseStructTemplateName(
     structName: IStructTemplateNameI[sI]):
@@ -465,7 +465,7 @@ pub fn collapse_struct_template_name(struct_name: &IStructTemplateNameI<'s, 't>)
 
 */
 // mig: fn collapse_function_template_name
-pub fn collapse_function_template_name(struct_name: &IFunctionTemplateNameI<'s, 't>) -> IFunctionTemplateNameI<'s, 't> { panic!("Unimplemented: collapse_function_template_name"); }
+pub fn collapse_function_template_name() { panic!("Unimplemented: collapse_function_template_name"); }
 /*
   def collapseFunctionTemplateName(
       structName: IFunctionTemplateNameI[sI]):
@@ -477,7 +477,7 @@ pub fn collapse_function_template_name(struct_name: &IFunctionTemplateNameI<'s, 
 
 */
 // mig: fn collapse_interface_template_name
-pub fn collapse_interface_template_name(struct_name: &IInterfaceTemplateNameI<'s, 't>) -> IInterfaceTemplateNameI<'s, 't> { panic!("Unimplemented: collapse_interface_template_name"); }
+pub fn collapse_interface_template_name() { panic!("Unimplemented: collapse_interface_template_name"); }
 /*
   def collapseInterfaceTemplateName(
       structName: IInterfaceTemplateNameI[sI]):
@@ -489,7 +489,7 @@ pub fn collapse_interface_template_name(struct_name: &IInterfaceTemplateNameI<'s
 
 */
 // mig: fn collapse_impl_name
-pub fn collapse_impl_name(map: &std::collections::HashMap<i32, i32>, name: &IImplNameI<'s, 't>) -> IImplNameI<'s, 't> { panic!("Unimplemented: collapse_impl_name"); }
+pub fn collapse_impl_name() { panic!("Unimplemented: collapse_impl_name"); }
 /*
   def collapseImplName(
       map: Map[Int, Int],
@@ -518,7 +518,7 @@ pub fn collapse_impl_name(map: &std::collections::HashMap<i32, i32>, name: &IImp
 
 */
 // mig: fn collapse_impl_id
-pub fn collapse_impl_id(map: &std::collections::HashMap<i32, i32>, struct_id: &IdI<'s, 't, IImplNameI<'s, 't>>) -> IdI<'s, 't, IImplNameI<'s, 't>> { panic!("Unimplemented: collapse_impl_id"); }
+pub fn collapse_impl_id() { panic!("Unimplemented: collapse_impl_id"); }
 /*
   def collapseImplId(
     map: Map[Int, Int],
@@ -532,7 +532,7 @@ pub fn collapse_impl_id(map: &std::collections::HashMap<i32, i32>, struct_id: &I
 
 */
 // mig: fn collapse_impl_template_id
-pub fn collapse_impl_template_id(map: &std::collections::HashMap<i32, i32>, struct_id: &IdI<'s, 't, IImplTemplateNameI<'s, 't>>) -> IdI<'s, 't, IImplTemplateNameI<'s, 't>> { panic!("Unimplemented: collapse_impl_template_id"); }
+pub fn collapse_impl_template_id() { panic!("Unimplemented: collapse_impl_template_id"); }
 /*
   def collapseImplTemplateId(
       map: Map[Int, Int],
@@ -546,7 +546,7 @@ pub fn collapse_impl_template_id(map: &std::collections::HashMap<i32, i32>, stru
 
 */
 // mig: fn collapse_impl_template_name
-pub fn collapse_impl_template_name(map: &std::collections::HashMap<i32, i32>, struct_name: &IImplTemplateNameI<'s, 't>) -> IImplTemplateNameI<'s, 't> { panic!("Unimplemented: collapse_impl_template_name"); }
+pub fn collapse_impl_template_name() { panic!("Unimplemented: collapse_impl_template_name"); }
 /*
   def collapseImplTemplateName(
     map: Map[Int, Int],

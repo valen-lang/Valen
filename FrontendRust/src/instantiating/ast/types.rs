@@ -1,5 +1,8 @@
 use std::marker::PhantomData;
 
+use crate::instantiating::ast::names::{IdI, IInterfaceNameI, IStructNameI, RuntimeSizedArrayNameI, StaticSizedArrayNameI};
+use crate::instantiating::instantiating_interner::MustIntern;
+
 /*
 package dev.vale.instantiating.ast
 
@@ -18,13 +21,15 @@ import dev.vale.typing.types._
 import scala.collection.immutable.List
 */
 // mig: enum OwnershipI
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipI {
-  ImmutableShareI(()),
-  MutableShareI(()),
-  OwnI(()),
-  WeakI(()),
-  ImmutableBorrowI(()),
-  MutableBorrowI(()),
+  ImmutableShare,
+  MutableShare,
+  Own,
+  Weak,
+  ImmutableBorrow,
+  MutableBorrow,
 }
 // mig: impl OwnershipI
 /*
@@ -73,9 +78,11 @@ case object MutableBorrowI extends OwnershipI {
 }
 */
 // mig: enum MutabilityI
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum MutabilityI {
-  MutableI(()),
-  ImmutableI(()),
+  Mutable,
+  Immutable,
 }
 // mig: impl MutabilityI
 /*
@@ -95,9 +102,11 @@ case object ImmutableI extends MutabilityI {
 }
 */
 // mig: enum VariabilityI
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum VariabilityI {
-  FinalI(()),
-  VaryingI(()),
+  Final,
+  Varying,
 }
 // mig: impl VariabilityI
 /*
@@ -117,9 +126,11 @@ case object VaryingI extends VariabilityI {
 }
 */
 // mig: enum LocationI
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LocationI {
-  InlineI(()),
-  YonderI(()),
+  Inline,
+  Yonder,
 }
 // mig: impl LocationI
 /*
@@ -139,6 +150,15 @@ case object YonderI extends LocationI {
 }
 */
 // mig: enum IRegionsModeI
+// Per architect Slab 16a: kept as pure compile-time phantom marker. The three
+// ZST variants below (sI/nI/cI) implement a private `Sealed` trait so only this
+// module can introduce new region modes — same closed-set guarantee as Scala's
+// `sealed trait IRegionsModeI`.
+mod region_mode_sealed {
+    pub trait Sealed {}
+}
+pub trait IRegionsModeIT: region_mode_sealed::Sealed {}
+
 #[allow(non_camel_case_types)]
 pub enum IRegionsModeI {
   sI(sI),
@@ -150,8 +170,11 @@ pub enum IRegionsModeI {
 sealed trait IRegionsModeI
 */
 // mig: struct sI
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(non_camel_case_types)]
 pub struct sI;
+impl region_mode_sealed::Sealed for sI {}
+impl IRegionsModeIT for sI {}
 // mig: impl sI
 /*
 // See CCFCTS, these need to have zero members. If we need to have members, we'll need to stop
@@ -159,15 +182,21 @@ pub struct sI;
 class sI() extends IRegionsModeI
 */
 // mig: struct nI
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(non_camel_case_types)]
 pub struct nI;
+impl region_mode_sealed::Sealed for nI {}
+impl IRegionsModeIT for nI {}
 // mig: impl nI
 /*
 class nI() extends sI // Stands for new. Serves as a starting point for a new instantiation.
 */
 // mig: struct cI
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(non_camel_case_types)]
 pub struct cI;
+impl region_mode_sealed::Sealed for cI {}
+impl IRegionsModeIT for cI {}
 // mig: impl cI
 /*
 class cI() extends IRegionsModeI
@@ -175,8 +204,8 @@ class cI() extends IRegionsModeI
 object CoordI {
 */
 // mig: fn void
-impl<'t, R> CoordI<'t, R> {
-  pub fn void<R>() -> CoordI<'t, R> { panic!("Unimplemented: void"); }
+impl<'s, 'i, R> CoordI<'s, 'i, R> where 's: 'i {
+  pub fn void() -> CoordI<'s, 'i, R> { panic!("Unimplemented: void"); }
 }
 /*
   def void[R <: IRegionsModeI]: CoordI[R] = CoordI[R](MutableShareI, VoidIT())
@@ -185,9 +214,11 @@ impl<'t, R> CoordI<'t, R> {
 }
 */
 // mig: struct CoordI
-pub struct CoordI<'t, R> {
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CoordI<'s, 'i, R> where 's: 'i {
   pub ownership: OwnershipI,
-  pub kind: KindIT<'t, R>,
+  pub kind: KindIT<'s, 'i, R>,
 }
 // mig: impl CoordI
 /*
@@ -221,17 +252,23 @@ case class CoordI[+R <: IRegionsModeI](
 }
 */
 // mig: enum KindIT
-pub enum KindIT<'t, R> {
-  NeverIT(&'t NeverIT<R>),
-  VoidIT(&'t VoidIT<R>),
-  IntIT(&'t IntIT<R>),
-  BoolIT(&'t BoolIT<R>),
-  StrIT(&'t StrIT<R>),
-  FloatIT(&'t FloatIT<R>),
-  StaticSizedArrayIT(&'t StaticSizedArrayIT<R>),
-  RuntimeSizedArrayIT(&'t RuntimeSizedArrayIT<R>),
-  StructIT(&'t StructIT<R>),
-  InterfaceIT(&'t InterfaceIT<R>),
+// Per Scala parity: primitives (NeverIT, VoidIT, IntIT, BoolIT, StrIT, FloatIT)
+// are TFITCX Value-type and held inline; the 4 compound payloads
+// (StaticSizedArrayIT, RuntimeSizedArrayIT, StructIT, InterfaceIT) are arena-
+// interned and held by `&'i` ref (see @WVSBIZ).
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum KindIT<'s, 'i, R> where 's: 'i {
+  NeverIT(NeverIT<R>),
+  VoidIT(VoidIT<R>),
+  IntIT(IntIT<R>),
+  BoolIT(BoolIT<R>),
+  StrIT(StrIT<R>),
+  FloatIT(FloatIT<R>),
+  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i, R>),
+  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i, R>),
+  StructIT(&'i StructIT<'s, 'i, R>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
 }
 // mig: impl KindIT
 /*
@@ -241,15 +278,15 @@ sealed trait KindIT[+R <: IRegionsModeI] {
   // We can always get the mutability for a struct from the coutputs.
 */
 // mig: fn is_primitive
-impl<'t, R> KindIT<'t, R> {
+impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   pub fn is_primitive(&self) -> bool { panic!("Unimplemented: is_primitive"); }
 }
 /*
   def isPrimitive: Boolean
 */
 // mig: fn expect_citizen
-impl<'t, R> KindIT<'t, R> {
-  pub fn expect_citizen(&self) -> ICitizenIT<'t, R> { panic!("Unimplemented: expect_citizen"); }
+impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
+  pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i, R> { panic!("Unimplemented: expect_citizen"); }
 }
 /*
   def expectCitizen(): ICitizenIT[R] = {
@@ -260,8 +297,8 @@ impl<'t, R> KindIT<'t, R> {
   }
 */
 // mig: fn expect_interface
-impl<'t, R> KindIT<'t, R> {
-  pub fn expect_interface(&self) -> InterfaceIT<R> { panic!("Unimplemented: expect_interface"); }
+impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
+  pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i, R> { panic!("Unimplemented: expect_interface"); }
 }
 /*
   def expectInterface(): InterfaceIT[R] = {
@@ -272,8 +309,8 @@ impl<'t, R> KindIT<'t, R> {
   }
 */
 // mig: fn expect_struct
-impl<'t, R> KindIT<'t, R> {
-  pub fn expect_struct(&self) -> StructIT<R> { panic!("Unimplemented: expect_struct"); }
+impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
+  pub fn expect_struct(&self) -> &'i StructIT<'s, 'i, R> { panic!("Unimplemented: expect_struct"); }
 }
 /*
   def expectStruct(): StructIT[R] = {
@@ -285,9 +322,11 @@ impl<'t, R> KindIT<'t, R> {
 }
 */
 // mig: struct NeverIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NeverIT<R> {
   pub from_break: bool,
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl NeverIT
 /*
@@ -303,8 +342,10 @@ case class NeverIT[+R <: IRegionsModeI](
 }
 */
 // mig: struct VoidIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidIT<R> {
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl VoidIT
 /*
@@ -314,9 +355,11 @@ case class VoidIT[+R <: IRegionsModeI]() extends KindIT[R] {
 }
 */
 // mig: struct IntIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntIT<R> {
   pub bits: i32,
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl IntIT
 /*
@@ -325,8 +368,10 @@ case class IntIT[+R <: IRegionsModeI](bits: Int) extends KindIT[R] {
 }
 */
 // mig: struct BoolIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolIT<R> {
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl BoolIT
 /*
@@ -335,8 +380,10 @@ case class BoolIT[+R <: IRegionsModeI]() extends KindIT[R] {
 }
 */
 // mig: struct StrIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrIT<R> {
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl StrIT
 /*
@@ -345,8 +392,10 @@ case class StrIT[+R <: IRegionsModeI]() extends KindIT[R] {
 }
 */
 // mig: struct FloatIT
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatIT<R> {
-  _phantom: PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl FloatIT
 /*
@@ -369,8 +418,18 @@ object contentsStaticSizedArrayIT {
 }
 */
 // mig: struct StaticSizedArrayIT
-pub struct StaticSizedArrayIT<R>(std::marker::PhantomData<R>);
-// TODO: populate fields when src/instantiating/ast/names.rs is fully migrated.
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayIT<'s, 'i, R> where 's: 'i {
+  pub name: IdI<'s, 'i, R>,
+  pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayITValI<'s, 'i, R> where 's: 'i {
+  pub name: IdI<'s, 'i, R>,
+}
 // mig: impl StaticSizedArrayIT
 /*
 case class StaticSizedArrayIT[+R <: IRegionsModeI](
@@ -399,8 +458,18 @@ object contentsRuntimeSizedArrayIT {
 }
 */
 // mig: struct RuntimeSizedArrayIT
-pub struct RuntimeSizedArrayIT<R>(std::marker::PhantomData<R>);
-// TODO: populate fields when src/instantiating/ast/names.rs is fully migrated.
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayIT<'s, 'i, R> where 's: 'i {
+  pub name: IdI<'s, 'i, R>,
+  pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayITValI<'s, 'i, R> where 's: 'i {
+  pub name: IdI<'s, 'i, R>,
+}
 // mig: impl RuntimeSizedArrayIT
 /*
 case class RuntimeSizedArrayIT[+R <: IRegionsModeI](
@@ -429,9 +498,11 @@ object ICitizenIT {
 }
 */
 // mig: enum ISubKindIT
-pub enum ISubKindIT<'t, R> {
-  StructIT(&'t StructIT<R>),
-  InterfaceIT(&'t InterfaceIT<R>),
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ISubKindIT<'s, 'i, R> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i, R>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
 }
 // mig: impl ISubKindIT
 /*
@@ -441,9 +512,11 @@ sealed trait ISubKindIT[+R <: IRegionsModeI] extends KindIT[R] {
 }
 */
 // mig: enum ICitizenIT
-pub enum ICitizenIT<'t, R> {
-  StructIT(&'t StructIT<R>),
-  InterfaceIT(&'t InterfaceIT<R>),
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ICitizenIT<'s, 'i, R> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i, R>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
 }
 // mig: impl ICitizenIT
 /*
@@ -452,8 +525,18 @@ sealed trait ICitizenIT[+R <: IRegionsModeI] extends ISubKindIT[R] {
 }
 */
 // mig: struct StructIT
-pub struct StructIT<R>(std::marker::PhantomData<R>);
-// TODO: populate fields when src/instantiating/ast/names.rs is fully migrated.
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructIT<'s, 'i, R> where 's: 'i {
+  pub id: IdI<'s, 'i, R>,
+  pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructITValI<'s, 'i, R> where 's: 'i {
+  pub id: IdI<'s, 'i, R>,
+}
 // mig: impl StructIT
 /*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
@@ -466,8 +549,18 @@ case class StructIT[+R <: IRegionsModeI](id: IdI[R, IStructNameI[R]]) extends IC
 }
 */
 // mig: struct InterfaceIT
-pub struct InterfaceIT<R>(std::marker::PhantomData<R>);
-// TODO: populate fields when src/instantiating/ast/names.rs is fully migrated.
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceIT<'s, 'i, R> where 's: 'i {
+  pub id: IdI<'s, 'i, R>,
+  pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceITValI<'s, 'i, R> where 's: 'i {
+  pub id: IdI<'s, 'i, R>,
+}
 // mig: impl InterfaceIT
 /*
 case class InterfaceIT[+R <: IRegionsModeI](id: IdI[R, IInterfaceNameI[R]]) extends ICitizenIT[R] {
@@ -478,3 +571,25 @@ case class InterfaceIT[+R <: IRegionsModeI](id: IdI[R, IInterfaceNameI[R]]) exte
   }
 }
 */
+// -- Union enums for the Kind-payload interning family ---------------------
+// Per architect Slab 16b: kind payloads dispatch through a tagged-union pair.
+// R stays phantom — the actual per-(type×region-mode) family separation lives
+// in the interner (3 HashMaps per logical type, one per region mode).
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedKindPayloadValI<'s, 'i, R> where 's: 'i {
+  StructIT(StructITValI<'s, 'i, R>),
+  InterfaceIT(InterfaceITValI<'s, 'i, R>),
+  StaticSizedArrayIT(StaticSizedArrayITValI<'s, 'i, R>),
+  RuntimeSizedArrayIT(RuntimeSizedArrayITValI<'s, 'i, R>),
+}
+
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedKindPayloadI<'s, 'i, R> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i, R>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
+  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i, R>),
+  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i, R>),
+}

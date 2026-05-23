@@ -17,7 +17,7 @@ import scala.collection.immutable.List
 
 */
 // mig: struct HammerTest
-pub struct HammerTest<'h> {
+pub struct HammerTest {
 }
 
 // mig: impl HammerTest

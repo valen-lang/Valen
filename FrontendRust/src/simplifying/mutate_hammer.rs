@@ -1,4 +1,17 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/MutateHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `MutateHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::instructions::ExpressionH;
+use crate::instantiating::ast::ast::FunctionHeaderI;
+use crate::instantiating::ast::expressions::{ExpressionIE, MutateIE, ReferenceExpressionIE};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::names::IVarNameI;
+use crate::instantiating::ast::types::{cI, CoordI, VariabilityI};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::{Hammer, Locals};
+
 /*
 package dev.vale.simplifying
 
@@ -6,39 +19,13 @@ import dev.vale._
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
 
-*/
-// mig: struct MutateHammerH
-/// Arena-allocated
-#[derive(PartialEq, Eq, Hash)]
-pub struct MutateHammerH<'h> {
-    pub keywords: Keywords,
-    pub type_hammer: TypeHammer,
-    pub name_hammer: NameHammer,
-    pub struct_hammer: StructHammer,
-    pub expression_hammer: ExpressionHammer,
-}
-// mig: impl MutateHammerH
-/*
 class MutateHammer(
     keywords: Keywords,
     typeHammer: TypeHammer,
     nameHammer: NameHammer,
     structHammer: StructHammer,
     expressionHammer: ExpressionHammer) {
-*/
-// mig: fn translate_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        mutate2: MutateIE,
-    ) -> ExpressionH {
-        panic!("Unimplemented: translate_mutate");
-    }
-}
-/*
+
   def translateMutate(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -78,22 +65,7 @@ impl<'h> MutateHammerH<'h> {
 
     expressionHammer.translateDeferreds(hinputs, hamuts, currentFunctionHeader, locals, oldValueAccess, sourceDeferreds ++ destinationDeferreds)
   }
-*/
-// mig: fn translate_mundane_runtime_sized_array_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_mundane_runtime_sized_array_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        array_expr2: ReferenceExpressionIE,
-        index_expr2: ReferenceExpressionIE,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_mundane_runtime_sized_array_mutate");
-    }
-}
-/*
+
   private def translateMundaneRuntimeSizedArrayMutate(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -121,22 +93,7 @@ impl<'h> MutateHammerH<'h> {
 
     (storeNode, destinationDeferreds ++ indexDeferreds)
   }
-*/
-// mig: fn translate_mundane_static_sized_array_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_mundane_static_sized_array_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        array_expr2: ReferenceExpressionIE,
-        index_expr2: ReferenceExpressionIE,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
-    }
-}
-/*
+
   private def translateMundaneStaticSizedArrayMutate(
                                                     hinputs: HinputsI,
                                                     hamuts: HamutsBox,
@@ -164,22 +121,7 @@ impl<'h> MutateHammerH<'h> {
 
     (storeNode, destinationDeferreds ++ indexDeferreds)
   }
-*/
-// mig: fn translate_addressible_member_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_addressible_member_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        struct_expr2: ReferenceExpressionIE,
-        member_name: IVarNameI,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_addressible_member_mutate");
-    }
-}
-/*
+
   private def translateAddressibleMemberMutate(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -243,22 +185,7 @@ impl<'h> MutateHammerH<'h> {
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (storeNode, destinationDeferreds)
   }
-*/
-// mig: fn translate_mundane_member_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_mundane_member_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        struct_expr2: ReferenceExpressionIE,
-        member_name: IVarNameI,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_mundane_member_mutate");
-    }
-}
-/*
+
   private def translateMundaneMemberMutate(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -293,24 +220,7 @@ impl<'h> MutateHammerH<'h> {
           nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, memberName)))
     (storeNode, destinationDeferreds)
   }
-*/
-// mig: fn translate_addressible_local_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_addressible_local_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        source_result_pointer_type_h: CoordH,
-        var_id: IVarNameI,
-        variability: VariabilityI,
-        reference: CoordI,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_addressible_local_mutate");
-    }
-}
-/*
+
   private def translateAddressibleLocalMutate(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -345,21 +255,7 @@ impl<'h> MutateHammerH<'h> {
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (storeNode, Vector.empty)
   }
-*/
-// mig: fn translate_mundane_local_mutate
-impl<'h> MutateHammerH<'h> {
-    pub fn translate_mundane_local_mutate(
-        hinputs: HinputsI,
-        hamuts: HamutsBox,
-        current_function_header: FunctionHeaderI,
-        locals: LocalsBox,
-        source_expr_result_line: ExpressionH,
-        var_id: IVarNameI,
-    ) -> (ExpressionH, Vec<ExpressionI>) {
-        panic!("Unimplemented: translate_mundane_local_mutate");
-    }
-}
-/*
+
   private def translateMundaneLocalMutate(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -379,3 +275,142 @@ impl<'h> MutateHammerH<'h> {
   }
 }
 */
+
+// mig: fn translate_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        mutate2: &MutateIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mutate");
+    }
+}
+
+// mig: fn translate_mundane_runtime_sized_array_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_runtime_sized_array_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_runtime_sized_array_mutate");
+    }
+}
+
+// mig: fn translate_mundane_static_sized_array_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_static_sized_array_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
+    }
+}
+
+// mig: fn translate_addressible_member_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_addressible_member_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        member_name: &'i IVarNameI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_member_mutate");
+    }
+}
+
+// mig: fn translate_mundane_member_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_member_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        member_name: &'i IVarNameI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_member_mutate");
+    }
+}
+
+// mig: fn translate_addressible_local_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_addressible_local_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: crate::final_ast::types::CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_local_mutate");
+    }
+}
+
+// mig: fn translate_mundane_local_mutate
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_local_mutate<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_result_line: ExpressionH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_local_mutate");
+    }
+}

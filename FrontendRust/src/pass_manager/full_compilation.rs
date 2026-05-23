@@ -8,7 +8,9 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
-use crate::simplifying::HammerCompilation;
+// Simplifying pass unlinked during instantiating bring-up (Slabs 16a–16j).
+// use crate::simplifying::HammerCompilation;
+use crate::instantiating::InstantiatedCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
@@ -62,7 +64,7 @@ where
   's: 't,
   'p: 'ctx,
 {
-  hammer_compilation: HammerCompilation<'s, 'ctx, 't, 'p>,
+  hammer_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'p>,
 }
 /*
 class FullCompilation(
@@ -90,17 +92,21 @@ where
     options: FullCompilationOptions,
     typing_bump: &'t Bump,
   ) -> Self {
-    let hammer_compilation = HammerCompilation::new(
+    let instantiator_options = crate::instantiating::InstantiatorCompilationOptions {
+      debug_out: options.debug_out,
+    };
+    let hammer_compilation = InstantiatedCompilation::new(
       scout_arena,
       keywords,
       parser_keywords,
       parse_arena,
       packages_to_build,
       package_to_contents_resolver,
-      options,
+      options.global_options,
+      instantiator_options,
       typing_bump,
     );
-    FullCompilation { hammer_compilation }
+    FullCompilation { hammer_compilation: hammer_compilation }
   }
 /*
   var hammerCompilation =

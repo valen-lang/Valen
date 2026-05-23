@@ -14,8 +14,8 @@ If a pass isn't listed in the per-pass values table below, the agent stops and r
 | postparsing | `src/postparsing/` | `S` | `'s` | (none) | `&'ctx ScoutArena<'s>` | `&'s [X]` | `IndexMap<K,V>` | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
 | higher_typing | `src/higher_typing/` | `A` | `'s` | (none) | `&'ctx ScoutArena<'s>` | `&'s [X]` | `IndexMap<K,V>` | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
 | typing | `src/typing/` | `T` | `'s, 't` | `where 's: 't` | `&'ctx TypingInterner<'s, 't>` | `&'t [X]` | `ArenaIndexMap<'t, K, V>` | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
-| instantiating | `src/instantiating/` | `I` | `'s, 't, 'i` | `where 's: 't, 't: 'i` | (TBD — defer to architect when first file gets migrated) | `&'i [X]` | (TBD) | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
-| simplifying | `src/simplifying/` | `H` | `'h` | (none) | `&'ctx HammerInterner<'h>` | `&'h [X]` | `ArenaIndexMap<'h, K, V>` | `StrI<'h>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
+| instantiating | `src/instantiating/` | `I` | `'s, 'i` | `where 's: 'i` | `&'ctx InstantiatingInterner<'s, 'i>` | `&'i [X]` | `ArenaIndexMap<'i, K, V>` | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
+| simplifying | `src/simplifying/` | `H` | `'s, 'i, 'h` | `where 's: 'i, 'i: 'h` | `&'ctx HammerInterner<'s, 'h>` | `&'h [X]` | `ArenaIndexMap<'h, K, V>` | `StrI<'s>` | enum-with-arena-refs | `ptr::eq` on interned, derive on Polyvalue | yes |
 
 TBD cells are explicit deferrals — the agent must stop and escalate to the architect when it hits a TBD it would need to use. Don't silently substitute typing-pass values.
 

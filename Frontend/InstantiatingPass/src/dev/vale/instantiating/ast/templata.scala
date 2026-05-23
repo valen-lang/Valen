@@ -234,7 +234,7 @@ case class PrototypeTemplataI[+R <: IRegionsModeI](declarationRange: RangeS, pro
   override def hashCode(): Int = hash;
 
 }
-case class IsaTemplataI[+R <: IRegionsModeI](declarationRange: RangeS, implName: IdI[R, IImplNameI[R]], subKind: KindT, superKind: KindIT[R]) extends ITemplataI[R] {
+case class IsaTemplataI[+R <: IRegionsModeI](declarationRange: RangeS, implName: IdI[R, IImplNameI[R]], subKind: KindIT[R], superKind: KindIT[R]) extends ITemplataI[R] {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 

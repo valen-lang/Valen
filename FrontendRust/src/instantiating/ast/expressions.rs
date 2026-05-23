@@ -4,24 +4,104 @@ package dev.vale.instantiating.ast
 import dev.vale._
 import dev.vale.postparsing._
 */
-// mig: trait ExpressionIE
-pub trait ExpressionIE<'s, 't> {}
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+use crate::instantiating::ast::types::{
+    CoordI, OwnershipI, MutabilityI, VariabilityI,
+    InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
+};
+use crate::instantiating::ast::names::{IdI, IVarNameI};
+use crate::instantiating::ast::ast::{
+    IVariableI, ILocalVariableI, PrototypeI, ReferenceLocalVariableI,
+};
+
+// mig: trait ExpressionIE — realized as enum per @ATDCX (no dyn, mirrors typing-pass ExpressionTE).
+/// Arena-allocated (see @TFITCX)
+//
+// No PartialEq/Hash derive: Scala uses `vcurious` (panic on equals) on every
+// expression case class; Rust's "no impl" gives a strictly stronger compile-time
+// error. Mirrors typing/ast/expressions.rs ExpressionTE.
+#[derive(Copy, Clone, Debug)]
+pub enum ExpressionIE<'s, 'i, R> {
+    Reference(ReferenceExpressionIE<'s, 'i, R>),
+    Address(AddressExpressionIE<'s, 'i, R>),
+}
 /*
 trait ExpressionI  {
 */
 // mig: fn result
-pub fn result(self_: &dyn ExpressionIE<'s, 't>) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ExpressionIE<'s, 'i, R> {
+    pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+}
 /*
   def result: CoordI[cI]
 }
 */
-// mig: trait ReferenceExpressionIE
-pub trait ReferenceExpressionIE<'s, 't>: ExpressionIE<'s, 't> {}
+// mig: trait ReferenceExpressionIE — realized as enum per @ATDCX.
+#[derive(Copy, Clone, Debug)]
+pub enum ReferenceExpressionIE<'s, 'i, R> {
+    LetAndLend(&'i LetAndLendIE<'s, 'i, R>),
+    LockWeak(&'i LockWeakIE<'s, 'i, R>),
+    BorrowToWeak(&'i BorrowToWeakIE<'s, 'i, R>),
+    LetNormal(&'i LetNormalIE<'s, 'i, R>),
+    Restackify(&'i RestackifyIE<'s, 'i, R>),
+    Unlet(&'i UnletIE<'s, 'i, R>),
+    Discard(&'i DiscardIE<'s, 'i, R>),
+    Defer(&'i DeferIE<'s, 'i, R>),
+    If(&'i IfIE<'s, 'i, R>),
+    While(&'i WhileIE<'s, 'i, R>),
+    Mutate(&'i MutateIE<'s, 'i, R>),
+    Return(&'i ReturnIE<'s, 'i, R>),
+    Break(&'i BreakIE<'s, 'i, R>),
+    Block(&'i BlockIE<'s, 'i, R>),
+    Mutabilify(&'i MutabilifyIE<'s, 'i, R>),
+    Immutabilify(&'i ImmutabilifyIE<'s, 'i, R>),
+    PreCheckBorrow(&'i PreCheckBorrowIE<'s, 'i, R>),
+    Consecutor(&'i ConsecutorIE<'s, 'i, R>),
+    Tuple(&'i TupleIE<'s, 'i, R>),
+    StaticArrayFromValues(&'i StaticArrayFromValuesIE<'s, 'i, R>),
+    ArraySize(&'i ArraySizeIE<'s, 'i, R>),
+    IsSameInstance(&'i IsSameInstanceIE<'s, 'i, R>),
+    AsSubtype(&'i AsSubtypeIE<'s, 'i, R>),
+    VoidLiteral(&'i VoidLiteralIE<'s, 'i, R>),
+    ConstantInt(&'i ConstantIntIE<'s, 'i, R>),
+    ConstantBool(&'i ConstantBoolIE<'s, 'i, R>),
+    ConstantStr(&'i ConstantStrIE<'s, 'i, R>),
+    ConstantFloat(&'i ConstantFloatIE<'s, 'i, R>),
+    ArgLookup(&'i ArgLookupIE<'s, 'i, R>),
+    ArrayLength(&'i ArrayLengthIE<'s, 'i, R>),
+    InterfaceFunctionCall(&'i InterfaceFunctionCallIE<'s, 'i, R>),
+    ExternFunctionCall(&'i ExternFunctionCallIE<'s, 'i, R>),
+    FunctionCall(&'i FunctionCallIE<'s, 'i, R>),
+    Reinterpret(&'i ReinterpretIE<'s, 'i, R>),
+    Construct(&'i ConstructIE<'s, 'i, R>),
+    NewMutRuntimeSizedArray(&'i NewMutRuntimeSizedArrayIE<'s, 'i, R>),
+    StaticArrayFromCallable(&'i StaticArrayFromCallableIE<'s, 'i, R>),
+    DestroyStaticSizedArrayIntoFunction(&'i DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, R>),
+    DestroyStaticSizedArrayIntoLocals(&'i DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, R>),
+    DestroyMutRuntimeSizedArray(&'i DestroyMutRuntimeSizedArrayIE<'s, 'i, R>),
+    RuntimeSizedArrayCapacity(&'i RuntimeSizedArrayCapacityIE<'s, 'i, R>),
+    PushRuntimeSizedArray(&'i PushRuntimeSizedArrayIE<'s, 'i, R>),
+    PopRuntimeSizedArray(&'i PopRuntimeSizedArrayIE<'s, 'i, R>),
+    InterfaceToInterfaceUpcast(&'i InterfaceToInterfaceUpcastIE<'s, 'i, R>),
+    Upcast(&'i UpcastIE<'s, 'i, R>),
+    SoftLoad(&'i SoftLoadIE<'s, 'i, R>),
+    Destroy(&'i DestroyIE<'s, 'i, R>),
+    DestroyImmRuntimeSizedArray(&'i DestroyImmRuntimeSizedArrayIE<'s, 'i, R>),
+    NewImmRuntimeSizedArray(&'i NewImmRuntimeSizedArrayIE<'s, 'i, R>),
+}
 /*
 trait ReferenceExpressionIE extends ExpressionI { }
 */
-// mig: trait AddressExpressionIE
-pub trait AddressExpressionIE<'s, 't>: ExpressionIE<'s, 't> {}
+// mig: trait AddressExpressionIE — realized as enum per @ATDCX.
+#[derive(Copy, Clone, Debug)]
+pub enum AddressExpressionIE<'s, 'i, R> {
+    LocalLookup(&'i LocalLookupIE<'s, 'i, R>),
+    StaticSizedArrayLookup(&'i StaticSizedArrayLookupIE<'s, 'i, R>),
+    RuntimeSizedArrayLookup(&'i RuntimeSizedArrayLookupIE<'s, 'i, R>),
+    ReferenceMemberLookup(&'i ReferenceMemberLookupIE<'s, 'i, R>),
+    AddressMemberLookup(&'i AddressMemberLookupIE<'s, 'i, R>),
+}
 /*
 // This is an Expression2 because we sometimes take an address and throw it
 // directly into a struct (closures!), which can have addressible members.
@@ -33,13 +113,13 @@ trait AddressExpressionIE extends ExpressionI {
 }
 */
 // mig: struct LetAndLendIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct LetAndLendIE<'s, 't> {
-	pub variable: ILocalVariableI<'s, 't>,
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct LetAndLendIE<'s, 'i, R> {
+	pub variable: ILocalVariableI<'s, 'i>,
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
 	pub target_ownership: OwnershipI,
-	pub result: CoordI<'s, 't>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl LetAndLendIE
 /*
@@ -75,16 +155,16 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct LockWeakIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct LockWeakIE<'s, 't> {
-	pub inner_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result_opt_borrow_type: CoordI<'s, 't>,
-	pub some_constructor: PrototypeI<'s, 't>,
-	pub none_constructor: PrototypeI<'s, 't>,
-	pub some_impl_name: IdI<'s, 't>,
-	pub none_impl_name: IdI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct LockWeakIE<'s, 'i, R> {
+	pub inner_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result_opt_borrow_type: CoordI<'s, 'i, R>,
+	pub some_constructor: PrototypeI<'s, 'i, R>,
+	pub none_constructor: PrototypeI<'s, 'i, R>,
+	pub some_impl_name: IdI<'s, 'i, R>,
+	pub none_impl_name: IdI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl LockWeakIE
 /*
@@ -122,11 +202,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct BorrowToWeakIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct BorrowToWeakIE<'s, 't> {
-	pub inner_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct BorrowToWeakIE<'s, 'i, R> {
+	pub inner_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl BorrowToWeakIE
 /*
@@ -162,12 +242,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct LetNormalIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct LetNormalIE<'s, 't> {
-	pub variable: ILocalVariableI<'s, 't>,
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct LetNormalIE<'s, 'i, R> {
+	pub variable: ILocalVariableI<'s, 'i>,
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl LetNormalIE
 /*
@@ -204,12 +284,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct RestackifyIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct RestackifyIE<'s, 't> {
-	pub variable: ILocalVariableI<'s, 't>,
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct RestackifyIE<'s, 'i, R> {
+	pub variable: ILocalVariableI<'s, 'i>,
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl RestackifyIE
 /*
@@ -246,11 +326,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct UnletIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct UnletIE<'s, 't> {
-	pub variable: ILocalVariableI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct UnletIE<'s, 'i, R> {
+	pub variable: ILocalVariableI<'s, 'i>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl UnletIE
 /*
@@ -275,10 +355,10 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct DiscardIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DiscardIE<'s, 't> {
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DiscardIE<'s, 'i, R> {
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl DiscardIE
 /*
@@ -305,8 +385,8 @@ case class DiscardIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> DiscardIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DiscardIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -330,12 +410,12 @@ impl<'s, 't> DiscardIE<'s, 't> {
 }
 */
 // mig: struct DeferIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DeferIE<'s, 't> {
-	pub inner_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub deferred_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DeferIE<'s, 'i, R> {
+	pub inner_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub deferred_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl DeferIE
 /*
@@ -362,13 +442,13 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct IfIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct IfIE<'s, 't> {
-	pub condition: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub then_call: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub else_call: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct IfIE<'s, 'i, R> {
+	pub condition: ReferenceExpressionIE<'s, 'i, R>,
+	pub then_call: ReferenceExpressionIE<'s, 'i, R>,
+	pub else_call: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl IfIE
 /*
@@ -417,11 +497,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct WhileIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct WhileIE<'s, 't> {
-	pub block: BlockIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct WhileIE<'s, 'i, R> {
+	pub block: BlockIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl WhileIE
 /*
@@ -446,12 +526,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct MutateIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct MutateIE<'s, 't> {
-	pub destination_expr: &'t dyn AddressExpressionIE<'s, 't>,
-	pub source_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct MutateIE<'s, 'i, R> {
+	pub destination_expr: AddressExpressionIE<'s, 'i, R>,
+	pub source_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl MutateIE
 /*
@@ -474,10 +554,10 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ReturnIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ReturnIE<'s, 't> {
-	pub source_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ReturnIE<'s, 'i, R> {
+	pub source_expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl ReturnIE
 /*
@@ -496,17 +576,17 @@ case class ReturnIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ReturnIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ReturnIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(false))
 }
 */
 // mig: struct BreakIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct BreakIE<'s, 't> {}
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct BreakIE<'s, 'i, R>(pub std::marker::PhantomData<(&'s (), &'i (), R)>);
 // mig: impl BreakIE
 /*
 case class BreakIE() extends ReferenceExpressionIE {
@@ -522,8 +602,8 @@ case class BreakIE() extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> BreakIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> BreakIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(true))
@@ -531,11 +611,11 @@ impl<'s, 't> BreakIE<'s, 't> {
 
 */
 // mig: struct BlockIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct BlockIE<'s, 't> {
-	pub inner: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct BlockIE<'s, 'i, R> {
+	pub inner: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl BlockIE
 /*
@@ -564,11 +644,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct MutabilifyIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct MutabilifyIE<'s, 't> {
-	pub inner: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct MutabilifyIE<'s, 'i, R> {
+	pub inner: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl MutabilifyIE
 /*
@@ -598,11 +678,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ImmutabilifyIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ImmutabilifyIE<'s, 't> {
-	pub inner: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ImmutabilifyIE<'s, 'i, R> {
+	pub inner: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl ImmutabilifyIE
 /*
@@ -636,10 +716,10 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct PreCheckBorrowIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct PreCheckBorrowIE<'s, 't> {
-	pub inner: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct PreCheckBorrowIE<'s, 'i, R> {
+	pub inner: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl PreCheckBorrowIE
 /*
@@ -650,8 +730,8 @@ case class PreCheckBorrowIE(
   vassert(inner.result.ownership == MutableBorrowI)
 */
 // mig: fn result
-impl<'s, 't> PreCheckBorrowIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> PreCheckBorrowIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = inner.result
@@ -668,11 +748,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ConsecutorIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConsecutorIE<'s, 't> {
-	pub exprs: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConsecutorIE<'s, 'i, R> {
+	pub exprs: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl ConsecutorIE
 /*
@@ -696,11 +776,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct TupleIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct TupleIE<'s, 't> {
-	pub elements: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct TupleIE<'s, 'i, R> {
+	pub elements: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl TupleIE
 /*
@@ -722,12 +802,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct StaticArrayFromValuesIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct StaticArrayFromValuesIE<'s, 't> {
-	pub elements: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result_reference: CoordI<'s, 't>,
-	pub array_type: StaticSizedArrayIT<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct StaticArrayFromValuesIE<'s, 'i, R> {
+	pub elements: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result_reference: CoordI<'s, 'i, R>,
+	pub array_type: StaticSizedArrayIT<'s, 'i, R>,
 }
 // mig: impl StaticArrayFromValuesIE
 /*
@@ -762,19 +842,19 @@ case class StaticArrayFromValuesIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> StaticArrayFromValuesIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> StaticArrayFromValuesIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = resultReference
 }
 */
 // mig: struct ArraySizeIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ArraySizeIE<'s, 't> {
-	pub array: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ArraySizeIE<'s, 'i, R> {
+	pub array: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl ArraySizeIE
 /*
@@ -796,11 +876,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct IsSameInstanceIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct IsSameInstanceIE<'s, 't> {
-	pub left: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub right: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct IsSameInstanceIE<'s, 'i, R> {
+	pub left: ReferenceExpressionIE<'s, 'i, R>,
+	pub right: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl IsSameInstanceIE
 /*
@@ -822,26 +902,26 @@ override def hashCode(): Int = vcurious()
   vassert(left.result == right.result)
 */
 // mig: fn result
-impl<'s, 't> IsSameInstanceIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> IsSameInstanceIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, BoolIT())
 }
 */
 // mig: struct AsSubtypeIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct AsSubtypeIE<'s, 't> {
-	pub source_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub target_type: CoordI<'s, 't>,
-	pub result_result_type: CoordI<'s, 't>,
-	pub ok_constructor: PrototypeI<'s, 't>,
-	pub err_constructor: PrototypeI<'s, 't>,
-	pub impl_name: IdI<'s, 't>,
-	pub ok_impl_name: IdI<'s, 't>,
-	pub err_impl_name: IdI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct AsSubtypeIE<'s, 'i, R> {
+	pub source_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub target_type: CoordI<'s, 'i, R>,
+	pub result_result_type: CoordI<'s, 'i, R>,
+	pub ok_constructor: PrototypeI<'s, 'i, R>,
+	pub err_constructor: PrototypeI<'s, 'i, R>,
+	pub impl_name: IdI<'s, 'i, R>,
+	pub ok_impl_name: IdI<'s, 'i, R>,
+	pub err_impl_name: IdI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl AsSubtypeIE
 /*
@@ -882,9 +962,9 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct VoidLiteralIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct VoidLiteralIE<'s, 't> {}
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct VoidLiteralIE<'s, 'i, R>(pub std::marker::PhantomData<(&'s (), &'i (), R)>);
 // mig: impl VoidLiteralIE
 /*
 case class VoidLiteralIE() extends ReferenceExpressionIE {
@@ -900,19 +980,20 @@ case class VoidLiteralIE() extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> VoidLiteralIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> VoidLiteralIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct ConstantIntIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConstantIntIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantIntIE<'s, 'i, R> {
 	pub value: i64,
 	pub bits: i32,
+	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
 }
 // mig: impl ConstantIntIE
 /*
@@ -929,17 +1010,18 @@ case class ConstantIntIE(value: Long, bits: Int) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ConstantIntIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result = CoordI[cI](MutableShareI, IntIT(bits))
 }
 */
 // mig: struct ConstantBoolIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConstantBoolIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantBoolIE<'s, 'i, R> {
+	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
 	pub value: bool,
 }
 // mig: impl ConstantBoolIE
@@ -957,17 +1039,18 @@ case class ConstantBoolIE(value: Boolean) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ConstantBoolIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result = CoordI[cI](MutableShareI, BoolIT())
 }
 */
 // mig: struct ConstantStrIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConstantStrIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantStrIE<'s, 'i, R> {
+	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
 	pub value: &'s str,
 }
 // mig: impl ConstantStrIE
@@ -985,17 +1068,18 @@ case class ConstantStrIE(value: String) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ConstantStrIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ConstantStrIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result = CoordI[cI](MutableShareI, StrIT())
 }
 */
 // mig: struct ConstantFloatIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConstantFloatIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantFloatIE<'s, 'i, R> {
+	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
 	pub value: f64,
 }
 // mig: impl ConstantFloatIE
@@ -1013,8 +1097,8 @@ case class ConstantFloatIE(value: Double) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ConstantFloatIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ConstantFloatIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result = CoordI[cI](MutableShareI, FloatIT())
@@ -1022,11 +1106,11 @@ impl<'s, 't> ConstantFloatIE<'s, 't> {
 
 */
 // mig: struct LocalLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct LocalLookupIE<'s, 't> {
-	pub local_variable: ILocalVariableI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct LocalLookupIE<'s, 'i, R> {
+	pub local_variable: ILocalVariableI<'s, 'i>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl LocalLookupIE
 /*
@@ -1057,11 +1141,11 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ArgLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ArgLookupIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ArgLookupIE<'s, 'i, R> {
 	pub param_index: i32,
-	pub coord: CoordI<'s, 't>,
+	pub coord: CoordI<'s, 'i, R>,
 }
 // mig: impl ArgLookupIE
 /*
@@ -1081,21 +1165,21 @@ case class ArgLookupIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ArgLookupIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ArgLookupIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = coord
 }
 */
 // mig: struct StaticSizedArrayLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct StaticSizedArrayLookupIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct StaticSizedArrayLookupIE<'s, 'i, R> {
 	pub range: RangeS<'s>,
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub index_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub element_type: CoordI<'s, 't>,
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub index_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub element_type: CoordI<'s, 'i, R>,
 	pub variability: VariabilityI,
 }
 // mig: impl StaticSizedArrayLookupIE
@@ -1121,8 +1205,8 @@ case class StaticSizedArrayLookupIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> StaticSizedArrayLookupIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> StaticSizedArrayLookupIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   // See RMLRMO why we just return the element type.
@@ -1130,12 +1214,12 @@ impl<'s, 't> StaticSizedArrayLookupIE<'s, 't> {
 }
 */
 // mig: struct RuntimeSizedArrayLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct RuntimeSizedArrayLookupIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub index_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub element_type: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct RuntimeSizedArrayLookupIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub index_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub element_type: CoordI<'s, 'i, R>,
 	pub variability: VariabilityI,
 }
 // mig: impl RuntimeSizedArrayLookupIE
@@ -1162,8 +1246,8 @@ override def hashCode(): Int = vcurious()
 //  vassert(arrayExpr.result.kind == arrayType)
 */
 // mig: fn result
-impl<'s, 't> RuntimeSizedArrayLookupIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> RuntimeSizedArrayLookupIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   // See RMLRMO why we just return the element type.
@@ -1171,10 +1255,10 @@ impl<'s, 't> RuntimeSizedArrayLookupIE<'s, 't> {
 }
 */
 // mig: struct ArrayLengthIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ArrayLengthIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ArrayLengthIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl ArrayLengthIE
 /*
@@ -1191,21 +1275,21 @@ case class ArrayLengthIE(arrayExpr: ReferenceExpressionIE) extends ReferenceExpr
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ArrayLengthIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ArrayLengthIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, IntIT(32))
 }
 */
 // mig: struct ReferenceMemberLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ReferenceMemberLookupIE<'s, 't> {
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ReferenceMemberLookupIE<'s, 'i, R> {
 	pub range: RangeS<'s>,
-	pub struct_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub member_name: IVarNameI<'s, 't>,
-	pub member_reference: CoordI<'s, 't>,
+	pub struct_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub member_name: IVarNameI<'s, 'i, R>,
+	pub member_reference: CoordI<'s, 'i, R>,
 	pub variability: VariabilityI,
 }
 // mig: impl ReferenceMemberLookupIE
@@ -1232,8 +1316,8 @@ case class ReferenceMemberLookupIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> ReferenceMemberLookupIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> ReferenceMemberLookupIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   // See RMLRMO why we just return the member type.
@@ -1241,12 +1325,12 @@ impl<'s, 't> ReferenceMemberLookupIE<'s, 't> {
 }
 */
 // mig: struct AddressMemberLookupIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct AddressMemberLookupIE<'s, 't> {
-	pub struct_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub member_name: IVarNameI<'s, 't>,
-	pub member_reference: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct AddressMemberLookupIE<'s, 'i, R> {
+	pub struct_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub member_name: IVarNameI<'s, 'i, R>,
+	pub member_reference: CoordI<'s, 'i, R>,
 	pub variability: VariabilityI,
 }
 // mig: impl AddressMemberLookupIE
@@ -1270,8 +1354,8 @@ case class AddressMemberLookupIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> AddressMemberLookupIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> AddressMemberLookupIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   // See RMLRMO why we just return the member type.
@@ -1279,13 +1363,13 @@ impl<'s, 't> AddressMemberLookupIE<'s, 't> {
 }
 */
 // mig: struct InterfaceFunctionCallIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InterfaceFunctionCallIE<'s, 't> {
-	pub super_function_prototype: PrototypeI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceFunctionCallIE<'s, 'i, R> {
+	pub super_function_prototype: PrototypeI<'s, 'i, R>,
 	pub virtual_param_index: i32,
-	pub args: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result: CoordI<'s, 't>,
+	pub args: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl InterfaceFunctionCallIE
 /*
@@ -1309,12 +1393,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ExternFunctionCallIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ExternFunctionCallIE<'s, 't> {
-	pub prototype2: PrototypeI<'s, 't>,
-	pub args: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ExternFunctionCallIE<'s, 'i, R> {
+	pub prototype2: PrototypeI<'s, 'i, R>,
+	pub args: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl ExternFunctionCallIE
 /*
@@ -1350,12 +1434,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct FunctionCallIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct FunctionCallIE<'s, 't> {
-	pub callable: PrototypeI<'s, 't>,
-	pub args: &'t [&'t dyn ReferenceExpressionIE<'s, 't>],
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionCallIE<'s, 'i, R> {
+	pub callable: PrototypeI<'s, 'i, R>,
+	pub args: &'i[ReferenceExpressionIE<'s, 'i, R>],
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl FunctionCallIE
 /*
@@ -1387,12 +1471,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ReinterpretIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ReinterpretIE<'s, 't> {
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result_reference: CoordI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ReinterpretIE<'s, 'i, R> {
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result_reference: CoordI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl ReinterpretIE
 /*
@@ -1433,12 +1517,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct ConstructIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ConstructIE<'s, 't> {
-	pub struct_tt: StructIT<'s, 't>,
-	pub result: CoordI<'s, 't>,
-	pub args: &'t [&'t dyn ExpressionIE<'s, 't>],
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct ConstructIE<'s, 'i, R> {
+	pub struct_tt: StructIT<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
+	pub args: &'i[ExpressionIE<'s, 'i, R>],
 }
 // mig: impl ConstructIE
 /*
@@ -1463,12 +1547,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct NewMutRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct NewMutRuntimeSizedArrayIE<'s, 't> {
-	pub array_type: RuntimeSizedArrayIT<'s, 't>,
-	pub capacity_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct NewMutRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_type: RuntimeSizedArrayIT<'s, 'i, R>,
+	pub capacity_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl NewMutRuntimeSizedArrayIE
 /*
@@ -1501,13 +1585,13 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct StaticArrayFromCallableIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct StaticArrayFromCallableIE<'s, 't> {
-	pub array_type: StaticSizedArrayIT<'s, 't>,
-	pub generator: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub generator_method: PrototypeI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct StaticArrayFromCallableIE<'s, 'i, R> {
+	pub array_type: StaticSizedArrayIT<'s, 'i, R>,
+	pub generator: ReferenceExpressionIE<'s, 'i, R>,
+	pub generator_method: PrototypeI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl StaticArrayFromCallableIE
 /*
@@ -1539,13 +1623,13 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct DestroyStaticSizedArrayIntoFunctionIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DestroyStaticSizedArrayIntoFunctionIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub array_type: StaticSizedArrayIT<'s, 't>,
-	pub consumer: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub consumer_method: PrototypeI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub array_type: StaticSizedArrayIT<'s, 'i, R>,
+	pub consumer: ReferenceExpressionIE<'s, 'i, R>,
+	pub consumer_method: PrototypeI<'s, 'i, R>,
 }
 // mig: impl DestroyStaticSizedArrayIntoFunctionIE
 /*
@@ -1583,20 +1667,20 @@ override def hashCode(): Int = vcurious()
   }
 */
 // mig: fn result
-impl<'s, 't> DestroyStaticSizedArrayIntoFunctionIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct DestroyStaticSizedArrayIntoLocalsIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DestroyStaticSizedArrayIntoLocalsIE<'s, 't> {
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub static_sized_array: StaticSizedArrayIT<'s, 't>,
-	pub destination_reference_variables: &'t [ReferenceLocalVariableI<'s, 't>],
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, R> {
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub static_sized_array: StaticSizedArrayIT<'s, 'i, R>,
+	pub destination_reference_variables: &'i[ReferenceLocalVariableI<'s, 'i>],
 }
 // mig: impl DestroyStaticSizedArrayIntoLocalsIE
 /*
@@ -1620,8 +1704,8 @@ case class DestroyStaticSizedArrayIntoLocalsIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> DestroyStaticSizedArrayIntoLocalsIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -1630,10 +1714,10 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsIE<'s, 't> {
 }
 */
 // mig: struct DestroyMutRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DestroyMutRuntimeSizedArrayIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyMutRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl DestroyMutRuntimeSizedArrayIE
 /*
@@ -1642,18 +1726,18 @@ case class DestroyMutRuntimeSizedArrayIE(
 ) extends ReferenceExpressionIE {
 */
 // mig: fn result
-impl<'s, 't> DestroyMutRuntimeSizedArrayIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DestroyMutRuntimeSizedArrayIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct RuntimeSizedArrayCapacityIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct RuntimeSizedArrayCapacityIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct RuntimeSizedArrayCapacityIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl RuntimeSizedArrayCapacityIE
 /*
@@ -1662,8 +1746,8 @@ case class RuntimeSizedArrayCapacityIE(
 ) extends ReferenceExpressionIE {
 */
 // mig: fn result
-impl<'s, 't> RuntimeSizedArrayCapacityIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> RuntimeSizedArrayCapacityIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, IntIT(32))
@@ -1671,11 +1755,11 @@ impl<'s, 't> RuntimeSizedArrayCapacityIE<'s, 't> {
 }
 */
 // mig: struct PushRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct PushRuntimeSizedArrayIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub new_element_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct PushRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub new_element_expr: ReferenceExpressionIE<'s, 'i, R>,
 }
 // mig: impl PushRuntimeSizedArrayIE
 /*
@@ -1687,19 +1771,19 @@ case class PushRuntimeSizedArrayIE(
 ) extends ReferenceExpressionIE {
 */
 // mig: fn result
-impl<'s, 't> PushRuntimeSizedArrayIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> PushRuntimeSizedArrayIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct PopRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct PopRuntimeSizedArrayIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct PopRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl PopRuntimeSizedArrayIE
 /*
@@ -1716,12 +1800,12 @@ case class PopRuntimeSizedArrayIE(
 }
 */
 // mig: struct InterfaceToInterfaceUpcastIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InterfaceToInterfaceUpcastIE<'s, 't> {
-	pub inner_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub target_interface: InterfaceIT<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceToInterfaceUpcastIE<'s, 'i, R> {
+	pub inner_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub target_interface: InterfaceIT<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl InterfaceToInterfaceUpcastIE
 /*
@@ -1749,13 +1833,13 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct UpcastIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct UpcastIE<'s, 't> {
-	pub inner_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub target_interface: InterfaceIT<'s, 't>,
-	pub impl_name: IdI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct UpcastIE<'s, 'i, R> {
+	pub inner_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub target_interface: InterfaceIT<'s, 'i, R>,
+	pub impl_name: IdI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl UpcastIE
 /*
@@ -1791,12 +1875,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct SoftLoadIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct SoftLoadIE<'s, 't> {
-	pub expr: &'t dyn AddressExpressionIE<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct SoftLoadIE<'s, 'i, R> {
+	pub expr: AddressExpressionIE<'s, 'i, R>,
 	pub target_ownership: OwnershipI,
-	pub result: CoordI<'s, 't>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl SoftLoadIE
 /*
@@ -1843,12 +1927,12 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: struct DestroyIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DestroyIE<'s, 't> {
-	pub expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub struct_tt: StructIT<'s, 't>,
-	pub destination_reference_variables: &'t [ReferenceLocalVariableI<'s, 't>],
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyIE<'s, 'i, R> {
+	pub expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub struct_tt: StructIT<'s, 'i, R>,
+	pub destination_reference_variables: &'i[ReferenceLocalVariableI<'s, 'i>],
 }
 // mig: impl DestroyIE
 /*
@@ -1874,21 +1958,21 @@ case class DestroyIE(
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 't> DestroyIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DestroyIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct DestroyImmRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DestroyImmRuntimeSizedArrayIE<'s, 't> {
-	pub array_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub array_type: RuntimeSizedArrayIT<'s, 't>,
-	pub consumer: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub consumer_method: PrototypeI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyImmRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub array_type: RuntimeSizedArrayIT<'s, 'i, R>,
+	pub consumer: ReferenceExpressionIE<'s, 'i, R>,
+	pub consumer_method: PrototypeI<'s, 'i, R>,
 }
 // mig: impl DestroyImmRuntimeSizedArrayIE
 /*
@@ -1923,22 +2007,22 @@ override def hashCode(): Int = vcurious()
   }
 */
 // mig: fn result
-impl<'s, 't> DestroyImmRuntimeSizedArrayIE<'s, 't> {
-	pub fn result(&self) -> CoordI<'s, 't> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R> DestroyImmRuntimeSizedArrayIE<'s, 'i, R> {
+	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 */
 // mig: struct NewImmRuntimeSizedArrayIE
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct NewImmRuntimeSizedArrayIE<'s, 't> {
-	pub array_type: RuntimeSizedArrayIT<'s, 't>,
-	pub size_expr: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub generator: &'t dyn ReferenceExpressionIE<'s, 't>,
-	pub generator_method: PrototypeI<'s, 't>,
-	pub result: CoordI<'s, 't>,
+/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
+#[derive(Copy, Clone, Debug)]
+pub struct NewImmRuntimeSizedArrayIE<'s, 'i, R> {
+	pub array_type: RuntimeSizedArrayIT<'s, 'i, R>,
+	pub size_expr: ReferenceExpressionIE<'s, 'i, R>,
+	pub generator: ReferenceExpressionIE<'s, 'i, R>,
+	pub generator_method: PrototypeI<'s, 'i, R>,
+	pub result: CoordI<'s, 'i, R>,
 }
 // mig: impl NewImmRuntimeSizedArrayIE
 /*

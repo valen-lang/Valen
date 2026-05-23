@@ -10,7 +10,7 @@ import scala.collection.immutable.List
 object HammerTestCompilation {
 */
 // mig: fn test
-pub fn test(code: &[StrI<'h>]) -> HammerCompilationH<'h> {
+pub fn test(code: &str) -> () {
   panic!("Unimplemented: test");
 }
 /*

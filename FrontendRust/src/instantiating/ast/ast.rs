@@ -1,3 +1,17 @@
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::names::IRuneS;
+use crate::instantiating::ast::types::{CoordI, KindIT, ICitizenIT, MutabilityI, VariabilityI, cI, StructIT};
+use crate::instantiating::ast::names::{
+    IdI, INameI,
+    IFunctionNameI, IImplNameI, IInterfaceNameI, IStructNameI, ICitizenNameI,
+    IRegionNameI, IVarNameI,
+    ExportNameI, FunctionBoundNameI, ImplBoundNameI,
+};
+use crate::instantiating::instantiating_interner::MustIntern;
+use crate::instantiating::ast::expressions::ReferenceExpressionIE;
+
 /*
 package dev.vale.instantiating.ast
 
@@ -18,14 +32,13 @@ import scala.collection.immutable._
 */
 // mig: struct KindExportI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct KindExportI<'s, 't> {
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct KindExportI<'s, 'i> {
     pub range: RangeS<'s>,
-    pub tyype: KindIT<'t>,
-    pub id: IdI<'t, ExportNameI<'t>>,
+    pub tyype: KindIT<'s, 'i, cI>,
+    pub id: IdI<'s, 'i, cI>,
     pub exported_name: StrI<'s>,
 }
-// mig: impl KindExportI
 /*
 case class KindExportI(
   range: RangeS,
@@ -36,6 +49,7 @@ case class KindExportI(
   exportedName: StrI
 )  {
 */
+// mig: impl KindExportI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for KindExportI` below.)
 /*
@@ -50,14 +64,13 @@ override def hashCode(): Int = vcurious()
 */
 // mig: struct FunctionExportI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct FunctionExportI<'s, 't> {
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FunctionExportI<'s, 'i> where 's: 'i {
     pub range: RangeS<'s>,
-    pub prototype: PrototypeI<'s, 't>,
-    pub export_id: IdI<'t, ExportNameI<'t>>,
+    pub prototype: &'i PrototypeI<'s, 'i, cI>,
+    pub export_id: IdI<'s, 'i, cI>,
     pub exported_name: StrI<'s>,
 }
-// mig: impl FunctionExportI
 /*
 case class FunctionExportI(
   range: RangeS,
@@ -66,6 +79,7 @@ case class FunctionExportI(
   exportedName: StrI
 )  {
 */
+// mig: impl FunctionExportI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for FunctionExportI` below.)
 /*
@@ -90,12 +104,11 @@ override def hashCode(): Int = vcurious()
 */
 // mig: struct FunctionExternI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct FunctionExternI<'s, 't> {
-    pub prototype: PrototypeI<'s, 't>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FunctionExternI<'s, 'i> where 's: 'i {
+    pub prototype: &'i PrototypeI<'s, 'i, cI>,
     pub extern_name: StrI<'s>,
 }
-// mig: impl FunctionExternI
 /*
 case class FunctionExternI(
 //  range: RangeS,
@@ -105,6 +118,7 @@ case class FunctionExternI(
 )  {
   vpass()
 */
+// mig: impl FunctionExternI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for FunctionExternI` below.)
 /*
@@ -119,18 +133,18 @@ override def hashCode(): Int = vcurious()
 */
 // mig: struct InterfaceEdgeBlueprintI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InterfaceEdgeBlueprintI<'s, 't> {
-    pub interface: IdI<'t, IInterfaceNameI<'t>>,
-    pub super_family_root_headers: &'t [(PrototypeI<'s, 't>, i32)],
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceEdgeBlueprintI<'s, 'i> where 's: 'i {
+    pub interface: IdI<'s, 'i, cI>,
+    pub super_family_root_headers: &'i [(&'i PrototypeI<'s, 'i, cI>, i32)],
 }
-// mig: impl InterfaceEdgeBlueprintI
 /*
 case class InterfaceEdgeBlueprintI(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
   interface: IdI[cI, IInterfaceNameI[cI]],
   superFamilyRootHeaders: Vector[(PrototypeI[cI], Int)]) {
 */
+// mig: impl InterfaceEdgeBlueprintI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for InterfaceEdgeBlueprintI` below.)
 /*
@@ -144,16 +158,15 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct EdgeI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct EdgeI<'s, 't> {
-    pub edge_id: IdI<'t, IImplNameI<'t>>,
-    pub sub_citizen: ICitizenIT<'t>,
-    pub super_interface: IdI<'t, IInterfaceNameI<'t>>,
-    pub rune_to_func_bound: ArenaIndexMap<'t, IRuneS<'s>, IdI<'t, FunctionBoundNameI<'t>>>,
-    pub rune_to_impl_bound: ArenaIndexMap<'t, IRuneS<'s>, IdI<'t, ImplBoundNameI<'t>>>,
-    pub abstract_func_to_override_func: ArenaIndexMap<'t, IdI<'t, IFunctionNameI<'t>>, PrototypeI<'s, 't>>,
+#[derive(PartialEq, Eq, Debug)]
+pub struct EdgeI<'s, 'i> where 's: 'i {
+    pub edge_id: IdI<'s, 'i, cI>,
+    pub sub_citizen: ICitizenIT<'s, 'i, cI>,
+    pub super_interface: IdI<'s, 'i, cI>,
+    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub abstract_func_to_override_func: ArenaIndexMap<'i, IdI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>>,
 }
-// mig: impl EdgeI
 /*
 case class EdgeI(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
@@ -169,6 +182,7 @@ case class EdgeI(
   abstractFuncToOverrideFunc: Map[IdI[cI, IFunctionNameI[cI]], PrototypeI[cI]]
 ) {
 */
+// mig: impl EdgeI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for EdgeI` below.)
 /*
@@ -193,14 +207,13 @@ case class EdgeI(
 */
 // mig: struct FunctionDefinitionI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct FunctionDefinitionI<'s, 't> {
-    pub header: FunctionHeaderI<'s, 't>,
-    pub rune_to_func_bound: ArenaIndexMap<'t, IRuneS<'s>, IdI<'t, FunctionBoundNameI<'t>>>,
-    pub rune_to_impl_bound: ArenaIndexMap<'t, IRuneS<'s>, IdI<'t, ImplBoundNameI<'t>>>,
-    pub body: ReferenceExpressionIE<'s, 't>,
+#[derive(Debug)]
+pub struct FunctionDefinitionI<'s, 'i> where 's: 'i {
+    pub header: FunctionHeaderI<'s, 'i>,
+    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub body: ReferenceExpressionIE<'s, 'i, cI>,
 }
-// mig: impl FunctionDefinitionI
 /*
 case class FunctionDefinitionI(
   header: FunctionHeaderI,
@@ -208,6 +221,7 @@ case class FunctionDefinitionI(
   runeToImplBound: Map[IRuneS, IdI[cI, ImplBoundNameI[cI]]],
   body: ReferenceExpressionIE)  {
 */
+// mig: impl FunctionDefinitionI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for FunctionDefinitionI` below.)
 /*
@@ -222,7 +236,7 @@ override def hashCode(): Int = vcurious()
   vassert(body.result.kind == NeverIT[cI](false))
 */
 // mig: fn is_pure
-impl<'s, 't> FunctionDefinitionI<'s, 't> {
+impl<'s, 'i> FunctionDefinitionI<'s, 'i> {
     pub fn is_pure(&self) -> bool {
         panic!("Unimplemented: is_pure")
     }
@@ -241,9 +255,9 @@ object getFunctionLastName {
 */
 // mig: struct LocationInFunctionEnvironmentI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct LocationInFunctionEnvironmentI<'t> {
-    pub path: &'t [i32],
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LocationInFunctionEnvironmentI<'i> {
+    pub path: &'i [i32],
 }
 // mig: impl LocationInFunctionEnvironmentI
 /*
@@ -257,8 +271,8 @@ case class LocationInFunctionEnvironmentI(path: Vector[Int]) {
   override def hashCode(): Int = hash;
 */
 // mig: fn add
-impl<'t> LocationInFunctionEnvironmentI<'t> {
-    pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentI<'t> {
+impl<'i> LocationInFunctionEnvironmentI<'i> {
+    pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentI<'i> {
         panic!("Unimplemented: add")
     }
 }
@@ -268,7 +282,7 @@ impl<'t> LocationInFunctionEnvironmentI<'t> {
   }
 */
 // mig: fn to_string
-impl<'t> LocationInFunctionEnvironmentI<'t> {
+impl<'i> LocationInFunctionEnvironmentI<'i> {
     pub fn to_string(&self) -> String {
         panic!("Unimplemented: to_string")
     }
@@ -279,7 +293,7 @@ impl<'t> LocationInFunctionEnvironmentI<'t> {
 */
 // mig: struct AbstractI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AbstractI;
 // mig: impl AbstractI
 /*
@@ -287,14 +301,13 @@ case class AbstractI()
 */
 // mig: struct ParameterI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ParameterI<'s, 't> {
-    pub name: IVarNameI<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ParameterI<'s, 'i> where 's: 'i {
+    pub name: IVarNameI<'s, 'i, cI>,
     pub virtuality: Option<AbstractI>,
     pub pre_checked: bool,
-    pub tyype: CoordI<'t>,
+    pub tyype: CoordI<'s, 'i, cI>,
 }
-// mig: impl ParameterI
 /*
 case class ParameterI(
   name: IVarNameI[cI],
@@ -302,6 +315,7 @@ case class ParameterI(
   preChecked: Boolean,
   tyype: CoordI[cI]) {
 */
+// mig: impl ParameterI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for ParameterI` below.)
 /*
@@ -316,7 +330,7 @@ case class ParameterI(
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn same
-impl<'s, 't> ParameterI<'s, 't> {
+impl<'s, 'i> ParameterI<'s, 'i> {
     pub fn same(&self, that: &ParameterI<'_, '_>) -> bool {
         panic!("Unimplemented: same")
     }
@@ -330,10 +344,17 @@ impl<'s, 't> ParameterI<'s, 't> {
 }
 */
 // mig: struct SignatureI
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct SignatureI<'s, 't> {
-    pub id: IdI<'t, IFunctionNameI<'t>>,
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct SignatureI<'s, 'i, R> {
+    pub id: IdI<'s, 'i, R>,
+    pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct SignatureIValI<'s, 'i, R> {
+    pub id: IdI<'s, 'i, R>,
 }
 // mig: impl SignatureI
 /*
@@ -358,8 +379,8 @@ case class SignatureI[+R <: IRegionsModeI](id: IdI[R, IFunctionNameI[R]]) {
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 't> SignatureI<'s, 't> {
-    pub fn param_types(&self) -> Vec<CoordI<'_>> {
+impl<'s, 'i, R> SignatureI<'s, 'i, R> {
+    pub fn param_types(&self) -> Vec<()> {
         panic!("Unimplemented: param_types")
     }
 }
@@ -369,29 +390,31 @@ impl<'s, 't> SignatureI<'s, 't> {
 */
 // mig: enum IFunctionAttributeI
 /// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum IFunctionAttributeI<'s, 't> {
-    // Placeholder variant
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IFunctionAttributeI<'s> {
+    PureI,
+    UserFunctionI,
+    ExternI(ExternI<'s>),
 }
-// mig: impl IFunctionAttributeI
 /*
 sealed trait IFunctionAttributeI
 */
+// mig: impl IFunctionAttributeI
 // mig: enum ICitizenAttributeI
 /// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum ICitizenAttributeI<'s, 't> {
-    // Placeholder variant
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ICitizenAttributeI<'s> {
+    SealedI,
+    ExternI(ExternI<'s>),
 }
-// mig: impl ICitizenAttributeI
 /*
 sealed trait ICitizenAttributeI
 */
+// mig: impl ICitizenAttributeI
 // mig: struct ExternI
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ExternI {
-    pub package_coord: PackageCoordinate,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ExternI<'s> {
+    pub package_coord: crate::utils::code_hierarchy::PackageCoordinate<'s>,
 }
 // mig: impl ExternI
 /*
@@ -411,27 +434,28 @@ case object UserFunctionI extends IFunctionAttributeI // Whether it was written 
 */
 // mig: struct RegionI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct RegionI<'s, 't> {
-    pub name: IRegionNameI<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RegionI<'s, 'i> where 's: 'i {
+    pub name: IRegionNameI<'s, 'i, cI>,
     pub mutable: bool,
 }
-// mig: impl RegionI
 /*
 case class RegionI(
   name: IRegionNameI[cI],
   mutable: Boolean)
 */
+// mig: impl RegionI
 // mig: struct FunctionHeaderI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct FunctionHeaderI<'s, 't> {
-    pub id: IdI<'t, IFunctionNameI<'t>>,
-    pub attributes: &'t [IFunctionAttributeI<'s, 't>],
-    pub params: &'t [ParameterI<'s, 't>],
-    pub return_type: CoordI<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FunctionHeaderI<'s, 'i> where 's: 'i {
+    // This one little name field can illuminate much of how the compiler works, see UINIT.
+    pub id: IdI<'s, 'i, cI>,
+    pub attributes: &'i [IFunctionAttributeI<'s>],
+//  regions: Vector[cIegionI],
+    pub params: &'i [ParameterI<'s, 'i>],
+    pub return_type: CoordI<'s, 'i, cI>,
 }
-// mig: impl FunctionHeaderI
 /*
 case class FunctionHeaderI(
   // This one little name field can illuminate much of how the compiler works, see UINIT.
@@ -441,6 +465,7 @@ case class FunctionHeaderI(
   params: Vector[ParameterI],
   returnType: CoordI[cI]) {
 */
+// mig: impl FunctionHeaderI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for FunctionHeaderI` below.)
 /*
@@ -478,7 +503,7 @@ case class FunctionHeaderI(
   vassert(id.localName.parameters == paramTypes)
 */
 // mig: fn is_extern
-impl<'s, 't> FunctionHeaderI<'s, 't> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_extern(&self) -> bool {
         panic!("Unimplemented: is_extern")
     }
@@ -488,7 +513,7 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
   //  def isExport = attributes.exists({ case Export2(_) => true case _ => false })
 */
 // mig: fn is_user_function
-impl<'s, 't> FunctionHeaderI<'s, 't> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_user_function(&self) -> bool {
         panic!("Unimplemented: is_user_function")
     }
@@ -509,8 +534,8 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
 //  def paramTypes: Vector[CoordI[cI]] = params.map(_.tyype)
 */
 // mig: fn get_abstract_interface
-impl<'s, 't> FunctionHeaderI<'s, 't> {
-    pub fn get_abstract_interface(&self) -> Option<InterfaceIT<'_>> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
+    pub fn get_abstract_interface(&self) -> Option<()> {
         panic!("Unimplemented: get_abstract_interface")
     }
 }
@@ -525,7 +550,7 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
   }
 */
 // mig: fn get_virtual_index
-impl<'s, 't> FunctionHeaderI<'s, 't> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn get_virtual_index(&self) -> Option<i32> {
         panic!("Unimplemented: get_virtual_index")
     }
@@ -547,8 +572,8 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
 //  })
 */
 // mig: fn to_prototype
-impl<'s, 't> FunctionHeaderI<'s, 't> {
-    pub fn to_prototype(&self) -> PrototypeI<'_, '_> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
+    pub fn to_prototype(&self) -> PrototypeI<'_, '_, ()> {
         panic!("Unimplemented: to_prototype")
     }
 }
@@ -562,8 +587,8 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
   }
 */
 // mig: fn to_signature
-impl<'s, 't> FunctionHeaderI<'s, 't> {
-    pub fn to_signature(&self) -> SignatureI<'_, '_> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
+    pub fn to_signature(&self) -> SignatureI<'_, '_, ()> {
         panic!("Unimplemented: to_signature")
     }
 }
@@ -573,8 +598,8 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
   }
 */
 // mig: fn param_types
-impl<'s, 't> FunctionHeaderI<'s, 't> {
-    pub fn param_types(&self) -> Vec<CoordI<'_>> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
+    pub fn param_types(&self) -> Vec<()> {
         panic!("Unimplemented: param_types")
     }
 }
@@ -589,7 +614,7 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
   }
 */
 // mig: fn is_pure
-impl<'s, 't> FunctionHeaderI<'s, 't> {
+impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_pure(&self) -> bool {
         panic!("Unimplemented: is_pure")
     }
@@ -601,11 +626,19 @@ impl<'s, 't> FunctionHeaderI<'s, 't> {
 }
 */
 // mig: struct PrototypeI
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct PrototypeI<'s, 't> {
-    pub id: IdI<'t, IFunctionNameI<'t>>,
-    pub return_type: CoordI<'t>,
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeI<'s, 'i, R> {
+    pub id: IdI<'s, 'i, R>,
+    pub return_type: CoordI<'s, 'i, R>,
+    pub _must_intern: MustIntern,
+}
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeIValI<'s, 'i, R> {
+    pub id: IdI<'s, 'i, R>,
+    pub return_type: CoordI<'s, 'i, R>,
 }
 // mig: impl PrototypeI
 /*
@@ -620,8 +653,8 @@ case class PrototypeI[+R <: IRegionsModeI](
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 't> PrototypeI<'s, 't> {
-    pub fn param_types(&self) -> Vec<CoordI<'_>> {
+impl<'s, 'i, R> PrototypeI<'s, 'i, R> {
+    pub fn param_types(&self) -> Vec<()> {
         panic!("Unimplemented: param_types")
     }
 }
@@ -629,8 +662,8 @@ impl<'s, 't> PrototypeI<'s, 't> {
   def paramTypes: Vector[CoordI[R]] = id.localName.parameters
 */
 // mig: fn to_signature
-impl<'s, 't> PrototypeI<'s, 't> {
-    pub fn to_signature(&self) -> SignatureI<'_, '_> {
+impl<'s, 'i, R> PrototypeI<'s, 'i, R> {
+    pub fn to_signature(&self) -> SignatureI<'_, '_, ()> {
         panic!("Unimplemented: to_signature")
     }
 }
@@ -640,17 +673,20 @@ impl<'s, 't> PrototypeI<'s, 't> {
 */
 // mig: enum IVariableI
 /// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum IVariableI<'s, 't> {
-    // Placeholder variant
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IVariableI<'s, 'i> where 's: 'i {
+    AddressibleLocalVariableI(&'i AddressibleLocalVariableI<'s, 'i>),
+    ReferenceLocalVariableI(&'i ReferenceLocalVariableI<'s, 'i>),
+    AddressibleClosureVariableI(&'i AddressibleClosureVariableI<'s, 'i>),
+    ReferenceClosureVariableI(&'i ReferenceClosureVariableI<'s, 'i>),
 }
-// mig: impl IVariableI
 /*
 sealed trait IVariableI  {
 */
+// mig: impl IVariableI
 // mig: fn name
-impl<'s, 't> IVariableI<'s, 't> {
-    pub fn name(&self) -> IVarNameI<'_> {
+impl<'s, 'i> IVariableI<'s, 'i> {
+    pub fn name(&self) -> () {
         panic!("Unimplemented: name")
     }
 }
@@ -658,8 +694,8 @@ impl<'s, 't> IVariableI<'s, 't> {
   def name: IVarNameI[cI]
 */
 // mig: fn variability
-impl<'s, 't> IVariableI<'s, 't> {
-    pub fn variability(&self) -> VariabilityI {
+impl<'s, 'i> IVariableI<'s, 'i> {
+    pub fn variability(&self) -> () {
         panic!("Unimplemented: variability")
     }
 }
@@ -667,8 +703,8 @@ impl<'s, 't> IVariableI<'s, 't> {
   def variability: VariabilityI
 */
 // mig: fn collapsed_coord
-impl<'s, 't> IVariableI<'s, 't> {
-    pub fn collapsed_coord(&self) -> CoordI<'_> {
+impl<'s, 'i> IVariableI<'s, 'i> {
+    pub fn collapsed_coord(&self) -> () {
         panic!("Unimplemented: collapsed_coord")
     }
 }
@@ -678,17 +714,18 @@ impl<'s, 't> IVariableI<'s, 't> {
 */
 // mig: enum ILocalVariableI
 /// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum ILocalVariableI<'s, 't> {
-    // Placeholder variant
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ILocalVariableI<'s, 'i> where 's: 'i {
+    AddressibleLocalVariableI(&'i AddressibleLocalVariableI<'s, 'i>),
+    ReferenceLocalVariableI(&'i ReferenceLocalVariableI<'s, 'i>),
 }
-// mig: impl ILocalVariableI
 /*
 sealed trait ILocalVariableI extends IVariableI {
 */
+// mig: impl ILocalVariableI
 // mig: fn name
-impl<'s, 't> ILocalVariableI<'s, 't> {
-    pub fn name(&self) -> IVarNameI<'_> {
+impl<'s, 'i> ILocalVariableI<'s, 'i> {
+    pub fn name(&self) -> () {
         panic!("Unimplemented: name")
     }
 }
@@ -696,8 +733,8 @@ impl<'s, 't> ILocalVariableI<'s, 't> {
   def name: IVarNameI[cI]
 */
 // mig: fn collapsed_coord
-impl<'s, 't> ILocalVariableI<'s, 't> {
-    pub fn collapsed_coord(&self) -> CoordI<'_> {
+impl<'s, 'i> ILocalVariableI<'s, 'i> {
+    pub fn collapsed_coord(&self) -> () {
         panic!("Unimplemented: collapsed_coord")
     }
 }
@@ -707,13 +744,12 @@ impl<'s, 't> ILocalVariableI<'s, 't> {
 */
 // mig: struct AddressibleLocalVariableI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct AddressibleLocalVariableI<'s, 't> {
-    pub name: IVarNameI<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AddressibleLocalVariableI<'s, 'i> where 's: 'i {
+    pub name: IVarNameI<'s, 'i, cI>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'t>,
+    pub collapsed_coord: CoordI<'s, 'i, cI>,
 }
-// mig: impl AddressibleLocalVariableI
 /*
 // Why the difference between reference and addressible:
 // If we mutate/move a variable from inside a closure, we need to put
@@ -727,6 +763,7 @@ case class AddressibleLocalVariableI(
   collapsedCoord: CoordI[cI]
 ) extends ILocalVariableI {
 */
+// mig: impl AddressibleLocalVariableI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for AddressibleLocalVariableI` below.)
 /*
@@ -741,13 +778,12 @@ override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: struct ReferenceLocalVariableI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ReferenceLocalVariableI<'s, 't> {
-    pub name: IVarNameI<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ReferenceLocalVariableI<'s, 'i> where 's: 'i {
+    pub name: IVarNameI<'s, 'i, cI>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'t>,
+    pub collapsed_coord: CoordI<'s, 'i, cI>,
 }
-// mig: impl ReferenceLocalVariableI
 /*
 case class ReferenceLocalVariableI(
   name: IVarNameI[cI],
@@ -755,6 +791,7 @@ case class ReferenceLocalVariableI(
   collapsedCoord: CoordI[cI]
 ) extends ILocalVariableI {
 */
+// mig: impl ReferenceLocalVariableI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for ReferenceLocalVariableI` below.)
 /*
@@ -770,14 +807,13 @@ override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: struct AddressibleClosureVariableI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct AddressibleClosureVariableI<'s, 't> {
-    pub name: IVarNameI<'t>,
-    pub closured_vars_struct_type: StructIT<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AddressibleClosureVariableI<'s, 'i> where 's: 'i {
+    pub name: IVarNameI<'s, 'i, cI>,
+    pub closured_vars_struct_type: StructIT<'s, 'i, cI>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'t>,
+    pub collapsed_coord: CoordI<'s, 'i, cI>,
 }
-// mig: impl AddressibleClosureVariableI
 /*
 case class AddressibleClosureVariableI(
   name: IVarNameI[cI],
@@ -788,16 +824,16 @@ case class AddressibleClosureVariableI(
   vpass()
 }
 */
+// mig: impl AddressibleClosureVariableI
 // mig: struct ReferenceClosureVariableI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct ReferenceClosureVariableI<'s, 't> {
-    pub name: IVarNameI<'t>,
-    pub closured_vars_struct_type: StructIT<'t>,
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ReferenceClosureVariableI<'s, 'i> where 's: 'i {
+    pub name: IVarNameI<'s, 'i, cI>,
+    pub closured_vars_struct_type: StructIT<'s, 'i, cI>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'t>,
+    pub collapsed_coord: CoordI<'s, 'i, cI>,
 }
-// mig: impl ReferenceClosureVariableI
 /*
 case class ReferenceClosureVariableI(
   name: IVarNameI[cI],
@@ -806,6 +842,7 @@ case class ReferenceClosureVariableI(
   collapsedCoord: CoordI[cI]
 ) extends IVariableI {
 */
+// mig: impl ReferenceClosureVariableI
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for ReferenceClosureVariableI` below.)
 /*

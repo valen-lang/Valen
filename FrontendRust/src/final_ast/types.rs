@@ -1,3 +1,14 @@
+// From Frontend/FinalAST/src/dev/vale/finalast/types.scala
+//
+// H-side output types for the simplifying pass. Mirrors src/instantiating/ast/types.rs
+// pattern: Polyvalue + Interned compounds + Val pairs + dispatch enum. Lifetimes
+// are `<'s, 'h>` with `where 's: 'h` (one region mode; H-side is post-collapse).
+
+use std::marker::PhantomData;
+
+use crate::final_ast::ast::IdH;
+use crate::simplifying::hammer_interner::MustIntern;
+
 /*
 package dev.vale.finalast
 
@@ -291,3 +302,214 @@ sealed trait Variability
 case object Final extends Variability
 case object Varying extends Variability
 */
+
+// mig: case class CodeLocation
+/// Temporary state
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct CodeLocation<'s> {
+    pub file: crate::utils::code_hierarchy::FileCoordinate<'s>,
+    pub offset: i32,
+}
+
+// mig: sealed trait OwnershipH
+// mig: case objects OwnH, MutableBorrowH, ImmutableBorrowH, MutableShareH, ImmutableShareH, WeakH
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum OwnershipH {
+    OwnH,
+    MutableBorrowH,
+    ImmutableBorrowH,
+    MutableShareH,
+    ImmutableShareH,
+    WeakH,
+}
+
+// mig: sealed trait LocationH
+// mig: case objects InlineH, YonderH
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum LocationH {
+    InlineH,
+    YonderH,
+}
+
+// mig: sealed trait Mutability
+// mig: case objects Immutable, Mutable
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum Mutability {
+    Immutable,
+    Mutable,
+}
+
+// mig: sealed trait Variability
+// mig: case objects Final, Varying
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum Variability {
+    Final,
+    Varying,
+}
+
+// mig: case class CoordH[+T <: KindHT]
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CoordH<'s, 'h> where 's: 'h {
+    pub ownership: OwnershipH,
+    pub location: LocationH,
+    pub kind: KindHT<'s, 'h>,
+}
+
+// mig: sealed trait KindHT
+/// Polyvalue
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum KindHT<'s, 'h> where 's: 'h {
+    IntHT(IntHT),
+    VoidHT(VoidHT),
+    BoolHT(BoolHT),
+    StrHT(StrHT),
+    FloatHT(FloatHT),
+    NeverHT(NeverHT),
+    InterfaceHT(&'h InterfaceHT<'s, 'h>),
+    StructHT(&'h StructHT<'s, 'h>),
+    StaticSizedArrayHT(&'h StaticSizedArrayHT<'s, 'h>),
+    RuntimeSizedArrayHT(&'h RuntimeSizedArrayHT<'s, 'h>),
+}
+
+// mig: case class IntHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IntHT {
+    pub bits: i32,
+}
+
+// mig: case class VoidHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct VoidHT;
+
+// mig: case class BoolHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct BoolHT;
+
+// mig: case class StrHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StrHT;
+
+// mig: case class FloatHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FloatHT;
+
+// mig: case class NeverHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct NeverHT {
+    pub from_break: bool,
+}
+
+// mig: case class StructHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class StructHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+
+// mig: case class InterfaceHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class InterfaceHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+
+// mig: case class StaticSizedArrayHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class StaticSizedArrayHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+
+// mig: case class RuntimeSizedArrayHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class RuntimeSizedArrayHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+}
+
+// mig: case class StaticSizedArrayDefinitionHT
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub size: i64,
+    pub mutability: Mutability,
+    pub variability: Variability,
+    pub element_type: CoordH<'s, 'h>,
+}
+
+// mig: case class RuntimeSizedArrayDefinitionHT
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub mutability: Mutability,
+    pub element_type: CoordH<'s, 'h>,
+}
+
+// --- Dispatch enums for the kind-payload interner family ---
+
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum InternedKindPayloadValH<'s, 'h> where 's: 'h {
+    StructHT(StructHTValH<'s, 'h>),
+    InterfaceHT(InterfaceHTValH<'s, 'h>),
+    StaticSizedArrayHT(StaticSizedArrayHTValH<'s, 'h>),
+    RuntimeSizedArrayHT(RuntimeSizedArrayHTValH<'s, 'h>),
+}
+
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum InternedKindPayloadH<'s, 'h> where 's: 'h {
+    StructHT(&'h StructHT<'s, 'h>),
+    InterfaceHT(&'h InterfaceHT<'s, 'h>),
+    StaticSizedArrayHT(&'h StaticSizedArrayHT<'s, 'h>),
+    RuntimeSizedArrayHT(&'h RuntimeSizedArrayHT<'s, 'h>),
+}
+
+// Suppress unused-PhantomData warning if any helper needs it.
+#[allow(dead_code)]
+type _PhantomS<'s, 'h> = PhantomData<(&'s (), &'h ())>;

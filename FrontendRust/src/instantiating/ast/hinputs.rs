@@ -1,4 +1,14 @@
 // VISTODO: rename Hinputs everywhere
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::names::IRuneS;
+use crate::instantiating::ast::types::{cI, sI};
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::ast::{
+    EdgeI, FunctionDefinitionI, FunctionExportI, FunctionExternI, InterfaceEdgeBlueprintI,
+    KindExportI, PrototypeI,
+};
+use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
+
 /*
 package dev.vale.instantiating.ast
 
@@ -15,8 +25,13 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 */
 // mig: struct InstantiationBoundArgumentsI
-pub struct InstantiationBoundArgumentsI<'s, 't>(std::marker::PhantomData<&'s &'t ()>);
-// TODO: populate fields when src/instantiating/ast/hinputs.rs is fully migrated.
+/// Temporary state (see @TFITCX)
+pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
+    pub rune_to_function_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>,
+    pub caller_rune_to_callee_rune_to_reachable_func:
+        ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>>,
+    pub rune_to_impl_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, sI>>,
+}
 
 // mig: impl InstantiationBoundArgumentsI
 /*
@@ -27,10 +42,19 @@ case class InstantiationBoundArgumentsI(
 
 */
 // mig: struct HinputsI
-pub struct HinputsI<'s, 't>(std::marker::PhantomData<&'s &'t ()>);
-// TODO: populate fields when src/instantiating/ast/hinputs.rs is fully migrated.
-
-// mig: impl HinputsI
+/// Temporary state (see @TFITCX) — top-level container for instantiated output.
+pub struct HinputsI<'s, 'i> where 's: 'i {
+    pub interfaces: &'i [InterfaceDefinitionI<'s, 'i, cI>],
+    pub structs: &'i [StructDefinitionI<'s, 'i, cI>],
+    pub functions: &'i [FunctionDefinitionI<'s, 'i>],
+    pub interface_to_edge_blueprints:
+        ArenaIndexMap<'i, IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>>,
+    pub interface_to_sub_citizen_to_edge:
+        ArenaIndexMap<'i, IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>>,
+    pub kind_exports: &'i [KindExportI<'s, 'i>],
+    pub function_exports: &'i [FunctionExportI<'s, 'i>],
+    pub function_externs: &'i [FunctionExternI<'s, 'i>],
+}
 /*
 case class HinputsI(
   interfaces: Vector[InterfaceDefinitionI],
@@ -64,6 +88,7 @@ case class HinputsI(
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
 */
+// mig: impl HinputsI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for HinputsI` below.)
 /*

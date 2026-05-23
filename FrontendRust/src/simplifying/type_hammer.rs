@@ -1,4 +1,17 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/TypeHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `TypeHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::ast::{PrototypeH, RegionH};
+use crate::final_ast::types::{CoordH, KindHT, RuntimeSizedArrayHT, StaticSizedArrayHT};
+use crate::instantiating::ast::ast::PrototypeI;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::templata::RegionTemplataI;
+use crate::instantiating::ast::types::{cI, CoordI, KindIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::Hammer;
+
 /*
 package dev.vale.simplifying
 
@@ -6,31 +19,12 @@ import dev.vale.finalast.{BoolHT, CoordH, FloatHT, InlineH, IntHT, KindHT, Never
 import dev.vale.{Interner, Keywords, vassert, vfail, vimpl, vregionmut, vwat, finalast => m}
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
-*/
-// mig: struct TypeHammerH
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct TypeHammerH<'h> {
-    pub interner: usize, // placeholder
-    pub keywords: usize, // placeholder
-    pub name_hammer: usize, // placeholder
-    pub struct_hammer: usize, // placeholder
-}
-// mig: impl TypeHammerH
-/*
+
 class TypeHammer(
     interner: Interner,
     keywords: Keywords,
     nameHammer: NameHammer,
     structHammer: StructHammer) {
-*/
-// mig: fn translate_kind
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_kind(&self, hinputs: usize, hamuts: usize, tyype: usize) -> usize {
-        panic!("Unimplemented: translate_kind");
-    }
-}
-/*
   def translateKind(hinputs: HinputsI, hamuts: HamutsBox, tyype: KindIT[cI]):
   (KindHT) = {
     tyype match {
@@ -60,14 +54,7 @@ impl<'h> TypeHammerH<'h> {
 //      }
     }
   }
-*/
-// mig: fn translate_region
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_region(&self, hinputs: usize, hamuts: usize, region: usize) -> usize {
-        panic!("Unimplemented: translate_region");
-    }
-}
-/*
+
   def translateRegion(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -75,14 +62,7 @@ impl<'h> TypeHammerH<'h> {
   RegionH = {
     RegionH()
   }
-*/
-// mig: fn translate_coord
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_coord(&self, hinputs: usize, hamuts: usize, coord: usize) -> usize {
-        panic!("Unimplemented: translate_coord");
-    }
-}
-/*
+
   def translateCoord(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -106,14 +86,7 @@ impl<'h> TypeHammerH<'h> {
     val (innerH) = translateKind(hinputs, hamuts, innerType);
     (CoordH(Conversions.evaluateOwnership(ownership), location, innerH))
   }
-*/
-// mig: fn translate_coords
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_coords(&self, hinputs: usize, hamuts: usize, references2: &'h [usize]) -> &'h [usize] {
-        panic!("Unimplemented: translate_coords");
-    }
-}
-/*
+
   def translateCoords(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -121,27 +94,13 @@ impl<'h> TypeHammerH<'h> {
   (Vector[CoordH[KindHT]]) = {
     references2.map(translateCoord(hinputs, hamuts, _))
   }
-*/
-// mig: fn check_conversion
-impl<'h> TypeHammerH<'h> {
-    pub fn check_conversion(&self, expected: usize, actual: usize) -> () {
-        panic!("Unimplemented: check_conversion");
-    }
-}
-/*
+
   def checkConversion(expected: CoordH[KindHT], actual: CoordH[KindHT]): Unit = {
     if (actual != expected) {
       vfail("Expected a " + expected + " but was a " + actual);
     }
   }
-*/
-// mig: fn translate_static_sized_array
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_static_sized_array(&self, hinputs: usize, hamuts: usize, ssaIT: usize) -> usize {
-        panic!("Unimplemented: translate_static_sized_array");
-    }
-}
-/*
+
   def translateStaticSizedArray(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -167,14 +126,7 @@ impl<'h> TypeHammerH<'h> {
       }
     }
   }
-*/
-// mig: fn translate_runtime_sized_array
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_runtime_sized_array(&self, hinputs: usize, hamuts: usize, rsaIT: usize) -> usize {
-        panic!("Unimplemented: translate_runtime_sized_array");
-    }
-}
-/*
+
   def translateRuntimeSizedArray(hinputs: HinputsI, hamuts: HamutsBox, rsaIT: RuntimeSizedArrayIT[cI]): RuntimeSizedArrayHT = {
     hamuts.runtimeSizedArrays.get(rsaIT) match {
       case Some(x) => x.kind
@@ -195,14 +147,7 @@ impl<'h> TypeHammerH<'h> {
       }
     }
   }
-*/
-// mig: fn translate_prototype
-impl<'h> TypeHammerH<'h> {
-    pub fn translate_prototype(&self, hinputs: usize, hamuts: usize, prototype2: usize) -> usize {
-        panic!("Unimplemented: translate_prototype");
-    }
-}
-/*
+
   def translatePrototype(
     hinputs: HinputsI, hamuts: HamutsBox,
     prototype2: PrototypeI[cI]):
@@ -217,3 +162,128 @@ impl<'h> TypeHammerH<'h> {
 
 }
 */
+
+// mig: fn translate_kind
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_kind<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        tyype: KindIT<'s, 'i, cI>,
+    ) -> KindHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_kind");
+    }
+}
+
+// mig: fn translate_region
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_region<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        region: &RegionTemplataI<'s, 'i, cI>,
+    ) -> RegionH
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_region");
+    }
+}
+
+// mig: fn translate_coord
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_coord<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        coord: CoordI<'s, 'i, cI>,
+    ) -> CoordH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_coord");
+    }
+}
+
+// mig: fn translate_coords
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_coords<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        references2: &[CoordI<'s, 'i, cI>],
+    ) -> Vec<CoordH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_coords");
+    }
+}
+
+// mig: fn check_conversion
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn check_conversion(
+        &self,
+        expected: CoordH<'s, 'h>,
+        actual: CoordH<'s, 'h>,
+    ) {
+        panic!("Unimplemented: check_conversion");
+    }
+}
+
+// mig: fn translate_static_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_static_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>,
+    ) -> &'h StaticSizedArrayHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_static_sized_array");
+    }
+}
+
+// mig: fn translate_runtime_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_runtime_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>,
+    ) -> &'h RuntimeSizedArrayHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_runtime_sized_array");
+    }
+}
+
+// mig: fn translate_prototype
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_prototype<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        prototype2: &'i PrototypeI<'s, 'i, cI>,
+    ) -> &'h PrototypeH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_prototype");
+    }
+}

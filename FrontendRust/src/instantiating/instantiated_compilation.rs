@@ -7,7 +7,8 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
-use crate::simplifying::HammerCompilationOptions;
+// Simplifying pass unlinked during instantiating bring-up (Slabs 16a–16j).
+// use crate::simplifying::HammerCompilationOptions;
 use crate::typing::TypingPassCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
@@ -95,7 +96,8 @@ where
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    options: HammerCompilationOptions,
+    global_options: crate::compile_options::GlobalOptions,
+    options: InstantiatorCompilationOptions,
     typing_bump: &'t Bump,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
@@ -109,7 +111,7 @@ where
       parse_arena,
       packages_to_build,
       package_to_contents_resolver,
-      options.global_options,
+      global_options,
       typing_options,
       typing_bump,
     );
@@ -230,7 +232,12 @@ where
     's: 't,
     'p: 'ctx,
 {
-  pub fn get_monouts(&mut self) -> () {
+  // Phase E (Slab 16j) signature: returns HinputsI<'s, 'i>.
+  // 'i tied to 's by the bare-placeholder shape; instantiating arena is
+  // managed by the InstantiatedCompilation itself (not yet wired — Slab 16j
+  // sets the type-signature handoff only, body stays panic).
+  pub fn get_monouts<'i>(&mut self) -> crate::instantiating::ast::hinputs::HinputsI<'s, 'i>
+  where 's: 'i {
     panic!("InstantiatedCompilation.get_monouts not yet implemented - see InstantiatedCompilation.scala lines 44-55")
   }
 }

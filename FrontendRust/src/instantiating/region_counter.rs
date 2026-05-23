@@ -10,11 +10,8 @@ import scala.collection.mutable
 object RegionCounter {
 */
 // mig: struct CounterI
-/// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct CounterI<'s, 't> {
-    pub set: std::collections::HashSet<i32>,
-}
+pub struct CounterI;
+// TODO: populate fields when names.rs / templata.rs are fully migrated.
 // mig: impl CounterI
 /*
   class Counter {
@@ -24,10 +21,8 @@ pub struct CounterI<'s, 't> {
 
 */
 // mig: fn count
-impl<'s, 't> CounterI<'s, 't> {
-    pub fn count(&mut self, region: RegionTemplataI) {
-        panic!("Unimplemented: count");
-    }
+impl CounterI {
+    pub fn count(&mut self) { panic!("Unimplemented: count"); }
 }
 /*
     def count(region: RegionTemplataI[sI]): Unit = {
@@ -36,7 +31,7 @@ impl<'s, 't> CounterI<'s, 't> {
 
 */
 // mig: fn assemble_map
-impl<'s, 't> CounterI<'s, 't> {
+impl CounterI {
     pub fn assemble_map(&self) -> std::collections::HashMap<i32, i32> {
         panic!("Unimplemented: assemble_map");
     }
@@ -86,7 +81,7 @@ impl<'s, 't> CounterI<'s, 't> {
 
 */
 // mig: fn count_prototype
-pub fn count_prototype(counter: &mut CounterI, prototype: PrototypeI) {
+pub fn count_prototype() {
     panic!("Unimplemented: count_prototype");
 }
 /*
@@ -98,7 +93,7 @@ pub fn count_prototype(counter: &mut CounterI, prototype: PrototypeI) {
 
 */
 // mig: fn count_id
-pub fn count_id<T>(counter: &mut CounterI, id: IdI<T>, func: fn(&mut CounterI, &T)) {
+pub fn count_id() {
     panic!("Unimplemented: count_id");
 }
 /*
@@ -114,7 +109,7 @@ pub fn count_id<T>(counter: &mut CounterI, id: IdI<T>, func: fn(&mut CounterI, &
 
 */
 // mig: fn count_function_id
-pub fn count_function_id(counter: &mut CounterI, id: IdI<IFunctionNameI>) {
+pub fn count_function_id() {
     panic!("Unimplemented: count_function_id");
 }
 /*
@@ -130,7 +125,7 @@ pub fn count_function_id(counter: &mut CounterI, id: IdI<IFunctionNameI>) {
 
 */
 // mig: fn count_function_name
-pub fn count_function_name(counter: &mut CounterI, name: IFunctionNameI) {
+pub fn count_function_name() {
     panic!("Unimplemented: count_function_name");
 }
 /*
@@ -173,7 +168,7 @@ pub fn count_function_name(counter: &mut CounterI, name: IFunctionNameI) {
 
 */
 // mig: fn count_citizen_name
-pub fn count_citizen_name(counter: &mut CounterI, name: ICitizenNameI) {
+pub fn count_citizen_name() {
     panic!("Unimplemented: count_citizen_name");
 }
 /*
@@ -199,7 +194,7 @@ pub fn count_citizen_name(counter: &mut CounterI, name: ICitizenNameI) {
 
 */
 // mig: fn count_var_name
-pub fn count_var_name(counter: &mut CounterI, name: IVarNameI) {
+pub fn count_var_name() {
     panic!("Unimplemented: count_var_name");
 }
 /*
@@ -217,7 +212,7 @@ pub fn count_var_name(counter: &mut CounterI, name: IVarNameI) {
 
 */
 // mig: fn count_name
-pub fn count_name(counter: &mut CounterI, name: INameI) {
+pub fn count_name() {
     panic!("Unimplemented: count_name");
 }
 /*
@@ -261,7 +256,7 @@ pub fn count_name(counter: &mut CounterI, name: INameI) {
 
 */
 // mig: fn count_templata
-pub fn count_templata(counter: &mut CounterI, templata: ITemplataI) {
+pub fn count_templata() {
     panic!("Unimplemented: count_templata");
 }
 /*
@@ -285,7 +280,7 @@ pub fn count_templata(counter: &mut CounterI, templata: ITemplataI) {
 
 */
 // mig: fn count_coord
-pub fn count_coord(counter: &mut CounterI, coord: CoordI) {
+pub fn count_coord() {
     panic!("Unimplemented: count_coord");
 }
 /*
@@ -299,7 +294,7 @@ pub fn count_coord(counter: &mut CounterI, coord: CoordI) {
 
 */
 // mig: fn count_kind
-pub fn count_kind_map(kind: KindIT) -> std::collections::HashMap<i32, i32> {
+pub fn count_kind_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_kind");
 }
 /*
@@ -311,7 +306,7 @@ pub fn count_kind_map(kind: KindIT) -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_kind
-pub fn count_kind(counter: &mut CounterI, kind: KindIT) {
+pub fn count_kind() {
     panic!("Unimplemented: count_kind");
 }
 /*
@@ -351,7 +346,7 @@ pub fn count_kind(counter: &mut CounterI, kind: KindIT) {
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array(counter: &mut CounterI, rsa: RuntimeSizedArrayIT) {
+pub fn count_runtime_sized_array() {
     panic!("Unimplemented: count_runtime_sized_array");
 }
 /*
@@ -371,7 +366,7 @@ pub fn count_runtime_sized_array(counter: &mut CounterI, rsa: RuntimeSizedArrayI
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array(counter: &mut CounterI, ssa: StaticSizedArrayIT) {
+pub fn count_static_sized_array() {
     panic!("Unimplemented: count_static_sized_array");
 }
 /*
@@ -391,7 +386,7 @@ pub fn count_static_sized_array(counter: &mut CounterI, ssa: StaticSizedArrayIT)
 
 */
 // mig: fn count_citizen_id
-pub fn count_citizen_id(counter: &mut CounterI, citizen_id: IdI<ICitizenNameI>) {
+pub fn count_citizen_id() {
     panic!("Unimplemented: count_citizen_id");
 }
 /*
@@ -411,7 +406,7 @@ pub fn count_citizen_id(counter: &mut CounterI, citizen_id: IdI<ICitizenNameI>) 
 
 */
 // mig: fn count_struct_id
-pub fn count_struct_id(counter: &mut CounterI, struct_id: IdI<IStructNameI>) {
+pub fn count_struct_id() {
     panic!("Unimplemented: count_struct_id");
 }
 /*
@@ -427,7 +422,7 @@ pub fn count_struct_id(counter: &mut CounterI, struct_id: IdI<IStructNameI>) {
 
 */
 // mig: fn count_struct_template_name
-pub fn count_struct_template_name(counter: &mut CounterI, struct_name: IStructTemplateNameI) {
+pub fn count_struct_template_name() {
     panic!("Unimplemented: count_struct_template_name");
 }
 /*
@@ -442,7 +437,7 @@ pub fn count_struct_template_name(counter: &mut CounterI, struct_name: IStructTe
 
 */
 // mig: fn count_struct_name
-pub fn count_struct_name(counter: &mut CounterI, struct_name: IStructNameI) {
+pub fn count_struct_name() {
     panic!("Unimplemented: count_struct_name");
 }
 /*
@@ -465,7 +460,7 @@ pub fn count_struct_name(counter: &mut CounterI, struct_name: IStructNameI) {
 
 */
 // mig: fn count_impl_id
-pub fn count_impl_id(counter: &mut CounterI, impl_id: IdI<IImplNameI>) {
+pub fn count_impl_id() {
     panic!("Unimplemented: count_impl_id");
 }
 /*
@@ -481,7 +476,7 @@ pub fn count_impl_id(counter: &mut CounterI, impl_id: IdI<IImplNameI>) {
 
 */
 // mig: fn count_impl_name
-pub fn count_impl_name(counter: &mut CounterI, impl_name: IImplNameI) {
+pub fn count_impl_name() {
     panic!("Unimplemented: count_impl_name");
 }
 /*
@@ -508,7 +503,7 @@ pub fn count_impl_name(counter: &mut CounterI, impl_name: IImplNameI) {
 
 */
 // mig: fn count_impl_template_name
-pub fn count_impl_template_name(counter: &mut CounterI, struct_name: IImplTemplateNameI) {
+pub fn count_impl_template_name() {
     panic!("Unimplemented: count_impl_template_name");
 }
 /*
@@ -523,7 +518,7 @@ pub fn count_impl_template_name(counter: &mut CounterI, struct_name: IImplTempla
 
 */
 // mig: fn count_export_id
-pub fn count_export_id(id_i: IdI<ExportNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_export_id() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_export_id");
 }
 /*
@@ -535,7 +530,7 @@ pub fn count_export_id(id_i: IdI<ExportNameI>) -> std::collections::HashMap<i32,
 
 */
 // mig: fn count_extern_id
-pub fn count_extern_id(id_i: IdI<ExternNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_extern_id() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_extern_id");
 }
 /*
@@ -547,7 +542,7 @@ pub fn count_extern_id(id_i: IdI<ExternNameI>) -> std::collections::HashMap<i32,
 
 */
 // mig: fn count_struct_id
-pub fn count_struct_id_map(id_i: IdI<IStructNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_struct_id_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_struct_id");
 }
 /*
@@ -559,7 +554,7 @@ pub fn count_struct_id_map(id_i: IdI<IStructNameI>) -> std::collections::HashMap
 
 */
 // mig: fn count_interface_id
-pub fn count_interface_id_map(id_i: IdI<IInterfaceNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_interface_id_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_interface_id");
 }
 /*
@@ -571,7 +566,7 @@ pub fn count_interface_id_map(id_i: IdI<IInterfaceNameI>) -> std::collections::H
 
 */
 // mig: fn count_interface_id
-pub fn count_interface_id(counter: &mut CounterI, interface_id: IdI<IInterfaceNameI>) {
+pub fn count_interface_id() {
     panic!("Unimplemented: count_interface_id");
 }
 /*
@@ -584,7 +579,7 @@ pub fn count_interface_id(counter: &mut CounterI, interface_id: IdI<IInterfaceNa
 
 */
 // mig: fn count_function_id
-pub fn count_function_id_map(id_i: IdI<IFunctionNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_function_id_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_function_id");
 }
 /*
@@ -596,7 +591,7 @@ pub fn count_function_id_map(id_i: IdI<IFunctionNameI>) -> std::collections::Has
 
 */
 // mig: fn count_impl_id
-pub fn count_impl_id_map(impl_id: IdI<IImplNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_impl_id_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_impl_id");
 }
 /*
@@ -611,7 +606,7 @@ pub fn count_impl_id_map(impl_id: IdI<IImplNameI>) -> std::collections::HashMap<
 
 */
 // mig: fn count_coord
-pub fn count_coord_map(coord: CoordI) -> std::collections::HashMap<i32, i32> {
+pub fn count_coord_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_coord");
 }
 /*
@@ -623,7 +618,7 @@ pub fn count_coord_map(coord: CoordI) -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_var_name
-pub fn count_var_name_map(name: IVarNameI) -> std::collections::HashMap<i32, i32> {
+pub fn count_var_name_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_var_name");
 }
 /*
@@ -637,7 +632,7 @@ pub fn count_var_name_map(name: IVarNameI) -> std::collections::HashMap<i32, i32
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array_map(ssa: StaticSizedArrayIT) -> std::collections::HashMap<i32, i32> {
+pub fn count_static_sized_array_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_static_sized_array");
 }
 /*
@@ -651,7 +646,7 @@ pub fn count_static_sized_array_map(ssa: StaticSizedArrayIT) -> std::collections
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array_map(rsa: RuntimeSizedArrayIT) -> std::collections::HashMap<i32, i32> {
+pub fn count_runtime_sized_array_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_runtime_sized_array");
 }
 /*
@@ -665,7 +660,7 @@ pub fn count_runtime_sized_array_map(rsa: RuntimeSizedArrayIT) -> std::collectio
 
 */
 // mig: fn count_prototype
-pub fn count_prototype_map(prototype: PrototypeI) -> std::collections::HashMap<i32, i32> {
+pub fn count_prototype_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_prototype");
 }
 /*
@@ -677,7 +672,7 @@ pub fn count_prototype_map(prototype: PrototypeI) -> std::collections::HashMap<i
 
 */
 // mig: fn count_function_name
-pub fn count_function_name_map(name: IFunctionNameI) -> std::collections::HashMap<i32, i32> {
+pub fn count_function_name_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_function_name");
 }
 /*
@@ -691,7 +686,7 @@ pub fn count_function_name_map(name: IFunctionNameI) -> std::collections::HashMa
 
 */
 // mig: fn count_impl_name
-pub fn count_impl_name_map(name: IImplNameI) -> std::collections::HashMap<i32, i32> {
+pub fn count_impl_name_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_impl_name");
 }
 /*
@@ -705,7 +700,7 @@ pub fn count_impl_name_map(name: IImplNameI) -> std::collections::HashMap<i32, i
 
 */
 // mig: fn count_citizen_name
-pub fn count_citizen_name_map(name: ICitizenNameI) -> std::collections::HashMap<i32, i32> {
+pub fn count_citizen_name_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_citizen_name");
 }
 /*
@@ -719,7 +714,7 @@ pub fn count_citizen_name_map(name: ICitizenNameI) -> std::collections::HashMap<
 
 */
 // mig: fn count_citizen_id
-pub fn count_citizen_id_map(name: IdI<ICitizenNameI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_citizen_id_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_citizen_id");
 }
 /*
@@ -733,7 +728,7 @@ pub fn count_citizen_id_map(name: IdI<ICitizenNameI>) -> std::collections::HashM
 
 */
 // mig: fn count_templata
-pub fn count_templata_map(name: ITemplataI) -> std::collections::HashMap<i32, i32> {
+pub fn count_templata_map() -> std::collections::HashMap<i32, i32> {
     panic!("Unimplemented: count_templata");
 }
 /*

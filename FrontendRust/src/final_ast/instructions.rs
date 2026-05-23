@@ -1,3 +1,20 @@
+// From Frontend/FinalAST/src/dev/vale/finalast/instructions.scala
+//
+// H-side instruction set: 50+ ExpressionH variants describing the lowered
+// program. Mirrors src/instantiating/ast/expressions.rs pattern — enum
+// dispatch with arena refs (no `dyn`). Per typing-pass parity, expression
+// types opt out of `PartialEq`/`Hash` (Scala uses `vcurious`); just
+// `Copy/Clone/Debug`.
+//
+// All variant payload structs are bare-placeholder (PhantomData) for now.
+// Body migration restores fields per Scala.
+
+#[allow(unused_imports)]
+use std::marker::PhantomData;
+
+use crate::final_ast::ast::{IdH, PrototypeH};
+use crate::final_ast::types::*;
+
 /*
 package dev.vale.finalast
 
@@ -1174,3 +1191,528 @@ case class VariableIdH(
   override def hashCode(): Int = hash;
 }
 */
+
+// mig: sealed trait ExpressionH
+/// Polyvalue
+//
+// Top-level expression dispatcher. Each variant holds an arena ref to the
+// concrete payload. Per typing-pass parity, no `PartialEq`/`Hash`.
+#[derive(Copy, Clone, Debug)]
+pub enum ExpressionH<'s, 'h> where 's: 'h {
+    ConstantVoidH(&'h ConstantVoidH),
+    ConstantIntH(&'h ConstantIntH),
+    ConstantBoolH(&'h ConstantBoolH),
+    ConstantStrH(&'h ConstantStrH<'s, 'h>),
+    ConstantF64H(&'h ConstantF64H),
+    ArgumentH(&'h ArgumentH<'s, 'h>),
+    StackifyH(&'h StackifyH<'s, 'h>),
+    RestackifyH(&'h RestackifyH<'s, 'h>),
+    UnstackifyH(&'h UnstackifyH<'s, 'h>),
+    DestroyH(&'h DestroyH<'s, 'h>),
+    DestroyStaticSizedArrayIntoLocalsH(&'h DestroyStaticSizedArrayIntoLocalsH<'s, 'h>),
+    StructToInterfaceUpcastH(&'h StructToInterfaceUpcastH<'s, 'h>),
+    InterfaceToInterfaceUpcastH(&'h InterfaceToInterfaceUpcastH<'s, 'h>),
+    LocalStoreH(&'h LocalStoreH<'s, 'h>),
+    LocalLoadH(&'h LocalLoadH<'s, 'h>),
+    MemberStoreH(&'h MemberStoreH<'s, 'h>),
+    MemberLoadH(&'h MemberLoadH<'s, 'h>),
+    NewArrayFromValuesH(&'h NewArrayFromValuesH<'s, 'h>),
+    StaticSizedArrayStoreH(&'h StaticSizedArrayStoreH<'s, 'h>),
+    RuntimeSizedArrayStoreH(&'h RuntimeSizedArrayStoreH<'s, 'h>),
+    RuntimeSizedArrayLoadH(&'h RuntimeSizedArrayLoadH<'s, 'h>),
+    StaticSizedArrayLoadH(&'h StaticSizedArrayLoadH<'s, 'h>),
+    CallH(&'h CallH<'s, 'h>),
+    ExternCallH(&'h ExternCallH<'s, 'h>),
+    InterfaceCallH(&'h InterfaceCallH<'s, 'h>),
+    IfH(&'h IfH<'s, 'h>),
+    WhileH(&'h WhileH<'s, 'h>),
+    ConsecutorH(&'h ConsecutorH<'s, 'h>),
+    BlockH(&'h BlockH<'s, 'h>),
+    MutabilifyH(&'h MutabilifyH<'s, 'h>),
+    ImmutabilifyH(&'h ImmutabilifyH<'s, 'h>),
+    ReturnH(&'h ReturnH<'s, 'h>),
+    NewImmRuntimeSizedArrayH(&'h NewImmRuntimeSizedArrayH<'s, 'h>),
+    NewMutRuntimeSizedArrayH(&'h NewMutRuntimeSizedArrayH<'s, 'h>),
+    PushRuntimeSizedArrayH(&'h PushRuntimeSizedArrayH<'s, 'h>),
+    PopRuntimeSizedArrayH(&'h PopRuntimeSizedArrayH<'s, 'h>),
+    StaticArrayFromCallableH(&'h StaticArrayFromCallableH<'s, 'h>),
+    DestroyStaticSizedArrayIntoFunctionH(&'h DestroyStaticSizedArrayIntoFunctionH<'s, 'h>),
+    DestroyImmRuntimeSizedArrayH(&'h DestroyImmRuntimeSizedArrayH<'s, 'h>),
+    DestroyMutRuntimeSizedArrayH(&'h DestroyMutRuntimeSizedArrayH<'s, 'h>),
+    BreakH(&'h BreakH),
+    NewStructH(&'h NewStructH<'s, 'h>),
+    ArrayLengthH(&'h ArrayLengthH<'s, 'h>),
+    ArrayCapacityH(&'h ArrayCapacityH<'s, 'h>),
+    BorrowToWeakH(&'h BorrowToWeakH<'s, 'h>),
+    IsSameInstanceH(&'h IsSameInstanceH<'s, 'h>),
+    AsSubtypeH(&'h AsSubtypeH<'s, 'h>),
+    LockWeakH(&'h LockWeakH<'s, 'h>),
+    DiscardH(&'h DiscardH<'s, 'h>),
+    PreCheckBorrowH(&'h PreCheckBorrowH<'s, 'h>),
+}
+
+// mig: trait IExpressionH
+/// Polyvalue
+#[derive(Copy, Clone, Debug)]
+pub enum IExpressionH<'s, 'h> where 's: 'h {
+    ReferenceExpressionH(&'h ReferenceExpressionH<'s, 'h>),
+    AddressExpressionH(&'h AddressExpressionH<'s, 'h>),
+}
+
+// mig: case class ReferenceExpressionH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ReferenceExpressionH<'s, 'h> where 's: 'h {
+    pub reference: CoordH<'s, 'h>,
+}
+
+// mig: case class AddressExpressionH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct AddressExpressionH<'s, 'h> where 's: 'h {
+    pub reference: CoordH<'s, 'h>,
+}
+
+// mig: case class Local
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct Local<'s, 'h> where 's: 'h {
+    pub id: VariableIdH<'s, 'h>,
+    pub variability: Variability,
+    pub type_h: CoordH<'s, 'h>,
+}
+
+// mig: case class VariableIdH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct VariableIdH<'s, 'h> where 's: 'h {
+    pub number: i32,
+    pub height: i32,
+    pub name: Option<&'h IdH<'s, 'h>>,
+}
+
+// ---- 50 expression-variant payload structs, Scala-parity fields ----
+
+// mig: case class ConstantVoidH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantVoidH;
+
+// mig: case class ConstantIntH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantIntH {
+    pub value: i64,
+    pub bits: i32,
+}
+
+// mig: case class ConstantBoolH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantBoolH {
+    pub value: bool,
+}
+
+// mig: case class ConstantStrH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantStrH<'s, 'h> where 's: 'h {
+    pub value: &'h str,
+    _marker: PhantomData<&'s ()>,
+}
+
+// mig: case class ConstantF64H
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConstantF64H {
+    pub value: f64,
+}
+
+// mig: case class ArgumentH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ArgumentH<'s, 'h> where 's: 'h {
+    pub result_type: CoordH<'s, 'h>,
+    pub argument_index: i32,
+}
+
+// mig: case class StackifyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct StackifyH<'s, 'h> where 's: 'h {
+    pub source_expr: ExpressionH<'s, 'h>,
+    pub local: Local<'s, 'h>,
+    pub name: Option<&'h IdH<'s, 'h>>,
+}
+
+// mig: case class RestackifyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct RestackifyH<'s, 'h> where 's: 'h {
+    pub source_expr: ExpressionH<'s, 'h>,
+    pub local: Local<'s, 'h>,
+    pub name: Option<&'h IdH<'s, 'h>>,
+}
+
+// mig: case class UnstackifyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct UnstackifyH<'s, 'h> where 's: 'h {
+    pub local: Local<'s, 'h>,
+}
+
+// mig: case class DestroyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyH<'s, 'h> where 's: 'h {
+    pub struct_expression: ExpressionH<'s, 'h>,
+    pub local_types: &'h [CoordH<'s, 'h>],
+    pub local_indices: &'h [Local<'s, 'h>],
+}
+
+// mig: case class DestroyStaticSizedArrayIntoLocalsH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyStaticSizedArrayIntoLocalsH<'s, 'h> where 's: 'h {
+    pub struct_expression: ExpressionH<'s, 'h>,
+    pub local_types: &'h [CoordH<'s, 'h>],
+    pub local_indices: &'h [Local<'s, 'h>],
+}
+
+// mig: case class StructToInterfaceUpcastH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct StructToInterfaceUpcastH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub target_interface: &'h InterfaceHT<'s, 'h>,
+}
+
+// mig: case class InterfaceToInterfaceUpcastH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceToInterfaceUpcastH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub target_interface: &'h InterfaceHT<'s, 'h>,
+}
+
+// mig: case class LocalStoreH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct LocalStoreH<'s, 'h> where 's: 'h {
+    pub local: Local<'s, 'h>,
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub local_name: &'h IdH<'s, 'h>,
+}
+
+// mig: case class LocalLoadH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct LocalLoadH<'s, 'h> where 's: 'h {
+    pub local: Local<'s, 'h>,
+    pub target_ownership: OwnershipH,
+    pub local_name: &'h IdH<'s, 'h>,
+}
+
+// mig: case class MemberStoreH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct MemberStoreH<'s, 'h> where 's: 'h {
+    pub result_type: CoordH<'s, 'h>,
+    pub struct_expression: ExpressionH<'s, 'h>,
+    pub member_index: i32,
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub member_name: &'h IdH<'s, 'h>,
+}
+
+// mig: case class MemberLoadH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct MemberLoadH<'s, 'h> where 's: 'h {
+    pub struct_expression: ExpressionH<'s, 'h>,
+    pub member_index: i32,
+    pub expected_member_type: CoordH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+    pub member_name: &'h IdH<'s, 'h>,
+}
+
+// mig: case class NewArrayFromValuesH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct NewArrayFromValuesH<'s, 'h> where 's: 'h {
+    pub result_type: CoordH<'s, 'h>,
+    pub source_expressions: &'h [ExpressionH<'s, 'h>],
+}
+
+// mig: case class StaticSizedArrayStoreH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct StaticSizedArrayStoreH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub index_expression: ExpressionH<'s, 'h>,
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class RuntimeSizedArrayStoreH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct RuntimeSizedArrayStoreH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub index_expression: ExpressionH<'s, 'h>,
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class RuntimeSizedArrayLoadH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct RuntimeSizedArrayLoadH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub index_expression: ExpressionH<'s, 'h>,
+    pub target_ownership: OwnershipH,
+    pub expected_element_type: CoordH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class StaticSizedArrayLoadH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct StaticSizedArrayLoadH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub index_expression: ExpressionH<'s, 'h>,
+    pub target_ownership: OwnershipH,
+    pub expected_element_type: CoordH<'s, 'h>,
+    pub array_size: i64,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class CallH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct CallH<'s, 'h> where 's: 'h {
+    pub function: &'h PrototypeH<'s, 'h>,
+    pub args_expressions: &'h [ExpressionH<'s, 'h>],
+}
+
+// mig: case class ExternCallH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ExternCallH<'s, 'h> where 's: 'h {
+    pub function: &'h PrototypeH<'s, 'h>,
+    pub args_expressions: &'h [ExpressionH<'s, 'h>],
+}
+
+// mig: case class InterfaceCallH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceCallH<'s, 'h> where 's: 'h {
+    pub args_expressions: &'h [ExpressionH<'s, 'h>],
+    pub virtual_param_index: i32,
+    pub interface_h: &'h InterfaceHT<'s, 'h>,
+    pub index_in_edge: i32,
+    pub function_type: &'h PrototypeH<'s, 'h>,
+}
+
+// mig: case class IfH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct IfH<'s, 'h> where 's: 'h {
+    pub condition_block: ExpressionH<'s, 'h>,
+    pub then_block: ExpressionH<'s, 'h>,
+    pub else_block: ExpressionH<'s, 'h>,
+    pub common_supertype: CoordH<'s, 'h>,
+}
+
+// mig: case class WhileH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct WhileH<'s, 'h> where 's: 'h {
+    pub body_block: ExpressionH<'s, 'h>,
+}
+
+// mig: case class ConsecutorH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ConsecutorH<'s, 'h> where 's: 'h {
+    pub exprs: &'h [ExpressionH<'s, 'h>],
+}
+
+// mig: case class BlockH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct BlockH<'s, 'h> where 's: 'h {
+    pub inner: ExpressionH<'s, 'h>,
+}
+
+// mig: case class MutabilifyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct MutabilifyH<'s, 'h> where 's: 'h {
+    pub inner: ExpressionH<'s, 'h>,
+}
+
+// mig: case class ImmutabilifyH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ImmutabilifyH<'s, 'h> where 's: 'h {
+    pub inner: ExpressionH<'s, 'h>,
+}
+
+// mig: case class ReturnH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ReturnH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class NewImmRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct NewImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub size_expression: ExpressionH<'s, 'h>,
+    pub generator_expression: ExpressionH<'s, 'h>,
+    pub generator_method: &'h PrototypeH<'s, 'h>,
+    pub element_type: CoordH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class NewMutRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct NewMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub capacity_expression: ExpressionH<'s, 'h>,
+    pub element_type: CoordH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class PushRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct PushRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub newcomer_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class PopRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct PopRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub element_type: CoordH<'s, 'h>,
+}
+
+// mig: case class StaticArrayFromCallableH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct StaticArrayFromCallableH<'s, 'h> where 's: 'h {
+    pub generator_expression: ExpressionH<'s, 'h>,
+    pub generator_method: &'h PrototypeH<'s, 'h>,
+    pub element_type: CoordH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class DestroyStaticSizedArrayIntoFunctionH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyStaticSizedArrayIntoFunctionH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub consumer_expression: ExpressionH<'s, 'h>,
+    pub consumer_method: &'h PrototypeH<'s, 'h>,
+    pub array_element_type: CoordH<'s, 'h>,
+    pub array_size: i64,
+}
+
+// mig: case class DestroyImmRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+    pub consumer_expression: ExpressionH<'s, 'h>,
+    pub consumer_method: &'h PrototypeH<'s, 'h>,
+    pub array_element_type: CoordH<'s, 'h>,
+}
+
+// mig: case class DestroyMutRuntimeSizedArrayH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DestroyMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+    pub array_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class BreakH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct BreakH;
+
+// mig: case class NewStructH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct NewStructH<'s, 'h> where 's: 'h {
+    pub source_expressions: &'h [ExpressionH<'s, 'h>],
+    pub target_member_names: &'h [&'h IdH<'s, 'h>],
+    pub result_type: CoordH<'s, 'h>,
+}
+
+// mig: case class ArrayLengthH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ArrayLengthH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class ArrayCapacityH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct ArrayCapacityH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class BorrowToWeakH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct BorrowToWeakH<'s, 'h> where 's: 'h {
+    pub ref_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class IsSameInstanceH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct IsSameInstanceH<'s, 'h> where 's: 'h {
+    pub left_expression: ExpressionH<'s, 'h>,
+    pub right_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class AsSubtypeH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct AsSubtypeH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub target_type: KindHT<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+    pub some_constructor: &'h PrototypeH<'s, 'h>,
+    pub none_constructor: &'h PrototypeH<'s, 'h>,
+}
+
+// mig: case class LockWeakH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct LockWeakH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
+    pub some_constructor: &'h PrototypeH<'s, 'h>,
+    pub none_constructor: &'h PrototypeH<'s, 'h>,
+}
+
+// mig: case class DiscardH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct DiscardH<'s, 'h> where 's: 'h {
+    pub source_expression: ExpressionH<'s, 'h>,
+}
+
+// mig: case class PreCheckBorrowH
+/// Temporary state
+#[derive(Copy, Clone, Debug)]
+pub struct PreCheckBorrowH<'s, 'h> where 's: 'h {
+    pub inner_expression: ExpressionH<'s, 'h>,
+}

@@ -1,3 +1,9 @@
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::names::IRuneS;
+use crate::instantiating::ast::types::{cI, CoordI, MutabilityI, VariabilityI, StructIT, InterfaceIT, ICitizenIT};
+use crate::instantiating::ast::names::{IdI, IVarNameI};
+use crate::instantiating::ast::ast::{ICitizenAttributeI, PrototypeI};
+
 /*
 package dev.vale.instantiating.ast
 
@@ -9,7 +15,7 @@ import scala.collection.immutable.Map
 // A "citizen" is a struct or an interface.
 */
 // mig: trait CitizenDefinitionI
-pub trait CitizenDefinitionI<'s, 't> {}
+pub trait CitizenDefinitionI<'s, 'i, R> {}
 /*
 trait CitizenDefinitionI {
 //  def genericParamTypes: Vector[ITemplataType]
@@ -18,16 +24,15 @@ trait CitizenDefinitionI {
 */
 // mig: struct StructDefinitionI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct StructDefinitionI<'s, 't> {
-    pub instantiated_citizen: (),
-    pub attributes: (),
-    pub weakable: (),
-    pub mutability: (),
-    pub members: (),
-    pub is_closure: (),
-    pub rune_to_function_bound: (),
-    pub rune_to_impl_bound: (),
+pub struct StructDefinitionI<'s, 'i, R> {
+    pub instantiated_citizen: &'i StructIT<'s, 'i, cI>,
+    pub attributes: &'i [ICitizenAttributeI<'s>],
+    pub weakable: bool,
+    pub mutability: MutabilityI,
+    pub members: &'i [StructMemberI<'s, 'i, R>],
+    pub is_closure: bool,
+    pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
 }
 // mig: impl StructDefinitionI
 /*
@@ -74,8 +79,8 @@ override def hashCode(): Int = vcurious()
 //  }
 */
 // mig: fn get_member_and_index
-impl<'s, 't> StructDefinitionI<'s, 't> {
-    pub fn get_member_and_index(&self, needle_name: ()) -> Option<()> {
+impl<'s, 'i, R> StructDefinitionI<'s, 'i, R> {
+    pub fn get_member_and_index(&self, needle_name: IVarNameI<'s, 'i, cI>) -> Option<(&StructMemberI<'s, 'i, R>, usize)> {
         panic!("Unimplemented: get_member_and_index")
     }
 }
@@ -95,10 +100,10 @@ impl<'s, 't> StructDefinitionI<'s, 't> {
 // mig: struct StructMemberI
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct StructMemberI<'s, 't> {
-    pub name: (),
-    pub variability: (),
-    pub tyype: (),
+pub struct StructMemberI<'s, 'i, R> {
+    pub name: IVarNameI<'s, 'i, cI>,
+    pub variability: VariabilityI,
+    pub tyype: IMemberTypeI<'s, 'i, R>,
 }
 // mig: impl StructMemberI
 /*
@@ -114,9 +119,9 @@ case class StructMemberI(
 // mig: enum IMemberTypeI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum IMemberTypeI<'s, 't> {
-    ReferenceMemberTypeI(&'t ReferenceMemberTypeI<'s, 't>),
-    AddressMemberTypeI(&'t AddressMemberTypeI<'s, 't>),
+pub enum IMemberTypeI<'s, 'i, R> {
+    ReferenceMemberTypeI(&'i ReferenceMemberTypeI<'s, 'i, R>),
+    AddressMemberTypeI(&'i AddressMemberTypeI<'s, 'i, R>),
 }
 // mig: impl IMemberTypeI
 /*
@@ -124,7 +129,7 @@ sealed trait IMemberTypeI  {
 */
 // mig: fn reference
 /* Guardian: disable-all */
-impl<'s, 't> IMemberTypeI<'s, 't> {
+impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
     pub fn reference(&self) -> () {
         match self {
             _ => panic!("Unimplemented: IMemberTypeI::reference dispatch"),
@@ -136,7 +141,7 @@ impl<'s, 't> IMemberTypeI<'s, 't> {
 */
 // mig: fn expect_reference_member
 /* Guardian: disable-all */
-impl<'s, 't> IMemberTypeI<'s, 't> {
+impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
     pub fn expect_reference_member(&self) -> () {
         match self {
             _ => panic!("Unimplemented: IMemberTypeI::expect_reference_member dispatch"),
@@ -153,7 +158,7 @@ impl<'s, 't> IMemberTypeI<'s, 't> {
 */
 // mig: fn expect_address_member
 /* Guardian: disable-all */
-impl<'s, 't> IMemberTypeI<'s, 't> {
+impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
     pub fn expect_address_member(&self) -> () {
         match self {
             _ => panic!("Unimplemented: IMemberTypeI::expect_address_member dispatch"),
@@ -172,8 +177,9 @@ impl<'s, 't> IMemberTypeI<'s, 't> {
 // mig: struct AddressMemberTypeI
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct AddressMemberTypeI<'s, 't> {
-    pub reference: (),
+pub struct AddressMemberTypeI<'s, 'i, R> {
+    pub reference: CoordI<'s, 'i, cI>,
+    pub _marker: std::marker::PhantomData<R>,
 }
 // mig: impl AddressMemberTypeI
 /*
@@ -182,8 +188,9 @@ case class AddressMemberTypeI(reference: CoordI[cI]) extends IMemberTypeI
 // mig: struct ReferenceMemberTypeI
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct ReferenceMemberTypeI<'s, 't> {
-    pub reference: (),
+pub struct ReferenceMemberTypeI<'s, 'i, R> {
+    pub reference: CoordI<'s, 'i, cI>,
+    pub _marker: std::marker::PhantomData<R>,
 }
 // mig: impl ReferenceMemberTypeI
 /*
@@ -191,15 +198,15 @@ case class ReferenceMemberTypeI(reference: CoordI[cI]) extends IMemberTypeI
 */
 // mig: struct InterfaceDefinitionI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InterfaceDefinitionI<'s, 't> {
-    pub instantiated_interface: (),
-    pub attributes: (),
-    pub weakable: (),
-    pub mutability: (),
-    pub rune_to_function_bound: (),
-    pub rune_to_impl_bound: (),
-    pub internal_methods: (),
+pub struct InterfaceDefinitionI<'s, 'i, R> {
+    pub instantiated_interface: &'i InterfaceIT<'s, 'i, cI>,
+    pub attributes: &'i [ICitizenAttributeI<'s>],
+    pub weakable: bool,
+    pub mutability: MutabilityI,
+    pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
+    pub internal_methods: &'i [(&'i PrototypeI<'s, 'i, cI>, i32)],
+    pub _marker: std::marker::PhantomData<R>,
 }
 // mig: impl InterfaceDefinitionI
 /*
@@ -222,8 +229,8 @@ case class InterfaceDefinitionI(
 //  }
 */
 // mig: fn instantiated_citizen
-impl<'s, 't> InterfaceDefinitionI<'s, 't> {
-    pub fn instantiated_citizen(&self) -> () {
+impl<'s, 'i, R> InterfaceDefinitionI<'s, 'i, R> {
+    pub fn instantiated_citizen(&self) -> ICitizenIT<'s, 'i, cI> {
         panic!("Unimplemented: instantiated_citizen")
     }
 }

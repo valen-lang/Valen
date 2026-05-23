@@ -1,7 +1,11 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/Conversions.scala
+#[allow(unused_imports)]
 use crate::utils::range::CodeLocationS;
+#[allow(unused_imports)]
 use crate::instantiating::ast::types::{MutabilityI, VariabilityI, OwnershipI, LocationI};
-use crate::simplifying::ast::{CodeLocation, Mutability, Variability, OwnershipH, LocationH};
+#[allow(unused_imports)]
+use crate::final_ast::types::{CodeLocation, Mutability, Variability, OwnershipH, LocationH};
+#[allow(unused_imports)]
 use crate::postparsing::itemplatatype::ITemplataType;
 /*
 package dev.vale.simplifying

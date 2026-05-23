@@ -1,12 +1,17 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/BlockHammer.scala
-// mig: struct BlockHammer
-pub struct BlockHammer<'h> {
-    pub expression_hammer: ExpressionHammer<'h>,
-    pub type_hammer: TypeHammer<'h>,
-}
+//
+// Scala's `BlockHammer` is collapsed: per typing-pass `Compiler` precedent
+// (no sub-`StructCompiler`/`ExpressionCompiler`/etc.), all sub-hammer methods
+// live as `impl Hammer { ... }` blocks colocated in per-area files.
+// `BlockHammer` itself is NOT a Rust struct.
 
-// mig: impl BlockHammer
-// (impl block intentionally not emitted per pass policy.)
+use crate::final_ast::instructions::{BlockH, ImmutabilifyH, MutabilifyH};
+use crate::instantiating::ast::ast::FunctionHeaderI;
+use crate::instantiating::ast::expressions::{BlockIE, ImmutabilifyIE, MutabilifyIE};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::types::cI;
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::{Hammer, Locals};
 
 /*
 package dev.vale.simplifying
@@ -16,14 +21,7 @@ import dev.vale.instantiating.ast._
 import dev.vale.{vassert, vcurious, vfail, vimpl, vwat, finalast => m}
 
 class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
-*/
-// mig: fn translate_block
-impl<'h> BlockHammer<'h> {
-    pub fn translate_block(&self) {
-        panic!("Unimplemented: translate_block");
-    }
-}
-/*
+
   def translateBlock(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -68,15 +66,7 @@ impl<'h> BlockHammer<'h> {
 //    start here, we're returning locals and thats not optimal
     BlockH(exprH)
   }
-*/
-// mig: fn translate_mutabilify
-impl<'h> BlockHammer<'h> {
-    pub fn translate_mutabilify(&self) {
-        panic!("Unimplemented: translate_mutabilify");
-    }
-}
 
-/*
   def translateMutabilify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -103,15 +93,7 @@ impl<'h> BlockHammer<'h> {
 
     MutabilifyH(innerHE)
   }
-*/
-// mig: fn translate_immutabilify
-impl<'h> BlockHammer<'h> {
-    pub fn translate_immutabilify(&self) {
-        panic!("Unimplemented: translate_immutabilify");
-    }
-}
 
-/*
   def translateImmutabilify(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -140,3 +122,57 @@ impl<'h> BlockHammer<'h> {
   }
 }
 */
+
+// mig: fn translate_block
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_block<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        parent_locals: &mut Locals<'s, 'i, 'h>,
+        block2: &BlockIE<'s, 'i, cI>,
+    ) -> &'h BlockH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_block");
+    }
+}
+
+// mig: fn translate_mutabilify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mutabilify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        node: &MutabilifyIE<'s, 'i, cI>,
+    ) -> &'h MutabilifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mutabilify");
+    }
+}
+
+// mig: fn translate_immutabilify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_immutabilify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        node: &ImmutabilifyIE<'s, 'i, cI>,
+    ) -> &'h ImmutabilifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_immutabilify");
+    }
+}

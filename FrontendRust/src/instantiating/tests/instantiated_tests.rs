@@ -32,6 +32,7 @@ pub fn test(code: &str) -> () {
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
 pub struct InstantiatedTests<'s, 't> {
+  pub _marker: std::marker::PhantomData<(&'s (), &'t ())>,
 }
 
 // mig: impl InstantiatedTests

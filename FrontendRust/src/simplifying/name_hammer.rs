@@ -1,11 +1,19 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/NameHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `NameHammer` is not a Rust struct.
+// Its methods live as `impl Hammer { ... }` blocks colocated here; its free
+// functions (in Scala's `object NameHammer`) become module-level Rust fns.
+
 use crate::interner::StrI;
 use crate::utils::range::CodeLocationS;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::von::ast::VonObject;
-use crate::simplifying::ast::{IdH, HamutsBox};
+use crate::final_ast::ast::IdH;
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::Hammer;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::types::cI;
 
 /*
 package dev.vale.simplifying
@@ -20,23 +28,7 @@ import dev.vale.von.{IVonData, VonArray, VonInt, VonMember, VonObject, VonStr}
 
 import scala.collection.immutable.List
 
-*/
-// mig: struct NameHammerH
-/// Temporary state
-pub struct NameHammerH {
-}
-
-// mig: impl NameHammerH
-/*
 class NameHammer() {
-*/
-// mig: fn translate_full_name
-impl<'h> NameHammerH {
-    pub fn translate_full_name(&self, hinputs: &HinputsI, hamuts: &HamutsBox, full_name2: &IdI) -> IdH {
-        panic!("Unimplemented: translate_full_name");
-    }
-}
-/*
   def translateFullName(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -48,14 +40,6 @@ impl<'h> NameHammerH {
     finalast.IdH(localName, packageCoord, longName, longName)
   }
 
-*/
-// mig: fn add_step
-impl<'h> NameHammerH {
-    pub fn add_step(&self, hamuts: &HamutsBox, full_name: &IdH, s: StrI<'h>) -> IdH {
-        panic!("Unimplemented: add_step");
-    }
-}
-/*
   // Adds a step to the name.
   def addStep(
     hamuts: HamutsBox,
@@ -68,12 +52,6 @@ impl<'h> NameHammerH {
 }
 
 object NameHammer {
-*/
-// mig: fn translate_code_location
-pub fn translate_code_location(location: &CodeLocationS) -> VonObject {
-    panic!("Unimplemented: translate_code_location");
-}
-/*
   def translateCodeLocation(location: CodeLocationS): VonObject = {
     val CodeLocationS(fileCoord, offset) = location
     VonObject(
@@ -84,12 +62,6 @@ pub fn translate_code_location(location: &CodeLocationS) -> VonObject {
         VonMember("offset", VonInt(offset))))
   }
 
-*/
-// mig: fn translate_file_coordinate
-pub fn translate_file_coordinate(coord: &FileCoordinate) -> VonObject {
-    panic!("Unimplemented: translate_file_coordinate");
-}
-/*
   def translateFileCoordinate(coord: FileCoordinate): VonObject = {
     val FileCoordinate(PackageCoordinate(module, paackage), filename) = coord
     VonObject(
@@ -101,12 +73,6 @@ pub fn translate_file_coordinate(coord: &FileCoordinate) -> VonObject {
         VonMember("filename", VonStr(filename))))
   }
 
-*/
-// mig: fn translate_package_coordinate
-pub fn translate_package_coordinate(coord: &PackageCoordinate) -> VonObject {
-    panic!("Unimplemented: translate_package_coordinate");
-}
-/*
   def translatePackageCoordinate(coord: PackageCoordinate): VonObject = {
     val PackageCoordinate(module, paackage) = coord
     val nonEmptyModuleName = if (module.str == "") "__vale" else module.str;
@@ -119,3 +85,50 @@ pub fn translate_package_coordinate(coord: &PackageCoordinate) -> VonObject {
   }
 }
 */
+
+// mig: fn translate_full_name
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_full_name<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &Hamuts<'s, 'i, 'h>,
+        full_name2: &IdI<'s, 'i, cI>,
+    ) -> &'h IdH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_full_name");
+    }
+}
+
+// mig: fn add_step
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn add_step<'i>(
+        &self,
+        hamuts: &Hamuts<'s, 'i, 'h>,
+        full_name: &IdH<'s, 'h>,
+        s: StrI<'s>,
+    ) -> &'h IdH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: add_step");
+    }
+}
+
+// mig: fn translate_code_location (object NameHammer free function)
+pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
+    panic!("Unimplemented: translate_code_location");
+}
+
+// mig: fn translate_file_coordinate (object NameHammer free function)
+pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
+    panic!("Unimplemented: translate_file_coordinate");
+}
+
+// mig: fn translate_package_coordinate (object NameHammer free function)
+pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObject {
+    panic!("Unimplemented: translate_package_coordinate");
+}

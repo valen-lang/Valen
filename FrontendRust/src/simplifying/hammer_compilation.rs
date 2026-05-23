@@ -1,20 +1,12 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/HammerCompilation.scala
 // Coordinates the Hammer (simplifying) pass
 
-use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
-use crate::instantiating::InstantiatedCompilation;
-use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
-use crate::lexing::ast::RangeL;
-use crate::lexing::errors::FailedParse;
-use crate::parsing::ast::FileP;
-use crate::pass_manager::FullCompilationOptions;
-use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::simplifying::hammer_interner::HammerInterner;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::parse_arena::ParseArena;
 
 /*
 package dev.vale.simplifying
@@ -36,7 +28,9 @@ import scala.collection.immutable.List
 */
 
 // mig: struct HammerCompilationOptions
-#[derive(PartialEq, Eq, Hash)]
+//
+// Drops PartialEq/Eq/Hash because `debug_out: Arc<dyn Fn(...)>` and
+// `global_options: GlobalOptions` don't impl them. Scala uses vcurious.
 pub struct HammerCompilationOptions {
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub global_options: GlobalOptions,
@@ -61,15 +55,20 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 
 // mig: struct HammerCompilation
-#[derive(PartialEq, Eq, Hash)]
-pub struct HammerCompilation<'s, 'ctx, 't, 'p>
-where 's: 't,
+pub struct HammerCompilation<'s, 'h, 'ctx, 't, 'p>
+where 's: 'h,
 {
-  pub interner: &'ctx HammerInterner<'h>,
+  pub interner: &'ctx HammerInterner<'s, 'h>,
   pub keywords: &'ctx Keywords<'s>,
   pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
   pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   pub options: HammerCompilationOptions,
+  pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'p>,
+  pub hamuts_cache: Option<crate::final_ast::ast::ProgramH<'s, 'h>>,
+  // Scala has `var vonHammerCache: Option[VonHammer]`. Dropped: per
+  // typing-pass precedent the VonHammer compiler class was collapsed
+  // onto `Hammer` (no separate VonHammer state), so there is nothing
+  // to cache.
 }
 // mig: impl HammerCompilation
 /*

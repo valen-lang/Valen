@@ -12,7 +12,7 @@ import scala.collection.immutable.Map
 object RegionCollapserIndividual {
 */
 // mig: fn collapse_prototype
-pub fn collapse_prototype(prototype: PrototypeI) -> PrototypeI {
+pub fn collapse_prototype() {
     panic!("Unimplemented: collapse_prototype")
 }
 /*
@@ -24,10 +24,7 @@ pub fn collapse_prototype(prototype: PrototypeI) -> PrototypeI {
   }
 */
 // mig: fn collapse_id
-pub fn collapse_id<T, Y, F>(id: IdI<T>, func: F) -> IdI<Y>
-where
-    F: Fn(T) -> Y,
-{
+pub fn collapse_id() {
     panic!("Unimplemented: collapse_id")
 }
 /*
@@ -43,7 +40,7 @@ where
   }
 */
 // mig: fn collapse_function_id
-pub fn collapse_function_id(id: IdI) -> IdI {
+pub fn collapse_function_id() {
     panic!("Unimplemented: collapse_function_id")
 }
 /*
@@ -56,7 +53,7 @@ pub fn collapse_function_id(id: IdI) -> IdI {
   }
 */
 // mig: fn collapse_function_name
-pub fn collapse_function_name(name: IFunctionNameI) -> IFunctionNameI {
+pub fn collapse_function_name() {
     panic!("Unimplemented: collapse_function_name")
 }
 /*
@@ -131,7 +128,7 @@ pub fn collapse_function_name(name: IFunctionNameI) -> IFunctionNameI {
   }
 */
 // mig: fn collapse_citizen_template_name
-pub fn collapse_citizen_template_name(citizen: ICitizenTemplateNameI) -> ICitizenTemplateNameI {
+pub fn collapse_citizen_template_name() {
     panic!("Unimplemented: collapse_citizen_template_name")
 }
 /*
@@ -148,7 +145,7 @@ pub fn collapse_citizen_template_name(citizen: ICitizenTemplateNameI) -> ICitize
   }
 */
 // mig: fn collapse_var_name
-pub fn collapse_var_name(name: IVarNameI) -> IVarNameI {
+pub fn collapse_var_name() {
     panic!("Unimplemented: collapse_var_name")
 }
 /*
@@ -171,7 +168,7 @@ pub fn collapse_var_name(name: IVarNameI) -> IVarNameI {
   }
 */
 // mig: fn collapse_function_template_name
-pub fn collapse_function_template_name(function_name: IFunctionTemplateNameI) -> IFunctionTemplateNameI {
+pub fn collapse_function_template_name() {
     panic!("Unimplemented: collapse_function_template_name")
 }
 /*
@@ -184,7 +181,7 @@ pub fn collapse_function_template_name(function_name: IFunctionTemplateNameI) ->
   }
 */
 // mig: fn collapse_name
-pub fn collapse_name(name: INameI) -> INameI {
+pub fn collapse_name() {
     panic!("Unimplemented: collapse_name")
 }
 /*
@@ -205,7 +202,7 @@ pub fn collapse_name(name: INameI) -> INameI {
   }
 */
 // mig: fn collapse_coord_templata
-pub fn collapse_coord_templata(map: indexmap::IndexMap<i32, i32>, templata: CoordTemplataI) -> CoordTemplataI {
+pub fn collapse_coord_templata() {
     panic!("Unimplemented: collapse_coord_templata")
 }
 /*
@@ -218,7 +215,7 @@ pub fn collapse_coord_templata(map: indexmap::IndexMap<i32, i32>, templata: Coor
   }
 */
 // mig: fn collapse_templata
-pub fn collapse_templata(map: indexmap::IndexMap<i32, i32>, templata: ITemplataI) -> ITemplataI {
+pub fn collapse_templata() {
     panic!("Unimplemented: collapse_templata")
 }
 /*
@@ -238,7 +235,7 @@ pub fn collapse_templata(map: indexmap::IndexMap<i32, i32>, templata: ITemplataI
   }
 */
 // mig: fn collapse_region_templata
-pub fn collapse_region_templata(map: indexmap::IndexMap<i32, i32>, templata: RegionTemplataI) -> RegionTemplataI {
+pub fn collapse_region_templata() {
     panic!("Unimplemented: collapse_region_templata")
 }
 /*
@@ -251,7 +248,7 @@ pub fn collapse_region_templata(map: indexmap::IndexMap<i32, i32>, templata: Reg
   }
 */
 // mig: fn collapse_coord
-pub fn collapse_coord(coord: CoordI) -> CoordI {
+pub fn collapse_coord() {
     panic!("Unimplemented: collapse_coord")
 }
 /*
@@ -263,7 +260,7 @@ pub fn collapse_coord(coord: CoordI) -> CoordI {
   }
 */
 // mig: fn collapse_kind
-pub fn collapse_kind(kind: KindIT) -> KindIT {
+pub fn collapse_kind() {
     panic!("Unimplemented: collapse_kind")
 }
 /*
@@ -285,7 +282,7 @@ pub fn collapse_kind(kind: KindIT) -> KindIT {
   }
 */
 // mig: fn collapse_runtime_sized_array
-pub fn collapse_runtime_sized_array(rsa: RuntimeSizedArrayIT) -> RuntimeSizedArrayIT {
+pub fn collapse_runtime_sized_array() {
     panic!("Unimplemented: collapse_runtime_sized_array")
 }
 /*
@@ -308,7 +305,7 @@ pub fn collapse_runtime_sized_array(rsa: RuntimeSizedArrayIT) -> RuntimeSizedArr
   }
 */
 // mig: fn collapse_static_sized_array
-pub fn collapse_static_sized_array(ssa: StaticSizedArrayIT) -> StaticSizedArrayIT {
+pub fn collapse_static_sized_array() {
     panic!("Unimplemented: collapse_static_sized_array")
 }
 /*
@@ -333,7 +330,7 @@ pub fn collapse_static_sized_array(ssa: StaticSizedArrayIT) -> StaticSizedArrayI
   }
 */
 // mig: fn collapse_interface_id
-pub fn collapse_interface_id(interface_id: IdI) -> IdI {
+pub fn collapse_interface_id() {
     panic!("Unimplemented: collapse_interface_id")
 }
 /*
@@ -346,7 +343,7 @@ pub fn collapse_interface_id(interface_id: IdI) -> IdI {
   }
 */
 // mig: fn collapse_struct_id
-pub fn collapse_struct_id(struct_id: IdI) -> IdI {
+pub fn collapse_struct_id() {
     panic!("Unimplemented: collapse_struct_id")
 }
 /*
@@ -359,7 +356,7 @@ pub fn collapse_struct_id(struct_id: IdI) -> IdI {
   }
 */
 // mig: fn collapse_struct_name
-pub fn collapse_struct_name(struct_name: IStructNameI) -> IStructNameI {
+pub fn collapse_struct_name() {
     panic!("Unimplemented: collapse_struct_name")
 }
 /*
@@ -386,7 +383,7 @@ pub fn collapse_struct_name(struct_name: IStructNameI) -> IStructNameI {
   }
 */
 // mig: fn collapse_impl_name
-pub fn collapse_impl_name(impl_name: IImplNameI) -> IImplNameI {
+pub fn collapse_impl_name() {
     panic!("Unimplemented: collapse_impl_name")
 }
 /*
@@ -418,7 +415,7 @@ pub fn collapse_impl_name(impl_name: IImplNameI) -> IImplNameI {
   }
 */
 // mig: fn collapse_interface_name
-pub fn collapse_interface_name(interface_name: IInterfaceNameI) -> IInterfaceNameI {
+pub fn collapse_interface_name() {
     panic!("Unimplemented: collapse_interface_name")
 }
 /*
@@ -437,7 +434,7 @@ pub fn collapse_interface_name(interface_name: IInterfaceNameI) -> IInterfaceNam
   }
 */
 // mig: fn collapse_export_id
-pub fn collapse_export_id(map: indexmap::IndexMap<i32, i32>, struct_id: IdI) -> IdI {
+pub fn collapse_export_id() {
     panic!("Unimplemented: collapse_export_id")
 }
 /*
@@ -455,7 +452,7 @@ pub fn collapse_export_id(map: indexmap::IndexMap<i32, i32>, struct_id: IdI) -> 
   }
 */
 // mig: fn collapse_extern_id
-pub fn collapse_extern_id(map: indexmap::IndexMap<i32, i32>, struct_id: IdI) -> IdI {
+pub fn collapse_extern_id() {
     panic!("Unimplemented: collapse_extern_id")
 }
 /*
@@ -473,7 +470,7 @@ pub fn collapse_extern_id(map: indexmap::IndexMap<i32, i32>, struct_id: IdI) -> 
   }
 */
 // mig: fn collapse_struct_template_name
-pub fn collapse_struct_template_name(struct_name: IStructTemplateNameI) -> IStructTemplateNameI {
+pub fn collapse_struct_template_name() {
     panic!("Unimplemented: collapse_struct_template_name")
 }
 /*
@@ -487,7 +484,7 @@ pub fn collapse_struct_template_name(struct_name: IStructTemplateNameI) -> IStru
   }
 */
 // mig: fn collapse_interface_template_name
-pub fn collapse_interface_template_name(struct_name: IInterfaceTemplateNameI) -> IInterfaceTemplateNameI {
+pub fn collapse_interface_template_name() {
     panic!("Unimplemented: collapse_interface_template_name")
 }
 /*
@@ -500,7 +497,7 @@ pub fn collapse_interface_template_name(struct_name: IInterfaceTemplateNameI) ->
   }
 */
 // mig: fn collapse_impl_id
-pub fn collapse_impl_id(impl_id: IdI) -> IdI {
+pub fn collapse_impl_id() {
     panic!("Unimplemented: collapse_impl_id")
 }
 /*
@@ -521,7 +518,7 @@ pub fn collapse_impl_id(impl_id: IdI) -> IdI {
   // }
 */
 // mig: fn collapse_impl_template_name
-pub fn collapse_impl_template_name(struct_name: IImplTemplateNameI) -> IImplTemplateNameI {
+pub fn collapse_impl_template_name() {
     panic!("Unimplemented: collapse_impl_template_name")
 }
 /*
@@ -535,7 +532,7 @@ pub fn collapse_impl_template_name(struct_name: IImplTemplateNameI) -> IImplTemp
   }
 */
 // mig: fn collapse_citizen
-pub fn collapse_citizen(citizen: ICitizenIT) -> ICitizenIT {
+pub fn collapse_citizen() {
     panic!("Unimplemented: collapse_citizen")
 }
 /*
