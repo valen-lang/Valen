@@ -28,7 +28,7 @@ pub fn name<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _n: INameT<'s, 't>,
 ) -> INameI<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::name")
 }
 
@@ -37,7 +37,7 @@ pub fn id<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _x: &'t IdT<'s, 't>,
 ) -> &'i IdI<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::id")
 }
 
@@ -46,7 +46,7 @@ pub fn prototype<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _p: &'t PrototypeT<'s, 't>,
 ) -> &'i () // &'i PrototypeI<'s, 'i, sI> when ast.rs is migrated
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::prototype")
 }
 
@@ -55,7 +55,7 @@ pub fn signature<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _s: &'t SignatureT<'s, 't>,
 ) -> &'i () // &'i SignatureI<'s, 'i, sI> when ast.rs is migrated
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::signature")
 }
 
@@ -64,7 +64,7 @@ pub fn coord<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _c: CoordT<'s, 't>,
 ) -> CoordI<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::coord")
 }
 
@@ -73,7 +73,7 @@ pub fn kind<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _k: KindT<'s, 't>,
 ) -> KindIT<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::kind")
 }
 
@@ -82,7 +82,7 @@ pub fn struct_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _s: &'t crate::typing::types::types::StructTT<'s, 't>,
 ) -> &'i StructIT<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::struct_payload")
 }
 
@@ -91,7 +91,7 @@ pub fn interface_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _x: &'t crate::typing::types::types::InterfaceTT<'s, 't>,
 ) -> &'i InterfaceIT<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::interface_payload")
 }
 
@@ -100,7 +100,7 @@ pub fn static_sized_array_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _x: &'t crate::typing::types::types::StaticSizedArrayTT<'s, 't>,
 ) -> &'i StaticSizedArrayIT<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::static_sized_array_payload")
 }
 
@@ -109,7 +109,7 @@ pub fn runtime_sized_array_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _x: &'t crate::typing::types::types::RuntimeSizedArrayTT<'s, 't>,
 ) -> &'i RuntimeSizedArrayIT<'s, 'i, sI>
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::runtime_sized_array_payload")
 }
 
@@ -118,6 +118,6 @@ pub fn templata<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
     _t: crate::typing::templata::templata::ITemplataT<'s, 't>,
 ) -> () // ITemplataI<'s, 'i, sI> when templata.rs is migrated
-where 's: 't, 't: 'i {
+where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::templata")
 }

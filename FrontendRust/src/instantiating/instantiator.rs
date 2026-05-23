@@ -18,12 +18,32 @@ import dev.vale.typing.types._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 */
+use crate::instantiating::ast::names::*;
+use crate::instantiating::ast::types::*;
+use crate::instantiating::ast::ast::*;
+use crate::instantiating::ast::citizens::*;
+use crate::instantiating::ast::templata::*;
+use crate::instantiating::ast::hinputs::*;
+use crate::instantiating::ast::expressions::*;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
+use crate::typing::names::names::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::types::types::*;
+use crate::typing::hinputs_t::*;
+use crate::postparsing::names::IRuneS;
+use crate::keywords::Keywords;
+use crate::compile_options::GlobalOptions;
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::ast::expressions::{ReferenceExpressionTE, ExpressionTE, AddressExpressionTE};
+use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT};
+use indexmap::IndexMap;
 // mig: struct DenizenBoundToDenizenCallerBoundArgI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct DenizenBoundToDenizenCallerBoundArgI<'s, 't> {
-    pub func_id_to_bound_arg_prototype: IndexMap<IdT<FunctionBoundNameT>, PrototypeI<'s>>,
-    pub bound_param_impl_id_to_bound_arg_impl_id: IndexMap<IdT<ImplBoundNameT>, IdI<'s, IImplNameI<'s>>>,
+#[derive(PartialEq, Eq)]
+pub struct DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 's: 'i {
+    pub func_id_to_bound_arg_prototype: IndexMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>>,
+    pub bound_param_impl_id_to_bound_arg_impl_id: IndexMap<IdT<'s, 't>, IdI<'s, 'i, sI>>,
 }
 // mig: impl DenizenBoundToDenizenCallerBoundArgI
 /*
@@ -32,8 +52,8 @@ case class DenizenBoundToDenizenCallerBoundArgS(
   boundParamImplIdToBoundArgImplId: Map[IdT[ImplBoundNameT], IdI[sI, IImplNameI[sI]]]) {
 */
 // mig: fn plus
-impl<'s, 't> DenizenBoundToDenizenCallerBoundArgI<'s, 't> {
-    pub fn plus(&self, that: &DenizenBoundToDenizenCallerBoundArgI) -> DenizenBoundToDenizenCallerBoundArgI {
+impl<'s, 't, 'i> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 's: 'i {
+    pub fn plus(&self, that: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>) -> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> {
         panic!("Unimplemented: plus");
     }
 }
@@ -53,25 +73,24 @@ impl<'s, 't> DenizenBoundToDenizenCallerBoundArgI<'s, 't> {
 */
 // mig: struct InstantiatedOutputsI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InstantiatedOutputsI<'s, 't> {
-    pub functions: IndexMap<IdI<'t, IFunctionNameI<'t>>, FunctionDefinitionI<'t>>,
-    pub structs: IndexMap<IdI<'t, IStructNameI<'t>>, StructDefinitionI<'t>>,
-    pub interfaces_without_methods: IndexMap<IdI<'t, IInterfaceNameI<'t>>, InterfaceDefinitionI<'t>>,
-    pub struct_to_mutability: IndexMap<IdI<'t, IStructNameI<'t>>, MutabilityI>,
-    pub struct_to_bounds: IndexMap<IdI<'s, IStructNameI<'s>>, DenizenBoundToDenizenCallerBoundArgI<'s, 't>>,
-    pub interface_to_mutability: IndexMap<IdI<'t, IInterfaceNameI<'t>>, MutabilityI>,
-    pub interface_to_bounds: IndexMap<IdI<'s, IInterfaceNameI<'s>>, DenizenBoundToDenizenCallerBoundArgI<'s, 't>>,
-    pub impl_to_mutability: IndexMap<IdI<'t, IImplNameI<'t>>, MutabilityI>,
-    pub impl_to_bounds: IndexMap<IdI<'s, IImplNameI<'s>>, DenizenBoundToDenizenCallerBoundArgI<'s, 't>>,
-    pub interface_to_impls: IndexMap<IdI<'t, IInterfaceNameI<'t>>, Vec<(IdT<IImplNameT>, IdI<'t, IImplNameI<'t>>)>>,
-    pub interface_to_abstract_func_to_virtual_index: IndexMap<IdI<'t, IInterfaceNameI<'t>>, IndexMap<PrototypeI<'t>, usize>>,
-    pub impls: IndexMap<IdI<'t, IImplNameI<'t>>, (ICitizenIT<'t>, IdI<'t, IInterfaceNameI<'t>>, DenizenBoundToDenizenCallerBoundArgI<'s, 't>, InstantiationBoundArgumentsI<'t>)>,
-    pub abstract_func_to_bounds: IndexMap<IdI<'t, IFunctionNameI<'t>>, (DenizenBoundToDenizenCallerBoundArgI<'s, 't>, InstantiationBoundArgumentsI<'t>)>,
-    pub interface_to_impl_to_abstract_prototype_to_override: IndexMap<IdI<'t, IInterfaceNameI<'t>>, IndexMap<IdI<'t, IImplNameI<'t>>, IndexMap<PrototypeI<'t>, PrototypeI<'t>>>>,
-    pub new_impls: Vec<(IdT<IImplNameT>, IdI<'t, IImplNameI<'t>>, InstantiationBoundArgumentsI<'t>)>,
-    pub new_abstract_funcs: Vec<(PrototypeT<IFunctionNameT>, PrototypeI<'t>, usize, IdI<'t, IInterfaceNameI<'t>>, InstantiationBoundArgumentsI<'t>)>,
-    pub new_functions: Vec<(PrototypeT<IFunctionNameT>, PrototypeI<'t>, InstantiationBoundArgumentsI<'t>, Option<DenizenBoundToDenizenCallerBoundArgI<'s, 't>>)>,
+pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
+    pub functions: IndexMap<IdI<'s, 'i, cI>, &'i FunctionDefinitionI<'s, 'i>>,
+    pub structs: IndexMap<IdI<'s, 'i, cI>, &'i StructDefinitionI<'s, 'i, cI>>,
+    pub interfaces_without_methods: IndexMap<IdI<'s, 'i, cI>, &'i InterfaceDefinitionI<'s, 'i, cI>>,
+    pub struct_to_mutability: IndexMap<IdI<'s, 'i, cI>, MutabilityI>,
+    pub struct_to_bounds: IndexMap<IdI<'s, 'i, sI>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>,
+    pub interface_to_mutability: IndexMap<IdI<'s, 'i, cI>, MutabilityI>,
+    pub interface_to_bounds: IndexMap<IdI<'s, 'i, sI>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>,
+    pub impl_to_mutability: IndexMap<IdI<'s, 'i, cI>, MutabilityI>,
+    pub impl_to_bounds: IndexMap<IdI<'s, 'i, sI>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>,
+    pub interface_to_impls: IndexMap<IdI<'s, 'i, cI>, Vec<(IdT<'s, 't>, IdI<'s, 'i, cI>)>>,
+    pub interface_to_abstract_func_to_virtual_index: IndexMap<IdI<'s, 'i, cI>, IndexMap<PrototypeI<'s, 'i, cI>, usize>>,
+    pub impls: IndexMap<IdI<'s, 'i, cI>, (ICitizenIT<'s, 'i, cI>, IdI<'s, 'i, cI>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, InstantiationBoundArgumentsI<'s, 'i>)>,
+    pub abstract_func_to_bounds: IndexMap<IdI<'s, 'i, cI>, (DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, InstantiationBoundArgumentsI<'s, 'i>)>,
+    pub interface_to_impl_to_abstract_prototype_to_override: IndexMap<IdI<'s, 'i, cI>, IndexMap<IdI<'s, 'i, cI>, IndexMap<PrototypeI<'s, 'i, cI>, PrototypeI<'s, 'i, cI>>>>,
+    pub new_impls: Vec<(IdT<'s, 't>, IdI<'s, 'i, nI>, InstantiationBoundArgumentsI<'s, 'i>)>,
+    pub new_abstract_funcs: Vec<(PrototypeT<'s, 't>, PrototypeI<'s, 'i, nI>, usize, IdI<'s, 'i, cI>, InstantiationBoundArgumentsI<'s, 'i>)>,
+    pub new_functions: Vec<(PrototypeT<'s, 't>, PrototypeI<'s, 'i, nI>, InstantiationBoundArgumentsI<'s, 'i>, Option<DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>)>,
 }
 // mig: impl InstantiatedOutputsI
 /*
@@ -122,8 +141,8 @@ class InstantiatedOutputs() {
   val newFunctions: mutable.Queue[(PrototypeT[IFunctionNameT], PrototypeI[nI], InstantiationBoundArgumentsI, Option[DenizenBoundToDenizenCallerBoundArgS])] = mutable.Queue()
 */
 // mig: fn add_method_to_v_table
-impl<'s, 't> InstantiatedOutputsI<'s, 't> {
-    pub fn add_method_to_v_table(&mut self, impl_id: IdI, super_interface_id: IdI, abstract_func_prototype: PrototypeI, override_: PrototypeI) {
+impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
+    pub fn add_method_to_v_table(&mut self, impl_id: IdI<'s, 'i, cI>, super_interface_id: IdI<'s, 'i, cI>, abstract_func_prototype: PrototypeI<'s, 'i, cI>, override_: PrototypeI<'s, 'i, cI>) {
         panic!("Unimplemented: add_method_to_v_table");
     }
 }
@@ -146,7 +165,8 @@ impl<'s, 't> InstantiatedOutputsI<'s, 't> {
 object Instantiator {
 */
 // mig: fn translate
-pub fn translate(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT) -> HinputsI {
+pub fn translate<'s, 'ctx, 't, 'i>(opts: &'ctx GlobalOptions, interner: &'ctx InstantiatingInterner<'s, 'i>, keywords: &'ctx Keywords<'s>, hinputs: &'ctx HinputsT<'s, 't>) -> HinputsI<'s, 'i>
+where 's: 't, 's: 'i {
     panic!("Unimplemented: translate");
 }
 /*
@@ -164,13 +184,11 @@ pub fn translate(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords,
 */
 // mig: struct InstantiatorI
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
-pub struct InstantiatorI<'s, 't> {
-    pub opts: GlobalOptions,
-    pub interner: Interner,
-    pub keywords: Keywords,
-    pub hinputs: HinputsT,
-    pub monouts: InstantiatedOutputsI<'s, 't>,
+pub struct InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub opts: &'ctx GlobalOptions,
+    pub interner: &'ctx InstantiatingInterner<'s, 'i>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub hinputs: &'ctx HinputsT<'s, 't>,
 }
 // mig: impl InstantiatorI
 /*
@@ -182,8 +200,8 @@ class Instantiator(
   monouts: InstantiatedOutputs) {
 */
 // mig: fn translate
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_method(&self) -> HinputsI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_method(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>) -> HinputsI<'s, 'i> {
         panic!("Unimplemented: translate_method");
     }
 }
@@ -402,8 +420,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_id<T, Y>(id_t: &IdT<T>, func: impl Fn(&T) -> Y) -> IdI<Y> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_id<T, Y>(_id_t: &IdT<'s, 't>, _func: impl Fn(&T) -> Y) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_id");
     }
 }
@@ -414,8 +432,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_export_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_export_name(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, export_name_t: &ExportNameT) -> ExportNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_export_name(_denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _export_name_t: &ExportNameT<'s, 't>) -> ExportNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_export_name");
     }
 }
@@ -434,8 +452,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_export_template_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_export_template_name(export_template_name_t: &ExportTemplateNameT) -> ExportTemplateNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_export_template_name(_export_template_name_t: &ExportTemplateNameT<'s, 't>) -> ExportTemplateNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_export_template_name");
     }
 }
@@ -446,8 +464,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_name(t: &INameT) -> INameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_name(_t: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_name");
     }
 }
@@ -457,8 +475,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn collapse_and_translate_interface_definition
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn collapse_and_translate_interface_definition(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, interface_id_t: &IdT<IInterfaceNameT>, interface_id_s: &IdI<IInterfaceNameI>, instantiation_bound_args: &InstantiationBoundArgumentsI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn collapse_and_translate_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_t: &IdT<'s, 't>, _interface_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         panic!("Unimplemented: collapse_and_translate_interface_definition");
     }
 }
@@ -527,8 +545,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn assemble_instantiation_bound_param_to_arg
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn assemble_instantiation_bound_param_to_arg(instantiation_bound_params: &InstantiationBoundArgumentsT<FunctionBoundNameT, ImplBoundNameT>, instantiation_bound_args: &InstantiationBoundArgumentsI) -> DenizenBoundToDenizenCallerBoundArgI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn assemble_instantiation_bound_param_to_arg(_instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> {
         panic!("Unimplemented: assemble_instantiation_bound_param_to_arg");
     }
 }
@@ -563,8 +581,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn assemble_callee_denizen_function_bounds
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn assemble_callee_denizen_function_bounds(callee_rune_to_receiver_bound_t: &IndexMap<IRuneS, IdT<FunctionBoundNameT>>, callee_rune_to_supplied_prototype: &IndexMap<IRuneS, PrototypeI>) -> IndexMap<IdT<FunctionBoundNameT>, PrototypeI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn assemble_callee_denizen_function_bounds(_callee_rune_to_receiver_bound_t: &IndexMap<IRuneS<'s>, IdT<'s, 't>>, _callee_rune_to_supplied_prototype: &IndexMap<IRuneS<'s>, PrototypeI<'s, 'i, sI>>) -> IndexMap<IdT<'s, 't>, PrototypeI<'s, 'i, sI>> {
         panic!("Unimplemented: assemble_callee_denizen_function_bounds");
     }
 }
@@ -581,8 +599,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn assemble_callee_denizen_impl_bounds
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn assemble_callee_denizen_impl_bounds(callee_rune_to_receiver_bound_t: &IndexMap<IRuneS, IdT<ImplBoundNameT>>, callee_rune_to_supplied_impl: &IndexMap<IRuneS, IdI<IImplNameI>>) -> IndexMap<IdT<ImplBoundNameT>, IdI<IImplNameI>> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn assemble_callee_denizen_impl_bounds(_callee_rune_to_receiver_bound_t: &IndexMap<IRuneS<'s>, IdT<'s, 't>>, _callee_rune_to_supplied_impl: &IndexMap<IRuneS<'s>, IdI<'s, 'i, sI>>) -> IndexMap<IdT<'s, 't>, IdI<'s, 'i, sI>> {
         panic!("Unimplemented: assemble_callee_denizen_impl_bounds");
     }
 }
@@ -599,8 +617,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn collapse_and_translate_struct_definition
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn collapse_and_translate_struct_definition(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, struct_id_t: &IdT<IStructNameT>, struct_id_s: &IdI<IStructNameI>, instantiation_bound_args: &InstantiationBoundArgumentsI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn collapse_and_translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _struct_id_t: &IdT<'s, 't>, _struct_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         panic!("Unimplemented: collapse_and_translate_struct_definition");
     }
 }
@@ -671,8 +689,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn find_struct
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn find_struct(hinputs: &HinputsT, struct_id: &IdT<IStructNameT>) -> StructDefinitionT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn find_struct(&self, _struct_id: &IdT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
         panic!("Unimplemented: find_struct");
     }
 }
@@ -687,8 +705,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn find_interface
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn find_interface(hinputs: &HinputsT, interface_id: &IdT<IInterfaceNameT>) -> InterfaceDefinitionT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn find_interface(&self, _interface_id: &IdT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: find_interface");
     }
 }
@@ -703,8 +721,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn find_impl
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn find_impl(hinputs: &HinputsT, impl_id: &IdT<IImplNameT>) -> EdgeT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn find_impl(&self, _impl_id: &IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
         panic!("Unimplemented: find_impl");
     }
 }
@@ -720,8 +738,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_override
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_override(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, impl_id_t: &IdT<IImplNameT>, impl_id_c: &IdI<IImplNameI>, abstract_func_prototype_t: &PrototypeT<IFunctionNameT>, abstract_func_prototype_c: &PrototypeI, abstract_func_instantiation_bound_args: &InstantiationBoundArgumentsI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_override(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, _impl_id_c: &IdI<'s, 'i, cI>, _abstract_func_prototype_t: &PrototypeT<'s, 't>, _abstract_func_prototype_c: &PrototypeI<'s, 'i, cI>, _abstract_func_instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         panic!("Unimplemented: translate_override");
     }
 }
@@ -952,8 +970,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_impl
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_impl(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, impl_id_t: &IdT<IImplNameT>, impl_id_n: &IdI<IImplNameI>, instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_impl(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, _impl_id_n: &IdI<'s, 'i, nI>, _instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI<'s, 'i>) {
         panic!("Unimplemented: translate_impl");
     }
 }
@@ -1003,8 +1021,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, desired_prototype_t: &PrototypeT<IFunctionNameT>, desired_prototype_n: &PrototypeI, supplied_bound_args: &InstantiationBoundArgumentsI, maybe_denizen_bound_to_denizen_caller_supplied_thing: Option<&DenizenBoundToDenizenCallerBoundArgI>) -> FunctionDefinitionI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _desired_prototype_t: &PrototypeT<'s, 't>, _desired_prototype_n: &PrototypeI<'s, 'i, nI>, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>, _maybe_denizen_bound_to_denizen_caller_supplied_thing: Option<&DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: translate_function");
     }
 }
@@ -1104,8 +1122,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_abstract_func
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_abstract_func(opts: &GlobalOptions, interner: &Interner, keywords: &Keywords, hinputs: &HinputsT, monouts: &mut InstantiatedOutputsI, interface_id_c: &IdI<IInterfaceNameI>, desired_abstract_prototype_t: &PrototypeT<IFunctionNameT>, desired_abstract_prototype_n: &PrototypeI, virtual_index: usize, supplied_bound_args: &InstantiationBoundArgumentsI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_abstract_func(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_c: &IdI<'s, 'i, cI>, _desired_abstract_prototype_t: &PrototypeT<'s, 't>, _desired_abstract_prototype_n: &PrototypeI<'s, 'i, nI>, _virtual_index: usize, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         panic!("Unimplemented: translate_abstract_func");
     }
 }
@@ -1179,8 +1197,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn assemble_placeholder_map
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn assemble_placeholder_map(id_t: &IdT<INameT>, id_s: &IdI<INameI>) -> IndexMap<IdT<IPlaceholderNameT>, ITemplataI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn assemble_placeholder_map(_id_t: &IdT<'s, 't>, _id_s: &IdI<'s, 'i, sI>) -> IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> {
         panic!("Unimplemented: assemble_placeholder_map");
     }
 }
@@ -1216,8 +1234,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn assemble_placeholder_map_inner
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn assemble_placeholder_map_inner(id_t: &IdT<IInstantiationNameT>, id_s: &IdI<IInstantiationNameI>) -> IndexMap<IdT<IPlaceholderNameT>, ITemplataI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn assemble_placeholder_map_inner(_id_t: &IdT<'s, 't>, _id_s: &IdI<'s, 'i, sI>) -> IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> {
         panic!("Unimplemented: assemble_placeholder_map_inner");
     }
 }
@@ -1462,8 +1480,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   //  }
 */
 // mig: fn translate_struct_member
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_struct_member(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, member: &StructMemberT) -> StructMemberI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_struct_member(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _member: &IStructMemberT<'s, 't>) -> (CoordI<'s, 'i, sI>, StructMemberI<'s, 'i, cI>) {
         panic!("Unimplemented: translate_struct_member");
     }
 }
@@ -1511,8 +1529,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_variability
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_variability(x: &VariabilityT) -> VariabilityI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_variability(_x: &VariabilityT) -> VariabilityI {
         panic!("Unimplemented: translate_variability");
     }
 }
@@ -1525,8 +1543,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_mutability
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_mutability(m: &MutabilityT) -> MutabilityI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_mutability(_m: &MutabilityT) -> MutabilityI {
         panic!("Unimplemented: translate_mutability");
     }
 }
@@ -1539,8 +1557,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_prototype
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_prototype(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, prototype_t: &PrototypeT<IFunctionNameT>) -> (PrototypeI, PrototypeI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_prototype(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _prototype_t: &PrototypeT<'s, 't>) -> (PrototypeI<'s, 'i, sI>, PrototypeI<'s, 'i, cI>) {
         panic!("Unimplemented: translate_prototype");
     }
 }
@@ -1696,8 +1714,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_bound_args_for_callee
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_bound_args_for_callee(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, callee_bound_params: &InstantiationBoundArgumentsT<FunctionBoundNameT, ImplBoundNameT>, caller_supplied_bound_args: &InstantiationBoundArgumentsI) -> InstantiationBoundArgumentsI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_bound_args_for_callee(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _instantiation_bound_args_for_call_unsubstituted: &InstantiationBoundArgumentsT<'s, 't>) -> InstantiationBoundArgumentsI<'s, 'i> {
         panic!("Unimplemented: translate_bound_args_for_callee");
     }
 }
@@ -1799,8 +1817,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_collapsed_struct_definition
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_collapsed_struct_definition(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, struct_id_t: &IdT<IStructNameT>, struct_id_c: &IdI<IStructNameI>, struct_def_t: &StructDefinitionT) -> StructDefinitionI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _struct_id_t: &IdT<'s, 't>, _struct_id_c: &IdI<'s, 'i, cI>, _struct_def_t: &StructDefinitionT<'s, 't>) {
         panic!("Unimplemented: translate_collapsed_struct_definition");
     }
 }
@@ -1862,8 +1880,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_collapsed_interface_definition
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_collapsed_interface_definition(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, interface_id_c: &IdI<IInterfaceNameI>, interface_def_t: &InterfaceDefinitionT) -> InterfaceDefinitionI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_collapsed_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _interface_id_c: &IdI<'s, 'i, cI>, _interface_def_t: &InterfaceDefinitionT<'s, 't>) {
         panic!("Unimplemented: translate_collapsed_interface_definition");
     }
 }
@@ -1938,8 +1956,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function_header
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function_header(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, header_t: &FunctionHeaderT) -> FunctionHeaderI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function_header(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _header_t: &FunctionHeaderT<'s, 't>) -> FunctionHeaderI<'s, 'i> {
         panic!("Unimplemented: translate_function_header");
     }
 }
@@ -1977,8 +1995,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function_attribute
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function_attribute(x: &IFunctionAttributeT) -> IFunctionAttributeI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function_attribute(_x: &IFunctionAttributeT<'s>) -> IFunctionAttributeI<'s> {
         panic!("Unimplemented: translate_function_attribute");
     }
 }
@@ -1993,8 +2011,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_collapsed_function
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_collapsed_function(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, func_id_c: &IdI<IFunctionNameI>, func_def_t: &FunctionDefinitionT) -> FunctionDefinitionI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_collapsed_function(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _desired_prototype_c: &PrototypeI<'s, 'i, cI>, _function_t: &FunctionDefinitionT<'s, 't>) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: translate_collapsed_function");
     }
 }
@@ -2054,8 +2072,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_local_variable
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_local_variable(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, local: &LocalVariableT) -> (CoordI, LocalVariableI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_local_variable(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _variable: &ILocalVariableT<'s, 't>) -> (CoordI<'s, 'i, sI>, ILocalVariableI<'s, 'i>) {
         panic!("Unimplemented: translate_local_variable");
     }
 }
@@ -2081,8 +2099,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_reference_local_variable
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_reference_local_variable(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, ref_local: &ReferenceLocalVariableT) -> (CoordI, ReferenceLocalVariableI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_reference_local_variable(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _variable: &ReferenceLocalVariableT<'s, 't>) -> (CoordI<'s, 'i, sI>, ReferenceLocalVariableI<'s, 'i>) {
         panic!("Unimplemented: translate_reference_local_variable");
     }
 }
@@ -2113,8 +2131,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_addressible_local_variable
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_addressible_local_variable(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, addr_local: &AddressibleLocalVariableT) -> (CoordI, AddressibleLocalVariableI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_addressible_local_variable(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _variable: &AddressibleLocalVariableT<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressibleLocalVariableI<'s, 'i>) {
         panic!("Unimplemented: translate_addressible_local_variable");
     }
 }
@@ -2145,8 +2163,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_addr_expr
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_addr_expr(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, expr: &AddressExpressionT) -> (CoordI, AddressExpressionI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_addr_expr(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _expr: &AddressExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressExpressionIE<'s, 'i, cI>) {
         panic!("Unimplemented: translate_addr_expr");
     }
 }
@@ -2280,8 +2298,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_expr
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_expr(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, expr: &ExpressionT) -> (CoordI, ExpressionI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_expr(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _expr: &ExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, ExpressionIE<'s, 'i, cI>) {
         panic!("Unimplemented: translate_expr");
     }
 }
@@ -2308,8 +2326,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_ref_expr
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_ref_expr(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, expr: &ReferenceExpressionT) -> (CoordI, ReferenceExpressionI) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_ref_expr(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _expr: &ReferenceExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, ReferenceExpressionIE<'s, 'i, cI>) {
         panic!("Unimplemented: translate_ref_expr");
     }
 }
@@ -3115,8 +3133,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn maybe_immutabilify
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn maybe_immutabilify(inner_ie: &ReferenceExpressionI) -> ReferenceExpressionI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn maybe_immutabilify(_inner_ie: &ReferenceExpressionIE<'s, 'i, cI>) -> ReferenceExpressionIE<'s, 'i, cI> {
         panic!("Unimplemented: maybe_immutabilify");
     }
 }
@@ -3150,8 +3168,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn run_in_new_pure_region
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn run_in_new_pure_region<T>(run: impl Fn(&RegionT) -> T) -> T {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn run_in_new_pure_region<T>(_denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _denizen_template_name: &IdT<'s, 't>, _new_default_region_t: &ITemplataT<'s, 't>, _run: impl Fn(&IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, &RegionT) -> T) -> T {
         panic!("Unimplemented: run_in_new_pure_region");
     }
 }
@@ -3180,8 +3198,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_ownership
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_ownership(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, ownership_t: &OwnershipT) -> OwnershipI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_ownership(_substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _ownership_t: &OwnershipT, _region_t: &RegionT) -> OwnershipI {
         panic!("Unimplemented: translate_ownership");
     }
 }
@@ -3213,8 +3231,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn compose_ownerships
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn compose_ownerships(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI, kind: &KindIT) -> OwnershipI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn compose_ownerships(_outer_ownership: &OwnershipT, _inner_ownership: &OwnershipI, _kind: &KindIT<'s, 'i, sI>) -> OwnershipI {
         panic!("Unimplemented: compose_ownerships");
     }
 }
@@ -3281,8 +3299,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn compose_ownerships
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn compose_ownerships_second(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI) -> OwnershipI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn compose_ownerships_second(_outer_ownership: &OwnershipT, _inner_ownership: &OwnershipI) -> OwnershipT {
         panic!("Unimplemented: compose_ownerships_second");
     }
 }
@@ -3310,8 +3328,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function_id(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, func_id_t: &IdT<IFunctionNameT>) -> IdI<IFunctionNameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function_id(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _func_id_t: &IdT<'s, 't>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_function_id");
     }
 }
@@ -3353,8 +3371,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
 //  }
 */
 // mig: fn translate_struct_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_struct_id(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, struct_id_t: &IdT<IStructNameT>) -> IdI<IStructNameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_struct_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _struct_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_struct_id");
     }
 }
@@ -3383,8 +3401,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_interface_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_interface_id(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, interface_id_t: &IdT<IInterfaceNameT>) -> IdI<IInterfaceNameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_interface_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _interface_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_interface_id");
     }
 }
@@ -3411,8 +3429,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_impl_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_impl_id(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, impl_id_t: &IdT<IImplNameT>) -> IdI<IImplNameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_impl_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _impl_id_t: &IdT<'s, 't>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_impl_id");
     }
 }
@@ -3467,8 +3485,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_citizen_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_citizen_name(citizen_name_t: &IInterfaceNameT) -> IInterfaceNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_citizen_name(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _t: &ICitizenNameT<'s, 't>) -> ICitizenNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_citizen_name");
     }
 }
@@ -3487,8 +3505,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_id_from_substitutions(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, id: &IdT<INameT>) -> IdI<INameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_id_from_substitutions(_substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _id: &IdT<'s, 't>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_id_from_substitutions");
     }
 }
@@ -3504,8 +3522,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_citizen_id
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_citizen_id(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, citizen_id_t: &IdT<ICitizenNameT>) -> IdI<ICitizenNameI> {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_citizen_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _citizen_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
         panic!("Unimplemented: translate_citizen_id");
     }
 }
@@ -3532,8 +3550,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_coord
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_coord(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, coord_t: &CoordT) -> CoordI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_coord(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _coord_t: &CoordT<'s, 't>) -> CoordI<'s, 'i, sI> {
         panic!("Unimplemented: translate_coord");
     }
 }
@@ -3628,8 +3646,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn get_mutability
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn get_mutability(hinputs: &HinputsT, monouts: &InstantiatedOutputsI, kind_it: &KindIT) -> MutabilityI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn get_mutability(_monouts: &InstantiatedOutputsI<'s, 't, 'i>, _kind_it: &KindIT<'s, 'i, cI>) -> MutabilityI {
         panic!("Unimplemented: get_mutability");
     }
 }
@@ -3654,8 +3672,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_citizen
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_citizen(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, citizen_t: &ICitizenIT) -> ICitizenIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_citizen(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _citizen: &ICitizenTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> ICitizenIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_citizen");
     }
 }
@@ -3675,8 +3693,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_struct
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_struct(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, struct_t: &StructT) -> StructIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_struct(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _struct: &StructTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> StructIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_struct");
     }
 }
@@ -3701,8 +3719,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_interface
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_interface(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, interface_t: &InterfaceT) -> InterfaceIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_interface(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _interface: &InterfaceTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> InterfaceIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_interface");
     }
 }
@@ -3726,8 +3744,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_super_kind
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_super_kind(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, super_kind_t: &SuperKindT) -> SuperKindIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_super_kind(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _kind: &ISuperKindTT<'s, 't>) -> InterfaceIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_super_kind");
     }
 }
@@ -3767,8 +3785,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_placeholder
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_placeholder(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, placeholder_t: &PlaceholderNameT) -> ITemplataI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_placeholder(&self, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _t: &KindPlaceholderT<'s, 't>) -> KindIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_placeholder");
     }
 }
@@ -3785,8 +3803,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_static_sized_array
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_static_sized_array(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, arr_t: &StaticSizedArrayIT) -> StaticSizedArrayIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_static_sized_array(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _ssa_tt: &StaticSizedArrayTT<'s, 't>) -> StaticSizedArrayIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_static_sized_array");
     }
 }
@@ -3840,8 +3858,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_runtime_sized_array
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_runtime_sized_array(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, arr_t: &RuntimeSizedArrayIT) -> RuntimeSizedArrayIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_runtime_sized_array(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _rsa_tt: &RuntimeSizedArrayTT<'s, 't>) -> RuntimeSizedArrayIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_runtime_sized_array");
     }
 }
@@ -3890,8 +3908,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_kind
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_kind(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, kind_t: &KindT) -> KindIT {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_kind(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _kind_t: &KindT<'s, 't>) -> KindIT<'s, 'i, sI> {
         panic!("Unimplemented: translate_kind");
     }
 }
@@ -3939,8 +3957,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_parameter
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_parameter(denizen_name: &IdT<IInstantiationNameT>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, param_t: &ParameterT) -> ParameterI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_parameter(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _param_t: &ParameterT<'s, 't>) -> ParameterI<'s, 'i> {
         panic!("Unimplemented: translate_parameter");
     }
 }
@@ -3966,8 +3984,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_templata
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_templata(substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, perspective_region_t: &RegionT, templata_t: &ITemplataT) -> ITemplataI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_templata(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _templata_t: &ITemplataT<'s, 't>) -> ITemplataI<'s, 'i, sI> {
         panic!("Unimplemented: translate_templata");
     }
 }
@@ -4004,8 +4022,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_var_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_var_name(var_name_t: &IVarNameT) -> IVarNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_var_name(_var_name_t: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_var_name");
     }
 }
@@ -4030,8 +4048,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function_template_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function_template_name(func_template_name_t: &IFunctionTemplateNameT) -> IFunctionTemplateNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function_template_name(_func_template_name_t: &IFunctionTemplateNameT<'s, 't>) -> IFunctionTemplateNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_function_template_name");
     }
 }
@@ -4044,8 +4062,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_function_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_function_name(func_name_t: &IFunctionNameT) -> IFunctionNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_function_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _name: &IFunctionNameT<'s, 't>) -> IFunctionNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_function_name");
     }
 }
@@ -4125,8 +4143,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_impl_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_impl_name(impl_name_t: &IImplNameT) -> IImplNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_impl_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _name: &IImplNameT<'s, 't>) -> IImplNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_impl_name");
     }
 }
@@ -4181,8 +4199,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_impl_template_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_impl_template_name(impl_template_name_t: &IImplTemplateNameT) -> IImplTemplateNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_impl_template_name(_name: &IImplTemplateNameT<'s, 't>) -> IImplTemplateNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_impl_template_name");
     }
 }
@@ -4213,8 +4231,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
 //  }
 */
 // mig: fn translate_struct_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_struct_name(struct_name_t: &IStructNameT) -> IStructNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_struct_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _name: &IStructNameT<'s, 't>) -> IStructNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_struct_name");
     }
 }
@@ -4256,8 +4274,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_interface_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_interface_name(interface_name_t: &IInterfaceNameT) -> IInterfaceNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_interface_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _name: &IInterfaceNameT<'s, 't>) -> IInterfaceNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_interface_name");
     }
 }
@@ -4280,8 +4298,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_interface_template_name
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_interface_template_name(interface_template_name_t: &IInterfaceTemplateNameT) -> IInterfaceTemplateNameI {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_interface_template_name(_name: &IInterfaceTemplateNameT<'s, 't>) -> IInterfaceTemplateNameI<'s, 'i, sI> {
         panic!("Unimplemented: translate_interface_template_name");
     }
 }
@@ -4296,6 +4314,15 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_name
+// Rust adaptation (SPDMX-S): Scala overloads `translateName`. The 1-arg
+// `translateName(t: INameT)` is `translate_name` above; this 5-arg version is
+// suffixed `_substituting` to disambiguate (Rust lacks overloading). Slice pipeline
+// emitted no stub for this overload (TL-added per NNDX escalation).
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_name_substituting(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _perspective_region_t: &RegionT, _name: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
+        panic!("Unimplemented: translate_name_substituting");
+    }
+}
 /*
   def translateName(
     denizenName: IdT[IInstantiationNameT],
@@ -4343,8 +4370,8 @@ impl<'s, 't> InstantiatorI<'s, 't> {
   }
 */
 // mig: fn translate_collapsed_impl_definition
-impl<'s, 't> InstantiatorI<'s, 't> {
-    pub fn translate_collapsed_impl_definition(denizen_name: &IdT<IInstantiationNameT>, instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI, substitutions: &IndexMap<IdT<INameT>, IndexMap<IdT<IPlaceholderNameT>, ITemplataI>>, impl_id_t: &IdT<IImplNameT>, impl_id_s: &IdI<IImplNameI>, impl_id_c: &IdI<IImplNameI>, impl_definition: &EdgeT) {
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_collapsed_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>>, _impl_id_t: &IdT<'s, 't>, _impl_id_s: &IdI<'s, 'i, sI>, _impl_id_c: &IdI<'s, 'i, cI>, _impl_definition: &EdgeT<'s, 't>) {
         panic!("Unimplemented: translate_collapsed_impl_definition");
     }
 }
