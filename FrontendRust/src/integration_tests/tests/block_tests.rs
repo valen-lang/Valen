@@ -1,3 +1,7 @@
+// mig: struct BlockTests
+pub struct BlockTests;
+
+/*
 package dev.vale
 
 import dev.vale.postparsing._
@@ -8,6 +12,15 @@ import dev.vale.von.VonInt
 import org.scalatest._
 
 class BlockTests extends FunSuite with Matchers {
+*/
+// mig: fn empty_block
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn empty_block() {
+    panic!("Unmigrated test: empty_block");
+}
+
+/*
   test("Empty block") {
     val compile = RunCompilation.test(
       """
@@ -29,6 +42,15 @@ class BlockTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
+*/
+// mig: fn simple_block_with_a_variable
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_block_with_a_variable() {
+    panic!("Unmigrated test: simple_block_with_a_variable");
+}
+
+/*
   test("Simple block with a variable") {
     val compile = RunCompilation.test(
       """
@@ -55,6 +77,15 @@ class BlockTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
+*/
+// mig: fn simple_block_with_a_variable_another_variable_outside_with_same_name
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
+    panic!("Unmigrated test: simple_block_with_a_variable_another_variable_outside_with_same_name");
+}
+
+/*
   test("Simple block with a variable, another variable outside with same name") {
     val compile = RunCompilation.test(
       """
@@ -71,3 +102,5 @@ class BlockTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 }
+
+*/

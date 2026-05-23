@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.highertyping.{ICompileErrorA, ProgramA}
@@ -356,3 +357,5 @@ class IntegrationTestsA extends FunSuite with Matchers {
 //  }
 
 }
+
+*/

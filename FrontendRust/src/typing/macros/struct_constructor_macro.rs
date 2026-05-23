@@ -339,17 +339,17 @@ where 's: 't,
             false, // sanity_check
             coutputs,
             env.template_id,
-            RegionT {},
+            RegionT { region: IRegionT::Default },
             *struct_tt,
             bound_arguments_source2,
         );
         let constructor_return_ownership = match mutability {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => OwnershipT::Own,
+            ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::MutabilityTemplataType(_)) => OwnershipT::Own,
             _ => panic!("Unexpected mutability type in generate_function_body_struct_constructor"),
         };
-        let constructor_return_type = CoordT { ownership: constructor_return_ownership, region: RegionT {}, kind: KindT::Struct(struct_tt) };
+        let constructor_return_type = CoordT { ownership: constructor_return_ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(struct_tt) };
 
         let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
         let header = FunctionHeaderT {
@@ -416,7 +416,7 @@ where 's: 't,
     val mutability =
       StructCompiler.getMutability(
         opts.globalOptions.sanityCheck,
-        interner, keywords, coutputs, env.denizenTemplateId, RegionT(), structTT,
+        interner, keywords, coutputs, env.denizenTemplateId, RegionT(DefaultRegionT), structTT,
         // Not entirely sure if this is right, but it's consistent with using it for the return kind
         // and its the more conservative option so we'll go with it for now.
         UseBoundsFromContainer(
@@ -428,7 +428,7 @@ where 's: 't,
         case MutabilityTemplataT(ImmutableT) => ShareT
         case PlaceholderTemplataT(idT, MutabilityTemplataType()) => OwnT
       }
-    val constructorReturnType = CoordT(constructorReturnOwnership, RegionT(), structTT)
+    val constructorReturnType = CoordT(constructorReturnOwnership, RegionT(DefaultRegionT), structTT)
 
     // not virtual because how could a constructor be virtual
     val header =

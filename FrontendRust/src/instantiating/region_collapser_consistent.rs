@@ -8,6 +8,10 @@ import dev.vale.{vassertSome, vimpl}
 // This one will use one map for the entire deep collapse, rather than making a new map for everything.
 object RegionCollapserConsistent {
 
+*/
+// mig: fn collapse_prototype
+pub fn collapse_prototype() { panic!("Unimplemented: collapse_prototype"); }
+/*
   def collapsePrototype(map: Map[Int, Int], prototype: PrototypeI[sI]): PrototypeI[nI] = {
     val PrototypeI(id, returnType) = prototype
     PrototypeI(
@@ -15,6 +19,10 @@ object RegionCollapserConsistent {
       collapseCoord(map, returnType))
   }
 
+*/
+// mig: fn collapse_id
+pub fn collapse_id() { panic!("Unimplemented: collapse_id"); }
+/*
   def collapseId[T <: INameI[sI], Y <: INameI[nI]](
       map: Map[Int, Int],
       id: IdI[sI, T],
@@ -27,6 +35,10 @@ object RegionCollapserConsistent {
       func(localName))
   }
 
+*/
+// mig: fn collapse_function_id
+pub fn collapse_function_id() { panic!("Unimplemented: collapse_function_id"); }
+/*
   def collapseFunctionId(
       map: Map[Int, Int],
       id: IdI[sI, IFunctionNameI[sI]]):
@@ -37,6 +49,10 @@ object RegionCollapserConsistent {
       x => collapseFunctionName(map, x))
   }
 
+*/
+// mig: fn collapse_function_name
+pub fn collapse_function_name() { panic!("Unimplemented: collapse_function_name"); }
+/*
   def collapseFunctionName(
       map: Map[Int, Int],
       name: IFunctionNameI[sI]):
@@ -102,6 +118,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_var_name
+pub fn collapse_var_name() { panic!("Unimplemented: collapse_var_name"); }
+/*
   def collapseVarName(
     name: IVarNameI[sI]):
   IVarNameI[sI] = {
@@ -113,6 +133,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_name
+pub fn collapse_name() { panic!("Unimplemented: collapse_name"); }
+/*
   def collapseName(
       map: Map[Int, Int],
       name: INameI[sI]):
@@ -135,6 +159,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_coord_templata
+pub fn collapse_coord_templata() { panic!("Unimplemented: collapse_coord_templata"); }
+/*
   def collapseCoordTemplata(
       map: Map[Int, Int],
       templata: CoordTemplataI[sI]):
@@ -143,6 +171,10 @@ object RegionCollapserConsistent {
     CoordTemplataI(collapseRegionTemplata(map, region), collapseCoord(map, coord))
   }
 
+*/
+// mig: fn collapse_templata
+pub fn collapse_templata() { panic!("Unimplemented: collapse_templata"); }
+/*
   def collapseTemplata(
     map: Map[Int, Int],
     templata: ITemplataI[sI]):
@@ -158,6 +190,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_region_templata
+pub fn collapse_region_templata() { panic!("Unimplemented: collapse_region_templata"); }
+/*
   def collapseRegionTemplata(
     map: Map[Int, Int],
     templata: RegionTemplataI[sI]):
@@ -166,6 +202,10 @@ object RegionCollapserConsistent {
     RegionTemplataI[nI](vassertSome(map.get(oldPureHeight)))
   }
 
+*/
+// mig: fn collapse_coord
+pub fn collapse_coord() { panic!("Unimplemented: collapse_coord"); }
+/*
   def collapseCoord(
       map: Map[Int, Int],
       coord: CoordI[sI]):
@@ -174,6 +214,10 @@ object RegionCollapserConsistent {
     CoordI(ownership, collapseKind(map, kind))
   }
 
+*/
+// mig: fn collapse_kind
+pub fn collapse_kind() { panic!("Unimplemented: collapse_kind"); }
+/*
   def collapseKind(
       map: Map[Int, Int],
       kind: KindIT[sI]):
@@ -192,6 +236,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_runtime_sized_array
+pub fn collapse_runtime_sized_array() { panic!("Unimplemented: collapse_runtime_sized_array"); }
+/*
   def collapseRuntimeSizedArray(
     map: Map[Int, Int],
     rsa: RuntimeSizedArrayIT[sI]):
@@ -211,6 +259,10 @@ object RegionCollapserConsistent {
         }))
   }
 
+*/
+// mig: fn collapse_static_sized_array
+pub fn collapse_static_sized_array() { panic!("Unimplemented: collapse_static_sized_array"); }
+/*
   def collapseStaticSizedArray(
     map: Map[Int, Int],
     ssa: StaticSizedArrayIT[sI]):
@@ -232,6 +284,10 @@ object RegionCollapserConsistent {
         }))
   }
 
+*/
+// mig: fn collapse_citizen
+pub fn collapse_citizen() { panic!("Unimplemented: collapse_citizen"); }
+/*
   def collapseCitizen(
       map: Map[Int, Int],
       citizen: ICitizenIT[sI]):
@@ -242,6 +298,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_citizen_id
+pub fn collapse_citizen_id() { panic!("Unimplemented: collapse_citizen_id"); }
+/*
   def collapseCitizenId(
       map: Map[Int, Int],
       implId: IdI[sI, ICitizenNameI[sI]]):
@@ -252,6 +312,10 @@ object RegionCollapserConsistent {
       collapseCitizenName(map, _))
   }
 
+*/
+// mig: fn collapse_citizen_name
+pub fn collapse_citizen_name() { panic!("Unimplemented: collapse_citizen_name"); }
+/*
   def collapseCitizenName(
       map: Map[Int, Int],
       citizenName: ICitizenNameI[sI]):
@@ -262,6 +326,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_struct_name
+pub fn collapse_struct_name() { panic!("Unimplemented: collapse_struct_name"); }
+/*
   def collapseStructName(
       map: Map[Int, Int],
       structName: IStructNameI[sI]):
@@ -283,6 +351,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_struct_id
+pub fn collapse_struct_id() { panic!("Unimplemented: collapse_struct_id"); }
+/*
   def collapseStructId(
     map: Map[Int, Int],
     structId: IdI[sI, IStructNameI[sI]]):
@@ -293,6 +365,10 @@ object RegionCollapserConsistent {
       collapseStructName(map, _))
   }
 
+*/
+// mig: fn collapse_interface_name
+pub fn collapse_interface_name() { panic!("Unimplemented: collapse_interface_name"); }
+/*
   def collapseInterfaceName(
       map: Map[Int, Int],
       interfaceName: IInterfaceNameI[sI]):
@@ -306,6 +382,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_interface_id
+pub fn collapse_interface_id() { panic!("Unimplemented: collapse_interface_id"); }
+/*
   def collapseInterfaceId(
       map: Map[Int, Int],
       interfaceId: IdI[sI, IInterfaceNameI[sI]]):
@@ -316,6 +396,10 @@ object RegionCollapserConsistent {
       collapseInterfaceName(map, _))
   }
 
+*/
+// mig: fn collapse_export_id
+pub fn collapse_export_id() { panic!("Unimplemented: collapse_export_id"); }
+/*
   def collapseExportId(
     map: Map[Int, Int],
     structId: IdI[sI, ExportNameI[sI]]):
@@ -330,6 +414,10 @@ object RegionCollapserConsistent {
       })
   }
 
+*/
+// mig: fn collapse_extern_id
+pub fn collapse_extern_id() { panic!("Unimplemented: collapse_extern_id"); }
+/*
   def collapseExternId(
     map: Map[Int, Int],
     structId: IdI[sI, ExternNameI[sI]]):
@@ -344,6 +432,10 @@ object RegionCollapserConsistent {
       })
   }
 
+*/
+// mig: fn collapse_citizen_template_name
+pub fn collapse_citizen_template_name() { panic!("Unimplemented: collapse_citizen_template_name"); }
+/*
   def collapseCitizenTemplateName(
       citizenName: ICitizenTemplateNameI[sI]):
   ICitizenTemplateNameI[nI] = {
@@ -357,6 +449,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_struct_template_name
+pub fn collapse_struct_template_name() { panic!("Unimplemented: collapse_struct_template_name"); }
+/*
   def collapseStructTemplateName(
     structName: IStructTemplateNameI[sI]):
   IStructTemplateNameI[nI] = {
@@ -367,6 +463,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_function_template_name
+pub fn collapse_function_template_name() { panic!("Unimplemented: collapse_function_template_name"); }
+/*
   def collapseFunctionTemplateName(
       structName: IFunctionTemplateNameI[sI]):
   IFunctionTemplateNameI[nI] = {
@@ -375,6 +475,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_interface_template_name
+pub fn collapse_interface_template_name() { panic!("Unimplemented: collapse_interface_template_name"); }
+/*
   def collapseInterfaceTemplateName(
       structName: IInterfaceTemplateNameI[sI]):
   IInterfaceTemplateNameI[nI] = {
@@ -383,6 +487,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_impl_name
+pub fn collapse_impl_name() { panic!("Unimplemented: collapse_impl_name"); }
+/*
   def collapseImplName(
       map: Map[Int, Int],
       name: IImplNameI[sI]):
@@ -408,6 +516,10 @@ object RegionCollapserConsistent {
     }
   }
 
+*/
+// mig: fn collapse_impl_id
+pub fn collapse_impl_id() { panic!("Unimplemented: collapse_impl_id"); }
+/*
   def collapseImplId(
     map: Map[Int, Int],
     structId: IdI[sI, IImplNameI[sI]]):
@@ -418,6 +530,10 @@ object RegionCollapserConsistent {
       collapseImplName(map, _))
   }
 
+*/
+// mig: fn collapse_impl_template_id
+pub fn collapse_impl_template_id() { panic!("Unimplemented: collapse_impl_template_id"); }
+/*
   def collapseImplTemplateId(
       map: Map[Int, Int],
       structId: IdI[sI, IImplTemplateNameI[sI]]):
@@ -428,6 +544,10 @@ object RegionCollapserConsistent {
       collapseImplTemplateName(map, _))
   }
 
+*/
+// mig: fn collapse_impl_template_name
+pub fn collapse_impl_template_name() { panic!("Unimplemented: collapse_impl_template_name"); }
+/*
   def collapseImplTemplateName(
     map: Map[Int, Int],
     structName: IImplTemplateNameI[sI]):

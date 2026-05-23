@@ -720,6 +720,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     members_predicted_rune_to_type: _,
     member_rules: member_rules_with_implicitly_coercing_lookups_s,
     members,
+    internal_methods: internal_methods_s,
   } = struct_s;
 
   // Check cache
@@ -821,7 +822,10 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   for rule in member_rules_builder.iter() {
     if matches!(rule, IRulexSR::MaybeCoercingCall(_)) { panic!("vwat: MaybeCoercingCallSR in member rules after explicify"); }
   }
-
+  let methods_env = env.add_runes(rune_a_to_type.clone());
+  let internal_methods_a: Vec<&'s FunctionA<'s>> = internal_methods_s.iter()
+    .map(|method| self.translate_function(astrouts, &methods_env, *method))
+    .collect();
   let struct_a = self.scout_arena.alloc(StructA::new(
     range_s.clone(),
     IStructDeclarationNameS::TopLevelStructDeclarationName((*name_s).clone()),
@@ -836,17 +840,19 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     members_rune_a_to_type,
     self.scout_arena.alloc_slice_from_vec(member_rules_builder),
     members,
+    self.scout_arena.alloc_slice_from_vec(internal_methods_a),
   ));
   astrouts.code_location_to_struct.insert(range_s.begin.clone(), struct_a);
   struct_a
 }
 /*
+Guardian: temp-disable: SPDMX — Multi-step landing: first add destructure to read internal_methods_s, then build methods_env + translate_function loop + pass to StructA::new in subsequent edits. Each step alone fails SPDMX because the final integration is split across multiple Edits in the same fn. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-729-1779424337649/hook-729/translate_struct--706.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateStruct(
     astrouts: Astrouts,
     env: EnvironmentA,
     structS: StructS):
   StructA = {
-    val StructS(rangeS, nameS, attributesS, weakable, genericParametersS, mutabilityRuneS, maybePredictedMutability, tyype, headerRuneToExplicitType, headerPredictedRuneToType, headerRulesWithImplicitlyCoercingLookupsS, membersRuneToExplicitType, membersPredictedRuneToType, memberRulesWithImplicitlyCoercingLookupsS, members) = structS
+    val StructS(rangeS, nameS, attributesS, weakable, genericParametersS, mutabilityRuneS, maybePredictedMutability, tyype, headerRuneToExplicitType, headerPredictedRuneToType, headerRulesWithImplicitlyCoercingLookupsS, membersRuneToExplicitType, membersPredictedRuneToType, memberRulesWithImplicitlyCoercingLookupsS, members, internalMethodsS) = structS
 
     val runeTypingEnv =
       new IRuneTypeSolverEnv {
@@ -930,7 +936,12 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     memberRulesExplicitS.collect({
       case MaybeCoercingCallSR(_, _, _, _) => vwat()
     })
-
+    val methodsEnv =
+      env.addRunes(runeAToType.toMap)
+    val internalMethodsA =
+      internalMethodsS.map(method => {
+        translateFunction(astrouts, methodsEnv, method)
+      })
     val structA =
       highertyping.StructA(
         rangeS,
@@ -945,7 +956,8 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
         headerRulesExplicitS,
         membersRuneAToType,
         memberRulesExplicitS,
-        members)
+        members,
+        internalMethodsA)
     astrouts.codeLocationToStruct.put(rangeS.begin, structA)
     structA
   }

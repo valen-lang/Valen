@@ -7,7 +7,7 @@ use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
-use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
+use crate::typing::types::types::{CoordT, IRegionT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
@@ -1224,8 +1224,8 @@ impl<'s, 't> StaticSizedArrayTemplateNameT<'s, 't> {
         let variability = expect_variability(template_args[2]);
         // val elementType = expectCoordTemplata(templateArgs(3)).coord
         let element_type = expect_coord_templata(template_args[3]).coord;
-        // val selfRegion = vregionmut(RegionT())
-        let self_region = RegionT;
+        // val selfRegion = vregionmut(RegionT(DefaultRegionT))
+        let self_region = RegionT { region: IRegionT::Default };
         // interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             mutability,
@@ -1247,7 +1247,7 @@ impl<'s, 't> StaticSizedArrayTemplateNameT<'s, 't> {
     val mutability = expectMutability(templateArgs(1))
     val variability = expectVariability(templateArgs(2))
     val elementType = expectCoordTemplata(templateArgs(3)).coord
-    val selfRegion = vregionmut(RegionT())
+    val selfRegion = vregionmut(RegionT(DefaultRegionT))
     interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
   }
 */
@@ -1296,8 +1296,8 @@ impl<'s, 't> RuntimeSizedArrayTemplateNameT<'s, 't> {
         let mutability = expect_mutability(template_args[0]);
         // val elementType = expectCoordTemplata(templateArgs(1)).coord
         let element_type = expect_coord_templata(template_args[1]).coord;
-        // val region = vregionmut(RegionT())
-        let region = RegionT;
+        // val region = vregionmut(RegionT(DefaultRegionT))
+        let region = RegionT { region: IRegionT::Default };
         // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
             mutability,
@@ -1315,7 +1315,7 @@ impl<'s, 't> RuntimeSizedArrayTemplateNameT<'s, 't> {
     vassert(templateArgs.size == 2)
     val mutability = expectMutability(templateArgs(0))
     val elementType = expectCoordTemplata(templateArgs(1)).coord
-    val region = vregionmut(RegionT())
+    val region = vregionmut(RegionT(DefaultRegionT))
     interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
   }
 */
@@ -1728,12 +1728,14 @@ case class ExternNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternFunctionNameT<'s, 't> {
     pub human_name: StrI<'s>,
+    pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
     pub _must_intern: MustIntern,
 }
 /*
 case class ExternFunctionNameT(
   humanName: StrI,
+  templateArgs: Vector[ITemplataT[ITemplataType]],
   parameters: Vector[CoordT]
 ) extends IFunctionNameT with IFunctionTemplateNameT {
   override def template: IFunctionTemplateNameT = this
@@ -1744,8 +1746,6 @@ case class ExternFunctionNameT(
     templateArgs: Vector[ITemplataT[ITemplataType]],
     params: Vector[CoordT]):
   IFunctionNameT = this
-
-  override def templateArgs: Vector[ITemplataT[ITemplataType]] = Vector.empty
 }
 
 */
@@ -1885,6 +1885,7 @@ pub struct LambdaCallFunctionTemplateNameT<'s, 't> {
     pub _must_intern: MustIntern,
 }
 /*
+// Per @LAGTNGZ, paramTypes is part of the template name so different arg tuples produce distinct names.
 case class LambdaCallFunctionTemplateNameT(
   codeLocation: CodeLocationS,
   paramTypes: Vector[CoordT]
@@ -1906,6 +1907,7 @@ pub struct LambdaCallFunctionNameT<'s, 't> {
     pub _must_intern: MustIntern,
 }
 /*
+// Per @LAGTNGZ, one closure struct can correspond to many of these — one per distinct call-site arg tuple.
 case class LambdaCallFunctionNameT(
   template: LambdaCallFunctionTemplateNameT,
   templateArgs: Vector[ITemplataT[ITemplataType]],
@@ -2129,6 +2131,7 @@ pub struct LambdaCitizenTemplateNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 /*
+// Per @LAGTNGZ, the closure struct doesnt have its own generic parameters, but its associated LambdaCallFunctionTemplateNameT does.
 case class LambdaCitizenTemplateNameT(
   codeLocation: CodeLocationS
 ) extends IStructTemplateNameT {
@@ -3764,6 +3767,7 @@ pub struct ExternFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub human_name: StrI<'s>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 /* Guardian: disable-all */

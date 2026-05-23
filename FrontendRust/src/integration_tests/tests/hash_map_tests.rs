@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.typing.env.ReferenceLocalVariableT
@@ -400,3 +401,5 @@ class HashMapTest extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
 }
+
+*/

@@ -8,8 +8,9 @@ use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
-  IExpressionSE, IfSE, IndexSE, LetSE, LocalLoadSE, LocalMutateSE, LocalS, OutsideLoadSE, OwnershippedSE, PureSE,
-  ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE, TupleSE, VoidSE,
+  IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, OutsideLoadSE, OverloadSetSE,
+  OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE, TemplataLoadSE,
+  TupleSE, VoidSE,
 };
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::rules::rules::{
@@ -38,15 +39,15 @@ use crate::postparsing::expressions::ConstantFloatSE;
 package dev.vale.postparsing
 
 import dev.vale.postparsing.patterns.PatternScout
-import dev.vale.postparsing.rules.{IRulexSR, IntLiteralSL, LiteralSR, MutabilityLiteralSL, RuleScout, RuneUsage, TemplexScout, VariabilityLiteralSL}
+import dev.vale.postparsing.rules.{IRulexSR, IntLiteralSL, LiteralSR, MaybeCoercingCallSR, MutabilityLiteralSL, RuleScout, RuneUsage, TemplexScout, VariabilityLiteralSL}
 import dev.vale.parsing.ast._
 import dev.vale.parsing.{ast, _}
-import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, postparsing, vassert, vassertSome, vcurious, vfail, vwat}
+import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, postparsing, vassert, vassertSome, vcurious, vfail, vimpl, vwat}
 import PostParser.{evalRange, noDeclarations, noVariableUses}
 import dev.vale
 import dev.vale.lexing.RangeL
 import dev.vale.parsing.ast
-import dev.vale.parsing.ast.{AndPE, AugmentPE, BinaryCallPE, BlockPE, BorrowP, BraceCallPE, BreakPE, ConsecutorPE, ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE, DotPE, EachPE, FinalP, FunctionCallPE, FunctionP, IExpressionPE, ITemplexPT, IfPE, IndexPE, LambdaPE, LetPE, LoadAsBorrowP, LoadAsP, LoadAsWeakP, LookupNameP, LookupPE, MagicParamLookupPE, MethodCallPE, MoveP, MutableP, MutatePE, NameP, NotPE, OrPE, PackPE, RangePE, ReturnPE, RuntimeSizedP, ShortcallPE, StaticSizedP, StrInterpolatePE, SubExpressionPE, TemplateArgsP, TuplePE, UnletPE, UseP, VoidPE, WeakP, WhilePE}
+import dev.vale.parsing.ast.{AndPE, AugmentPE, BinaryCallPE, BlockPE, BorrowP, BraceCallPE, BreakPE, CallPT, ConsecutorPE, ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE, DotPE, EachPE, FinalP, FunctionCallPE, FunctionP, IExpressionPE, ITemplexPT, IfPE, IndexPE, LambdaPE, LetPE, LoadAsBorrowP, LoadAsP, LoadAsWeakP, LookupNameP, LookupPE, MagicParamLookupPE, MethodCallPE, MoveP, MutableP, MutatePE, NameOrRunePT, NameP, NotPE, OrPE, PackPE, RangePE, ReturnPE, RuntimeSizedP, ShortcallPE, StaticSizedP, StrInterpolatePE, SubExpressionPE, TemplateArgsP, TuplePE, UnletPE, UseP, VoidPE, WeakP, WhilePE}
 import dev.vale.postparsing.patterns.PatternScout
 //import dev.vale.postparsing.predictor.{Conclusions, PredictorEvaluator}
 import dev.vale.postparsing.rules.TemplexScout
@@ -102,7 +103,7 @@ pub(crate) struct OutsideLookupResultS<'s, 'p> {
 case class OutsideLookupResult(
   range: RangeS,
   name: StrI,
-  templateArgs: Option[Vector[ITemplexPT]]
+  maybeTemplateArgs: Option[Vector[ITemplexPT]]
 ) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
@@ -615,6 +616,22 @@ fn scout_expression(
   // - new expression
   // - variable uses by self
   // - variable uses by child blocks
+  private def translateMaybeTemplateArgs(
+    parentEnv: IEnvironmentS,
+    lidb: LocationInDenizenBuilder,
+    ruleBuilder: ArrayBuffer[IRulexSR],
+    contextRegion: IRuneS,
+    maybeTemplateArgs: Option[Vector[ITemplexPT]]):
+  Vector[RuneUsage] = {
+    maybeTemplateArgs match {
+      case None => Vector()
+      case Some(templateArgs) => {
+        templateArgs.map(templateArg => {
+          templexScout.translateTemplex(parentEnv, lidb.child(), ruleBuilder, contextRegion, templateArg)
+        })
+      }
+    }
+  }
   private def scoutExpression(
     stackFrame0: StackFrame,
     lidb: LocationInDenizenBuilder,
@@ -639,7 +656,7 @@ fn scout_expression(
       VariableUses::<'s>::empty(),
     )),
     /*
-    case VoidPE(range) => (stackFrame0, NormalResult(vale.postparsing.VoidSE(evalRange(range))), noVariableUses, noVariableUses)
+    case VoidPE(range) => (stackFrame0, NormalResult(VoidSE(evalRange(range))), noVariableUses, noVariableUses)
     */
     IExpressionPE::Lambda(lambda) => {
       let (function_s, child_uses) = self.scout_lambda(stack_frame.clone(), &lambda.function)?;
@@ -673,9 +690,13 @@ fn scout_expression(
             partsSE.foldLeft(startingExpr)({
               case (prevExpr, partSE) => {
                 val addCallRange = RangeS(prevExpr.range.end, partSE.range.begin)
-                val callableExpr =
-                  vale.postparsing.OutsideLoadSE(addCallRange, Vector(), interner.intern(CodeNameS(keywords.plus)), None, LoadAsBorrowP)
-                FunctionCallSE(addCallRange, lidb.child().consume(), callableExpr, Vector(prevExpr, partSE))
+                val overloadSetSE =
+                  OverloadSetSE(
+                    OutsideLoadSE(
+                      addCallRange,
+                      Vector(),
+                      Vector(LoadPartSE(interner.intern(CodeNameS(keywords.plus)), Vector()))))
+                FunctionCallSE(addCallRange, lidb.child().consume(), overloadSetSE, Vector(prevExpr, partSE))
               }
             })
           (stackFrame1, NormalResult(addedExpr), partsSelfUses, partsChildUses)
@@ -706,9 +727,6 @@ fn scout_expression(
         IExpressionSE::LocalLoad(local_load) => {
           assert_eq!(local_load.target_ownership, load_as);
         }
-        IExpressionSE::OutsideLoad(outside_load) => {
-          assert_eq!(outside_load.target_ownership, load_as);
-        }
         _ => panic!("POSTPARSER_SCOUT_AUGMENT_UNEXPECTED_RESULT"),
       }
       Ok((
@@ -730,7 +748,7 @@ fn scout_expression(
         inner1 match {
           case OwnershippedSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
           case LocalLoadSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
-          case OutsideLoadSE(_, _, _, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
+//            case OutsideLoadSE(_, _, _, innerLoadAs) => vassert(loadAs == innerLoadAs) DO NOT SUBMIT
           case _ => vwat()
         }
         (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)
@@ -760,7 +778,7 @@ fn scout_expression(
       case ReturnPE(range, innerPE) => {
         val (stackFrame1, inner1, innerSelfUses, innerChildUses) =
           scoutExpressionAndCoerce(stackFrame0, lidb.child(), innerPE, UseP)
-        (stackFrame1, NormalResult(vale.postparsing.ReturnSE(evalRange(range), inner1)), innerSelfUses, innerChildUses)
+        (stackFrame1, NormalResult(ReturnSE(evalRange(range), inner1)), innerSelfUses, innerChildUses)
       }
       */
         /*
@@ -770,21 +788,31 @@ fn scout_expression(
         */
         /*
         case NotPE(range, innerPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(keywords.not)), None, LoadAsBorrowP)
+          val overloadSetSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+                evalRange(range),
+                Vector(),
+                Vector(LoadPartSE(interner.intern(CodeNameS(keywords.not)), Vector()))))
 
           val (stackFrame1, innerSE, innerSelfUses, innerChildUses) =
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), innerPE, UseP)
 
           val result =
             NormalResult(
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(innerSE)))
+              FunctionCallSE(evalRange(range), lidb.child().consume(), overloadSetSE, Vector(innerSE)))
 
           (stackFrame1, result, innerSelfUses, innerChildUses)
         }
         */
         /*
         case RangePE(range, beginPE, endPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(keywords.range)), None, LoadAsBorrowP)
+          val callableSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+                evalRange(range),
+                Vector(),
+                Vector(LoadPartSE(interner.intern(CodeNameS(keywords.range)), Vector()))))
 
           val loadBeginAs =
             beginPE match {
@@ -807,7 +835,7 @@ fn scout_expression(
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), endPE, loadEndAs)
 
           val resultSE =
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(beginSE, endSE))
+              FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(beginSE, endSE))
 
           (stackFrame2, NormalResult(resultSE), beginSelfUses.thenMerge(endSelfUses), beginChildUses.thenMerge(endChildUses))
         }
@@ -866,7 +894,7 @@ fn scout_expression(
       VariableUses::<'s>::empty(),
     )),
         /*
-        case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(vale.postparsing.ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
+        case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
         */
     IExpressionPE::ConstantStr(constant_str) => Ok((
       stack_frame.clone(),
@@ -881,7 +909,7 @@ fn scout_expression(
     )),
         /*
         case ConstantStrPE(range, value) => {
-          (stackFrame0, NormalResult(vale.postparsing.ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
+          (stackFrame0, NormalResult(ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
         }
         */
     IExpressionPE::ConstantFloat(constant_float) => Ok((
@@ -917,7 +945,7 @@ fn scout_expression(
     /*
     case MagicParamLookupPE(range) => {
       val name = interner.intern(MagicParamNameS(PostParser.evalPos(stackFrame0.file, range.begin)))
-      val lookup = vale.postparsing.LocalLookupResult(evalRange(range), name)
+      val lookup = LocalLookupResult(evalRange(range), name)
       // We dont declare it here, because then scoutBlock will think its a local and
       // hide it from those above.
       //   val declarations = VariableDeclarations(Vector(VariableDeclaration(lookup.name, FinalP)))
@@ -992,7 +1020,7 @@ fn scout_expression(
                 if (stackFrame0.parentEnv.allDeclaredRunes().contains(CodeRuneS(name))) {
                   NormalResult(RuneLookupSE(rangeS, CodeRuneS(name)))
                 } else {
-                  (vale.postparsing.OutsideLookupResult(rangeS, name, None))
+                  OutsideLookupResult(rangeS, name, None)
                 }
               }
               case _ => vwat(impreciseNameS)
@@ -1008,7 +1036,7 @@ fn scout_expression(
           case _ => vwat()
         }
       val result =
-        vale.postparsing.OutsideLookupResult(
+        OutsideLookupResult(
           evalRange(range),
           templateName,
           Some(templateArgs.toVector))
@@ -1049,55 +1077,118 @@ fn scout_expression(
         }
         */
     IExpressionPE::FunctionCall(function_call) => {
-      let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
-        let mut callable_lidb = lidb.child();
-        let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses) = self.scout_expression_and_coerce(
-          stack_frame,
-          &mut callable_lidb,
-          function_call.callable_expr,
-          LoadAsP::LoadAsBorrow,
-        )?;
-        (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses)
-      };
-      let mut args_lidb = lidb.child();
-      let (stack_frame2, arg_exprs_s, args_self_uses, args_child_uses) =
-          self.scout_elements_as_expressions(stack_frame1, &mut args_lidb, &function_call.arg_exprs)?;
-      let result =
-          IScoutResult::NormalResult(NormalResultS {
+      let parent_env = IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone());
+      let context_region = stack_frame.context_region.clone();
+      let mut callable_lidb = lidb.child();
+      let (stack_frame0a, subject_uncoerced_scout_result, uncoerced_callable_self_uses, uncoerced_callable_child_uses) =
+        self.scout_expression(stack_frame, &mut callable_lidb, function_call.callable_expr)?;
+      match subject_uncoerced_scout_result {
+        IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name: container_name, template_args: container_maybe_template_args }) => {
+          let mut rule_builder = Vec::new();
+          let container_template_arg_rune_usages = self.translate_maybe_template_args(
+            &parent_env,
+            lidb,
+            &mut rule_builder,
+            context_region,
+            container_maybe_template_args,
+          );
+          let load_part_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+            name: container_name,
+          }));
+          let load_part = self.scout_arena.alloc(LoadPartSE {
+            name: load_part_name,
+            explicit_template_args: container_template_arg_rune_usages,
+          });
+          let overload_set_se = &*self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+            lookup: OutsideLoadSE {
+              range,
+              rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+              parts: self.scout_arena.alloc_slice_copy(&[&*load_part]),
+            },
+          }));
+          let mut args_lidb = lidb.child();
+          let (stack_frame3, args_se, self_uses, child_uses) =
+            self.scout_elements_as_expressions(stack_frame0a, &mut args_lidb, &function_call.arg_exprs)?;
+          let result = IScoutResult::NormalResult(NormalResultS {
+            expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
+              range,
+              location: lidb.child().consume_in_arena(self.scout_arena),
+              callable_expr: overload_set_se,
+              arg_exprs: self.scout_arena.alloc_slice_from_vec(args_se),
+            })),
+          });
+          Ok((stack_frame3, result, self_uses, child_uses))
+        }
+        _ => {
+          let callable_child_uses = uncoerced_callable_child_uses;
+          let (stack_frame2, callable1, callable_self_uses) = self.coerce(
+            stack_frame0a,
+            subject_uncoerced_scout_result,
+            &mut lidb.child(),
+            uncoerced_callable_self_uses,
+            LoadAsP::LoadAsBorrow,
+          )?;
+          let mut args_lidb = lidb.child();
+          let (stack_frame3, args1, args_self_uses, args_child_uses) =
+            self.scout_elements_as_expressions(stack_frame2, &mut args_lidb, &function_call.arg_exprs)?;
+          let result = IScoutResult::NormalResult(NormalResultS {
             expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
               range: PostParser::eval_range(&file_coordinate, function_call.range),
               location: lidb.child().consume_in_arena(self.scout_arena),
-              callable_expr: callable_expr_s,
-              arg_exprs: self.scout_arena.alloc_slice_from_vec(arg_exprs_s),
+              callable_expr: callable1,
+              arg_exprs: self.scout_arena.alloc_slice_from_vec(args1),
             })),
           });
-      Ok((
-        stack_frame2,
-        result,
-        callable_self_uses.then_merge(&args_self_uses),
-        callable_child_uses.then_merge(&args_child_uses),
-      ))
+          Ok((stack_frame3, result, callable_self_uses.then_merge(&args_self_uses), callable_child_uses.then_merge(&args_child_uses)))
+        }
+      }
     }
     /*
-    case FunctionCallPE(range, _, callablePE, args) => {
-      val loadCallableAs = LoadAsBorrowP
-      val (stackFrame1, callable1, callableSelfUses, callableChildUses) =
-        scoutExpressionAndCoerce(stackFrame0, lidb.child(), callablePE, loadCallableAs)
-      val (stackFrame2, args1, argsSelfUses, argsChildUses) =
-        scoutElementsAsExpressions(stackFrame1, lidb.child(), args)
-      val result = NormalResult(vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args1.toVector))
-      (stackFrame2, result, callableSelfUses.thenMerge(argsSelfUses), callableChildUses.thenMerge(argsChildUses))
+    case FunctionCallPE(range, _, callablePE, argsPE) => {
+      val (stackFrame0a, subjectUncoercedScoutResult, uncoercedCallableSelfUses, uncoercedCallableChildUses) =
+        scoutExpression(stackFrame0, lidb.child(), callablePE)
+      subjectUncoercedScoutResult match {
+        case OutsideLookupResult(range, containerName, containerMaybeTemplateArgs) => {
+          val ruleBuilder = ArrayBuffer[IRulexSR]()
+          val containerTemplateArgRuneUsages =
+            translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, containerMaybeTemplateArgs)
+          val overloadSetSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+                range,
+                ruleBuilder.toVector,
+                Vector(LoadPartSE(interner.intern(CodeNameS(containerName)), containerTemplateArgRuneUsages))))
+          val (stackFrame3, argsSE, selfUses, childUses) =
+            scoutElementsAsExpressions(stackFrame0a, lidb.child(), argsPE)
+          val result = NormalResult(FunctionCallSE(range, lidb.child().consume(), overloadSetSE, argsSE))
+          (stackFrame3, result, selfUses, childUses)
+        }
+        case _ => {
+          val callableChildUses = uncoercedCallableChildUses
+          val (stackFrame2, callable1, callableSelfUses) =
+            coerce(stackFrame0a, subjectUncoercedScoutResult, lidb.child(), uncoercedCallableSelfUses, LoadAsBorrowP)
+          val (stackFrame3, args1, argsSelfUses, argsChildUses) =
+            scoutElementsAsExpressions(stackFrame2, lidb.child(), argsPE)
+          val result = NormalResult(FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args1.toVector))
+          (stackFrame3, result, callableSelfUses.thenMerge(argsSelfUses), callableChildUses.thenMerge(argsChildUses))
+        }
+      }
     }
     */
     IExpressionPE::BinaryCall(binary_call) => {
-      let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
-        range: PostParser::eval_range(&file_coordinate, binary_call.range),
-        rules: &[],
-        name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-          name: self.scout_arena.intern_str(binary_call.function_name.str().as_str()),
-        })),
-        maybe_template_args: None,
-        target_ownership: LoadAsP::LoadAsBorrow,
+      let part_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: self.scout_arena.intern_str(binary_call.function_name.str().as_str()),
+      }));
+      let load_part = self.scout_arena.alloc(LoadPartSE {
+        name: part_name,
+        explicit_template_args: &[],
+      });
+      let overload_set_se = &*self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+        lookup: OutsideLoadSE {
+          range: PostParser::eval_range(&file_coordinate, binary_call.range),
+          rules: &[],
+          parts: self.scout_arena.alloc_slice_copy(&[&*load_part]),
+        },
       }));
       let (stack_frame1, left_expr_s, left_self_uses, left_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
         let mut left_lidb = lidb.child();
@@ -1121,7 +1212,7 @@ fn scout_expression(
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
           range: PostParser::eval_range(&file_coordinate, binary_call.range),
           location: lidb.child().consume_in_arena(self.scout_arena),
-          callable_expr: callable_expr_s,
+          callable_expr: overload_set_se,
           arg_exprs: self.scout_arena.alloc_slice_from_vec(
             vec![left_expr_s, right_expr_s],
           ),
@@ -1136,7 +1227,12 @@ fn scout_expression(
     }
     /*
     case BinaryCallPE(range, namePE, leftPE, rightPE) => {
-      val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(namePE.str)), None, LoadAsBorrowP)
+      val overloadSetSE =
+        OverloadSetSE(
+          OutsideLoadSE(
+          evalRange(range),
+          Vector(),
+          Vector(LoadPartSE(interner.intern(CodeNameS(namePE.str)), Vector()))))
 
       val (stackFrame1, leftSE, leftSelfUses, leftChildUses) =
         scoutExpressionAndCoerce(stackFrame0, lidb.child(), leftPE, LoadAsBorrowP)
@@ -1145,7 +1241,7 @@ fn scout_expression(
 
       val result =
         NormalResult(
-          vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(leftSE, rightSE)))
+          FunctionCallSE(evalRange(range), lidb.child().consume(), overloadSetSE, Vector(leftSE, rightSE)))
       (stackFrame2, result, leftSelfUses.thenMerge(rightSelfUses), leftChildUses.thenMerge(rightChildUses))
     }
     */
@@ -1169,82 +1265,146 @@ fn scout_expression(
           val (stackFrame2, argSE, argSelfUses, argChildUses) =
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), argPE, UseP)
 
-          val resultSE = vale.postparsing.IndexSE(evalRange(range), callableSE, argSE)
+          val resultSE = IndexSE(evalRange(range), callableSE, argSE)
           (stackFrame2, NormalResult(resultSE), callableSelfUses.thenMerge(argSelfUses), callableChildUses.thenMerge(argChildUses))
         }
         */
     IExpressionPE::MethodCall(method_call) => {
-      let load_subject_as = match method_call.subject_expr {
-        IExpressionPE::Lookup(_) => LoadAsP::LoadAsBorrow,
-        _ => LoadAsP::Use,
-      };
-      // Per @PPSPASTNZ, allocate synthetic parser node in parse_arena
-      let method_lookup_expr: &'p IExpressionPE<'p> = &*self.parse_arena.alloc(IExpressionPE::Lookup(method_call.method_lookup));
-      let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
-        let mut callable_lidb = lidb.child();
-        self.scout_expression_and_coerce(
-          stack_frame,
-          &mut callable_lidb,
-          method_lookup_expr,
-          LoadAsP::LoadAsBorrow,
-        )?
-      };
-      let (stack_frame2, subject_expr_s, subject_self_uses, subject_child_uses) = {
-        let mut subject_lidb = lidb.child();
-        self.scout_expression_and_coerce(
-          stack_frame1,
-          &mut subject_lidb,
-          method_call.subject_expr,
-          load_subject_as,
-        )?
-      };
-      let (stack_frame3, tail_arg_exprs_s, tail_args_self_uses, tail_args_child_uses) = {
-        let mut args_lidb = lidb.child();
-        self.scout_elements_as_expressions(stack_frame2, &mut args_lidb, method_call.arg_exprs)?
-      };
-
-      let mut arg_exprs_s = vec![subject_expr_s];
-      arg_exprs_s.extend(tail_arg_exprs_s);
+      let method_call_range_s = PostParser::eval_range(&file_coordinate, method_call.range);
+      let parent_env = IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone());
+      let context_region = stack_frame.context_region.clone();
+      let method_name_p = method_call.method_lookup.name;
+      let maybe_method_template_args_args: Option<&'p [&'p ITemplexPT<'p>]> =
+        method_call.method_lookup.template_args.as_ref().map(|t| t.args);
+      let mut subject_lidb = lidb.child();
+      let (stack_frame0a, subject_uncoerced_scout_result, uncoerced_subject_self_uses, uncoerced_subject_child_uses) =
+        self.scout_expression(stack_frame, &mut subject_lidb, method_call.subject_expr)?;
+      let method_imprecise_name_s = translate_imprecise_name(self.scout_arena, &file_coordinate, &method_name_p);
+      let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+      let method_template_arg_rune_usages = self.translate_maybe_template_args(
+        &parent_env,
+        lidb,
+        &mut rule_builder,
+        context_region.clone(),
+        maybe_method_template_args_args,
+      );
+      let (stack_frame3, args, self_uses, child_uses, container_parts): (StackFrame<'s>, Vec<&'s IExpressionSE<'s>>, VariableUses<'s>, VariableUses<'s>, Vec<&'s LoadPartSE<'s>>) =
+        match subject_uncoerced_scout_result {
+          IScoutResult::OutsideLookupResult(OutsideLookupResultS { range: _subject_range_s, name: container_name, template_args: container_maybe_template_args }) => {
+            assert!(uncoerced_subject_self_uses.is_empty());
+            assert!(uncoerced_subject_child_uses.is_empty());
+            let container_template_arg_rune_usages = self.translate_maybe_template_args(
+              &parent_env,
+              lidb,
+              &mut rule_builder,
+              context_region.clone(),
+              container_maybe_template_args,
+            );
+            let mut args_lidb = lidb.child();
+            let (stack_frame3, args, self_uses, child_uses) =
+              self.scout_elements_as_expressions(stack_frame0a, &mut args_lidb, method_call.arg_exprs)?;
+            // We don't support more than 2 parts yet
+            let container_load_part_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+              name: container_name,
+            }));
+            let container_part = self.scout_arena.alloc(LoadPartSE {
+              name: container_load_part_name,
+              explicit_template_args: container_template_arg_rune_usages,
+            });
+            (stack_frame3, args, self_uses, child_uses, vec![&*container_part])
+          }
+          _ => {
+            let load_subject_as = match method_call.subject_expr {
+              // For locals, just borrow.
+              IExpressionPE::Lookup(_) => LoadAsP::LoadAsBorrow,
+              // For anything else, default to moving.
+              _ => LoadAsP::Use,
+            };
+            let subject_child_uses = uncoerced_subject_child_uses;
+            let mut coerce_lidb = lidb.child();
+            let (stack_frame1, subject1, subject_self_uses) = self.coerce(
+              stack_frame0a,
+              subject_uncoerced_scout_result,
+              &mut coerce_lidb,
+              uncoerced_subject_self_uses,
+              load_subject_as,
+            )?;
+            let mut args_lidb = lidb.child();
+            let (stack_frame3, tail_args1, tail_args_self_uses, tail_args_child_uses) =
+              self.scout_elements_as_expressions(stack_frame1, &mut args_lidb, method_call.arg_exprs)?;
+            let mut args = vec![subject1];
+            args.extend(tail_args1);
+            (stack_frame3, args, subject_self_uses.then_merge(&tail_args_self_uses), subject_child_uses.then_merge(&tail_args_child_uses), Vec::new())
+          }
+        };
+      let method_load_part = self.scout_arena.alloc(LoadPartSE {
+        name: method_imprecise_name_s,
+        explicit_template_args: method_template_arg_rune_usages,
+      });
+      let mut parts: Vec<&'s LoadPartSE<'s>> = container_parts;
+      parts.push(&*method_load_part);
+      let parts_slice = self.scout_arena.alloc_slice_copy(&parts);
+      let overload_set_se = &*self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+        lookup: OutsideLoadSE {
+          range: method_call_range_s,
+          rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+          parts: parts_slice,
+        },
+      }));
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
-          range: PostParser::eval_range(&file_coordinate, method_call.range),
+          range: method_call_range_s,
           location: lidb.child().consume_in_arena(self.scout_arena),
-          callable_expr: callable_expr_s,
-          arg_exprs: self.scout_arena.alloc_slice_from_vec(arg_exprs_s),
+          callable_expr: overload_set_se,
+          arg_exprs: self.scout_arena.alloc_slice_from_vec(args),
         })),
       });
-      Ok((
-        stack_frame3,
-        result,
-        callable_self_uses
-          .then_merge(&subject_self_uses)
-          .then_merge(&tail_args_self_uses),
-        callable_child_uses
-          .then_merge(&subject_child_uses)
-          .then_merge(&tail_args_child_uses),
-      ))
+      Ok((stack_frame3, result, self_uses, child_uses))
     }
         /*
-        case MethodCallPE(range, subjectExpr, operatorRange, memberLookup, methodArgs) => {
-          val loadSubjectAs =
-            subjectExpr match {
-              // For locals, just borrow.
-              case LookupPE(_, _) => LoadAsBorrowP
-              // For anything else, default to moving.
-              case _ => UseP
+        case MethodCallPE(methodCallRangeP, subjectExpr, _, LookupPE(methodName, maybeMethodTemplateArgs), methodArgs) => {
+          val methodCallRangeS = evalRange(methodCallRangeP)
+          val (stackFrame0a, subjectUncoercedScoutResult, uncoercedSubjectSelfUses, uncoercedSubjectChildUses) =
+            scoutExpression(stackFrame0, lidb.child(), subjectExpr)
+          val methodImpreciseNameS = PostParser.translateImpreciseName(interner, stackFrame0.file, methodName)
+          val ruleBuilder = ArrayBuffer[IRulexSR]()
+          val methodTemplateArgRuneUsages =
+            translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, maybeMethodTemplateArgs.map(_.args))
+          val (stackFrame3, args, selfUses, childUses, containerParts) =
+            subjectUncoercedScoutResult match {
+              case OutsideLookupResult(subjectRangeS, containerName, containerMaybeTemplateArgs) => {
+                vassert(uncoercedSubjectSelfUses.isEmpty)
+                vassert(uncoercedSubjectChildUses.isEmpty)
+                val containerTemplateArgRuneUsages =
+                  translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, containerMaybeTemplateArgs)
+                val (stackFrame3, args, selfUses, childUses) =
+                  scoutElementsAsExpressions(stackFrame0a, lidb.child(), methodArgs)
+                // We don't support more than 2 parts yet
+                val containerParts = Vector(
+                  LoadPartSE(interner.intern(CodeNameS(containerName)), containerTemplateArgRuneUsages))
+                (stackFrame3, args, selfUses, childUses, containerParts)
+              }
+              case _ => {
+                val loadSubjectAs =
+                  subjectExpr match {
+                    // For locals, just borrow.
+                    case LookupPE(_, _) => LoadAsBorrowP
+                    // For anything else, default to moving.
+                    case _ => UseP
+                  }
+                val subjectChildUses = uncoercedSubjectChildUses
+                val (stackFrame1, subject1, subjectSelfUses) =
+                  coerce(stackFrame0a, subjectUncoercedScoutResult, lidb.child(), uncoercedSubjectSelfUses, loadSubjectAs)
+                val (stackFrame3, tailArgs1, tailArgsSelfUses, tailArgsChildUses) =
+                  scoutElementsAsExpressions(stackFrame1, lidb.child(), methodArgs)
+                val containerParts = Vector()
+                (stackFrame3, Vector(subject1) ++ tailArgs1, subjectSelfUses.thenMerge(tailArgsSelfUses), subjectChildUses.thenMerge(tailArgsChildUses), containerParts)
+              }
             }
-          val (stackFrame1, callable1, callableSelfUses, callableChildUses) =
-            scoutExpressionAndCoerce(stackFrame0, lidb.child(), memberLookup, LoadAsBorrowP)
-          val (stackFrame2, subject1, subjectSelfUses, subjectChildUses) =
-            scoutExpressionAndCoerce(stackFrame1, lidb.child(), subjectExpr, loadSubjectAs)
-          val (stackFrame3, tailArgs1, tailArgsSelfUses, tailArgsChildUses) =
-            scoutElementsAsExpressions(stackFrame2, lidb.child(), methodArgs)
-
-          val selfUses = callableSelfUses.thenMerge(subjectSelfUses).thenMerge(tailArgsSelfUses)
-          val childUses = callableChildUses.thenMerge(subjectChildUses).thenMerge(tailArgsChildUses)
-          val args = Vector(subject1) ++ tailArgs1
-
-          val result = NormalResult(vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args))
+          val parts = containerParts :+ LoadPartSE(methodImpreciseNameS, methodTemplateArgRuneUsages)
+          val overloadSetSE =
+            OverloadSetSE(OutsideLoadSE(methodCallRangeS, ruleBuilder.toVector, parts))
+          val result = NormalResult(FunctionCallSE(methodCallRangeS, lidb.child().consume(), overloadSetSE, args))
           (stackFrame3, result, selfUses, childUses)
         }
         */
@@ -1711,7 +1871,7 @@ fn scout_expression(
                 val childCaseUses = thenChildUses.branchMerge(elseChildUses)
                 val childUses = condChildUses.thenMerge(childCaseUses);
 
-                val ifSE = vale.postparsing.IfSE(evalRange(range), condSE, thenSE, elseSE)
+                val ifSE = IfSE(evalRange(range), condSE, thenSE, elseSE)
                 (stackFrame2, ifSE, selfUses, childUses)
               })
           (stackFrame0, NormalResult(resultSE), selfUses, childUses)
@@ -1860,7 +2020,7 @@ fn scout_expression(
         patternScout.translatePattern(
           stackFrame1, lidb.child(), ruleBuilder, runeToExplicitType, patternP)
 
-      val declarationsFromPattern = vale.postparsing.VariableDeclarations(patternScout.getParameterCaptures(patternS))
+      val declarationsFromPattern = VariableDeclarations(patternScout.getParameterCaptures(patternS))
 
       val nameConflictVarNames =
         stackFrame1.locals.vars.map(_.name).intersect(declarationsFromPattern.vars.map(_.name))
@@ -2000,7 +2160,7 @@ fn scout_expression(
         // in a constructor, `this` is just an imaginary concept until we actually
         // fill all the variables.
         case LookupPE(LookupNameP(NameP(range, s)), _) if s == keywords.self && (stackFrame0.findVariable(interner.intern(CodeNameS(interner.intern(StrI("self"))))).isEmpty) => {
-          val result = vale.postparsing.LocalLookupResult(evalRange(range), interner.intern(ConstructingMemberNameS(memberName)))
+          val result = LocalLookupResult(evalRange(range), interner.intern(ConstructingMemberNameS(memberName)))
           (stackFrame0, result, noVariableUses, noVariableUses)
         }
         case _ => {
@@ -2017,7 +2177,7 @@ fn scout_expression(
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), containerExprPE, LoadAsBorrowP)
           val (stackFrame2, indexExpr1, indexSelfUses, indexChildUses) =
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), indexExprPE, UseP);
-          val dot1 = vale.postparsing.IndexSE(evalRange(range), containerExpr1, indexExpr1)
+          val dot1 = IndexSE(evalRange(range), containerExpr1, indexExpr1)
           (stackFrame2, NormalResult(dot1), containerSelfUses.thenMerge(indexSelfUses), containerChildUses.thenMerge(indexChildUses))
         }
         */
@@ -2027,14 +2187,19 @@ fn scout_expression(
         }
         */
     IExpressionPE::Not(not) => {
-      let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
-        range: PostParser::eval_range(&file_coordinate, not.range),
-        rules: &[],
-        name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-          name: self.keywords.not,
-        })),
-        maybe_template_args: None,
-        target_ownership: LoadAsP::LoadAsBorrow,
+      let not_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: self.keywords.not,
+      }));
+      let load_part = self.scout_arena.alloc(LoadPartSE {
+        name: not_name,
+        explicit_template_args: &[],
+      });
+      let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+        lookup: OutsideLoadSE {
+          range: PostParser::eval_range(&file_coordinate, not.range),
+          rules: &[],
+          parts: self.scout_arena.alloc_slice_copy(&[&*load_part]),
+        },
       }));
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
         let mut inner_lidb = lidb.child();
@@ -2159,14 +2324,19 @@ fn scout_expression(
           begin: prev_expr.range().end,
           end: part_se.range().begin,
         };
-        let callable_expr = self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
-          range: add_call_range,
-          rules: &[],
-          name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-            name: self.keywords.plus,
-          })),
-          maybe_template_args: None,
-          target_ownership: LoadAsP::LoadAsBorrow,
+        let plus_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          name: self.keywords.plus,
+        }));
+        let load_part = self.scout_arena.alloc(LoadPartSE {
+          name: plus_name,
+          explicit_template_args: &[],
+        });
+        let callable_expr = self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+          lookup: OutsideLoadSE {
+            range: add_call_range,
+            rules: &[],
+            parts: self.scout_arena.alloc_slice_copy(&[&*load_part]),
+          },
         }));
         let args = self.scout_arena.alloc_slice_from_vec(vec![prev_expr, *part_se]);
         self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
@@ -2261,10 +2431,40 @@ where
     val childUses = condChildUses.thenMerge(childCaseUses);
 
     val ifSE =
-      vale.postparsing.IfSE(PostParser.evalRange(stackFrame0.file, range), condSE, thenSE, elseSE)
+      IfSE(PostParser.evalRange(stackFrame0.file, range), condSE, thenSE, elseSE)
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
+pub(crate) fn translate_maybe_template_args(
+    &self,
+    parent_env: &IEnvironmentS<'s>,
+    lidb: &mut LocationInDenizenBuilder,
+    rule_builder: &mut Vec<IRulexSR<'s>>,
+    context_region: IRuneS<'s>,
+    maybe_template_args: Option<&'p [&'p ITemplexPT<'p>]>,
+  ) -> &'s [RuneUsage<'s>] {
+    match maybe_template_args {
+      None => &[],
+      Some(template_args) => {
+        let runes: Vec<RuneUsage<'s>> = template_args.iter().map(|template_arg| {
+          let mut child_lidb = lidb.child();
+          translate_templex(
+            self.scout_arena,
+            self.keywords,
+            parent_env.clone(),
+            &mut child_lidb,
+            rule_builder,
+            context_region.clone(),
+            template_arg,
+          )
+        }).collect();
+        self.scout_arena.alloc_slice_from_vec(runes)
+      }
+    }
+  }
+// (audit-trail for translateMaybeTemplateArgs lives at canonical position in scoutExpression's
+//  audit-trail block above; no duplicate adjacent block needed.)
+
 // If we load an immutable with targetOwnershipIfLookupResult = Own or Borrow, it will just be Share.
 pub(crate) fn scout_expression_and_coerce(
     &self,
@@ -2274,122 +2474,114 @@ pub(crate) fn scout_expression_and_coerce(
     load_as_p: LoadAsP,
   ) -> Result<(StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>), ICompileErrorS<'s>>
   {
-    let parent_env = IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone());
-    let context_region = stack_frame.context_region.clone();
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = self.scout_expression(
       stack_frame,
       &mut expression_lidb,
       expression_p,
     )?;
-    let (first_expr_s, first_self_uses) = match first_result_s {
+    let mut coerce_lidb = lidb.child();
+    let (next_stack_frame, first_expr_s, first_self_uses) =
+      self.coerce(next_stack_frame, first_result_s, &mut coerce_lidb, first_inner_self_uses, load_as_p)?;
+    Ok((next_stack_frame, first_expr_s, first_self_uses, first_child_uses))
+  }
+/*
+  // If we load an immutable with targetOwnershipIfLookupResult = Own or Borrow, it will just be Share.
+  def scoutExpressionAndCoerce(
+    stackFrame0: StackFrame,
+    lidb: LocationInDenizenBuilder,
+    exprPE: IExpressionPE,
+    loadAsP: LoadAsP):
+  (StackFrame, IExpressionSE, VariableUses, VariableUses) = {
+    val (stackFrame1, uncoercedScoutResult, exprSelfUses, exprChildUses) =
+      scoutExpression(stackFrame0, lidb.child(), exprPE)
+    val (stackFrame2, coercedExpr, coercedSelfUses) =
+      coerce(stackFrame1, uncoercedScoutResult, lidb.child(), exprSelfUses, loadAsP)
+    (stackFrame2, coercedExpr, coercedSelfUses, exprChildUses)
+  }
+*/
+
+pub(crate) fn coerce(
+    &self,
+    stack_frame: StackFrame<'s>,
+    first_result: IScoutResult<'s, 'p>,
+    _lidb: &mut LocationInDenizenBuilder,
+    self_uses_before: VariableUses<'s>,
+    load_as_p: LoadAsP,
+  ) -> Result<(StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>), ICompileErrorS<'s>> {
+    match first_result {
       IScoutResult::LocalLookupResult(LocalLookupResultS { range, name }) => {
-        let uses = match load_as_p {
-          LoadAsP::LoadAsBorrow => first_inner_self_uses.mark_borrowed(name.clone()),
-          LoadAsP::LoadAsWeak => first_inner_self_uses.mark_borrowed(name.clone()),
-          LoadAsP::Use | LoadAsP::Move => first_inner_self_uses.mark_moved(name.clone()),
+        let self_uses_after = match load_as_p {
+          LoadAsP::LoadAsBorrow => self_uses_before.mark_borrowed(name.clone()),
+          LoadAsP::LoadAsWeak => self_uses_before.mark_borrowed(name.clone()),
+          LoadAsP::Use | LoadAsP::Move => self_uses_before.mark_moved(name.clone()),
         };
-        (
+        Ok((
+          stack_frame,
           &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range,
             name,
             target_ownership: load_as_p,
           })),
-          uses,
-        )
+          self_uses_after,
+        ))
       }
-      IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name, template_args }) => {
-        let mut rule_builder = Vec::new();
-        let maybe_template_arg_runes = template_args.map(|template_args_p| {
-          template_args_p
-            .iter()
-            .map(|template_arg_p| {
-              let mut template_arg_lidb = lidb.child();
-              translate_templex(
-                self.scout_arena,
-                self.keywords,
-                parent_env.clone(),
-                &mut template_arg_lidb,
-                &mut rule_builder,
-                context_region.clone(),
-                template_arg_p,
-              )
-            })
-            .collect::<Vec<_>>()
-        });
-        let maybe_template_args_slice = maybe_template_arg_runes
-          .map(|v| self.scout_arena.alloc_slice_from_vec(v) as &[_]);
-        (
-          &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
-            range,
-            rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
-            name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-              name,
-            })),
-            maybe_template_args: maybe_template_args_slice,
-            target_ownership: load_as_p,
-          })),
-          first_inner_self_uses,
-        )
+      IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name: _, template_args: _ }) => {
+        // When we have globals, here's where we'd check that the user declared they're accessing a global.
+        // But since we don't have globals yet, we just throw an error...
+        // V: open question... why don't we coerce to overload set here? Is that done somewhere else?
+        Err(ICompileErrorS::CouldntFindVarToMutateS(CouldntFindVarToMutateS {
+          range,
+          name: "a".to_string(),
+        }))
       }
       IScoutResult::NormalResult(NormalResultS { expr: inner_expr_s }) => {
         match load_as_p {
-          LoadAsP::Use => (inner_expr_s, first_inner_self_uses),
-          _ => (
+          LoadAsP::Use => Ok((stack_frame, inner_expr_s, self_uses_before)),
+          _ => Ok((
+            stack_frame,
             &*self.scout_arena.alloc(IExpressionSE::Ownershipped(OwnershippedSE {
               range: inner_expr_s.range(),
               inner_expr: inner_expr_s,
               target_ownership: load_as_p,
             })),
-            first_inner_self_uses,
-          ),
+            self_uses_before,
+          )),
         }
       }
-    };
-    Ok((next_stack_frame, first_expr_s, first_self_uses, first_child_uses))
+    }
   }
-
 /*
-  // If we load an immutable with targetOwnershipIfLookupResult = Own or Borrow, it will just be Share.
-  def scoutExpressionAndCoerce(
-    stackFramePE: StackFrame,
-    lidb: LocationInDenizenBuilder,
-    exprPE: IExpressionPE,
-    loadAsP: LoadAsP):
-  (StackFrame, IExpressionSE, VariableUses, VariableUses) = {
-    val (namesFromInsideFirst, firstResult1, firstInnerSelfUses, firstChildUses) =
-      scoutExpression(stackFramePE, lidb.child(), exprPE);
-    val (firstExpr1, firstSelfUses) =
-      firstResult1 match {
-        case LocalLookupResult(range, name) => {
-          val uses =
-            loadAsP match {
-              case LoadAsBorrowP => firstInnerSelfUses.markBorrowed(name)
-              case LoadAsWeakP => firstInnerSelfUses.markBorrowed(name)
-              case UseP | MoveP => firstInnerSelfUses.markMoved(name)
-            }
-          (vale.postparsing.LocalLoadSE(range, name, loadAsP), uses)
-        }
-        case OutsideLookupResult(range, name, maybeTemplateArgs) => {
-          val ruleBuilder = ArrayBuffer[IRulexSR]()
-          val maybeTemplateArgRunes =
-            maybeTemplateArgs.map(templateArgs => {
-              templateArgs.map(templateArgPT => {
-                templexScout.translateTemplex(
-                  stackFramePE.parentEnv, lidb.child(), ruleBuilder, stackFramePE.contextRegion, templateArgPT)
-              })
-            })
-          val load = vale.postparsing.OutsideLoadSE(range, ruleBuilder.toVector, interner.intern(CodeNameS(name)), maybeTemplateArgRunes, loadAsP)
-          (load, firstInnerSelfUses)
-        }
-        case NormalResult(innerExpr1) => {
+  def coerce(
+      stackFrame0: StackFrame,
+      firstResult1: IScoutResult[IExpressionSE],
+      lidb: LocationInDenizenBuilder,
+      selfUsesBefore: VariableUses,
+      loadAsP: LoadAsP
+  ): (StackFrame, IExpressionSE, VariableUses) = {
+    firstResult1 match {
+      case LocalLookupResult(range, name) => {
+        val selfUsesAfter =
           loadAsP match {
-            case UseP => (innerExpr1, firstInnerSelfUses)
-            case _ => (vale.postparsing.OwnershippedSE(innerExpr1.range, innerExpr1, loadAsP), firstInnerSelfUses)
+            case LoadAsBorrowP => selfUsesBefore.markBorrowed(name)
+            case LoadAsWeakP => selfUsesBefore.markBorrowed(name)
+            case UseP | MoveP => selfUsesBefore.markMoved(name)
           }
+        (stackFrame0, LocalLoadSE(range, name, loadAsP), selfUsesAfter)
+      }
+      case OutsideLookupResult(range, name, maybeTemplateArgs) => {
+        // When we have globals, here's where we'd check that the user declared they're accessing a global.
+        // But since we don't have globals yet, we just throw an error...
+        // V: open question... why don't we coerce to overload set here? Is that done somewhere else?
+        throw CompileErrorExceptionS(CouldntFindVarToMutateS(range, "a"))
+      }
+      case NormalResult(innerExpr1) => {
+        loadAsP match {
+          case UseP => (stackFrame0, innerExpr1, selfUsesBefore)
+          case _ => (stackFrame0, OwnershippedSE(innerExpr1.range, innerExpr1, loadAsP), selfUsesBefore)
         }
       }
-    (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
+    }
   }
 */
 pub(crate) fn scout_elements_as_expressions(

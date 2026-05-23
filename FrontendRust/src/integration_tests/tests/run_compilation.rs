@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.finalast.ProgramH
@@ -88,3 +89,5 @@ class RunCompilation(
     (kind, stdoutStringBuilder.mkString)
   }
 }
+
+*/

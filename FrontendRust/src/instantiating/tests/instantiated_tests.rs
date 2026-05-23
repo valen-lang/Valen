@@ -6,6 +6,12 @@ import dev.vale.{Builtins, FileCoordinateMap, Interner, Keywords, PackageCoordin
 import org.scalatest._
 
 object InstantiatingCompilation {
+*/
+// mig: fn test
+pub fn test(code: &str) -> () {
+  panic!("Unimplemented: test");
+}
+/*
   def test(code: String*): InstantiatedCompilation = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -21,9 +27,25 @@ object InstantiatingCompilation {
         GlobalOptions(true, true, true, true, true)))
   }
 }
+*/
+// mig: struct InstantiatedTests
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct InstantiatedTests<'s, 't> {
+  pub _marker: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 
+// mig: impl InstantiatedTests
+/*
 class InstantiatedTests extends FunSuite with Matchers {
-
+*/
+// mig: fn test_templates
+#[test]
+#[ignore = "unmigrated - pending instantiating-pass body migration"]
+fn test_templates() {
+  panic!("Unmigrated test: test_templates");
+}
+/*
   test("Test templates") {
     val compile = InstantiatingCompilation.test(
       """

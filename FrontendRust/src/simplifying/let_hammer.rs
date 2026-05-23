@@ -1,3 +1,24 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/LetHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `LetHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+// `LetHammer.BOX_MEMBER_INDEX` (Scala `object LetHammer`) becomes a module
+// constant.
+
+use crate::final_ast::instructions::{ExpressionH, RestackifyH, StackifyH};
+use crate::final_ast::types::CoordH;
+use crate::instantiating::ast::ast::FunctionHeaderI;
+use crate::instantiating::ast::expressions::{
+    DestroyIE, DestroyStaticSizedArrayIntoLocalsIE, LetAndLendIE, LetNormalIE, ReferenceExpressionIE,
+    RestackifyIE, UnletIE,
+};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::names::IVarNameI;
+use crate::instantiating::ast::types::{cI, CoordI, VariabilityI};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::{Hammer, Locals};
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast._
@@ -477,4 +498,247 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, destructureAndUnboxings, sourceExprDeferreds)
   }
+}
+*/
+
+// mig: const BOX_MEMBER_INDEX
+pub const BOX_MEMBER_INDEX: i32 = 0;
+
+// mig: fn translate_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let2: &LetNormalIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_let");
+    }
+}
+
+// mig: fn translate_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let2: &RestackifyIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_restackify");
+    }
+}
+
+// mig: fn translate_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_let_and_point");
+    }
+}
+
+// mig: fn translate_addressible_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_let");
+    }
+}
+
+// mig: fn translate_addressible_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_restackify");
+    }
+}
+
+// mig: fn translate_addressible_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_let_and_point");
+    }
+}
+
+// mig: fn translate_mundane_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+    ) -> &'h StackifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_let");
+    }
+}
+
+// mig: fn translate_mundane_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+    ) -> &'h RestackifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_restackify");
+    }
+}
+
+// mig: fn translate_mundane_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_let_and_point");
+    }
+}
+
+// mig: fn translate_unlet
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_unlet<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        unlet2: &UnletIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_unlet");
+    }
+}
+
+// mig: fn translate_destructure_static_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destructure_static_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        des2: &DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destructure_static_sized_array");
+    }
+}
+
+// mig: fn translate_destroy
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destroy<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        des2: &DestroyIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destroy");
+    }
 }

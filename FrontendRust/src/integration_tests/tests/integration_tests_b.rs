@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.finalast._
@@ -289,3 +290,5 @@ class IntegrationTestsB extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(120) => }
   }
 }
+
+*/

@@ -1,3 +1,5 @@
+// From Frontend/SimplifyingPass/test/dev/vale/simplifying/HammerTest.scala
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.StackifyH
@@ -13,8 +15,25 @@ import dev.vale.postparsing.ICompileErrorS
 import scala.collection.immutable.List
 
 
+*/
+// mig: struct HammerTest
+pub struct HammerTest {
+}
 
+// mig: impl HammerTest
+// (impl block suppressed per simplifying-pass policy — test fns emitted at module scope)
+
+/*
 class HammerTest extends FunSuite with Matchers with Collector {
+*/
+// mig: fn local_ids_unique
+#[test]
+#[ignore = "unmigrated - pending simplifying-pass body migration"]
+fn local_ids_unique() {
+    panic!("Unmigrated test: local_ids_unique");
+}
+
+/*
   test("Local IDs unique") {
     val compile = HammerTestCompilation.test(
         """
@@ -45,3 +64,4 @@ class HammerTest extends FunSuite with Matchers with Collector {
   }
 }
 
+*/

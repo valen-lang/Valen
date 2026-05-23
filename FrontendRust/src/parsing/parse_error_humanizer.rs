@@ -73,6 +73,9 @@ impl ParseErrorHumanizer {
       ParseError::ForgotSetKeyword(_) => {
         "Need `set` keyword to mutate a variable that already exists."
       }
+      ParseError::FuncBoundWithoutWhere(_) => {
+        "Function bound needs `where` keyword before it. e.g.: `func foo<T>() where func bar(&T)void { ... }`"
+      }
       ParseError::BadStartOfWhileCondition(_) => "Bad start of while condition, expected (",
       ParseError::BadEndOfWhileCondition(_) => "Bad end of while condition, expected )",
       ParseError::BadStartOfWhileBody(_) => "Bad start of while body, expected {",
@@ -156,7 +159,7 @@ package dev.vale.parsing
 import dev.vale.{FileCoordinate, FileCoordinateMap}
 import dev.vale.CodeLocationS
 import dev.vale.SourceCodeUtils.{humanizeFile, humanizePos, nextThingAndRestOfLine}
-import dev.vale.lexing.{BadArraySizerEnd, BadAttributeError, BadBinaryFunctionName, BadDestructureError, BadDot, BadEndOfElseBody, BadEndOfIfBody, BadEndOfIfCondition, BadEndOfWhileBody, BadEndOfWhileCondition, BadExpressionBegin, BadExpressionEnd, BadForeachInError, BadFunctionAfterParam, BadFunctionBodyError, BadImplFor, BadInterfaceHeader, BadInterfaceMember, BadLetEndError, BadLetEqualsError, BadLetSourceError, BadLocalName, BadMemberEnd, BadMutateEqualsError, BadRuleCallParam, BadRuneTypeError, BadStartOfBlock, BadStartOfElseBody, BadStartOfIfBody, BadStartOfIfCondition, BadStartOfStatementError, BadStartOfWhileBody, BadStartOfWhileCondition, BadStringChar, BadStringInterpolationEnd, BadStructContentsBegin, BadStructMember, BadTemplateCallParam, BadTypeExpression, CantUseBreakInExpression, CantUseReturnInExpression, DontNeedSemicolon, ForgotSetKeyword, IParseError, IfBlocksMustBothOrNeitherReturn, LightFunctionMustHaveParamTypes, NeedSemicolon, NeedWhitespaceAroundBinaryOperator, OnlyRegionRunesCanHaveMutability, RangedInternalErrorP, UnknownTupleOrSubExpression, UnrecognizableExpressionAfterAugment, UnrecognizedDenizenError}
+import dev.vale.lexing.{BadArraySizerEnd, BadAttributeError, BadBinaryFunctionName, BadDestructureError, BadDot, BadEndOfElseBody, BadEndOfIfBody, BadEndOfIfCondition, BadEndOfWhileBody, BadEndOfWhileCondition, BadExpressionBegin, BadExpressionEnd, BadForeachInError, BadFunctionAfterParam, BadFunctionBodyError, BadImplFor, BadInterfaceHeader, BadInterfaceMember, BadLetEndError, BadLetEqualsError, BadLetSourceError, BadLocalName, BadMemberEnd, BadMutateEqualsError, BadRuleCallParam, BadRuneTypeError, BadStartOfBlock, BadStartOfElseBody, BadStartOfIfBody, BadStartOfIfCondition, BadStartOfStatementError, BadStartOfWhileBody, BadStartOfWhileCondition, BadStringChar, BadStringInterpolationEnd, BadStructContentsBegin, BadStructMember, BadTemplateCallParam, BadTypeExpression, CantUseBreakInExpression, CantUseReturnInExpression, DontNeedSemicolon, ForgotSetKeyword, FuncBoundWithoutWhere, IParseError, IfBlocksMustBothOrNeitherReturn, LightFunctionMustHaveParamTypes, NeedSemicolon, NeedWhitespaceAroundBinaryOperator, OnlyRegionRunesCanHaveMutability, RangedInternalErrorP, UnknownTupleOrSubExpression, UnrecognizableExpressionAfterAugment, UnrecognizedDenizenError}
 
 object ParseErrorHumanizer {
   def humanizeFromMap(
@@ -212,6 +215,7 @@ object ParseErrorHumanizer {
         case BadExpressionEnd(pos) => "expected `;` or `}` after expression, but found:\n"
         case IfBlocksMustBothOrNeitherReturn(pos) => "If blocks should either both ret, or neither return."
         case ForgotSetKeyword(pos) => "Need `set` keyword to mutate a variable that already exists."
+        case FuncBoundWithoutWhere(pos) => "Function bound needs `where` keyword before it. e.g.: `func foo<T>() where func bar(&T)void { ... }`"
 //        case BadImport(pos, cause) => "bad import:\n" + cause.toString + "\n"
         case BadStartOfWhileCondition(pos) => "Bad start of while condition, expected ("
         case BadEndOfWhileCondition(pos) => "Bad end of while condition, expected )"

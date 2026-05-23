@@ -1,3 +1,11 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/Hamuts.scala
+//
+// Mutable bookkeeping state threaded through every simplifying-pass translation.
+// This is the same wrap-and-stub pattern as src/simplifying/ast/types.rs and ast.rs:
+// full Scala source wrapped in /* */, plus empty placeholder Rust types so
+// signatures across the simplifying-pass migration can compile. Fields will
+// be populated when the slice-pipeline reaches hamuts.rs proper.
+/*
 package dev.vale.simplifying
 
 import dev.vale.{PackageCoordinate, StrI, vassert, vcurious, vfail, vimpl}
@@ -489,4 +497,51 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
   def getRuntimeSizedArray(runtimeSizedArrayTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
     runtimeSizedArrays.values.find(_.kind == runtimeSizedArrayTH).get
   }
+}
+*/
+
+// mig: case class HamutsBox (collapsed into Hamuts; see Slab 17 architect directive)
+// Scala's HamutsBox was a mutable wrapper around an immutable Hamuts. Per
+// architect directive, the Rust port mirrors typing pass's `CompilerOutputs`:
+// a single mutable struct with HashMap/IndexMap fields and `&mut self`
+// methods. No HamutsBox/Hamuts split.
+
+use std::collections::HashMap;
+
+use crate::interner::StrI;
+use crate::instantiating::ast::types::{
+    cI, InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
+};
+use crate::instantiating::ast::ast::PrototypeI;
+use crate::final_ast::ast::{
+    FunctionH, FunctionRefH, InterfaceDefinitionH, PrototypeH, StructDefinitionH,
+};
+use crate::final_ast::types::{
+    InterfaceHT, KindHT, RuntimeSizedArrayDefinitionHT, StaticSizedArrayDefinitionHT, StructHT,
+};
+
+// mig: case class Hamuts
+/// Temporary state
+//
+// Mutable accumulator. `'p` is the parser arena (matches Scala's
+// `PackageCoordinate` references). `'i` is the instantiating arena
+// (matches Scala's `StructIT[cI]`/`InterfaceIT[cI]`/`PrototypeI[cI]` keys).
+// `'h` is the simplifying arena.
+pub struct Hamuts<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub human_name_to_full_name_to_id: HashMap<String, HashMap<String, i32>>,
+    pub struct_t_to_struct_h: HashMap<&'i StructIT<'s, 'i, cI>, &'h StructHT<'s, 'h>>,
+    pub struct_t_to_struct_def_h: HashMap<&'i StructIT<'s, 'i, cI>, StructDefinitionH<'s, 'h>>,
+    pub struct_defs: Vec<StructDefinitionH<'s, 'h>>,
+    pub static_sized_arrays: HashMap<&'i StaticSizedArrayIT<'s, 'i, cI>, StaticSizedArrayDefinitionHT<'s, 'h>>,
+    pub runtime_sized_arrays: HashMap<&'i RuntimeSizedArrayIT<'s, 'i, cI>, RuntimeSizedArrayDefinitionHT<'s, 'h>>,
+    pub interface_t_to_interface_h: HashMap<&'i InterfaceIT<'s, 'i, cI>, &'h InterfaceHT<'s, 'h>>,
+    pub interface_t_to_interface_def_h: HashMap<&'i InterfaceIT<'s, 'i, cI>, InterfaceDefinitionH<'s, 'h>>,
+    pub function_refs: HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionRefH<'s, 'h>>,
+    pub function_defs: HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionH<'s, 'h>>,
+    pub package_coord_to_export_name_to_function: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, HashMap<StrI<'s>, &'h PrototypeH<'s, 'h>>>,
+    pub package_coord_to_export_name_to_kind: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, HashMap<StrI<'s>, KindHT<'s, 'h>>>,
+    pub package_coord_to_extern_name_to_function: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, HashMap<StrI<'s>, &'h PrototypeH<'s, 'h>>>,
+    pub package_coord_to_extern_name_to_kind: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, HashMap<StrI<'s>, KindHT<'s, 'h>>>,
 }

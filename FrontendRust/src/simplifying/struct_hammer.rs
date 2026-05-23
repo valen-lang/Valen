@@ -1,3 +1,21 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/StructHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `StructHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::ast::{EdgeH, InterfaceDefinitionH, InterfaceMethodH, StructDefinitionH, StructMemberH};
+use crate::final_ast::types::{CoordH, InterfaceHT, StructHT};
+use crate::instantiating::ast::ast::EdgeI;
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::citizens::{
+    AddressMemberTypeI, InterfaceDefinitionI, ReferenceMemberTypeI, StructDefinitionI, StructMemberI,
+};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::types::{cI, CoordI, InterfaceIT, StructIT, VariabilityI};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::Hammer;
+
+/*
 package dev.vale.simplifying
 
 import dev.vale._
@@ -250,4 +268,219 @@ class StructHammer(
   def lookupInterface(hinputs: HinputsI, hamuts: HamutsBox, interfaceTT: InterfaceIT[cI]): InterfaceDefinitionI = {
     hinputs.lookupInterface(interfaceTT.id)
   }
+}
+*/
+
+// mig: fn translate_interfaces
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interfaces<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+    )
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interfaces");
+    }
+}
+
+// mig: fn translate_interface_methods
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interface_methods<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
+    ) -> Vec<InterfaceMethodH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interface_methods");
+    }
+}
+
+// mig: fn translate_interface
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interface<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+    ) -> &'h InterfaceHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interface");
+    }
+}
+
+// mig: fn translate_structs
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_structs<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+    )
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_structs");
+    }
+}
+
+// mig: fn translate_struct_i
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_struct_i<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_it: &'i StructIT<'s, 'i, cI>,
+    ) -> &'h StructHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_struct_i");
+    }
+}
+
+// mig: fn translate_members
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_members<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_name: &IdI<'s, 'i, cI>,
+        members: &[StructMemberI<'s, 'i, cI>],
+    ) -> Vec<StructMemberH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_members");
+    }
+}
+
+// mig: fn translate_member
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_member<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_name: &IdI<'s, 'i, cI>,
+        member2: &StructMemberI<'s, 'i, cI>,
+    ) -> StructMemberH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_member");
+    }
+}
+
+// mig: fn make_box
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn make_box<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        conceptual_variability: VariabilityI,
+        type2: CoordI<'s, 'i, cI>,
+        type_h: CoordH<'s, 'h>,
+    ) -> &'h StructHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: make_box");
+    }
+}
+
+// mig: fn translate_edges_for_struct (Scala overload — disambiguated.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edges_for_struct<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        struct_tt: &'i StructIT<'s, 'i, cI>,
+    ) -> Vec<EdgeH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edges_for_struct");
+    }
+}
+
+// mig: fn translate_edges_for_struct_with_edges (Scala overload — disambiguated.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edges_for_struct_with_edges<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        edges2: &[EdgeI<'s, 'i>],
+    ) -> Vec<EdgeH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edges_for_struct_with_edges");
+    }
+}
+
+// mig: fn translate_edge
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edge<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+        edge2: &EdgeI<'s, 'i>,
+    ) -> EdgeH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edge");
+    }
+}
+
+// mig: fn lookup_struct
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn lookup_struct<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &Hamuts<'s, 'i, 'h>,
+        struct_tt: &'i StructIT<'s, 'i, cI>,
+    ) -> &'i StructDefinitionI<'s, 'i, cI>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: lookup_struct");
+    }
+}
+
+// mig: fn lookup_interface
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn lookup_interface<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &Hamuts<'s, 'i, 'h>,
+        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: lookup_interface");
+    }
 }

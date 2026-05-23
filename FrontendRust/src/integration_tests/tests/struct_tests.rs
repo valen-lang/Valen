@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.testvm.PanicException
@@ -280,3 +281,5 @@ class StructTests extends FunSuite with Matchers {
     }
   }
 }
+
+*/

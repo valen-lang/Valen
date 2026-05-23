@@ -1,3 +1,23 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/VonHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `VonHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::ast::{
+    EdgeH, FunctionH, FunctionRefH, IdH, InterfaceDefinitionH, InterfaceMethodH, PackageH,
+    ProgramH, PrototypeH, RegionH, StructDefinitionH, StructMemberH,
+};
+use crate::final_ast::instructions::{ExpressionH, Local, VariableIdH};
+use crate::final_ast::types::{
+    CodeLocation, CoordH, InterfaceHT, KindHT, LocationH, Mutability, OwnershipH,
+    RuntimeSizedArrayDefinitionHT, StaticSizedArrayDefinitionHT, StructHT, Variability,
+};
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::von::ast::IVonData;
+use crate::simplifying::hammer::Hammer;
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.{CodeLocationS, PackageCoordinate, RangeS, vimpl}
@@ -975,4 +995,289 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("packageCoordinate", NameHammer.translatePackageCoordinate(packageCoordinate)),
         VonMember("shortenedName", VonStr(shortenedName))))
   }
+}
+*/
+
+// mig: fn vonify_program
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_program(&self, program: &ProgramH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_program");
+    }
+}
+
+// mig: fn vonify_package
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_package(
+        &self,
+        package_coord: PackageCoordinate<'s>,
+        paackage: &PackageH<'s, 'h>,
+    ) -> IVonData {
+        panic!("Unimplemented: vonify_package");
+    }
+}
+
+// mig: fn vonify_region
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_region(&self, region: RegionH) -> IVonData {
+        panic!("Unimplemented: vonify_region");
+    }
+}
+
+// mig: fn vonify_struct_h
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_struct_h(&self, r#ref: &StructHT<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_struct_h");
+    }
+}
+
+// mig: fn vonify_interface (Scala overload — by InterfaceHT)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_interface(&self, r#ref: &InterfaceHT<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_interface");
+    }
+}
+
+// mig: fn vonify_interface_method
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_interface_method(
+        &self,
+        interface_method_h: &InterfaceMethodH<'s, 'h>,
+    ) -> IVonData {
+        panic!("Unimplemented: vonify_interface_method");
+    }
+}
+
+// mig: fn vonify_interface_def (Scala overload — by InterfaceDefinitionH;
+// disambiguated per overload-suffix pattern.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_interface_def(&self, interface: &InterfaceDefinitionH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_interface_def");
+    }
+}
+
+// mig: fn vonify_struct
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_struct(&self, r#struct: &StructDefinitionH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_struct");
+    }
+}
+
+// mig: fn vonify_mutability
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_mutability(&self, mutability: Mutability) -> IVonData {
+        panic!("Unimplemented: vonify_mutability");
+    }
+}
+
+// mig: fn vonify_location
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_location(&self, location: LocationH) -> IVonData {
+        panic!("Unimplemented: vonify_location");
+    }
+}
+
+// mig: fn vonify_variability
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_variability(&self, variability: Variability) -> IVonData {
+        panic!("Unimplemented: vonify_variability");
+    }
+}
+
+// mig: fn vonify_prototype
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_prototype(&self, prototype: &PrototypeH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_prototype");
+    }
+}
+
+// mig: fn vonify_coord
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_coord(&self, coord: CoordH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_coord");
+    }
+}
+
+// mig: fn vonify_edge
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_edge(&self, edge_h: &EdgeH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_edge");
+    }
+}
+
+// mig: fn vonify_ownership
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_ownership(&self, ownership: OwnershipH) -> IVonData {
+        panic!("Unimplemented: vonify_ownership");
+    }
+}
+
+// mig: fn vonify_struct_member
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_struct_member(&self, struct_member_h: &StructMemberH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_struct_member");
+    }
+}
+
+// mig: fn vonify_runtime_sized_array_definition
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_runtime_sized_array_definition(
+        &self,
+        rsa_def: &RuntimeSizedArrayDefinitionHT<'s, 'h>,
+    ) -> IVonData {
+        panic!("Unimplemented: vonify_runtime_sized_array_definition");
+    }
+}
+
+// mig: fn vonify_static_sized_array_definition
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_static_sized_array_definition(
+        &self,
+        ssa_def: &StaticSizedArrayDefinitionHT<'s, 'h>,
+    ) -> IVonData {
+        panic!("Unimplemented: vonify_static_sized_array_definition");
+    }
+}
+
+// mig: fn vonify_kind
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_kind(&self, kind: KindHT<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_kind");
+    }
+}
+
+// mig: fn vonify_function
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_function(&self, function_h: &FunctionH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_function");
+    }
+}
+
+// mig: fn vonify_expression
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_expression(&self, node: ExpressionH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_expression");
+    }
+}
+
+// mig: fn vonify_function_ref
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_function_ref(&self, r#ref: &FunctionRefH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_function_ref");
+    }
+}
+
+// mig: fn vonify_local
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_local(&self, local: Local<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_local");
+    }
+}
+
+// mig: fn vonify_variable_id
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_variable_id(&self, id: VariableIdH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_variable_id");
+    }
+}
+
+// mig: fn vonify_optional
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_optional<I>(&self, opt: Option<I>, func: impl Fn(I) -> IVonData) -> IVonData {
+        panic!("Unimplemented: vonify_optional");
+    }
+}
+
+// mig: fn vonify_code_location
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_code_location(&self, code_location: CodeLocation) -> IVonData {
+        panic!("Unimplemented: vonify_code_location");
+    }
+}
+
+// mig: fn vonify_code_location2
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_code_location2(&self, code_location: &CodeLocationS<'s>) -> IVonData {
+        panic!("Unimplemented: vonify_code_location2");
+    }
+}
+
+// mig: fn vonify_ranges
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_ranges(&self, ranges: &[RangeS<'s>]) -> IVonData {
+        panic!("Unimplemented: vonify_ranges");
+    }
+}
+
+// mig: fn vonify_range
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_range(&self, range: RangeS<'s>) -> IVonData {
+        panic!("Unimplemented: vonify_range");
+    }
+}
+
+// mig: fn vonify_name
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn vonify_name(&self, h: &IdH<'s, 'h>) -> IVonData {
+        panic!("Unimplemented: vonify_name");
+    }
 }

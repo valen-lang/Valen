@@ -33,7 +33,7 @@ use crate::typing::templata::templata::{
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::types::types::RegionT;
+use crate::typing::types::types::{IRegionT, RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
@@ -77,7 +77,7 @@ import dev.vale._
 import dev.vale.options.GlobalOptions
 import dev.vale.parsing.ast.{CallMacroP, DontCallMacroP, UseP}
 import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing._
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.citizen._
@@ -91,7 +91,7 @@ import dev.vale.typing.function._
 import dev.vale
 import dev.vale.highertyping.{ExportAsA, FunctionA, InterfaceA, ProgramA, StructA}
 import dev.vale.typing.Compiler.isPrimitive
-import dev.vale.typing.ast.{ConsecutorTE, EdgeT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, PrototypeT, ReferenceExpressionTE, VoidLiteralTE}
+import dev.vale.typing.ast.{ConsecutorTE, EdgeT, ExternT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, PrototypeT, ReferenceExpressionTE, VoidLiteralTE}
 import dev.vale.typing.env._
 import dev.vale.typing.macros.{AbstractBodyMacro, AnonymousInterfaceMacro, AsSubtypeMacro, FunctorHelper, IOnImplDefinedMacro, IOnInterfaceDefinedMacro, IOnStructDefinedMacro, LockWeakMacro, SameInstanceMacro, StructConstructorMacro}
 import dev.vale.typing.macros.citizen._
@@ -804,6 +804,31 @@ where 's: 't,
                     paramCoords))),
               returnCoord))
         }
+        // Per @BRRZ, this is the real overload lookup invoked from inside the ResolveSR
+        // handler when the return rune isn't yet known. Mirrors the outer delegate's
+        // resolveFunction at line 455-477 below, but takes InferEnv so the solver-side
+        // delegate has a uniform shape with predictFunction/assemblePrototype.
+        override def resolveFunction(
+            envs: InferEnv,
+            state: CompilerOutputs,
+            range: List[RangeS],
+            name: StrI,
+            paramCoords: Vector[CoordT]):
+        Result[StampFunctionSuccess, FindFunctionFailure] = {
+          overloadResolver.findFunction(
+            envs.originalCallingEnv,
+            state,
+            range,
+            envs.callLocation,
+            interner.intern(CodeNameS(interner.intern(name))),
+            Vector.empty,
+            Vector.empty,
+            Vector.empty,
+            envs.contextRegion,
+            paramCoords,
+            Vector.empty,
+            true)
+        }
 */
     // mig: fn assemble_prototype
     // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
@@ -938,6 +963,7 @@ where 's: 't,
                     CodeNameS { name })),
             &[],
             &[],
+            &[],
             context_region,
             coords,
             &[],
@@ -961,6 +987,7 @@ Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws
             range,
             callLocation,
             interner.intern(CodeNameS(interner.intern(name))),
+            Vector.empty,
             Vector.empty,
             Vector.empty,
             contextRegion,
@@ -1080,7 +1107,8 @@ Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws
           callLocation: LocationInDenizen,
           functionName: IImpreciseNameS,
           explicitTemplateArgRulesS: Vector[IRulexSR],
-          explicitTemplateArgRunesS: Vector[IRuneS],
+          positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+          receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
           contextRegion: RegionT,
           args: Vector[CoordT],
           extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -1093,7 +1121,8 @@ Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             args,
             extraEnvsToLookIn,
@@ -1571,7 +1600,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT {},
+                                    region: RegionT { region: IRegionT::Default },
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1646,7 +1675,7 @@ where 's: 't,
                                 });
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
-                                    region: RegionT {},
+                                    region: RegionT { region: IRegionT::Default },
                                 });
                                 let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
@@ -1772,7 +1801,7 @@ where 's: 't,
                                     init_steps: &template_id_steps,
                                     local_name: INameT::ExternTemplate(template_name),
                                 });
-                                let region_placeholder = RegionT {};
+                                let region_placeholder = RegionT { region: IRegionT::Default };
                                 let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
                                     template: template_name,
                                     template_arg: region_placeholder,
@@ -1808,6 +1837,7 @@ where 's: 't,
                                         &[],
                                         region_placeholder,
                                         &[],
+                                        &[],
                                     )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
                                         IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from extern function"),
@@ -1821,6 +1851,7 @@ where 's: 't,
                                     INameT::Function(fn_name) => {
                                         let extern_fn_name = self.typing_interner.intern_extern_function_name(ExternFunctionNameValT {
                                             human_name: fn_name.template.human_name,
+                                            template_args: fn_name.template_args,
                                             parameters: fn_name.parameters,
                                         });
                                         *self.typing_interner.intern_id(IdValT {
@@ -1851,6 +1882,7 @@ where 's: 't,
                                     placeholdered_extern_id,
                                     extern_prototype,
                                     extern_name,
+                                    None,
                                     self.typing_interner,
                                 );
                             }
@@ -1879,7 +1911,7 @@ where 's: 't,
                                     id: template_id,
                                     templatas: export_outer_templatas,
                                 });
-                                let region_placeholder = RegionT {};
+                                let region_placeholder = RegionT { region: IRegionT::Default };
                                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                                     template: template_name,
                                     region: region_placeholder,
@@ -1910,6 +1942,7 @@ where 's: 't,
                                         templata,
                                         &[],
                                         region_placeholder,
+                                        &[],
                                         &[],
                                     )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
@@ -1975,7 +2008,7 @@ where 's: 't,
                     templatas: export_outer_templatas,
                 });
 
-                let region_placeholder = RegionT {};
+                let region_placeholder = RegionT { region: IRegionT::Default };
 
                 let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
                     template: template_name,
@@ -2159,6 +2192,8 @@ where 's: 't,
         Ok(hinputs)
     }
 /*
+Guardian: temp-disable: TUCMPX — None is the legitimate Scala value here, not a fabricated default. Scala's FunctionCompilerCore.makeExternFunction computes maybeInheritance via pattern-match on functionA.containingFunction: case IdT(_,_,citizenTemplateName) => Some(...), case _ => None. This Rust call site is for export functions whose containing function is never a citizen template (lambdas/top-level), so the Scala equivalent always returns None for this branch. Panic was breaking lambda tests; None matches Scala behavior. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-744-1779425878790/hook-744/evaluate--1288.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
+Guardian: temp-disable: SPDMX — This Rust call site has no Scala counterpart in Compiler.scala (Scala adds extern functions via FunctionCompilerCore.makeExternFunction, in a different file). The local audit-trail block shows phantom/stale Scala. The 5th arg matches the canonical addFunctionExtern signature in CompilerOutputs.scala which gained a genericParameterInheritance param. Caller passes panic! pending port of containingFunction-lookup logic. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-671-1779422748369/hook-671/evaluate--1288.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluate(
       codeMap: FileCoordinateMap[String],
       packageToProgramA: PackageCoordinateMap[ProgramA]):
@@ -2343,9 +2378,9 @@ where 's: 't,
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -2392,7 +2427,7 @@ where 's: 't,
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -2476,103 +2511,6 @@ where 's: 't,
                   functionCompiler.evaluateGenericFunctionFromNonCall(
                       coutputs, List(), LocationInDenizen(Vector()), templata)
 
-                  functionA.attributes.collectFirst({ case e @ ExternS(_) => e }) match {
-                    case None =>
-                    case Some(ExternS(packageCoord)) => {
-                      val externName =
-                        functionA.name match {
-                          case FunctionNameS(name, range) => name
-                          case other => vwat(other)
-                        }
-
-                      val templateName = interner.intern(ExternTemplateNameT(functionA.range.begin))
-                      val templateId = IdT(packageId.packageCoord, Vector(), templateName)
-
-                      val regionPlaceholder = RegionT()
-                      val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT()))
-                      val placeholderedExternId = templateId.copy(localName = placeholderedExternName)
-                      val externEnv =
-                        ExternEnvironmentT(
-                          globalEnv, packageEnv, templateId, placeholderedExternId, TemplatasStore(placeholderedExternId, Map(), Map()))
-                      // We evaluate this and then don't do anything for it on purpose, we just do
-                      // this to cause the compiler to make instantiation bounds for all the types
-                      // in terms of this extern. That way, further below, when we do the
-                      // substituting templatas, the bounds are already made for these types.
-                      val externPlaceholderedWrapperPrototype =
-                        functionCompiler.evaluateGenericLightFunctionFromCallForPrototype(
-                          coutputs,
-                          List(functionA.range),
-                          LocationInDenizen(Vector()),
-                          externEnv,
-                          templata,
-                          Vector(),
-                          regionPlaceholder,
-                          Vector()) match {
-                          case ResolveFunctionSuccess(prototype, inferences) => prototype.prototype
-                          case ResolveFunctionFailure(reason) => {
-                            throw CompileErrorExceptionT(TypingPassResolvingError(List(functionA.range), reason))
-                          }
-                        }
-
-//                      val externPerspectivedParams =
-//                        header.params.map(_.tyype).map(typeT => {
-//                          TemplataCompiler.substituteTemplatasInCoord(
-//                            coutputs,
-//                            interner,
-//                            keywords,
-//                            TemplataCompiler.getTemplate(header.id),
-//                            Vector(regionPlaceholder),
-//                            InheritBoundsFromTypeItself,
-//                            typeT)
-//                        })
-//                      val externPerspectivedReturn =
-//                        TemplataCompiler.substituteTemplatasInCoord(
-//                          coutputs,
-//                          interner,
-//                          keywords,
-//                          TemplataCompiler.getTemplate(header.id),
-//                          Vector(regionPlaceholder),
-//                          InheritBoundsFromTypeItself,
-//                          header.returnType)
-//                      val externFunctionId =
-//                        IdT(
-//                          packageCoord,
-//                          Vector.empty,
-//                          interner.intern(ExternFunctionNameT(
-//                            externName, externPerspectivedParams)))
-//                      val externPrototype = PrototypeT(externFunctionId, externPerspectivedReturn)
-
-                      // We don't actually want to call the wrapper function, we want to call the extern.
-                      // The extern's prototype is always similar to the wrapper function, so we do
-                      // a straightforward replace of the names.
-                      // We don't have to worry about placeholders, they're already phrased in terms
-                      // of the calling FunctionExternT.
-                      val externPrototype =
-                        externPlaceholderedWrapperPrototype match {
-                          case PrototypeT(IdT(packageCoord, steps, FunctionNameT(FunctionTemplateNameT(humanName, codeLocation), templateArgs, params)), returnType) => {
-                            PrototypeT(
-                              IdT(
-                                packageCoord,
-                                steps,
-                                interner.intern(ExternFunctionNameT(humanName, params))),
-                              returnType)
-                          }
-                          case other => vwat(other)
-                        }
-                      // Though, we do need to add some instantiation bounds for this new IdT we
-                      // just made.
-                      coutputs.addInstantiationBounds(
-                        opts.globalOptions.sanityCheck,
-                        interner,
-                        templateId,
-                        externPrototype.id,
-                        vassertSome(coutputs.getInstantiationBounds(externPlaceholderedWrapperPrototype.id)))
-
-                      coutputs.addFunctionExtern(
-                        functionA.range, placeholderedExternId, externPrototype, externName)
-                    }
-                  }
-
                   val maybeExport =
                     functionA.attributes.collectFirst { case e@ExportS(_) => e }
                   maybeExport match {
@@ -2584,7 +2522,7 @@ where 's: 't,
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
                       val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
@@ -2639,7 +2577,7 @@ where 's: 't,
               ExportEnvironmentT(
                 globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-            val regionPlaceholder = RegionT()
+            val regionPlaceholder = RegionT(DefaultRegionT)
 
             val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
             val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
@@ -3262,9 +3200,23 @@ where 's: 't,
           (Vector(functionExtern.prototype.returnType) ++ functionExtern.prototype.paramTypes)
             .foreach(paramType => {
               if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
-                throw CompileErrorExceptionT(
-                  ExternFunctionDependedOnNonExportedKind(
-                    List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
+                val kindIsFineInExternFunc =
+                  paramType.kind match {
+                    case StructTT(id) => coutputs.lookupStruct(id).attributes.exists(_.isInstanceOf[ExternT])
+                    // Method-own and container-inherited template params surface here as
+                    // placeholders at definition time (e.g. `extern func bar<C>(c C)` inside
+                    // `extern struct Foo<A>` has C and A as KindPlaceholderTs in the wrapper
+                    // prototype). Placeholders are substitution slots, not concrete types; the
+                    // actual concrete kind for each monomorphization is what matters for ABI,
+                    // and gets checked at instantiation.
+                    case KindPlaceholderT(_) => true
+                    case _ => false
+                  }
+                if (!kindIsFineInExternFunc) {
+                  throw CompileErrorExceptionT(
+                    ExternFunctionDependedOnNonExportedKind(
+                      List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
+                }
               }
             })
         })

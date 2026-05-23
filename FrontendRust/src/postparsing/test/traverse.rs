@@ -604,7 +604,8 @@ where
       }
     }
     IExpressionSE::LocalLoad(x) => visit_var_name(pred, out, &x.name),
-    IExpressionSE::OutsideLoad(x) => visit_outside_load(pred, out, x),
+    IExpressionSE::OverloadSet(x) => visit_outside_load(pred, out, &x.lookup),
+    IExpressionSE::TemplataLoad(_x) => {}
     IExpressionSE::RuneLookup(x) => visit_rune(pred, out, &x.rune),
     IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
   }
@@ -631,9 +632,9 @@ where
   for rule in outside_load.rules {
     visit_rulex(pred, out, rule);
   }
-  visit_imprecise_name(pred, out, &outside_load.name);
-  if let Some(template_args) = outside_load.maybe_template_args {
-    for template_arg in template_args {
+  for part in outside_load.parts {
+    visit_imprecise_name(pred, out, &part.name);
+    for template_arg in part.explicit_template_args {
       visit_rune_usage(pred, out, template_arg);
     }
   }

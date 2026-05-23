@@ -177,9 +177,10 @@ where 's: 't,
                 (V::OverrideDispatcherCase(key), T::OverrideDispatcherCase(self.bump.alloc(canonical)))
             }
             V::ExternFunction(v) => {
+                let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = ExternFunctionNameT { human_name: v.human_name, parameters, _must_intern: MustIntern(()) };
-                let key = ExternFunctionNameValT { human_name: v.human_name, parameters };
+                let canonical = ExternFunctionNameT { human_name: v.human_name, template_args, parameters, _must_intern: MustIntern(()) };
+                let key = ExternFunctionNameValT { human_name: v.human_name, template_args, parameters };
                 (V::ExternFunction(key), T::ExternFunction(self.bump.alloc(canonical)))
             }
             V::Function(v) => {

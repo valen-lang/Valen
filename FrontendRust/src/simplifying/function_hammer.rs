@@ -1,3 +1,18 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/FunctionHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `FunctionHammer` is not a Rust
+// struct. Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::ast::FunctionRefH;
+use crate::final_ast::ast::IFunctionAttributeH;
+use crate::instantiating::ast::ast::{ExternI, FunctionDefinitionI, FunctionHeaderI, IFunctionAttributeI};
+use crate::instantiating::ast::ast::{PrototypeI};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::types::cI;
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::Hammer;
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.{FunctionH, Local, PureH, UserFunctionH, VariableIdH}
@@ -98,4 +113,66 @@ class FunctionHammer(
     val functionRefH = FunctionRefH(prototypeH);
     (functionRefH)
   }
+}
+*/
+
+// mig: fn translate_functions
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_functions<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        functions2: &[FunctionDefinitionI<'s, 'i>],
+    ) -> Vec<FunctionRefH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_functions");
+    }
+}
+
+// mig: fn translate_function
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_function<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        function2: &FunctionDefinitionI<'s, 'i>,
+    ) -> FunctionRefH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_function");
+    }
+}
+
+// mig: fn translate_function_attributes
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_function_attributes(
+        &self,
+        attributes: &[IFunctionAttributeI<'s>],
+    ) -> Vec<IFunctionAttributeH> {
+        panic!("Unimplemented: translate_function_attributes");
+    }
+}
+
+// mig: fn translate_function_ref
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_function_ref<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        prototype2: &'i PrototypeI<'s, 'i, cI>,
+    ) -> FunctionRefH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_function_ref");
+    }
 }

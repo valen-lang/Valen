@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.instantiating.ast._
@@ -485,3 +486,5 @@ class VirtualTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonStr("42true") => }
   }
 }
+
+*/

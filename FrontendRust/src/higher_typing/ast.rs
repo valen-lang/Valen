@@ -117,7 +117,7 @@ pub fn lookup_struct_by_name(&self, _name: &INameS<'s>) -> &StructA<'s> {
     val matches = structs.find(_.name == name)
     vassert(matches.size == 1)
     matches.head match {
-      case i @ StructA(_, _, _, _, _, _, _, _, _, _, _, _, _) => i
+      case i @ StructA(_, _, _, _, _, _, _, _, _, _, _, _, _, _) => i
     }
   }
 */
@@ -162,6 +162,7 @@ pub struct StructA<'s> {
     pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub member_rules: &'s [IRulexSR<'s>],
     pub members: &'s [IStructMemberS<'s>],
+    pub internal_methods: &'s [&'s FunctionA<'s>],
 }
 /*
 case class StructA(
@@ -186,7 +187,9 @@ case class StructA(
   // These are separated so they can be skipped during resolving, see SMRASDR.
   membersRuneToType: Map[IRuneS, ITemplataType],
   memberRules: Vector[IRulexSR],
-  members: Vector[IStructMemberS]
+  members: Vector[IStructMemberS],
+  // See IMRFDI; mirrors InterfaceA.internalMethods.
+  internalMethods: Vector[FunctionA]
 ) extends CitizenA {
   val hash = range.hashCode() + name.hashCode()
 */
@@ -206,6 +209,7 @@ pub fn new(
     members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
+    internal_methods: &'s [&'s FunctionA<'s>],
 ) -> Self {
     // These should be removed by the higher typer
     for rule in header_rules.iter() {
@@ -234,7 +238,7 @@ pub fn new(
         !members_rune_to_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
         "vassert: members_rune_to_type should not contain DenizenDefaultRegionRuneS"
     );
-    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members }
+    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods }
 }
 /*
 */

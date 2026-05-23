@@ -8,15 +8,35 @@ import dev.vale.{U, vassert, vimpl, vwat}
 import scala.collection.mutable
 
 object RegionCounter {
+*/
+// mig: struct CounterI
+pub struct CounterI;
+// TODO: populate fields when names.rs / templata.rs are fully migrated.
+// mig: impl CounterI
+/*
   class Counter {
     // TODO(optimize): Use an array for this, with a minimum index and maximum index (similar to
     // what a circular queue uses)
     val set: mutable.HashSet[Int] = mutable.HashSet[Int]()
 
+*/
+// mig: fn count
+impl CounterI {
+    pub fn count(&mut self) { panic!("Unimplemented: count"); }
+}
+/*
     def count(region: RegionTemplataI[sI]): Unit = {
       set.add(region.pureHeight)
     }
 
+*/
+// mig: fn assemble_map
+impl CounterI {
+    pub fn assemble_map(&self) -> std::collections::HashMap<i32, i32> {
+        panic!("Unimplemented: assemble_map");
+    }
+}
+/*
     def assembleMap(): Map[Int, Int] = {
       val numRegions = set.size
       // Let's say we have a set that contains 3, 5, -2, 0, 4, it becomes...
@@ -59,12 +79,24 @@ object RegionCounter {
 
   }
 
+*/
+// mig: fn count_prototype
+pub fn count_prototype() {
+    panic!("Unimplemented: count_prototype");
+}
+/*
   def countPrototype(counter: Counter, prototype: PrototypeI[sI]): Unit = {
     val PrototypeI(id, returnType) = prototype
     countFunctionId(counter, id)
     countCoord(counter, returnType)
   }
 
+*/
+// mig: fn count_id
+pub fn count_id() {
+    panic!("Unimplemented: count_id");
+}
+/*
   def countId[T <: INameI[sI]](
     counter: Counter,
     id: IdI[sI, T],
@@ -75,6 +107,12 @@ object RegionCounter {
     func(localName)
   }
 
+*/
+// mig: fn count_function_id
+pub fn count_function_id() {
+    panic!("Unimplemented: count_function_id");
+}
+/*
   def countFunctionId(
     counter: Counter,
     id: IdI[sI, IFunctionNameI[sI]]):
@@ -85,6 +123,12 @@ object RegionCounter {
       x => countFunctionName(counter, x))
   }
 
+*/
+// mig: fn count_function_name
+pub fn count_function_name() {
+    panic!("Unimplemented: count_function_name");
+}
+/*
   def countFunctionName(
     counter: Counter,
     name: IFunctionNameI[sI]):
@@ -122,6 +166,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_citizen_name
+pub fn count_citizen_name() {
+    panic!("Unimplemented: count_citizen_name");
+}
+/*
   def countCitizenName(
       counter: Counter,
       name: ICitizenNameI[sI]):
@@ -142,6 +192,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_var_name
+pub fn count_var_name() {
+    panic!("Unimplemented: count_var_name");
+}
+/*
   def countVarName(
     counter: Counter,
     name: IVarNameI[sI]):
@@ -154,6 +210,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_name
+pub fn count_name() {
+    panic!("Unimplemented: count_name");
+}
+/*
   def countName(
     counter: Counter,
     name: INameI[sI]):
@@ -192,6 +254,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_templata
+pub fn count_templata() {
+    panic!("Unimplemented: count_templata");
+}
+/*
   def countTemplata(
     counter: Counter,
     templata: ITemplataI[sI]):
@@ -210,6 +278,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_coord
+pub fn count_coord() {
+    panic!("Unimplemented: count_coord");
+}
+/*
   def countCoord(
     counter: Counter,
     coord: CoordI[sI]):
@@ -218,12 +292,24 @@ object RegionCounter {
     countKind(counter, kind)
   }
 
+*/
+// mig: fn count_kind
+pub fn count_kind_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_kind");
+}
+/*
   def countKind(kind: KindIT[sI]): Map[Int, Int] = {
     val map = new RegionCounter.Counter()
     RegionCounter.countKind(map, kind)
     map.assembleMap()
   }
 
+*/
+// mig: fn count_kind
+pub fn count_kind() {
+    panic!("Unimplemented: count_kind");
+}
+/*
   def countKind(
     counter: Counter,
     kind: KindIT[sI]):
@@ -258,6 +344,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_runtime_sized_array
+pub fn count_runtime_sized_array() {
+    panic!("Unimplemented: count_runtime_sized_array");
+}
+/*
   def countRuntimeSizedArray(
     counter: Counter,
     rsa: RuntimeSizedArrayIT[sI]):
@@ -272,6 +364,12 @@ object RegionCounter {
       })
   }
 
+*/
+// mig: fn count_static_sized_array
+pub fn count_static_sized_array() {
+    panic!("Unimplemented: count_static_sized_array");
+}
+/*
   def countStaticSizedArray(
     counter: Counter,
     ssa: StaticSizedArrayIT[sI]):
@@ -286,6 +384,12 @@ object RegionCounter {
       })
   }
 
+*/
+// mig: fn count_citizen_id
+pub fn count_citizen_id() {
+    panic!("Unimplemented: count_citizen_id");
+}
+/*
   def countCitizenId(
       counter: Counter,
       citizenId: IdI[sI, ICitizenNameI[sI]]):
@@ -300,6 +404,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_struct_id
+pub fn count_struct_id() {
+    panic!("Unimplemented: count_struct_id");
+}
+/*
   def countStructId(
     counter: Counter,
     structId: IdI[sI, IStructNameI[sI]]):
@@ -310,6 +420,12 @@ object RegionCounter {
       countStructName(counter, _))
   }
 
+*/
+// mig: fn count_struct_template_name
+pub fn count_struct_template_name() {
+    panic!("Unimplemented: count_struct_template_name");
+}
+/*
   def countStructTemplateName(
       counter: Counter,
       structName: IStructTemplateNameI[sI]):
@@ -319,6 +435,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_struct_name
+pub fn count_struct_name() {
+    panic!("Unimplemented: count_struct_name");
+}
+/*
   def countStructName(
       counter: Counter,
       structName: IStructNameI[sI]):
@@ -336,6 +458,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_impl_id
+pub fn count_impl_id() {
+    panic!("Unimplemented: count_impl_id");
+}
+/*
   def countImplId(
     counter: Counter,
     structId: IdI[sI, IImplNameI[sI]]):
@@ -346,6 +474,12 @@ object RegionCounter {
       x => countImplName(counter, x))
   }
 
+*/
+// mig: fn count_impl_name
+pub fn count_impl_name() {
+    panic!("Unimplemented: count_impl_name");
+}
+/*
   def countImplName(
       counter: Counter,
       implId: IImplNameI[sI]):
@@ -367,6 +501,12 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_impl_template_name
+pub fn count_impl_template_name() {
+    panic!("Unimplemented: count_impl_template_name");
+}
+/*
   def countImplTemplateName(
     counter: Counter,
     structName: IImplTemplateNameI[sI]):
@@ -376,30 +516,60 @@ object RegionCounter {
     }
   }
 
+*/
+// mig: fn count_export_id
+pub fn count_export_id() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_export_id");
+}
+/*
   def countExportId(idI: IdI[sI, ExportNameI[sI]]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countId(counter, idI, (x: ExportNameI[sI]) => RegionCounter.countName(counter, x))
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_extern_id
+pub fn count_extern_id() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_extern_id");
+}
+/*
   def countExternId(idI: IdI[sI, ExternNameI[sI]]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countId(counter, idI, (x: ExternNameI[sI]) => RegionCounter.countName(counter, x))
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_struct_id
+pub fn count_struct_id_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_struct_id");
+}
+/*
   def countStructId(idI: IdI[sI, IStructNameI[sI]]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countId(counter, idI, (x: IStructNameI[sI]) => RegionCounter.countName(counter, x))
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_interface_id
+pub fn count_interface_id_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_interface_id");
+}
+/*
   def countInterfaceId(idI: IdI[sI, IInterfaceNameI[sI]]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     countInterfaceId(counter, idI)
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_interface_id
+pub fn count_interface_id() {
+    panic!("Unimplemented: count_interface_id");
+}
+/*
   def countInterfaceId(
       counter: Counter,
       interfaceId: IdI[sI, IInterfaceNameI[sI]]):
@@ -407,12 +577,24 @@ object RegionCounter {
     RegionCounter.countId(counter, interfaceId, (x: IInterfaceNameI[sI]) => RegionCounter.countName(counter, x))
   }
 
+*/
+// mig: fn count_function_id
+pub fn count_function_id_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_function_id");
+}
+/*
   def countFunctionId(idI: IdI[sI, IFunctionNameI[sI]]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countId(counter, idI, (x: IFunctionNameI[sI]) => RegionCounter.countName(counter, x))
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_impl_id
+pub fn count_impl_id_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_impl_id");
+}
+/*
   def countImplId(
     implId: IdI[sI, IImplNameI[sI]]):
   Map[Int, Int] = {
@@ -422,12 +604,24 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_coord
+pub fn count_coord_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_coord");
+}
+/*
   def countCoord(coord: CoordI[sI]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countCoord(counter, coord)
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_var_name
+pub fn count_var_name_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_var_name");
+}
+/*
   def countVarName(
     name: IVarNameI[sI]):
   Map[Int, Int] = {
@@ -436,6 +630,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_static_sized_array
+pub fn count_static_sized_array_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_static_sized_array");
+}
+/*
   def countStaticSizedArray(
     ssa: StaticSizedArrayIT[sI]):
   Map[Int, Int] = {
@@ -444,6 +644,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_runtime_sized_array
+pub fn count_runtime_sized_array_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_runtime_sized_array");
+}
+/*
   def countRuntimeSizedArray(
     rsa: RuntimeSizedArrayIT[sI]):
   Map[Int, Int] = {
@@ -452,12 +658,24 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_prototype
+pub fn count_prototype_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_prototype");
+}
+/*
   def countPrototype(prototype: PrototypeI[sI]): Map[Int, Int] = {
     val counter = new RegionCounter.Counter()
     RegionCounter.countPrototype(counter, prototype)
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_function_name
+pub fn count_function_name_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_function_name");
+}
+/*
   def countFunctionName(
     name: IFunctionNameI[sI]):
   Map[Int, Int] = {
@@ -466,6 +684,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_impl_name
+pub fn count_impl_name_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_impl_name");
+}
+/*
   def countImplName(
       name: IImplNameI[sI]):
   Map[Int, Int] = {
@@ -474,6 +698,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_citizen_name
+pub fn count_citizen_name_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_citizen_name");
+}
+/*
   def countCitizenName(
       name: ICitizenNameI[sI]):
   Map[Int, Int] = {
@@ -482,6 +712,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_citizen_id
+pub fn count_citizen_id_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_citizen_id");
+}
+/*
   def countCitizenId(
       name: IdI[sI, ICitizenNameI[sI]]):
   Map[Int, Int] = {
@@ -490,6 +726,12 @@ object RegionCounter {
     counter.assembleMap()
   }
 
+*/
+// mig: fn count_templata
+pub fn count_templata_map() -> std::collections::HashMap<i32, i32> {
+    panic!("Unimplemented: count_templata");
+}
+/*
   def countTemplata(
       name: ITemplataI[sI]):
   Map[Int, Int] = {

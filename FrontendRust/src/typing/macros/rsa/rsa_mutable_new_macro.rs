@@ -13,7 +13,7 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS, CodeRuneS, IRuneValS};
 use crate::typing::env::environment::{ILookupContext, IInDenizenEnvironmentT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability};
-use crate::typing::types::types::RegionT;
+use crate::typing::types::types::{IRegionT, RegionT};
 use std::collections::HashSet;
 
 /*
@@ -101,13 +101,13 @@ where 's: 't,
             }, self.typing_interner).expect("vassertSome: M rune"),
         );
 
-        let array_tt = self.resolve_runtime_sized_array(element_type, mutability, RegionT);
+        let array_tt = self.resolve_runtime_sized_array(element_type, mutability, RegionT { region: IRegionT::Default });
 
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: ReferenceExpressionTE::NewMutRuntimeSizedArray(self.typing_interner.alloc(NewMutRuntimeSizedArrayTE {
                     array_type: self.typing_interner.alloc(array_tt),
-                    region: RegionT,
+                    region: RegionT { region: IRegionT::Default },
                     capacity_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,
@@ -145,14 +145,14 @@ where 's: 't,
           env.lookupNearestWithImpreciseName(
             interner.intern(RuneNameS(CodeRuneS(keywords.M))), Set(TemplataLookupContext))))
 
-    val arrayTT = arrayCompiler.resolveRuntimeSizedArray(elementType, mutability, RegionT())
+    val arrayTT = arrayCompiler.resolveRuntimeSizedArray(elementType, mutability, RegionT(DefaultRegionT))
 
     val body =
       BlockTE(
         ReturnTE(
           NewMutRuntimeSizedArrayTE(
             arrayTT,
-            RegionT(),
+            RegionT(DefaultRegionT),
             ArgLookupTE(0, paramCoords(0).tyype))))
 //            freePrototype)))
     (header, body)

@@ -13,11 +13,11 @@ Your job: add a Rust placeholder stub right below each `// mig:` comment, keepin
 
 **IMPORTANT: Use the EXACT name from the `// mig:` comment.** Do NOT add suffixes like `Mig`, `Placeholder`, `New`, etc. Do NOT rename anything to avoid name collisions with existing code. Name collisions are expected and intentional -- the reconcile step will fix them.
 
-# Step 0: Read the pass migration policy
+# Step 0: Read the migration policy
 
-Before emitting anything, find the `migration-policy.md` for this pass by walking up from the target file's directory. If only the template at `FrontendRust/docs/migration/migration-policy.md` is found (and no per-pass override exists), STOP and report "no per-pass migration-policy.md found; need one before placehold can run." Do not fall back to generic defaults — generic defaults produced the ~32 orphan-fn / wrong-lifetime / missing-interner cleanup burden documented in TL.md for the typing pass.
+Before emitting anything, read the central migration policy at `FrontendRust/docs/migration/migration-policy.md` and find the values for this pass (identified by the target file's source dir, e.g. `src/typing/` → typing). If the pass has no values in the sections you need, STOP and report "pass `<name>` has no values in `FrontendRust/docs/migration/migration-policy.md`; add them before placehold can run." Do not fall back to generic defaults — generic defaults produced the ~32 orphan-fn / wrong-lifetime / missing-interner cleanup burden documented in TL.md for the typing pass.
 
-Read the policy in full. The sections you use here:
+Read the relevant pass's values in full. The sections you use here:
  * **Lifetimes** + default `where` clause — applied to every `struct`/`enum`/`trait`/`impl` opening.
  * **Interner type** — added as the first parameter on any `fn` whose Scala body intern-allocates (look for `interner.intern(` / `arena.alloc(` patterns in the Scala body).
  * **Default collection types** — for translating `Vector`/`Map`/`Set` literals in stub signatures.
@@ -33,7 +33,7 @@ Read the policy in full. The sections you use here:
 
 # Walking the file
 
-Walk the `// mig:` comments top to bottom. Each marker is independent — there is no stack-tracking or nesting. Every `// mig: fn` emits a free-floating, module-scope stub. `// mig: impl Foo` markers emit **nothing** (they are left in place as markers only); methods are not nested inside impl blocks at this stage.
+Walk the `// mig:` comments top to bottom. Each marker is independent — there is no stack-tracking or nesting. Every `// mig: fn` emits a free-floating, module-scope stub; methods are not nested inside impl blocks at this stage.
 
 A **separate later pass** (see `.claude/agents/slice-impl-wrap.md`) is responsible for wrapping each module-scope `fn` in its own dedicated `impl<…> Foo<…> { fn … }` block (one impl per method, matching the style in `FrontendRust/src/typing/`). This placehold step must not do that wrapping itself — keep stubs flat.
 
@@ -54,11 +54,9 @@ Generate a `pub enum Foo<'s, 't> { /* variants */ }` per the policy's **sealed-t
 
 Above the enum: emit the policy's arena-classification doc-comment + the policy's derive directive (Polyvalue enums get `#[derive(PartialEq, Eq, Hash, Clone, Copy)]`).
 
-## `// mig: impl Foo`
+## Sealed-trait dispatcher fns
 
-Emit **nothing for the impl wrapper itself** — leave the `// mig: impl Foo` marker as a comment-only marker; do not generate any `impl` block (no opener, no closer, no empty `{}`).
-
-However, if `Foo` corresponds to a previously-emitted `// mig: enum Foo` whose Scala `sealed trait` body has abstract `def`s, emit a **module-scope dispatcher fn** for each one per the policy's "Abstract-def dispatcher policy":
+For a `// mig: enum Foo` that came from a Scala `sealed trait` with abstract `def`s, emit a **module-scope dispatcher fn** for each abstract def per the policy's "Abstract-def dispatcher policy":
 
 ```rust
 /* Guardian: disable-all */
@@ -69,7 +67,7 @@ pub fn method(this: &Foo<'s, 't>, /* args from policy */) -> /* return from poli
 }
 ```
 
-The dispatcher is module-scope (the `impl`-wrapping pass will later wrap it in `impl<...> Foo<...> { ... }`). The `/* Guardian: disable-all */` annotation is mandatory — these dispatchers have no 1:1 Scala counterpart.
+The dispatcher is module-scope (the `impl`-wrapping pass will later wrap it in `impl<...> Foo<...> { ... }`, anchored on the `// mig: enum Foo` marker). The `/* Guardian: disable-all */` annotation is mandatory — these dispatchers have no 1:1 Scala counterpart.
 
 ## `// mig: trait Foo`
 

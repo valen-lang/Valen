@@ -40,8 +40,9 @@ import dev.vale.postparsing._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-*/
-/*
+// Per @ECSIIOSZ, each call-site's templex tree (`Some<T>`, `&E`, `Array<imm, int>`, etc.) is
+// lowered here into a flat rule vector that later becomes the input to a per-call-site
+// solver instance.
 class TemplexScout(
     interner: Interner,
   keywords: Keywords) {
@@ -772,61 +773,88 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
 */
       ITemplexPT::Tuple(tuple) => {
         let range_s = PostParser::eval_range(file, tuple.range);
-        let mut child_lidb = lidb.child();
-        let result_rune_s = RuneUsage {
-          range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
-        };
-        let mut child_lidb = lidb.child();
-        let template_rune_s = RuneUsage {
-          range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
-        };
-        rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
-          range: range_s.clone(),
-          rune: template_rune_s.clone(),
-          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS {
-            name: keywords.tuple_human_name[tuple.elements.len()],
-          })),
+        let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+          name: keywords.tuple_human_name[tuple.elements.len()],
         }));
-        let mut element_runes = Vec::<RuneUsage<'s>>::new();
-        for element in tuple.elements {
+        if tuple.elements.is_empty() {
+          // Zero-arg case: lower directly to a single MaybeCoercingLookupSR, matching
+          // how any other zero-arg kind template (e.g., `Spaceship`) is handled.
+          // Emitting a MaybeCoercingCallSR here would deadlock RuneTypeSolver, since
+          // its pre-processor declines to seed Tup0's ambiguous templata shape.
           let mut child_lidb = lidb.child();
-          element_runes.push(translate_templex(
-            scout_arena,
-            keywords,
-            env.clone(),
-            &mut child_lidb,
-            rule_builder,
-            context_region.clone(),
-            element,
-          ));
+          let result_rune_s = RuneUsage {
+            range: range_s.clone(),
+            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          };
+          rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
+            range: range_s,
+            rune: result_rune_s.clone(),
+            name: tuple_name,
+          }));
+          result_rune_s
+        } else {
+          let mut child_lidb = lidb.child();
+          let result_rune_s = RuneUsage {
+            range: range_s.clone(),
+            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          };
+          let mut child_lidb = lidb.child();
+          let template_rune_s = RuneUsage {
+            range: range_s.clone(),
+            rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+          };
+          rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
+            range: range_s.clone(),
+            rune: template_rune_s.clone(),
+            name: tuple_name,
+          }));
+          let mut element_runes = Vec::<RuneUsage<'s>>::new();
+          for element in tuple.elements {
+            let mut child_lidb = lidb.child();
+            element_runes.push(translate_templex(
+              scout_arena,
+              keywords,
+              env.clone(),
+              &mut child_lidb,
+              rule_builder,
+              context_region.clone(),
+              element,
+            ));
+          }
+          rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
+            range: range_s,
+            result_rune: result_rune_s.clone(),
+            template_rune: template_rune_s,
+            args: scout_arena.alloc_slice_from_vec(element_runes),
+          }));
+          result_rune_s
         }
-        rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
-          range: range_s,
-          result_rune: result_rune_s.clone(),
-          template_rune: template_rune_s,
-          args: scout_arena.alloc_slice_from_vec(element_runes),
-        }));
-        result_rune_s
       }
 /*
       case TuplePT(rangeP, elements) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder +=
-          rules.MaybeCoercingLookupSR(
-            rangeS,
-            templateRuneS,
-            interner.intern(CodeNameS(keywords.tupleHumanName(elements.length))))
-        ruleBuilder +=
-          rules.MaybeCoercingCallSR(
-            rangeS,
-            resultRuneS,
-            templateRuneS,
-            elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-        resultRuneS
+        val tupleName = interner.intern(CodeNameS(keywords.tupleHumanName(elements.length)))
+        if (elements.isEmpty) {
+          // Zero-arg case: lower directly to a single MaybeCoercingLookupSR, matching
+          // how any other zero-arg kind template (e.g., `Spaceship`) is handled.
+          // Emitting a MaybeCoercingCallSR here would deadlock RuneTypeSolver, since
+          // its pre-processor declines to seed Tup0's ambiguous templata shape.
+          val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+          ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, resultRuneS, tupleName)
+          resultRuneS
+        } else {
+          val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+          val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+          ruleBuilder +=
+            rules.MaybeCoercingLookupSR(rangeS, templateRuneS, tupleName)
+          ruleBuilder +=
+            rules.MaybeCoercingCallSR(
+              rangeS,
+              resultRuneS,
+              templateRuneS,
+              elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
+          resultRuneS
+        }
       }
 */
       _ => panic!("POSTPARSER_TRANSLATE_TEMPLEX_NOT_YET_IMPLEMENTED"),

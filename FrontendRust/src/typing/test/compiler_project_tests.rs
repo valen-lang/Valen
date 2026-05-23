@@ -22,7 +22,7 @@ use crate::typing::names::names::LambdaCitizenNameT;
 use crate::typing::types::types::StructTTValT;
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::OwnershipT;
-use crate::typing::types::types::RegionT;
+use crate::typing::types::types::{IRegionT, RegionT};
 use crate::typing::types::types::KindT;
 use crate::typing::names::names::LambdaCallFunctionTemplateNameValT;
 use crate::typing::names::names::LambdaCallFunctionNameValT;
@@ -160,7 +160,7 @@ fn lambda_has_correct_name() {
             StructTTValT { id: *lambda_citizen_id });
         let lambda_share_coord = CoordT {
             ownership: OwnershipT::Share,
-            region: RegionT,
+            region: RegionT { region: IRegionT::Default },
             kind: KindT::Struct(lambda_struct),
         };
         let lambda_func_template_name = typing_interner.intern_lambda_call_function_template_name(
@@ -203,10 +203,10 @@ fn lambda_has_correct_name() {
     val lambdaLoc = CodeLocationS(interner.intern(FileCoordinate(packageCoord, "test.vale")), 23)
     val lambdaCitizenTemplateName = interner.intern(LambdaCitizenTemplateNameT(lambdaLoc))
     val lambdaCitizenName = interner.intern(LambdaCitizenNameT(lambdaCitizenTemplateName))
-    val lambdaFuncTemplateName = interner.intern(LambdaCallFunctionTemplateNameT(lambdaLoc, Vector(CoordT(ShareT,RegionT(), interner.intern(StructTT(IdT(packageCoord, Vector(mainName), lambdaCitizenName)))))))
+    val lambdaFuncTemplateName = interner.intern(LambdaCallFunctionTemplateNameT(lambdaLoc, Vector(CoordT(ShareT,RegionT(DefaultRegionT), interner.intern(StructTT(IdT(packageCoord, Vector(mainName), lambdaCitizenName)))))))
     val lambdaCitizenId = IdT(packageCoord, Vector(mainName), lambdaCitizenName)
     val lambdaStruct = interner.intern(StructTT(lambdaCitizenId))
-    val lambdaShareCoord = CoordT(ShareT, RegionT(), lambdaStruct)
+    val lambdaShareCoord = CoordT(ShareT, RegionT(DefaultRegionT), lambdaStruct)
     val lambdaFuncName = interner.intern(LambdaCallFunctionNameT(lambdaFuncTemplateName, Vector(), Vector(lambdaShareCoord)))
     val lambdaFuncId =
       IdT(packageCoord, Vector(mainName, lambdaCitizenTemplateName), lambdaFuncName)

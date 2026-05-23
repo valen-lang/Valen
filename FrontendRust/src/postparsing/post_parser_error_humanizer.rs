@@ -47,6 +47,9 @@ where
     ICompileErrorS::InterfaceMethodNeedsSelf(_) => {
       "Interface's method needs a virtual param of interface's type!".to_string()
     }
+    ICompileErrorS::VirtualAndAbstractGoTogether(_) => {
+      "Abstract function needs a `virtual` parameter.".to_string()
+    }
     ICompileErrorS::ExternHasBodyS(_) => "Extern function can't have a body too.".to_string(),
     ICompileErrorS::IdentifyingRunesIncompleteS(_) => {
       "Not enough identifying runes.".to_string()
@@ -114,6 +117,7 @@ where
         }
         case VariableNameAlreadyExists(range, name) => s"Local named " + humanizeName(name) + " already exists!\n(If you meant to modify the variable, use the `set` keyword beforehand.)"
         case InterfaceMethodNeedsSelf(range) => s"Interface's method needs a virtual param of interface's type!"
+        case VirtualAndAbstractGoTogether(range) => s"Abstract function needs a `virtual` parameter."
         case ForgotSetKeywordError(range) => s"Changing a struct's member must start with the `set` keyword."
         case ExternHasBody(range) => s"Extern function can't have a body too."
 //        case CantInitializeIndividualElementsOfRuntimeSizedArray(range) => s"Can't initialize individual elements of a runtime-sized array."

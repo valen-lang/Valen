@@ -1,3 +1,7 @@
+// mig: struct PatternTests
+pub struct PatternTests;
+
+/*
 package dev.vale
 
 import dev.vale.parsing.ast.FinalP
@@ -21,7 +25,15 @@ class PatternTests extends FunSuite with Matchers {
   //  main.header.returnType shouldEqual Coord(Share, Readonly, Int2())
   //  compile.evalForKind(Vector()) match { case VonInt(4) => }
   //}
+*/
+// mig: fn test_matching_a_multiple_member_seq_of_immutables
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_matching_a_multiple_member_seq_of_immutables() {
+    panic!("Unmigrated test: test_matching_a_multiple_member_seq_of_immutables");
+}
 
+/*
   test("Test matching a multiple-member seq of immutables") {
     // Checks that the 5 made it into y, and it was an int
     val compile = RunCompilation.test( "exported func main() int { [x, y] = (4, 5); return y; }")
@@ -30,7 +42,15 @@ class PatternTests extends FunSuite with Matchers {
     main.header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
+*/
+// mig: fn test_matching_a_multiple_member_seq_of_mutables
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_matching_a_multiple_member_seq_of_mutables() {
+    panic!("Unmigrated test: test_matching_a_multiple_member_seq_of_mutables");
+}
 
+/*
   test("Test matching a multiple-member seq of mutables") {
     // Checks that the 5 made it into y, and it was an int
     val compile = RunCompilation.test(
@@ -43,7 +63,15 @@ class PatternTests extends FunSuite with Matchers {
     main.header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
+*/
+// mig: fn test_matching_a_multiple_member_pack_of_immutable_and_own
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
+    panic!("Unmigrated test: test_matching_a_multiple_member_pack_of_immutable_and_own");
+}
 
+/*
   test("Test matching a multiple-member pack of immutable and own") {
     // Checks that the 5 made it into y, and it was an int
     val compile = RunCompilation.test(
@@ -55,7 +83,15 @@ class PatternTests extends FunSuite with Matchers {
     coutputs.functions.head.header.returnType == CoordT(ShareT, RegionT(), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
+*/
+// mig: fn test_matching_a_multiple_member_pack_of_immutable_and_borrow
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
+    panic!("Unmigrated test: test_matching_a_multiple_member_pack_of_immutable_and_borrow");
+}
 
+/*
   test("Test matching a multiple-member pack of immutable and borrow") {
     // Checks that the 5 made it into y, and it was an int
     val compile = RunCompilation.test(
@@ -85,8 +121,15 @@ class PatternTests extends FunSuite with Matchers {
     }
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
+*/
+// mig: fn test_destructuring_a_shared
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_destructuring_a_shared() {
+    panic!("Unmigrated test: test_destructuring_a_shared");
+}
 
-
+/*
   test("Test destructuring a shared") {
     val compile = RunCompilation.test(
       """
@@ -101,8 +144,8 @@ class PatternTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
-
+*/
+/*
 
 
 
@@ -160,6 +203,15 @@ class PatternTests extends FunSuite with Matchers {
 //    compile.evalForKind(Vector()) match { case VonInt(8) => }
 //  }
 
+*/
+// mig: fn ignore_destructure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn ignore_destructure() {
+    panic!("Unmigrated test: ignore_destructure");
+}
+
+/*
   test("Ignore destructure") {
     val compile = RunCompilation.test(
       """
@@ -179,3 +231,5 @@ class PatternTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

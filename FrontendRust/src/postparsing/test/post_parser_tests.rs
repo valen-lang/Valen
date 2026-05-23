@@ -10,8 +10,8 @@ use crate::scout_arena::ScoutArena;
 use crate::parsing::ast::{IMacroInclusionP, LoadAsP, VariabilityP};
 use crate::postparsing::ast::{IStructMemberS, ProgramS};
 use crate::postparsing::expressions::{
-  ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LocalLoadSE,
-  LocalS, OutsideLoadSE, OwnershippedSE, ReturnSE,
+  ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LoadPartSE, LocalLoadSE,
+  LocalS, OutsideLoadSE, OverloadSetSE, OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
@@ -196,14 +196,16 @@ fn lookup_plus() {
       inner:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(code_name),
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE { parts, .. },
             }),
           ..
         }),
       ..
-    }) => assert_eq!(code_name.name.as_str(), "+"),
+    }) => match &parts.first().expect("non-empty parts").name {
+      IImpreciseNameS::CodeName(code_name) => assert_eq!(code_name.name.as_str(), "+"),
+      _ => panic!("expected CodeName in OverloadSet first part"),
+    },
     _ => panic!("expected return +(3, 4) structure"),
   }
 }
@@ -216,7 +218,7 @@ fn lookup_plus() {
     val CodeBodyS(BodySE(_, _, block)) = main.body
     val ret = Collector.only(block.expr, { case x @ ReturnSE(_, _) => x })
     val call = Collector.only(ret.inner, { case x @ FunctionCallSE(_, _, _, _) => x })
-    Collector.only(call.callableExpr, { case x @ OutsideLoadSE(_, _, CodeNameS(StrI("+")), _, _) => x })
+    Collector.only(call.callableExpr, { case x @ OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("+")), _)))) => x })
   }
 */
 #[test]
@@ -528,11 +530,8 @@ fn method_call() {
       inner:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(CodeNameS {
-                name: StrI("shout"),
-              }),
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE { parts, .. },
             }),
           arg_exprs:
             [IExpressionSE::ConstantBool(ConstantBoolSE {
@@ -542,7 +541,10 @@ fn method_call() {
           ..
         }),
       ..
-    })) => Some(())
+    })) if matches!(
+      parts.first().map(|p| &p.name),
+      Some(IImpreciseNameS::CodeName(CodeNameS { name, .. })) if name.as_str() == "shout"
+    ) => Some(())
   );
 }
 /*
@@ -552,7 +554,7 @@ fn method_call() {
 
     val CodeBodyS(BodySE(_, _, block)) = main.body
     val ret = Collector.only(block, { case r @ ReturnSE(_, _) => r })
-    Collector.only(ret, { case FunctionCallSE(_, _, OutsideLoadSE(_, _, CodeNameS(StrI("shout")), _, _), Vector(ConstantBoolSE(_,true))) => })
+    Collector.only(ret, { case FunctionCallSE(_, _, OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("shout")), _)))), Vector(ConstantBoolSE(_,true))) => })
 //    { case ReturnSE(_,FunctionCallSE(_,_,Vector()) => }
   }
 */
@@ -577,11 +579,8 @@ fn moving_method_call() {
       inner:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(CodeNameS {
-                name: StrI("shout"),
-              }),
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE { parts, .. },
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
@@ -592,7 +591,10 @@ fn moving_method_call() {
           ..
         }),
       ..
-    })) => Some(())
+    })) if matches!(
+      parts.first().map(|p| &p.name),
+      Some(IImpreciseNameS::CodeName(CodeNameS { name, .. })) if name.as_str() == "shout"
+    ) => Some(())
   );
 }
 /*
@@ -602,7 +604,23 @@ fn moving_method_call() {
 
     val CodeBodyS(BodySE(_, _, block)) = main.body
     val ret = Collector.only(block, { case r @ ReturnSE(_, _) => r })
-    Collector.only(ret, { case FunctionCallSE(_, _, OutsideLoadSE(_, _, CodeNameS(StrI("shout")), _, _), Vector(LocalLoadSE(_,CodeVarNameS(StrI("x")), UseP))) => })
+    Collector.only(ret, { case FunctionCallSE(_, _, OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("shout")), _)))), Vector(LocalLoadSE(_,CodeVarNameS(StrI("x")), UseP))) => })
+  }
+  test("Method call with explicit template arg preserves the <T>") {
+    val program1 = compile("exported func main() { x = 4; x.foo<int>(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val outside =
+      Collector.only(block, {
+        case OverloadSetSE(o @ OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("foo")), _)))) => o
+      })
+    val Vector(LoadPartSE(_, fooExplicitArgs)) = outside.parts
+    // Expected: <int> appears as one explicit arg rune, with a corresponding lookup rule.
+    // Actual: fooExplicitArgs is empty and rules is empty — `<int>` was dropped.
+    vassert(fooExplicitArgs.size == 1)
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == fooExplicitArgs.head)
+    }
   }
 
   vregionmut() // Put this back in with regions
@@ -836,11 +854,14 @@ fn constructing_members() {
     NodeRefS::Expression(
       IExpressionSE::FunctionCall(FunctionCallSE {
         callable_expr:
-          IExpressionSE::OutsideLoad(OutsideLoadSE {
-            name: IImpreciseNameS::CodeName(CodeNameS {
-              name: StrI("MyStruct"),
-            }),
-            ..
+          IExpressionSE::OverloadSet(OverloadSetSE {
+            lookup: OutsideLoadSE {
+              parts: [LoadPartSE {
+                name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct") }),
+                ..
+              }],
+              ..
+            },
           }),
         arg_exprs: [
           IExpressionSE::LocalLoad(LocalLoadSE {
@@ -890,7 +911,7 @@ fn constructing_members() {
     })
     Collector.only(exprs, {
       case FunctionCallSE(_, _,
-        OutsideLoadSE(_, _, CodeNameS(StrI("MyStruct")), _, _),
+        OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("MyStruct")), _)))),
         Vector(
           LocalLoadSE(_, ConstructingMemberNameS(StrI("x")), UseP),
           LocalLoadSE(_, ConstructingMemberNameS(StrI("y")), UseP))) =>
@@ -1040,47 +1061,45 @@ fn test_loading_from_member() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    "func MyStruct() {
+    "func main() {
+      moo = MyStruct();
       return moo.x;
     }",
   );
-  let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, IBodyS::CodeBody);
-  match code_body.body.block.expr {
-    IExpressionSE::Return(ReturnSE {
+  let main = program.lookup_function("main");
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
+  crate::collect_only_snode!(
+    NodeRefS::Expression(code_body.body.block.expr),
+    NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
         IExpressionSE::Dot(DotSE {
           left:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(outside_name),
-              maybe_template_args: None,
+            IExpressionSE::LocalLoad(LocalLoadSE {
+              name: IVarNameS::CodeVarName(StrI("moo")),
               target_ownership: LoadAsP::LoadAsBorrow,
               ..
             }),
-          member,
+          member: StrI("x"),
           borrow_container: true,
           ..
         }),
       ..
-    }) => {
-      assert_eq!(outside_name.name.as_str(), "moo");
-      assert_eq!(member.as_str(), "x");
-    }
-    other => panic!("unexpected shape: {:?}", other),
-  }
+    })) => Some(())
+  );
 }
 /*
   test("Test loading from member") {
     val program1 = compile(
-      """func MyStruct() {
+      """func main() {
+        |  moo = MyStruct();
         |  return moo.x;
         |}
         |""".stripMargin)
-    val main = program1.lookupFunction("MyStruct")
+    val main = program1.lookupFunction("main")
 
     val CodeBodyS(BodySE(_, _, block)) = main.body
     Collector.only(block,
-      { case ReturnSE(_, DotSE(_,OutsideLoadSE(_,_,CodeNameS(StrI("moo")),None,LoadAsBorrowP),StrI("x"),true)) => })
+      { case ReturnSE(_, DotSE(_,LocalLoadSE(_,CodeVarNameS(StrI("moo")),LoadAsBorrowP),StrI("x"),true)) => })
 
   }
 */
@@ -1095,52 +1114,49 @@ fn test_loading_from_member_2() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    "func MyStruct() {
+    "func main() {
+      moo = MyStruct();
       return &moo.x;
     }",
   );
-  let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, IBodyS::CodeBody);
-  match code_body.body.block.expr {
-    IExpressionSE::Return(ReturnSE {
+  let main = program.lookup_function("main");
+  let code_body = cast!(&main.body, IBodyS::CodeBody);
+  crate::collect_only_snode!(
+    NodeRefS::Expression(code_body.body.block.expr),
+    NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
         IExpressionSE::Ownershipped(OwnershippedSE {
           target_ownership: LoadAsP::LoadAsBorrow,
           inner_expr:
             IExpressionSE::Dot(DotSE {
               left:
-                IExpressionSE::OutsideLoad(OutsideLoadSE {
-                  name: IImpreciseNameS::CodeName(outside_name),
-                  maybe_template_args: None,
+                IExpressionSE::LocalLoad(LocalLoadSE {
+                  name: IVarNameS::CodeVarName(StrI("moo")),
                   target_ownership: LoadAsP::LoadAsBorrow,
                   ..
                 }),
-              member,
               borrow_container: true,
               ..
             }),
           ..
         }),
       ..
-    }) => {
-      assert_eq!(outside_name.name.as_str(), "moo");
-      assert_eq!(member.as_str(), "x");
-    }
-    other => panic!("unexpected shape: {:?}", other),
-  }
+    })) => Some(())
+  );
 }
 /*
   test("Test loading from member 2") {
     val program1 = compile(
-      """func MyStruct() {
+      """func main() {
+        |  moo = MyStruct();
         |  return &moo.x;
         |}
         |""".stripMargin)
-    val main = program1.lookupFunction("MyStruct")
+    val main = program1.lookupFunction("main")
 
     val CodeBodyS(BodySE(_, _, block)) = main.body
     Collector.only(block, {
-      case ReturnSE(_, OwnershippedSE(_, DotSE(_,OutsideLoadSE(_,_,CodeNameS(StrI("moo")),None,LoadAsBorrowP),x,true),LoadAsBorrowP)) =>
+      case ReturnSE(_, OwnershippedSE(_, DotSE(_,LocalLoadSE(_,CodeVarNameS(StrI("moo")),LoadAsBorrowP),x,true),LoadAsBorrowP)) =>
     })
   }
 */
@@ -1225,9 +1241,14 @@ fn constructing_members_borrowing_another_member() {
   crate::collect_only_snode!(
     NodeRefS::Expression(block.expr),
     NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
-      callable_expr: IExpressionSE::OutsideLoad(OutsideLoadSE {
-        name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct"), .. }),
-        ..
+      callable_expr: IExpressionSE::OverloadSet(OverloadSetSE {
+        lookup: OutsideLoadSE {
+          parts: [LoadPartSE {
+            name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct") }),
+            ..
+          }],
+          ..
+        },
       }),
       arg_exprs: [
         IExpressionSE::LocalLoad(LocalLoadSE {
@@ -1273,7 +1294,7 @@ fn constructing_members_borrowing_another_member() {
     })
     Collector.only(block, {
       case FunctionCallSE(_, _,
-        OutsideLoadSE(_, _, CodeNameS(StrI("MyStruct")), _, _),
+        OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("MyStruct")), _)))),
         Vector(
         LocalLoadSE(_, ConstructingMemberNameS(StrI("x")), UseP),
         LocalLoadSE(_, ConstructingMemberNameS(StrI("y")), UseP))) =>
@@ -1292,6 +1313,7 @@ fn foreach() {
     &keywords,
     &parse_arena,
     "func main() {
+      myList = 0;
       foreach i in myList { }
     }",
   );
@@ -1362,11 +1384,8 @@ fn foreach() {
         ..
       },
       expr:
-        IExpressionSE::OutsideLoad(OutsideLoadSE {
-          name: IImpreciseNameS::CodeName(CodeNameS {
-            name: StrI("myList"),
-          }),
-          maybe_template_args: None,
+        IExpressionSE::LocalLoad(LocalLoadSE {
+          name: IVarNameS::CodeVarName(StrI("myList")),
           target_ownership: LoadAsP::Use,
           ..
         }),
@@ -1389,13 +1408,16 @@ fn foreach() {
       expr:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(CodeNameS {
-                name: StrI("begin"),
-              }),
-              maybe_template_args: None,
-              target_ownership: LoadAsP::LoadAsBorrow,
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE {
+                parts: [LoadPartSE {
+                  name: IImpreciseNameS::CodeName(CodeNameS {
+                    name: StrI("begin"),
+                  }),
+                  ..
+                }],
+                ..
+              },
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
@@ -1428,13 +1450,16 @@ fn foreach() {
       expr:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(CodeNameS {
-                name: StrI("next"),
-              }),
-              maybe_template_args: None,
-              target_ownership: LoadAsP::LoadAsBorrow,
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE {
+                parts: [LoadPartSE {
+                  name: IImpreciseNameS::CodeName(CodeNameS {
+                    name: StrI("next"),
+                  }),
+                  ..
+                }],
+                ..
+              },
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
@@ -1451,11 +1476,16 @@ fn foreach() {
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
       callable_expr:
-        IExpressionSE::OutsideLoad(OutsideLoadSE {
-          name: IImpreciseNameS::CodeName(CodeNameS {
-            name: StrI("isEmpty"),
-          }),
-          ..
+        IExpressionSE::OverloadSet(OverloadSetSE {
+          lookup: OutsideLoadSE {
+            parts: [LoadPartSE {
+              name: IImpreciseNameS::CodeName(CodeNameS {
+                name: StrI("isEmpty"),
+              }),
+              ..
+            }],
+            ..
+          },
         }),
       arg_exprs:
         [IExpressionSE::LocalLoad(LocalLoadSE {
@@ -1486,13 +1516,16 @@ fn foreach() {
       expr:
         IExpressionSE::FunctionCall(FunctionCallSE {
           callable_expr:
-            IExpressionSE::OutsideLoad(OutsideLoadSE {
-              name: IImpreciseNameS::CodeName(CodeNameS {
-                name: StrI("get"),
-              }),
-              maybe_template_args: None,
-              target_ownership: LoadAsP::LoadAsBorrow,
-              ..
+            IExpressionSE::OverloadSet(OverloadSetSE {
+              lookup: OutsideLoadSE {
+                parts: [LoadPartSE {
+                  name: IImpreciseNameS::CodeName(CodeNameS {
+                    name: StrI("get"),
+                  }),
+                  ..
+                }],
+                ..
+              },
             }),
           arg_exprs:
             [IExpressionSE::LocalLoad(LocalLoadSE {
@@ -1519,6 +1552,7 @@ fn foreach() {
   test("foreach") {
     val program1 = compile(
       """func main() {
+        |  myList = 0;
         |  foreach i in myList { }
         |}
         |""".stripMargin)
@@ -1540,13 +1574,13 @@ fn foreach() {
     body.block shouldHave {
       case LetSE(_,_,
         AtomSP(_,Some(CaptureS(IterableNameS(_), false)),None,None),
-        OutsideLoadSE(_,_,CodeNameS(StrI("myList")),None,UseP)) =>
+        LocalLoadSE(_,CodeVarNameS(StrI("myList")),UseP)) =>
     }
     body.block shouldHave {
       case LetSE(_,_,
         AtomSP(_,Some(CaptureS(IteratorNameS(_), false)),None,None),
         FunctionCallSE(_,_,
-          OutsideLoadSE(_,_,CodeNameS(StrI("begin")),None,LoadAsBorrowP),
+            OverloadSetSE(OutsideLoadSE(_,_,Vector(LoadPartSE(CodeNameS(StrI("begin")),_)))),
           Vector(LocalLoadSE(_,IterableNameS(_),LoadAsBorrowP)))) =>
     }
     body.block shouldHave {
@@ -1556,13 +1590,13 @@ fn foreach() {
       case LetSE(_,_,
         AtomSP(_,Some(CaptureS(IterationOptionNameS(_), false)),None,None),
         FunctionCallSE(_,_,
-          OutsideLoadSE(_,_,CodeNameS(StrI("next")),None,LoadAsBorrowP),
+            OverloadSetSE(OutsideLoadSE(_,_,Vector(LoadPartSE(CodeNameS(StrI("next")),_)))),
           Vector(
             LocalLoadSE(_,IteratorNameS(_),LoadAsBorrowP)))) =>
     }
     body.block shouldHave {
       case FunctionCallSE(_,_,
-        OutsideLoadSE(_,_,CodeNameS(StrI("isEmpty")),_,_),
+          OverloadSetSE(OutsideLoadSE(_,_,Vector(LoadPartSE(CodeNameS(StrI("isEmpty")),_)))),
         Vector(
           LocalLoadSE(_,IterationOptionNameS(_),LoadAsBorrowP))) =>
     }
@@ -1573,7 +1607,7 @@ fn foreach() {
       case LetSE(_,_,
         AtomSP(_,Some(CaptureS(CodeVarNameS(StrI("i")), false)),None,None),
         FunctionCallSE(_,_,
-          OutsideLoadSE(_,_,CodeNameS(StrI("get")),None,LoadAsBorrowP),
+            OverloadSetSE(OutsideLoadSE(_,_,Vector(LoadPartSE(CodeNameS(StrI("get")),_)))),
           Vector(LocalLoadSE(_,IterationOptionNameS(_),UseP)))) =>
     }
     body.block shouldHave {
@@ -1602,8 +1636,9 @@ fn this_isnt_special_if_was_explicit_param() {
     NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
   );
-  let outside_load = cast!(function_call.callable_expr, IExpressionSE::OutsideLoad);
-  let code_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
+  let overload_set = cast!(function_call.callable_expr, IExpressionSE::OverloadSet);
+  let load_part = expect_1(overload_set.lookup.parts);
+  let code_name = cast!(&load_part.name, IImpreciseNameS::CodeName);
   assert_eq!(code_name.name.as_str(), "println");
   let dot = cast!(expect_1(&function_call.arg_exprs), IExpressionSE::Dot);
   assert_eq!(dot.member.as_str(), "x");
@@ -1631,7 +1666,7 @@ fn this_isnt_special_if_was_explicit_param() {
     val main = program1.lookupFunction("moo")
     Collector.only(main.body, {
       case FunctionCallSE(_,_,
-        OutsideLoadSE(_, _, CodeNameS(StrI("println")), _, _),
+        OverloadSetSE(OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("println")), _)))),
         Vector(DotSE(_, LocalLoadSE(_, CodeVarNameS(StrI("self")), LoadAsBorrowP), StrI("x"), true))) =>
     })
     Collector.all(main.body, { case FunctionCallSE(_, _, _, _) => }).size shouldEqual 1
@@ -1832,6 +1867,179 @@ fn report_type_mismatch() {
       case RuneExplicitTypeConflictS(_, CodeRuneS(StrI("N")), _) =>
     }
   }
+  test("Free function call with explicit template arg makes single-part OutsideLoadSE with one explicit arg rune") {
+    val program1 = compile("exported func main() { f<int>(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val outside =
+      Collector.only(block, {
+        case OverloadSetSE(x @ OutsideLoadSE(_, _, Vector(LoadPartSE(CodeNameS(StrI("f")), Vector(_))))) => x
+      })
+    // The single explicit arg rune should be tied to a lookup of `int` in the rules.
+    val Vector(LoadPartSE(_, Vector(argRune))) = outside.parts
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == argRune)
+    }
+  }
+  test("Namespace method call makes two-part OutsideLoadSE in source order (container first, function last)") {
+    val program1 = compile("exported func main() { Vec<int>.foo(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val (rules, intRune) =
+      Collector.only(block, {
+        case OverloadSetSE(OutsideLoadSE(_, rules,
+          Vector(
+            LoadPartSE(CodeNameS(StrI("Vec")), Vector(intRune)),
+            LoadPartSE(CodeNameS(StrI("foo")), Vector())
+          ))) => (rules, intRune)
+      })
+    rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == intRune)
+    }
+  }
+  test("Namespace method call with multi-arg container makes part with multiple explicit arg runes") {
+    val program1 = compile("exported func main() { Pair<int, bool>.make(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val (rules, intRune, boolRune) =
+      Collector.only(block, {
+        case OverloadSetSE(OutsideLoadSE(_, rules,
+          Vector(
+            LoadPartSE(CodeNameS(StrI("Pair")), Vector(intRune, boolRune)),
+            LoadPartSE(CodeNameS(StrI("make")), Vector()))
+        )) => (rules, intRune, boolRune)
+      })
+    rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == intRune)
+    }
+    rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("bool"))) => vassert(r == boolRune)
+    }
+  }
+  // Ignored: postparser currently drops method-level template args on namespace method calls.
+  // For `S<int>.foo<bool>()`, only `int` makes it into the rules/explicit-args; the `<bool>` on
+  // `foo` is silently lost. Same blocker as `Namespace method call with both container and method
+  // generic args` in CompilerTests. When that's lifted, this test should pass.
+  ignore("Namespace method call with both container and method args makes both parts have explicit arg runes") {
+    val program1 = compile("exported func main() { S<int>.foo<bool>(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val (rules, intRune, boolRune) =
+      Collector.only(block, {
+        case OverloadSetSE(OutsideLoadSE(_, rules,
+          Vector(
+            LoadPartSE(CodeNameS(StrI("S")), Vector(intRune)),
+            LoadPartSE(CodeNameS(StrI("foo")), Vector(boolRune))),
+        )) => (rules, intRune, boolRune)
+      })
+    rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == intRune)
+    }
+    rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("bool"))) => vassert(r == boolRune)
+    }
+  }
+  // Ignored: pre-existing FunctionScout limitation rejects user-declared runes on
+  // interface/struct internal methods (FunctionScout.scala:114 — `case ParentInterface(_, _, _, _)
+  // => vassert(userDeclaredRunes.isEmpty)`). Same blocker as the "Namespace method call with both
+  // container and method generic args" CompilerTests test. When that's lifted, this should pass
+  // with parent-at-end ordering (Z before K before V).
+  ignore("Interface internal method has identifying runes [own, parent...] (parent runes at end)") {
+    val interner = new Interner()
+    val program1 = compile(
+      """interface IS<K, V> { func zork<Z>(virtual this &IS<K, V>, z Z)void; }""",
+      interner)
+    val is = program1.lookupInterface("IS")
+    val zork = is.internalMethods.head
+    val zorkRunes = zork.genericParams.map(_.rune.rune)
+    val z = CodeRuneS(interner.intern(StrI("Z")))
+    val k = CodeRuneS(interner.intern(StrI("K")))
+    val v = CodeRuneS(interner.intern(StrI("V")))
+    val zIdx = zorkRunes.indexOf(z)
+    val kIdx = zorkRunes.indexOf(k)
+    val vIdx = zorkRunes.indexOf(v)
+    vassert(zIdx >= 0 && kIdx >= 0 && vIdx >= 0)
+    vassert(zIdx < kIdx)
+    vassert(kIdx < vIdx)
+  }
+  // Ignored: struct internal methods are silently dropped at the postparser today
+  // (PostParser.scala:681 — `case StructMethodP(_) => Vector.empty`). PR 2.5 wires them
+  // through the same way as interface internal methods. Once that lands, uncomment the
+  // body below; it should pass with the same parent-at-end ordering as interfaces.
+  ignore("Struct internal method has identifying runes [own, parent...] (parent runes at end)") {
+//    val interner = new Interner()
+//    val program1 = compile(
+//      """struct S<K, V> { func zork<Z>(self &S<K, V>, z Z)void { } }""",
+//      interner)
+//    val s = program1.lookupStruct("S")
+//
+//    val zork = s.internalMethods.head
+//    val zorkRunes = zork.genericParams.map(_.rune.rune)
+//    val z = CodeRuneS(interner.intern(StrI("Z")))
+//    val k = CodeRuneS(interner.intern(StrI("K")))
+//    val v = CodeRuneS(interner.intern(StrI("V")))
+//    // Own rune Z first; inherited K and V from S at the end (in their declared order).
+//    val zIdx = zorkRunes.indexOf(z)
+//    val kIdx = zorkRunes.indexOf(k)
+//    val vIdx = zorkRunes.indexOf(v)
+//    vassert(zIdx >= 0 && kIdx >= 0 && vIdx >= 0)
+//    vassert(zIdx < kIdx)
+//    vassert(kIdx < vIdx)
+  }
+  // Ignored: FunctionScout.scala:114 rejects user-declared runes on struct internal methods.
+  // When that's lifted, zork's genericParams should be [N, K, V] per @PRIIROZ.
+  ignore("Struct internal method zork<N> in S<K, V> has generic params [N, K, V] (own first, parent runes at end)") {
+    val interner = new Interner()
+    val program1 = compile(
+      """struct S<K, V> { func zork<N>(self &S<K, V>, n N)void { } }""",
+      interner)
+    val s = program1.lookupStruct("S")
+    val zork = s.internalMethods.head
+    val zorkRunes = zork.genericParams.map(_.rune.rune)
+    val n = CodeRuneS(interner.intern(StrI("N")))
+    val k = CodeRuneS(interner.intern(StrI("K")))
+    val v = CodeRuneS(interner.intern(StrI("V")))
+    val nIdx = zorkRunes.indexOf(n)
+    val kIdx = zorkRunes.indexOf(k)
+    val vIdx = zorkRunes.indexOf(v)
+    vassert(nIdx >= 0 && kIdx >= 0 && vIdx >= 0)
+    vassert(nIdx < kIdx)
+    vassert(kIdx < vIdx)
+  }
+  // Ignored: parser doesn't yet support nested container chains like S<X>.T<Y>.foo().
+  // When it does, parts should come out in source order: [S(int,bool), T(float), zork(double)].
+  // At the definition site, zork's genericParams would be [N, Q, K, V] per @PRIIROZ
+  // (own first, then containers' innermost-first).
+  ignore("Three-part chain S<K, V>.T<Q>.zork<N> makes three-part OutsideLoadSE in source order") {
+    val program1 = compile("exported func main() { S<int, bool>.T<float>.zork<double>(); }")
+    val main = program1.lookupFunction("main")
+    val CodeBodyS(BodySE(_, _, block)) = main.body
+    val outside =
+      Collector.only(block, {
+        case OverloadSetSE(x @ OutsideLoadSE(_, _,
+          Vector(
+            LoadPartSE(CodeNameS(StrI("S")), Vector(_, _)),
+            LoadPartSE(CodeNameS(StrI("T")), Vector(_)),
+            LoadPartSE(CodeNameS(StrI("zork")), Vector(_))),
+        )) => x
+      })
+    val Vector(
+      LoadPartSE(_, Vector(sArg0Rune, sArg1Rune)),
+      LoadPartSE(_, Vector(tArgRune)),
+      LoadPartSE(_, Vector(zorkArgRune))) = outside.parts
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("int"))) => vassert(r == sArg0Rune)
+    }
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("bool"))) => vassert(r == sArg1Rune)
+    }
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("float"))) => vassert(r == tArgRune)
+    }
+    outside.rules shouldHave {
+      case MaybeCoercingLookupSR(_, r, CodeNameS(StrI("double"))) => vassert(r == zorkArgRune)
+    }
+  }
 */
 
 #[test]
@@ -1846,6 +2054,7 @@ fn foreach_expr() {
     &keywords,
     &parse_arena,
     "func main() {
+      c = 0;
       a = foreach i in c { i };
     }",
   );

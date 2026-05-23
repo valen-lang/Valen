@@ -17,13 +17,11 @@ So please run them as agents. Do not make edits yourself, do not use the Edit to
 
 # Steps
 
-## Step 0: Verify the pass migration policy exists
+## Step 0: Verify the pass has values in the central migration policy
 
-The pipeline is pass-aware. Each pass needs a `migration-policy.md` next to its source root (walking up from the target file). If none exists, STOP and tell the user — running without one produces the cleanup burden documented in `FrontendRust/docs/migration/migration-policy.md` and TL.md §"Cleaning Up After The Slice Pipeline."
+The pipeline is pass-aware. All passes' values live in the single central policy at `FrontendRust/docs/migration/migration-policy.md`. Confirm the target file's pass (identified by its source dir) has values there. If the pass has no entry, STOP and tell the user to add it — running without values produces the cleanup burden documented in that file and TL.md §"Cleaning Up After The Slice Pipeline."
 
-Check by walking up from the target file's directory. Do NOT accept `FrontendRust/docs/migration/migration-policy.md` as a match — that is the template/canonical-example, not a real per-pass policy.
-
-If found, paste the full policy path into the spawn prompt for each subsequent agent so they can read it.
+Paste the central policy path (`FrontendRust/docs/migration/migration-policy.md`) into the spawn prompt for each subsequent agent so they read it.
 
 ## Step 1: slice-start
 
@@ -71,24 +69,36 @@ This deletes everything marked `// old, obsolete`.
 
 Apply the slice-impl-wrap agent. Read `.claude/agents/slice-impl-wrap.md` and follow its instructions on the file.
 
-This wraps each module-scope `pub fn` stub in its own dedicated `impl<'s, 't> Foo<'s, 't> { fn ... }` block (one impl per method, matching the style in `FrontendRust/src/typing/`), using the `// mig: impl Foo` markers as receiver-type anchors. Per-fn `<'s, 't>` generics are stripped (the impl provides them — see TL.md §143).
+This wraps each module-scope `pub fn` stub in its own dedicated `impl<'s, 't> Foo<'s, 't> { fn ... }` block (one impl per method, matching the style in `FrontendRust/src/typing/`), using the `// mig: struct Foo` / `// mig: enum Foo` markers as receiver-type anchors. Per-fn `<'s, 't>` generics are stripped (the impl provides them — see TL.md §143).
 
 This step runs **after** reconcile (Steps 4–6) so that any old Rust definitions copied into stubs by reconcile-copy get wrapped together with the fresh stubs.
 
-## Step 8: SCPX verification
+## Step 8: SCPX verification (monotonic — no new drift)
 
-After all prior steps, verify the Scala-comment audit trail is structurally intact. Run:
+During in-flight migration the repo carries a known SCPX drift baseline (e.g. transplanted passes awaiting drift-reconcile), so a whole-repo "All N files OK" is **not** the gate. The gate is **monotonic: this pipeline run must not introduce any new mismatch.**
+
+Record the baseline **before Step 1**:
+
+```bash
+cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all > ./tmp/slice-pipeline-scpx-before.txt 2>&1
+grep -c '^MISMATCH' ./tmp/slice-pipeline-scpx-before.txt   # baseline count
+```
+
+After all prior steps, run it again and compare:
 
 ```bash
 cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all > ./tmp/slice-pipeline-scpx.txt 2>&1
+grep -c '^MISMATCH' ./tmp/slice-pipeline-scpx.txt          # must be <= baseline
 ```
 
-Then check the output: it must report `All N files OK` for some N. If any file fails SCPX, STOP and report the failing file + reason — the pipeline output is not safe to commit until SCPX is green. Common causes:
- * A Rust definition landed between a struct and its `/* */` block (the user's known issue #2).
+The mismatch count must be **≤ the baseline**. If it went up, the slice introduced new drift — STOP and report the new failing file(s) + reason. Common causes:
+ * A Rust definition landed between a struct and its `/* */` block.
  * A `// mig: fn` was placed at module scope where its impl wrap should sit between the Rust fn and the Scala `/* */` block.
  * An emitted impl block has its closing `}` in the wrong position.
 
-If SCPX is green: also do a `cargo check --manifest-path FrontendRust/Cargo.toml --lib > ./tmp/slice-pipeline-check.txt 2>&1` and report the error count. Pre-existing warnings are fine; new compile errors mean placehold produced something rustc rejects.
+**Registration caveat:** if the file you sliced appears under "UNREGISTERED files" (not in SCPX's FILE_MAP), SCPX *cannot* verify its audit trail — it's neither pass nor fail, just unchecked. That's a FILE_MAP gap, not a pipeline failure: add a FILE_MAP entry (a Luz change) mapping the sliced `.rs` to its canonical Scala so SCPX (and drift-reconcile) can see it. Until then the slice is tool-unverified — eyeball the `/* */` blocks to confirm they're intact.
+
+Then also run `cargo check --manifest-path FrontendRust/Cargo.toml --lib --tests > ./tmp/slice-pipeline-check.txt 2>&1` and report the error count. Pre-existing warnings are fine; new compile errors mean placehold produced something rustc rejects. (For a test-only module not yet wired into the crate, the sliced file won't be compiled until it's declared as a module — treat that as a separate wiring step, not a pipeline failure.)
 
 # When done
 

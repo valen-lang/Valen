@@ -175,13 +175,22 @@ pub struct FunctionExternT<'s, 't> {
     pub extern_placeholdered_id: IdT<'s, 't>,
     pub prototype: PrototypeT<'s, 't>,
     pub extern_name: StrI<'s>,
+    pub generic_parameter_inheritance: Option<GenericParametersInheritance>,
 }
 /*
 case class FunctionExternT(
   range: RangeS,
   externPlaceholderedId: IdT[ExternNameT],
   prototype: PrototypeT[IFunctionNameT],
-  externName: StrI
+  externName: StrI,
+  // None if this was a top-level function; not inside a struct.
+  // Some if this was a function declared inside a struct.
+  // The count is how many generic parameters were inherited from the container, per @PRIIROZ.
+  // Hammer uses this to reshape the wire-format SimpleId so container template args land on
+  // the citizen step (e.g. Vec<i32>::capacity rather than Vec::capacity<i32>), which is what
+  // the Backend's rustifySimpleId expects per @SMLRZ. AFTERM: would also let a future tcx
+  // lookup find the right rustc associated function from the container's impl.
+  genericParameterInheritance: Option[GenericParametersInheritance]
 )  {
 */
 impl<'s, 't> FunctionExternT<'s, 't> {

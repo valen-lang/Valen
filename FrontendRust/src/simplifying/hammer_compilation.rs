@@ -1,20 +1,12 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/HammerCompilation.scala
 // Coordinates the Hammer (simplifying) pass
 
-use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
-use crate::instantiating::InstantiatedCompilation;
-use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
-use crate::lexing::ast::RangeL;
-use crate::lexing::errors::FailedParse;
-use crate::parsing::ast::FileP;
-use crate::pass_manager::FullCompilationOptions;
-use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::simplifying::hammer_interner::HammerInterner;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::parse_arena::ParseArena;
 
 /*
 package dev.vale.simplifying
@@ -35,11 +27,17 @@ import dev.vale.typing.{HinputsT, ICompileErrorT}
 import scala.collection.immutable.List
 */
 
-// From HammerCompilation.scala lines 18-23: HammerCompilationOptions
+// mig: struct HammerCompilationOptions
+//
+// Drops PartialEq/Eq/Hash because `debug_out: Arc<dyn Fn(...)>` and
+// `global_options: GlobalOptions` don't impl them. Scala uses vcurious.
 pub struct HammerCompilationOptions {
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub global_options: GlobalOptions,
 }
+// mig: impl HammerCompilationOptions
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for HammerCompilationOptions` or `#[derive(Hash)]`.)
 /*
 case class HammerCompilationOptions(
   debugOut: (=> String) => Unit = (x => {
@@ -49,19 +47,30 @@ case class HammerCompilationOptions(
 ) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for HammerCompilationOptions` or `#[derive(PartialEq)]`.)
+/*
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 
-// From HammerCompilation.scala lines 25-66: HammerCompilation class
-pub struct HammerCompilation<'s, 'ctx, 't, 'p>
-where 's: 't,
+// mig: struct HammerCompilation
+pub struct HammerCompilation<'s, 'h, 'ctx, 't, 'p>
+where 's: 'h,
 {
-  instantiated_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'p>,
-  #[allow(dead_code)]
-  hamuts_cache: Option<()>, // ProgramH not yet ported
-  #[allow(dead_code)]
-  von_hammer_cache: Option<()>, // VonHammer not yet ported
+  pub interner: &'ctx HammerInterner<'s, 'h>,
+  pub keywords: &'ctx Keywords<'s>,
+  pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
+  pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  pub options: HammerCompilationOptions,
+  pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'p>,
+  pub hamuts_cache: Option<crate::final_ast::ast::ProgramH<'s, 'h>>,
+  // Scala has `var vonHammerCache: Option[VonHammer]`. Dropped: per
+  // typing-pass precedent the VonHammer compiler class was collapsed
+  // onto `Hammer` (no separate VonHammer state), so there is nothing
+  // to cache.
 }
+// mig: impl HammerCompilation
 /*
 class HammerCompilation(
   val interner: Interner,
@@ -69,47 +78,7 @@ class HammerCompilation(
   packagesToBuild: Vector[PackageCoordinate],
   packageToContentsResolver: IPackageResolver[Map[String, String]],
   options: HammerCompilationOptions = HammerCompilationOptions()) {
-*/
 
-impl<'s, 'ctx, 't, 'p> HammerCompilation<'s, 'ctx, 't, 'p>
-where
-  's: 't,
-  'p: 'ctx,
-{
-  // From HammerCompilation.scala lines 25-40
-  pub fn new(
-    scout_arena: &'ctx ScoutArena<'s>,
-    keywords: &'ctx Keywords<'s>,
-    parser_keywords: &'ctx Keywords<'p>,
-    parse_arena: &'ctx ParseArena<'p>,
-    packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    options: FullCompilationOptions,
-    typing_bump: &'t Bump,
-  ) -> Self {
-    let hammer_options = HammerCompilationOptions {
-      debug_out: options.debug_out.clone(),
-      global_options: options.global_options,
-    };
-
-    let instantiated_compilation = InstantiatedCompilation::new(
-      scout_arena,
-      keywords,
-      parser_keywords,
-      parse_arena,
-      packages_to_build,
-      package_to_contents_resolver,
-      hammer_options,
-      typing_bump,
-    );
-
-    HammerCompilation {
-      instantiated_compilation,
-      hamuts_cache: None,
-      von_hammer_cache: None,
-    }
-  }
-/*
   var instantiatedCompilation =
     new InstantiatedCompilation(
       interner,
@@ -122,93 +91,82 @@ where
   var hamutsCache: Option[ProgramH] = None
   var vonHammerCache: Option[VonHammer] = None
 */
-
-  // From HammerCompilation.scala line 43: getVonHammer
-  pub fn get_von_hammer(&self) -> () {
-    panic!(
-      "HammerCompilation.get_von_hammer not yet implemented - see HammerCompilation.scala line 43"
-    )
-  }
+// mig: fn get_von_hammer
+pub fn get_von_hammer() -> () {
+  panic!("Unimplemented: get_von_hammer");
+}
 /*
   def getVonHammer() = vassertSome(vonHammerCache)
 */
 
-  // From HammerCompilation.scala line 45: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.instantiated_compilation.get_code_map()
-  }
+// mig: fn get_code_map
+pub fn get_code_map() -> Result<(), String> {
+  panic!("Unimplemented: get_code_map");
+}
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getCodeMap()
 */
 
-  // From HammerCompilation.scala line 46: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-    self.instantiated_compilation.get_parseds()
-  }
+// mig: fn get_parseds
+pub fn get_parseds() -> Result<(), String> {
+  panic!("Unimplemented: get_parseds");
+}
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = instantiatedCompilation.getParseds()
 */
 
-  // From HammerCompilation.scala line 47: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.instantiated_compilation.get_vpst_map()
-  }
+// mig: fn get_vpst_map
+pub fn get_vpst_map() -> Result<(), String> {
+  panic!("Unimplemented: get_vpst_map");
+}
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getVpstMap()
 */
 
-  // From HammerCompilation.scala line 48: getScoutput
-  pub fn get_scoutput(&mut self) -> Result<(), String> {
-    panic!(
-      "HammerCompilation.get_scoutput not yet implemented - see HammerCompilation.scala line 48"
-    )
-  }
+// mig: fn get_scoutput
+pub fn get_scoutput() -> Result<(), String> {
+  panic!("Unimplemented: get_scoutput");
+}
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = instantiatedCompilation.getScoutput()
 */
 
-  // From HammerCompilation.scala line 49: getAstrouts
-  pub fn get_astrouts(&mut self) -> Result<(), String> {
-    panic!(
-      "HammerCompilation.get_astrouts not yet implemented - see HammerCompilation.scala line 49"
-    )
-  }
+// mig: fn get_astrouts
+pub fn get_astrouts() -> Result<(), String> {
+  panic!("Unimplemented: get_astrouts");
+}
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = instantiatedCompilation.getAstrouts()
 */
 
-  // From HammerCompilation.scala line 50: getCompilerOutputs
-  pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
-    panic!("HammerCompilation.get_compiler_outputs not yet implemented - see HammerCompilation.scala line 50")
-  }
+// mig: fn get_compiler_outputs
+pub fn get_compiler_outputs() -> Result<(), String> {
+  panic!("Unimplemented: get_compiler_outputs");
+}
 /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = instantiatedCompilation.getCompilerOutputs()
 */
 
-  // From HammerCompilation.scala line 51: getMonouts
-  pub fn get_monouts(&mut self) -> () {
-    panic!(
-      "HammerCompilation.get_monouts not yet implemented - see HammerCompilation.scala line 51"
-    )
-  }
+// mig: fn get_monouts
+pub fn get_monouts() -> () {
+  panic!("Unimplemented: get_monouts");
+}
 /*
   def getMonouts(): HinputsI = instantiatedCompilation.getMonouts()
 */
 
-  // From HammerCompilation.scala line 52: expectCompilerOutputs
-  pub fn expect_compiler_outputs(&mut self) -> () {
-    panic!("HammerCompilation.expect_compiler_outputs not yet implemented - see HammerCompilation.scala line 52")
-  }
+// mig: fn expect_compiler_outputs
+pub fn expect_compiler_outputs() -> () {
+  panic!("Unimplemented: expect_compiler_outputs");
+}
 /*
   def expectCompilerOutputs(): HinputsT = instantiatedCompilation.expectCompilerOutputs()
 */
 
-  // From HammerCompilation.scala lines 54-65: getHamuts
-  pub fn get_hamuts(&mut self) -> () {
-    panic!(
-      "HammerCompilation.get_hamuts not yet implemented - see HammerCompilation.scala lines 54-65"
-    )
-  }
+// mig: fn get_hamuts
+pub fn get_hamuts() -> () {
+  panic!("Unimplemented: get_hamuts");
+}
 /*
   def getHamuts(): ProgramH = {
     hamutsCache match {
@@ -224,4 +182,3 @@ where
   }
 }
 */
-}

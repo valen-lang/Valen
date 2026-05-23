@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.passmanager.FullCompilationOptions
@@ -11,10 +12,20 @@ import org.scalatest._
 
 import scala.collection.immutable.List
 
+*/
+// mig: struct HammerTests
+pub struct HammerTests;
+/*
 class HammerTests extends FunSuite with Matchers {
   // Hammer tests only test the general structure of things, not the generated nodes.
   // The generated nodes will be tested by end-to-end tests.
 
+*/
+// mig: fn simple_main
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn simple_main() { panic!("Unmigrated test: simple_main"); }
+/*
   test("Simple main") {
     val compile = RunCompilation.test(
       "exported func main() int { return 3; }")
@@ -38,6 +49,12 @@ class HammerTests extends FunSuite with Matchers {
 //    hamuts.structs.find(_.fullName.parts.last.humanName == "ListNode").get;
 //  }
 
+*/
+// mig: fn two_templated_structs_make_it_into_hamuts
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn two_templated_structs_make_it_into_hamuts() { panic!("Unmigrated test: two_templated_structs_make_it_into_hamuts"); }
+/*
   test("Two templated structs make it into hamuts") {
     val compile = RunCompilation.test(
       """
@@ -89,6 +106,12 @@ class HammerTests extends FunSuite with Matchers {
 //    vassert(packageH.getAllUserFunctions.size == 1)
 //  }
 
+*/
+// mig: fn tests_stripping_things_after_panic
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_stripping_things_after_panic() { panic!("Unmigrated test: tests_stripping_things_after_panic"); }
+/*
   test("Tests stripping things after panic") {
     val compile = RunCompilation.test(
       """
@@ -107,6 +130,12 @@ class HammerTests extends FunSuite with Matchers {
     }
   }
 
+*/
+// mig: fn panic_in_expr
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn panic_in_expr() { panic!("Unmigrated test: panic_in_expr"); }
+/*
   test("panic in expr") {
     val compile = RunCompilation.test(
       """
@@ -134,6 +163,12 @@ class HammerTests extends FunSuite with Matchers {
     })
   }
 
+*/
+// mig: fn tests_export_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_function() { panic!("Unmigrated test: tests_export_function"); }
+/*
   test("Tests export function") {
     val compile = RunCompilation.test(
       """
@@ -144,6 +179,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToFunction(compile.interner.intern(StrI("moo"))) shouldEqual moo.prototype
   }
 
+*/
+// mig: fn tests_export_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_struct() { panic!("Unmigrated test: tests_export_struct"); }
+/*
   test("Tests export struct") {
     val compile = RunCompilation.test(
       """
@@ -154,6 +195,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToKind(compile.interner.intern(StrI("Moo"))) shouldEqual moo.getRef
   }
 
+*/
+// mig: fn tests_export_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_interface() { panic!("Unmigrated test: tests_export_interface"); }
+/*
   test("Tests export interface") {
     val compile = RunCompilation.test(
       """
@@ -164,6 +211,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToKind(compile.interner.intern(StrI("Moo"))) shouldEqual moo.getRef
   }
 
+*/
+// mig: fn tests_exports_from_two_modules_different_names
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_exports_from_two_modules_different_names() { panic!("Unmigrated test: tests_exports_from_two_modules_different_names"); }
+/*
   test("Tests exports from two modules, different names") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -233,3 +286,5 @@ class HammerTests extends FunSuite with Matchers {
 //    vassert(fullNameA != fullNameB)
 //  }
 }
+
+*/

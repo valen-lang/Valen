@@ -1,3 +1,18 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/TypeHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `TypeHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::ast::{PrototypeH, RegionH};
+use crate::final_ast::types::{CoordH, KindHT, RuntimeSizedArrayHT, StaticSizedArrayHT};
+use crate::instantiating::ast::ast::PrototypeI;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::templata::RegionTemplataI;
+use crate::instantiating::ast::types::{cI, CoordI, KindIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::Hammer;
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast.{BoolHT, CoordH, FloatHT, InlineH, IntHT, KindHT, NeverHT, PrototypeH, RuntimeSizedArrayDefinitionHT, RuntimeSizedArrayHT, StaticSizedArrayDefinitionHT, StaticSizedArrayHT, StrHT, VoidHT, YonderH}
@@ -145,4 +160,130 @@ class TypeHammer(
     (prototypeH)
   }
 
+}
+*/
+
+// mig: fn translate_kind
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_kind<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        tyype: KindIT<'s, 'i, cI>,
+    ) -> KindHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_kind");
+    }
+}
+
+// mig: fn translate_region
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_region<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        region: &RegionTemplataI<'s, 'i, cI>,
+    ) -> RegionH
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_region");
+    }
+}
+
+// mig: fn translate_coord
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_coord<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        coord: CoordI<'s, 'i, cI>,
+    ) -> CoordH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_coord");
+    }
+}
+
+// mig: fn translate_coords
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_coords<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        references2: &[CoordI<'s, 'i, cI>],
+    ) -> Vec<CoordH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_coords");
+    }
+}
+
+// mig: fn check_conversion
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn check_conversion(
+        &self,
+        expected: CoordH<'s, 'h>,
+        actual: CoordH<'s, 'h>,
+    ) {
+        panic!("Unimplemented: check_conversion");
+    }
+}
+
+// mig: fn translate_static_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_static_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>,
+    ) -> &'h StaticSizedArrayHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_static_sized_array");
+    }
+}
+
+// mig: fn translate_runtime_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_runtime_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>,
+    ) -> &'h RuntimeSizedArrayHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_runtime_sized_array");
+    }
+}
+
+// mig: fn translate_prototype
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_prototype<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        prototype2: &'i PrototypeI<'s, 'i, cI>,
+    ) -> &'h PrototypeH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_prototype");
+    }
 }

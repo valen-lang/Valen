@@ -20,7 +20,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::function::function_compiler::IDefineFunctionResult;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
-use crate::typing::types::types::{KindPlaceholderT, KindT, RegionT};
+use crate::typing::types::types::{IRegionT, KindPlaceholderT, KindT, RegionT};
 use crate::typing::templata::templata::PlaceholderTemplataT;
 use crate::typing::env::environment::child_of;
 use crate::typing::infer_compiler::InitialKnown;
@@ -429,7 +429,7 @@ where 's: 't,
                     ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
                         coord: CoordT {
                             ownership: ct.coord.ownership,
-                            region: RegionT {},
+                            region: RegionT { region: IRegionT::Default },
                             kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
                         },
                     }))
@@ -511,7 +511,7 @@ where 's: 't,
           val originalPlaceholderTemplateId = TemplataCompiler.getPlaceholderTemplate(originalPlaceholderId)
           val mutability = coutputs.lookupMutability(originalPlaceholderTemplateId)
           coutputs.declareTypeMutability(placeholderTemplateId, mutability)
-          CoordTemplataT(CoordT(ownership, RegionT(), KindPlaceholderT(placeholderId)))
+          CoordTemplataT(CoordT(ownership, RegionT(DefaultRegionT), KindPlaceholderT(placeholderId)))
         }
         case other => vwat(other)
       }
@@ -667,13 +667,38 @@ where 's: 't,
                     expect_coord_templata(templata).coord
                 })
                 .collect();
+        // Any generic parameter of the abstract function that wasn't pinned by the impl's self-type
+        // gets a fresh dispatcher-owned placeholder inside evaluate_generic_virtual_dispatcher_function_for_prototype.
+        // Collect those so they appear in the dispatcher's templateArgs — the Instantiator's
+        // assemble_placeholder_map zips templateArgs with concrete args at monomorphization, so any
+        // placeholder that doesn't appear here can't be substituted and trips a vassertSome later.
+        // Example: map<T, R>(&Opt<T>, &IFunction1<mut,&T,R>) Opt<R> with impl<I> Opt<I> for Some<I> —
+        // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
+        let existing_dispatcher_placeholder_ids: std::collections::HashSet<IdT<'s, 't>> =
+            dispatcher_placeholders.iter()
+                .map(|p| self.get_placeholder_templata_id(*p))
+                .collect();
+        let fresh_dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
+            origin_function_templata.function.generic_parameters.iter()
+                .filter_map(|gp| {
+                    dispatcher_inner_inferences.get(&gp.rune.rune).and_then(|templata| match *templata {
+                        ITemplataT::Coord(&CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }), .. } }) =>
+                            if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
+                        ITemplataT::Kind(&KindTemplataT { kind: KindT::KindPlaceholder(&KindPlaceholderT { id }) }) =>
+                            if existing_dispatcher_placeholder_ids.contains(&id) { None } else { Some(*templata) },
+                        _ => None,
+                    })
+                })
+                .collect();
+        let all_dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
+            dispatcher_placeholders.iter().chain(fresh_dispatcher_placeholders.iter()).copied().collect();
         let dispatcher_id_ref = {
             let func_name = IFunctionTemplateNameT::try_from(dispatcher_template_id_ref.local_name)
                 .expect("dispatcher_template_id local_name should be IFunctionTemplateNameT");
             let local_name = func_name.make_function_name(
                 self.typing_interner,
                 self.keywords,
-                &dispatcher_placeholders,
+                &all_dispatcher_placeholders,
                 &dispatcher_params,
             );
             self.typing_interner.intern_id(IdValT {
@@ -895,8 +920,8 @@ where 's: 't,
         override_function_param_types[abstract_index as usize] = overriding_param_coord;
 
         let extra_envs: Vec<IInDenizenEnvironmentT<'s, 't>> = vec![
-            coutputs.get_outer_env_for_type(&[range], interface_template_id),
-            coutputs.get_outer_env_for_type(&[range], sub_citizen_template_id),
+            coutputs.get_outer_env_for_type(&[range, impl_t.templata.impl_.range], interface_template_id),
+            coutputs.get_outer_env_for_type(&[range, impl_t.templata.impl_.range], sub_citizen_template_id),
         ];
         let found_function = match self.find_function(
             IInDenizenEnvironmentT::from(dispatcher_case_env),
@@ -906,7 +931,8 @@ where 's: 't,
             override_imprecise_name,
             &[],
             &[],
-            RegionT {},
+            &[],
+            RegionT { region: IRegionT::Default },
             &override_function_param_types,
             &extra_envs,
             true,
@@ -1065,9 +1091,28 @@ where 's: 't,
     val dispatcherParams =
       originFunctionTemplata.function.params.map(_.pattern.coordRune).map(vassertSome(_)).map(_.rune)
         .map(rune => expectCoordTemplata(dispatcherInnerInferences(rune)).coord)
+    // Any generic parameter of the abstract function that wasn't pinned by the impl's self-type
+    // gets a fresh dispatcher-owned placeholder inside evaluateGenericVirtualDispatcherFunctionForPrototype.
+    // Collect those so they appear in the dispatcher's templateArgs — the Instantiator's
+    // assemblePlaceholderMap zips templateArgs with concrete args at monomorphization, so any
+    // placeholder that doesn't appear here can't be substituted and trips a vassertSome later.
+    // Example: map<T, R>(&Opt<T>, &IFunction1<mut,&T,R>) Opt<R> with impl<I> Opt<I> for Some<I> —
+    // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
+    val existingDispatcherPlaceholderIds =
+      dispatcherPlaceholders.map(TemplataCompiler.getPlaceholderTemplataId).toSet
+    val freshDispatcherPlaceholders =
+      originFunctionTemplata.function.genericParameters.flatMap(gp =>
+        dispatcherInnerInferences.get(gp.rune.rune).flatMap({
+          case templata @ CoordTemplataT(CoordT(_, _, KindPlaceholderT(id))) =>
+            if (existingDispatcherPlaceholderIds.contains(id)) None else Some(templata)
+          case templata @ KindTemplataT(KindPlaceholderT(id)) =>
+            if (existingDispatcherPlaceholderIds.contains(id)) None else Some(templata)
+          case _ => None
+        }))
+    val allDispatcherPlaceholders = dispatcherPlaceholders ++ freshDispatcherPlaceholders
     val dispatcherId =
       dispatcherTemplateId.copy(localName =
-        dispatcherTemplateId.localName.makeFunctionName(interner, keywords, dispatcherPlaceholders.toVector, dispatcherParams))
+        dispatcherTemplateId.localName.makeFunctionName(interner, keywords, allDispatcherPlaceholders.toVector, dispatcherParams))
 
     val dispatcherInnerEnv =
       GeneralEnvironmentT.childOf(
@@ -1270,7 +1315,8 @@ where 's: 't,
         overrideImpreciseName,
         Vector.empty,
         Vector.empty,
-        RegionT(),
+        Vector.empty,
+        RegionT(DefaultRegionT),
         overrideFunctionParamTypes,
         Vector(
           coutputs.getOuterEnvForType(List(range, impl.templata.impl.range), interfaceTemplateId),

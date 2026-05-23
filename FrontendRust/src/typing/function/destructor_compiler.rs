@@ -4,7 +4,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
-use crate::typing::types::types::{CoordT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{CoordT, IRegionT, KindT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::names::IImpreciseNameValS;
@@ -63,7 +63,7 @@ where 's: 't,
             IImpreciseNameValS::CodeName(
                 CodeNameS { name: self.keywords.drop }));
         let args = &[type_2];
-        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true)?
+        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], &[], context_region, args, &[], true)?
         {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
                 range: self.typing_interner.alloc_slice_copy(call_range),
@@ -84,7 +84,7 @@ where 's: 't,
     val name = interner.intern(CodeNameS(keywords.drop))
     val args = Vector(type2)
     overloadCompiler.findFunction(
-      env, coutputs, callRange, callLocation, name, Vector.empty, Vector.empty, contextRegion, args, Vector(), true) match {
+      env, coutputs, callRange, callLocation, name, Vector.empty, Vector.empty, Vector.empty, contextRegion, args, Vector(), true) match {
       case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(callRange, e))
       case Ok(x) => x
     }
@@ -112,7 +112,7 @@ where 's: 't,
             }
             (OwnershipT::Own, _) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
-                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT {}, result_coord)?;
+                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT { region: IRegionT::Default }, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
                 let result_tt = destructor_prototype.return_type;
                 ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
@@ -151,7 +151,7 @@ where 's: 't,
         case CoordT(ShareT, _, _) => DiscardTE(undestructedExpr2)
         case r@CoordT(OwnT, _, _) => {
           val StampFunctionSuccess(destructorPrototype, _) =
-            getDropFunction(env, coutputs, callRange, callLocation, RegionT(), r)
+            getDropFunction(env, coutputs, callRange, callLocation, RegionT(DefaultRegionT), r)
           vassert(coutputs.getInstantiationBounds(destructorPrototype.id).nonEmpty)
           val resultTT =
             destructorPrototype.returnType

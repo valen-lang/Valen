@@ -5,7 +5,10 @@
 pub mod builtins;
 pub mod compile_options;
 pub mod file_coordinate_map;
+pub mod final_ast;
 pub mod higher_typing;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod instantiating;
 pub mod interner;
 pub mod keywords;

@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.von.VonInt
@@ -356,3 +357,5 @@ class WhileTests extends FunSuite with Matchers {
 //    compile.evalForKind(Vector()) match { case VonInt(4) => }
 //  }
 }
+
+*/

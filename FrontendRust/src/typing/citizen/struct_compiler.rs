@@ -111,7 +111,8 @@ trait IStructCompilerDelegate {
     callLocation: LocationInDenizen,
     functionName: IImpreciseNameS,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     contextRegion: RegionT,
     args: Vector[CoordT],
     extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -238,6 +239,12 @@ where 's: 't,
                 );
             }
         }
+        // Build internal method entries for the outer env
+        let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            struct_a.internal_methods.iter().map(|internal_method| {
+                let function_name = self.translate_generic_function_name(internal_method.name);
+                (INameT::from(function_name), IEnvEntryT::Function(internal_method))
+            }).collect();
         let sibling_key = struct_template_id.add_step(
             self.typing_interner,
             INameT::PackageTopLevel(self.typing_interner.intern_package_top_level_name(
@@ -249,8 +256,10 @@ where 's: 't,
                 .filter(|(id, _)| **id == *sibling_key)
                 .flat_map(|(_, ts)| ts.name_to_entry.iter().map(|(n, e)| (*n, *e)))
                 .collect();
+        let all_outer_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            internal_method_entries.into_iter().chain(sibling_entries.into_iter()).collect();
         let mut outer_store = TemplatasStoreBuilder::new(struct_template_id);
-        outer_store.add_entries(self.scout_arena, sibling_entries);
+        outer_store.add_entries(self.scout_arena, all_outer_entries);
         let outer_templatas = outer_store.build_in(self.typing_interner);
         let outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
             global_env: declaring_env.global_env(),
@@ -292,6 +301,15 @@ where 's: 't,
         TemplatasStore(structTemplateId, Map(), Map())
           .addEntries(
             interner,
+            // Internal methods declared inside the struct body (see IMRFDI). Mirrors the
+            // interface registration below: the struct's outer env is the single home for
+            // its internal methods, and lookups from per-instantiation envs walk up to find
+            // them.
+            structA.internalMethods
+              .map(internalMethod => {
+                val functionName = nameTranslator.translateGenericFunctionName(internalMethod.name)
+                (functionName -> FunctionEnvEntry(internalMethod))
+              }) ++
             // Merge in any things from the global environment that say they're part of this
             // structs's namespace (see IMRFDI and CODME).
             // StructFreeMacro will put a free function here.

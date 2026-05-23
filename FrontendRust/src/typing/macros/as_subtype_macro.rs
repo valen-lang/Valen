@@ -86,10 +86,10 @@ where 's: 't,
 
         // Because we dont yet put borrows in structs
         let result_ownership = incoming_ownership;
-        let success_coord = CoordT { ownership: result_ownership, region: RegionT, kind: target_kind };
-        let fail_coord = CoordT { ownership: result_ownership, region: RegionT, kind: incoming_kind };
+        let success_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: target_kind };
+        let fail_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: incoming_kind };
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
-            self.get_result(coutputs, env, call_range, call_location, RegionT, success_coord, fail_coord);
+            self.get_result(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, success_coord, fail_coord);
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
             panic!("CompileErrorExceptionT: RangedInternalErrorT: Bad result coord");
         }
@@ -160,10 +160,10 @@ where 's: 't,
     // Because we dont yet put borrows in structs
 //    val resultOwnership = incomingCoord.ownership
     val resultOwnership = incomingOwnership
-    val successCoord = CoordT(resultOwnership, RegionT(), targetKind)
-    val failCoord = CoordT(resultOwnership, RegionT(), incomingKind)
+    val successCoord = CoordT(resultOwnership, RegionT(DefaultRegionT), targetKind)
+    val failCoord = CoordT(resultOwnership, RegionT(DefaultRegionT), incomingKind)
     val (resultCoord, okConstructor, okResultImpl, errConstructor, errResultImpl) =
-      expressionCompiler.getResult(coutputs, env, callRange, callLocation, RegionT(), successCoord, failCoord)
+      expressionCompiler.getResult(coutputs, env, callRange, callLocation, RegionT(DefaultRegionT), successCoord, failCoord)
     if (resultCoord != vassertSome(maybeRetCoord)) {
       throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Bad result coord:\n" + resultCoord + "\nand\n" + vassertSome(maybeRetCoord)))
     }

@@ -1,3 +1,21 @@
+// From Frontend/SimplifyingPass/src/dev/vale/simplifying/ExpressionHammer.scala
+//
+// Per typing-pass `Compiler` precedent, `ExpressionHammer` is not a Rust struct.
+// Methods become `impl Hammer { ... }` blocks colocated here.
+
+use crate::final_ast::instructions::{ExpressionH, WhileH};
+use crate::instantiating::ast::ast::{FunctionHeaderI, PrototypeI};
+use crate::instantiating::ast::expressions::{
+    DestroyImmRuntimeSizedArrayIE, DestroyStaticSizedArrayIntoFunctionIE, ExpressionIE, IfIE,
+    NewImmRuntimeSizedArrayIE, NewMutRuntimeSizedArrayIE, ReferenceExpressionIE,
+    StaticArrayFromCallableIE, WhileIE,
+};
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::ast::types::{cI, CoordI};
+use crate::simplifying::hamuts::Hamuts;
+use crate::simplifying::hammer::{Hammer, Locals};
+
+/*
 package dev.vale.simplifying
 
 import dev.vale.finalast._
@@ -1112,4 +1130,266 @@ class ExpressionHammer(
     translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, callNode, argsDeferreds)
   }
+}
+*/
+
+// mig: fn translate_expression (Scala `ExpressionHammer.translate` — disambiguated
+// from `Hammer.translate` per overload-suffix pattern, since both methods now
+// live on the same `impl Hammer` per typing-pass collapse.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_expression<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        expr2: ExpressionIE<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_expression");
+    }
+}
+
+// mig: fn translate_deferreds
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_deferreds<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        original_expr: ExpressionH<'s, 'h>,
+        deferreds: Vec<ExpressionIE<'s, 'i, cI>>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_deferreds");
+    }
+}
+
+// mig: fn translate_expressions_until_never
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_expressions_until_never<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        exprs_ie: &[ExpressionIE<'s, 'i, cI>],
+    ) -> (Vec<ExpressionH<'s, 'h>>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_expressions_until_never");
+    }
+}
+
+// mig: fn translate_expressions_and_deferreds
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_expressions_and_deferreds<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        exprs2: &[ExpressionIE<'s, 'i, cI>],
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_expressions_and_deferreds");
+    }
+}
+
+// mig: fn translate_extern_function_call
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_extern_function_call<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        prototype2: &'i PrototypeI<'s, 'i, cI>,
+        args_exprs2: &[ReferenceExpressionIE<'s, 'i, cI>],
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_extern_function_call");
+    }
+}
+
+// mig: fn translate_function_pointer_call
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_function_pointer_call<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        function: &'i PrototypeI<'s, 'i, cI>,
+        args: &[ExpressionIE<'s, 'i, cI>],
+        result_type2: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_function_pointer_call");
+    }
+}
+
+// mig: fn translate_new_mut_runtime_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_new_mut_runtime_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_new_mut_runtime_sized_array");
+    }
+}
+
+// mig: fn translate_new_imm_runtime_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_new_imm_runtime_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        construct_array2: &NewImmRuntimeSizedArrayIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_new_imm_runtime_sized_array");
+    }
+}
+
+// mig: fn translate_static_array_from_callable
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_static_array_from_callable<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        expr_ie: &StaticArrayFromCallableIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_static_array_from_callable");
+    }
+}
+
+// mig: fn translate_destroy_static_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destroy_static_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        das2: &DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destroy_static_sized_array");
+    }
+}
+
+// mig: fn translate_destroy_imm_runtime_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destroy_imm_runtime_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        das2: &DestroyImmRuntimeSizedArrayIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
+    }
+}
+
+// mig: fn translate_if
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_if<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        parent_locals: &mut Locals<'s, 'i, 'h>,
+        if2: &IfIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_if");
+    }
+}
+
+// mig: fn translate_while
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_while<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        while2: &WhileIE<'s, 'i, cI>,
+    ) -> &'h WhileH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_while");
+    }
+}
+
+// mig: fn translate_interface_function_call
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interface_function_call<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        super_function_prototype: &'i PrototypeI<'s, 'i, cI>,
+        virtual_param_index: i32,
+        result_type2: CoordI<'s, 'i, cI>,
+        args_exprs2: &[ExpressionIE<'s, 'i, cI>],
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interface_function_call");
+    }
 }

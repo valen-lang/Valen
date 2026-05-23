@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.finalast._
@@ -386,3 +387,5 @@ class IntegrationTestsC extends FunSuite with Matchers {
     }
   }
 }
+
+*/

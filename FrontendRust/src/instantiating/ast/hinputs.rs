@@ -1,4 +1,15 @@
 // VISTODO: rename Hinputs everywhere
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::postparsing::names::IRuneS;
+use crate::instantiating::ast::types::{cI, sI};
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::names::{IStructTemplateNameI, IInterfaceTemplateNameI, IImplTemplateNameI, IFunctionTemplateNameI};
+use crate::instantiating::ast::ast::{
+    EdgeI, FunctionDefinitionI, FunctionExportI, FunctionExternI, InterfaceEdgeBlueprintI,
+    KindExportI, PrototypeI,
+};
+use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
+
 /*
 package dev.vale.instantiating.ast
 
@@ -13,12 +24,39 @@ import dev.vale.typing.names._
 import dev.vale.typing.types._
 
 import scala.collection.mutable
+*/
+// mig: struct InstantiationBoundArgumentsI
+/// Temporary state (see @TFITCX)
+pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
+    pub rune_to_function_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>,
+    pub caller_rune_to_callee_rune_to_reachable_func:
+        ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>>,
+    pub rune_to_impl_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, sI>>,
+}
 
+// mig: impl InstantiationBoundArgumentsI
+/*
 case class InstantiationBoundArgumentsI(
   runeToFunctionBoundArg: Map[IRuneS, PrototypeI[sI]],
   callerRuneToCalleeRuneToReachableFunc: Map[IRuneS, Map[IRuneS, PrototypeI[sI]]],
   runeToImplBoundArg: Map[IRuneS, IdI[sI, IImplNameI[sI]]])
 
+*/
+// mig: struct HinputsI
+/// Temporary state (see @TFITCX) — top-level container for instantiated output.
+pub struct HinputsI<'s, 'i> where 's: 'i {
+    pub interfaces: &'i [InterfaceDefinitionI<'s, 'i, cI>],
+    pub structs: &'i [StructDefinitionI<'s, 'i, cI>],
+    pub functions: &'i [FunctionDefinitionI<'s, 'i>],
+    pub interface_to_edge_blueprints:
+        ArenaIndexMap<'i, IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>>,
+    pub interface_to_sub_citizen_to_edge:
+        ArenaIndexMap<'i, IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>>,
+    pub kind_exports: &'i [KindExportI<'s, 'i>],
+    pub function_exports: &'i [FunctionExportI<'s, 'i>],
+    pub function_externs: &'i [FunctionExternI<'s, 'i>],
+}
+/*
 case class HinputsI(
   interfaces: Vector[InterfaceDefinitionI],
   structs: Vector[StructDefinitionI],
@@ -50,29 +88,104 @@ case class HinputsI(
   val subCitizenToInterfaceToEdge: Map[IdI[cI, ICitizenNameI[cI]], Map[IdI[cI, IInterfaceNameI[cI]], EdgeI]] =
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
+*/
+// mig: impl HinputsI
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for HinputsI` below.)
+/*
   override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for HinputsI` below.)
+/*
 override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 
+*/
+// mig: fn lookup_struct
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_struct(
+        &self,
+        _struct_id: &IdI<'s, 'i, cI>,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_struct")
+    }
+}
+/*
   def lookupStruct(structId: IdI[cI, IStructNameI[cI]]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))
   }
 
+*/
+// mig: fn lookup_interface
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_interface(
+        &self,
+        _interface_id: &IdI<'s, 'i, cI>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_interface")
+    }
+}
+/*
   def lookupInterface(interfaceId: IdI[cI, IInterfaceNameI[cI]]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
   }
 
+*/
+// mig: fn lookup_struct_by_template
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_struct_by_template(
+        &self,
+        _struct_template_name: &IStructTemplateNameI<'s, 'i, cI>,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_struct_by_template")
+    }
+}
+/*
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameI[cI]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
   }
 
+*/
+// mig: fn lookup_interface_by_template
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_interface_by_template(
+        &self,
+        _interface_template_name: &IInterfaceTemplateNameI<'s, 'i, cI>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_interface_by_template")
+    }
+}
+/*
   def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameI[cI]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
   }
 
+*/
+// mig: fn lookup_impl_by_template
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_impl_by_template(
+        &self,
+        _impl_template_name: &IImplTemplateNameI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
+        panic!("Unimplemented: lookup_impl_by_template")
+    }
+}
+/*
   def lookupImplByTemplate(implTemplateName: IImplTemplateNameI[cI]): EdgeI = {
     vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
   }
 
+*/
+// mig: fn lookup_edge
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_edge(
+        &self,
+        _impl_id: &IdI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
+        panic!("Unimplemented: lookup_edge")
+    }
+}
+/*
   def lookupEdge(implId: IdI[cI, IImplNameI[cI]]): EdgeI = {
     vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
   }
@@ -112,10 +225,32 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
   //   functions.find(_.header.toSignature == signature2).headOption
   // }
 
+*/
+// mig: fn lookup_function
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_function_by_template(
+        &self,
+        _func_template_name: &IFunctionTemplateNameI<'s, 'i, cI>,
+    ) -> Option<&'i FunctionDefinitionI<'s, 'i>> {
+        panic!("Unimplemented: lookup_function_by_template")
+    }
+}
+/*
   def lookupFunction(funcTemplateName: IFunctionTemplateNameI[cI]): Option[FunctionDefinitionI] = {
     functions.find(_.header.id.localName.template == funcTemplateName).headOption
   }
 
+*/
+// mig: fn lookup_function
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_function(
+        &self,
+        _human_name: &str,
+    ) -> &'i FunctionDefinitionI<'s, 'i> {
+        panic!("Unimplemented: lookup_function")
+    }
+}
+/*
   def lookupFunction(humanName: String): FunctionDefinitionI = {
     val matches = functions.filter(f => {
       f.header.id.localName match {
@@ -131,6 +266,17 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     matches.head
   }
 
+*/
+// mig: fn lookup_struct
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_struct_by_name(
+        &self,
+        _human_name: &str,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_struct_by_name")
+    }
+}
+/*
   def lookupStruct(humanName: String): StructDefinitionI = {
     val matches = structs.filter(s => {
       s.instantiatedCitizen.id.localName match {
@@ -146,6 +292,18 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     matches.head
   }
 
+*/
+// mig: fn lookup_impl
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_impl(
+        &self,
+        _sub_citizen_it: &IdI<'s, 'i, cI>,
+        _interface_it: &IdI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
+        panic!("Unimplemented: lookup_impl")
+    }
+}
+/*
   def lookupImpl(
     subCitizenIT: IdI[cI, ICitizenNameI[cI]],
     interfaceIT: IdI[cI, IInterfaceNameI[cI]]):
@@ -155,6 +313,17 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         .get(subCitizenIT))
   }
 
+*/
+// mig: fn lookup_interface
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_interface_by_name(
+        &self,
+        _human_name: &str,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_interface_by_name")
+    }
+}
+/*
   def lookupInterface(humanName: String): InterfaceDefinitionI = {
     val matches = interfaces.filter(s => {
       s.instantiatedCitizen.id.localName match {
@@ -170,6 +339,17 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     matches.head
   }
 
+*/
+// mig: fn lookup_user_function
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_user_function(
+        &self,
+        _human_name: &str,
+    ) -> &'i FunctionDefinitionI<'s, 'i> {
+        panic!("Unimplemented: lookup_user_function")
+    }
+}
+/*
   def lookupUserFunction(humanName: String): FunctionDefinitionI = {
     val matches =
       functions
@@ -205,10 +385,30 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 //    vassertOne(lookupLambdasIn(needleFunctionHumanName))
 //  }
 
+*/
+// mig: fn get_all_non_extern_functions
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn get_all_non_extern_functions(
+        &self,
+    ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
+        panic!("Unimplemented: get_all_non_extern_functions")
+    }
+}
+/*
   def getAllNonExternFunctions: Iterable[FunctionDefinitionI] = {
     functions.filter(!_.header.isExtern)
   }
 
+*/
+// mig: fn get_all_user_functions
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn get_all_user_functions(
+        &self,
+    ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
+        panic!("Unimplemented: get_all_user_functions")
+    }
+}
+/*
   def getAllUserFunctions: Iterable[FunctionDefinitionI] = {
     functions.filter(_.header.isUserFunction)
   }

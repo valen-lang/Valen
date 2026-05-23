@@ -56,7 +56,7 @@ where 's: 't,
         exprs: Vec<ReferenceExpressionTE<'s, 't>>,
     ) -> ReferenceExpressionTE<'s, 't> {
         let types_2: Vec<CoordT<'s, 't>> = exprs.iter().map(|e| IExpressionResultT::Reference(e.result()).expect_reference().coord).collect();
-        let region = RegionT;
+        let region = RegionT { region: IRegionT::Default };
         let final_expr = ReferenceExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs),
             result_reference: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
@@ -72,7 +72,7 @@ where 's: 't,
     exprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     val types2 = exprs2.map(_.result.expectReference().coord)
-    val region = RegionT()
+    val region = RegionT(DefaultRegionT)
     val finalExpr = TupleTE(exprs2, makeTupleCoord(env, coutputs, parentRanges, callLocation, region, types2))
     (finalExpr)
   }

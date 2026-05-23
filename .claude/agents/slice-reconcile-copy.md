@@ -15,7 +15,7 @@ Your ONLY job: for each `// old, obsolete` definition, find the matching placeho
 
 # How to match
 
-Match by name: an old `pub struct FileCoordinate` matches a stub under `// mig: struct FileCoordinate`. An old `pub fn put_package` matches a stub under `// mig: fn put_package`. An old `impl FileCoordinate` matches a stub under `// mig: impl FileCoordinate`.
+Match by name: an old `pub struct FileCoordinate` matches a stub under `// mig: struct FileCoordinate`. An old `pub fn put_package` matches a stub under `// mig: fn put_package` — including a fn wrapped in an `impl FileCoordinate { ... }` block, which matches via its fn name (there is no separate `// mig: impl` marker).
 
 # What is a placeholder stub?
 

@@ -281,6 +281,7 @@ pub struct StructS<'s> {
   pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
+  pub internal_methods: &'s [&'s FunctionS<'s>],
 }
 /*
 case class StructS(
@@ -307,7 +308,8 @@ case class StructS(
     membersPredictedRuneToType: Map[IRuneS, ITemplataType],
     memberRules: Vector[IRulexSR],
 
-    members: Vector[IStructMemberS]
+    members: Vector[IStructMemberS],
+    internalMethods: Vector[FunctionS]
 ) extends ICitizenS {
 */
 impl<'s> StructS<'s> {
@@ -327,6 +329,7 @@ impl<'s> StructS<'s> {
     members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
+    internal_methods: &'s [&'s FunctionS<'s>],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -342,7 +345,7 @@ impl<'s> StructS<'s> {
       range, name, attributes, weakable, generic_params, mutability_rune,
       maybe_predicted_mutability, tyype, header_rune_to_explicit_type,
       header_predicted_rune_to_type, header_rules, members_rune_to_explicit_type,
-      members_predicted_rune_to_type, member_rules, members,
+      members_predicted_rune_to_type, member_rules, members, internal_methods,
     }
   }
 }
@@ -913,13 +916,20 @@ case class GenericParameterS(
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
   pub rules: &'s [&'s IRulexSR<'s>],
+  pub rune_to_type: &'s [(IRuneS<'s>, ITemplataType<'s>)],
 }
 /*
+// Per @DRSINI, these rules are added incrementally (not in the initial rule set) by
+// solveForResolving and evaluateGenericFunctionFromCallForPrototype for unsolved runes.
+// `rules` includes the connecting EqualsSR(paramRune, resultRune) so the default is fully
+// self-contained — it travels intact when GenericParameterS is inherited (e.g. by struct
+// internal methods). `runeToType` carries types for default-only runes (currently just
+// resultRune); these get registered into the solver at default-fire time.
+// DO NOT SUBMIT is this true?
 case class GenericParameterDefaultS(
-  // One day, when we want more rules in here, we might need to have a runeToType map
-  // and other things to make it its own little world.
   resultRune: IRuneS,
-  rules: Vector[IRulexSR])
+  rules: Vector[IRulexSR],
+  runeToType: Map[IRuneS, ITemplataType])
 */
 #[derive(Debug, PartialEq)]
 pub struct FunctionS<'s> {

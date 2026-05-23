@@ -11,7 +11,7 @@ use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocal
 use crate::typing::names::names::{CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, INameT, IStructTemplateNameT, IVarNameT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT, MutabilityTemplataT, VariabilityTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-use crate::typing::types::types::{CoordT, IntT, KindT, MutabilityT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT, VariabilityT};
+use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, MutabilityT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT, VariabilityT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -99,7 +99,7 @@ fn test_mutating_a_local_var() {
         NodeRefT::LocalLookup(l) => Some(l)
     );
     let result_coord = lookup.result().coord;
-    assert_eq!(result_coord, CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
+    assert_eq!(result_coord, CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT { bits: 32 }) });
 }
 /*
   test("Test mutating a local var") {
@@ -114,7 +114,7 @@ fn test_mutating_a_local_var() {
 
     val lookup = Collector.only(main, { case l @ LocalLookupTE(range, localVariable) => l })
     val resultCoord = lookup.result.coord
-    resultCoord shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    resultCoord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 */
 // mig: fn test_mutable_member_permission
@@ -490,7 +490,7 @@ fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
         |}
         |""".stripMargin)
     compile.getCompilerOutputs() match {
-      case Err(CouldntConvertForMutateT(_, CoordT(ShareT, _, IntT.i32), CoordT(ShareT, RegionT(), StrT()))) =>
+      case Err(CouldntConvertForMutateT(_, CoordT(ShareT, _, IntT.i32), CoordT(ShareT, RegionT(DefaultRegionT), StrT()))) =>
       case _ => vfail()
     }
   }
@@ -641,7 +641,7 @@ fn humanize_errors() {
     });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT, kind: firefly_kind };
+    let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: std::marker::PhantomData });
@@ -652,7 +652,7 @@ fn humanize_errors() {
     });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT, kind: serenity_kind };
+    let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: serenity_kind };
 
     let myfunc_template_name = typing_interner.intern_function_template_name(
         FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
@@ -721,9 +721,9 @@ fn humanize_errors() {
     val testPackageCoord = PackageCoordinate.TEST_TLD(interner, keywords)
     val tzCodeLoc = CodeLocationS.testZero(interner)
     val fireflyKind = StructTT(IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(StructNameT(StructTemplateNameT(StrI("Firefly")), Vector.empty))))
-    val fireflyCoord = CoordT(OwnT,RegionT(), fireflyKind)
+    val fireflyCoord = CoordT(OwnT,RegionT(DefaultRegionT), fireflyKind)
     val serenityKind = StructTT(IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(StructNameT(StructTemplateNameT(StrI("Serenity")), Vector.empty))))
-    val serenityCoord = CoordT(OwnT,RegionT(), serenityKind)
+    val serenityCoord = CoordT(OwnT,RegionT(DefaultRegionT), serenityKind)
 
     val filenamesAndSources = FileCoordinateMap.test(interner, "blah blah blah\nblah blah blah")
 

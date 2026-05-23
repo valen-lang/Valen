@@ -185,6 +185,7 @@ where
         vec![],
         initially_known_runes,
         initial_rules,
+        std::collections::HashSet::new(),
     ) {
         Ok(()) => {},
         Err(_) => panic!("Initial commitStep should not fail"),

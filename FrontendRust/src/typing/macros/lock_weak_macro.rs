@@ -64,7 +64,7 @@ where 's: 't,
         };
         let borrow_coord = CoordT { ownership: OwnershipT::Borrow, ..param_coords[0].tyype };
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
-            self.get_option(coutputs, env, call_range, call_location, RegionT, borrow_coord);
+            self.get_option(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, borrow_coord);
         let lock_expr = ReferenceExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
             inner_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
@@ -100,7 +100,7 @@ where 's: 't,
 
     val borrowCoord = paramCoords.head.tyype.copy(ownership = BorrowT)
     val (optCoord, someConstructor, noneConstructor, someImplId, noneImplId) =
-      expressionCompiler.getOption(coutputs, env, callRange, callLocation, RegionT(), borrowCoord)
+      expressionCompiler.getOption(coutputs, env, callRange, callLocation, RegionT(DefaultRegionT), borrowCoord)
     val lockExpr =
       LockWeakTE(
         ArgLookupTE(0, paramCoords.head.tyype),

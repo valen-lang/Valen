@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.parsing.ast.ImmutableP
@@ -745,3 +746,5 @@ class ArrayTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

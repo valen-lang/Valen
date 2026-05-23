@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.typing.ast.ConstantStrTE
@@ -153,3 +154,5 @@ class StringTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 }
+
+*/

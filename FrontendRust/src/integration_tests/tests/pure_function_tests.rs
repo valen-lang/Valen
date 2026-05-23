@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.simplifying.VonHammer
@@ -8,8 +9,19 @@ import dev.vale.testvm.StructInstanceV
 import dev.vale.von.VonInt
 import dev.vale.{finalast => m}
 import org.scalatest._
-
+*/
+// mig: struct PureFunctionTests
+pub struct PureFunctionTests;
+/*
 class PureFunctionTests extends FunSuite with Matchers {
+*/
+// mig: fn simple_pure_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_pure_function() {
+    panic!("Unmigrated test: simple_pure_function");
+}
+/*
   test("Simple pure function") {
     val compile =
       RunCompilation.test(
@@ -31,3 +43,5 @@ class PureFunctionTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
 }
+
+*/

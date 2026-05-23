@@ -1,8 +1,29 @@
-# Per-Pass Migration Policy
+# Migration Policy
 
-The slice-pipeline is pass-agnostic by default and produces wrong defaults for any pass that has non-trivial arena/lifetime/interning conventions. Each pass that wants slice-pipeline support drops a `migration-policy.md` next to its source root (e.g. `src/instantiating/migration-policy.md`). `slice-rustify` and `slice-placehold` read this file before emitting anything; the orchestrator skill (`docs/skills/slice-pipeline.md`) points the agents at it.
+This is the **single central migration policy** for the whole frontend. It covers every pass; there is no per-pass policy file. The slice-pipeline is pass-agnostic by default and produces wrong defaults for any pass that has non-trivial arena/lifetime/interning conventions, so `slice-rustify`, `slice-placehold`, and `slice-impl-wrap` read this file before emitting anything and use the values for the target file's pass. The orchestrator skill (`docs/skills/slice-pipeline.md`) points the agents here.
 
-The file below is the **template + canonical example** (filled in with the typing-pass values that the slabs-15 migration converged on). Copy it into a new pass directory, swap the values, and the agents will pick it up.
+Each schema section below lists its value per pass (e.g. Type-name suffix: typing `T`, postparsing `S`, …). When a pass isn't listed in a section, that section doesn't apply to it yet — add its value here when the pass enters the pipeline. The typing-pass values (which the slabs-15 migration converged on) are the most complete and serve as the canonical example.
+
+---
+
+## Per-pass quick reference
+
+The core values for each pass. The schema sections below expand on these; the deeper per-pass lists (dual-enum pairs, builder/frozen pairs, naming exceptions) are filled in as each pass enters the pipeline.
+
+| Pass | Source dir | Suffix | Lifetimes | Interner / Arena | Collections | String |
+|---|---|---|---|---|---|---|
+| parsing | `src/parsing/` | `P` | `'p` | `ParseArena<'p>` | `&'p [X]` | `StrI<'p>` |
+| postparsing | `src/postparsing/` | `S` | `'s` | `ScoutArena<'s>` | `&'s [X]`, `IndexMap` | `StrI<'s>` |
+| higher_typing | `src/higher_typing/` | `A` | `'s` | `ScoutArena<'s>` | `&'s [X]` | `StrI<'s>` |
+| typing | `src/typing/` | `T` | `'s, 't` | `&'ctx TypingInterner<'s,'t>` | `&'t [X]`, `ArenaIndexMap<'t,…>` | `StrI<'s>` |
+| instantiating | `src/instantiating/` | `I` | `'s, 'i` (+ region-mode generic `R: IRegionsModeI`) | `InstantiatingInterner<'s,'i>` / `InstantiatingArena<'i>` | `&'i [X]`, `ArenaIndexMap` | `StrI<'s>` |
+| simplifying + final_ast | `src/simplifying/`, `src/final_ast/` | `H` | `'s, 'h` | `HammerInterner<'s,'h>` / `HammerArena` | `&'h [X]` | `StrI<'s>` |
+| integration_tests | `src/integration_tests/` | (test classes: none) | n/a — `#[test]` module-scope fns | n/a (assert on frontend output only) | n/a | n/a |
+
+Notes:
+- **instantiating** carries an extra region-mode type parameter `R: IRegionsModeI` on most types (`Foo<'s,'i,R>`) — the T-erased region representation (`IdI<'s,'i,R>`). It is a generic *type* param, not a lifetime.
+- **simplifying** emits the final AST (the `H`-suffixed types in `src/final_ast/`) and uses the `MustIntern` seal. Per typing-pass precedent the `VonHammer` and `HamutsBox` compiler classes were collapsed onto `Hammer`/`Hamuts` — there is no separate `VonHammer`/`HamutsBox` state.
+- **integration_tests** is a test-only module: its `.rs` files are mostly `#[test]` fns that assert on frontend pipeline output (compile-succeeds / expected hamuts), not on executed programs. Test classes (`class FooTests extends FunSuite`) get **no** type suffix and are not impl-wrapped.
 
 ---
 
@@ -17,13 +38,13 @@ Short identifier used in agent output, e.g. `typing`, `instantiating`, `simplify
 Pass-local source root, e.g. `FrontendRust/src/typing/`.
 
 ### Type-name suffix
-Single ASCII letter appended to every Scala type name on translation. Typing pass: `T`. Postparsing: `S`. Parsing: `P`. Higher-typing: `A`. If a Scala class name already carries this suffix, it stays unchanged; otherwise the agent appends it. Applies to `struct`, `enum`, `trait`, `impl` mig comments.
+Single ASCII letter appended to every Scala type name on translation. Typing: `T`. Postparsing: `S`. Parsing: `P`. Higher-typing: `A`. Instantiating: `I`. Simplifying / final AST: `H`. If a Scala class name already carries this suffix, it stays unchanged; otherwise the agent appends it. Applies to `struct`, `enum`, `trait` mig comments. **Test classes** (`class FooTests extends FunSuite`) get no suffix.
 
 ### Lifetimes
-Ordered list of lifetime parameters every `struct`/`enum`/`trait`/`impl` carries by default, e.g. `'s, 't`. Plus any default `where`-clause (e.g. `where 's: 't`). slice-placehold emits these on every type definition and impl block unless the policy file says otherwise for a specific case.
+Ordered list of lifetime parameters every `struct`/`enum`/`trait`/`impl` carries by default, e.g. `'s, 't`. Plus any default `where`-clause (e.g. `where 's: 't`). slice-placehold emits these on every type definition and impl block unless the policy says otherwise for a specific case. Per pass: parsing `'p`; postparsing/higher_typing `'s`; typing `'s, 't`; instantiating `'s, 'i` plus the region-mode type generic `R: IRegionsModeI`; simplifying/final_ast `'s, 'h`.
 
 ### Interner type
-The arena/interner type that body-emitting methods take as a parameter. Typing pass: `&'ctx TypingInterner<'s, 't>`. Postparsing: `&'ctx ScoutArena<'s>`. The agent threads this as an extra leading parameter on every method whose Scala body calls `interner.intern(...)` — i.e. methods that *produce* an interned value. (SPDMX-B adaptation; documented as a `// Rust adaptation (SPDMX-B): ...` comment above the fn.)
+The arena/interner type that body-emitting methods take as a parameter. Typing: `&'ctx TypingInterner<'s, 't>`. Postparsing/higher_typing: `&'ctx ScoutArena<'s>`. Parsing: `&'ctx ParseArena<'p>`. Instantiating: `&'ctx InstantiatingInterner<'s, 'i>` (arena `InstantiatingArena<'i>`). Simplifying/final_ast: `&'ctx HammerInterner<'s, 'h>` (arena `HammerArena`). The agent threads this as an extra leading parameter on every method whose Scala body calls `interner.intern(...)` — i.e. methods that *produce* an interned value. (SPDMX-B adaptation; documented as a `// Rust adaptation (SPDMX-B): ...` comment above the fn.)
 
 ### Default collection types
 Scala → Rust mapping for collection literals. Typing pass:
@@ -126,17 +147,44 @@ Typing pass:
 
 ---
 
+## Conventions & lessons learned
+
+Durable lessons from the migration so far. These govern how slicing and body migration should be done; see also `TL.md`, `tl-handoff.md`, and the shields (SPDMX, SCPX, DCCR, PSMONMX) for the authoritative rules.
+
+### `vimpl`/`vfail`/`vwat` → `panic!` is faithful, not a gap
+Scala's `vimpl()`, `vfail()`, `vwat()`, `vcurious()`, and a failed `vassertSome` translate to Rust `panic!(...)`. These are correct 1:1 translations. A high panic count in a migrated file is mostly faithful translation, **not** incompleteness — distinguish genuine not-yet-migrated stubs (`panic!("Unimplemented: …")` / `"Unmigrated …"`) from faithful `vimpl`-style panics when gauging progress.
+
+### Match Scala structurally, not just behaviorally
+SPDMX checks shape, not only behavior. Mirror Scala's control structure: a single `match` with destructured patterns → a single Rust `match` (not nested matches, per PSMONMX); `flatMap`/`flatMap` chains → `filter_map`/`and_then` (not a combined helper); `xs ++ ys` → `iter().chain().collect()` (not mutate-then-extend). Matching behavior alone leaves latent SPDMX hits.
+
+### When canonical throws and Rust silently succeeds, the Rust is wrong
+If canonical Scala throws an error on a path where the Rust silently wraps/succeeds (or vice versa), the Rust diverged. Align to Scala. This may break tests that were asserting the wrong-Rust behavior — **update or delete those tests to match canonical's test set** (the test corpus is the spec). This is the DCCR-sanctioned exception: changing a test because it encoded wrong behavior, with canonical as the witness. A test passing on wrong-Rust behavior is worse than one failing on correct-Rust behavior.
+
+### Unmigrated tests are `#[ignore]`'d panic-stubs
+A not-yet-migrated test is `#[test] #[ignore = "unmigrated - pending <pass> body migration"] fn x() { panic!("Unmigrated test: x"); }`. An unconditional `panic!` **without** `#[ignore]` fails the suite — always ignore them. The body-migration loop un-ignores one at a time, fills the panicked paths it hits, and repeats.
+
+### Generic-parameter ordering (@PRIIROZ)
+`genericParametersS` and equivalents concatenate as: user-specified ++ extra-from-explicit-params ++ extra-from-body ++ extra-from-parent (**parent last**).
+
+### Orphan-file traps
+A `.rs` file that is (a) not declared in any `mod.rs`/`lib.rs`, or (b) contains bare Scala not wrapped in `/* */`, is invisible to **cargo** (not compiled), **SCPX** (no audit-trail block → no mismatch reported), and **slice-pipeline** (nothing to anchor on). Before slicing a module: ensure every file is `/* */`-wrapped *and* the module is wired into the crate. (This is exactly how 13 `simplifying/` files and the entire `integration_tests/` module silently slipped past every check.)
+
+### Cross-pass wiring during mid-migration
+When an orchestration type (e.g. `pass_manager`/`FullCompilation`) must construct a type from a downstream pass that is still a mid-migration stub (no real constructor, possibly extra lifetimes), **stub the seam**: hold the dependency as `PhantomData` (keeping the lifetimes live), and `panic!` in the constructor and any delegating methods, until the downstream pass's body migration provides a real constructor. Don't force a premature real wiring.
+
+### Combining parallel migration branches
+When two branches migrate different passes against forked `Frontend/` Scala: do a **scoped transplant** of the owning branch's pass directories (plus their support files and any new crate-level deps, e.g. `paste`, wiring an orphaned `final_ast` module), **not** a full `git merge` — a blanket merge drags the whole-frontend slice-pipeline stubs and regresses already-completed passes back to stubs. After transplant, drift-reconcile the transplanted passes' audit-trail to whichever `Frontend/` is canonical. Pick **one** canonical `Frontend/` (the one that's ahead) and have both branches' body-migration target it.
+
 ## How the agents consume this file
 
-`slice-rustify` and `slice-placehold` look for a `migration-policy.md` by walking up from the target file's directory until they find one or hit the repo root. If none is found, they fall back to a no-policy mode that prints a warning ("no migration-policy.md found; using generic defaults — output will need manual cleanup"). The orchestrator skill (`docs/skills/slice-pipeline.md`) verifies a policy exists before starting and refuses to run the pipeline without one.
+`slice-rustify`, `slice-placehold`, and `slice-impl-wrap` read this central file (`FrontendRust/docs/migration/migration-policy.md`) before emitting anything, and look up the values for the target file's pass (identified by its source dir, e.g. `src/typing/` → typing). If a pass has no values in a section, the agent treats that section as not-applicable for that pass.
 
-The policy file is read *once per agent invocation* — the agent stuffs the relevant section into its working context and references it in every emit decision. Agents are explicitly told (in their own .md files) not to deviate from the policy without architect approval.
+The file is read *once per agent invocation* — the agent stuffs the relevant pass's values into its working context and references them in every emit decision. Agents are explicitly told (in their own .md files) not to deviate from the policy without architect approval.
 
 ---
 
-## Writing a new policy for a new pass
+## Adding a new pass
 
-1. Copy this file to `<new-pass-source-dir>/migration-policy.md`.
-2. Fill in every H2 section. Don't leave any blank — "(none)" is the right answer when the section doesn't apply (e.g. a pass with no `case object`s).
-3. Get architect sign-off on the policy *before* running the pipeline. The cost of running the pipeline with a wrong policy is high (~32 orphan free fns in `src/typing/` is the typing-pass cost).
-4. As the migration proceeds and new patterns surface, edit the policy file rather than special-casing individual files. The policy is canonical.
+1. In each H2 section above, add the new pass's value alongside the existing passes (e.g. add a `Simplifying: H` line to **Type-name suffix**). Cover every section that applies; sections that don't apply to the pass can be omitted for it.
+2. Get architect sign-off on the new pass's values *before* running the pipeline. The cost of running the pipeline with wrong values is high (~32 orphan free fns in `src/typing/` is the typing-pass cost).
+3. As the migration proceeds and new patterns surface, edit this central file rather than special-casing individual files. This file is canonical.
