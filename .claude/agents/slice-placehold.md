@@ -114,6 +114,7 @@ Signature inference:
    // arena-allocates where Scala used GC.
    ```
  * If the Scala code is `test("…")`, emit `#[test]` and `panic!("Unmigrated test: foo");` at module scope (tests never go inside an impl).
+ * **Scala method overloads.** When two `// mig: fn` markers translate to the same snake_case name (Scala overloads — same name, different parameter lists), emit a stub for **each** marker. Do NOT skip the second marker just because a stub with that name was already emitted for an earlier overload — Rust lacks overloading, so the name collision is real and *expected* (the reconcile step / TL disambiguates with a `_<suffix>` per SPDMX-S). Skipping the second marker leaves a markerless Scala `/* */` block that compiles fine while gated but silently lacks a stub, which surfaces as a missing-method NNDX escalation during body migration (e.g. the 5-arg `translateName` in `instantiator.rs`). Every `// mig: fn` marker gets its own stub, full stop.
 
 If the `// mig: fn` is suffixed `(realized-by-impl PartialEq)`, `(realized-by-impl Hash)`, or `(realized-by-TryFrom)`, do NOT emit a `pub fn`. Instead emit a marker stub per the policy's equals/hashCode/unapply policy:
 

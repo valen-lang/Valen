@@ -3,6 +3,7 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
 use crate::instantiating::ast::types::{cI, sI};
 use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::names::{IStructTemplateNameI, IInterfaceTemplateNameI, IImplTemplateNameI, IFunctionTemplateNameI};
 use crate::instantiating::ast::ast::{
     EdgeI, FunctionDefinitionI, FunctionExportI, FunctionExternI, InterfaceEdgeBlueprintI,
     KindExportI, PrototypeI,
@@ -101,12 +102,11 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
 */
 // mig: fn lookup_struct
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct(
         &self,
-        struct_id: &IdI<'s, 't, IStructNameI<'s, 't>>,
-    ) -> Option<&StructDefinitionI<'s, 't>> {
+        _struct_id: &IdI<'s, 'i, cI>,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_struct")
     }
 }
@@ -117,12 +117,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_interface
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface(
         &self,
-        interface_id: &IdI<'s, 't, IInterfaceNameI<'s, 't>>,
-    ) -> Option<&InterfaceDefinitionI<'s, 't>> {
+        _interface_id: &IdI<'s, 'i, cI>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_interface")
     }
 }
@@ -133,12 +132,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_struct_by_template
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct_by_template(
         &self,
-        struct_template_name: &IStructTemplateNameI<'s, 't>,
-    ) -> Option<&StructDefinitionI<'s, 't>> {
+        _struct_template_name: &IStructTemplateNameI<'s, 'i, cI>,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_struct_by_template")
     }
 }
@@ -149,12 +147,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_interface_by_template
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface_by_template(
         &self,
-        interface_template_name: &IInterfaceTemplateNameI<'s, 't>,
-    ) -> Option<&InterfaceDefinitionI<'s, 't>> {
+        _interface_template_name: &IInterfaceTemplateNameI<'s, 'i, cI>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_interface_by_template")
     }
 }
@@ -165,12 +162,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_impl_by_template
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_impl_by_template(
         &self,
-        impl_template_name: &IImplTemplateNameI<'s, 't>,
-    ) -> Option<&EdgeI<'s, 't>> {
+        _impl_template_name: &IImplTemplateNameI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl_by_template")
     }
 }
@@ -181,12 +177,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_edge
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_edge(
         &self,
-        impl_id: &IdI<'s, 't, IImplNameI<'s, 't>>,
-    ) -> Option<&EdgeI<'s, 't>> {
+        _impl_id: &IdI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_edge")
     }
 }
@@ -232,12 +227,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_function
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_function_by_template(
         &self,
-        func_template_name: &IFunctionTemplateNameI<'s, 't>,
-    ) -> Option<&FunctionDefinitionI<'s, 't>> {
+        _func_template_name: &IFunctionTemplateNameI<'s, 'i, cI>,
+    ) -> Option<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: lookup_function_by_template")
     }
 }
@@ -248,12 +242,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_function
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_function(
         &self,
-        human_name: &str,
-    ) -> Option<&FunctionDefinitionI<'s, 't>> {
+        _human_name: &str,
+    ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_function")
     }
 }
@@ -275,12 +268,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_struct
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct_by_name(
         &self,
-        human_name: &str,
-    ) -> Option<&StructDefinitionI<'s, 't>> {
+        _human_name: &str,
+    ) -> &'i StructDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_struct_by_name")
     }
 }
@@ -302,13 +294,12 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_impl
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_impl(
         &self,
-        sub_citizen_it: &IdI<'s, 't, ICitizenNameI<'s, 't>>,
-        interface_it: &IdI<'s, 't, IInterfaceNameI<'s, 't>>,
-    ) -> Option<&EdgeI<'s, 't>> {
+        _sub_citizen_it: &IdI<'s, 'i, cI>,
+        _interface_it: &IdI<'s, 'i, cI>,
+    ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl")
     }
 }
@@ -324,12 +315,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_interface
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface_by_name(
         &self,
-        human_name: &str,
-    ) -> Option<&InterfaceDefinitionI<'s, 't>> {
+        _human_name: &str,
+    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_interface_by_name")
     }
 }
@@ -351,12 +341,11 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn lookup_user_function
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_user_function(
         &self,
-        human_name: &str,
-    ) -> Option<&FunctionDefinitionI<'s, 't>> {
+        _human_name: &str,
+    ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_user_function")
     }
 }
@@ -398,11 +387,10 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn get_all_non_extern_functions
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn get_all_non_extern_functions(
         &self,
-    ) -> Vec<&FunctionDefinitionI<'s, 't>> {
+    ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_non_extern_functions")
     }
 }
@@ -413,11 +401,10 @@ impl<'s, 't> HinputsI<'s, 't> {
 
 */
 // mig: fn get_all_user_functions
-#[cfg(any())]
-impl<'s, 't> HinputsI<'s, 't> {
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn get_all_user_functions(
         &self,
-    ) -> Vec<&FunctionDefinitionI<'s, 't>> {
+    ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_user_functions")
     }
 }
