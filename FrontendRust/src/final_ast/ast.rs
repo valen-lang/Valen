@@ -80,8 +80,8 @@ pub struct PackageH<'s, 'h> where 's: 'h {
     pub runtime_sized_arrays: &'h [RuntimeSizedArrayDefinitionHT<'s, 'h>],
     pub export_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
     pub export_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
-    pub extern_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
-    pub extern_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
+    pub prototype_to_extern: &'h ArenaIndexMap<'h, &'h PrototypeH<'s, 'h>, HamutsFunctionExtern<'s, 'h>>,
+    pub kind_to_extern: &'h ArenaIndexMap<'h, &'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>,
 }
 /*
 case class PackageH(
@@ -102,9 +102,9 @@ case class PackageH(
     // Translations for backends to use if they need to export a name.
     exportNameToKind: Map[StrI, KindHT],
     // Translations for backends to use if they need to export a name.
-    externNameToFunction: Map[StrI, PrototypeH],
+    prototypeToExtern: Map[PrototypeH, HamutsFunctionExtern],
     // Translations for backends to use if they need to export a name.
-    externNameToKind: Map[StrI, KindHT]
+    kindToExtern: Map[OpaqueHT, HamutsKindExtern]
 ) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
