@@ -14,8 +14,9 @@ use crate::final_ast::instructions::{
 };
 use crate::final_ast::types::{CoordH, KindHT, NeverHT, Variability, VoidHT};
 use crate::instantiating::ast::hinputs::HinputsI;
-use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::cI;
+use crate::instantiating::ast::names::{IdI, INameI, IVarNameI};
+use crate::instantiating::ast::templata::ITemplataI;
+use crate::instantiating::ast::types::{cI, CoordI, KindIT};
 use crate::keywords::Keywords;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hamuts::Hamuts;
@@ -24,15 +25,20 @@ use std::collections::{HashMap, HashSet};
 /*
 package dev.vale.simplifying
 
-import dev.vale.{Builtins, FileCoordinateMap, IPackageResolver, Interner, Keywords, PackageCoordinate, PackageCoordinateMap, Profiler, Result, finalast, vassert, vcurious, vfail, vwat}
+import dev.vale.{Builtins, FileCoordinateMap, IPackageResolver, Interner, Keywords, PackageCoordinate, PackageCoordinateMap, Profiler, Result, finalast, vassert, vcurious, vfail, vimpl, vwat}
 import dev.vale.finalast.{ConsecutorH, ConstantVoidH, CoordH, ExpressionH, Final, IdH, KindHT, Local, NeverHT, PackageH, ProgramH, PrototypeH, StackifyH, Variability, VariableIdH, VoidHT}
 import dev.vale.highertyping.ICompileErrorA
 import dev.vale.finalast._
-import dev.vale.instantiating.ast._
+import dev.vale.instantiating.ast.{IdI, _}
 import dev.vale.postparsing.ICompileErrorS
 
 import scala.collection.immutable.List
+*/
 
+// mig: case class FunctionRefH (moved to src/final_ast/ast.rs — Scala has it
+// in `Hammer.scala`, but it's a pure data type that colocates with the other
+// finalast H-side AST. Field shape `{ prototype: &'h PrototypeH<...> }` per Scala.)
+/*
 case class FunctionRefH(prototype: PrototypeH) {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -40,35 +46,170 @@ override def equals(obj: Any): Boolean = vcurious();
   //  def functionType = prototype.functionType
   def fullName = prototype.id
 }
+*/
 
+// mig: case class LocalsBox (collapsed into Locals; see architect directive)
+// Scala's LocalsBox was a mutable wrapper around an immutable Locals. Per
+// architect directive (matching typing-pass `CompilerOutputs` precedent and
+// the `HamutsBox` → `Hamuts` collapse), the Rust port has a single mutable
+// `Locals` accumulator. The LocalsBox methods become &mut self/&self methods on
+// Locals (below); the immutable `Locals.foo` functional-update methods collapse
+// into those (preserved as audit-trail under `(collapsed)` markers).
+/*
 case class LocalsBox(var inner: Locals) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
+*/
 
+// mig: fn snapshot
+// (LocalsBox.snapshot returned `inner`; with the LocalsBox/Locals collapse,
+// snapshot becomes a clone-equivalent. Not yet exposed — body migration.)
+/*
   def snapshot = inner
+*/
 
+// mig: fn typing_pass_locals
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>> {
+        panic!("Unimplemented: typing_pass_locals");
+    }
+}
+/*
   def typingPassLocals: Map[IVarNameI[cI], VariableIdH] = inner.typingPassLocals
+*/
+
+// mig: fn unstackified_vars
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn unstackified_vars(&self) -> &HashSet<VariableIdH<'s, 'h>> {
+        panic!("Unimplemented: unstackified_vars");
+    }
+}
+/*
   def unstackifiedVars: Set[VariableIdH] = inner.unstackifiedVars
+*/
+
+// mig: fn locals
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn locals(&self) -> &HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>> {
+        panic!("Unimplemented: locals");
+    }
+}
+/*
   def locals: Map[VariableIdH, Local] = inner.locals
+*/
+
+// mig: fn next_local_id_number
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn next_local_id_number(&self) -> i32 {
+        panic!("Unimplemented: next_local_id_number");
+    }
+}
+/*
   def nextLocalIdNumber: Int = inner.nextLocalIdNumber
+*/
 
+// mig: fn get_by_var_name (Scala overload `get(IVarNameI[cI])` —
+// disambiguated per instantiating overload-suffix pattern.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn get_by_var_name(&self, id: &'i IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
+        panic!("Unimplemented: get_by_var_name");
+    }
+}
+/*
   def get(id: IVarNameI[cI]) = inner.get(id)
-  def get(id: VariableIdH) = inner.get(id)
+*/
 
+// mig: fn get (Scala overload `get(VariableIdH)`.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn get(&self, id: VariableIdH<'s, 'h>) -> Option<Local<'s, 'h>> {
+        panic!("Unimplemented: get");
+    }
+}
+/*
+  def get(id: VariableIdH) = inner.get(id)
+*/
+
+// mig: fn mark_unstackified_by_var_name (Scala overload disambiguated.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
+        panic!("Unimplemented: mark_unstackified_by_var_name");
+    }
+}
+/*
   def markUnstackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markUnstackified(varId2)
   }
+*/
+
+// mig: fn mark_restackified_by_var_name (Scala overload disambiguated.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
+        panic!("Unimplemented: mark_restackified_by_var_name");
+    }
+}
+/*
   def markRestackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markRestackified(varId2)
   }
+*/
 
+// mig: fn mark_unstackified
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn mark_unstackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
+        panic!("Unimplemented: mark_unstackified");
+    }
+}
+/*
   def markUnstackified(varIdH: VariableIdH): Unit = {
     inner = inner.markUnstackified(varIdH)
   }
+*/
+
+// mig: fn set_next_local_id_number
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
+        panic!("Unimplemented: set_next_local_id_number");
+    }
+}
+/*
   def setNextLocalIdNumber(nextLocalIdNumber: Int): Unit = {
     inner = inner.copy(nextLocalIdNumber = nextLocalIdNumber)
   }
+*/
 
+// mig: fn add_hammer_local
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn add_hammer_local(
+        &mut self,
+        tyype: CoordH<'s, 'h>,
+        variability: Variability,
+    ) -> Local<'s, 'h> {
+        panic!("Unimplemented: add_hammer_local");
+    }
+}
+/*
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):
@@ -77,7 +218,23 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     inner = newInner
     local
   }
+*/
 
+// mig: fn add_typing_pass_local (Scala name; matches Scala `addTypingPassLocal`.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn add_typing_pass_local(
+        &mut self,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id_name_h: &'h IdH<'s, 'h>,
+        variability: Variability,
+        tyype: CoordH<'s, 'h>,
+    ) -> Local<'s, 'h> {
+        panic!("Unimplemented: add_typing_pass_local");
+    }
+}
+/*
   def addTypingPassLocal(
     varId2: IVarNameI[cI],
     varIdNameH: IdH,
@@ -90,7 +247,19 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 
 }
+*/
 
+// mig: case class Locals
+/// Temporary state
+pub struct Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub typing_pass_locals: HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>>,
+    pub unstackified_vars: HashSet<VariableIdH<'s, 'h>>,
+    pub locals: HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>>,
+    pub next_local_id_number: i32,
+}
+/*
 // This represents the locals for the entire function.
 // Note, some locals will have the same index, that just means they're in
 // different blocks.
@@ -107,7 +276,25 @@ case class Locals(
      nextLocalIdNumber: Int) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
+*/
 
+// mig: fn add_compiler_local (Scala name on Locals — distinct from
+// add_typing_pass_local on LocalsBox in Scala. With LocalsBox collapsed, both
+// methods live here.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn add_compiler_local(
+        &mut self,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id_name_h: &'h IdH<'s, 'h>,
+        variability: Variability,
+        tyype: CoordH<'s, 'h>,
+    ) -> Local<'s, 'h> {
+        panic!("Unimplemented: add_compiler_local");
+    }
+}
+/*
   def addCompilerLocal(
     varId2: IVarNameI[cI],
     varIdNameH: IdH,
@@ -131,7 +318,10 @@ override def hashCode(): Int = vcurious()
         newLocalIdNumber + 1)
     (newLocals, newLocal)
   }
+*/
 
+// mig: fn add_hammer_local (collapsed into the &mut self method above)
+/*
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):
@@ -148,15 +338,24 @@ override def hashCode(): Int = vcurious()
         newLocalIdNumber + 1)
     (newLocals, newLocal)
   }
+*/
 
+// mig: fn mark_unstackified_by_var_name (collapsed into the &mut self method above)
+/*
   def markUnstackified(varId2: IVarNameI[cI]): Locals = {
     markUnstackified(typingPassLocals(varId2))
   }
+*/
 
+// mig: fn mark_restackified_by_var_name (collapsed into the &mut self method above)
+/*
   def markRestackified(varId2: IVarNameI[cI]): Locals = {
     markRestackified(typingPassLocals(varId2))
   }
+*/
 
+// mig: fn mark_unstackified (collapsed into the &mut self method above)
+/*
   def markUnstackified(varIdH: VariableIdH): Locals = {
     // Make sure it existed and wasnt already unstackified
     vassert(locals.contains(varIdH))
@@ -165,7 +364,17 @@ override def hashCode(): Int = vcurious()
     }
     Locals(typingPassLocals, unstackifiedVars + varIdH, locals, nextLocalIdNumber)
   }
+*/
 
+// mig: fn mark_restackified
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn mark_restackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
+        panic!("Unimplemented: mark_restackified");
+    }
+}
+/*
   def markRestackified(varIdH: VariableIdH): Locals = {
     // Make sure it existed and was unstackified
     vassert(locals.contains(varIdH))
@@ -174,19 +383,40 @@ override def hashCode(): Int = vcurious()
     }
     Locals(typingPassLocals, unstackifiedVars - varIdH, locals, nextLocalIdNumber)
   }
+*/
 
+// mig: fn get_by_var_name (collapsed into the &self method above)
+/*
   def get(varId: IVarNameI[cI]): Option[Local] = {
     typingPassLocals.get(varId) match {
       case None => None
       case Some(index) => Some(locals(index))
     }
   }
+*/
 
+// mig: fn get (collapsed into the &self method above)
+/*
   def get(varId: VariableIdH): Option[Local] = {
     locals.get(varId)
   }
 }
+*/
 
+// mig: class Hammer
+/// Temporary state
+//
+// Central god struct (typing-pass `Compiler` precedent). Sub-hammer
+// fields from Scala (`nameHammer`, `structHammer`, `typeHammer`,
+// `functionHammer`, `vonHammer`) NOT held as Rust fields — their methods
+// become `impl Hammer { ... }` blocks colocated in per-area files.
+pub struct Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub interner: &'ctx HammerInterner<'s, 'h>,
+    pub keywords: &'ctx Keywords<'s>,
+}
+/*
 class Hammer(interner: Interner, keywords: Keywords) {
   val nameHammer: NameHammer = new NameHammer()
   val structHammer: StructHammer =
@@ -199,7 +429,150 @@ class Hammer(interner: Interner, keywords: Keywords) {
   val typeHammer: TypeHammer = new TypeHammer(interner, keywords, nameHammer, structHammer)
   val functionHammer = new FunctionHammer(keywords, typeHammer, nameHammer, structHammer)
   val vonHammer = new VonHammer(nameHammer, typeHammer)
+*/
 
+// mig: fn mangle_func
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_func(&self, id: &IdI<'s, 'i, cI>) -> String {
+        panic!("Unimplemented: mangle_func");
+    }
+}
+/*
+  def mangleFunc(id: IdI[cI, IFunctionNameI[cI]]): String = {
+    if (id.packageCoord.module.str == "rust") {
+      ""
+    } else {
+      val IdI(packageCoord, initSteps, localName) = id
+      (localName match {
+        case FunctionNameIX(FunctionTemplateNameI(humanName, _), templateArgs, _) => {
+          packageCoord.packages.map(_.str + "_").mkString("") +
+              initSteps.map(mangleName(_, true)).mkString("") +
+              humanName.str +
+              (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+              templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        }
+        case ExternFunctionNameI(humanName, templateArgs, _) => {
+          packageCoord.packages.map(_.str + "_").mkString("") +
+              initSteps.map(mangleName(_, true)).mkString("") +
+              humanName.str +
+              (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+              templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        }
+        case other => vimpl(other)
+      })
+    }
+  }
+*/
+
+// mig: fn mangle_name
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_name(&self, name: &INameI<'s, 'i, cI>, stuff_after: bool) -> String {
+        panic!("Unimplemented: mangle_name");
+    }
+}
+/*
+  def mangleName(name: INameI[cI], stuffAfter: Boolean): String = {
+    ""
+//    name match {
+//      case StructNameI(StructTemplateNameI(humanName),templateArgs) => {
+//        humanName.str +
+//        (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+//        templateArgs.map("__" + mangleTemplata(_)).mkString("") +
+//        (if (stuffAfter) "__" else "")
+//      }
+//      case other => vimpl(other)
+//    }
+  }
+*/
+
+// mig: fn mangle_struct
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_struct(&self, id: &IdI<'s, 'i, cI>) -> String {
+        panic!("Unimplemented: mangle_struct");
+    }
+}
+/*
+  def mangleStruct(id: IdI[cI, IStructNameI[cI]]): String = {
+    ""
+//    val IdI(packageCoord, initSteps, localName) = id
+//    mangleName(localName, false)
+  }
+*/
+
+// mig: fn mangle_kind
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_kind(&self, kind: &KindIT<'s, 'i, cI>) -> String {
+        panic!("Unimplemented: mangle_kind");
+    }
+}
+/*
+  def mangleKind(kind: KindIT[cI]): String = {
+    ""
+//    kind match {
+//      case IntIT(bits) => "i" + bits
+//      case other => vimpl(other)
+//    }
+  }
+*/
+
+// mig: fn mangle_coord
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_coord(&self, coord: &CoordI<'s, 'i, cI>) -> String {
+        panic!("Unimplemented: mangle_coord");
+    }
+}
+/*
+  def mangleCoord(coord: CoordI[cI]): String = {
+    ""
+//    val CoordI(ownership, kind) = coord
+//    (ownership match {
+//      case ImmutableShareI => "1_IRef_"
+//      case MutableShareI => ""
+//      case OwnI => ""
+//      case WeakI => "1_Weak_"
+//      case ImmutableBorrowI => "1_IRef_"
+//      case MutableBorrowI => "1_Ref_"
+//    }) + mangleKind(kind)
+  }
+*/
+
+// mig: fn mangle_templata
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i, cI>) -> String {
+        panic!("Unimplemented: mangle_templata");
+    }
+}
+/*
+  def mangleTemplata(templata: ITemplataI[cI]): String = {
+    ""
+//    templata match {
+//      case CoordTemplataI(region, coord) => mangleCoord(coord)
+//      case other => vimpl(other)
+//    }
+  }
+*/
+
+// mig: fn translate
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+    pub fn translate(&self, hinputs: &HinputsI<'s, 'i>) -> &'h ProgramH<'s, 'h> {
+        panic!("Unimplemented: translate");
+    }
+}
+/*
   def translate(hinputs: HinputsI): ProgramH = {
     val HinputsI(
     interfaces,
@@ -210,10 +583,11 @@ class Hammer(interner: Interner, keywords: Keywords) {
     edges,
     kindExports,
     functionExports,
+    kindExterns,
     functionExterns) = hinputs
 
 
-    val hamuts = HamutsBox(Hamuts(Map(), Map(), Map(), Vector.empty, Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map()))
+    val hamuts = HamutsBox(Hamuts(Map(), Map(), Map(), Map(), Vector.empty, Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map()))
     //    val emptyPackStructRefH = structHammer.translateStructRef(hinputs, hamuts, emptyPackStructRef)
     //    vassert(emptyPackStructRefH == ProgramH.emptyTupleStructRef)
 
@@ -232,9 +606,48 @@ class Hammer(interner: Interner, keywords: Keywords) {
 //      hamuts.addKindExtern(kindH, packageCoordinate, exportName)
 //    })
 
-    functionExterns.foreach({ case FunctionExternI(prototype, exportName) =>
+    kindExterns.foreach({ case (struct, KindExternI(_)) =>
+      val exportName = mangleStruct(struct.id)
+      val exportSimplifiedId = NameHammer.simplifyId(struct.id)
+      val opaqueH = structHammer.translateOpaqueI(hinputs, hamuts, struct)
+      hamuts.addKindExtern(opaqueH, exportSimplifiedId, exportName)
+    })
+
+    functionExterns.foreach({ case FunctionExternI(prototype, numInherited) =>
+      // Non-rust externs (stdlib's fsqrt etc.) use humanName directly so the user-written
+      // `#include "stdlib/fsqrt.h"` and the generated header path agree. Rust externs use
+      // "" because ValeRuster reads exportSimplifiedId instead of exportName.
+      val exportName =
+        if (prototype.id.packageCoord.module.str == "rust") {
+          ""
+        } else {
+          prototype.id.localName match {
+            case ExternFunctionNameI(humanName, _, _) => humanName.str
+            case other => vwat(other)
+          }
+        }
+      val rawSimpleId = NameHammer.simplifyId(prototype.id)
+      val exportSimplifiedId =
+        if (numInherited == 0) {
+          rawSimpleId
+        } else {
+          // Per @PRIIROZ, inherited generic params come AFTER own ones in the leaf step's
+          // templateArgs (e.g. `zork<N, K, V>` where N is own and K, V are inherited).
+          // Move the trailing `numInherited` args off the leaf step onto the immediately
+          // preceding (parent citizen) step, producing e.g. `[..., Vec<i32>, capacity]`
+          // instead of `[..., Vec, capacity<i32>]`. This is the shape Backend's
+          // rustifySimpleId expects per @SMLRZ.
+          val steps = rawSimpleId.steps
+          val leaf = steps.last
+          val parentIdx = steps.length - 2
+          val parent = steps(parentIdx)
+          val (own, inherited) = leaf.templateArgs.splitAt(leaf.templateArgs.size - numInherited)
+          val newParent = SimpleIdStep(parent.name, parent.templateArgs ++ inherited)
+          val newLeaf = SimpleIdStep(leaf.name, own)
+          SimpleId(steps.updated(parentIdx, newParent).updated(steps.length - 1, newLeaf))
+        }
       val prototypeH = typeHammer.translatePrototype(hinputs, hamuts, prototype)
-      hamuts.addFunctionExtern(prototypeH, exportName)
+      hamuts.addFunctionExtern(prototypeH, exportSimplifiedId, exportName)
     })
 
     // We generate the names here first, so that externs get the first chance at having
@@ -283,8 +696,8 @@ class Hammer(interner: Interner, keywords: Keywords) {
 //    val packageToImmDestructorPrototypes = immDestructorPrototypesH.groupBy(_._1.packageCoord(interner, keywords))
     val packageToExportNameToKind = hamuts.packageCoordToExportNameToKind
     val packageToExportNameToFunction = hamuts.packageCoordToExportNameToFunction
-    val packageToExternNameToKind = hamuts.packageCoordToExternNameToKind
-    val packageToExternNameToFunction = hamuts.packageCoordToExternNameToFunction
+    val packageToExternNameToKind = hamuts.packageCoordToKindToExtern
+    val packageToExternNameToFunction = hamuts.packageCoordToPrototypeToExtern
 
     val allPackageCoords =
       packageToInterfaceDefs.keySet ++
@@ -318,7 +731,17 @@ class Hammer(interner: Interner, keywords: Keywords) {
     finalast.ProgramH(packages)
   }
 }
+*/
 
+// mig: fn flatten_and_filter_voids
+pub fn flatten_and_filter_voids<'s, 'h>(
+    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
+) -> Vec<ExpressionH<'s, 'h>>
+where 's: 'h,
+{
+    panic!("Unimplemented: flatten_and_filter_voids");
+}
+/*
 object Hammer {
 
   private def flattenAndFilterVoids(unfilteredExprsHE: Vector[ExpressionH[KindHT]]): Vector[ExpressionH[KindHT]] = {
@@ -346,7 +769,17 @@ object Hammer {
     vassert(filteredFlattenedExprsHE.nonEmpty)
     filteredFlattenedExprsHE
   }
+*/
 
+// mig: fn consecutive
+pub fn consecutive<'s, 'h>(
+    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
+) -> ExpressionH<'s, 'h>
+where 's: 'h,
+{
+    panic!("Unimplemented: consecutive");
+}
+/*
   def consecutive(unfilteredExprsHE: Vector[ExpressionH[KindHT]]): ExpressionH[KindHT] = {
     val filteredFlattenedExprsHE = flattenAndFilterVoids(unfilteredExprsHE)
 
@@ -356,7 +789,18 @@ object Hammer {
       case multiple => ConsecutorH(multiple)
     }
   }
+*/
 
+// mig: fn consecrash
+pub fn consecrash<'s, 'i, 'h>(
+    locals: &mut Locals<'s, 'i, 'h>,
+    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
+) -> ExpressionH<'s, 'h>
+where 's: 'i, 'i: 'h,
+{
+    panic!("Unimplemented: consecrash");
+}
+/*
   // Like consecutive() but for expressions that were meant to go somewhere
   // but then the last one crashes.
   // We store them into locals really just so ConsecutorH doesn't complain
@@ -396,225 +840,3 @@ object Hammer {
   }
 }
 */
-
-// mig: case class FunctionRefH (moved to src/final_ast/ast.rs — Scala has it
-// in `Hammer.scala`, but it's a pure data type that colocates with the other
-// finalast H-side AST. Field shape `{ prototype: &'h PrototypeH<...> }` per Scala.)
-
-// mig: case class LocalsBox (collapsed into Locals; see architect directive)
-// Scala's LocalsBox was a mutable wrapper around an immutable Locals. Per
-// architect directive (matching typing-pass `CompilerOutputs` precedent and
-// the `HamutsBox` → `Hamuts` collapse), the Rust port has a single mutable
-// `Locals` accumulator. The LocalsBox methods become &mut self methods on
-// Locals.
-
-// mig: case class Locals
-/// Temporary state
-pub struct Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub typing_pass_locals: HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>>,
-    pub unstackified_vars: HashSet<VariableIdH<'s, 'h>>,
-    pub locals: HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>>,
-    pub next_local_id_number: i32,
-}
-
-// mig: fn snapshot
-// (LocalsBox.snapshot returned `inner`; with the LocalsBox/Locals collapse,
-// snapshot becomes a clone-equivalent. Not yet exposed — body migration.)
-
-// mig: fn typing_pass_locals
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>> {
-        panic!("Unimplemented: typing_pass_locals");
-    }
-}
-
-// mig: fn unstackified_vars
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn unstackified_vars(&self) -> &HashSet<VariableIdH<'s, 'h>> {
-        panic!("Unimplemented: unstackified_vars");
-    }
-}
-
-// mig: fn locals
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn locals(&self) -> &HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>> {
-        panic!("Unimplemented: locals");
-    }
-}
-
-// mig: fn next_local_id_number
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn next_local_id_number(&self) -> i32 {
-        panic!("Unimplemented: next_local_id_number");
-    }
-}
-
-// mig: fn get_by_var_name (Scala overload `get(IVarNameI[cI])` —
-// disambiguated per instantiating overload-suffix pattern.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn get_by_var_name(&self, id: &'i IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
-        panic!("Unimplemented: get_by_var_name");
-    }
-}
-
-// mig: fn get (Scala overload `get(VariableIdH)`.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn get(&self, id: VariableIdH<'s, 'h>) -> Option<Local<'s, 'h>> {
-        panic!("Unimplemented: get");
-    }
-}
-
-// mig: fn mark_unstackified_by_var_name (Scala overload disambiguated.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
-        panic!("Unimplemented: mark_unstackified_by_var_name");
-    }
-}
-
-// mig: fn mark_restackified_by_var_name (Scala overload disambiguated.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
-        panic!("Unimplemented: mark_restackified_by_var_name");
-    }
-}
-
-// mig: fn mark_unstackified
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn mark_unstackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
-        panic!("Unimplemented: mark_unstackified");
-    }
-}
-
-// mig: fn mark_restackified
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn mark_restackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
-        panic!("Unimplemented: mark_restackified");
-    }
-}
-
-// mig: fn set_next_local_id_number
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
-        panic!("Unimplemented: set_next_local_id_number");
-    }
-}
-
-// mig: fn add_hammer_local
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn add_hammer_local(
-        &mut self,
-        tyype: CoordH<'s, 'h>,
-        variability: Variability,
-    ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_hammer_local");
-    }
-}
-
-// mig: fn add_typing_pass_local (Scala name; matches Scala `addTypingPassLocal`.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn add_typing_pass_local(
-        &mut self,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        var_id_name_h: &'h IdH<'s, 'h>,
-        variability: Variability,
-        tyype: CoordH<'s, 'h>,
-    ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_typing_pass_local");
-    }
-}
-
-// mig: fn add_compiler_local (Scala name on Locals — distinct from
-// add_typing_pass_local on LocalsBox in Scala. With LocalsBox collapsed, both
-// methods live here.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
-    pub fn add_compiler_local(
-        &mut self,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        var_id_name_h: &'h IdH<'s, 'h>,
-        variability: Variability,
-        tyype: CoordH<'s, 'h>,
-    ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_compiler_local");
-    }
-}
-
-// mig: class Hammer
-/// Temporary state
-//
-// Central god struct (typing-pass `Compiler` precedent). Sub-hammer
-// fields from Scala (`nameHammer`, `structHammer`, `typeHammer`,
-// `functionHammer`, `vonHammer`) NOT held as Rust fields — their methods
-// become `impl Hammer { ... }` blocks colocated in per-area files.
-pub struct Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub interner: &'ctx HammerInterner<'s, 'h>,
-    pub keywords: &'ctx Keywords<'s>,
-}
-
-// mig: fn translate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
-    pub fn translate(&self, hinputs: &HinputsI<'s, 'i>) -> &'h ProgramH<'s, 'h> {
-        panic!("Unimplemented: translate");
-    }
-}
-
-// mig: fn flatten_and_filter_voids
-pub fn flatten_and_filter_voids<'s, 'h>(
-    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
-) -> Vec<ExpressionH<'s, 'h>>
-where 's: 'h,
-{
-    panic!("Unimplemented: flatten_and_filter_voids");
-}
-
-// mig: fn consecutive
-pub fn consecutive<'s, 'h>(
-    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
-) -> ExpressionH<'s, 'h>
-where 's: 'h,
-{
-    panic!("Unimplemented: consecutive");
-}
-
-// mig: fn consecrash
-pub fn consecrash<'s, 'i, 'h>(
-    locals: &mut Locals<'s, 'i, 'h>,
-    unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
-) -> ExpressionH<'s, 'h>
-where 's: 'i, 'i: 'h,
-{
-    panic!("Unimplemented: consecrash");
-}
