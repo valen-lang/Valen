@@ -39,7 +39,7 @@ fn test_matching_a_multiple_member_seq_of_immutables() {
     val compile = RunCompilation.test( "exported func main() int { [x, y] = (4, 5); return y; }")
     val coutputs = compile.expectCompilerOutputs()
     val main = coutputs.lookupFunction("main")
-    main.header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    main.header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
 */
@@ -60,7 +60,7 @@ fn test_matching_a_multiple_member_seq_of_mutables() {
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
     val main = coutputs.lookupFunction("main");
-    main.header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    main.header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
 */
@@ -80,7 +80,7 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
         |exported func main() int { [x, y] = (7, Marine(8)); return y.hp; }
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
-    coutputs.functions.head.header.returnType == CoordT(ShareT, RegionT(), IntT.i32)
+    coutputs.functions.head.header.returnType == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
 */
@@ -104,12 +104,15 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
         |}
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
-    coutputs.functions.head.header.returnType == CoordT(ShareT, RegionT(), IntT.i32)
+    coutputs.functions.head.header.returnType == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
 
     val monouts = compile.getMonouts()
     val tupDef = monouts.lookupStruct("Tup2")
     val tupDefMemberTypes =
-      tupDef.members.collect({ case StructMemberI(_, _, tyype) => tyype.reference })
+      tupDef.members.collect({
+        case StructMemberI(_, _, AddressMemberTypeI(tyype)) => tyype
+        case StructMemberI(_, _, ReferenceMemberTypeI(tyype)) => tyype
+      })
     tupDefMemberTypes match {
       case Vector(
         CoordI(MutableShareI,IntIT(32)),

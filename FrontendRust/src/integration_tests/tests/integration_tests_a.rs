@@ -36,6 +36,20 @@ import scala.collection.immutable.List
 pub struct IntegrationTestsA;
 /*
 class IntegrationTestsA extends FunSuite with Matchers {
+*/
+// mig: fn roguelike_typing_pass
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn roguelike_typing_pass() { panic!("Unmigrated test: roguelike_typing_pass"); }
+/*
+  test("Roguelike typing pass") {
+    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"), true)
+    compile.getCompilerOutputs() match {
+      case Ok(_) =>
+      case Err(e) => { println("DIAG-RAW-ERR: " + e); throw new RuntimeException("compile failed") }
+    }
+  }
+
   //  test("Scratch scratch") {
   //    val compile =
   //      RunCompilation.test(
@@ -535,6 +549,120 @@ fn set_swapping_locals() { panic!("Unmigrated test: set_swapping_locals"); }
   test("set swapping locals") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/mutswaplocals.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
+  }
+*/
+// mig: fn simple_extern_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_extern_function() { panic!("Unmigrated test: simple_extern_function"); }
+/*
+  test("Simple extern function") {
+    val compile = RunCompilation.test(
+      """
+        |extern func __vbi_addI32(left int, right int) int;
+        |exported func main() int { return __vbi_addI32(27, 15); }
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
+  }
+*/
+// mig: fn extern_function_returning_extern_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn extern_function_returning_extern_struct() { panic!("Unmigrated test: extern_function_returning_extern_struct"); }
+/*
+  test("Extern function returning extern struct") {
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm;
+        |extern func VecOuterNew<T>() Vec<T>;
+        |exported func main() int {
+        |  v = VecOuterNew<int>();
+        |  return 42;
+        |}
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
+  }
+
+
+*/
+// mig: fn extern_rust_vec
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn extern_rust_vec() { panic!("Unmigrated test: extern_rust_vec"); }
+/*
+  test("Extern rust Vec") {
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm {
+        |  extern func new() Vec<T>;
+        |}
+        |exported func main() int {
+        |  v = Vec<int>.new();
+        |  return 42;
+        |}
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
+  }
+*/
+// mig: fn extern_rust_vec_capacity
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn extern_rust_vec_capacity() { panic!("Unmigrated test: extern_rust_vec_capacity"); }
+/*
+  test("Extern rust Vec capacity") {
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm {
+        |  extern func with_capacity(c i64) Vec<T>;
+        |  extern func capacity(self Vec<T>) i64;
+        |}
+        |exported func main() i64 {
+        |  v = Vec<int>.with_capacity(42i64);
+        |  return Vec<int>.capacity(v);
+        |}
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
+  }
+*/
+// mig: fn extern_method_on_generic_extern_struct_returns_expected_value
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn extern_method_on_generic_extern_struct_returns_expected_value() { panic!("Unmigrated test: extern_method_on_generic_extern_struct_returns_expected_value"); }
+/*
+  test("Extern method on generic extern struct returns expected value") {
+    // Validates the FunctionExternT genericParameterInheritance plumbing — the typing-pass
+    // chain through Compiler.scala → FunctionCompilerCore → CompilerOutputs → HinputsT, and
+    // Instantiator's linear-scan lookup of inheritance counts when collecting generic externs
+    // at callsites. Vivem matches on the humanized fullyQualifiedName (not the wire-format
+    // SimpleId), so the wire-format reshape is exercised separately in HammerTests; this
+    // test catches regressions in the call-path plumbing that downstream needs.
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm {
+        |  extern func with_capacity(c i64) Vec<T>;
+        |  extern func capacity(self Vec<T>) i64;
+        |}
+        |exported func main() i64 {
+        |  v = Vec<int>.with_capacity(42i64);
+        |  return v.capacity();
+        |}
+        |""".stripMargin,
+      false)
+    compile.evalForKind(Vector()) match {
+      case VonInt(42) =>
+    }
   }
 
   // Known failure 2020-08-20

@@ -39,7 +39,7 @@ fn simple_program_containing_a_virtual_function() {
       val keywords = compile.keywords
 
       vassert(coutputs.getAllUserFunctions.size == 2)
-      vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(), IntT.i32))
+      vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
 
       val doThing =
         vassertSome(
@@ -59,7 +59,7 @@ fn simple_program_containing_a_virtual_function() {
                     Vector(
                       CoordT(
                         OwnT,
-                        RegionT(),
+                        RegionT(DefaultRegionT),
                         interner.intern(
                           InterfaceTT(
                             IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("I")))), Vector.empty)))))))))))))
@@ -87,7 +87,7 @@ fn can_call_virtual_function() {
     val keywords = compile.keywords
 
     vassert(coutputs.getAllUserFunctions.size == 2)
-    vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(), IntT.i32))
+    vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
 
 
     val doThing =
@@ -109,7 +109,7 @@ fn can_call_virtual_function() {
                   Vector(
                     CoordT(
                       OwnT,
-                      RegionT(),
+                      RegionT(DefaultRegionT),
                       interner.intern(
                         InterfaceTT(
                           IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("I")))), Vector.empty)))))))))))))
@@ -316,7 +316,7 @@ fn can_call_interface_envs_function_from_outside() {
     val interner = compile.interner
 
     vassert(coutputs.getAllUserFunctions.size == 1)
-    vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(), IntT.i32))
+    vassert(coutputs.lookupFunction("main").header.returnType == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
 
 
     val doThing = coutputs.lookupFunction("doThing")

@@ -71,12 +71,14 @@ pub fn collapse_function_name() {
           })
         FunctionNameIX[cI](templateC, templateArgsC, paramsC)
       }
-      case ExternFunctionNameI(humanName, parameters) => {
+      case n @ ExternFunctionNameI(humanName, templateArgs, parameters) => {
+        val map = RegionCounter.countFunctionName(n)
         val paramsC =
           parameters.map(param => {
             collapseCoord(param)
           })
-        ExternFunctionNameI[cI](humanName, paramsC)
+        val templateArgsC = templateArgs.map(collapseTemplata(map, _))
+        ExternFunctionNameI[cI](humanName, templateArgsC, paramsC)
       }
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
         val map = RegionCounter.countFunctionName(n)
@@ -192,6 +194,7 @@ pub fn collapse_name() {
       case n : IFunctionNameI[_] => collapseFunctionName(n.asInstanceOf[IFunctionNameI[sI]])
       case x : IFunctionTemplateNameI[_] => collapseFunctionTemplateName(x.asInstanceOf[IFunctionTemplateNameI[sI]])
       case StructTemplateNameI(humanName) => StructTemplateNameI(humanName)
+      case s @ StructNameI(_,_) => collapseStructName(s)
       case x @ LambdaCitizenNameI(_) => collapseStructName(x)
       case LambdaCitizenTemplateNameI(codeLocation) => LambdaCitizenTemplateNameI(codeLocation)
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramTypes), templateArgs, parameters) => collapseFunctionName(n)

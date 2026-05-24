@@ -87,7 +87,7 @@ fn ladder() {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), IntT.i32))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
     ifs.size shouldEqual 2
     val userFuncs = coutputs.getAllUserFunctions
     userFuncs.foreach(func => {
@@ -126,7 +126,7 @@ fn moving_from_inside_if() {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), IntT.i32))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
     val userFuncs = coutputs.getAllUserFunctions
     userFuncs.foreach(func => {
       func.header.returnType match {
@@ -159,7 +159,7 @@ fn if_with_complex_condition() {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), StrT()))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), StrT()))
 
     compile.evalForKind(Vector()) match { case VonStr("#") => }
   }

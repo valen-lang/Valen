@@ -107,30 +107,56 @@ override def hashCode(): Int = vcurious()
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionExternI<'s, 'i> where 's: 'i {
     pub prototype: &'i PrototypeI<'s, 'i, cI>,
-    pub extern_name: StrI<'s>,
+    // How many of the function's trailing generic-arg slots were inherited from a parent
+    // citizen template, per @PRIIROZ (0 = no inheritance / top-level extern). Hammer uses
+    // this to reshape the wire-format SimpleId so container template args land on the
+    // citizen step (e.g. Vec<i32>::capacity rather than Vec::capacity<i32>), which is
+    // what the Backend's rustifySimpleId expects per @SMLRZ.
+    pub num_inherited_generic_parameters: i32,
 }
 /*
 case class FunctionExternI(
-//  range: RangeS,
-  prototype: PrototypeI[cI],
-//  packageCoordinate: PackageCoordinate,
-  externName: StrI
-)  {
+    prototype: PrototypeI[cI],
+    // How many of the function's trailing generic-arg slots were inherited from a parent
+    // citizen template, per @PRIIROZ (0 = no inheritance / top-level extern). Hammer uses
+    // this to reshape the wire-format SimpleId so container template args land on the
+    // citizen step (e.g. Vec<i32>::capacity rather than Vec::capacity<i32>), which is
+    // what the Backend's rustifySimpleId expects per @SMLRZ.
+    numInheritedGenericParameters: Int) {
   vpass()
 */
 // mig: impl FunctionExternI
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for FunctionExternI` below.)
 /*
-  override def equals(obj: Any): Boolean = vcurious();
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 */
 // mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for FunctionExternI` below.)
+// (Canonical groups equals/hashCode on one physical line — see the eq block above.)
 /*
-override def hashCode(): Int = vcurious()
-
 }
 */
+// mig: struct KindExternI
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct KindExternI<'s, 'i> where 's: 'i {
+    pub r#struct: &'i StructIT<'s, 'i, cI>,
+}
+/*
+case class KindExternI(struct: StructIT[cI]) {
+*/
+// mig: impl KindExternI
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by the #[derive(PartialEq, Eq)] above.)
+/*
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Canonical groups equals/hashCode on one physical line — see the eq block above.)
+/*
+}
+*/
+
 // mig: struct InterfaceEdgeBlueprintI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

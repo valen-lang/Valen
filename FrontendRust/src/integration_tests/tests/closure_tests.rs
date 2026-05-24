@@ -174,7 +174,7 @@ pub fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         }))
 
     val expectedMembers =
-      Vector(NormalStructMemberT(interner.intern(CodeVarNameT(interner.intern(StrI("x")))), FinalT, ReferenceMemberTypeT(CoordT(ShareT, RegionT(), IntT.i32))));
+      Vector(NormalStructMemberT(interner.intern(CodeVarNameT(interner.intern(StrI("x")))), FinalT, ReferenceMemberTypeT(CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))));
     vassert(closuredVarsStructDef.members == expectedMembers)
 
     val lambda = coutputs.lookupLambdaIn("main")
@@ -195,7 +195,7 @@ pub fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     params.head match {
       case CoordT(ShareT, _, StructTT(IdT(_, Vector(FunctionNameT(FunctionTemplateNameT(StrI("main"), _),Vector(),Vector())),LambdaCitizenNameT(_)))) =>
     }
-    returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
 
     // Make sure we make it with a function pointer and a constructed vars struct
     val main = coutputs.lookupFunction("main")
@@ -237,7 +237,7 @@ pub fn mutates_from_inside_a_closure() {
     val closure = coutputs.lookupLambdaIn("main")
     val closureStruct = closure.header.params.head.tyype.kind.expectStruct()
     val closureStructDef = coutputs.lookupStruct(closureStruct.id)
-    val expectedMembers = Vector(NormalStructMemberT(interner.intern(CodeVarNameT(interner.intern(StrI("x")))), VaryingT, AddressMemberTypeT(CoordT(ShareT, RegionT(), IntT.i32))));
+    val expectedMembers = Vector(NormalStructMemberT(interner.intern(CodeVarNameT(interner.intern(StrI("x")))), VaryingT, AddressMemberTypeT(CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))));
     closureStructDef.members shouldEqual expectedMembers
 
     val lambda = coutputs.lookupLambdaIn("main")
