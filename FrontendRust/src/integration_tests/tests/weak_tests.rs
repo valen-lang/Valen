@@ -277,7 +277,7 @@ fn weak_yonder_member() {
   test("Weak yonder member") {
     val compile = RunCompilation.test(
         """
-          |struct Base {
+          |weakable struct Base {
           |  hp int;
           |}
           |struct Spaceship {

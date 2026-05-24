@@ -6,14 +6,25 @@
 
 use std::marker::PhantomData;
 
-use crate::final_ast::ast::IdH;
+use crate::final_ast::ast::{IdH, PrototypeH};
+use crate::interner::StrI;
 use crate::simplifying::hammer_interner::MustIntern;
 
 /*
 package dev.vale.finalast
 
 import dev.vale.{FileCoordinate, Interner, Keywords, PackageCoordinate, vassert, vfail, vimpl}
+*/
 
+// mig: case class CoordH[+T <: KindHT]
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CoordH<'s, 'h> where 's: 'h {
+    pub ownership: OwnershipH,
+    pub location: LocationH,
+    pub kind: KindHT<'s, 'h>,
+}
+/*
 // Represents a reference type.
 // A reference contains these things:
 // - The kind; the thing that this reference points at.
@@ -40,15 +51,17 @@ import dev.vale.{FileCoordinate, Interner, Keywords, PackageCoordinate, vassert,
 // In previous stages, this is referred to as a "coord", because these four things can be
 // thought of as dimensions of a coordinate.
 case class CoordH[+T <: KindHT](
-    ownership: OwnershipH, location: LocationH, kind: T) {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
+    ownership: OwnershipH,
+    location: LocationH,
+    kind: T) {
+  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 
-  (ownership, location) match {
-    case (OwnH, YonderH) =>
-    case (ImmutableShareH | MutableShareH, _) =>
-    case (MutableBorrowH | ImmutableBorrowH, YonderH) =>
-    case (WeakH, YonderH) =>
+  (ownership, location, kind) match {
+    case (OwnH, YonderH, _) =>
+    case (OwnH, InlineH, OpaqueHT(_, _, _)) =>
+    case (ImmutableShareH | MutableShareH, _, _) =>
+    case (MutableBorrowH | ImmutableBorrowH, YonderH, _) =>
+    case (WeakH, YonderH, _) =>
     case _ => vfail()
   }
 
@@ -65,7 +78,11 @@ case class CoordH[+T <: KindHT](
       vassert(ownership == ImmutableShareH || ownership == MutableShareH)
       vassert(location == YonderH)
     }
-    case StructHT(name) => {
+    case s @ OpaqueHT(_, _, _) => {
+      vassert(ownership == ImmutableShareH || ownership == MutableShareH)
+      vassert(location == InlineH)
+    }
+    case s @ StructHT(name) => {
       val isBox = name.fullyQualifiedName.startsWith("__Box")
 
       if (isBox) {
@@ -104,39 +121,133 @@ case class CoordH[+T <: KindHT](
     }
   }
 }
+*/
 
+// mig: sealed trait KindHT
+/// Polyvalue
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum KindHT<'s, 'h> where 's: 'h {
+    IntHT(IntHT),
+    VoidHT(VoidHT),
+    OpaqueHT(&'h OpaqueHT<'s, 'h>),
+    BoolHT(BoolHT),
+    StrHT(StrHT),
+    FloatHT(FloatHT),
+    NeverHT(NeverHT),
+    InterfaceHT(&'h InterfaceHT<'s, 'h>),
+    StructHT(&'h StructHT<'s, 'h>),
+    StaticSizedArrayHT(&'h StaticSizedArrayHT<'s, 'h>),
+    RuntimeSizedArrayHT(&'h RuntimeSizedArrayHT<'s, 'h>),
+}
+/*
 // A value, a thing that can be pointed at. See ReferenceH for more information.
 sealed trait KindHT {
   def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate
+//  def isRustOpaqueType(): Boolean
 }
+*/
+
+// mig: object IntHT
+/*
 object IntHT {
   val i32 = IntHT(32)
 }
+*/
+
+// mig: case class IntHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IntHT {
+    pub bits: i32,
+}
+/*
 case class IntHT(bits: Int) extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
+
+// mig: case class VoidHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct VoidHT;
+/*
 case class VoidHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
+
+// mig: case class OpaqueHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct OpaqueHT<'s, 'h> where 's: 'h {
+    pub package_coord: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub struct_id: &'h IdH<'s, 'h>,
+    pub simple_id: SimpleId<'s, 'h>,
+}
+/*
+case class OpaqueHT(
+  packageCoord: PackageCoordinate,
+  structId: IdH,
+  simpleId: SimpleId
+) extends KindHT {
+  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = packageCoord
+//    override def isRustOpaqueType(): Boolean = false
+}
+*/
+
+// mig: case class BoolHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct BoolHT;
+/*
 case class BoolHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
+
+// mig: case class StrHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StrHT;
+/*
 case class StrHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
+
+// mig: case class FloatHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FloatHT;
+/*
 case class FloatHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
+
+// mig: case class NeverHT
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct NeverHT {
+    pub from_break: bool,
+}
+/*
 // A primitive which can never be instantiated. If something returns this, it
 // means that it will never actually return. For example, the return type of
 // __panic() is a NeverH.
@@ -147,8 +258,25 @@ case class NeverHT(fromBreak: Boolean) extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
+}
+*/
+
+// mig: case class InterfaceHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
 }
 
+// mig: case class InterfaceHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+/*
 case class InterfaceHT(
   // Unique identifier for the interface.
   id: IdH
@@ -156,8 +284,25 @@ case class InterfaceHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
+}
+*/
+
+// mig: case class StructHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
 }
 
+// mig: case class StructHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+/*
 case class StructHT(
   // Unique identifier for the interface.
   id: IdH
@@ -165,8 +310,25 @@ case class StructHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = id.packageCoordinate.module.str == "rust"
+}
+*/
+
+// mig: case class StaticSizedArrayHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
 }
 
+// mig: case class StaticSizedArrayHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+}
+/*
 // An array whose size is known at compile time, and therefore doesn't need to
 // carry around its size at runtime.
 case class StaticSizedArrayHT(
@@ -176,8 +338,21 @@ case class StaticSizedArrayHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
 
+// mig: case class StaticSizedArrayDefinitionHT
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub size: i64,
+    pub mutability: Mutability,
+    pub variability: Variability,
+    pub element_type: CoordH<'s, 'h>,
+}
+/*
 // An array whose size is known at compile time, and therefore doesn't need to
 // carry around its size at runtime.
 case class StaticSizedArrayDefinitionHT(
@@ -193,7 +368,23 @@ case class StaticSizedArrayDefinitionHT(
   override def hashCode(): Int = hash;
   def kind = StaticSizedArrayHT(name)
 }
+*/
 
+// mig: case class RuntimeSizedArrayHT
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+
+// mig: case class RuntimeSizedArrayHT (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+}
+/*
 case class RuntimeSizedArrayHT(
   // This is useful for naming the Midas struct that wraps this array and its ref count.
   name: IdH,
@@ -201,8 +392,19 @@ case class RuntimeSizedArrayHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = name.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
 }
+*/
 
+// mig: case class RuntimeSizedArrayDefinitionHT
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub mutability: Mutability,
+    pub element_type: CoordH<'s, 'h>,
+}
+/*
 case class RuntimeSizedArrayDefinitionHT(
   // This is useful for naming the Midas struct that wraps this array and its ref count.
   name: IdH,
@@ -213,7 +415,16 @@ case class RuntimeSizedArrayDefinitionHT(
   override def hashCode(): Int = hash;
   def kind = RuntimeSizedArrayHT(name)
 }
+*/
 
+// mig: case class CodeLocation
+/// Temporary state
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct CodeLocation<'s> {
+    pub file: crate::utils::code_hierarchy::FileCoordinate<'s>,
+    pub offset: i32,
+}
+/*
 // Place in the original source code that something came from. Useful for uniquely
 // identifying templates.
 case class CodeLocation(
@@ -221,7 +432,21 @@ case class CodeLocation(
   offset: Int) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
+*/
 
+// mig: sealed trait OwnershipH
+// mig: case objects OwnH, MutableBorrowH, ImmutableBorrowH, MutableShareH, ImmutableShareH, WeakH
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum OwnershipH {
+    OwnH,
+    MutableBorrowH,
+    ImmutableBorrowH,
+    MutableShareH,
+    ImmutableShareH,
+    WeakH,
+}
+/*
 // Ownership is the way a reference relates to the kind's lifetime, see
 // ReferenceH for explanation.
 sealed trait OwnershipH
@@ -231,7 +456,17 @@ case object ImmutableBorrowH extends OwnershipH
 case object MutableShareH extends OwnershipH
 case object ImmutableShareH extends OwnershipH
 case object WeakH extends OwnershipH
+*/
 
+// mig: sealed trait LocationH
+// mig: case objects InlineH, YonderH
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum LocationH {
+    InlineH,
+    YonderH,
+}
+/*
 // Location says whether a reference contains the kind's location (yonder) or
 // contains the kind itself (inline).
 // Yes, it's weird to consider a reference containing a kind, but it makes a
@@ -258,7 +493,17 @@ sealed trait LocationH
 case object InlineH extends LocationH
 // Means that the kind will be allocated separately, in the heap.
 case object YonderH extends LocationH
+*/
 
+// mig: sealed trait Mutability
+// mig: case objects Immutable, Mutable
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum Mutability {
+    Immutable,
+    Mutable,
+}
+/*
 // Used to say whether an object can be modified or not.
 // Structs and interfaces specify whether theyre immutable or mutable, but all
 // primitives are immutable (after all, you can't change 4 itself to be another
@@ -270,7 +515,17 @@ sealed trait Mutability
 case object Immutable extends Mutability
 // Mutable objects have a lifetime.
 case object Mutable extends Mutability
+*/
 
+// mig: sealed trait Variability
+// mig: case objects Final, Varying
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum Variability {
+    Final,
+    Varying,
+}
+/*
 // Used to say whether a variable (or member) reference can be changed to point
 // at something else.
 // Examples (with C++ translations):
@@ -303,192 +558,60 @@ case object Final extends Variability
 case object Varying extends Variability
 */
 
-// mig: case class CodeLocation
-/// Temporary state
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct CodeLocation<'s> {
-    pub file: crate::utils::code_hierarchy::FileCoordinate<'s>,
-    pub offset: i32,
-}
-
-// mig: sealed trait OwnershipH
-// mig: case objects OwnH, MutableBorrowH, ImmutableBorrowH, MutableShareH, ImmutableShareH, WeakH
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum OwnershipH {
-    OwnH,
-    MutableBorrowH,
-    ImmutableBorrowH,
-    MutableShareH,
-    ImmutableShareH,
-    WeakH,
-}
-
-// mig: sealed trait LocationH
-// mig: case objects InlineH, YonderH
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum LocationH {
-    InlineH,
-    YonderH,
-}
-
-// mig: sealed trait Mutability
-// mig: case objects Immutable, Mutable
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum Mutability {
-    Immutable,
-    Mutable,
-}
-
-// mig: sealed trait Variability
-// mig: case objects Final, Varying
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum Variability {
-    Final,
-    Varying,
-}
-
-// mig: case class CoordH[+T <: KindHT]
+// mig: case class SimpleId
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordH<'s, 'h> where 's: 'h {
-    pub ownership: OwnershipH,
-    pub location: LocationH,
+pub struct SimpleId<'s, 'h> where 's: 'h {
+    pub steps: &'h [SimpleIdStep<'s, 'h>],
+}
+/*
+case class SimpleId(steps: Vector[SimpleIdStep]) {
+  vassert(steps.length > 0)
+}
+*/
+
+// mig: case class SimpleIdStep
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct SimpleIdStep<'s, 'h> where 's: 'h {
+    pub name: StrI<'s>,
+    pub template_args: &'h [SimpleId<'s, 'h>],
+}
+/*
+case class SimpleIdStep(
+    name: String, // Could also be & or &mut
+    templateArgs: Vector[SimpleId])
+*/
+
+// mig: case class HamutsFunctionExtern
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct HamutsFunctionExtern<'s, 'h> where 's: 'h {
+    pub maybe_extern_name: StrI<'s>,
+    pub prototype: &'h PrototypeH<'s, 'h>,
+    pub simple_id: SimpleId<'s, 'h>,
+}
+/*
+case class HamutsFunctionExtern(
+    maybeExternName: String,
+    prototype: PrototypeH,
+    simpleId: SimpleId)
+*/
+
+// mig: case class HamutsKindExtern
+/// Value-type
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct HamutsKindExtern<'s, 'h> where 's: 'h {
+    pub maybe_extern_name: StrI<'s>,
     pub kind: KindHT<'s, 'h>,
+    pub simple_id: SimpleId<'s, 'h>,
 }
-
-// mig: sealed trait KindHT
-/// Polyvalue
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum KindHT<'s, 'h> where 's: 'h {
-    IntHT(IntHT),
-    VoidHT(VoidHT),
-    BoolHT(BoolHT),
-    StrHT(StrHT),
-    FloatHT(FloatHT),
-    NeverHT(NeverHT),
-    InterfaceHT(&'h InterfaceHT<'s, 'h>),
-    StructHT(&'h StructHT<'s, 'h>),
-    StaticSizedArrayHT(&'h StaticSizedArrayHT<'s, 'h>),
-    RuntimeSizedArrayHT(&'h RuntimeSizedArrayHT<'s, 'h>),
-}
-
-// mig: case class IntHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IntHT {
-    pub bits: i32,
-}
-
-// mig: case class VoidHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct VoidHT;
-
-// mig: case class BoolHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct BoolHT;
-
-// mig: case class StrHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StrHT;
-
-// mig: case class FloatHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct FloatHT;
-
-// mig: case class NeverHT
-/// Value-type
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct NeverHT {
-    pub from_break: bool,
-}
-
-// mig: case class StructHT
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub _must_intern: MustIntern,
-}
-
-// mig: case class StructHT (transient companion)
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-}
-
-// mig: case class InterfaceHT
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub _must_intern: MustIntern,
-}
-
-// mig: case class InterfaceHT (transient companion)
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-}
-
-// mig: case class StaticSizedArrayHT
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub _must_intern: MustIntern,
-}
-
-// mig: case class StaticSizedArrayHT (transient companion)
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-}
-
-// mig: case class RuntimeSizedArrayHT
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
-    pub _must_intern: MustIntern,
-}
-
-// mig: case class RuntimeSizedArrayHT (transient companion)
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
-}
-
-// mig: case class StaticSizedArrayDefinitionHT
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
-    pub size: i64,
-    pub mutability: Mutability,
-    pub variability: Variability,
-    pub element_type: CoordH<'s, 'h>,
-}
-
-// mig: case class RuntimeSizedArrayDefinitionHT
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
-    pub mutability: Mutability,
-    pub element_type: CoordH<'s, 'h>,
-}
+/*
+case class HamutsKindExtern(
+    maybeExternName: String,
+    kind: KindHT,
+    simpleId: SimpleId)
+*/
 
 // --- Dispatch enums for the kind-payload interner family ---
 

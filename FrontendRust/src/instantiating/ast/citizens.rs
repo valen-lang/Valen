@@ -127,18 +127,6 @@ pub enum IMemberTypeI<'s, 'i, R> {
 /*
 sealed trait IMemberTypeI  {
 */
-// mig: fn reference
-/* Guardian: disable-all */
-impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
-    pub fn reference(&self) -> () {
-        match self {
-            _ => panic!("Unimplemented: IMemberTypeI::reference dispatch"),
-        }
-    }
-}
-/*
-  def reference: CoordI[cI]
-*/
 // mig: fn expect_reference_member
 /* Guardian: disable-all */
 impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {

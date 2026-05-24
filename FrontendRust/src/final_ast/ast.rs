@@ -36,11 +36,27 @@ object ProgramH {
   val externRegionName = "host"
 }
 
+*/
+
+// mig: case class RegionH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RegionH;
+/*
 case class RegionH() {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
+*/
 
+// mig: case class Export
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct Export<'s, 'h> where 's: 'h {
+    pub name_h: &'h IdH<'s, 'h>,
+    pub exported_name: StrI<'s>,
+}
+/*
 case class Export(
   nameH: IdH,
   exportedName: String
@@ -48,7 +64,26 @@ case class Export(
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
+*/
 
+// mig: case class PackageH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
+// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
+#[derive(Copy, Clone, Debug)]
+pub struct PackageH<'s, 'h> where 's: 'h {
+    pub interfaces: &'h [InterfaceDefinitionH<'s, 'h>],
+    pub structs: &'h [StructDefinitionH<'s, 'h>],
+    pub functions: &'h [FunctionH<'s, 'h>],
+    pub static_sized_arrays: &'h [StaticSizedArrayDefinitionHT<'s, 'h>],
+    pub runtime_sized_arrays: &'h [RuntimeSizedArrayDefinitionHT<'s, 'h>],
+    pub export_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
+    pub export_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
+    pub extern_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
+    pub extern_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
+}
+/*
 case class PackageH(
     // All the interfaces in the program.
     interfaces: Vector[InterfaceDefinitionH],
@@ -112,7 +147,14 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     matches.head
   }
 }
+*/
 
+// mig: case class ProgramH
+/// Temporary state
+pub struct ProgramH<'s, 'h> where 's: 'h {
+    pub packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, PackageH<'s, 'h>>,
+}
+/*
 case class ProgramH(
   packages: PackageCoordinateMap[PackageH]) {
   override def equals(obj: Any): Boolean = vcurious();
@@ -145,7 +187,22 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     vassertSome(paackage.runtimeSizedArrays.find(_.name == rsaTH.name))
   }
 }
+*/
 
+// mig: case class StructDefinitionH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because the edges field's EdgeH transitively
+// holds an ArenaIndexMap (which lacks those impls). Matches Scala's `vcurious`.
+#[derive(Copy, Clone, Debug)]
+pub struct StructDefinitionH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub weakable: bool,
+    pub mutability: Mutability,
+    pub edges: &'h [EdgeH<'s, 'h>],
+    pub members: &'h [StructMemberH<'s, 'h>],
+}
+/*
 // The struct definition, which defines a struct's name, members, and so on.
 // There is only one of these per type of struct in the program.
 case class StructDefinitionH(
@@ -157,6 +214,8 @@ case class StructDefinitionH(
     // back at itself.
     // On iOS, this can be ignored, all objects are weakable already.
     weakable: Boolean,
+    // Whether it's defined by the outside world.
+    extern: Boolean,
     // Whether this struct is deeply immutable or not.
     // This affects how the struct is deallocated.
     // On native, this means that we potentially call the destructor any time we let go
@@ -173,7 +232,17 @@ case class StructDefinitionH(
 override def equals(obj: Any): Boolean = vcurious();
   def getRef: StructHT = StructHT(id)
 }
+*/
 
+// mig: case class StructMemberH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructMemberH<'s, 'h> where 's: 'h {
+    pub name: &'h IdH<'s, 'h>,
+    pub variability: Variability,
+    pub tyype: CoordH<'s, 'h>,
+}
+/*
 // A member of a struct.
 case class StructMemberH(
   // Name of the struct member. This is *not* guaranteed to be unique in the entire
@@ -192,7 +261,19 @@ case class StructMemberH(
   override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious();
 }
+*/
 
+// mig: case class InterfaceDefinitionH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub weakable: bool,
+    pub mutability: Mutability,
+    pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
+    pub methods: &'h [InterfaceMethodH<'s, 'h>],
+}
+/*
 // An interface definition containing name, methods, etc.
 case class InterfaceDefinitionH(
   id: IdH,
@@ -217,7 +298,16 @@ case class InterfaceDefinitionH(
 override def equals(obj: Any): Boolean = vcurious();
   def getRef = InterfaceHT(id)
 }
+*/
 
+// mig: case class InterfaceMethodH
+/// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
+    pub prototype_h: &'h PrototypeH<'s, 'h>,
+    pub virtual_param_index: i32,
+}
+/*
 // A method in an interface.
 case class InterfaceMethodH(
   // The name, params, and return type of the method.
@@ -229,7 +319,20 @@ case class InterfaceMethodH(
   override def hashCode(): Int = hash;
   vassert(virtualParamIndex >= 0)
 }
+*/
 
+// mig: case class EdgeH
+/// Temporary state
+//
+// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
+// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
+#[derive(Copy, Clone, Debug)]
+pub struct EdgeH<'s, 'h> where 's: 'h {
+    pub struct_: &'h StructHT<'s, 'h>,
+    pub interface: &'h InterfaceHT<'s, 'h>,
+    pub struct_prototypes_by_interface_method: &'h ArenaIndexMap<'h, InterfaceMethodH<'s, 'h>, &'h PrototypeH<'s, 'h>>,
+}
+/*
 // Represents how a struct implements an interface.
 // Each edge has a vtable.
 case class EdgeH(
@@ -243,11 +346,35 @@ case class EdgeH(
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
+*/
 
+// mig: sealed trait IFunctionAttributeH + case objects UserFunctionH, PureH
+/// Polyvalue
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IFunctionAttributeH {
+    UserFunctionH,
+    PureH,
+}
+/*
 sealed trait IFunctionAttributeH
 case object UserFunctionH extends IFunctionAttributeH // Whether it was written by a human. Mostly for tests right now.
 case object PureH extends IFunctionAttributeH
+*/
 
+// mig: case class FunctionH
+/// Temporary state
+//
+// Drops PartialEq/Eq/Hash because the `body: ExpressionH` field opts out
+// (per typing-pass parity — Scala uses `vcurious` on FunctionH).
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionH<'s, 'h> where 's: 'h {
+    pub prototype: &'h PrototypeH<'s, 'h>,
+    pub is_abstract: bool,
+    pub is_extern: bool,
+    pub attributes: &'h [IFunctionAttributeH],
+    pub body: ExpressionH<'s, 'h>,
+}
+/*
 // A function's definition.
 case class FunctionH(
   // Describes the function's name, params, and return type.
@@ -273,7 +400,18 @@ override def equals(obj: Any): Boolean = vcurious();
   def id = prototype.id
   def isUserFunction = attributes.contains(UserFunctionH)
 }
+*/
 
+// mig: case class PrototypeH
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub params: &'h [CoordH<'s, 'h>],
+    pub return_type: CoordH<'s, 'h>,
+    pub _must_intern: MustIntern,
+}
+/*
 // A wrapper around a function's name, which also has its params and return type.
 case class PrototypeH(
   id: IdH,
@@ -282,7 +420,29 @@ case class PrototypeH(
 ) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
+*/
 
+// mig: case class PrototypeH (transient companion)
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeHValH<'s, 'h> where 's: 'h {
+    pub id: &'h IdH<'s, 'h>,
+    pub params: &'h [CoordH<'s, 'h>],
+    pub return_type: CoordH<'s, 'h>,
+}
+
+// mig: case class IdH
+/// Interning permanent (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IdH<'s, 'h> where 's: 'h {
+    pub local_name: StrI<'s>,
+    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub shortened_name: StrI<'s>,
+    pub fully_qualified_name: StrI<'s>,
+    pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
+    _phantom_h: PhantomData<&'h ()>,
+}
+/*
 // A unique name for something in the program.
 case class IdH(
   // This is at the beginning so toString puts it at the start, for easier debugging
@@ -320,150 +480,6 @@ case class IdH(
 //  }
 //}
 */
-
-// mig: case class RegionH
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RegionH;
-
-// mig: case class Export
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct Export<'s, 'h> where 's: 'h {
-    pub name_h: &'h IdH<'s, 'h>,
-    pub exported_name: StrI<'s>,
-}
-
-// mig: case class PackageH
-/// Temporary state
-//
-// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
-// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
-#[derive(Copy, Clone, Debug)]
-pub struct PackageH<'s, 'h> where 's: 'h {
-    pub interfaces: &'h [InterfaceDefinitionH<'s, 'h>],
-    pub structs: &'h [StructDefinitionH<'s, 'h>],
-    pub functions: &'h [FunctionH<'s, 'h>],
-    pub static_sized_arrays: &'h [StaticSizedArrayDefinitionHT<'s, 'h>],
-    pub runtime_sized_arrays: &'h [RuntimeSizedArrayDefinitionHT<'s, 'h>],
-    pub export_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
-    pub export_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
-    pub extern_name_to_function: &'h ArenaIndexMap<'h, StrI<'s>, &'h PrototypeH<'s, 'h>>,
-    pub extern_name_to_kind: &'h ArenaIndexMap<'h, StrI<'s>, KindHT<'s, 'h>>,
-}
-
-// mig: case class ProgramH
-/// Temporary state
-pub struct ProgramH<'s, 'h> where 's: 'h {
-    pub packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, PackageH<'s, 'h>>,
-}
-
-// mig: case class StructDefinitionH
-/// Temporary state
-//
-// PartialEq/Eq/Hash dropped because the edges field's EdgeH transitively
-// holds an ArenaIndexMap (which lacks those impls). Matches Scala's `vcurious`.
-#[derive(Copy, Clone, Debug)]
-pub struct StructDefinitionH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub weakable: bool,
-    pub mutability: Mutability,
-    pub edges: &'h [EdgeH<'s, 'h>],
-    pub members: &'h [StructMemberH<'s, 'h>],
-}
-
-// mig: case class StructMemberH
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructMemberH<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
-    pub variability: Variability,
-    pub tyype: CoordH<'s, 'h>,
-}
-
-// mig: case class InterfaceDefinitionH
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub weakable: bool,
-    pub mutability: Mutability,
-    pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
-    pub methods: &'h [InterfaceMethodH<'s, 'h>],
-}
-
-// mig: case class InterfaceMethodH
-/// Temporary state
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
-    pub prototype_h: &'h PrototypeH<'s, 'h>,
-    pub virtual_param_index: i32,
-}
-
-// mig: case class EdgeH
-/// Temporary state
-//
-// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
-// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
-#[derive(Copy, Clone, Debug)]
-pub struct EdgeH<'s, 'h> where 's: 'h {
-    pub struct_: &'h StructHT<'s, 'h>,
-    pub interface: &'h InterfaceHT<'s, 'h>,
-    pub struct_prototypes_by_interface_method: &'h ArenaIndexMap<'h, InterfaceMethodH<'s, 'h>, &'h PrototypeH<'s, 'h>>,
-}
-
-// mig: sealed trait IFunctionAttributeH + case objects UserFunctionH, PureH
-/// Polyvalue
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IFunctionAttributeH {
-    UserFunctionH,
-    PureH,
-}
-
-// mig: case class FunctionH
-/// Temporary state
-//
-// Drops PartialEq/Eq/Hash because the `body: ExpressionH` field opts out
-// (per typing-pass parity — Scala uses `vcurious` on FunctionH).
-#[derive(Copy, Clone, Debug)]
-pub struct FunctionH<'s, 'h> where 's: 'h {
-    pub prototype: &'h PrototypeH<'s, 'h>,
-    pub is_abstract: bool,
-    pub is_extern: bool,
-    pub attributes: &'h [IFunctionAttributeH],
-    pub body: ExpressionH<'s, 'h>,
-}
-
-// mig: case class PrototypeH
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct PrototypeH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub params: &'h [CoordH<'s, 'h>],
-    pub return_type: CoordH<'s, 'h>,
-    pub _must_intern: MustIntern,
-}
-
-// mig: case class PrototypeH (transient companion)
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct PrototypeHValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
-    pub params: &'h [CoordH<'s, 'h>],
-    pub return_type: CoordH<'s, 'h>,
-}
-
-// mig: case class IdH
-/// Interning permanent (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdH<'s, 'h> where 's: 'h {
-    pub local_name: StrI<'s>,
-    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
-    pub shortened_name: StrI<'s>,
-    pub fully_qualified_name: StrI<'s>,
-    pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
-    _phantom_h: PhantomData<&'h ()>,
-}
 
 // mig: case class IdH (transient companion)
 /// Interning transient (see @TFITCX)
