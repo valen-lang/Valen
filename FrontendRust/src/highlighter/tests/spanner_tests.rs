@@ -10,6 +10,11 @@ import dev.vale.parsing.{ast, _}
 import org.scalatest._
 
 class SpannerTests extends FunSuite with Matchers {
+*/
+
+// mig: fn compile
+fn compile() { panic!("Unimplemented: compile"); }
+/*
   private def compile(code: String): FileP = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -25,7 +30,13 @@ class SpannerTests extends FunSuite with Matchers {
       case Ok(program0) => program0.expectOne()._1
     }
   }
+*/
 
+// mig: fn spanner_simple_function
+#[test]
+#[ignore = "unmigrated - pending highlighter body migration"]
+fn spanner_simple_function() { panic!("Unmigrated test: spanner_simple_function"); }
+/*
   test("Spanner simple function") {
     val program1 = compile("func main() int { 3 }")
     val main = program1.lookupFunction("main")
@@ -37,8 +48,13 @@ class SpannerTests extends FunSuite with Matchers {
         Span(Block,RangeL(16,21),Vector(
           Span(Num,RangeL(18,19),Vector.empty)))))
   }
+*/
 
-
+// mig: fn spanner_map_call
+#[test]
+#[ignore = "unmigrated - pending highlighter body migration"]
+fn spanner_map_call() { panic!("Unmigrated test: spanner_map_call"); }
+/*
   test("Spanner map call") {
     val program1 = compile(
       """func main() int {

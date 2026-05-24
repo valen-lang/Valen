@@ -1,3 +1,5 @@
+// mig: struct TodoTests
+pub struct TodoTests {}
 /*
 package dev.vale.typing
 

@@ -1,3 +1,8 @@
+use crate::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::postparsing::ScoutCompilation;
+
 /*
 package dev.vale.postparsing
 
@@ -6,6 +11,17 @@ import dev.vale.options.GlobalOptions
 
 object PostParserTestCompilation {
 */
+// mig: fn test
+pub fn test<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
+  code: &str,
+) -> ScoutCompilation<'s, 'ctx, 'p>
+where 'p: 's,
+{
+  panic!("Unimplemented: test");
+}
 /*
   def test(code: String, interner: Interner = new Interner()): ScoutCompilation = {
     val keywords = new Keywords(interner)

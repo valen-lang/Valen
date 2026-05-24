@@ -1,3 +1,5 @@
+// mig: struct ArithmeticTestsA
+pub struct ArithmeticTestsA;
 /*
 package dev.vale
 
@@ -12,6 +14,12 @@ import dev.vale.{finalast => m}
 import org.scalatest.{FunSuite, Matchers}
 
 class ArithmeticTestsA extends FunSuite with Matchers {
+*/
+// mig: fn dividing
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn dividing() { panic!("Unmigrated test: dividing"); }
+/*
   test("Dividing") {
     val compile = RunCompilation.test("exported func main() int { return 5 / 2; }")
     compile.evalForKind(Vector()) match { case VonInt(2) => }

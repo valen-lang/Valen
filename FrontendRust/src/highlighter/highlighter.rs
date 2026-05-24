@@ -7,6 +7,10 @@ import dev.vale.parsing._
 import dev.vale.vfail
 
 object Highlighter {
+*/
+// mig: fn min
+pub fn min(positions: &[i32]) -> i32 { panic!("Unimplemented: min"); }
+/*
   def min(positions: List[Int]): Int = {
     positions match {
       case Nil => vfail()
@@ -18,14 +22,26 @@ object Highlighter {
       }
     }
   }
+*/
 
+// mig: struct CodeIter
+pub struct CodeIter;
+/*
   class CodeIter(code: String) {
     var index = 0
-
+*/
+impl CodeIter {
+  // mig: fn advance
+  fn advance(&self) { panic!("Unimplemented: advance"); }
+  /*
     private def advance(): Unit = {
       index = index + 1
     }
+  */
 
+  // mig: fn advance_to
+  pub fn advance_to(&self) { panic!("Unimplemented: advance_to"); }
+  /*
     def advanceTo(untilPos: Int, untilIndex: Int): String = {
       val indexBefore = index
       while (index < untilPos && index < code.length && index < untilIndex) {
@@ -35,10 +51,19 @@ object Highlighter {
       code.substring(indexBefore, indexAfter)
     }
   }
+  */
+}
 
+// mig: struct CommentingCodeIter
+pub struct CommentingCodeIter;
+/*
   class CommentingCodeIter(code: String, var commentRanges: Vector[RangeL], builder: StringBuilder) {
     val iter = new CodeIter(code)
-
+*/
+impl CommentingCodeIter {
+  // mig: fn advance_to
+  pub fn advance_to(&self) { panic!("Unimplemented: advance_to"); }
+  /*
     // Advances the underlying CodeIter until we get to untilPos, but also
     // stopping at any comments along the way to add them to builder.
     // Will keep resuming until we hit untilPos.
@@ -61,7 +86,12 @@ object Highlighter {
       }
     }
   }
+  */
+}
 
+// mig: fn span_to_html
+pub fn span_to_html() { panic!("Unimplemented: span_to_html"); }
+/*
   def spanToHTML(builder: StringBuilder, iter: CommentingCodeIter, span: Span): Unit = {
     iter.advanceTo(span.range.begin)
     builder.append(s"""<span class="${span.classs}">""")
@@ -73,7 +103,11 @@ object Highlighter {
     iter.advanceTo(span.range.end)
     builder.append("</span>")
   }
+*/
 
+// mig: fn escape
+pub fn escape() { panic!("Unimplemented: escape"); }
+/*
   def escape(s: String): String = {
     s
       .replaceAll("\\{", "&#123;")
@@ -82,7 +116,11 @@ object Highlighter {
       .replaceAll(">", "&gt;")
       .replaceAll("\\n", "<br />")
   }
+*/
 
+// mig: fn to_html
+pub fn to_html() { panic!("Unimplemented: to_html"); }
+/*
   def toHTML(code: String, span: Span, commentRanges: Vector[RangeL]): String = {
     val builder = new StringBuilder()
     val iter = new CommentingCodeIter(code, commentRanges, builder)

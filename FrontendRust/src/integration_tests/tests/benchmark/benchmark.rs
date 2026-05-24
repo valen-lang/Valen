@@ -10,6 +10,11 @@ import dev.vale.postparsing.PostParserErrorHumanizer
 import dev.vale.typing.CompilerErrorHumanizer
 
 object Benchmark {
+*/
+
+// mig: const roguelike_src
+pub const ROGUELIKE_SRC: &str = "";
+/*
   val roguelikeSrc =
     """
       |import hashmap.*;
@@ -44,6 +49,11 @@ object Benchmark {
       |  return m.get(44).get();
       |}
       |""".stripMargin
+*/
+
+// mig: fn go
+pub fn go(use_optimization: bool) -> i64 { panic!("Unimplemented: go"); }
+/*
   def go(useOptimization: Boolean): Long = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -115,7 +125,11 @@ object Benchmark {
     timer.stop()
     timer.getNanosecondsSoFar()
   }
+*/
 
+// mig: fn main
+pub fn main(args: Vec<String>) { panic!("Unimplemented: main"); }
+/*
   def main(args: Array[String]): Unit = {
     val compareOptimization = true
 

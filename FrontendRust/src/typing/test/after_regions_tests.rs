@@ -1,3 +1,5 @@
+// mig: struct AfterRegionsTests
+pub struct AfterRegionsTests {}
 /*
 package dev.vale.typing
 
@@ -19,7 +21,12 @@ import scala.io.Source
 import OverloadResolver._
 
 class AfterRegionsTests extends FunSuite with Matchers {
-
+*/
+// mig: fn method_call_on_generic_data
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn method_call_on_generic_data() { panic!("Unmigrated test: method_call_on_generic_data"); }
+/*
   test("Method call on generic data") {
     val compile = CompilerTestCompilation.test(
       """
@@ -69,7 +76,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         _, _) =>
     })
   }
-
+*/
+// mig: fn tests_overload_set_and_concept_function
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn tests_overload_set_and_concept_function() { panic!("Unmigrated test: tests_overload_set_and_concept_function"); }
+/*
   ignore("Tests overload set and concept function") {
     // Search @POSIPP for why this doesn't work.
     val compile = CompilerTestCompilation.test(
@@ -88,7 +100,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn generic_interface_anonymous_subclass
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn generic_interface_anonymous_subclass() { panic!("Unmigrated test: generic_interface_anonymous_subclass"); }
+/*
   ignore("Generic interface anonymous subclass") {
     val compile = CompilerTestCompilation.test(
       """
@@ -103,7 +120,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn lambda_body_type_matches_anonymous_interface_return_type
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn lambda_body_type_matches_anonymous_interface_return_type() { panic!("Unmigrated test: lambda_body_type_matches_anonymous_interface_return_type"); }
+/*
   test("Lambda body type matches anonymous interface return type") {
     val compile = CompilerTestCompilation.test(
       """
@@ -142,7 +164,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
 //      case CoordT(_,_, StrT()) =>
 //    }
 //  }
-
+*/
+// mig: fn tuple_with_all_imm_fields_is_imm
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_imm_fields_is_imm"); }
+/*
   ignore("Tuple with all imm fields is imm") {
     // Aspirational. The Builtins ship Tup2<T0, T1> as unconditionally `mut` (see
     // Builtins/src/dev/vale/resources/tup2.vale). A tuple constructed from imm-able
@@ -174,7 +201,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       case sd @ StructDefinitionT(simpleNameT("Tup2"), _, _, _, MutabilityTemplataT(ImmutableT), _, _, _) => sd
     }))
   }
-
+*/
+// mig: fn can_destructure_and_assemble_tuple
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn can_destructure_and_assemble_tuple() { panic!("Unmigrated test: can_destructure_and_assemble_tuple"); }
+/*
   test("Can destructure and assemble tuple") {
     val compile = CompilerTestCompilation.test(
       """
@@ -201,7 +233,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
 //      case CoordTemplata(CoordT(ShareT, BoolT())) =>
 //    }
   }
-
+*/
+// mig: fn can_turn_a_borrow_coord_into_an_owning_coord
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn can_turn_a_borrow_coord_into_an_owning_coord() { panic!("Unmigrated test: can_turn_a_borrow_coord_into_an_owning_coord"); }
+/*
   test("Can turn a borrow coord into an owning coord") {
     val compile = CompilerTestCompilation.test(
       """
@@ -227,7 +264,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       case CoordT(OwnT, _, StructTT(IdT(_, _, StructNameT(StructTemplateNameT(StrI("SomeStruct")), _)))) =>
     }
   }
-
+*/
+// mig: fn impl_rule
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn impl_rule() { panic!("Unmigrated test: impl_rule"); }
+/*
   // Depends on Method call on generic data
   test("Impl rule") {
     val compile = CompilerTestCompilation.test(
@@ -270,7 +312,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         _, _) =>
     })
   }
-
+*/
+// mig: fn can_downcast_interface_to_interface_through_registered_impl
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn can_downcast_interface_to_interface_through_registered_impl() { panic!("Unmigrated test: can_downcast_interface_to_interface_through_registered_impl"); }
+/*
   test("Can downcast interface to interface through registered impl") {
     val compile = CompilerTestCompilation.test(
       """
@@ -299,7 +346,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       case CoordT(ShareT, _, BoolT()) =>
     }
   }
-
+*/
+// mig: fn test_two_instantiations_of_anonymous_param_lambda
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn test_two_instantiations_of_anonymous_param_lambda() { panic!("Unmigrated test: test_two_instantiations_of_anonymous_param_lambda"); }
+/*
   test("Test two instantiations of anonymous-param lambda") {
     val compile = CompilerTestCompilation.test(
       """
@@ -331,7 +383,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       }).toSet
     paramTypeTuples.size shouldEqual 2 // distinct per-call-site instantiations
   }
-
+*/
+// mig: fn test_interface_default_generic_argument_in_type
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn test_interface_default_generic_argument_in_type() { panic!("Unmigrated test: test_interface_default_generic_argument_in_type"); }
+/*
   test("Test interface default generic argument in type") {
     val compile = CompilerTestCompilation.test(
       """
@@ -356,7 +413,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       IntegerTemplataT(5)))))) =>
     }
   }
-
+*/
+// mig: fn reports_when_we_give_too_many_args
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn reports_when_we_give_too_many_args() { panic!("Unmigrated test: reports_when_we_give_too_many_args"); }
+/*
   test("Reports when we give too many args") {
     val compile = CompilerTestCompilation.test(
       """
@@ -375,7 +437,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn reports_when_ownership_doesnt_match
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn reports_when_ownership_doesnt_match() { panic!("Unmigrated test: reports_when_ownership_doesnt_match"); }
+/*
   test("Reports when ownership doesnt match") {
     val compile = CompilerTestCompilation.test(
       """
@@ -405,7 +472,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn failure_to_resolve_a_prot_rules_function_doesnt_halt
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn failure_to_resolve_a_prot_rules_function_doesnt_halt() { panic!("Unmigrated test: failure_to_resolve_a_prot_rules_function_doesnt_halt"); }
+/*
   test("Failure to resolve a Prot rule's function doesnt halt") {
     // In the below example, it should disqualify the first foo() because T = bool
     // and there exists no moo(bool). Instead, we saw the Prot rule throw and halt
@@ -436,7 +508,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |func main() { foo("hello"); }
         |""".stripMargin).expectCompilerOutputs()
   }
-
+*/
+// mig: fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() { panic!("Unmigrated test: bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general"); }
+/*
   // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
   // bound `func(&G)E` where E is an identifying generic rune appearing only in the
   // bound's return position. The caller supplies a lambda for G but does not (and
@@ -457,7 +534,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn brrz_nested_bound_return_inference_through_a_lambda_body
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn brrz_nested_bound_return_inference_through_a_lambda_body() { panic!("Unmigrated test: brrz_nested_bound_return_inference_through_a_lambda_body"); }
+/*
   // Edge case for @BRRZ: the lambda body itself invokes another generic function
   // with its own bound. Exercises stamping-during-solve recursing into a nested
   // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
@@ -477,7 +559,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn brrz_two_bound_return_inferences_in_the_same_call
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn brrz_two_bound_return_inferences_in_the_same_call() { panic!("Unmigrated test: brrz_two_bound_return_inferences_in_the_same_call"); }
+/*
   // Edge case for @BRRZ: two bounds on the same function, each resolving to a
   // different lambda. Exercises multiple ResolveSR rules firing in the same solve
   // under the relaxed puzzle.
@@ -497,7 +584,12 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn basic_ifunction1_anonymous_subclass
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn basic_ifunction1_anonymous_subclass() { panic!("Unmigrated test: basic_ifunction1_anonymous_subclass"); }
+/*
   // Depends on IFunction1, and maybe Generic interface anonymous subclass
   test("Basic IFunction1 anonymous subclass") {
     val compile = CompilerTestCompilation.test(

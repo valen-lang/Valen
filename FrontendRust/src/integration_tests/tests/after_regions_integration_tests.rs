@@ -1,3 +1,5 @@
+// mig: struct AfterRegionsIntegrationTests
+pub struct AfterRegionsIntegrationTests;
 /*
 package dev.vale
 
@@ -21,7 +23,12 @@ import org.scalatest._
 
 
 class AfterRegionsIntegrationTests extends FunSuite with Matchers {
-
+*/
+// mig: fn todo
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn todo() { panic!("Unmigrated test: todo"); }
+/*
   ignore("TODO") {
     // only look at function bounds from the caller's environment, dont get any actual functions
     // from there. we can get actual functions from the type's environment, however.
@@ -48,7 +55,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     // this cause some mayhem further down when a name didnt match.
     vimpl()
   }
-
+*/
+// mig: fn test_returning_empty_seq
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_returning_empty_seq() { panic!("Unmigrated test: test_returning_empty_seq"); }
+/*
   test("Test returning empty seq") {
     val compile = RunCompilation.test(
       """
@@ -61,7 +73,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn map_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn map_function() { panic!("Unmigrated test: map_function"); }
+/*
   // Family 3: generic virtual dispatcher with abstract generics not reachable from
   // self-interface. Exercises `abstract func map<T, R>(virtual opt &Opt<T>, ...) Opt<R>`,
   // where `R` doesn't appear in `self`. The typing-pass → instantiator pipeline was
@@ -83,12 +100,22 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonBool(true) => }
   }
-
+*/
+// mig: fn imm_tuple_access
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn imm_tuple_access() { panic!("Unmigrated test: imm_tuple_access"); }
+/*
   test("imm tuple access") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/tuples/immtupleaccess.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() { panic!("Unmigrated test: interface_method_call_on_impl_bounded_generic_dispatches_through_interface"); }
+/*
   test("Interface Method call on impl-bounded generic dispatches through interface") {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
     // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
@@ -144,7 +171,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn test_overload_set
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
+/*
   ignore("Test overload set") {
     // Search @POSIPP for why this doesn't work.
     val compile =
@@ -160,7 +192,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn pass_overload_set_into_placeholder_parameter_posipp
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated test: pass_overload_set_into_placeholder_parameter_posipp"); }
+/*
   ignore("Pass overload set into placeholder parameter (@POSIPP)") {
     // Search @POSIPP for why this doesn't work.
     val compile =
@@ -175,7 +212,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn upcasting_in_a_generic_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn upcasting_in_a_generic_function() { panic!("Unmigrated test: upcasting_in_a_generic_function"); }
+/*
   ignore("Upcasting in a generic function") {
     // This is testing two things:
     //  - Upcasting inside a generic function
@@ -210,7 +252,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn diff_iter
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn diff_iter() { panic!("Unmigrated test: diff_iter"); }
+/*
   ignore("Diff iter") {
     // When we try to compile this:
     //   HashSetDiffIterator<K>(a.table, b, 0)
@@ -254,7 +301,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(14) => }
   }
-
+*/
+// mig: fn call_array_without_element_type
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn call_array_without_element_type() { panic!("Unmigrated test: call_array_without_element_type"); }
+/*
   test("Call Array<> without element type") {
     val compile = RunCompilation.test(
       """
@@ -268,7 +320,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn make_array_without_type
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_array_without_type() { panic!("Unmigrated test: make_array_without_type"); }
+/*
   test("Make array without type") {
     val compile = RunCompilation.test(
       """
@@ -281,7 +338,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn borrowing_to_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn borrowing_to_array() { panic!("Unmigrated test: borrowing_to_array"); }
+/*
   test("Borrowing toArray") {
     val compile = RunCompilation.test(
       """import list.*;
@@ -302,7 +364,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn infinite_lambda_call
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_lambda_call() { panic!("Unmigrated test: infinite_lambda_call"); }
+/*
   ignore("Infinite lambda call") {
     val compile = RunCompilation.test(
       """
@@ -317,6 +384,5 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
-
 }
 */

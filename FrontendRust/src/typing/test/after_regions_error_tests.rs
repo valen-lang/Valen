@@ -1,3 +1,5 @@
+// mig: struct AfterRegionsErrorTests
+pub struct AfterRegionsErrorTests {}
 /*
 package dev.vale.typing
 
@@ -16,7 +18,12 @@ import dev.vale.{Collector, Err, Ok, vwat, _}
 import org.scalatest._
 
 class AfterRegionsErrorTests extends FunSuite with Matchers {
-
+*/
+// mig: fn prints_bread_crumb_trail
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn prints_bread_crumb_trail() { panic!("Unmigrated test: prints_bread_crumb_trail"); }
+/*
   ignore("Prints bread crumb trail") {
     val compile = CompilerTestCompilation.test(
       """
@@ -103,7 +110,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     // Also prune it down a bit
     vimpl()
   }
-
+*/
+// mig: fn reports_error
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn reports_error() { panic!("Unmigrated test: reports_error"); }
+/*
   // https://github.com/ValeLang/Vale/issues/548
   // Real bug: impl-ing a mut interface with an imm struct is silently accepted, then
   // explodes mid-override-search with BadIsaSuperKind(B). Fix attempt was an impl-time
@@ -127,7 +139,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
 
     vimpl()
   }
-
+*/
+// mig: fn reports_error_imm_interface_imm_struct
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_error_imm_interface_imm_struct"); }
+/*
   ignore("Reports error (imm interface + imm struct)") {
     // Fails with "Immutable struct ("A.anonymous") cannot have mutable member",
     // because the anonymous substruct made from interface A contains a mutable
@@ -165,7 +182,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
 ////      case Err(FunctionAlreadyExists(_, _, FullNameT(_, Vector(), FunctionTemplateNameT(StrI("moo"), _)))) =>
 //    }
 //  }
-
+*/
+// mig: fn report_when_downcasting_between_unrelated_types
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn report_when_downcasting_between_unrelated_types() { panic!("Unmigrated test: report_when_downcasting_between_unrelated_types"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Report when downcasting between unrelated types") {
     val compile = CompilerTestCompilation.test(
@@ -185,7 +207,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Err(CantDowncastUnrelatedTypes(_, _, _, _)) =>
     }
   }
-
+*/
+// mig: fn lambda_body_type_mismatches_anonymous_interface_return_type
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn lambda_body_type_mismatches_anonymous_interface_return_type() { panic!("Unmigrated test: lambda_body_type_mismatches_anonymous_interface_return_type"); }
+/*
   test("Lambda body type mismatches anonymous interface return type") {
     val compile = CompilerTestCompilation.test(
       """
@@ -234,7 +261,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Ok(wat) => vwat(wat)
     }
   }
-
+*/
+// mig: fn detects_sending_non_citizen_to_citizen
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn detects_sending_non_citizen_to_citizen() { panic!("Unmigrated test: detects_sending_non_citizen_to_citizen"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Detects sending non-citizen to citizen") {
     val compile = CompilerTestCompilation.test(
@@ -259,7 +291,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn accidentally_mention_type_rune
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn accidentally_mention_type_rune() { panic!("Unmigrated test: accidentally_mention_type_rune"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Accidentally mention type rune") {
     val compile = CompilerTestCompilation.test(
@@ -279,7 +316,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Ok(_) => vfail()
     }
   }
-
+*/
+// mig: fn call_bound_with_wrong_arguments
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn call_bound_with_wrong_arguments() { panic!("Unmigrated test: call_bound_with_wrong_arguments"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Call bound with wrong arguments") {
     val compile = CompilerTestCompilation.test(
@@ -302,7 +344,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Ok(_) => vfail()
     }
   }
-
+*/
+// mig: fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() { panic!("Unmigrated test: inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt"); }
+/*
   ignore("Inherit reachable bounds for params and things inside params too (IRBFPTIPT)") {
     val compile = CompilerTestCompilation.test(
       """
@@ -325,7 +372,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Ok(_) => vfail()
     }
   }
-
+*/
+// mig: fn ambiguous_call
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn ambiguous_call() { panic!("Unmigrated test: ambiguous_call"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Ambiguous call") {
     val compile = CompilerTestCompilation.test(
@@ -346,7 +398,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case Ok(_) => vfail()
     }
   }
-
+*/
+// mig: fn cant_make_non_weakable_extend_a_weakable
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn cant_make_non_weakable_extend_a_weakable() { panic!("Unmigrated test: cant_make_non_weakable_extend_a_weakable"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Cant make non-weakable extend a weakable") {
     val compile = CompilerTestCompilation.test(
@@ -368,7 +425,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn cant_make_weakable_extend_a_non_weakable
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn cant_make_weakable_extend_a_non_weakable() { panic!("Unmigrated test: cant_make_weakable_extend_a_non_weakable"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Cant make weakable extend a non-weakable") {
     val compile = CompilerTestCompilation.test(
@@ -387,7 +449,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case _ => vfail()
     }
   }
-
+*/
+// mig: fn cant_make_weak_ref_to_non_weakable
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn cant_make_weak_ref_to_non_weakable() { panic!("Unmigrated test: cant_make_weak_ref_to_non_weakable"); }
+/*
   // This test does not pass yet, use #[ignore].
   test("Cant make weak ref to non-weakable") {
     val compile = CompilerTestCompilation.test(
@@ -409,7 +476,12 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
 
   }
-
+*/
+// mig: fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args
+#[test]
+#[ignore = "unmigrated - pending typing-pass body migration"]
+fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() { panic!("Unmigrated test: hash_map_style_return_type_inference_must_not_skip_caller_bound_args"); }
+/*
   // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
   // that motivated removing return-type inference. With the relaxed ResolveSR puzzle
   // the solver no longer stalls on K and V, but the post-solve bound-arg check

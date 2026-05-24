@@ -7,13 +7,24 @@ import org.scalatest._
 import dev.vale.solver._
 
 class ErrorTests extends FunSuite with Matchers  {
+*/
+
+// mig: fn compile_program_for_error
+fn compile_program_for_error() { panic!("Unimplemented: compile_program_for_error"); }
+/*
   def compileProgramForError(compilation: HigherTypingCompilation): ICompileErrorA = {
     compilation.getAstrouts() match {
       case Ok(result) => vfail("Expected error, but actually parsed invalid program:\n" + result)
       case Err(err) => err
     }
   }
+*/
 
+// mig: fn report_type_not_found
+#[test]
+#[ignore = "unmigrated - pending higher-typing-pass body migration"]
+fn report_type_not_found() { panic!("Unmigrated test: report_type_not_found"); }
+/*
   test("Report type not found") {
     val compilation =
       HigherTypingTestCompilation.test(

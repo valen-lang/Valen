@@ -7,7 +7,78 @@ import dev.vale.parsing.ast.{AbstractAttributeP, AugmentPE, BinaryCallPE, BlockP
 import dev.vale.{vassert, vcurious, vimpl}
 import dev.vale.parsing.ast._
 import dev.vale.parsing.{ast, _}
+*/
 
+// mig: enum IClass
+pub enum IClass {
+    Prog,
+    W,
+    Abst,
+    Ext,
+    Pure,
+    Range,
+    Fn,
+    Struct,
+    Break,
+    FnName,
+    Region,
+    StructName,
+    Membs,
+    Point,
+    Memb,
+    Interface,
+    MembName,
+    Rules,
+    Rule,
+    Rune,
+    Prototype,
+    IdentRunes,
+    IdentRune,
+    Params,
+    Pat,
+    Destructure,
+    Impl,
+    Import,
+    Export,
+    Capture,
+    CaptureName,
+    Block,
+    Num,
+    Str,
+    Bool,
+    Typ,
+    Destruct,
+    Call,
+    Consecutor,
+    Ret,
+    If,
+    While,
+    Paren,
+    CallLookup,
+    Inl,
+    Lookup,
+    Seq,
+    ConstructArray,
+    Mut,
+    MemberAccess,
+    Let,
+    Lambda,
+    MagicParam,
+    TplArgs,
+    Comment,
+    Mutability,
+    Interpreted,
+    Ownership,
+    Match,
+    EqualsRule,
+    OrRule,
+    DotRule,
+    ComponentsRule,
+    TypedRule,
+    CallRule,
+    PackRule,
+}
+/*
 sealed trait IClass
 case object Prog extends IClass
 case object W extends IClass
@@ -75,10 +146,20 @@ case object ComponentsRule extends IClass
 case object TypedRule extends IClass
 case object CallRule extends IClass
 case object PackRule extends IClass
+*/
 
+// mig: struct Span
+pub struct Span;
+/*
 case class Span(classs: IClass, range: RangeL, children: Vector[Span]) { override def hashCode(): Int = vcurious() }
+*/
 
+/*
 object Spanner {
+*/
+// mig: fn for_program
+pub fn for_program() { panic!("Unimplemented: for_program"); }
+/*
   def forProgram(program: FileP): Span = {
     makeSpan(
       Prog,
@@ -92,7 +173,11 @@ object Spanner {
         case TopLevelImportP(impoort) => forImport(impoort)
       }).toVector)
   }
+*/
 
+// mig: fn for_interface
+pub fn for_interface() { panic!("Unimplemented: for_interface"); }
+/*
   def forInterface(i: InterfaceP): Span = {
     val InterfaceP(range, name, attributes, mutability, maybeIdentifyingRunes, maybeTemplateRulesP, maybeDefaultRegionRuneP, _, members) = i
 
@@ -103,7 +188,11 @@ object Spanner {
       maybeDefaultRegionRuneP.map(defaultRegionRuneP => makeSpan(Region, defaultRegionRuneP.range, Vector.empty)) ++
       members.map(forFunction))
   }
+*/
 
+// mig: fn for_impl
+pub fn for_impl() { panic!("Unimplemented: for_impl"); }
+/*
   def forImpl(i: ImplP): Span = {
     val ImplP(range, identifyingRunes, templateRules, struct, interface, attributes) = i
     makeSpan(
@@ -113,7 +202,11 @@ object Spanner {
       struct.toVector.map(forTemplex) ++
       Vector(forTemplex(interface)))
   }
+*/
 
+// mig: fn for_export
+pub fn for_export() { panic!("Unimplemented: for_export"); }
+/*
   def forExport(i: ExportAsP): Span = {
     val ExportAsP(range, struct, exportedName) = i
     makeSpan(
@@ -121,7 +214,11 @@ object Spanner {
       range,
       Vector(forTemplex(struct)))
   }
+*/
 
+// mig: fn for_import
+pub fn for_import() { panic!("Unimplemented: for_import"); }
+/*
   def forImport(i: ImportP): Span = {
     val ImportP(range, moduleName, packageSteps, importeeName) = i
     makeSpan(
@@ -129,7 +226,11 @@ object Spanner {
       range,
       Vector())
   }
+*/
 
+// mig: fn for_struct
+pub fn for_struct() { panic!("Unimplemented: for_struct"); }
+/*
   def forStruct(struct: StructP): Span = {
     val StructP(range, NameP(nameRange, _), _, _, maybeIdentifyingRunesP, maybeTemplateRulesP, maybeDefaultRegionRuneP, _, StructMembersP(membersRange, members)) = struct
 
@@ -146,7 +247,11 @@ object Spanner {
           membersRange,
           members.map(forStructContent))))
   }
+*/
 
+// mig: fn for_struct_content
+pub fn for_struct_content() { panic!("Unimplemented: for_struct_content"); }
+/*
   def forStructContent(c: IStructContent): Span = {
     c match {
       case m @ NormalStructMemberP(_, _, _, _) => forMember(m)
@@ -154,7 +259,11 @@ object Spanner {
       case StructMethodP(f) => forFunction(f)
     }
   }
+*/
 
+// mig: fn for_member
+pub fn for_member() { panic!("Unimplemented: for_member"); }
+/*
   def forMember(member: NormalStructMemberP): Span = {
     val NormalStructMemberP(range, NameP(nameRange, _), _, tyype) = member
     makeSpan(
@@ -164,7 +273,11 @@ object Spanner {
         makeSpan(MembName, nameRange, Vector.empty),
         forTemplex(tyype)))
   }
+*/
 
+// mig: fn for_variadic_member
+pub fn for_variadic_member() { panic!("Unimplemented: for_variadic_member"); }
+/*
   def forVariadicMember(member: VariadicStructMemberP): Span = {
     val VariadicStructMemberP(range, _, tyype) = member
     makeSpan(
@@ -173,7 +286,11 @@ object Spanner {
       Vector(
         forTemplex(tyype)))
   }
+*/
 
+// mig: fn for_function_attribute
+pub fn for_function_attribute() { panic!("Unimplemented: for_function_attribute"); }
+/*
   def forFunctionAttribute(functionAttributeP: IAttributeP): Span = {
     functionAttributeP match {
       case ExternAttributeP(range) => makeSpan(Ext, range)
@@ -182,7 +299,11 @@ object Spanner {
       case PureAttributeP(range) => makeSpan(Pure, range)
     }
   }
+*/
 
+// mig: fn for_function_return
+pub fn for_function_return() { panic!("Unimplemented: for_function_return"); }
+/*
   def forFunctionReturn(p: FunctionReturnP): Span = {
     val FunctionReturnP(range, maybeRetType) = p
     makeSpan(
@@ -190,7 +311,11 @@ object Spanner {
       range,
       maybeRetType.toVector.map(forTemplex))
   }
+*/
 
+// mig: fn for_function
+pub fn for_function() { panic!("Unimplemented: for_function"); }
+/*
   def forFunction(function: FunctionP): Span = {
     val FunctionP(range, FunctionHeaderP(_, maybeName, attributes, maybeUserSpecifiedIdentifyingRunes, maybeTemplateRulesP, params, ret), body) = function
 
@@ -205,7 +330,11 @@ object Spanner {
       Vector(forFunctionReturn(ret)) ++
       body.toVector.map(forBlock))
   }
+*/
 
+// mig: fn for_block
+pub fn for_block() { panic!("Unimplemented: for_block"); }
+/*
   def forBlock(b: BlockPE): Span = {
     val BlockPE(range, pure, maybeDefaultRegion, inner) = b
     makeSpan(
@@ -213,7 +342,11 @@ object Spanner {
       maybeDefaultRegion.toVector.map(n => makeSpan(Region, n.range)) ++
       Vector(forExpression(inner)))
   }
+*/
 
+// mig: fn for_expression
+pub fn for_expression() { panic!("Unimplemented: for_expression"); }
+/*
   def forExpression(e: IExpressionPE): Span = {
     e match {
       case ConstantIntPE(range, _, _) => makeSpan(Num, range, Vector.empty)
@@ -408,12 +541,20 @@ object Spanner {
       case other => vimpl(other.toString)
     }
   }
+*/
 
+// mig: fn for_params
+pub fn for_params() { panic!("Unimplemented: for_params"); }
+/*
   def forParams(p: ParamsP): Span = {
     val ParamsP(range, params) = p
     makeSpan(Params, range, params.map(forParameter))
   }
+*/
 
+// mig: fn for_parameter
+pub fn for_parameter() { panic!("Unimplemented: for_parameter"); }
+/*
   def forParameter(p: ParameterP): Span = {
     val ParameterP(range, virtuality, maybePreChecked, maybeselfBorrow, pattern) = p
     makeSpan(
@@ -422,7 +563,11 @@ object Spanner {
       maybeselfBorrow.toVector.map(b => makeSpan(Point, b, Vector.empty)) ++
         pattern.toVector.map(forPattern))
   }
+*/
 
+// mig: fn for_pattern
+pub fn for_pattern() { panic!("Unimplemented: for_pattern"); }
+/*
   def forPattern(p: PatternPP): Span = {
     val PatternPP(range, capture, templex, maybeDestructure) = p
     makeSpan(
@@ -440,7 +585,11 @@ object Spanner {
   //     range,
   //     maybePreBorrow.toVector.map(b => makeSpan(Point, b, Vector.empty)) ++
   //         destLocal.toVector.map(_.decl).map(forCapture) ++
+*/
 
+// mig: fn for_destructure
+pub fn for_destructure() { panic!("Unimplemented: for_destructure"); }
+/*
   def forDestructure(d: DestructureP): Span = {
     val DestructureP(range, patterns) = d
     makeSpan(
@@ -448,7 +597,11 @@ object Spanner {
       range,
       patterns.map(forPattern))
   }
+*/
 
+// mig: fn for_capture
+pub fn for_capture() { panic!("Unimplemented: for_capture"); }
+/*
   def forCapture(c: INameDeclarationP): Span = {
     c match {
       case IgnoredLocalNameDeclarationP(nameRange) => {
@@ -471,7 +624,11 @@ object Spanner {
       }
     }
   }
+*/
 
+// mig: fn for_templex
+pub fn for_templex() { panic!("Unimplemented: for_templex"); }
+/*
   def forTemplex(t: ITemplexPT): Span = {
     t match {
       case NameOrRunePT(NameP(range, _)) => {
@@ -552,8 +709,11 @@ object Spanner {
       case other => vimpl(other.toString)
     }
   }
+*/
 
-
+// mig: fn for_template_args
+pub fn for_template_args() { panic!("Unimplemented: for_template_args"); }
+/*
   def forTemplateArgs(argsP: TemplateArgsP): Span = {
     val TemplateArgsP(range, args) = argsP
     makeSpan(
@@ -561,7 +721,11 @@ object Spanner {
       range,
       args.map(forTemplex))
   }
+*/
 
+// mig: fn for_template_rules
+pub fn for_template_rules() { panic!("Unimplemented: for_template_rules"); }
+/*
   def forTemplateRules(rulesP: TemplateRulesP): Span = {
     val TemplateRulesP(range, rules) = rulesP
     makeSpan(
@@ -569,7 +733,11 @@ object Spanner {
       range,
       rules.map(forRulex))
   }
+*/
 
+// mig: fn for_rulex
+pub fn for_rulex() { panic!("Unimplemented: for_rulex"); }
+/*
   def forRulex(rulex: IRulexPR): Span = {
     rulex match {
       case EqualsPR(range, left, right) => {
@@ -596,7 +764,11 @@ object Spanner {
       }
     }
   }
+*/
 
+// mig: fn for_identifying_runes
+pub fn for_identifying_runes() { panic!("Unimplemented: for_identifying_runes"); }
+/*
   def forIdentifyingRunes(r: GenericParametersP): Span = {
     val GenericParametersP(range, runes) = r
     makeSpan(
@@ -604,7 +776,11 @@ object Spanner {
       range,
       runes.map(rune => makeSpan(IdentRune, rune.range)))
   }
+*/
 
+// mig: fn make_span
+pub fn make_span() { panic!("Unimplemented: make_span"); }
+/*
   def makeSpan(classs: IClass, range: RangeL, children: Vector[Span] = Vector.empty) = {
     val filteredAndSortedChildren =
       children
