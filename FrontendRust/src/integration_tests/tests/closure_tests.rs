@@ -1,3 +1,5 @@
+// mig: struct ClosureTests
+pub struct ClosureTests;
 /*
 package dev.vale
 
@@ -17,7 +19,14 @@ import dev.vale.typing.templata.MutabilityTemplataT
 import dev.vale.von.VonInt
 
 class ClosureTests extends FunSuite with Matchers {
-
+*/
+// mig: fn addressibility
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn addressibility() {
+    panic!("Unmigrated test: addressibility");
+}
+/*
   test("Addressibility") {
     val interner = new Interner()
 
@@ -70,7 +79,14 @@ class ClosureTests extends FunSuite with Matchers {
     // If we're certain children mutate it, it also has to be addressible.
     calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) shouldEqual (true, true)
   }
-
+*/
+// mig: fn captured_own_is_borrow
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn captured_own_is_borrow() {
+    panic!("Unmigrated test: captured_own_is_borrow");
+}
+/*
   test("Captured own is borrow") {
     // Here, the scout determined that the closure is only ever borrowing
     // it (during the dereference to get its member) so typingpass doesn't put
@@ -94,7 +110,14 @@ class ClosureTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn test_closure_s_local_variables
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn test_closure_s_local_variables() {
+    panic!("Unmigrated test: test_closure_s_local_variables");
+}
+/*
   test("Test closure's local variables") {
     val compile = RunCompilation.test("exported func main() int { x = 4; return {x}(); }")
     val coutputs = compile.expectCompilerOutputs()
@@ -124,7 +147,14 @@ class ClosureTests extends FunSuite with Matchers {
         _) =>
     })
   }
-
+*/
+// mig: fn test_returning_a_nonmutable_closured_variable_from_the_closure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
+    panic!("Unmigrated test: test_returning_a_nonmutable_closured_variable_from_the_closure");
+}
+/*
   test("Test returning a nonmutable closured variable from the closure") {
     val compile = RunCompilation.test("exported func main() int { x = 4; return {x}(); }")
     val coutputs = compile.expectCompilerOutputs()
@@ -183,7 +213,14 @@ class ClosureTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn mutates_from_inside_a_closure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn mutates_from_inside_a_closure() {
+    panic!("Unmigrated test: mutates_from_inside_a_closure");
+}
+/*
   test("Mutates from inside a closure") {
     val compile = RunCompilation.test(
       """
@@ -217,13 +254,27 @@ class ClosureTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn mutates_from_inside_a_closure_inside_a_closure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn mutates_from_inside_a_closure_inside_a_closure() {
+    panic!("Unmigrated test: mutates_from_inside_a_closure_inside_a_closure");
+}
+/*
   test("Mutates from inside a closure inside a closure") {
     val compile = RunCompilation.test("exported func main() int { x = 4; { { set x = x + 1; }(); }(); return x; }")
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn read_from_inside_a_closure_inside_a_closure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn read_from_inside_a_closure_inside_a_closure() {
+    panic!("Unmigrated test: read_from_inside_a_closure_inside_a_closure");
+}
+/*
   test("Read from inside a closure inside a closure") {
     val compile = RunCompilation.test(
       """
@@ -235,7 +286,14 @@ class ClosureTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn mutable_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn mutable_lambda() {
+    panic!("Unmigrated test: mutable_lambda");
+}
+/*
   test("Mutable lambda") {
     val compile =
       RunCompilation.test(

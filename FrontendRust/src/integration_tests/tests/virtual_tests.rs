@@ -12,9 +12,19 @@ import dev.vale.typing.templata.ITemplataT.{expectCoord, expectCoordTemplata}
 import dev.vale.typing.types._
 import dev.vale.von.{VonInt, VonStr}
 import org.scalatest._
-
+*/
+// mig: struct VirtualTests
+pub struct VirtualTests;
+/*
 class VirtualTests extends FunSuite with Matchers {
-
+*/
+// mig: fn simple_program_containing_a_virtual_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_program_containing_a_virtual_function() {
+    panic!("Unmigrated test: simple_program_containing_a_virtual_function");
+}
+/*
     test("Simple program containing a virtual function") {
       val compile = RunCompilation.test(
         """
@@ -55,7 +65,14 @@ class VirtualTests extends FunSuite with Matchers {
                             IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("I")))), Vector.empty)))))))))))))
       vassert(doThing.header.params(0).virtuality.get == AbstractT())
     }
-
+*/
+// mig: fn can_call_virtual_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn can_call_virtual_function() {
+    panic!("Unmigrated test: can_call_virtual_function");
+}
+/*
   test("Can call virtual function") {
     val compile = RunCompilation.test(
       """
@@ -98,7 +115,14 @@ class VirtualTests extends FunSuite with Matchers {
                           IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector.empty, interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("I")))), Vector.empty)))))))))))))
     vassert(doThing.header.params(0).virtuality.get == AbstractT())
   }
-
+*/
+// mig: fn owning_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn owning_interface() {
+    panic!("Unmigrated test: owning_interface");
+}
+/*
   test("Owning interface") {
     val compile = RunCompilation.test(
       """
@@ -110,7 +134,14 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn simple_override_with_param_and_bound
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_override_with_param_and_bound() {
+    panic!("Unmigrated test: simple_override_with_param_and_bound");
+}
+/*
   test("Simple override with param and bound") {
     // This is the Serenity case in ROWC.
     val compile = RunCompilation.test(
@@ -133,7 +164,14 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn struct_with_different_ordered_runes
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn struct_with_different_ordered_runes() {
+    panic!("Unmigrated test: struct_with_different_ordered_runes");
+}
+/*
   test("Struct with different ordered runes") {
     // This is the Firefly case in ROWC.
     val compile = RunCompilation.test(
@@ -156,7 +194,14 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn struct_with_less_generic_params_than_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn struct_with_less_generic_params_than_interface() {
+    panic!("Unmigrated test: struct_with_less_generic_params_than_interface");
+}
+/*
   test("Struct with less generic params than interface") {
     // This is the Raza case in ROWC.
     val compile = RunCompilation.test(
@@ -178,7 +223,14 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn struct_with_more_generic_params_than_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn struct_with_more_generic_params_than_interface() {
+    panic!("Unmigrated test: struct_with_more_generic_params_than_interface");
+}
+/*
   test("Struct with more generic params than interface") {
     // This is the Milano case in ROWC.
     val compile = RunCompilation.test(
@@ -200,7 +252,14 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn struct_repeating_generic_params_for_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn struct_repeating_generic_params_for_interface() {
+    panic!("Unmigrated test: struct_repeating_generic_params_for_interface");
+}
+/*
   test("Struct repeating generic params for interface") {
     // This is the Enterprise case in ROWC.
     val compile = RunCompilation.test(
@@ -222,13 +281,27 @@ class VirtualTests extends FunSuite with Matchers {
         |""".stripMargin, false)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn imm_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn imm_interface() {
+    panic!("Unmigrated test: imm_interface");
+}
+/*
   test("Imm interface") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/virtuals/interfaceimm.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn can_call_interface_envs_function_from_outside
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn can_call_interface_envs_function_from_outside() {
+    panic!("Unmigrated test: can_call_interface_envs_function_from_outside");
+}
+/*
   test("Can call interface env's function from outside") {
     val compile = RunCompilation.test(
       """
@@ -250,7 +323,14 @@ class VirtualTests extends FunSuite with Matchers {
     vassert(doThing.header.params(0).virtuality.get == AbstractT())
   }
 
-
+*/
+// mig: fn interface_with_method_with_param_of_substruct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn interface_with_method_with_param_of_substruct() {
+    panic!("Unmigrated test: interface_with_method_with_param_of_substruct");
+}
+/*
   test("Interface with method with param of substruct") {
     val compile = RunCompilation.test(
         """
@@ -264,7 +344,14 @@ class VirtualTests extends FunSuite with Matchers {
         """.stripMargin)
     val coutputs = compile.getHamuts()
   }
-
+*/
+// mig: fn feeding_instantiation_bounds_for_something_created_in_same_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn feeding_instantiation_bounds_for_something_created_in_same_function() {
+    panic!("Unmigrated test: feeding_instantiation_bounds_for_something_created_in_same_function");
+}
+/*
   test("Feeding instantiation bounds for something created in same function") {
     val compile = RunCompilation.test(
       """
@@ -289,7 +376,14 @@ class VirtualTests extends FunSuite with Matchers {
   """.stripMargin)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn generic_interface_forwarder_with_bound
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn generic_interface_forwarder_with_bound() {
+    panic!("Unmigrated test: generic_interface_forwarder_with_bound");
+}
+/*
   test("Generic interface forwarder with bound") {
     val compile = RunCompilation.test(
       """
@@ -322,7 +416,14 @@ class VirtualTests extends FunSuite with Matchers {
     """.stripMargin)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn generic_interface_forwarder_with_drop_bound
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn generic_interface_forwarder_with_drop_bound() {
+    panic!("Unmigrated test: generic_interface_forwarder_with_drop_bound");
+}
+/*
   test("Generic interface forwarder with drop bound") {
     val compile = RunCompilation.test(
       """
@@ -351,7 +452,14 @@ class VirtualTests extends FunSuite with Matchers {
   """.stripMargin)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn open_interface_constructor
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn open_interface_constructor() {
+    panic!("Unmigrated test: open_interface_constructor");
+}
+/*
   test("Open interface constructor") {
     val compile = RunCompilation.test(
       """
@@ -374,7 +482,14 @@ class VirtualTests extends FunSuite with Matchers {
     val coutputs = compile.getHamuts()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn open_interface_constructor_multiple_methods
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn open_interface_constructor_multiple_methods() {
+    panic!("Unmigrated test: open_interface_constructor_multiple_methods");
+}
+/*
   test("Open interface constructor, multiple methods") {
     val compile = RunCompilation.test(
         """
@@ -404,7 +519,8 @@ class VirtualTests extends FunSuite with Matchers {
     val coutputs = compile.getHamuts()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+/*
 //  test("Successful borrow downcast with as") {
 //    val compile = RunCompilation.test(
 //      Tests.loadExpected("programs/downcast/downcastBorrowSuccessful.vale"))
@@ -416,13 +532,27 @@ class VirtualTests extends FunSuite with Matchers {
 //      Tests.loadExpected("programs/downcast/downcastBorrowFailed.vale"))
 //    compile.evalForKind(Vector()) match { case VonInt(42) => }
 //  }
-
+*/
+// mig: fn successful_pointer_downcast_with_as
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn successful_pointer_downcast_with_as() {
+    panic!("Unmigrated test: successful_pointer_downcast_with_as");
+}
+/*
   test("Successful pointer downcast with as") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/downcast/downcastPointerSuccess.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn failed_pointer_downcast_with_as
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn failed_pointer_downcast_with_as() {
+    panic!("Unmigrated test: failed_pointer_downcast_with_as");
+}
+/*
   test("Failed pointer downcast with as") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/downcast/downcastPointerFailed.vale"))
@@ -457,19 +587,40 @@ class VirtualTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn successful_owning_downcast_with_as
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn successful_owning_downcast_with_as() {
+    panic!("Unmigrated test: successful_owning_downcast_with_as");
+}
+/*
   test("Successful owning downcast with as") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/downcast/downcastOwningSuccessful.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn failed_owning_downcast_with_as
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn failed_owning_downcast_with_as() {
+    panic!("Unmigrated test: failed_owning_downcast_with_as");
+}
+/*
   test("Failed owning downcast with as") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/downcast/downcastOwningFailed.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn lambda_is_compatible_anonymous_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn lambda_is_compatible_anonymous_interface() {
+    panic!("Unmigrated test: lambda_is_compatible_anonymous_interface");
+}
+/*
   test("Lambda is compatible anonymous interface") {
     val compile = RunCompilation.test(
       """

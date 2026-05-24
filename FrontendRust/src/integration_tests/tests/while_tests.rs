@@ -1,3 +1,5 @@
+// mig: struct WhileTests
+pub struct WhileTests;
 /*
 package dev.vale
 
@@ -5,6 +7,14 @@ import dev.vale.von.VonInt
 import org.scalatest._
 
 class WhileTests extends FunSuite with Matchers {
+*/
+// mig: fn simple_while_loop_that_doesnt_execute
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_while_loop_that_doesnt_execute() {
+    panic!("Unmigrated test: simple_while_loop_that_doesnt_execute");
+}
+/*
   test("Simple while loop that doesnt execute") {
     val compile = RunCompilation.test(
       """
@@ -16,7 +26,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn test_a_for_ish_while_loop
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_a_for_ish_while_loop() {
+    panic!("Unmigrated test: test_a_for_ish_while_loop");
+}
+/*
   test("Test a for-ish while loop") {
     val compile = RunCompilation.test(
       """
@@ -31,7 +48,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn tests_a_while_loop_with_a_complex_condition
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_while_loop_with_a_complex_condition() {
+    panic!("Unmigrated test: tests_a_while_loop_with_a_complex_condition");
+}
+/*
   test("Tests a while loop with a complex condition") {
     val compile = RunCompilation.test(
       """import ioutils.*;
@@ -47,7 +71,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector(), Vector("A", "B", "c")) match { case VonInt(99) => }
   }
-
+*/
+// mig: fn tests_a_while_loop_with_a_set_in_it
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_while_loop_with_a_set_in_it() {
+    panic!("Unmigrated test: tests_a_while_loop_with_a_set_in_it");
+}
+/*
   test("Tests a while loop with a set in it") {
     val compile = RunCompilation.test(
       """
@@ -66,7 +97,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector(), Vector("A", "B", "c")) match { case VonInt(99) => }
   }
-
+*/
+// mig: fn tests_a_while_loop_with_a_declaration_in_it
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_while_loop_with_a_declaration_in_it() {
+    panic!("Unmigrated test: tests_a_while_loop_with_a_declaration_in_it");
+}
+/*
   test("Tests a while loop with a declaration in it") {
     val compile = RunCompilation.test(
       """
@@ -83,7 +121,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector(), Vector("A", "B", "c"))
   }
-
+*/
+// mig: fn return_from_infinite_while_loop
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn return_from_infinite_while_loop() {
+    panic!("Unmigrated test: return_from_infinite_while_loop");
+}
+/*
   test("Return from infinite while loop") {
     val compile = RunCompilation.test(
       """
@@ -97,7 +142,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn infinite_while_loop_conditional_break
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_conditional_break() {
+    panic!("Unmigrated test: infinite_while_loop_conditional_break");
+}
+/*
   test("Infinite while loop conditional break") {
     val compile = RunCompilation.test(
       """
@@ -114,7 +166,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn infinite_while_loop_unconditional_break
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_unconditional_break() {
+    panic!("Unmigrated test: infinite_while_loop_unconditional_break");
+}
+/*
   test("Infinite while loop unconditional break") {
     val compile = RunCompilation.test(
       """
@@ -128,7 +187,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn infinite_while_loop_conditional_break_from_both_sides
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_conditional_break_from_both_sides() {
+    panic!("Unmigrated test: infinite_while_loop_conditional_break_from_both_sides");
+}
+/*
   test("Infinite while loop conditional break from both sides") {
     val compile = RunCompilation.test(
       """
@@ -146,7 +212,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn infinite_while_loop_conditional_return
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_conditional_return() {
+    panic!("Unmigrated test: infinite_while_loop_conditional_return");
+}
+/*
   test("Infinite while loop conditional return") {
     val compile = RunCompilation.test(
       """
@@ -163,7 +236,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn infinite_while_loop_unconditional_return
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_unconditional_return() {
+    panic!("Unmigrated test: infinite_while_loop_unconditional_return");
+}
+/*
   test("Infinite while loop unconditional return") {
     val compile = RunCompilation.test(
       """
@@ -177,7 +257,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn infinite_while_loop_conditional_return_from_both_sides
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_while_loop_conditional_return_from_both_sides() {
+    panic!("Unmigrated test: infinite_while_loop_conditional_return_from_both_sides");
+}
+/*
   test("Infinite while loop conditional return from both sides") {
     val compile = RunCompilation.test(
       """
@@ -195,7 +282,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn while_with_condition_declaration
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn while_with_condition_declaration() {
+    panic!("Unmigrated test: while_with_condition_declaration");
+}
+/*
   test("While with condition declaration") {
     val compile = RunCompilation.test(
       """
@@ -207,7 +301,14 @@ class WhileTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn each_on_int_range
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn each_on_int_range() {
+    panic!("Unmigrated test: each_on_int_range");
+}
+/*
   test("each on int range") {
     val compile = RunCompilation.test(
       """
@@ -223,7 +324,14 @@ class WhileTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(45) => }
   }
-
+*/
+// mig: fn parallel_foreach
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn parallel_foreach() {
+    panic!("Unmigrated test: parallel_foreach");
+}
+/*
   test("Parallel foreach") {
     val compile = RunCompilation.test(
       """
@@ -244,7 +352,14 @@ class WhileTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForStdout(Vector()).trim shouldEqual "[1, 2, 3, 4, 5]"
   }
-
+*/
+// mig: fn mutable_foreach
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutable_foreach() {
+    panic!("Unmigrated test: mutable_foreach");
+}
+/*
   test("Mutable foreach") {
     val compile = RunCompilation.test(
       """
@@ -279,7 +394,14 @@ class WhileTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn each_on_int_range_with_conditional_break
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn each_on_int_range_with_conditional_break() {
+    panic!("Unmigrated test: each_on_int_range_with_conditional_break");
+}
+/*
   test("each on int range with conditional break") {
     val compile = RunCompilation.test(
       """
@@ -300,7 +422,14 @@ class WhileTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(0) => }
   }
-
+*/
+// mig: fn each_on_int_range_with_unconditional_break
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn each_on_int_range_with_unconditional_break() {
+    panic!("Unmigrated test: each_on_int_range_with_unconditional_break");
+}
+/*
   test("each on int range with unconditional break") {
     val compile = RunCompilation.test(
       """
@@ -316,7 +445,14 @@ class WhileTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(0) => }
   }
-
+*/
+// mig: fn each_on_int_range_with_conditional_break_from_both_branches
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn each_on_int_range_with_conditional_break_from_both_branches() {
+    panic!("Unmigrated test: each_on_int_range_with_conditional_break_from_both_branches");
+}
+/*
   test("each on int range with conditional break from both branches") {
     val compile = RunCompilation.test(
       """

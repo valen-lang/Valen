@@ -15,8 +15,19 @@ import dev.vale.typing.names.CodeVarNameT
 import dev.vale.typing.types._
 import dev.vale.von.VonInt
 import org.scalatest._
-
+*/
+// mig: struct WeakTests
+pub struct WeakTests;
+/*
 class WeakTests extends FunSuite with Matchers {
+*/
+// mig: fn make_and_lock_weak_ref_then_destroy_own_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_then_destroy_own_with_struct");
+}
+/*
   test("Make and lock weak ref then destroy own, with struct") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/lockWhileLiveStruct.vale"))
@@ -32,14 +43,28 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn destroy_own_then_locking_gives_none_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_own_then_locking_gives_none_with_struct() {
+    panic!("Unmigrated test: destroy_own_then_locking_gives_none_with_struct");
+}
+/*
   test("Destroy own then locking gives none, with struct") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/dropThenLockStruct.vale"))
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn drop_while_locked_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn drop_while_locked_with_struct() {
+    panic!("Unmigrated test: drop_while_locked_with_struct");
+}
+/*
   test("Drop while locked, with struct") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/dropWhileLockedStruct.vale"))
@@ -52,7 +77,14 @@ class WeakTests extends FunSuite with Matchers {
       case _ => vfail()
     }
   }
-
+*/
+// mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct");
+}
+/*
   test("Make and lock weak ref from borrow local then destroy own, with struct") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/weaks/weakFromLocalCRefStruct.vale"))
@@ -63,7 +95,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct");
+}
+/*
   test("Make and lock weak ref from borrow then destroy own, with struct") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/weakFromCRefStruct.vale"))
@@ -74,7 +113,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn make_weak_ref_from_temporary
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_weak_ref_from_temporary() {
+    panic!("Unmigrated test: make_weak_ref_from_temporary");
+}
+/*
   test("Make weak ref from temporary") {
     val compile = RunCompilation.test(
         """
@@ -87,8 +133,14 @@ class WeakTests extends FunSuite with Matchers {
     Collector.only(main.body, { case BorrowToWeakTE(_) => })
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
-
+*/
+// mig: fn make_and_lock_weak_ref_then_destroy_own_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_then_destroy_own_with_interface");
+}
+/*
   test("Make and lock weak ref then destroy own, with interface") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/lockWhileLiveInterface.vale"))
@@ -104,14 +156,28 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn destroy_own_then_locking_gives_none_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_own_then_locking_gives_none_with_interface() {
+    panic!("Unmigrated test: destroy_own_then_locking_gives_none_with_interface");
+}
+/*
   test("Destroy own then locking gives none, with interface") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/dropThenLockInterface.vale"))
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn drop_while_locked_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn drop_while_locked_with_interface() {
+    panic!("Unmigrated test: drop_while_locked_with_interface");
+}
+/*
   test("Drop while locked, with interface") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/dropWhileLockedInterface.vale"))
@@ -124,7 +190,14 @@ class WeakTests extends FunSuite with Matchers {
       case other => vfail(other)
     }
   }
-
+*/
+// mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface");
+}
+/*
   test("Make and lock weak ref from borrow local then destroy own, with interface") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/weakFromLocalCRefInterface.vale"))
@@ -135,7 +208,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
+    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface");
+}
+/*
   test("Make and lock weak ref from borrow then destroy own, with interface") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/weakFromCRefInterface.vale"))
@@ -146,7 +226,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn call_weak_self_method_after_drop
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn call_weak_self_method_after_drop() {
+    panic!("Unmigrated test: call_weak_self_method_after_drop");
+}
+/*
   test("Call weak-self method, after drop") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/callWeakSelfMethodAfterDrop.vale"))
@@ -159,7 +246,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn call_weak_self_method_while_alive
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn call_weak_self_method_while_alive() {
+    panic!("Unmigrated test: call_weak_self_method_while_alive");
+}
+/*
   test("Call weak-self method, while alive") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/weaks/callWeakSelfMethodWhileLive.vale"))
@@ -172,7 +266,14 @@ class WeakTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn weak_yonder_member
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn weak_yonder_member() {
+    panic!("Unmigrated test: weak_yonder_member");
+}
+/*
   test("Weak yonder member") {
     val compile = RunCompilation.test(
         """

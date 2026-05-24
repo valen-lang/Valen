@@ -1,3 +1,5 @@
+// mig: struct StringTests
+pub struct StringTests;
 /*
 package dev.vale
 
@@ -7,6 +9,12 @@ import dev.vale.von.{VonInt, VonStr}
 import org.scalatest._
 
 class StringTests extends FunSuite with Matchers {
+*/
+// mig: fn simple_string
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_string() { panic!("Unmigrated test: simple_string"); }
+/*
   test("Simple string") {
     val compile = RunCompilation.test(
       """
@@ -20,7 +28,12 @@ class StringTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonStr("sprogwoggle") => }
   }
-
+*/
+// mig: fn empty_string
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn empty_string() { panic!("Unmigrated test: empty_string"); }
+/*
   test("Empty string") {
     val compile = RunCompilation.test(
       """
@@ -34,7 +47,12 @@ class StringTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonStr("") => }
   }
-
+*/
+// mig: fn string_with_escapes
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn string_with_escapes() { panic!("Unmigrated test: string_with_escapes"); }
+/*
   test("String with escapes") {
     val compile = RunCompilation.test(
       """
@@ -48,7 +66,12 @@ class StringTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonStr("sprog\nwoggle") => }
   }
-
+*/
+// mig: fn string_with_hex_escape
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn string_with_hex_escape() { panic!("Unmigrated test: string_with_hex_escape"); }
+/*
   test("String with hex escape") {
     val code = "exported func main() str { return \"sprog\\u001bwoggle\"; }"
     // This assert makes sure the above is making the input we actually intend.
@@ -70,28 +93,54 @@ class StringTests extends FunSuite with Matchers {
     result shouldEqual "sprog\u001bwoggle"
   }
 
+*/
+// mig: fn int_to_string
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn int_to_string() { panic!("Unmigrated test: int_to_string"); }
+/*
   test("int to string") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/strings/inttostr.vale"))
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn i64_to_string
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn i64_to_string() { panic!("Unmigrated test: i64_to_string"); }
+/*
   test("i64 to string") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/strings/i64tostr.vale"))
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn string_length
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn string_length() { panic!("Unmigrated test: string_length"); }
+/*
   test("String length") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/strings/strlen.vale"))
 
     compile.evalForKind(Vector()) match { case VonInt(12) => }
   }
-
+*/
+// mig: fn strings_equal
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn strings_equal() { panic!("Unmigrated test: strings_equal"); }
+/*
   test("Strings equal") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/strings/strneq.vale"))
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn string_interpolate
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn string_interpolate() { panic!("Unmigrated test: string_interpolate"); }
+/*
   test("String interpolate") {
     val compile = RunCompilation.test(
       "func +(s str, i int) str { return s + str(i); }\n" +
@@ -100,7 +149,12 @@ class StringTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonStr("bl\"4rg") => }
   }
-
+*/
+// mig: fn slice_a_slice
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn slice_a_slice() { panic!("Unmigrated test: slice_a_slice"); }
+/*
   test("Slice a slice") {
     val compile = RunCompilation.test(
         """
