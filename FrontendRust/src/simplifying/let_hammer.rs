@@ -25,7 +25,11 @@ import dev.vale.finalast._
 import dev.vale._
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
+*/
 
+// mig: const BOX_MEMBER_INDEX
+pub const BOX_MEMBER_INDEX: i32 = 0;
+/*
 object LetHammer {
   val BOX_MEMBER_INDEX: Int = 0
 }
@@ -36,7 +40,26 @@ class LetHammer(
     structHammer: StructHammer,
     expressionHammer: ExpressionHammer,
     loadHammer: LoadHammer) {
+*/
 
+// mig: fn translate_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let2: &LetNormalIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_let");
+    }
+}
+/*
   def translateLet(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -72,7 +95,26 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackifyNode, deferreds)
   }
+*/
 
+// mig: fn translate_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let2: &RestackifyIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_restackify");
+    }
+}
+/*
   def translateRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -108,7 +150,26 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackifyNode, deferreds)
   }
+*/
 
+// mig: fn translate_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_let_and_point");
+    }
+}
+/*
   def translateLetAndPoint(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -138,7 +199,30 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, borrowAccess, deferreds)
   }
+*/
 
+// mig: fn translate_addressible_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_let");
+    }
+}
+/*
   private def translateAddressibleLet(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -167,7 +251,30 @@ class LetHammer(
       local,
       Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
   }
+*/
 
+// mig: fn translate_addressible_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_restackify");
+    }
+}
+/*
   private def translateAddressibleRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -195,7 +302,32 @@ class LetHammer(
       local,
       Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
   }
+*/
 
+// mig: fn translate_addressible_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_addressible_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        reference: CoordI<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_let_and_point");
+    }
+}
+/*
   private def translateAddressibleLetAndPoint(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -224,7 +356,29 @@ class LetHammer(
         letIE.result.ownership)
     ConsecutorH(Vector(stackifyH, borrowAccess))
   }
+*/
 
+// mig: fn translate_mundane_let
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_let<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+    ) -> &'h StackifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_let");
+    }
+}
+/*
   private def translateMundaneLet(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -249,7 +403,27 @@ class LetHammer(
         Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
     stackNode
   }
+*/
 
+// mig: fn translate_mundane_restackify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_restackify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+    ) -> &'h RestackifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_restackify");
+    }
+}
+/*
   private def translateMundaneRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -272,7 +446,31 @@ class LetHammer(
         Some(nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId))))
     stackNode
   }
+*/
 
+// mig: fn translate_mundane_let_and_point
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub(crate) fn translate_mundane_let_and_point<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr_he: ExpressionH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
+        let_ie: &LetAndLendIE<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_let_and_point");
+    }
+}
+/*
     private def translateMundaneLetAndPoint(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -308,7 +506,26 @@ class LetHammer(
 
       ConsecutorH(Vector(stackifyH, borrowAccess))
   }
+*/
 
+// mig: fn translate_unlet
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_unlet<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        unlet2: &UnletIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_unlet");
+    }
+}
+/*
   def translateUnlet(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -354,7 +571,26 @@ class LetHammer(
       }
     }
   }
+*/
 
+// mig: fn translate_destructure_static_sized_array
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destructure_static_sized_array<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        des2: &DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destructure_static_sized_array");
+    }
+}
+/*
   def translateDestructureStaticSizedArray(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -405,7 +641,26 @@ class LetHammer(
     expressionHammer.translateDeferreds(
       hinputs, hamuts, currentFunctionHeader, locals, stackNode, sourceExprDeferreds)
   }
+*/
 
+// mig: fn translate_destroy
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_destroy<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        des2: &DestroyIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_destroy");
+    }
+}
+/*
   def translateDestroy(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -500,245 +755,3 @@ class LetHammer(
   }
 }
 */
-
-// mig: const BOX_MEMBER_INDEX
-pub const BOX_MEMBER_INDEX: i32 = 0;
-
-// mig: fn translate_let
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_let<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        let2: &LetNormalIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_let");
-    }
-}
-
-// mig: fn translate_restackify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_restackify<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        let2: &RestackifyIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_restackify");
-    }
-}
-
-// mig: fn translate_let_and_point
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_let_and_point<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_let_and_point");
-    }
-}
-
-// mig: fn translate_addressible_let
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_addressible_let<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_addressible_let");
-    }
-}
-
-// mig: fn translate_addressible_restackify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_addressible_restackify<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_addressible_restackify");
-    }
-}
-
-// mig: fn translate_addressible_let_and_point
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_addressible_let_and_point<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: CoordH<'s, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_addressible_let_and_point");
-    }
-}
-
-// mig: fn translate_mundane_let
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_mundane_let<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-    ) -> &'h StackifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_let");
-    }
-}
-
-// mig: fn translate_mundane_restackify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_mundane_restackify<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-    ) -> &'h RestackifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_restackify");
-    }
-}
-
-// mig: fn translate_mundane_let_and_point
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub(crate) fn translate_mundane_let_and_point<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        source_expr_he: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: CoordH<'s, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_let_and_point");
-    }
-}
-
-// mig: fn translate_unlet
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_unlet<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        unlet2: &UnletIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_unlet");
-    }
-}
-
-// mig: fn translate_destructure_static_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_destructure_static_sized_array<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        des2: &DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_destructure_static_sized_array");
-    }
-}
-
-// mig: fn translate_destroy
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_destroy<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        des2: &DestroyIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_destroy");
-    }
-}

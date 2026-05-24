@@ -30,7 +30,26 @@ class LoadHammer(
     nameHammer: NameHammer,
     structHammer: StructHammer,
     expressionHammer: ExpressionHammer) {
+*/
 
+// mig: fn translate_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        load2: &SoftLoadIE<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_load");
+    }
+}
+/*
   def translateLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -132,7 +151,29 @@ class LoadHammer(
 
     (loadedAccessH, sourceDeferreds)
   }
+*/
 
+// mig: fn translate_mundane_runtime_sized_array_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_runtime_sized_array_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+        result_type2: CoordI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_runtime_sized_array_load");
+    }
+}
+/*
   private def translateMundaneRuntimeSizedArrayLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -183,7 +224,29 @@ class LoadHammer(
 
     (loadedNodeH, arrayDeferreds ++ indexDeferreds)
   }
+*/
 
+// mig: fn translate_mundane_static_sized_array_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_static_sized_array_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+        result_type2: CoordI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_static_sized_array_load");
+    }
+}
+/*
   private def translateMundaneStaticSizedArrayLoad(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -233,7 +296,29 @@ class LoadHammer(
 
     (loadedNodeH, arrayDeferreds ++ indexDeferreds)
   }
+*/
 
+// mig: fn translate_addressible_member_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_addressible_member_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        member_name: &'i IVarNameI<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+        expected_member_coord: CoordI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_member_load");
+    }
+}
+/*
   private def translateAddressibleMemberLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -301,7 +386,29 @@ class LoadHammer(
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (loadedNodeH, structDeferreds)
   }
+*/
 
+// mig: fn translate_mundane_member_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_member_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        member_name: &'i IVarNameI<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+        expected_member_coord: CoordI<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_member_load");
+    }
+}
+/*
   private def translateMundaneMemberLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -344,7 +451,29 @@ class LoadHammer(
           nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, memberName)))
     (loadedNode, structDeferreds)
   }
+*/
 
+// mig: fn translate_addressible_local_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_addressible_local_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        variability: VariabilityI,
+        local_reference2: CoordI<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_addressible_local_load");
+    }
+}
+/*
   def translateAddressibleLocalLoad(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -387,7 +516,28 @@ class LoadHammer(
           nameHammer.addStep(hamuts, boxStructRefH.id, keywords.BOX_MEMBER_NAME.str))
     (loadedNode, Vector.empty)
   }
+*/
 
+// mig: fn translate_mundane_local_load
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mundane_local_load<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        var_id: &'i IVarNameI<'s, 'i, cI>,
+        local_type: CoordI<'s, 'i, cI>,
+        target_ownership_i: OwnershipI,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mundane_local_load");
+    }
+}
+/*
   def translateMundaneLocalLoad(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -419,7 +569,26 @@ class LoadHammer(
             hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, varId)))
     (loadedNode, Vector.empty)
   }
+*/
 
+// mig: fn translate_local_address
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_local_address<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        lookup2: &LocalLookupIE<'s, 'i, cI>,
+    ) -> ExpressionH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_local_address");
+    }
+}
+/*
   def translateLocalAddress(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -444,7 +613,26 @@ class LoadHammer(
         nameHammer.translateFullName(hinputs, hamuts, INameI.addStep(currentFunctionHeader.id, localVar.name)))
     loadBoxNode
   }
+*/
 
+// mig: fn translate_member_address
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_member_address<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        lookup2: &AddressMemberLookupIE<'s, 'i, cI>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_member_address");
+    }
+}
+/*
   // In this, we're basically taking an addressible lookup, in other words,
   // a reference to a box.
   def translateMemberAddress(
@@ -508,7 +696,15 @@ class LoadHammer(
 
     (loadBoxNode, structDeferreds)
   }
+*/
 
+// mig: fn get_borrowed_location (free helper — no &self needed)
+pub fn get_borrowed_location<'s, 'h>(member_type: CoordH<'s, 'h>) -> crate::final_ast::types::LocationH
+where 's: 'h,
+{
+    panic!("Unimplemented: get_borrowed_location");
+}
+/*
   def getBorrowedLocation(memberType: CoordH[KindHT]) = {
     (memberType.ownership, memberType.location) match {
       case (OwnH, _) => YonderH
@@ -518,189 +714,3 @@ class LoadHammer(
   }
 }
 */
-
-// mig: fn translate_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        load2: &SoftLoadIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_load");
-    }
-}
-
-// mig: fn translate_mundane_runtime_sized_array_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_mundane_runtime_sized_array_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-        result_type2: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_runtime_sized_array_load");
-    }
-}
-
-// mig: fn translate_mundane_static_sized_array_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_mundane_static_sized_array_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-        result_type2: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_static_sized_array_load");
-    }
-}
-
-// mig: fn translate_addressible_member_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_addressible_member_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-        expected_member_coord: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_addressible_member_load");
-    }
-}
-
-// mig: fn translate_mundane_member_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_mundane_member_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-        expected_member_coord: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_member_load");
-    }
-}
-
-// mig: fn translate_addressible_local_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_addressible_local_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        variability: VariabilityI,
-        local_reference2: CoordI<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_addressible_local_load");
-    }
-}
-
-// mig: fn translate_mundane_local_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_mundane_local_load<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        local_type: CoordI<'s, 'i, cI>,
-        target_ownership_i: OwnershipI,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mundane_local_load");
-    }
-}
-
-// mig: fn translate_local_address
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_local_address<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        lookup2: &LocalLookupIE<'s, 'i, cI>,
-    ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_local_address");
-    }
-}
-
-// mig: fn translate_member_address
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_member_address<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        lookup2: &AddressMemberLookupIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_member_address");
-    }
-}
-
-// mig: fn get_borrowed_location (free helper — no &self needed)
-pub fn get_borrowed_location<'s, 'h>(member_type: CoordH<'s, 'h>) -> crate::final_ast::types::LocationH
-where 's: 'h,
-{
-    panic!("Unimplemented: get_borrowed_location");
-}
