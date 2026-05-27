@@ -4,7 +4,7 @@
 // Methods become `impl Hammer { ... }` blocks colocated here.
 
 use crate::final_ast::ast::{EdgeH, InterfaceDefinitionH, InterfaceMethodH, StructDefinitionH, StructMemberH};
-use crate::final_ast::types::{CoordH, InterfaceHT, StructHT};
+use crate::final_ast::types::{CoordH, InterfaceHT, Mutability, OpaqueHT, StructHT};
 use crate::instantiating::ast::ast::EdgeI;
 use crate::instantiating::ast::names::IdI;
 use crate::instantiating::ast::citizens::{
@@ -31,10 +31,44 @@ class StructHammer(
     nameHammer: NameHammer,
     translatePrototype: (HinputsI, HamutsBox, PrototypeI[cI]) => PrototypeH,
     translateReference: (HinputsI, HamutsBox, CoordI[cI]) => CoordH[KindHT]) {
+*/
+
+// mig: fn translate_interfaces
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interfaces<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+    )
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interfaces");
+    }
+}
+/*
   def translateInterfaces(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
     hinputs.interfaces.foreach(interface => translateInterface(hinputs, hamuts, interface.instantiatedInterface))
   }
+*/
 
+// mig: fn translate_interface_methods
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interface_methods<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
+    ) -> Vec<InterfaceMethodH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interface_methods");
+    }
+}
+/*
   def translateInterfaceMethods(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -52,7 +86,24 @@ class StructHammer(
 
     methodsH
   }
+*/
 
+// mig: fn translate_interface
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_interface<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+    ) -> &'h InterfaceHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_interface");
+    }
+}
+/*
   def translateInterface(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -98,11 +149,50 @@ class StructHammer(
       }
     }
   }
+*/
 
+// mig: fn translate_structs
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_structs<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+    )
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_structs");
+    }
+}
+/*
   def translateStructs(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
-    hinputs.structs.foreach(structDefI => translateStructI(hinputs, hamuts, structDefI.instantiatedCitizen))
+    hinputs.structs.foreach(structDefI => {
+      if (hinputs.kindExterns.contains(structDefI.instantiatedCitizen)) {
+        translateOpaqueI(hinputs, hamuts, structDefI.instantiatedCitizen)
+      } else {
+        translateStructI(hinputs, hamuts, structDefI.instantiatedCitizen)
+      }
+    })
   }
+*/
 
+// mig: fn translate_struct_i
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_struct_i<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_it: &'i StructIT<'s, 'i, cI>,
+    ) -> &'h StructHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_struct_i");
+    }
+}
+/*
   def translateStructI(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -116,8 +206,9 @@ class StructHammer(
         val temporaryStructRefH = StructHT(fullNameH);
         hamuts.forwardDeclareStruct(structIT, temporaryStructRefH)
         val structDefI = hinputs.lookupStruct(structIT.id);
+        val mutabilityH = Conversions.evaluateMutabilityTemplata(structDefI.mutability)
         val (membersH) =
-          translateMembers(hinputs, hamuts, structDefI.instantiatedCitizen.id, structDefI.members)
+          translateMembers(hinputs, hamuts, structDefI.instantiatedCitizen.id, mutabilityH, structDefI.members)
 
         val (edgesH) = translateEdgesForStruct(hinputs, hamuts, temporaryStructRefH, structIT)
 
@@ -125,7 +216,8 @@ class StructHammer(
           StructDefinitionH(
             fullNameH,
             structDefI.weakable,
-            Conversions.evaluateMutabilityTemplata(structDefI.mutability),
+            structDefI.attributes.exists({ case ExternI(_) => true case _ => false }),
+            mutabilityH,
             edgesH,
             membersH);
         hamuts.addStructOriginatingFromTypingPass(structIT, structDefH)
@@ -150,17 +242,112 @@ class StructHammer(
       }
     }
   }
+*/
 
-  def translateMembers(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], members: Vector[StructMemberI]):
-  (Vector[StructMemberH]) = {
-    members.map(translateMember(hinputs, hamuts, structName, _))
+// mig: fn translate_opaque_i
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_opaque_i<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_it: &'i StructIT<'s, 'i, cI>,
+    ) -> &'h OpaqueHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_opaque_i");
+    }
+}
+/*
+  def translateOpaqueI(
+      hinputs: HinputsI,
+      hamuts: HamutsBox,
+      structIT: StructIT[cI]):
+  (OpaqueHT) = {
+    hamuts.structTToOpaqueH.get(structIT) match {
+      case Some(opaqueH) => opaqueH
+      case None => {
+        val (fullNameH) = nameHammer.translateFullName(hinputs, hamuts, structIT.id)
+        // This is the only place besides StructDefinitionH that can make a StructRefH
+        val temporaryStructRefH = StructHT(fullNameH);
+        hamuts.forwardDeclareStruct(structIT, temporaryStructRefH)
+        val structDefI = hinputs.lookupStruct(structIT.id);
+        val mutabilityH = Conversions.evaluateMutabilityTemplata(structDefI.mutability)
+        vassert(structDefI.members.isEmpty)
+
+        val (edgesH) = translateEdgesForStruct(hinputs, hamuts, temporaryStructRefH, structIT)
+
+//        hamuts.addStructOriginatingFromTypingPass(structIT, structDefH)
+//        vassert(structDefH.getRef == temporaryStructRefH)
+
+        val opaqueH =
+          OpaqueHT(
+            structIT.id.packageCoord,
+            nameHammer.translateFullName(hinputs, hamuts, structIT.id),
+            NameHammer.simplifyId(structIT.id))
+
+        hamuts.addOpaque(structIT, opaqueH)
+
+        opaqueH
+      }
+    }
   }
+*/
 
-  def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], member2: StructMemberI):
+// mig: fn translate_members
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_members<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_name: &IdI<'s, 'i, cI>,
+        struct_mutability_h: Mutability,
+        members: &[StructMemberI<'s, 'i, cI>],
+    ) -> Vec<StructMemberH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_members");
+    }
+}
+/*
+  def translateMembers(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, members: Vector[StructMemberI]):
+  (Vector[StructMemberH]) = {
+    members.map(translateMember(hinputs, hamuts, structName, structMutabilityH, _))
+  }
+*/
+
+// mig: fn translate_member
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_member<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_name: &IdI<'s, 'i, cI>,
+        struct_mutability_h: Mutability,
+        member2: &StructMemberI<'s, 'i, cI>,
+    ) -> StructMemberH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_member");
+    }
+}
+/*
+  def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, member2: StructMemberI):
   (StructMemberH) = {
     val (variability, memberType) =
       member2 match {
-//        case VariadicStructMemberI(name, tyype) => vimpl()
+//        case StructMemberI(_, variability, OpaqueMemberTypeI()) => {
+//          val opaqueHT =
+//            OpaqueHT(
+//              nameHammer.translateFullName(hinputs, hamuts, structName),
+//              NameHammer.simplifyId(structName))
+//          (variability, CoordH(vregionmut(MutableShareH), YonderH, opaqueHT))
+//        }
         case StructMemberI(_, variability, ReferenceMemberTypeI(coord)) => {
           (variability, translateReference(hinputs, hamuts, coord))
         }
@@ -178,7 +365,26 @@ class StructHammer(
       Conversions.evaluateVariability(variability),
       memberType)
   }
+*/
 
+// mig: fn make_box
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn make_box<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        conceptual_variability: VariabilityI,
+        type2: CoordI<'s, 'i, cI>,
+        type_h: CoordH<'s, 'h>,
+    ) -> &'h StructHT<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: make_box");
+    }
+}
+/*
   def makeBox(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -213,6 +419,7 @@ class StructHammer(
           StructDefinitionH(
             boxFullNameH,
             false,
+            false,
             Mutable,
             Vector.empty,
             Vector(memberH));
@@ -222,7 +429,25 @@ class StructHammer(
       }
     }
   }
+*/
 
+// mig: fn translate_edges_for_struct (Scala overload — disambiguated.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edges_for_struct<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        struct_tt: &'i StructIT<'s, 'i, cI>,
+    ) -> Vec<EdgeH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edges_for_struct");
+    }
+}
+/*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
       structRefH: StructHT,
@@ -231,7 +456,25 @@ class StructHammer(
     val edges2 = hinputs.interfaceToSubCitizenToEdge.values.flatMap(_.values).filter(_.subCitizen.id == structTT.id)
     translateEdgesForStruct(hinputs, hamuts, structRefH, edges2.toVector)
   }
+*/
 
+// mig: fn translate_edges_for_struct_with_edges (Scala overload — disambiguated.)
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edges_for_struct_with_edges<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        edges2: &[EdgeI<'s, 'i>],
+    ) -> Vec<EdgeH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edges_for_struct_with_edges");
+    }
+}
+/*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
       structRefH: StructHT,
@@ -239,8 +482,26 @@ class StructHammer(
   (Vector[EdgeH]) = {
     edges2.map(e => translateEdge(hinputs, hamuts, structRefH, InterfaceIT(e.superInterface), e))
   }
+*/
 
-
+// mig: fn translate_edge
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_edge<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        struct_ref_h: &'h StructHT<'s, 'h>,
+        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+        edge2: &EdgeI<'s, 'i>,
+    ) -> EdgeH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_edge");
+    }
+}
+/*
   private def translateEdge(hinputs: HinputsI, hamuts: HamutsBox, structRefH: StructHT, interfaceIT: InterfaceIT[cI], edge2: EdgeI):
   (EdgeH) = {
     // Purposefully not trying to translate the entire struct here, because we might hit a circular dependency
@@ -260,198 +521,7 @@ class StructHammer(
     val structPrototypesByInterfacePrototype = ListMap[InterfaceMethodH, PrototypeH](interfacePrototypesH.zip(prototypesH) : _*)
     (EdgeH(structRefH, interfaceRefH, structPrototypesByInterfacePrototype))
   }
-
-  def lookupStruct(hinputs: HinputsI, hamuts: HamutsBox, structTT: StructIT[cI]): StructDefinitionI = {
-    hinputs.lookupStruct(structTT.id)
-  }
-
-  def lookupInterface(hinputs: HinputsI, hamuts: HamutsBox, interfaceTT: InterfaceIT[cI]): InterfaceDefinitionI = {
-    hinputs.lookupInterface(interfaceTT.id)
-  }
-}
 */
-
-// mig: fn translate_interfaces
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_interfaces<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-    )
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_interfaces");
-    }
-}
-
-// mig: fn translate_interface_methods
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_interface_methods<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
-    ) -> Vec<InterfaceMethodH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_interface_methods");
-    }
-}
-
-// mig: fn translate_interface
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_interface<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        interface_it: &'i InterfaceIT<'s, 'i, cI>,
-    ) -> &'h InterfaceHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_interface");
-    }
-}
-
-// mig: fn translate_structs
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_structs<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-    )
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_structs");
-    }
-}
-
-// mig: fn translate_struct_i
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_struct_i<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_it: &'i StructIT<'s, 'i, cI>,
-    ) -> &'h StructHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_struct_i");
-    }
-}
-
-// mig: fn translate_members
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_members<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i, cI>,
-        members: &[StructMemberI<'s, 'i, cI>],
-    ) -> Vec<StructMemberH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_members");
-    }
-}
-
-// mig: fn translate_member
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_member<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i, cI>,
-        member2: &StructMemberI<'s, 'i, cI>,
-    ) -> StructMemberH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_member");
-    }
-}
-
-// mig: fn make_box
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn make_box<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        conceptual_variability: VariabilityI,
-        type2: CoordI<'s, 'i, cI>,
-        type_h: CoordH<'s, 'h>,
-    ) -> &'h StructHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: make_box");
-    }
-}
-
-// mig: fn translate_edges_for_struct (Scala overload — disambiguated.)
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_edges_for_struct<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_ref_h: &'h StructHT<'s, 'h>,
-        struct_tt: &'i StructIT<'s, 'i, cI>,
-    ) -> Vec<EdgeH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_edges_for_struct");
-    }
-}
-
-// mig: fn translate_edges_for_struct_with_edges (Scala overload — disambiguated.)
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_edges_for_struct_with_edges<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_ref_h: &'h StructHT<'s, 'h>,
-        edges2: &[EdgeI<'s, 'i>],
-    ) -> Vec<EdgeH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_edges_for_struct_with_edges");
-    }
-}
-
-// mig: fn translate_edge
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_edge<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_ref_h: &'h StructHT<'s, 'h>,
-        interface_it: &'i InterfaceIT<'s, 'i, cI>,
-        edge2: &EdgeI<'s, 'i>,
-    ) -> EdgeH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_edge");
-    }
-}
 
 // mig: fn lookup_struct
 impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
@@ -468,6 +538,11 @@ where 's: 'h,
         panic!("Unimplemented: lookup_struct");
     }
 }
+/*
+  def lookupStruct(hinputs: HinputsI, hamuts: HamutsBox, structTT: StructIT[cI]): StructDefinitionI = {
+    hinputs.lookupStruct(structTT.id)
+  }
+*/
 
 // mig: fn lookup_interface
 impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
@@ -484,3 +559,9 @@ where 's: 'h,
         panic!("Unimplemented: lookup_interface");
     }
 }
+/*
+  def lookupInterface(hinputs: HinputsI, hamuts: HamutsBox, interfaceTT: InterfaceIT[cI]): InterfaceDefinitionI = {
+    hinputs.lookupInterface(interfaceTT.id)
+  }
+}
+*/

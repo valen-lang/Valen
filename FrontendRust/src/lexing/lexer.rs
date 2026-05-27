@@ -242,6 +242,22 @@ where
               RangeL(attributeBegin, end),
               DontCallMacroL,
               WordLE(RangeL(attributeBegin, end), keywords.DeriveStructDrop))))
+      } else if (iter.trySkipCompleteWord("#DeriveStructConstructor")) {
+        val end = iter.getPos()
+        Ok(
+          Some(
+            MacroCallL(
+              RangeL(attributeBegin, end),
+              CallMacroL,
+              WordLE(RangeL(attributeBegin, end), keywords.DeriveStructConstructor))))
+      } else if (iter.trySkipCompleteWord("#!DeriveStructConstructor")) {
+        val end = iter.getPos()
+        Ok(
+          Some(
+            MacroCallL(
+              RangeL(attributeBegin, end),
+              DontCallMacroL,
+              WordLE(RangeL(attributeBegin, end), keywords.DeriveStructConstructor))))
       } else if (iter.trySkipCompleteWord("#DeriveAnonymousSubstruct")) {
           val end = iter.getPos()
           Ok(
@@ -525,7 +541,7 @@ where
         }
 
       iter.consumeCommentsAndWhitespace()
-
+      val interfaceOwnershipSymbols = lexImplOwnershipPrefix(iter)
       val interfaceName =
         lexIdentifier(iter) match {
           case None => return Err(BadImplInterface(iter.getPos()))
@@ -540,15 +556,12 @@ where
           case Ok(x) => x
         }
 
-      val interface =
-        maybeInterfaceGenericArgs match {
-          case None => ScrambleLE(interfaceName.range, Vector(interfaceName))
-          case Some(interfaceGenericArgs) => {
-            ScrambleLE(
-              RangeL(interfaceName.range.begin, interfaceGenericArgs.range.end),
-              Vector(interfaceName, interfaceGenericArgs))
-          }
-        }
+      val interface = {
+        val elements = interfaceOwnershipSymbols ++ Vector(interfaceName) ++ maybeInterfaceGenericArgs.toVector
+        val begin = elements.head.range.begin
+        val end = elements.last.range.end
+        ScrambleLE(RangeL(begin, end), elements)
+      }
 
       iter.consumeCommentsAndWhitespace()
 
@@ -557,7 +570,7 @@ where
       }
 
       iter.consumeCommentsAndWhitespace()
-
+      val structOwnershipSymbols = lexImplOwnershipPrefix(iter)
       val structName =
         lexIdentifier(iter) match {
           case None => return Err(BadImplStruct(iter.getPos()))
@@ -572,15 +585,12 @@ where
           case Ok(x) => x
         }
 
-      val struct =
-        maybeStructGenericArgs match {
-          case None => ScrambleLE(structName.range, Vector(structName))
-          case Some(structGenericArgs) => {
-            ScrambleLE(
-              RangeL(structName.range.begin, structGenericArgs.range.end),
-              Vector(structName, structGenericArgs))
-          }
-        }
+      val struct = {
+        val elements = structOwnershipSymbols ++ Vector(structName) ++ maybeStructGenericArgs.toVector
+        val begin = elements.head.range.begin
+        val end = elements.last.range.end
+        ScrambleLE(RangeL(begin, end), elements)
+      }
 
       iter.consumeCommentsAndWhitespace()
 
@@ -906,19 +916,50 @@ where
 
     iter.consume_comments_and_whitespace();
 
-    if !iter.try_skip('{') {
+    let mut members_acc: Vec<ScrambleLE<'p>> = Vec::new();
+    let mut methods_acc: Vec<FunctionL<'p>> = Vec::new();
+    let contents_range = if iter.peek() == ';' {
+      let r = RangeL::new(iter.get_pos(), iter.get_pos());
+      if !iter.try_skip(';') { panic!("vwat"); }
+      iter.consume_comments_and_whitespace();
+      r
+    } else if iter.try_skip('{') {
+      iter.consume_comments_and_whitespace();
+      let contents_begin = iter.get_pos();
+      let mut keep_going = true;
+      while keep_going {
+        if iter.at_end() || iter.peek() == '}' {
+          keep_going = false;
+        } else {
+          let member_begin = iter.get_pos();
+          let mut func_trial_iter = iter.clone();
+          let trial_attributes = self.lex_attributes(&mut func_trial_iter)?;
+          match self.lex_function(&mut func_trial_iter, member_begin, trial_attributes)? {
+            Some(func) => {
+              iter.position = func_trial_iter.position;
+              iter.consume_comments_and_whitespace();
+              methods_acc.push(func);
+            }
+            None => {
+              members_acc.push(self.lex_scramble(iter, false, false, true)?);
+              iter.consume_comments_and_whitespace();
+              if !iter.try_skip(';') {
+                return Err(ParseError::BadStructContentsEnd(iter.get_pos()));
+              }
+              iter.consume_comments_and_whitespace();
+            }
+          }
+        }
+      }
+      let contents_end = iter.get_pos();
+      if !iter.try_skip('}') {
+        return Err(ParseError::BadStructContentsEnd(iter.get_pos()));
+      }
+      iter.consume_comments_and_whitespace();
+      RangeL::new(contents_begin, contents_end)
+    } else {
       return Err(ParseError::BadStructContentsBegin(iter.get_pos()));
-    }
-
-    iter.consume_comments_and_whitespace();
-
-    let contents = self.lex_scramble(iter, false, false, false)?;
-
-    if !iter.try_skip('}') {
-      return Err(ParseError::BadStructContentsEnd(iter.get_pos()));
-    }
-
-    iter.consume_comments_and_whitespace();
+    };
 
     Ok(Some(StructL {
       range: RangeL::new(begin, header_end),
@@ -927,7 +968,9 @@ where
       mutability: maybe_mutability,
       identifying_runes: maybe_generic_args,
       template_rules: maybe_rules,
-      members: contents,
+      contents_range,
+      members: self.parse_arena.alloc_slice_from_vec(members_acc),
+      methods: self.parse_arena.alloc_slice_from_vec(methods_acc),
     }))
   }
 
@@ -996,28 +1039,60 @@ where
         }
 
       iter.consumeCommentsAndWhitespace()
-
-      if (!iter.trySkip('{')) {
-        return Err(BadStructContentsBegin(iter.getPos()))
-      }
-      val membersBegin = iter.getPos()
-
-      iter.consumeCommentsAndWhitespace()
-
-      val membersAcc = new Accumulator[ScrambleLE]() // MIGALLOW: Unused
-
-      val contents =
-        lexScramble(iter, false, false, false) match {
-          case Err(e) => return Err(e)
-          case Ok(x) => x
+      val membersAcc = new Accumulator[ScrambleLE]()
+      val methodsAcc = new Accumulator[FunctionL]()
+      val contentsRange =
+        if (iter.peek() == ';') {
+          val r = RangeL(iter.getPos(), iter.getPos())
+          if (!iter.trySkip(';')) vwat()
+          iter.consumeCommentsAndWhitespace()
+          r
+        } else if (iter.trySkip('{')) {
+          iter.consumeCommentsAndWhitespace()
+          val contentsBegin = iter.getPos()
+          var keepGoing = true
+          while (keepGoing) {
+            if (iter.atEnd() || iter.peek() == '}') {
+              keepGoing = false
+            } else {
+              val memberBegin = iter.getPos()
+              val funcTrialIter = iter.clone()
+              val trialAttributes =
+                lexAttributes(funcTrialIter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(a) => a
+                }
+              lexFunction(funcTrialIter, memberBegin, trialAttributes) match {
+                case Err(e) => return Err(e)
+                case Ok(Some(func)) => {
+                  iter.position = funcTrialIter.position
+                  iter.consumeCommentsAndWhitespace()
+                  methodsAcc.add(func)
+                }
+                case Ok(None) => {
+                  membersAcc.add(
+                    lexScramble(iter, false, false, true) match {
+                      case Err(e) => return Err(e)
+                      case Ok(x) => x
+                    })
+                  iter.consumeCommentsAndWhitespace()
+                  if (!iter.trySkip(';')) {
+                    return Err(BadStructContentsEnd(iter.getPos()))
+                  }
+                  iter.consumeCommentsAndWhitespace()
+                }
+              }
+            }
+          }
+          val contentsEnd = iter.getPos()
+          if (!iter.trySkip('}')) {
+            return Err(BadStructContentsEnd(iter.getPos()))
+          }
+          iter.consumeCommentsAndWhitespace()
+          RangeL(contentsBegin, contentsEnd)
+        } else {
+          return Err(BadStructContentsBegin(iter.getPos()))
         }
-
-      if (!iter.trySkip('}')) {
-        return Err(BadStructContentsEnd(iter.getPos()))
-      }
-
-      iter.consumeCommentsAndWhitespace()
-
       val end = iter.getPos()
 
       val struct =
@@ -1028,7 +1103,9 @@ where
           maybeMutability,
           maybeGenericArgs,
           maybeRules,
-          contents)
+          contentsRange,
+          membersAcc.buildArray(),
+          methodsAcc.buildArray())
       Ok(Some(struct))
     }
   */
@@ -2004,6 +2081,18 @@ where
     }
   }
   /*
+  // Lex optional ownership prefix symbols (&, &&, ^) for impl interface/struct positions.
+  // Returns SymbolLE nodes for each prefix character, e.g. && becomes two SymbolLE('&').
+  private def lexImplOwnershipPrefix(iter: LexingIterator): Vector[SymbolLE] = {
+    var symbols = Vector[SymbolLE]()
+    while (!iter.atEnd() && (iter.peek() == '&' || iter.peek() == '^')) {
+      val begin = iter.getPos()
+      val c = iter.peek()
+      iter.advance()
+      symbols = symbols :+ SymbolLE(RangeL(begin, iter.getPos()), c)
+    }
+    symbols
+  }
     def lexIdentifier(iter: LexingIterator): Option[WordLE] = {
       val begin = iter.getPos()
       // If it was a word char, then keep eating until we reach the end of the word chars.

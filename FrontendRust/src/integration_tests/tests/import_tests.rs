@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.passmanager.FullCompilationOptions
@@ -7,8 +8,19 @@ import dev.vale.{finalast => m}
 import org.scalatest._
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct ImportTests
+pub struct ImportTests;
+/*
 class ImportTests extends FunSuite with Matchers {
+*/
+// mig: fn tests_import
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_import() {
+    panic!("Unmigrated test: tests_import");
+}
+/*
   test("Tests import") {
     val moduleACode =
       """
@@ -53,7 +65,14 @@ class ImportTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn tests_non_imported_module_isnt_brought_in
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_non_imported_module_isnt_brought_in() {
+    panic!("Unmigrated test: tests_non_imported_module_isnt_brought_in");
+}
+/*
   test("Tests non-imported module isn't brought in") {
     val moduleACode =
       """
@@ -95,7 +114,14 @@ class ImportTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn tests_import_with_paackage
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_import_with_paackage() {
+    panic!("Unmigrated test: tests_import_with_paackage");
+}
+/*
   test("Tests import with paackage") {
     val moduleACode =
       """
@@ -136,7 +162,14 @@ class ImportTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn tests_import_of_directory_with_no_vale_files
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_import_of_directory_with_no_vale_files() {
+    panic!("Unmigrated test: tests_import_of_directory_with_no_vale_files");
+}
+/*
   test("Tests import of directory with no vale files") {
     val moduleACode =
       """
@@ -172,3 +205,5 @@ class ImportTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

@@ -65,4 +65,58 @@ object NameHammer {
         VonMember("project", VonStr(nonEmptyModuleName)),
         VonMember("packageSteps", VonArray(None, paackage.map(_.str).map(VonStr).toVector))))
   }
+
+  def simplifyId(id: IdI[cI, INameI[cI]]): SimpleId = {
+    val IdI(packageCoord, initSteps, localName) = id
+    val PackageCoordinate(module, packages) = packageCoord
+    SimpleId(
+      (SimpleIdStep(module.str, Vector()) +:
+          packages.map(paackage => SimpleIdStep(paackage.str, Vector()))) ++
+          initSteps.map(step => simplifyName(step)) :+
+          simplifyName(localName))
+  }
+
+  def simplifyName(name: INameI[cI]): SimpleIdStep = {
+    name match {
+      case StructNameI(StructTemplateNameI(humanName), templateArgs) =>
+        SimpleIdStep(humanName.str, templateArgs.map(simplifyTemplata))
+      case StructTemplateNameI(humanName) =>
+        SimpleIdStep(humanName.str, Vector())
+      case InterfaceNameI(InterfaceTemplateNameI(humanName), templateArgs) =>
+        SimpleIdStep(humanName.str, templateArgs.map(simplifyTemplata))
+      case InterfaceTemplateNameI(humanName) =>
+        SimpleIdStep(humanName.str, Vector())
+      case ExternFunctionNameI(humanName, templateArgs, parameters) =>
+        SimpleIdStep(humanName.str, templateArgs.map(simplifyTemplata))
+      case other => vimpl(other)
+    }
+  }
+
+  def simplifyTemplata(templata: ITemplataI[cI]): SimpleId = {
+    templata match {
+      case CoordTemplataI(region, coord) => simplifyCoord(coord)
+      case other => vimpl(other)
+    }
+  }
+
+  def simplifyKind(value: KindIT[cI]): SimpleId = {
+    value match {
+      case IntIT(bits) => SimpleId(Vector(SimpleIdStep("i" + bits, Vector())))
+      case StrIT() => SimpleId(Vector(SimpleIdStep("str", Vector())))
+      case other => vimpl(other)
+    }
+  }
+
+  def simplifyCoord(value: CoordI[cI]): SimpleId = {
+    val CoordI(ownership, kind) = value
+    val kindId = simplifyKind(kind)
+    (ownership match {
+      case ImmutableShareI => kindId
+      case MutableShareI => kindId
+      case OwnI => kindId
+      case WeakI => vimpl()
+      case ImmutableBorrowI => SimpleId(Vector(SimpleIdStep("&", Vector(kindId))))
+      case MutableBorrowI => SimpleId(Vector(SimpleIdStep("&mut", Vector(kindId))))
+    })
+  }
 }

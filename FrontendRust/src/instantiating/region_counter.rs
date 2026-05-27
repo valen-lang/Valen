@@ -138,7 +138,8 @@ pub fn count_function_name() {
         templateArgs.foreach(countTemplata(counter, _))
         parameters.foreach(countCoord(counter, _))
       }
-      case ExternFunctionNameI(humanName, parameters) => {
+      case ExternFunctionNameI(humanName, templateArgs, parameters) => {
+        templateArgs.foreach(countTemplata(counter, _))
         parameters.foreach(countCoord(counter, _))
       }
       case LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLoc, paramsTT), templateArgs, parameters) => {

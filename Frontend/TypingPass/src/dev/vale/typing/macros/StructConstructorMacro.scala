@@ -152,7 +152,7 @@ class StructConstructorMacro(
     val mutability =
       StructCompiler.getMutability(
         opts.globalOptions.sanityCheck,
-        interner, keywords, coutputs, env.denizenTemplateId, RegionT(), structTT,
+        interner, keywords, coutputs, env.denizenTemplateId, RegionT(DefaultRegionT), structTT,
         // Not entirely sure if this is right, but it's consistent with using it for the return kind
         // and its the more conservative option so we'll go with it for now.
         UseBoundsFromContainer(
@@ -164,7 +164,7 @@ class StructConstructorMacro(
         case MutabilityTemplataT(ImmutableT) => ShareT
         case PlaceholderTemplataT(idT, MutabilityTemplataType()) => OwnT
       }
-    val constructorReturnType = CoordT(constructorReturnOwnership, RegionT(), structTT)
+    val constructorReturnType = CoordT(constructorReturnOwnership, RegionT(DefaultRegionT), structTT)
 
     // not virtual because how could a constructor be virtual
     val header =

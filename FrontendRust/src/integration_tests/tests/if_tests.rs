@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.postparsing._
@@ -10,7 +11,19 @@ import dev.vale.typing.types._
 import dev.vale.von.{VonInt, VonStr}
 import org.scalatest._
 
+*/
+// mig: struct IfTests
+pub struct IfTests;
+/*
 class IfTests extends FunSuite with Matchers {
+*/
+// mig: fn simple_true_branch_returning_an_int
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_true_branch_returning_an_int() {
+    panic!("Unmigrated test: simple_true_branch_returning_an_int");
+}
+/*
   test("Simple true branch returning an int") {
     val compile = RunCompilation.test(
       """
@@ -38,7 +51,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn simple_false_branch_returning_an_int
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_false_branch_returning_an_int() {
+    panic!("Unmigrated test: simple_false_branch_returning_an_int");
+}
+/*
   test("Simple false branch returning an int") {
     val compile = RunCompilation.test(
       """
@@ -49,7 +69,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn ladder
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn ladder() {
+    panic!("Unmigrated test: ladder");
+}
+/*
   test("Ladder") {
     val compile = RunCompilation.test(
       """
@@ -60,7 +87,7 @@ class IfTests extends FunSuite with Matchers {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), IntT.i32))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
     ifs.size shouldEqual 2
     val userFuncs = coutputs.getAllUserFunctions
     userFuncs.foreach(func => {
@@ -73,7 +100,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn moving_from_inside_if
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn moving_from_inside_if() {
+    panic!("Unmigrated test: moving_from_inside_if");
+}
+/*
   test("Moving from inside if") {
     val compile = RunCompilation.test(
       """
@@ -92,7 +126,7 @@ class IfTests extends FunSuite with Matchers {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), IntT.i32))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
     val userFuncs = coutputs.getAllUserFunctions
     userFuncs.foreach(func => {
       func.header.returnType match {
@@ -103,7 +137,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn if_with_complex_condition
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn if_with_complex_condition() {
+    panic!("Unmigrated test: if_with_complex_condition");
+}
+/*
   test("If with complex condition") {
     val compile = RunCompilation.test(
       """
@@ -118,11 +159,18 @@ class IfTests extends FunSuite with Matchers {
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
-    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(), StrT()))
+    ifs.foreach(iff => iff.result.coord shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), StrT()))
 
     compile.evalForKind(Vector()) match { case VonStr("#") => }
   }
-
+*/
+// mig: fn if_with_condition_declaration
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn if_with_condition_declaration() {
+    panic!("Unmigrated test: if_with_condition_declaration");
+}
+/*
   test("If with condition declaration") {
     val compile = RunCompilation.test(
       """
@@ -134,7 +182,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn ret_from_inside_if_will_destroy_locals
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn ret_from_inside_if_will_destroy_locals() {
+    panic!("Unmigrated test: ret_from_inside_if_will_destroy_locals");
+}
+/*
   test("Ret from inside if will destroy locals") {
     val compile = RunCompilation.test(
       """import printutils.*;
@@ -161,7 +216,14 @@ class IfTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "In then!\nDestroying marine!\n"
   }
-
+*/
+// mig: fn can_continue_if_other_branch_would_have_returned
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn can_continue_if_other_branch_would_have_returned() {
+    panic!("Unmigrated test: can_continue_if_other_branch_would_have_returned");
+}
+/*
   test("Can continue if other branch would have returned") {
     val compile = RunCompilation.test(
       """
@@ -191,7 +253,14 @@ class IfTests extends FunSuite with Matchers {
     val main = compile.expectCompilerOutputs().lookupFunction("main")
     compile.evalForStdout(Vector()) shouldEqual "In else!\nIn rest!\nDestroying marine!\n"
   }
-
+*/
+// mig: fn destructure_inside_if
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destructure_inside_if() {
+    panic!("Unmigrated test: destructure_inside_if");
+}
+/*
   test("Destructure inside if") {
     val compile = RunCompilation.test(
       """import printutils.*;
@@ -220,12 +289,26 @@ class IfTests extends FunSuite with Matchers {
     val main = compile.expectCompilerOutputs().lookupFunction("main")
     compile.evalForStdout(Vector()) shouldEqual "5\n5\n5\n5\n"
   }
-
+*/
+// mig: fn if_nevers
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn if_nevers() {
+    panic!("Unmigrated test: if_nevers");
+}
+/*
   test("If nevers") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/if/ifnevers.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn if_with_panics_and_rets
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn if_with_panics_and_rets() {
+    panic!("Unmigrated test: if_with_panics_and_rets");
+}
+/*
   test("If with panics and rets") {
     val compile =
       RunCompilation.test(
@@ -244,7 +327,14 @@ class IfTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn toast
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn toast() {
+    panic!("Unmigrated test: toast");
+}
+/*
   test("Toast") {
     val compile = RunCompilation.test(
       """
@@ -265,3 +355,5 @@ class IfTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

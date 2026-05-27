@@ -31,6 +31,28 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
             }).toVector))))
   }
 
+  def vonifySimpleId(simpleId: SimpleId): IVonData = {
+    VonObject(
+      "Id",
+      None,
+      Vector(
+        VonMember(
+          "steps",
+          VonArray(
+            None,
+            simpleId.steps.map(vonifySimpleIdStep)))))
+  }
+
+  def vonifySimpleIdStep(step: SimpleIdStep): IVonData = {
+    val SimpleIdStep(name, templateArgs) = step
+    VonObject(
+      "IdStep",
+      None,
+      Vector(
+        VonMember("name", VonStr(name)),
+        VonMember("templateArgs", VonArray(None, templateArgs.map(vonifySimpleId)))))
+  }
+
   def vonifyPackage(packageCoord: PackageCoordinate, paackage: PackageH): IVonData = {
     val PackageH(
       interfaces,
@@ -92,27 +114,29 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
                   VonMember("kind", vonifyKind(kind))))
             }))),
         VonMember(
-          "externNameToFunction",
+          "prototypeToExtern",
           VonArray(
             None,
-            externNameToFunction.toVector.map({ case (externName, prototype) =>
+            externNameToFunction.toVector.map({ case (_, HamutsFunctionExtern(maybeExternName, prototype, simpleId)) =>
               VonObject(
-                "Entry",
+                "ExternFunction",
                 None,
                 Vector(
-                  VonMember("externName", VonStr(externName.str)),
+                  VonMember("mangledName", VonStr(maybeExternName)),
+                  VonMember("id", vonifySimpleId(simpleId)),
                   VonMember("prototype", vonifyPrototype(prototype))))
             }))),
         VonMember(
-          "externNameToKind",
+          "kindToExtern", // DO NOT SUBMIT rename plz
           VonArray(
             None,
-            externNameToKind.toVector.map({ case (externName, kind) =>
+            externNameToKind.toVector.map({ case (_, HamutsKindExtern(maybeExternName, kind, simpleId)) =>
               VonObject(
-                "Entry",
+                "ExternKind",
                 None,
                 Vector(
-                  VonMember("externName", VonStr(externName.str)),
+                  VonMember("mangledName", VonStr(maybeExternName)),
+                  VonMember("id", vonifySimpleId(simpleId)),
                   VonMember("kind", vonifyKind(kind))))
             })))))
   }
@@ -179,7 +203,7 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
   }
 
   def vonfiyStruct(struct: StructDefinitionH): IVonData = {
-    val StructDefinitionH(fullName, weakable, mutability, edges, members) = struct
+    val StructDefinitionH(fullName, weakable, extern, mutability, edges, members) = struct
 
     VonObject(
       "Struct",
@@ -188,6 +212,7 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
         VonMember("name", vonifyName(fullName)),
         VonMember("kind", vonifyStructH(struct.getRef)),
         VonMember("weakable", VonBool(weakable)),
+        VonMember("extern", VonBool(extern)),
         VonMember("mutability", vonifyMutability(mutability)),
         VonMember("edges", VonArray(None, edges.map(edge => vonifyEdge(edge)).toVector)),
         VonMember("members", VonArray(None, members.map(vonifyStructMember).toVector))))
@@ -334,6 +359,14 @@ class VonHammer(nameHammer: NameHammer, typeHammer: TypeHammer) {
           None,
           Vector(
             VonMember("name", vonifyName(name))))
+      }
+      case OpaqueHT(_, structId, simpleId) => {
+        VonObject(
+          "Opaque",
+          None,
+          Vector(
+            VonMember("structId", vonifyName(structId)),
+            VonMember("structSimpleId", vonifySimpleId(simpleId))))
       }
     }
   }

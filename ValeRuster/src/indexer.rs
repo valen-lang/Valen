@@ -1,16 +1,32 @@
 use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+use std::process::Command;
 use rustdoc_types::{Crate, Enum, Id, Item, ItemEnum, Primitive, Struct};
-use crate::{GenealogyKey, item_has_name, resolve_id, ResolveError, UId};
-use crate::GenealogyKey::Normal;
+use anyhow::{Context, Result};
+use crate::{resolve_id, ResolveError, UId};
 use crate::resolve_id::{collapse_children, get_expanded_direct_child_uids, get_unexpanded_direct_child_uids_exclude_impl_children, include_impls_children, lookup_uid, resolve_uid};
 use crate::ResolveError::ResolveFatal;
+use crate::indexer::GenealogyKey::{Normal, ImplOrMethod};
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+enum GenealogyKey {
+  Normal(UId),
+  ImplOrMethod{ struct_uid: UId, child_uid: UId }, // TODO: rename
+}
+impl GenealogyKey {
+  fn uid(&self) -> &UId {
+    match self {
+      Normal(uid) => uid,
+      ImplOrMethod { struct_uid: _, child_uid: child_uid } => child_uid
+    }
+  }
+}
 
 pub struct ItemIndex {
-  pub(crate) child_key_to_parent_uid: HashMap<GenealogyKey, UId>,
   pub(crate) primitive_name_to_uid: HashMap<String, UId>,
   pub(crate) primitive_uid_to_name: HashMap<UId, String>,
-  pub(crate) drop_trait_uid: UId,
-  pub(crate) drop_method_uid: UId,
 }
 
 pub fn genealogize(
@@ -44,185 +60,10 @@ pub fn genealogize(
     }
   }
 
-  let mut child_key_to_parent_uid: HashMap<GenealogyKey, UId> = HashMap::new();
-  for (crate_name, crate_) in crates {
-    for (self_id, item) in &crate_.index {
-      let self_uid =
-          UId { crate_name: crate_name.to_string(), id: self_id.clone() };
-      let child_uids =
-          match &item.inner {
-            ItemEnum::Module(_) => {
-              let direct_child_uids_without_methods =
-                get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &self_uid)?;
-              let direct_child_keys =
-                  include_impls_children(crates, &primitive_name_to_uid, direct_child_uids_without_methods)?;
-              let direct_child_uids = collapse_children(&direct_child_keys);
-              direct_child_uids
-                  .into_iter()
-                  .map(|x| GenealogyKey::Normal(x.clone()))
-                  .collect::<Vec<GenealogyKey>>()
-            },
-            ItemEnum::Primitive(Primitive { impls: impl_ids, .. }) |
-            ItemEnum::Struct(Struct { impls: impl_ids, .. }) |
-            ItemEnum::Enum(Enum { impls: impl_ids, .. }) => {
-              let mut result = Vec::new();
-              let direct_child_uids_without_methods =
-                  get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &self_uid)?;
-              let direct_child_keys =
-                  include_impls_children(crates, &primitive_name_to_uid, direct_child_uids_without_methods)?;
-              let direct_child_uids = collapse_children(&direct_child_keys);
-              for child_id in direct_child_uids {
-                result.push(GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: child_id.clone() });
-              }
-              // // Now add all the impls' children.
-              // for impl_id in impl_ids {
-              //   let impl_uid = UId { crate_name: crate_name.clone(), id: impl_id.clone() };
-              //   for method_uid in get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &impl_uid, true)? {
-              //     result.push(GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: method_uid.clone() });
-              //   }
-              // }
-              result
-            },
-            ItemEnum::Import(_import) => {
-              continue;
-            }
-            _ => continue
-          };
-      for child_uid in child_uids {
-        if let Some(existing_parent_uid) = child_key_to_parent_uid.get(&child_uid) {
-          if *existing_parent_uid != self_uid {
-            // TODO: resultify all these panics
-            panic!("Parent collision {:?} and {:?} for child {:?}", existing_parent_uid, self_uid, child_uid);
-          }
-        } else {
-          child_key_to_parent_uid.insert(child_uid, self_uid.clone());
-        }
-      }
-    }
-  }
-
-  let mut importee_uid_to_imports: HashMap<UId, HashSet<UId>> = HashMap::new();
-  // This loop modifies importee_uid_to_imports *and* the child_key_to_parent_uid.
-  // Specifically, if it doesn't find a parent for something in child_key_to_parent_uid, it will
-  // use an import for it.
-  for (crate_name, crate_) in crates {
-    for (self_id, item) in &crate_.index {
-      let self_uid =
-          UId { crate_name: crate_name.to_string(), id: self_id.clone() };
-      match &item.inner {
-        ItemEnum::Module(_) => {
-          let direct_child_uids_without_methods =
-              get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &self_uid)?;
-          let direct_child_keys =
-              include_impls_children(crates, &primitive_name_to_uid, direct_child_uids_without_methods)?;
-          let direct_child_uids = collapse_children(&direct_child_keys);
-          for direct_child_uid in &direct_child_uids {
-            let direct_child_item = lookup_uid(crates, &direct_child_uid);
-            match &direct_child_item.inner {
-              ItemEnum::Import(import) => {
-                let importee_uids =
-                  if !import.glob {
-                    if let Some(imported_id) = import.id.as_ref() {
-                      vec![UId { crate_name: crate_name.clone(), id: imported_id.clone() }]
-                    } else {
-                      vec![]
-                    }
-                  } else {
-                    // We treat glob imports as if we're directly importing
-                    // everything matching them.
-                    match import.name.as_str() {
-                      // std references this in itself but doesn't include its definition.
-                      "_Unwind_Reason_Code" => vec![],
-                      _ => {
-                        let target_module_uid =
-                            match resolve_uid(crates, &primitive_name_to_uid, &direct_child_uid) {
-                              Ok(x) => x,
-                              Err(ResolveError::NotFound) => unimplemented!(),
-                              Err(ResolveFatal(e)) => return Err(e)
-                            };
-                        match get_expanded_direct_child_uids(
-                          crates, &primitive_name_to_uid, &target_module_uid, true) {
-                          Ok(x) => {
-                            x
-                          },
-                          Err(ResolveError::NotFound) => unimplemented!(),
-                          Err(ResolveFatal(e)) => return Err(e)
-                        }
-                      }
-                    }
-                  };
-                for importee_uid in importee_uids {
-                  if !importee_uid_to_imports.contains_key(&importee_uid) {
-                    importee_uid_to_imports.insert(importee_uid.clone(), HashSet::new());
-                  }
-                  // println!("Noting importee {:?} imported by {:?}", importee_uid, direct_child_uid.clone());
-                  importee_uid_to_imports.get_mut(&importee_uid).unwrap().insert(direct_child_uid.clone());
-                }
-              }
-              _ => {}
-            }
-          }
-        },
-        // We would do this code down here instead, if we want to handle non-modules' imports.
-        // ItemEnum::Import(import) => {
-        //   if let Some(imported_id) = import.id.as_ref() {
-        //     let importee_uid =
-        //         UId { crate_name: crate_name.clone(), id: imported_id.clone() };
-        //     // We handle glob imports in the case handling Module items.
-        //     if !import.glob {
-        //       if !importee_uid_to_imports.contains_key(&importee_uid) {
-        //         importee_uid_to_imports.insert(importee_uid.clone(), HashSet::new());
-        //       }
-        //       eprintln!("Noting importee {:?} imported by import {:?}", importee_uid, self_uid);
-        //       importee_uid_to_imports.get_mut(&importee_uid).unwrap().insert(self_uid);
-        //     }
-        //   }
-        // }
-        _ => {}
-      }
-    }
-  }
-
-  let final_child_key_to_parent_uid =
-    infer_missing_owners(
-      crates, &primitive_name_to_uid, &mut child_key_to_parent_uid, &mut importee_uid_to_imports)?;
-
-  let std =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, None, "std") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let ops =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&std), "ops") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let drop_trait =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&ops), "Drop") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let drop_method_uid =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&drop_trait), "drop") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-
   return Ok(
     ItemIndex {
-      child_key_to_parent_uid: final_child_key_to_parent_uid,
       primitive_uid_to_name,
       primitive_name_to_uid,
-      drop_trait_uid: drop_trait,
-      drop_method_uid: drop_method_uid
     })
 }
 
@@ -284,181 +125,6 @@ fn item_is_crate_root_module(
   false
 }
 
-fn infer_missing_owners(
-  crates: &HashMap<String, Crate>,
-  primitive_name_to_uid: &HashMap<String, UId>,
-  child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
-  importee_uid_to_imports: &HashMap<UId, HashSet<UId>>
-) -> anyhow::Result<HashMap<GenealogyKey, UId>> {
-  let mut result: HashMap<GenealogyKey, UId> = HashMap::new();
-
-  // Sanity check:
-  for (crate_name, crate_) in crates {
-    for (item_id, _item) in &crate_.index {
-      let item_uid =
-          UId { crate_name: crate_name.to_string(), id: item_id.clone() };
-      if item_uid.id.0 == "0:462:2678" {
-
-      }
-      let item = crate_.index.get(&item_uid.id).unwrap();
-      match &item.inner {
-        ItemEnum::Module(_) => {
-          if item_is_crate_root_module(crates, &item_uid) {
-            continue;
-          }
-          let parent_uid =
-              match determine_ultimate_owner(crates, child_key_to_parent_uid, importee_uid_to_imports, &item_uid) {
-                None => {
-                  println!("No owners or imports for {:?}", item_uid);
-                  continue
-                },
-                Some(value) => value,
-              };
-          // let import_key = Normal(parent_uid);
-          // println!("{:?} Noting new owner, module {:?} parent import {:?}", result.len(), item_uid.clone(), parent_uid);
-          assert!(!result.contains_key(&Normal(item_uid.clone())));
-          result.insert(Normal(item_uid), parent_uid.clone());
-        }
-        ItemEnum::Primitive(Primitive { impls: impl_ids, .. }) |
-        ItemEnum::Struct(Struct { impls: impl_ids, .. }) |
-        ItemEnum::Enum(Enum { impls: impl_ids, .. }) => {
-          if item_has_name(&item, "Chars") {
-
-          }
-          let parent_uid =
-              match determine_ultimate_owner(crates, child_key_to_parent_uid, importee_uid_to_imports, &item_uid) {
-                None => {
-                  println!("No owners or imports for {:?}", item_uid);
-                  continue
-                },
-                Some(value) => value,
-              };
-          // println!("{:?} Noting new owner for {:?}, parent {:?}", result.len(), item_uid.clone(), parent_uid);
-          assert!(!result.contains_key(&Normal(item_uid.clone())));
-          result.insert(Normal(item_uid.clone()), parent_uid.clone());
-
-          let direct_child_uids_without_methods =
-              get_unexpanded_direct_child_uids_exclude_impl_children(
-                crates, &primitive_name_to_uid, &item_uid)?;
-          let direct_child_keys =
-            include_impls_children(
-              crates, &primitive_name_to_uid, direct_child_uids_without_methods)?;
-          // println!("Direct child keys: {:?}", &direct_child_keys);
-          let direct_child_uids = collapse_children(&direct_child_keys);
-          // println!("Direct child uids: {:?}", &direct_child_uids);
-          // Now look for all their methods.
-          let mut method_keys = Vec::new();
-          for direct_child_uid in direct_child_uids {
-            // println!("Pushing A {:?}", GenealogyKey::ImplOrMethod { struct_uid: item_uid.clone(), child_uid: direct_child_uid.clone() });
-            method_keys.push(GenealogyKey::ImplOrMethod { struct_uid: item_uid.clone(), child_uid: direct_child_uid.clone() });
-          }
-          // // Now add all the impls' children.
-          // for impl_id in impl_ids {
-          //   let impl_uid = UId { crate_name: crate_name.clone(), id: impl_id.clone() };
-          //   for method_uid in get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &impl_uid, true)? {
-          //     println!("Pushing B {:?}", GenealogyKey::ImplOrMethod { struct_uid: item_uid.clone(), child_uid: method_uid.clone() });
-          //     method_keys.push(GenealogyKey::ImplOrMethod { struct_uid: item_uid.clone(), child_uid: method_uid.clone() });
-          //   }
-          // }
-          for method_key in method_keys {
-            match &method_key {
-              GenealogyKey::ImplOrMethod {
-                struct_uid: UId { crate_name: _, id: Id(x) },
-                child_uid: UId { crate_name: _, id: Id(y) },
-              } if x == "0:3816:3157" && y == "1:3721:1799" => {
-
-              }
-              _ => {}
-            }
-
-            // println!("{:?} Noting impl-method {:?} has owner {:?}", result.len(), &method_key, &item_uid);
-            assert!(!result.contains_key(&method_key));
-            result.insert(method_key, item_uid.clone());
-          }
-        }
-        ItemEnum::Function(_func) => {
-          if child_key_to_parent_uid.contains_key(&Normal(item_uid.clone())) {
-            // Then it's a free function.
-            let parent_uid =
-                match determine_ultimate_owner(crates, child_key_to_parent_uid, importee_uid_to_imports, &item_uid) {
-                  None => {
-                    println!("No owners or imports for {:?}", &item_uid);
-                    continue
-                  },
-                  Some(value) => value,
-                };
-            // let import_key = Normal(parent_uid);
-            // println!("{:?} Noting new owner for free function {:?}, import {:?}", result.len(), item_uid.clone(), parent_uid);
-            assert!(!result.contains_key(&Normal(item_uid.clone())));
-            result.insert(Normal(item_uid), parent_uid.clone());
-          } else {
-            // It's a method, skip it. We'll get it in the struct|trait|enum case.
-          }
-        }
-        // ItemEnum::Function(_) => {}
-        _ => {}
-      }
-    }
-  }
-
-  // for (crate_name, crate_) in crates {
-  //   for (item_id, _item) in &crate_.index {
-  //     let item_uid =
-  //         UId { crate_name: crate_name.to_string(), id: item_id.clone() };
-  //     let item = crate_.index.get(&item_uid.id).unwrap();
-  //     match item.inner {
-  //       ItemEnum::Module(_) | ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
-  //         let item_key = Normal(item_uid.clone());
-  //         if !result.contains_key(&item_key) {
-  //           if let Some(unnarrowed_imports) = importee_uid_to_imports.get(item_key.uid()) {
-  //             let imports: Vec<UId> =
-  //                 if unnarrowed_imports.len() == 0 {
-  //                   println!("No owners or imports for {:?}", item_key);
-  //                   continue;
-  //                 } else if unnarrowed_imports.len() > 1 {
-  //                   // Narrow it down by the smallest path. For example, LineWriter
-  //                   // is imported in two places:
-  //                   //   "library/std/src/io/buffered/mod.rs",
-  //                   //   "library/std/src/io/mod.rs",
-  //                   // so we'll go with the second one.
-  //                   // TODO: use a better resolution approach
-  //                   let mut bork: Vec<(UId, &Item)> =
-  //                       unnarrowed_imports.iter()
-  //                           .map(|id| (id.clone(), lookup_uid(crates, id)))
-  //                           .collect::<Vec<_>>();
-  //                   bork.sort_by_key(|(_uid, item)| item.span.as_ref().unwrap().filename.to_str().as_ref().unwrap().len());
-  //                   println!("Heuristic, estimating owner for {:?} is {:?}", item_key, bork.iter().next().unwrap().clone());
-  //                   bork.into_iter().map(|x| x.0).collect()
-  //                 } else {
-  //                   unnarrowed_imports.iter().map(|x| x.clone()).collect()
-  //                 };
-  //             let import_key = Normal(imports.iter().next().unwrap().clone());
-  //             if let Some(import_parent_id) = child_key_to_parent_uid.get(&import_key) {
-  //               println!("{:?} Noting new owner for {:?}, import {:?}'s parent {:?}", result.len(), item_key, import_key.uid(), &import_parent_id);
-  //               match result.get(&item_key) {
-  //                 None => {}
-  //                 Some(existing_id) => panic!("Already existing owner: {:?}", existing_id)
-  //               }
-  //               assert!(!result.contains_key(&item_key));
-  //               result.insert(item_key, import_parent_id.clone());
-  //             } else {
-  //               println!("New owner for {:?}, import {:?} has no owner itself!", item_key, import_key.uid());
-  //               continue;
-  //             }
-  //           } else {
-  //             println!("Orphan module: {:?}", item.name);
-  //           }
-  //         }
-  //       }
-  //       // ItemEnum::Function(_) => {}
-  //       _ => {}
-  //     }
-  //   }
-  // }
-
-  Ok(result)
-}
-
 fn determine_ultimate_owner(
   crates: &HashMap<String, Crate>,
   child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
@@ -507,4 +173,131 @@ fn determine_ultimate_owner(
             .clone()
       };
   Some(parent_uid)
+}
+
+pub(crate) fn get_crate(rustc_sysroot_path: &str, cargo_path: &str, output_dir_path: &str, crate_name: &str) -> Result<Crate, anyhow::Error> {
+  let json =
+      if let Some(crate_json) = get_stdlib_json(&rustc_sysroot_path, crate_name)? {
+        crate_json
+      } else {
+        get_dependency_json(cargo_path, output_dir_path, crate_name)?
+      };
+  let v: Crate = serde_json::from_str(&json)?;
+  Ok(v)
+}
+
+fn get_stdlib_json(rustc_sysroot_path: &str, crate_name: &str) -> Result<Option<String>, anyhow::Error> {
+  let stdlib_json_file_path: String =
+      rustc_sysroot_path.to_string() + "/share/doc/rust/json/" + &crate_name + ".json";
+  eprintln!("Reading json from {}", stdlib_json_file_path);
+
+  if !Path::new(&stdlib_json_file_path).exists() {
+    return Ok(None)
+  }
+
+  let mut stdlib_json_file =
+      File::open(stdlib_json_file_path.clone())
+          .with_context(|| format!("Failed to open {}", stdlib_json_file_path))?;
+
+  let mut stdlib_json_str: String = String::new();
+  stdlib_json_file.read_to_string(&mut stdlib_json_str)
+      .with_context(|| format!("Failed to read {} into string", stdlib_json_file_path))?;
+
+  return Ok(Some(stdlib_json_str));
+}
+
+fn get_dependency_json(cargo_path: &str, output_dir_path: &str, crate_name: &str) -> Result<String, anyhow::Error> {
+  let output = Command::new(&cargo_path)
+      .args(&[
+        "rustdoc",
+        &("--manifest-path=".to_string() + output_dir_path + "/Cargo.toml"),
+        "-Zunstable-options",
+        "--output-format=json",
+        "--package",
+        crate_name
+      ])
+      .output()
+      .with_context(|| "Failed to execute cargo rustdoc command")?;
+  if output.status.code() == Some(0) {
+    // Continue
+  } else {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let error = "Error from cargo rustdoc command: ".to_string() + &stderr;
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  let json_file_path: String =
+      output_dir_path.to_owned() + "/target/doc/" + &crate_name.replace("-", "_") + ".json";
+
+  if !Path::new(&json_file_path).exists() {
+    let error = format!("cargo rustdoc command didn't generate json in the expected place ({})", json_file_path);
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  let mut stdlib_json_file =
+      File::open(json_file_path.clone())
+          .with_context(|| format!("Failed to open {}", json_file_path))?;
+
+  let mut stdlib_json_str: String = String::new();
+  stdlib_json_file.read_to_string(&mut stdlib_json_str)
+      .with_context(|| format!("Failed to read {} into string", json_file_path))?;
+
+  return Ok(stdlib_json_str);
+}
+
+pub(crate) fn get_dependency_crates(
+  rustc_sysroot_path: &str,
+  cargo_path: &str,
+  output_dir_path: &str,
+  cargo_toml_path: &str,
+  crates: &mut HashMap<String, Crate>
+) -> Result<()> {
+
+  // Open the Cargo.toml file
+  let mut file = match File::open(cargo_toml_path) {
+    Ok(file) => file,
+    Err(err) => {
+      let error = format!("Error opening {}: {}", cargo_toml_path, err);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Read the contents of the file into a string
+  let mut contents = String::new();
+  if let Err(err) = file.read_to_string(&mut contents) {
+    let error = format!("Error reading {}: {}", cargo_toml_path, err);
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  // Parse the TOML contents
+  let toml_contents = match contents.parse::<toml::Value>() {
+    Ok(toml_contents) => toml_contents,
+    Err(err) => {
+      let error = format!("Error parsing {}: {}", cargo_toml_path, err);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Get the dependencies table
+  let dependencies = match toml_contents.get("dependencies") {
+    Some(dependencies) => dependencies,
+    None => {
+      let error = format!("No dependencies found in {}", cargo_toml_path);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Iterate over the dependencies
+  let dependencies_table =
+      if let Some(dependencies_table) = dependencies.as_table() {
+        dependencies_table
+      } else {
+        let error = format!("No dependencies found in {}", cargo_toml_path);
+        return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+      };
+
+  for (name, _) in dependencies_table.iter() {
+    crates.insert(name.clone(), get_crate(rustc_sysroot_path, cargo_path, output_dir_path, name)?);
+  }
+  Ok(())
 }

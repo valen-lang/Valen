@@ -1,10 +1,10 @@
 package dev.vale.simplifying
 
-import dev.vale.{Builtins, FileCoordinateMap, IPackageResolver, Interner, Keywords, PackageCoordinate, PackageCoordinateMap, Profiler, Result, finalast, vassert, vcurious, vfail, vwat}
+import dev.vale.{Builtins, FileCoordinateMap, IPackageResolver, Interner, Keywords, PackageCoordinate, PackageCoordinateMap, Profiler, Result, finalast, vassert, vcurious, vfail, vimpl, vwat}
 import dev.vale.finalast.{ConsecutorH, ConstantVoidH, CoordH, ExpressionH, Final, IdH, KindHT, Local, NeverHT, PackageH, ProgramH, PrototypeH, StackifyH, Variability, VariableIdH, VoidHT}
 import dev.vale.highertyping.ICompileErrorA
 import dev.vale.finalast._
-import dev.vale.instantiating.ast._
+import dev.vale.instantiating.ast.{IdI, _}
 import dev.vale.postparsing.ICompileErrorS
 
 import scala.collection.immutable.List
@@ -176,6 +176,79 @@ class Hammer(interner: Interner, keywords: Keywords) {
   val functionHammer = new FunctionHammer(keywords, typeHammer, nameHammer, structHammer)
   val vonHammer = new VonHammer(nameHammer, typeHammer)
 
+  def mangleFunc(id: IdI[cI, IFunctionNameI[cI]]): String = {
+    if (id.packageCoord.module.str == "rust") {
+      ""
+    } else {
+      val IdI(packageCoord, initSteps, localName) = id
+      (localName match {
+        case FunctionNameIX(FunctionTemplateNameI(humanName, _), templateArgs, _) => {
+          packageCoord.packages.map(_.str + "_").mkString("") +
+              initSteps.map(mangleName(_, true)).mkString("") +
+              humanName.str +
+              (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+              templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        }
+        case ExternFunctionNameI(humanName, templateArgs, _) => {
+          packageCoord.packages.map(_.str + "_").mkString("") +
+              initSteps.map(mangleName(_, true)).mkString("") +
+              humanName.str +
+              (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+              templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        }
+        case other => vimpl(other)
+      })
+    }
+  }
+
+  def mangleName(name: INameI[cI], stuffAfter: Boolean): String = {
+    ""
+//    name match {
+//      case StructNameI(StructTemplateNameI(humanName),templateArgs) => {
+//        humanName.str +
+//        (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+//        templateArgs.map("__" + mangleTemplata(_)).mkString("") +
+//        (if (stuffAfter) "__" else "")
+//      }
+//      case other => vimpl(other)
+//    }
+  }
+
+  def mangleStruct(id: IdI[cI, IStructNameI[cI]]): String = {
+    ""
+//    val IdI(packageCoord, initSteps, localName) = id
+//    mangleName(localName, false)
+  }
+
+  def mangleKind(kind: KindIT[cI]): String = {
+    ""
+//    kind match {
+//      case IntIT(bits) => "i" + bits
+//      case other => vimpl(other)
+//    }
+  }
+
+  def mangleCoord(coord: CoordI[cI]): String = {
+    ""
+//    val CoordI(ownership, kind) = coord
+//    (ownership match {
+//      case ImmutableShareI => "1_IRef_"
+//      case MutableShareI => ""
+//      case OwnI => ""
+//      case WeakI => "1_Weak_"
+//      case ImmutableBorrowI => "1_IRef_"
+//      case MutableBorrowI => "1_Ref_"
+//    }) + mangleKind(kind)
+  }
+
+  def mangleTemplata(templata: ITemplataI[cI]): String = {
+    ""
+//    templata match {
+//      case CoordTemplataI(region, coord) => mangleCoord(coord)
+//      case other => vimpl(other)
+//    }
+  }
+
   def translate(hinputs: HinputsI): ProgramH = {
     val HinputsI(
     interfaces,
@@ -186,10 +259,11 @@ class Hammer(interner: Interner, keywords: Keywords) {
     edges,
     kindExports,
     functionExports,
+    kindExterns,
     functionExterns) = hinputs
 
 
-    val hamuts = HamutsBox(Hamuts(Map(), Map(), Map(), Vector.empty, Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map()))
+    val hamuts = HamutsBox(Hamuts(Map(), Map(), Map(), Map(), Vector.empty, Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map(), Map()))
     //    val emptyPackStructRefH = structHammer.translateStructRef(hinputs, hamuts, emptyPackStructRef)
     //    vassert(emptyPackStructRefH == ProgramH.emptyTupleStructRef)
 
@@ -208,9 +282,48 @@ class Hammer(interner: Interner, keywords: Keywords) {
 //      hamuts.addKindExtern(kindH, packageCoordinate, exportName)
 //    })
 
-    functionExterns.foreach({ case FunctionExternI(prototype, exportName) =>
+    kindExterns.foreach({ case (struct, KindExternI(_)) =>
+      val exportName = mangleStruct(struct.id)
+      val exportSimplifiedId = NameHammer.simplifyId(struct.id)
+      val opaqueH = structHammer.translateOpaqueI(hinputs, hamuts, struct)
+      hamuts.addKindExtern(opaqueH, exportSimplifiedId, exportName)
+    })
+
+    functionExterns.foreach({ case FunctionExternI(prototype, numInherited) =>
+      // Non-rust externs (stdlib's fsqrt etc.) use humanName directly so the user-written
+      // `#include "stdlib/fsqrt.h"` and the generated header path agree. Rust externs use
+      // "" because ValeRuster reads exportSimplifiedId instead of exportName.
+      val exportName =
+        if (prototype.id.packageCoord.module.str == "rust") {
+          ""
+        } else {
+          prototype.id.localName match {
+            case ExternFunctionNameI(humanName, _, _) => humanName.str
+            case other => vwat(other)
+          }
+        }
+      val rawSimpleId = NameHammer.simplifyId(prototype.id)
+      val exportSimplifiedId =
+        if (numInherited == 0) {
+          rawSimpleId
+        } else {
+          // Per @PRIIROZ, inherited generic params come AFTER own ones in the leaf step's
+          // templateArgs (e.g. `zork<N, K, V>` where N is own and K, V are inherited).
+          // Move the trailing `numInherited` args off the leaf step onto the immediately
+          // preceding (parent citizen) step, producing e.g. `[..., Vec<i32>, capacity]`
+          // instead of `[..., Vec, capacity<i32>]`. This is the shape Backend's
+          // rustifySimpleId expects per @SMLRZ.
+          val steps = rawSimpleId.steps
+          val leaf = steps.last
+          val parentIdx = steps.length - 2
+          val parent = steps(parentIdx)
+          val (own, inherited) = leaf.templateArgs.splitAt(leaf.templateArgs.size - numInherited)
+          val newParent = SimpleIdStep(parent.name, parent.templateArgs ++ inherited)
+          val newLeaf = SimpleIdStep(leaf.name, own)
+          SimpleId(steps.updated(parentIdx, newParent).updated(steps.length - 1, newLeaf))
+        }
       val prototypeH = typeHammer.translatePrototype(hinputs, hamuts, prototype)
-      hamuts.addFunctionExtern(prototypeH, exportName)
+      hamuts.addFunctionExtern(prototypeH, exportSimplifiedId, exportName)
     })
 
     // We generate the names here first, so that externs get the first chance at having
@@ -259,8 +372,8 @@ class Hammer(interner: Interner, keywords: Keywords) {
 //    val packageToImmDestructorPrototypes = immDestructorPrototypesH.groupBy(_._1.packageCoord(interner, keywords))
     val packageToExportNameToKind = hamuts.packageCoordToExportNameToKind
     val packageToExportNameToFunction = hamuts.packageCoordToExportNameToFunction
-    val packageToExternNameToKind = hamuts.packageCoordToExternNameToKind
-    val packageToExternNameToFunction = hamuts.packageCoordToExternNameToFunction
+    val packageToExternNameToKind = hamuts.packageCoordToKindToExtern
+    val packageToExternNameToFunction = hamuts.packageCoordToPrototypeToExtern
 
     val allPackageCoords =
       packageToInterfaceDefs.keySet ++

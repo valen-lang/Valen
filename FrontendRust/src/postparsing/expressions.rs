@@ -300,7 +300,8 @@ pub enum IExpressionSE<'s> {
   Index(IndexSE<'s>),
   FunctionCall(FunctionCallSE<'s>),
   LocalLoad(LocalLoadSE<'s>),
-  OutsideLoad(OutsideLoadSE<'s>),
+  OverloadSet(OverloadSetSE<'s>),
+  TemplataLoad(TemplataLoadSE<'s>),
   RuneLookup(RuneLookupSE<'s>),
   Ownershipped(OwnershippedSE<'s>),
 }
@@ -342,7 +343,8 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
       IExpressionSE::Index(x) => x.range.clone(),
       IExpressionSE::FunctionCall(x) => x.range.clone(),
       IExpressionSE::LocalLoad(x) => x.range.clone(),
-      IExpressionSE::OutsideLoad(x) => x.range.clone(),
+      IExpressionSE::OverloadSet(x) => x.lookup.range.clone(),
+      IExpressionSE::TemplataLoad(x) => x.range.clone(),
       IExpressionSE::RuneLookup(x) => x.range.clone(),
       IExpressionSE::Ownershipped(x) => x.range.clone(),
     }
@@ -688,26 +690,102 @@ pub struct LocalLoadSE<'s> {
   pub name: IVarNameS<'s>,
   pub target_ownership: LoadAsP,
 }
+// One step in a OutsideLoadSE. See OutsideLoadSE comments.
+#[derive(Debug, PartialEq)]
+pub struct LoadPartSE<'s> {
+  pub name: IImpreciseNameS<'s>,
+  pub explicit_template_args: &'s [RuneUsage<'s>],
+}
+/*
+// One step in a OutsideLoadSE. See OutsideLoadSE comments.
+case class LoadPartSE(
+  name: IImpreciseNameS,
+  explicitTemplateArgs: Vector[RuneUsage]
+) {
+  vpass()
+}
+*/
+
+// A load from something that lives outside the current definition.
+// For example:
+//     v = Vec<int>.with_capacity(42)
+// would have a OutsideLoadSE for the `Vec<int>.with_capacity` part.
+// It would look like this:
+// - parts: [LoadPartSE("Vec", [$0]), LoadPartSE("with_capacity", [])]
+// - rules: [$0 = LookupSR("int")]
+// Per @PRIIROZ, we add containers' generic params *after* the function's generic params.
+// Example:
+//     number_to_corresponding_string = HashMap<int, str>.create_and_fill(64, 42, i => to_string(i))
+// Would look like this:
+// - parts: [LoadPartSE("HashMap", [$0, $1]), LoadPartSE("create_and_fill", [$2])]
+// - rules: [$0 = "int", $1 = "str", $2 = main:lambda:1]
+//
+// This is only used by OverloadSetSE so far, but someday it could be used for looking up associated aliases on structs
+// or something.
 #[derive(Debug, PartialEq)]
 pub struct OutsideLoadSE<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
-  pub name: IImpreciseNameS<'s>,
-  pub maybe_template_args: Option<&'s [RuneUsage<'s>]>,
-  pub target_ownership: LoadAsP,
+  // parts' explicitArgs are runes that refer to the above rules.
+  pub parts: &'s [&'s LoadPartSE<'s>],
 }
 /*
-// Loads a non-local. In well formed code, this will be a function, but the user also likely
-// tried to access a variable they forgot to declare.
+// A load from something that lives outside the current definition.
+// For example:
+//     v = Vec<int>.with_capacity(42)
+// would have a OutsideLoadSE for the `Vec<int>.with_capacity` part.
+// It would look like this:
+// - parts: [LoadPartSE("Vec", [$0]), LoadPartSE("with_capacity", [])]
+// - rules: [$0 = LookupSR("int")]
+// Per @PRIIROZ, we add containers' generic params *after* the function's generic params.
+// Example:
+//     number_to_corresponding_string = HashMap<int, str>.create_and_fill(64, 42, i => to_string(i))
+// Would look like this:
+// - parts: [LoadPartSE("HashMap", [$0, $1]), LoadPartSE("create_and_fill", [$2])]
+// - rules: [$0 = "int", $1 = "str", $2 = main:lambda:1]
+//
+// This is only used by OverloadSetSE so far, but someday it could be used for looking up associated aliases on structs
+// or something.
 case class OutsideLoadSE(
   range: RangeS,
   rules: Vector[IRulexSR],
-  name: IImpreciseNameS,
-  maybeTemplateArgs: Option[Vector[RuneUsage]],
-  targetOwnership: LoadAsP
-) extends IExpressionSE {
+  // parts' explicitArgs are runes that refer to the above rules.
+  parts: Vector[LoadPartSE]
+) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
+  vpass()
+}
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct OverloadSetSE<'s> {
+  pub lookup: OutsideLoadSE<'s>,
+}
+/*
+case class OverloadSetSE(
+    lookup: OutsideLoadSE
+) extends IExpressionSE {
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
+  override def range = lookup.range
+}
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct TemplataLoadSE<'s> {
+  pub range: RangeS<'s>,
+  pub rules: &'s [IRulexSR<'s>],
+  pub target_ownership: LoadAsP,
+}
+/*
+case class TemplataLoadSE(
+    range: RangeS,
+    rules: Vector[IRulexSR],
+    targetOwnership: LoadAsP
+)  extends IExpressionSE {
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
   vpass()
 }
 */

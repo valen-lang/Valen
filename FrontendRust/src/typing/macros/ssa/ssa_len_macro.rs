@@ -78,7 +78,7 @@ where 's: 't,
             source_expr: ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                 value: len,
                 bits: 32,
-                region: RegionT,
+                region: RegionT { region: IRegionT::Default },
             })),
         }));
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
@@ -115,7 +115,7 @@ where 's: 't,
           Vector(
             DiscardTE(ArgLookupTE(0, paramCoords(0).tyype)),
             ReturnTE(
-              ConstantIntTE(len, 32, RegionT())))))
+              ConstantIntTE(len, 32, RegionT(DefaultRegionT))))))
     (header, body)
   }
 

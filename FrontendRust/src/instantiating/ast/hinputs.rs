@@ -1,24 +1,24 @@
 // VISTODO: rename Hinputs everywhere
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::{cI, sI};
+use crate::instantiating::ast::types::{cI, sI, StructIT};
 use crate::instantiating::ast::names::IdI;
 use crate::instantiating::ast::names::{IStructTemplateNameI, IInterfaceTemplateNameI, IImplTemplateNameI, IFunctionTemplateNameI};
 use crate::instantiating::ast::ast::{
     EdgeI, FunctionDefinitionI, FunctionExportI, FunctionExternI, InterfaceEdgeBlueprintI,
-    KindExportI, PrototypeI,
+    KindExportI, KindExternI, PrototypeI,
 };
-use crate::instantiating::ast::citizens::{InterfaceDefinitionI, StructDefinitionI};
+use crate::instantiating::ast::citizens::{ICitizenDefinitionI, InterfaceDefinitionI, StructDefinitionI};
 
 /*
 package dev.vale.instantiating.ast
 
 import dev.vale.postparsing.IRuneS
 import dev.vale.typing.ast._
-import dev.vale.typing.names.{CitizenNameT, CitizenTemplateNameT, IdT, FunctionNameT, IFunctionNameT, LambdaCitizenNameT}
+import dev.vale.typing.names.{CitizenNameT, CitizenTemplateNameT, FunctionNameT, IFunctionNameT, IdT, LambdaCitizenNameT}
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
-import dev.vale.{StrI, vassertOne, vassertSome, vcurious, vfail, vimpl}
+import dev.vale.{StrI, vassert, vassertOne, vassertSome, vcurious, vfail, vimpl}
 import dev.vale.typing.ast._
 import dev.vale.typing.names._
 import dev.vale.typing.types._
@@ -54,6 +54,7 @@ pub struct HinputsI<'s, 'i> where 's: 'i {
         ArenaIndexMap<'i, IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>>,
     pub kind_exports: &'i [KindExportI<'s, 'i>],
     pub function_exports: &'i [FunctionExportI<'s, 'i>],
+    pub kind_externs: ArenaIndexMap<'i, StructIT<'s, 'i, cI>, KindExternI<'s, 'i>>,
     pub function_externs: &'i [FunctionExternI<'s, 'i>],
 }
 /*
@@ -73,9 +74,18 @@ case class HinputsI(
 
   kindExports: Vector[KindExportI],
   functionExports: Vector[FunctionExportI],
-//  kindExterns: Vector[KindExternI],
+  kindExterns: Map[StructIT[cI], KindExternI],
   functionExterns: Vector[FunctionExternI],
 ) {
+*/
+// mig: fn to_string
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn to_string(&self) -> String {
+        panic!("Unimplemented: to_string")
+    }
+}
+/*
+  override def toString: String = "HinputsI#()"
 
   private val subCitizenToInterfaceToEdgeMutable = mutable.HashMap[IdI[cI, ICitizenNameI[cI]], mutable.HashMap[IdI[cI, IInterfaceNameI[cI]], EdgeI]]()
   interfaceToSubCitizenToEdge.foreach({ case (interface, subCitizenToEdge) =>
@@ -128,6 +138,22 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 /*
   def lookupInterface(interfaceId: IdI[cI, IInterfaceNameI[cI]]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
+  }
+
+*/
+// mig: fn lookup_citizen
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_citizen(
+        &self,
+        _citizen_id: &IdI<'s, 'i, cI>,
+    ) -> ICitizenDefinitionI<'s, 'i, cI> {
+        panic!("Unimplemented: lookup_citizen")
+    }
+}
+/*
+  def lookupCitizen(citizenId: IdI[cI, ICitizenNameI[cI]]): CitizenDefinitionI = {
+    vassertOne(
+      structs.find(_.instantiatedCitizen.id == citizenId) ++ interfaces.find(_.instantiatedCitizen.id == citizenId))
   }
 
 */

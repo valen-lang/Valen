@@ -67,8 +67,7 @@ class FunctionCompilerSolvingLayer(
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) =
@@ -135,8 +134,7 @@ class FunctionCompilerSolvingLayer(
     checkClosureConcernsHandled(declaringEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, 0)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) = {
@@ -207,9 +205,11 @@ class FunctionCompilerSolvingLayer(
       case _ =>
     }
 
+    // Per @ECSIIOSZ, this is the per-call-site solver for function call resolution: argument
+    // types become InitialSends, explicit template args become InitialKnowns, and
+    // assembleCallSiteRules filters per SROACSD.
     val callSiteRules =
-      TemplataCompiler.assembleCallSiteRules(
-        function.rules, function.genericParameters, explicitTemplateArgs.size)
+      TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
@@ -286,6 +286,8 @@ class FunctionCompilerSolvingLayer(
   }
 
   // IOW, add the necessary data to turn the near env into the runed env.
+  // The reachableBoundsFromParamsAndReturn harvest violates @BDPFWDZ — the bound prototypes
+  // are pushed downward from each citizen-typed param's inner env into this near-env.
   private def addRunedDataToNearEnv(
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
     identifyingRunes: Vector[IRuneS],
@@ -305,7 +307,7 @@ class FunctionCompilerSolvingLayer(
         templatasByRune.toVector
           .map({ case (k, v) => (interner.intern(RuneNameT(k)), TemplataEnvEntry(v)) }))
 
-    val defaultRegion = RegionT()
+    val defaultRegion = RegionT(DefaultRegionT)
 
     BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
       globalEnv,
@@ -334,15 +336,15 @@ class FunctionCompilerSolvingLayer(
     callLocation: LocationInDenizen,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]],
     contextRegion: RegionT,
-    args: Vector[Option[CoordT]]):
+    args: Vector[Option[CoordT]],
+    containerRuneInitialKnowns: Vector[InitialKnown] = Vector.empty):
   (IResolveFunctionResult) = {
     val function = outerEnv.function
     // Check preconditions
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args)
 
@@ -351,16 +353,21 @@ class FunctionCompilerSolvingLayer(
     val rules = callSiteRules
     val runeToType = function.runeToType
     val invocationRange = callRange
-    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
+    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs) ++ containerRuneInitialKnowns
     val includeReachableBoundsForRunes =
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 
+    // No MKRFA preprocessing needed: `function.rules` is declaration-scoped (same solver as
+    // the function's own generic params), so the postparser never emits RuneParentEnvLookupSR
+    // into it. If this site ever starts consuming expression-level rules, MKRFA preprocessing
+    // MUST be added — see OverloadResolver.scala:311 and docs/refactor-thoughts/mkrfa-protocol-leak.md.
     val solver =
       inferCompiler.makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 
     var loopCheck = function.genericParameters.size + 1
 
-    // Incrementally solve and add default generic parameters (and context region).
+    // Per @DRSINI, defaults are added here incrementally as a fallback, only for runes
+    // that remain unsolved after argument inference.
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
       (solverState) => {
@@ -379,7 +386,8 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
+                solverState.commitStep[ITypingPassSolverError](
+                  false, Vector(), Map(), defaultRules.rules, defaultRules.runeToType.keySet).getOrDie()
                 true
               }
               case None => {
@@ -453,7 +461,7 @@ class FunctionCompilerSolvingLayer(
     //   func map<T, F>(self Opt<T>, f F, t T) { ... }
     // into a:
     //   func map<F>(self Opt<$0>, f F, t $0) { ... }
-    val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT())
+    val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT(DefaultRegionT))
     val preliminarySolverState =
       inferCompiler.makeSolverState(
         preliminaryEnvs,
@@ -485,12 +493,10 @@ class FunctionCompilerSolvingLayer(
           case Some(x) => Some(InitialKnown(genericParam.rune, x))
           case None => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
-//            val runeType = vassertSome(function.runeToType.get(genericParam.rune.rune))
-            vimpl()
             val placeholderPureHeight = vregionmut(None)
             val templata =
               templataCompiler.createPlaceholder(
-                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, false)
+                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, true)
             Some(InitialKnown(genericParam.rune, templata))
           }
         }
@@ -501,7 +507,7 @@ class FunctionCompilerSolvingLayer(
 
     val CompleteDefineSolve(inferences, instantiationBoundParams) =
       inferCompiler.solveForDefining(
-        InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT()),
+        InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT(DefaultRegionT)),
         coutputs,
         functionDefinitionRules,
         function.runeToType,
@@ -552,7 +558,7 @@ class FunctionCompilerSolvingLayer(
     val paramAndReturnRunes =
       (function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)).distinct.toVector
 
-    val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT())
+    val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT(DefaultRegionT))
     val solver =
       inferCompiler.makeSolverState(
         envs, coutputs, definitionRules, function.runeToType, range, Vector(), Vector())

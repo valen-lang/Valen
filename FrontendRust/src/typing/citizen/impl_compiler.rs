@@ -54,7 +54,7 @@ import dev.vale.{Accumulator, Err, Interner, Ok, Profiler, RangeS, Result, U, po
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing._
-import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT}
+import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT, StructDefinitionT}
 import dev.vale.typing.env._
 import dev.vale.typing.function._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -155,7 +155,7 @@ where 's: 't,
             parent_ranges: all_ranges_slice,
             call_location,
             self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Citizen(outer_env)),
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, all_ranges_slice, initial_knowns, &[]);
@@ -217,7 +217,9 @@ where 's: 't,
     // This is callingEnv because we might be coming from an abstract function that's trying
     // to evaluate an override.
     val originalCallingEnv = callingEnv
-    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
+    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT(DefaultRegionT))
+    // Per @ECSIIOSZ, this is a per-call-site solver instantiation for impl resolution;
+    // initialKnowns come from the caller via solveImplForCall's preprocessing.
     val solver =
       inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
@@ -295,7 +297,7 @@ where 's: 't,
             parent_ranges: all_ranges_slice,
             call_location,
             self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Citizen(outer_env)),
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, all_ranges_slice, initial_knowns, &[]);
@@ -348,7 +350,7 @@ where 's: 't,
     // This is callingEnv because we might be coming from an abstract function that's trying
     // to evaluate an override.
     val originalCallingEnv = callingEnv
-    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
+    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT(DefaultRegionT))
     val solverState =
       inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
@@ -416,7 +418,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![impl_a.range]),
             call_location,
             self_env: IEnvironmentT::from(impl_outer_env_iden),
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
 
         let complete_define_solve = match self.solve_for_defining(
@@ -601,7 +603,7 @@ where 's: 't,
         List(range),
         callLocation,
         outerEnv,
-        RegionT())
+        RegionT(DefaultRegionT))
     val CompleteDefineSolve(inferences, InstantiationBoundArgumentsT(_, reachableBoundsFromSubCitizen, _)) =
       inferCompiler.solveForDefining(
         envs,
@@ -636,7 +638,15 @@ where 's: 't,
     val superInterfaceTemplateId =
       TemplataCompiler.getInterfaceTemplate(superInterface.id)
 
-
+    val subCitizenWeakable =
+      coutputs.lookupCitizen(subCitizen) match {
+        case s: StructDefinitionT => s.weakable
+        case i: InterfaceDefinitionT => i.weakable
+      }
+    val superInterfaceWeakable = coutputs.lookupInterface(superInterface).weakable
+    if (subCitizenWeakable != superInterfaceWeakable) {
+      throw WeakableImplingMismatch(subCitizenWeakable, superInterfaceWeakable)
+    }
     val templateArgs = implA.genericParams.map(_.rune.rune).map(inferences)
     val instantiatedId = assembleImplName(implTemplateId, templateArgs, subCitizen)
 

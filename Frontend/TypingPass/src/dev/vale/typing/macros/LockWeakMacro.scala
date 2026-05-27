@@ -35,7 +35,7 @@ class LockWeakMacro(
 
     val borrowCoord = paramCoords.head.tyype.copy(ownership = BorrowT)
     val (optCoord, someConstructor, noneConstructor, someImplId, noneImplId) =
-      expressionCompiler.getOption(coutputs, env, callRange, callLocation, RegionT(), borrowCoord)
+      expressionCompiler.getOption(coutputs, env, callRange, callLocation, RegionT(DefaultRegionT), borrowCoord)
     val lockExpr =
       LockWeakTE(
         ArgLookupTE(0, paramCoords.head.tyype),

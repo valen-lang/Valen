@@ -1204,3 +1204,10 @@ LiveRef ResilientV3::immutabilify(
       preCheckBorrow(checkerAFL, functionState, builder, regionInstanceRef, refMT, ref, false);
   return liveRef;
 }
+
+void ResilientV3::declareOpaque(Opaque* opaque) {
+  { assert(false); throw 1337; } // impl
+}
+void ResilientV3::defineOpaque(Opaque* opaque, int size, int alignment) {
+  { assert(false); throw 1337; } // impl
+}

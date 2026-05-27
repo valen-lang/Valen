@@ -204,6 +204,7 @@ class LocalHelper(
     }
   }
 
+
   def borrowSoftLoad(coutputs: CompilerOutputs, expr2: AddressExpressionTE):
   ReferenceExpressionTE = {
     val ownership = getBorrowOwnership(coutputs, expr2.result.coord.kind)

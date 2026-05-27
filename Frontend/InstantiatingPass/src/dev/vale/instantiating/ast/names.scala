@@ -321,18 +321,10 @@ case class BuildingFunctionNameWithClosuredsI[+R <: IRegionsModeI](
 
 case class ExternFunctionNameI[+R <: IRegionsModeI](
   humanName: StrI,
+  templateArgs: Vector[ITemplataI[R]],
   parameters: Vector[CoordI[R]]
 ) extends IFunctionNameI[R] with IFunctionTemplateNameI[R] {
   override def template: IFunctionTemplateNameI[R] = this
-
-//  override def makeFunctionName(
-//    interner: Interner,
-//    keywords: Keywords,
-//    templateArgs: Vector[ITemplataI[R]],
-//    params: Vector[CoordI]):
-//  IFunctionNameI = this
-
-  override def templateArgs: Vector[ITemplataI[R]] = Vector.empty
 }
 
 case class FunctionNameIX[+R <: IRegionsModeI](
@@ -385,6 +377,7 @@ case class FunctionTemplateNameI[+R <: IRegionsModeI](
 //  }
 }
 
+// Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS,
   paramTypes: Vector[CoordT]
@@ -531,6 +524,7 @@ case class InterfaceNameI[+R <: IRegionsModeI](
   vpass()
 }
 
+// Per @LAGTNGZ, closure struct isn't parameterized; one struct corresponds to many LambdaCallFunctionNameIs.
 case class LambdaCitizenTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS
 ) extends IStructTemplateNameI[R] {

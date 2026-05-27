@@ -15,6 +15,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::infer_compiler::InitialKnown;
 use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -40,7 +41,7 @@ import dev.vale.typing.env._
 import dev.vale.typing.function._
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env.{AddressibleClosureVariableT, BuildingFunctionEnvironmentWithClosuredsT, IEnvEntry, IInDenizenEnvironmentT, IVariableT, ReferenceClosureVariableT, TemplataEnvEntry, TemplatasStore}
-import dev.vale.typing.{CompilerOutputs, ConvertHelper, InferCompiler, TemplataCompiler, TypingPassOptions, env}
+import dev.vale.typing.{CompilerOutputs, ConvertHelper, InferCompiler, InitialKnown, TemplataCompiler, TypingPassOptions, env}
 import dev.vale.typing.names._
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
@@ -197,6 +198,7 @@ where 's: 't,
         panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_prototype");
     }
 /*
+  // Per @LAGTNGZ, each call site reaches here with its own argTypes, producing a distinct LambdaCallFunctionTemplateNameT.
   def evaluateTemplatedClosureFunctionFromCallForPrototype(
     outerEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -281,6 +283,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
+        container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         self.check_not_closure(function);
 
@@ -299,9 +302,10 @@ where 's: 't,
         let outer_env_id = parent_env.id().add_step(self.typing_interner, function_name_local);
         let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, false);
         self.evaluate_generic_function_from_call_for_prototype(
-            outer_env, coutputs, calling_env, call_range, call_location, explicit_template_args, context_region, args)
+            outer_env, coutputs, calling_env, call_range, call_location, explicit_template_args, context_region, args, container_rune_initial_knowns)
     }
 /*
+  // Per @LAGTNGZ, "Generic" here means true generics (one solve, later stamped); contrast the Templated methods used for lambdas.
   def evaluateGenericLightFunctionFromCallForPrototype2(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -311,14 +315,15 @@ where 's: 't,
     function: FunctionA,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]],
     contextRegion: RegionT,
-    args: Vector[Option[CoordT]]):
+    args: Vector[Option[CoordT]],
+    containerRuneInitialKnowns: Vector[InitialKnown] = Vector.empty):
   (IResolveFunctionResult) = {
     checkNotClosure(function);
 
     val outerEnvId = parentEnv.id.addStep(nameTranslator.translateGenericFunctionName(function.name))
     val outerEnv = makeEnvWithoutClosureStuff(parentEnv, function, outerEnvId, false)
     ordinaryOrTemplatedLayer.evaluateGenericFunctionFromCallForPrototype(
-      outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, args)
+      outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, args, containerRuneInitialKnowns)
   }
 
 */

@@ -13,7 +13,7 @@ import dev.vale.typing.env._
 import dev.vale.typing.function._
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env.{AddressibleClosureVariableT, BuildingFunctionEnvironmentWithClosuredsT, IEnvEntry, IInDenizenEnvironmentT, IVariableT, ReferenceClosureVariableT, TemplataEnvEntry, TemplatasStore}
-import dev.vale.typing.{CompilerOutputs, ConvertHelper, InferCompiler, TemplataCompiler, TypingPassOptions, env}
+import dev.vale.typing.{CompilerOutputs, ConvertHelper, InferCompiler, InitialKnown, TemplataCompiler, TypingPassOptions, env}
 import dev.vale.typing.names._
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
@@ -107,6 +107,7 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
   }
 
+  // Per @LAGTNGZ, each call site reaches here with its own argTypes, producing a distinct LambdaCallFunctionTemplateNameT.
   def evaluateTemplatedClosureFunctionFromCallForPrototype(
     outerEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -153,6 +154,7 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, argTypes)
   }
 
+  // Per @LAGTNGZ, "Generic" here means true generics (one solve, later stamped); contrast the Templated methods used for lambdas.
   def evaluateGenericLightFunctionFromCallForPrototype2(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -162,14 +164,15 @@ class FunctionCompilerClosureOrLightLayer(
     function: FunctionA,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]],
     contextRegion: RegionT,
-    args: Vector[Option[CoordT]]):
+    args: Vector[Option[CoordT]],
+    containerRuneInitialKnowns: Vector[InitialKnown] = Vector.empty):
   (IResolveFunctionResult) = {
     checkNotClosure(function);
 
     val outerEnvId = parentEnv.id.addStep(nameTranslator.translateGenericFunctionName(function.name))
     val outerEnv = makeEnvWithoutClosureStuff(parentEnv, function, outerEnvId, false)
     ordinaryOrTemplatedLayer.evaluateGenericFunctionFromCallForPrototype(
-      outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, args)
+      outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, args, containerRuneInitialKnowns)
   }
 
   def evaluateGenericVirtualDispatcherFunctionForPrototype(

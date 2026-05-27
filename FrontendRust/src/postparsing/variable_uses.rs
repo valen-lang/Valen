@@ -144,6 +144,13 @@ impl<'s> VariableUses<'s> {
     VariableUses { uses: Vec::new() }
   }
 
+  pub fn is_empty(&self) -> bool {
+    self.uses.is_empty()
+  }
+/*
+  def isEmpty: Boolean = uses.isEmpty
+*/
+
   pub fn all_used_names(&self) -> Vec<IVarNameS<'_>> {
     self.uses.iter().map(|use_| use_.name.clone()).collect()
   }

@@ -108,8 +108,15 @@ Ref buildCallOrSideCall(
   hostArgsLE.insert(hostArgsLE.end(), sizeArgsLE.begin(), sizeArgsLE.end());
   sizeArgsLE.clear();
 
-  auto externFuncIter = globalState->externFunctions.find(prototype->name->name);
-  assert(externFuncIter != globalState->externFunctions.end());
+  auto externFuncIter = globalState->externFunctions.find(prototype);
+  if (externFuncIter == globalState->externFunctions.end()) {
+      std::cerr << "Couldn't find extern: " << (void*)prototype << " " << prototype->name->name << std::endl;
+      for (auto [key, value] : globalState->externFunctions) {
+          std::cerr << "Candidate: " << (void*)key << " " << key->name->name << std::endl;
+      }
+      std::cerr << "Couldn't find extern: " << (void*)prototype << " " << prototype->name->name << std::endl;
+      exit(1);
+  }
   auto externFuncL = externFuncIter->second;
 
   buildFlare(FL(), globalState, functionState, builder, "Suspending function ", functionState->containingFuncName);

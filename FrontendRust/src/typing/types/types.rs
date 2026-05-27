@@ -125,9 +125,23 @@ case object YonderT extends LocationT {
 */
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RegionT;
+pub enum IRegionT {
+  Iso,
+  // TODO: Get rid of this when we have an actual default region
+  Default,
+}
+
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RegionT {
+  pub region: IRegionT,
+}
 /*
-case class RegionT()
+sealed trait IRegionT
+case object IsoRegionT extends IRegionT
+// TODO: Get rid of this when we have an actual default region
+case object DefaultRegionT extends IRegionT
+case class RegionT(region: IRegionT)
 */
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

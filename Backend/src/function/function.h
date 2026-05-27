@@ -192,7 +192,8 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
 RawFuncPtrLE declareExternFunction(
     GlobalState* globalState,
     Package* package,
-    Prototype* prototypeM);
+    Prototype* prototypeM,
+    const std::string& mangledName);
 
 //LLVMTypeRef translateExternType(GlobalState* globalState, Reference* reference);
 

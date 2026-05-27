@@ -19,7 +19,7 @@ An "old definition" is a Rust `struct`, `impl`, `fn`, `trait`, or `const` that:
  * Appears OUTSIDE the sliced section (i.e., NOT directly under a `// mig:` comment).
  * Has a matching placeholder stub under a `// mig:` comment somewhere else in the file.
 
-Match by name: `pub struct FileCoordinate` matches `// mig: struct FileCoordinate`. `pub fn put_package` matches `// mig: fn put_package`. `impl FileCoordinate` matches `// mig: impl FileCoordinate`.
+Match by name: `pub struct FileCoordinate` matches `// mig: struct FileCoordinate`. `pub fn put_package` matches `// mig: fn put_package` — including a fn wrapped in an `impl FileCoordinate { ... }` block, which matches via its fn name (there is no separate `// mig: impl` marker).
 
 # Steps
 

@@ -229,7 +229,7 @@ class EdgeCompiler(
           val originalPlaceholderTemplateId = TemplataCompiler.getPlaceholderTemplate(originalPlaceholderId)
           val mutability = coutputs.lookupMutability(originalPlaceholderTemplateId)
           coutputs.declareTypeMutability(placeholderTemplateId, mutability)
-          CoordTemplataT(CoordT(ownership, RegionT(), KindPlaceholderT(placeholderId)))
+          CoordTemplataT(CoordT(ownership, RegionT(DefaultRegionT), KindPlaceholderT(placeholderId)))
         }
         case other => vwat(other)
       }
@@ -355,9 +355,28 @@ class EdgeCompiler(
     val dispatcherParams =
       originFunctionTemplata.function.params.map(_.pattern.coordRune).map(vassertSome(_)).map(_.rune)
         .map(rune => expectCoordTemplata(dispatcherInnerInferences(rune)).coord)
+    // Any generic parameter of the abstract function that wasn't pinned by the impl's self-type
+    // gets a fresh dispatcher-owned placeholder inside evaluateGenericVirtualDispatcherFunctionForPrototype.
+    // Collect those so they appear in the dispatcher's templateArgs — the Instantiator's
+    // assemblePlaceholderMap zips templateArgs with concrete args at monomorphization, so any
+    // placeholder that doesn't appear here can't be substituted and trips a vassertSome later.
+    // Example: map<T, R>(&Opt<T>, &IFunction1<mut,&T,R>) Opt<R> with impl<I> Opt<I> for Some<I> —
+    // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
+    val existingDispatcherPlaceholderIds =
+      dispatcherPlaceholders.map(TemplataCompiler.getPlaceholderTemplataId).toSet
+    val freshDispatcherPlaceholders =
+      originFunctionTemplata.function.genericParameters.flatMap(gp =>
+        dispatcherInnerInferences.get(gp.rune.rune).flatMap({
+          case templata @ CoordTemplataT(CoordT(_, _, KindPlaceholderT(id))) =>
+            if (existingDispatcherPlaceholderIds.contains(id)) None else Some(templata)
+          case templata @ KindTemplataT(KindPlaceholderT(id)) =>
+            if (existingDispatcherPlaceholderIds.contains(id)) None else Some(templata)
+          case _ => None
+        }))
+    val allDispatcherPlaceholders = dispatcherPlaceholders ++ freshDispatcherPlaceholders
     val dispatcherId =
       dispatcherTemplateId.copy(localName =
-        dispatcherTemplateId.localName.makeFunctionName(interner, keywords, dispatcherPlaceholders.toVector, dispatcherParams))
+        dispatcherTemplateId.localName.makeFunctionName(interner, keywords, allDispatcherPlaceholders.toVector, dispatcherParams))
 
     val dispatcherInnerEnv =
       GeneralEnvironmentT.childOf(
@@ -560,7 +579,8 @@ class EdgeCompiler(
         overrideImpreciseName,
         Vector.empty,
         Vector.empty,
-        RegionT(),
+        Vector.empty,
+        RegionT(DefaultRegionT),
         overrideFunctionParamTypes,
         Vector(
           coutputs.getOuterEnvForType(List(range, impl.templata.impl.range), interfaceTemplateId),

@@ -303,7 +303,7 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     env: EnvironmentA,
     structS: StructS):
   StructA = {
-    val StructS(rangeS, nameS, attributesS, weakable, genericParametersS, mutabilityRuneS, maybePredictedMutability, tyype, headerRuneToExplicitType, headerPredictedRuneToType, headerRulesWithImplicitlyCoercingLookupsS, membersRuneToExplicitType, membersPredictedRuneToType, memberRulesWithImplicitlyCoercingLookupsS, members) = structS
+    val StructS(rangeS, nameS, attributesS, weakable, genericParametersS, mutabilityRuneS, maybePredictedMutability, tyype, headerRuneToExplicitType, headerPredictedRuneToType, headerRulesWithImplicitlyCoercingLookupsS, membersRuneToExplicitType, membersPredictedRuneToType, memberRulesWithImplicitlyCoercingLookupsS, members, internalMethodsS) = structS
 
     val runeTypingEnv =
       new IRuneTypeSolverEnv {
@@ -388,6 +388,13 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
       case MaybeCoercingCallSR(_, _, _, _) => vwat()
     })
 
+    val methodsEnv =
+      env.addRunes(runeAToType.toMap)
+    val internalMethodsA =
+      internalMethodsS.map(method => {
+        translateFunction(astrouts, methodsEnv, method)
+      })
+
     val structA =
       highertyping.StructA(
         rangeS,
@@ -402,7 +409,8 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
         headerRulesExplicitS,
         membersRuneAToType,
         memberRulesExplicitS,
-        members)
+        members,
+        internalMethodsA)
     astrouts.codeLocationToStruct.put(rangeS.begin, structA)
     structA
   }

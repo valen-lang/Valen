@@ -42,7 +42,7 @@ class DestructorCompiler(
     val name = interner.intern(CodeNameS(keywords.drop))
     val args = Vector(type2)
     overloadCompiler.findFunction(
-      env, coutputs, callRange, callLocation, name, Vector.empty, Vector.empty, contextRegion, args, Vector(), true) match {
+      env, coutputs, callRange, callLocation, name, Vector.empty, Vector.empty, Vector.empty, contextRegion, args, Vector(), true) match {
       case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(callRange, e))
       case Ok(x) => x
     }
@@ -62,7 +62,7 @@ class DestructorCompiler(
         case CoordT(ShareT, _, _) => DiscardTE(undestructedExpr2)
         case r@CoordT(OwnT, _, _) => {
           val StampFunctionSuccess(destructorPrototype, _) =
-            getDropFunction(env, coutputs, callRange, callLocation, RegionT(), r)
+            getDropFunction(env, coutputs, callRange, callLocation, RegionT(DefaultRegionT), r)
           vassert(coutputs.getInstantiationBounds(destructorPrototype.id).nonEmpty)
           val resultTT =
             destructorPrototype.returnType

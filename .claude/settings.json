@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Sylvan/.claude/hooks/guardian-client.sh || exit 2"
+            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh 7879 || exit 2"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Sylvan/.claude/hooks/guardian-client.sh || exit 2"
+            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh 7879 || exit 2"
           }
         ]
       }

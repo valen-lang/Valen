@@ -8,6 +8,7 @@ import dev.vale.postparsing._
 import dev.vale.solver.{FailedSolve, ISolverError, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.ast.PrototypeT
+import dev.vale.typing.function.StampFunctionSuccess
 import dev.vale.typing.names._
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
@@ -157,6 +158,19 @@ trait IInfererDelegate {
     returnCoord: CoordT):
   PrototypeTemplataT[IFunctionNameT]
 
+  // Per @BRRZ, used by the relaxed ResolveSR handler when the return rune isn't known.
+  // Performs a real overload lookup against the caller's (snapshotted) env and returns
+  // the stamped function's prototype, whose returnType unblocks the solver. Mirrors
+  // the outer InferCompiler delegate's resolveFunction — this delegate exists only
+  // inside the solver's own handler dispatch, so we need it declared here too.
+  def resolveFunction(
+    env: InferEnv,
+    state: CompilerOutputs,
+    range: List[RangeS],
+    name: StrI,
+    paramCoords: Vector[CoordT]):
+  Result[StampFunctionSuccess, FindFunctionFailure]
+
   def assemblePrototype(
     env: InferEnv,
     state: CompilerOutputs,
@@ -242,7 +256,14 @@ class CompilerSolver(
       case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => Vector(Vector(resultRune.rune))
       // Definition doesn't need the placeholder to be present, it's what populates the placeholder.
       case DefinitionFuncSR(range, placeholderRune, name, paramListRune, returnRune) => Vector(Vector(paramListRune.rune, returnRune.rune))
-      case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(Vector(paramsListRune.rune, returnRune.rune))
+      // Per @BRRZ, ResolveSR fires in one of two modes: when both params and return
+      // are known (existing predict path, postponing real resolution per SFWPRL), or
+      // when only params are known (real overload lookup to discover the return).
+      // Handler below branches on which condition triggered.
+      case ResolveSR(range, resultRune, name, paramsListRune, returnRune) =>
+        Vector(
+          Vector(paramsListRune.rune, returnRune.rune),
+          Vector(paramsListRune.rune))
       case OneOfSR(range, rune, literals) => Vector(Vector(rune.rune))
       case EqualsSR(range, leftRune, rightRune) => Vector(Vector(leftRune.rune), Vector(rightRune.rune))
       case IsConcreteSR(range, rune) => Vector(Vector(rune.rune))
@@ -455,12 +476,12 @@ object CompilerRuleSolver {
                   if resultRune.rune == receiver => {
                   CoordT(
                     Conversions.evaluateOwnership(vassertSome(ownership)),
-                    RegionT(),
+                    RegionT(DefaultRegionT),
                     receiverInstantiationKind)
                 }
               }) ++
                   senderConclusions.map(_._2).map({ case CoordT(ownership, _, _) =>
-                    CoordT(ownership, RegionT(), receiverInstantiationKind)
+                    CoordT(ownership, RegionT(DefaultRegionT), receiverInstantiationKind)
                   })
             if (possibleCoords.nonEmpty) {
               val ownership =
@@ -469,7 +490,7 @@ object CompilerRuleSolver {
                   case Vector(ownership) => ownership
                   case _ => return Err(RuleError(ReceivingDifferentOwnerships(senderConclusions)))
                 }
-              val region = RegionT()
+              val region = RegionT(DefaultRegionT)
               Some(receiver -> CoordTemplataT(CoordT(ownership, region, receiverInstantiationKind)))
             } else {
               // Just conclude a kind, which will coerce to an owning coord, and hope it's right.
@@ -609,12 +630,12 @@ object CompilerRuleSolver {
           case None => {
             val OwnershipTemplataT(ownership) = vassertSome(solverState.getConclusion(ownershipRune.rune))
             val KindTemplataT(kind) = vassertSome(solverState.getConclusion(kindRune.rune))
-            val region = RegionT()
+            val region = RegionT(DefaultRegionT)
             val newCoord =
               delegate.getMutability(state, kind) match {
                 case MutabilityTemplataT(ImmutableT) => CoordT(ShareT, region, kind)
                 case MutabilityTemplataT(MutableT) | PlaceholderTemplataT(_, MutabilityTemplataType()) => {
-                  CoordT(ownership, RegionT(), kind)
+                  CoordT(ownership, RegionT(DefaultRegionT), kind)
                 }
               }
             solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> CoordTemplataT(newCoord)), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
@@ -636,10 +657,39 @@ object CompilerRuleSolver {
         // via the `func moo(int)void` syntax) or let the caller pass it in.
 
         val CoordListTemplataT(paramCoords) = vassertSome(solverState.getConclusion(paramListRune.rune))
-        val CoordTemplataT(returnCoord) = vassertSome(solverState.getConclusion(returnRune.rune))
-        // We only pretend this function exists for now, and postpone actually resolving it until later, see SFWPRL.
-        val prototypeTemplata = delegate.predictFunction(env, state, range, name, paramCoords, returnCoord)
-        solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> prototypeTemplata), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.getConclusion(returnRune.rune) match {
+          case Some(CoordTemplataT(returnCoord)) => {
+            // Existing predict path: both params and return are known. We only pretend
+            // the function exists for now; actual resolution is postponed to after the
+            // solve completes. See SFWPRL in docs/Generics.md:353.
+            val prototypeTemplata = delegate.predictFunction(env, state, range, name, paramCoords, returnCoord)
+            solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> prototypeTemplata), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+          }
+          case None => {
+            // Per @BRRZ, params are known but return isn't. Do a real overload lookup
+            // (the same delegate.resolveFunction the post-solve phase uses at
+            // InferCompiler.scala:350) so we can discover the return type and unblock
+            // the solver. Safety of this mid-solve lookup:
+            //   - CompilerOutputs.lookupFunction's signatureToFunction cache is the
+            //     recursion terminator for nested bound resolution.
+            //   - RuneTypeSolver.scala:210 already types returnRune as CoordTemplataType,
+            //     so the commitStep below is guaranteed well-typed.
+            //   - Per @SROACSD, no solver call site coexists DefinitionFuncSR with
+            //     ResolveSR, so there is no rule-ordering hazard.
+            //   - All state read by the call chain is frozen env + settled
+            //     CompilerOutputs; the outer solver's in-flight state is never consulted.
+            delegate.resolveFunction(env, state, range :: env.parentRanges, name, paramCoords) match {
+              case Ok(stampResult) => {
+                solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex),
+                  Map(
+                    resultRune.rune -> PrototypeTemplataT(stampResult.prototype),
+                    returnRune.rune -> CoordTemplataT(stampResult.prototype.returnType)),
+                  Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+              }
+              case Err(fff) => Err(CouldntFindFunction(range :: env.parentRanges, fff))
+            }
+          }
+        }
       }
       case CallSiteFuncSR(range, prototypeRune, name, paramListRune, returnRune) => {
         // If we're here, then we're solving in the callsite, not the definition.
@@ -835,7 +885,7 @@ object CompilerRuleSolver {
             }
           }
           case Some(kind) => {
-            val coerced = delegate.coerceToCoord(env, state, range :: env.parentRanges, kind, RegionT())
+            val coerced = delegate.coerceToCoord(env, state, range :: env.parentRanges, kind, RegionT(DefaultRegionT))
             solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(coordRune.rune -> coerced), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
           }
         }
@@ -853,8 +903,11 @@ object CompilerRuleSolver {
         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(rune.rune -> result), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
       }
       case RuneParentEnvLookupSR(range, rune) => {
-        // This rule does nothing, it was actually preprocessed.
-        solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+        // This rule should never reach the solver — callers are required to preprocess
+        // it out (look up the rune in callingEnv, emit an InitialKnown, strip the rule).
+        // Canonical preprocessing fold: OverloadResolver.scala:311-325. See MKRFA /
+        // docs/refactor-thoughts/mkrfa-protocol-leak.md for the full contract.
+        vwat(rune)
       }
       case AugmentSR(range, outerCoordRune, maybeAugmentOwnership, innerRune) => {
         solverState.getConclusion(outerCoordRune.rune) match {
@@ -891,7 +944,7 @@ object CompilerRuleSolver {
           case None => {
             val CoordTemplataT(innerCoord) =
               expectCoordTemplata(vassertSome(solverState.getConclusion(innerRune.rune)))
-            val newRegion = RegionT()
+            val newRegion = RegionT(DefaultRegionT)
             val newOwnership =
               maybeAugmentOwnership match {
                 case None => innerCoord.ownership
@@ -1354,7 +1407,7 @@ object CompilerRuleSolver {
           case RuntimeSizedArrayTemplateTemplataT() => {
             val args = argRunes.map(argRune => vassertSome(solverState.getConclusion(argRune.rune)))
             val Vector(m, CoordTemplataT(coord)) = args
-            val contextRegion = RegionT()
+            val contextRegion = RegionT(DefaultRegionT)
             val mutability = ITemplataT.expectMutability(m)
             val rsaKind = delegate.predictRuntimeSizedArrayKind(env, state, coord, mutability, contextRegion)
             solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> KindTemplataT(rsaKind)), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
@@ -1362,7 +1415,7 @@ object CompilerRuleSolver {
           case StaticSizedArrayTemplateTemplataT() => {
             val args = argRunes.map(argRune => vassertSome(solverState.getConclusion(argRune.rune)))
             val Vector(s, m, v, CoordTemplataT(coord)) = args
-            val contextRegion = RegionT()
+            val contextRegion = RegionT(DefaultRegionT)
             val size = ITemplataT.expectInteger(s)
             val mutability = ITemplataT.expectMutability(m)
             val variability = ITemplataT.expectVariability(v)

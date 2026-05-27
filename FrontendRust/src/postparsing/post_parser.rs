@@ -109,6 +109,7 @@ pub enum ICompileErrorS<'s> {
   StatementAfterReturnS(StatementAfterReturnS<'s>),
   VariableNameAlreadyExists(VariableNameAlreadyExists<'s>),
   InterfaceMethodNeedsSelf(InterfaceMethodNeedsSelf<'s>),
+  VirtualAndAbstractGoTogether(VirtualAndAbstractGoTogether<'s>),
   RuneExplicitTypeConflictS(RuneExplicitTypeConflictS<'s>),
   InitializingRuntimeSizedArrayRequiresSizeAndCallable(
     InitializingRuntimeSizedArrayRequiresSizeAndCallable<'s>,
@@ -132,6 +133,7 @@ impl ICompileErrorS<'_> {
       ICompileErrorS::StatementAfterReturnS(x) => &x.range,
       ICompileErrorS::VariableNameAlreadyExists(x) => &x.range,
       ICompileErrorS::InterfaceMethodNeedsSelf(x) => &x.range,
+      ICompileErrorS::VirtualAndAbstractGoTogether(x) => &x.range,
       ICompileErrorS::RuneExplicitTypeConflictS(x) => &x.range,
       ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(x) => &x.range,
       ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(x) => &x.range,
@@ -269,6 +271,10 @@ override def hashCode(): Int = vcurious()
 }
 */
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct VirtualAndAbstractGoTogether<'s> {
+  pub range: RangeS<'s>,
+}
 /*
 case class VirtualAndAbstractGoTogether(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
@@ -875,16 +881,24 @@ pub(crate) fn scout_generic_parameter(
         IRulexSR::Literal(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
         IRulexSR::MaybeCoercingLookup(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
         IRulexSR::Resolve(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
-        IRulexSR::Equals(_) => rule_builder.push(r), // Hoist it up into regular rules
+        // Per @DRSINI, this EqualsSR aliases the param rune to the default's resultRune.
+        // We KEEP it in the default's rules (rather than hoisting) so the default is fully
+        // self-contained — it travels intact when GenericParameterS is inherited (e.g. by
+        // struct internal methods). At default-fire time, the typing pass registers the
+        // default-only runes via solverState.registerRunes(default.runeToType.keys).
+        IRulexSR::Equals(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
         IRulexSR::CallSiteFunc(_) => rule_builder.push(r), // Hoist it up into regular rules
         IRulexSR::DefinitionFunc(_) => rule_builder.push(r), // Hoist it up into regular rules
         other => panic!("vwat: {:?}", other),
       }
     }
 
+    let default_rune_to_type = self.scout_arena.alloc_slice_from_vec(
+      vec![(result_rune.rune.clone(), generic_param_type_s.tyype())]);
     GenericParameterDefaultS {
       result_rune: result_rune.rune,
       rules: self.scout_arena.alloc_slice_from_vec(rules_to_leave_in_default_argument),
+      rune_to_type: default_rune_to_type,
     }
   });
 
@@ -984,6 +998,9 @@ pub(crate) fn scout_generic_parameter(
       maybeDefault.map(defaultPT => {
         val uncategorizedRules = ArrayBuffer[IRulexSR]()
         val resultRune = templexScout.translateTemplex(env, lidb, uncategorizedRules, contextRegion, defaultPT)
+        // Per @DRSINI, this EqualsSR is hoisted into main rules below. It just aliases the
+        // param rune and the default result rune — harmless until LiteralSR gives the result
+        // rune a value. LiteralSR is added incrementally (not eagerly) by solveForResolving.
         uncategorizedRules += EqualsSR(genericParamRangeS, runeS, resultRune)
 
         val rulesToLeaveInDefaultArgument = new Accumulator[IRulexSR]()
@@ -992,14 +1009,24 @@ pub(crate) fn scout_generic_parameter(
           case r @ LiteralSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ MaybeCoercingLookupSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ ResolveSR(_, _, _, _, _) => rulesToLeaveInDefaultArgument.add(r)
-          case r @ EqualsSR(_, _, _) => ruleBuilder += r // Hoist it up into regular rules
+          // Per @DRSINI, this EqualsSR aliases the param rune to the default's resultRune.
+          // We KEEP it in the default's rules (rather than hoisting) so the default is fully
+          // self-contained — it travels intact when GenericParameterS is inherited (e.g. by
+          // struct internal methods). At default-fire time, the typing pass registers the
+          // default-only runes via solverState.registerRunes(default.runeToType.keys).
+          case r @ EqualsSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ CallSiteFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case r @ DefinitionFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case other => vwat(other)
         })
 
+        // Default-only runeToType. resultRune is typed the same as the parent param via
+        // the connecting EqualsSR. (For complex defaults that introduce additional
+        // default-only runes via MaybeCoercingLookupSR/ResolveSR/etc., those runes' types
+        // would also belong here — left as a follow-up.)
+        val defaultRuneToType = Map(resultRune.rune -> genericParamTypeS.tyype)
         GenericParameterDefaultS(
-          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector)
+          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector, defaultRuneToType)
       })
 
 //    val (maybeImplicitRegionGenericParam, maybeCoordRegionS) =
@@ -1025,6 +1052,7 @@ pub(crate) fn scout_generic_parameter(
 */
 }
 /*
+Guardian: temp-disable: SPDMX — Cross-section sandwich: I'm adding GenericParameterDefaultS.runeToType field per Scala, but the Rust struct construction and the audit-trail mirror are ~117 lines apart in the same function. Can't update both in one Edit. Temp-disable lets me sandwich correctly across two edits. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-697-1779423496008/hook-697/scout_generic_parameter--741.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 }
 */
 pub struct PostParser<'s, 'p, 'ctx> {
@@ -1937,8 +1965,7 @@ fn predict_mutability(
           })]
         }
         IStructContent::StructMethod(_) => {
-          // Implement struct methods one day
-          Vec::new()
+          panic!("Unimplemented: struct internal methods (StructMethodP) — Scala collects into internalMethodsP then scouts via functionScout.scoutInterfaceMember; not yet ported");
         }
       })
       .collect::<Vec<_>>();
@@ -2050,9 +2077,11 @@ fn predict_mutability(
       members_rune_to_predicted_type,
       self.scout_arena.alloc_slice_from_vec(member_rules_s),
       self.scout_arena.alloc_slice_from_vec(members_s),
+      &[],
     ))
   }
 /*
+Guardian: temp-disable: SPDMX — Cross-section sandwich: adding StructS.internalMethods field per Scala. The Rust StructS::new call and the audit-trail StructS scala block are ~165 lines apart in the same function; can't update both in one Edit. Caller passes empty slice since StructMethod branch panics until methods get scouted. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-719-1779424083290/hook-719/scout_struct--1736.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 Guardian: disable: TUCMPX
   private def scoutStruct(file: FileCoordinate, head: StructP): StructS = {
     val StructP(rangeP, NameP(structNameRange, structHumanName), attributesP, mutabilityPT, maybeGenericParametersP, maybeTemplateRulesP, maybeDefaultRegionRuneP, bodyRangeP, StructMembersP(_, members)) = head
@@ -2133,6 +2162,7 @@ Guardian: disable: TUCMPX
         structEnv, lidb.child(), headerRuleBuilder, defaultRegionRuneS, mutability)
     headerRuneToExplicitType += ((mutabilityRuneS.rune, MutabilityTemplataType()))
 
+    val internalMethodsP = mutable.ArrayBuffer[FunctionP]()
     val membersS =
       members.flatMap({
         case NormalStructMemberP(range, name, variability, memberType) => {
@@ -2149,8 +2179,8 @@ Guardian: disable: TUCMPX
           membersRuneToExplicitType.put(memberRune.rune, PackTemplataType(CoordTemplataType()))
           Vector(VariadicStructMemberS(PostParser.evalRange(structEnv.file, range), variability, memberRune))
         }
-        case StructMethodP(_) => {
-          // Implement struct methods one day
+        case StructMethodP(funcP) => {
+          internalMethodsP += funcP
           Vector.empty
         }
       })
@@ -2184,6 +2214,18 @@ Guardian: disable: TUCMPX
 
 //    val runeSToCanonicalRune = ruleBuilder.runeSToTentativeRune.mapValues(tentativeRune => tentativeRuneToCanonicalRune(tentativeRune))
 
+    val internalMethodsS =
+      internalMethodsP.toVector.map(method => {
+        functionScout.scoutInterfaceMember(
+          ParentCitizen(
+            false,  // not an interface — struct internal methods don't require virtual self
+            structEnv,
+            genericParametersS.toVector,
+            allRulesS,
+            allRuneToExplicitType.toMap),
+          method)
+      })
+
     StructS(
       structRangeS,
       structName,
@@ -2199,7 +2241,8 @@ Guardian: disable: TUCMPX
       membersRuneToExplicitType.toMap,
       membersRuneToPredictedType,
       memberRulesS,
-      membersS)
+      membersS,
+      internalMethodsS)
   }
 */
 fn translate_citizen_attributes(
@@ -2234,6 +2277,7 @@ fn translate_citizen_attributes(
   def translateCitizenAttributes(file: FileCoordinate, denizenName: INameS, attrsP: Vector[IAttributeP]): Vector[ICitizenAttributeS] = {
     attrsP.map({
       case ExportAttributeP(_) => ExportS(file.packageCoordinate)
+      case ExternAttributeP(_) => ExternS(file.packageCoordinate)
       case SealedAttributeP(_) => SealedS
       case MacroCallP(range, dontCall, NameP(_, str)) => MacroCallS(PostParser.evalRange(file, range), dontCall, str)
       case x => vimpl(x.toString)
@@ -2659,7 +2703,8 @@ pub(crate) fn check_identifiability(
     val internalMethodsS =
       internalMethodsP.map(method => {
         functionScout.scoutInterfaceMember(
-          ParentInterface(
+          ParentCitizen(
+            true,  // interface internal methods do require virtual self
             interfaceEnv,
             genericParametersS.toVector,
             rulesS,

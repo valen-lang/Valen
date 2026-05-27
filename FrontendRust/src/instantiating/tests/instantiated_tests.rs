@@ -41,6 +41,7 @@ class InstantiatedTests extends FunSuite with Matchers {
 */
 // mig: fn test_templates
 #[test]
+#[ignore = "unmigrated - pending instantiating-pass body migration"]
 fn test_templates() {
   panic!("Unmigrated test: test_templates");
 }

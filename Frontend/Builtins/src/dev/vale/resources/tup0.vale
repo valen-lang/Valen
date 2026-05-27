@@ -1,2 +1,2 @@
 
-struct Tup0 { }
+struct Tup0 imm { }

@@ -44,7 +44,7 @@ case class ProgramA(
     val matches = structs.find(_.name == name)
     vassert(matches.size == 1)
     matches.head match {
-      case i @ StructA(_, _, _, _, _, _, _, _, _, _, _, _, _) => i
+      case i @ StructA(_, _, _, _, _, _, _, _, _, _, _, _, _, _) => i
     }
   }
   def lookupStruct(name: String) = {
@@ -81,7 +81,10 @@ case class StructA(
   // These are separated so they can be skipped during resolving, see SMRASDR.
   membersRuneToType: Map[IRuneS, ITemplataType],
   memberRules: Vector[IRulexSR],
-  members: Vector[IStructMemberS]
+  members: Vector[IStructMemberS],
+
+  // See IMRFDI; mirrors InterfaceA.internalMethods.
+  internalMethods: Vector[FunctionA]
 ) extends CitizenA {
   val hash = range.hashCode() + name.hashCode()
   override def hashCode(): Int = hash;

@@ -18,12 +18,14 @@ package dev.vale.typing.expression
 
 import dev.vale._
 import dev.vale.postparsing._
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing.GlobalFunctionFamilyNameS
-import dev.vale.typing.OverloadResolver.FindFunctionFailure
+import dev.vale.solver.{FailedSolve, RuleError}
+import dev.vale.typing.OverloadResolver.{FindFunctionFailure, FindFunctionResolveFailure, InferFailure}
 import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
+import dev.vale.typing.infer.IsaFailed
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing.function._
@@ -80,6 +82,7 @@ where 's: 't,
                         *overload_set.name,
                         explicit_template_arg_rules_s,
                         explicit_template_arg_runes_s,
+                        &[],
                         context_region,
                         &unconverted_args_pointer_types_2,
                         &[],
@@ -134,6 +137,7 @@ where 's: 't,
         }
     }
 /*
+Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune param; the Rust call and the local audit-trail findFunction call need updating together, and the audit-trail also needs the older explicitTemplateArgRunesS → positionalExplicitTemplateArgRunesS rename. Doing call edit first, audit-trail follow-up. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-785-1779427206683/hook-785/evaluate_call--50.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def evaluateCall(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -143,7 +147,8 @@ where 's: 't,
     contextRegion: RegionT,
     callableExpr: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     callableExpr.result.coord.kind match {
@@ -154,6 +159,27 @@ where 's: 't,
           "wot " + callableExpr.result.coord.kind))
       }
       case OverloadSetT(overloadSetEnv, functionName) => {
+        // Here we have a special case for overload sets.
+        // It makes cases like these work:
+        //     myOverloadSet = print;
+        //     myOverloadSet("hello");
+        // However, this code here only works when the user is specifically doing that form:
+        // an overload set, then some parens. We then do a lookup of the overload set's
+        // stored name ("print") in the overload set's stored env.
+        //
+        // This might not be the best long-term approach because it doesn't work in other cases:
+        //     fn myFunc<F>(f &F) where func(&F)void { f() }
+        //     myFunc(print);
+        // The below code doesn't match this example because it's not literally overloadset
+        // then parens; this example is instead trying to feed an overloadset argument into a
+        // parameter that has a __call method available. OverloadSet is not that; OverloadSet is
+        // a very surface level judo trick.
+        //
+        // See (failing) test "Pass overload set into placeholder parameter" (see @POSIPP).
+        //
+        // I think the right solution long term is to give OverloadSet some sort of __call
+        // function that under the hood calls some sort of builtin that knows how to do the
+        // below machinery.
         val unconvertedArgsPointerTypes2 =
           givenArgsExprs2.map(_.result.expectReference().coord)
 
@@ -169,11 +195,30 @@ where 's: 't,
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             unconvertedArgsPointerTypes2,
             Vector.empty,
             false) match {
+            case Err(e @ FindFunctionFailure(CodeNameS(asName), _, _)) if asName == keywords.as => {
+              val isaFailures = e.rejectedCalleeToReason.flatMap { case (_, reason) =>
+                reason match {
+                  case InferFailure(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper)))) =>
+                    Some((sub, suuper, fs))
+                  case FindFunctionResolveFailure(ResolvingSolveFailedOrIncomplete(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper))))) =>
+                    Some((sub, suuper, fs))
+                  case _ => None
+                }
+              }
+              if (isaFailures.nonEmpty) {
+                val (sub, suuper, _) = isaFailures.head
+                val failedSolves = isaFailures.map(_._3).toVector
+                throw CompileErrorExceptionT(CantDowncastUnrelatedTypes(range, suuper, sub, failedSolves))
+              } else {
+                throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
+              }
+            }
             case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
             case Ok(x) => x
           }
@@ -205,7 +250,8 @@ where 's: 't,
           contextRegion,
           callableExpr.result.coord.kind,
           explicitTemplateArgRulesS,
-          explicitTemplateArgRunesS,
+          positionalExplicitTemplateArgRunesS,
+          receivingRuneToExplicitTemplateArgRune,
           callableExpr,
           givenArgsExprs2)
       }
@@ -259,7 +305,7 @@ where 's: 't,
         let env = nenv.snapshot(self.typing_interner);
 
         let args_types_2: Vec<CoordT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result().coord).collect();
-        let closure_param_type = CoordT { ownership: given_callable_borrow_expr_2.result().coord.ownership, region: RegionT {}, kind };
+        let closure_param_type = CoordT { ownership: given_callable_borrow_expr_2.result().coord.ownership, region: RegionT { region: IRegionT::Default }, kind };
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
@@ -272,6 +318,7 @@ where 's: 't,
                 self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call })),
                 explicit_template_arg_rules_s,
                 explicit_template_arg_runes_s,
+                &[],
                 context_region,
                 &param_filters,
                 &[],
@@ -311,6 +358,7 @@ where 's: 't,
         })))
     }
 /*
+Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune param; same fn has Rust call + local audit-trail call needing twin updates. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-789-1779427320299/hook-789/evaluate_custom_call--238.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def evaluateCustomCall(
     nenv: NodeEnvironmentBox,
     coutputs: CompilerOutputs,
@@ -320,7 +368,8 @@ where 's: 't,
     contextRegion: RegionT,
     kind: KindT,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenCallableUnborrowedExpr2: ReferenceExpressionTE,
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
     (FunctionCallTE) = {
@@ -349,7 +398,7 @@ where 's: 't,
 //      }
 
     val argsTypes2 = givenArgsExprs2.map(_.result.coord)
-    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(), kind)
+    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(DefaultRegionT), kind)
     val paramFilters = Vector(closureParamType) ++ argsTypes2
     val resolved =
       overloadCompiler.findFunction(
@@ -359,7 +408,8 @@ where 's: 't,
         callLocation,
         interner.intern(CodeNameS(keywords.underscoresCall)),
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         contextRegion,
         paramFilters,
         Vector.empty,
@@ -527,9 +577,9 @@ where 's: 't,
     region: RegionT,
     callableReferenceExpr2: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
-    argsExprs2: Vector[ReferenceExpressionTE]
-  ):
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
+    argsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     val callExpr =
       evaluateCall(
@@ -541,7 +591,8 @@ where 's: 't,
         region,
         callableReferenceExpr2,
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         argsExprs2)
     (callExpr)
   }

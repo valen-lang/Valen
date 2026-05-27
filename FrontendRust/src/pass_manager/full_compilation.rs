@@ -8,9 +8,7 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
-// Simplifying pass unlinked during instantiating bring-up (Slabs 16a–16j).
-// use crate::simplifying::HammerCompilation;
-use crate::instantiating::InstantiatedCompilation;
+use std::marker::PhantomData;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
@@ -64,7 +62,10 @@ where
   's: 't,
   'p: 'ctx,
 {
-  hammer_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'p>,
+  // Hammer wiring is stubbed pending the simplifying-pass body migration
+  // (transplanted HammerCompilation has no constructor yet). PhantomData
+  // keeps the four lifetimes live without holding a real HammerCompilation.
+  _marker: PhantomData<(&'t &'s (), &'ctx &'p ())>,
 }
 /*
 class FullCompilation(
@@ -92,21 +93,7 @@ where
     options: FullCompilationOptions,
     typing_bump: &'t Bump,
   ) -> Self {
-    let instantiator_options = crate::instantiating::InstantiatorCompilationOptions {
-      debug_out: options.debug_out,
-    };
-    let hammer_compilation = InstantiatedCompilation::new(
-      scout_arena,
-      keywords,
-      parser_keywords,
-      parse_arena,
-      packages_to_build,
-      package_to_contents_resolver,
-      options.global_options,
-      instantiator_options,
-      typing_bump,
-    );
-    FullCompilation { hammer_compilation: hammer_compilation }
+    panic!("Unimplemented: HammerCompilation wiring pending simplifying-pass body migration (transplanted HammerCompilation has no constructor yet) - see HammerCompilation.scala");
   }
 /*
   var hammerCompilation =
@@ -124,7 +111,7 @@ where
 
   // From FullCompilation.scala line 48: getCodeMap
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.hammer_compilation.get_code_map()
+    panic!("FullCompilation.get_code_map: HammerCompilation wiring pending simplifying-pass body migration")
   }
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getCodeMap()
@@ -132,7 +119,7 @@ where
 
   // From FullCompilation.scala line 49: getParseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-    self.hammer_compilation.get_parseds()
+    panic!("FullCompilation.get_parseds: HammerCompilation wiring pending simplifying-pass body migration")
   }
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = hammerCompilation.getParseds()
@@ -140,7 +127,7 @@ where
 
   // From FullCompilation.scala line 50: getVpstMap
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.hammer_compilation.get_vpst_map()
+    panic!("FullCompilation.get_vpst_map: HammerCompilation wiring pending simplifying-pass body migration")
   }
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getVpstMap()

@@ -385,7 +385,8 @@ class AnonymousInterfaceMacro(
       rulesBuilder.buildArray(),
       Map(),
       Vector(),
-      members)
+      members,
+      Vector())
   }
 
   private def makeForwarderFunction(

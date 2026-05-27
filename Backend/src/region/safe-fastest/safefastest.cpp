@@ -863,8 +863,7 @@ void SafeFastest::declareStruct(
   kindStructs.declareStruct(structM->kind, Weakability::WEAKABLE);
 }
 
-void SafeFastest::defineStruct(
-    StructDefinition* structM) {
+void SafeFastest::defineStruct(StructDefinition* structM) {
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
@@ -1757,4 +1756,11 @@ LiveRef SafeFastest::immutabilify(
   auto transmuted =
       kindStructs.makeWrapperPtr(checkerAFL, functionState, builder, targetRefMT, wrapperPtrLE.refLE);
   return toLiveRef(transmuted);
+}
+
+void SafeFastest::declareOpaque(Opaque* opaque) {
+  { assert(false); throw 1337; } // impl
+}
+void SafeFastest::defineOpaque(Opaque* opaque, int size, int alignment) {
+  { assert(false); throw 1337; } // impl
 }

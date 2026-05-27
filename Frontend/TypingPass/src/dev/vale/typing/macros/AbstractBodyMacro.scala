@@ -1,6 +1,6 @@
 package dev.vale.typing.macros
 
-import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl}
+import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl, vpass}
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
@@ -27,6 +27,9 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
     maybeRetCoord: Option[CoordT]):
   (FunctionHeaderT, ReferenceExpressionTE) = {
     val returnReferenceType2 = vassertSome(maybeRetCoord)
+    if (!params2.exists(_.virtuality == Some(AbstractT()))) {
+      vpass()
+    }
     vassert(params2.exists(_.virtuality == Some(AbstractT())))
     val header =
       FunctionHeaderT(
@@ -39,6 +42,9 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
     // Find self, but instead of calling it like a regular function call, call it like an interface.
     // We do this instead of grabbing the prototype out of the environment because we want to get its
     // instantiation bounds too (well, we want them to be added to the coutputs).
+    // Per @DRSINI, this triggers overload resolution with 0 explicit template args and
+    // placeholder-typed self arg. Defaults must not be in the initial rules or they'd
+    // conflict with arg-inferred placeholders.
     val prototype =
       overloadResolver.findFunction(
         env,
@@ -48,7 +54,8 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
         vassertSome(TemplatasStore.getImpreciseName(interner, env.id.localName)),
         Vector(),
         Vector(),
-        RegionT(),
+        Vector(),
+        RegionT(DefaultRegionT),
         params2.map(_.tyype),
         Vector(),
         true) match {

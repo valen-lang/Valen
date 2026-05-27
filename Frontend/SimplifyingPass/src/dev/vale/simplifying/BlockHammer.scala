@@ -46,7 +46,7 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
     unstackifiedLocalsFromParent.foreach(parentLocals.markUnstackified)
     parentLocals.setNextLocalIdNumber(blockLocals.nextLocalIdNumber)
 
-//    start here, we're returning locals and thats not optimal
+//    start here, we're returning locals and thats not optimal DO NOT SUBMIT?
     BlockH(exprH)
   }
 

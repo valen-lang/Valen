@@ -196,6 +196,7 @@ where 's: 't,
 
     val rules = new Accumulator[IRulexSR]()
     // Use the same rules as the original struct, see MDSFONARFO.
+    // Per @DRSINI, this copies the hoisted EqualsSR from default generic params.
     structA.headerRules.foreach(r => rules.add(r))
     val runeToType = mutable.HashMap[IRuneS, ITemplataType]()
     // Use the same runes as the original struct, see MDSFONARFO.
@@ -234,7 +235,9 @@ where 's: 't,
         RuneUsage(structA.name.range, selfKindRune)))
 
 
-    // Use the same generic parameters as the struct
+    // Use the same generic parameters as the struct.
+    // Per @DRSINI, defaults are harmless here because they're only added incrementally
+    // for unsolved runes during solveForResolving, not eagerly.
     val functionGenericParameters = structA.genericParameters
 
     val functionTemplataType =
@@ -425,9 +428,9 @@ where 's: 't,
             ITemplataT::Placeholder(_) => OwnershipT::Own,
             _ => panic!("struct drop: unexpected mutability"),
         };
-        let struct_type = CoordT { ownership: struct_ownership, region: RegionT {}, kind: KindT::Struct(struct_tt) };
+        let struct_type = CoordT { ownership: struct_ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(struct_tt) };
 
-        let ret = CoordT { ownership: OwnershipT::Share, region: RegionT {}, kind: KindT::Void(VoidT {}) };
+        let ret = CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Void(VoidT {}) };
         let params_arena: &'t [ParameterT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(params2.to_vec());
         let header = FunctionHeaderT {
             id: env.id,
@@ -484,7 +487,7 @@ where 's: 't,
                         variable: ILocalVariableT::Reference(*v),
                     }));
                     // Until a test path forces Result conversion through struct_drop_macro.
-                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT {}, unlet)
+                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT { region: IRegionT::Default }, unlet)
                         .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through struct_drop_macro"))
                 }).collect();
                 let mut all_exprs: Vec<ReferenceExpressionTE<'s, 't>> = vec![destroy];
@@ -496,7 +499,7 @@ where 's: 't,
 
         let return_expr =
             ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT {}, _phantom: std::marker::PhantomData })),
+                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }, _phantom: std::marker::PhantomData })),
             }));
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),
@@ -530,9 +533,9 @@ where 's: 't,
         case MutabilityTemplataT(ImmutableT) => ShareT
         case PlaceholderTemplataT(idT, MutabilityTemplataType()) => OwnT
       }
-    val structType = CoordT(structOwnership, RegionT(), structTT)
+    val structType = CoordT(structOwnership, RegionT(DefaultRegionT), structTT)
 
-    val ret = CoordT(ShareT, RegionT(), VoidT())
+    val ret = CoordT(ShareT, RegionT(DefaultRegionT), VoidT())
     val header = ast.FunctionHeaderT(env.id, Vector.empty, params2, ret, Some(env.templata))
 
     coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
@@ -574,12 +577,12 @@ where 's: 't,
                         coutputs,
                         originFunction1.map(_.range).toList ++ callRange,
                         callLocation,
-                        RegionT(),
+                        RegionT(DefaultRegionT),
                         UnletTE(v))
                     }))
               }
             },
-            ReturnTE(VoidLiteralTE(RegionT())))))
+            ReturnTE(VoidLiteralTE(RegionT(DefaultRegionT))))))
     (header, body)
   }
 }

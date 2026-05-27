@@ -133,7 +133,9 @@ where
         solved_rule_indices: Vec<i32>,
         conclusions: std::collections::HashMap<Rune, Conclusion>,
         new_rules: Vec<Rule>,
+        new_runes: std::collections::HashSet<Rune>,
     ) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>> {
+        self.all_runes.extend(new_runes);
         let solved_rules: Vec<(i32, Rule)> = solved_rule_indices
             .iter()
             .map(|&idx| (idx, self.rules[idx as usize].clone()))
@@ -188,8 +190,18 @@ where
         Ok(())
     }
 /*
-  def commitStep[ErrType](complex: Boolean, solvedRuleIndices: Vector[Int], conclusions: Map[Rune, Conclusion], newRules: Vector[Rule]):
+  def commitStep[ErrType](
+    complex: Boolean,
+    solvedRuleIndices: Vector[Int],
+    conclusions: Map[Rune, Conclusion],
+    newRules: Vector[Rule],
+    // `newRunes` extends allRunes mid-solve, used when incrementally committing rules
+    // that introduce previously-unknown runes (e.g. default-only runes that travel inside
+    // GenericParameterDefaultS, see DRSINI).
+    // DO NOT SUBMIT undefault this param
+    newRunes: Set[Rune] = Set.empty):
   Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
+    allRunes = allRunes ++ newRunes
     val step = Step[Rule, Rune, Conclusion](complex, solvedRuleIndices.map(ruleIndex => (ruleIndex, rules(ruleIndex))), newRules, conclusions)
     // Append step before checking for conflicts, so the audit trail captures
     // the conflicting step even when we return an error below.

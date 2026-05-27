@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.parsing.ast.ImmutableP
@@ -13,8 +14,19 @@ import dev.vale.typing.templata.MutabilityTemplataT
 import dev.vale.typing.types._
 import dev.vale.von.{VonBool, VonInt, VonStr}
 import org.scalatest._
-
+*/
+// mig: struct ArrayTests
+pub struct ArrayTests;
+/*
 class ArrayTests extends FunSuite with Matchers {
+*/
+// mig: fn returning_static_array_from_function_and_dotting_it
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn returning_static_array_from_function_and_dotting_it() {
+    panic!("Unmigrated test: returning_static_array_from_function_and_dotting_it");
+}
+/*
   test("Returning static array from function and dotting it") {
     val compile = RunCompilation.test(
       """
@@ -29,7 +41,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn simple_static_array_and_runtime_index_lookup
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_static_array_and_runtime_index_lookup() {
+    panic!("Unmigrated test: simple_static_array_and_runtime_index_lookup");
+}
+/*
   test("Simple static array and runtime index lookup") {
     val compile = RunCompilation.test(
       """
@@ -48,7 +67,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn destroy_ssa_of_imms_into_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_ssa_of_imms_into_function() {
+    panic!("Unmigrated test: destroy_ssa_of_imms_into_function");
+}
+/*
   test("Destroy SSA of imms into function") {
     val compile = RunCompilation.test(
       """
@@ -62,7 +88,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn destroy_rsa_of_imms_into_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_rsa_of_imms_into_function() {
+    panic!("Unmigrated test: destroy_rsa_of_imms_into_function");
+}
+/*
   test("Destroy RSA of imms into function") {
     val compile = RunCompilation.test(
       """
@@ -76,7 +109,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn destroy_ssa_of_muts_into_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_ssa_of_muts_into_function() {
+    panic!("Unmigrated test: destroy_ssa_of_muts_into_function");
+}
+/*
   test("Destroy SSA of muts into function") {
     val compile = RunCompilation.test(
       """
@@ -91,7 +131,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn destroy_rsa_of_muts_into_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_rsa_of_muts_into_function() {
+    panic!("Unmigrated test: destroy_rsa_of_muts_into_function");
+}
+/*
   test("Destroy RSA of muts into function") {
     val compile = RunCompilation.test(
       """
@@ -107,7 +154,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn migrate_rsa
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn migrate_rsa() {
+    panic!("Unmigrated test: migrate_rsa");
+}
+/*
   test("Migrate RSA") {
     val compile = RunCompilation.test(
       """
@@ -123,7 +177,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn migrate_ssa
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn migrate_ssa() {
+    panic!("Unmigrated test: migrate_ssa");
+}
+/*
   test("Migrate SSA") {
     val compile = RunCompilation.test(
       """
@@ -139,7 +200,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn unspecified_mutability_static_array_from_lambda_defaults_to_mutable
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn unspecified_mutability_static_array_from_lambda_defaults_to_mutable() {
+    panic!("Unmigrated test: unspecified_mutability_static_array_from_lambda_defaults_to_mutable");
+}
+/*
   test("Unspecified-mutability static array from lambda defaults to mutable") {
     val compile = RunCompilation.test(
       """
@@ -159,7 +227,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn immutable_static_array_from_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn immutable_static_array_from_lambda() {
+    panic!("Unmigrated test: immutable_static_array_from_lambda");
+}
+/*
   test("Immutable static array from lambda") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/arrays/ssaimmfromcallable.vale"))
 
@@ -172,7 +247,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn mutable_static_array_from_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutable_static_array_from_lambda() {
+    panic!("Unmigrated test: mutable_static_array_from_lambda");
+}
+/*
   test("Mutable static array from lambda") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/arrays/ssamutfromcallable.vale"))
 
@@ -185,7 +267,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn immutable_static_array_from_values
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn immutable_static_array_from_values() {
+    panic!("Unmigrated test: immutable_static_array_from_values");
+}
+/*
   test("Immutable static array from values") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/arrays/ssaimmfromvalues.vale"))
 
@@ -198,7 +287,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn mutable_static_array_from_values
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutable_static_array_from_values() {
+    panic!("Unmigrated test: mutable_static_array_from_values");
+}
+/*
   test("Mutable static array from values") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/arrays/ssamutfromvalues.vale"))
 
@@ -211,7 +307,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable() {
+    panic!("Unmigrated test: unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable");
+}
+/*
   test("Unspecified-mutability runtime array from lambda defaults to mutable") {
     val compile = RunCompilation.test(
       """
@@ -232,7 +335,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn immutable_runtime_array_from_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn immutable_runtime_array_from_lambda() {
+    panic!("Unmigrated test: immutable_runtime_array_from_lambda");
+}
+/*
   test("Immutable runtime array from lambda") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/arrays/rsaimmfromcallable.vale"))
 
@@ -245,7 +355,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn mutable_runtime_array_from_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutable_runtime_array_from_lambda() {
+    panic!("Unmigrated test: mutable_runtime_array_from_lambda");
+}
+/*
   test("Mutable runtime array from lambda") {
     val compile =
       RunCompilation.test(
@@ -260,7 +377,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn take_arraysequence_as_a_parameter
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn take_arraysequence_as_a_parameter() {
+    panic!("Unmigrated test: take_arraysequence_as_a_parameter");
+}
+/*
   //m [<mut> 3 * [#3]<mut>int] = [mut][ [mut][1, 2, 3], [mut][4, 5, 6], [mut][7, 8, 9] ];
   test("Take arraysequence as a parameter") {
     val compile = RunCompilation.test(
@@ -276,7 +400,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn borrow_arraysequence_as_a_parameter
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn borrow_arraysequence_as_a_parameter() {
+    panic!("Unmigrated test: borrow_arraysequence_as_a_parameter");
+}
+/*
   test("Borrow arraysequence as a parameter") {
     val compile = RunCompilation.test(
       """
@@ -295,7 +426,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn array_map_with_int
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_map_with_int() {
+    panic!("Unmigrated test: array_map_with_int");
+}
+/*
   // the argument to __Array doesnt even have to be a struct or a lambda or an
   // interface or whatever, its just passed straight through to the prototype
   test("array map with int") {
@@ -317,7 +455,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn new_rsa
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn new_rsa() {
+    panic!("Unmigrated test: new_rsa");
+}
+/*
   test("new rsa") {
     val compile = RunCompilation.test(
       """
@@ -338,7 +483,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn array_map_with_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_map_with_lambda() {
+    panic!("Unmigrated test: array_map_with_lambda");
+}
+/*
   test("array map with lambda") {
     val compile = RunCompilation.test(
       """
@@ -360,7 +512,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn make_array_map_with_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_array_map_with_struct() {
+    panic!("Unmigrated test: make_array_map_with_struct");
+}
+/*
   test("MakeArray map with struct") {
     val compile = RunCompilation.test(
         """
@@ -377,7 +536,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn make_array_map_with_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_array_map_with_lambda() {
+    panic!("Unmigrated test: make_array_map_with_lambda");
+}
+/*
   test("MakeArray map with lambda") {
     val compile = RunCompilation.test(
         """
@@ -390,7 +556,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn array_map_with_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_map_with_interface() {
+    panic!("Unmigrated test: array_map_with_interface");
+}
+/*
   test("array map with interface") {
     val compile = RunCompilation.test(
         """
@@ -415,7 +588,14 @@ class ArrayTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn array_map_taking_a_closure_which_captures_something
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_map_taking_a_closure_which_captures_something() {
+    panic!("Unmigrated test: array_map_taking_a_closure_which_captures_something");
+}
+/*
   test("Array map taking a closure which captures something") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -427,7 +607,14 @@ class ArrayTests extends FunSuite with Matchers {
         """.stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
-
+*/
+// mig: fn simple_array_map_with_runtime_index_lookup
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_array_map_with_runtime_index_lookup() {
+    panic!("Unmigrated test: simple_array_map_with_runtime_index_lookup");
+}
+/*
   test("Simple array map with runtime index lookup") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -440,7 +627,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn nested_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn nested_array() {
+    panic!("Unmigrated test: nested_array");
+}
+/*
   test("Nested array") {
     val compile = RunCompilation.test(
       """
@@ -452,7 +646,14 @@ class ArrayTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(2) => }
   }
 
-
+*/
+// mig: fn two_dimensional_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn two_dimensional_array() {
+    panic!("Unmigrated test: two_dimensional_array");
+}
+/*
   test("Two dimensional array") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -467,7 +668,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn array_with_capture
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_with_capture() {
+    panic!("Unmigrated test: array_with_capture");
+}
+/*
   test("Array with capture") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -484,7 +692,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn capture
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn capture() {
+    panic!("Unmigrated test: capture");
+}
+/*
   test("Capture") {
     val compile = RunCompilation.test(
       """
@@ -509,7 +724,14 @@ class ArrayTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
 
-
+*/
+// mig: fn mutate_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutate_array() {
+    panic!("Unmigrated test: mutate_array");
+}
+/*
   test("Mutate array") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -522,7 +744,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn capture_mutable_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn capture_mutable_array() {
+    panic!("Unmigrated test: capture_mutable_array");
+}
+/*
   test("Capture mutable array") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -538,7 +767,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "6"
   }
-
+*/
+// mig: fn swap_out_of_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn swap_out_of_array() {
+    panic!("Unmigrated test: swap_out_of_array");
+}
+/*
   test("Swap out of array") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -554,7 +790,14 @@ class ArrayTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
 
-
+*/
+// mig: fn test_array_length
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_array_length() {
+    panic!("Unmigrated test: test_array_length");
+}
+/*
   test("Test array length") {
     val compile = RunCompilation.test(
         """import array.make.*;
@@ -565,7 +808,14 @@ class ArrayTests extends FunSuite with Matchers {
         """.stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(11) => }
   }
-
+*/
+// mig: fn map_using_array_construct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn map_using_array_construct() {
+    panic!("Unmigrated test: map_using_array_construct");
+}
+/*
   test("Map using array construct") {
     val compile = RunCompilation.test(
         """
@@ -582,7 +832,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn map_from_hardcoded_values
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn map_from_hardcoded_values() {
+    panic!("Unmigrated test: map_from_hardcoded_values");
+}
+/*
   test("Map from hardcoded values") {
     val compile = RunCompilation.test(
         """
@@ -597,7 +854,14 @@ class ArrayTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn nested_imm_arrays
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn nested_imm_arrays() {
+    panic!("Unmigrated test: nested_imm_arrays");
+}
+/*
   test("Nested imm arrays") {
     val compile = RunCompilation.test(
       """
@@ -612,7 +876,14 @@ class ArrayTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(30) => }
   }
-
+*/
+// mig: fn array_foreach
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_foreach() {
+    panic!("Unmigrated test: array_foreach");
+}
+/*
   test("Array foreach") {
     val compile = RunCompilation.test(
       """
@@ -626,7 +897,14 @@ class ArrayTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(169) => }
   }
-
+*/
+// mig: fn array_has
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_has() {
+    panic!("Unmigrated test: array_has");
+}
+/*
   test("Array has") {
     val compile = RunCompilation.test(
         """
@@ -638,7 +916,14 @@ class ArrayTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonBool(true) => }
   }
 
-
+*/
+// mig: fn each_on_ssa
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn each_on_ssa() {
+    panic!("Unmigrated test: each_on_ssa");
+}
+/*
   test("each on SSA") {
     val compile = RunCompilation.test(
         """
@@ -653,7 +938,14 @@ class ArrayTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForStdout(Vector()) shouldEqual "VenusEarthMars"
   }
-
+*/
+// mig: fn change_mutability
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn change_mutability() {
+    panic!("Unmigrated test: change_mutability");
+}
+/*
   test("Change mutability") {
     val compile = RunCompilation.test(
       """import array.make.*;
@@ -666,7 +958,14 @@ class ArrayTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonStr("3") => }
   }
-
+*/
+// mig: fn reports_when_making_new_imm_rsa_without_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn reports_when_making_new_imm_rsa_without_lambda() {
+    panic!("Unmigrated test: reports_when_making_new_imm_rsa_without_lambda");
+}
+/*
   test("Reports when making new imm rsa without lambda") {
     val compile = RunCompilation.test(
       """
@@ -723,7 +1022,14 @@ class ArrayTests extends FunSuite with Matchers {
 //
 //    compile.evalForKind(Vector()) match { case VonInt(3) => }
 //  }
-
+*/
+// mig: fn new_immutable_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn new_immutable_array() {
+    panic!("Unmigrated test: new_immutable_array");
+}
+/*
   test("New immutable array") {
     val compile = RunCompilation.test(
       """
@@ -745,3 +1051,5 @@ class ArrayTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

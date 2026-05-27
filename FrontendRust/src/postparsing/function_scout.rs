@@ -23,12 +23,12 @@ use crate::lexing::ast::RangeL;
 use crate::postparsing::names::{
   ClosureParamNameS, CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, FunctionNameS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameValS, INameS, INameValS,
-  IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplicitRuneValS, LambdaDeclarationNameS,
+  IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplicitRegionRuneValS, ImplicitRuneValS, LambdaDeclarationNameS,
   LambdaStructDeclarationNameS, MagicParamRuneValS,
 };
 use crate::postparsing::post_parser::{
   CouldntFindRuneS, ExternHasBodyS, FunctionEnvironmentS, ICompileErrorS, IEnvironmentS,
-  InterfaceMethodNeedsSelf, PostParser, RangedInternalErrorS, StackFrame,
+  InterfaceMethodNeedsSelf, PostParser, RangedInternalErrorS, StackFrame, VirtualAndAbstractGoTogether,
 };
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
@@ -74,11 +74,12 @@ pub enum IFunctionParent<'s>
 
 {
   FunctionNoParent,
-  ParentInterface {
-    interface_env: FunctionEnvironmentS<'s>,
-    interface_generic_params: &'s [&'s GenericParameterS<'s>],
-    interface_rules: Vec<IRulexSR<'s>>,
-    interface_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  ParentCitizen {
+    citizen_is_interface: bool,
+    citizen_env: FunctionEnvironmentS<'s>,
+    citizen_generic_params: &'s [&'s GenericParameterS<'s>],
+    citizen_rules: Vec<IRulexSR<'s>>,
+    citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
   },
   ParentFunction {
     parent_stack_frame: StackFrame<'s>,
@@ -92,11 +93,12 @@ sealed trait IFunctionParent
 case class FunctionNoParent() extends IFunctionParent
 */
 /*
-case class ParentInterface(
-  interfaceEnv: EnvironmentS,
-  interfaceGenericParams: Vector[GenericParameterS],
-  interfaceRules: Vector[IRulexSR],
-  interfaceRuneToExplicitType: Map[IRuneS, ITemplataType]
+case class ParentCitizen(
+  citizenIsInterface: Boolean,
+  citizenEnv: EnvironmentS,
+  citizenGenericParams: Vector[GenericParameterS],
+  citizenRules: Vector[IRulexSR],
+  citizenRuneToExplicitType: Map[IRuneS, ITemplataType]
 ) extends IFunctionParent
 */
 /*
@@ -138,7 +140,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     // AFTERM: check the order of these various chunks of logic
 
     let is_parent_function = matches!(&maybe_parent, IFunctionParent::ParentFunction { .. });
-    let is_parent_interface = matches!(&maybe_parent, IFunctionParent::ParentInterface { .. });
+    let is_parent_interface = matches!(&maybe_parent, IFunctionParent::ParentCitizen { citizen_is_interface: true, .. });
     let function_name = function.header.name.as_ref();
     let generic_parameters_p: &[GenericParameterP<'p>] = function
       .header
@@ -181,18 +183,42 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         user_declared_runes.push(rune_usage);
       }
     }
-    if is_parent_interface {
-      assert!(
-        user_declared_runes.is_empty(),
-        "POSTPARSER_SCOUT_INTERFACE_USER_DECLARED_RUNES_NOT_EMPTY"
-      );
-      if let Some(params) = &function.header.params {
-        if !params.params.iter().any(|param| param.virtuality.is_some()) {
-          return Err(ICompileErrorS::InterfaceMethodNeedsSelf(
-            InterfaceMethodNeedsSelf {
-              range: Self::eval_range(file_coordinate, function.range),
-            },
-          ));
+    match &maybe_parent {
+      IFunctionParent::FunctionNoParent => {
+        if function.header.attributes.iter().any(|a| matches!(a, IAttributeP::AbstractAttribute(_))) {
+          match &function.header.params {
+            None => {
+              return Err(ICompileErrorS::VirtualAndAbstractGoTogether(
+                VirtualAndAbstractGoTogether {
+                  range: Self::eval_range(file_coordinate, function.range),
+                },
+              ));
+            }
+            Some(params) => {
+              if !params.params.iter().any(|param| param.virtuality.is_some()) {
+                return Err(ICompileErrorS::VirtualAndAbstractGoTogether(
+                  VirtualAndAbstractGoTogether {
+                    range: Self::eval_range(file_coordinate, function.range),
+                  },
+                ));
+              }
+            }
+          }
+        }
+      }
+      IFunctionParent::ParentFunction { .. } => {}
+      IFunctionParent::ParentCitizen { citizen_is_interface, .. } => {
+        // When we have traits that can have static methods, this check might need to go away
+        if *citizen_is_interface {
+          if let Some(params) = &function.header.params {
+            if !params.params.iter().any(|param| param.virtuality.is_some()) {
+              return Err(ICompileErrorS::InterfaceMethodNeedsSelf(
+                InterfaceMethodNeedsSelf {
+                  range: Self::eval_range(file_coordinate, function.range),
+                },
+              ));
+            }
+          }
         }
       }
     }
@@ -223,12 +249,15 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       _ => panic!("POSTPARSER_INTERN_FUNCTION_NAME_EXPECTED_FUNCTION_DECLARATION"),
     };
     let extra_generic_params_from_parent: Vec<&'s GenericParameterS<'s>> = match &maybe_parent {
-      IFunctionParent::ParentInterface {
-        interface_generic_params,
+      IFunctionParent::ParentCitizen {
+        citizen_generic_params,
         ..
-      } => interface_generic_params.to_vec(),
+      } => citizen_generic_params.to_vec(),
       _ => Vec::new(),
     };
+    for gp in &extra_generic_params_from_parent {
+      rune_to_explicit_type.push((gp.rune.rune.clone(), gp.tyype.tyype()));
+    }
     let parent_env: Option<Box<IEnvironmentS<'s>>> = match &maybe_parent {
       IFunctionParent::FunctionNoParent => None,
       IFunctionParent::ParentFunction { parent_stack_frame } => {
@@ -236,12 +265,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           parent_stack_frame.parent_env.clone(),
         )))
       }
-      IFunctionParent::ParentInterface { interface_env, .. } => {
+      IFunctionParent::ParentCitizen { citizen_env: interface_env, .. } => {
         Some(Box::new(IEnvironmentS::FunctionEnvironment(interface_env.clone())))
       }
     };
     let declared_runes: IndexSet<IRuneS<'s>> = match &maybe_parent {
-      IFunctionParent::ParentInterface { .. } => IndexSet::new(),
+      IFunctionParent::ParentCitizen { .. } => IndexSet::new(),
       _ => user_declared_runes
         .iter()
         .map(|rune_usage| rune_usage.rune.clone())
@@ -258,7 +287,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .as_ref()
         .map(|params| params.params.len() as i32)
         .unwrap_or(0),
-      is_interface_internal_method: matches!(&maybe_parent, IFunctionParent::ParentInterface { .. }),
+      is_interface_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen { .. }),
     };
     let header_range_s = Self::eval_range(file_coordinate, function.header.range);
     let (default_region_rune, _maybe_region_generic_param): (IRuneS<'s>, _) = match function
@@ -334,7 +363,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           "POSTPARSER_SCOUT_FUNCTION_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
         );
       }
-      IFunctionParent::ParentInterface { interface_env, .. } => {
+      IFunctionParent::ParentCitizen { citizen_env: interface_env, .. } => {
         let mut child_lidb = lidb.child();
         translate_rulexes(
           self.scout_arena,
@@ -375,7 +404,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           .iter()
           .map(|param| {
             match &maybe_parent {
-              IFunctionParent::FunctionNoParent | IFunctionParent::ParentInterface { .. } => {
+              IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen { .. } => {
                 assert!(
                   param.pattern.as_ref().map(|pattern| pattern.templex.is_some()).unwrap_or(false),
                   "POSTPARSER_SCOUT_FUNCTION_PARAM_TYPE_REQUIRED_NOT_YET_IMPLEMENTED"
@@ -389,15 +418,17 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       })
       .unwrap_or_default();
     // We say PerhapsTypeless because we're in a lambda, they might be anonymous params.
-    let explicit_params_s: Vec<ParameterS<'s>> = params_p
+    // For lambdas, untyped explicit params (like `(a, b) => ...` or `(_) => ...`) get a
+    // synthesized coord rune here that will be added to the function's identifying runes.
+    let explicit_params_s_and_synthesized_runes: Vec<(ParameterS<'s>, Option<RuneUsage<'s>>)> = params_p
       .iter()
       .map(|param| {
             let param_range = PostParser::eval_range(file_coordinate, param.range);
             let virtuality = param.virtuality.as_ref().map(|abstract_p| AbstractSP {
               range: PostParser::eval_range(file_coordinate, abstract_p.range),
-              is_internal_method: matches!(&maybe_parent, IFunctionParent::ParentInterface { .. }),
+              is_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen { .. }),
             });
-            let pattern = match (&param.self_borrow, &param.pattern) {
+            let (pattern, synthesized_rune): (AtomSP<'s>, Option<RuneUsage<'s>>) = match (&param.self_borrow, &param.pattern) {
               (Some(_), None) => {
                 let coord_rune = RuneUsage {
                   range: param_range.clone(),
@@ -407,7 +438,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                   coord_rune.rune.clone(),
                   ITemplataType::CoordTemplataType(CoordTemplataType {}),
                 ));
-                AtomSP {
+                let pattern_s = AtomSP {
                   range: param_range.clone(),
                   name: Some(CaptureS {
                     name: IVarNameS::CodeVarName(self.keywords.self_),
@@ -415,7 +446,8 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                   }),
                   coord_rune: Some(coord_rune),
                   destructure: None,
-                }
+                };
+                (pattern_s, None)
               }
               (None, Some(pattern)) => {
                 let mut pattern_lidb = lidb.child();
@@ -446,34 +478,68 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                     rune_to_explicit_type.push((rune, tyype));
                   }
                 }
-                if pattern_s.coord_rune.is_none() {
-                  let coord_rune = RuneUsage {
-                    range: param_range.clone(),
-                    rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
-                  };
-                  rune_to_explicit_type.push((
-                    coord_rune.rune.clone(),
-                    ITemplataType::CoordTemplataType(CoordTemplataType {}),
-                  ));
-                  pattern_s.coord_rune = Some(coord_rune);
+                match pattern_s.coord_rune {
+                  None => {
+                    // Untyped param (like in `(a) => a`) so make a rune that will be added to
+                    // genericParams and to the identifying runes. This only happens for lambdas,
+                    // top level functions can't have these (enforced elsewhere).
+                    let coord_rune = RuneUsage {
+                      range: param_range.clone(),
+                      rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
+                    };
+                    rune_to_explicit_type.push((
+                      coord_rune.rune.clone(),
+                      ITemplataType::CoordTemplataType(CoordTemplataType {}),
+                    ));
+                    pattern_s.coord_rune = Some(coord_rune.clone());
+                    (pattern_s, Some(coord_rune))
+                  }
+                  Some(_) => (pattern_s, None),
                 }
-                pattern_s
               }
               _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
             };
-            return ParameterS::new(
-              param_range.clone(),
-              virtuality,
-              param.maybe_pre_checked.is_some(),
-              pattern,
-            );
+            (
+              ParameterS::new(
+                param_range.clone(),
+                virtuality,
+                param.maybe_pre_checked.is_some(),
+                pattern,
+              ),
+              synthesized_rune,
+            )
       })
-      .collect::<Vec<ParameterS<'s>>>();
+      .collect::<Vec<(ParameterS<'s>, Option<RuneUsage<'s>>)>>();
+    let mut explicit_params_s: Vec<ParameterS<'s>> = Vec::new();
+    let mut explicit_params_synthesized_runes: Vec<RuneUsage<'s>> = Vec::new();
+    for (param_s, maybe_rune) in explicit_params_s_and_synthesized_runes {
+      explicit_params_s.push(param_s);
+      if let Some(rune) = maybe_rune {
+        explicit_params_synthesized_runes.push(rune);
+      }
+    }
+    // Untyped lambda params (from `(_) =>` or `(a, b) =>`) contribute their synthesized coord runes here so later
+    // passes see a uniform FunctionS shape regardless of whether the user wrote `<T>` or an untyped param.
+    let extra_generic_params_from_explicit_params_s: Vec<&'s GenericParameterS<'s>> =
+      explicit_params_synthesized_runes.into_iter()
+        .map(|rune| {
+          &*self.scout_arena.alloc(GenericParameterS {
+            range: rune.range,
+            rune,
+            tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
+              coord_region: None,
+              kind_mutable: true,
+              region_mutable: false,
+            }),
+            default: None,
+          })
+        })
+        .collect();
     let maybe_capture_declarations = match function.body {
       None => None,
       Some(_) => {
         let mut first_params = match &maybe_parent {
-          IFunctionParent::FunctionNoParent | IFunctionParent::ParentInterface { .. } => {
+          IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen { .. } => {
             VariableDeclarations { vars: Vec::new() }
           }
           IFunctionParent::ParentFunction { .. } => {
@@ -535,14 +601,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         let ret_rune = translate_maybe_type_into_maybe_rune(
           self.scout_arena,
           self.keywords,
-          match &maybe_parent {
-            IFunctionParent::FunctionNoParent | IFunctionParent::ParentFunction { .. } => {
-              IEnvironmentS::FunctionEnvironment(function_environment.clone())
-            }
-            IFunctionParent::ParentInterface { interface_env, .. } => {
-              IEnvironmentS::FunctionEnvironment(interface_env.clone())
-            }
-          },
+          IEnvironmentS::FunctionEnvironment(function_environment.clone()),
           &mut ret_lidb,
           Self::eval_range(file_coordinate, function.header.ret.range),
           &mut rules,
@@ -676,8 +735,8 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         let IFunctionParent::ParentFunction { parent_stack_frame } = &maybe_parent else {
           panic!("POSTPARSER_SCOUT_FUNCTION_EXPECTED_PARENT_FUNCTION");
         };
-        let closure_struct_region_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
         let closure_struct_kind_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+        let closure_struct_region_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRegionRune(ImplicitRegionRuneValS { original_rune: closure_struct_kind_rune }));
         let closure_struct_coord_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
         let closure_param_s = self.create_closure_param(
           function.range,
@@ -725,9 +784,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         extra_generic_params_from_body,
       )
     };
-    let mut generic_params: Vec<&'s GenericParameterS<'s>> = extra_generic_params_from_parent;
-    generic_params.extend(function_user_specified_generic_parameters_s);
+    // Per @PRIIROZ, parent ones go on the end.
+    let mut generic_params: Vec<&'s GenericParameterS<'s>> = function_user_specified_generic_parameters_s;
+    generic_params.extend(extra_generic_params_from_explicit_params_s);
     generic_params.extend(extra_generic_params_from_body);
+    generic_params.extend(extra_generic_params_from_parent);
     generic_params = generic_params
       .into_iter()
       .filter(|generic_param| {
@@ -740,7 +801,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     let unfiltered_rules_array: Vec<IRulexSR<'s>> = rules;
     let rules_array = match &maybe_parent {
-      IFunctionParent::ParentInterface { .. } => unfiltered_rules_array
+      IFunctionParent::ParentCitizen { .. } => unfiltered_rules_array
         .into_iter()
         .filter(|rule| !matches!(rule, IRulexSR::RuneParentEnvLookup(_)))
         .collect::<Vec<_>>(),
@@ -753,7 +814,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .iter()
         .filter(|a| !matches!(a, IAttributeP::AbstractAttribute(_)))
         .collect(),
-      IFunctionParent::ParentInterface { .. } => unfiltered_attrs_p.iter().collect(),
+      IFunctionParent::ParentCitizen { .. } => unfiltered_attrs_p.iter().collect(),
       IFunctionParent::ParentFunction { .. } => unfiltered_attrs_p.iter().collect(),
     };
     let func_attrs_s: Vec<IFunctionAttributeS<'s>> = filtered_attrs
@@ -844,7 +905,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     maybeParent match {
       case FunctionNoParent() =>
-      case ParentInterface(_, _, _, _) =>
+      case ParentCitizen(_, _, _, _, _) =>
       case ParentFunction(_) => {
         vcurious(maybeGenericParametersP.isEmpty)
       }
@@ -852,7 +913,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     val funcName =
       maybeParent match {
-        case FunctionNoParent() | ParentInterface(_, _, _, _) => {
+        case FunctionNoParent() | ParentCitizen(_, _, _, _, _) => {
           val NameP(_, codeName) = vassertSome(maybeName)
           interner.intern(FunctionNameS(codeName, codeLocation))
         }
@@ -881,22 +942,31 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .map({ case NameP(range, identifyingRuneName) => rules.RuneUsage(rangeS, CodeRuneS(identifyingRuneName)) })
     val userDeclaredRunes = (userSpecifiedIdentifyingRunes ++ userRunesFromRules).distinct
 
-    maybeParent match {
-      case ParentInterface(_, _, _, _) => vassert(userDeclaredRunes.isEmpty)
-      case _ =>
-    }
-
     val lidb = new LocationInDenizenBuilder(Vector())
 
     maybeParent match {
-      case FunctionNoParent() =>
+      case FunctionNoParent() => {
+        if (attrsP.collectFirst({ case AbstractAttributeP(_) => }).nonEmpty) {
+          maybeParamsP match {
+            case None =>
+              throw CompileErrorExceptionS(VirtualAndAbstractGoTogether(rangeS))
+            case Some(paramsP) =>
+              if (!paramsP.params.exists(_.virtuality match { case Some(AbstractP(_)) => true case _ => false })) {
+                throw CompileErrorExceptionS(VirtualAndAbstractGoTogether(rangeS))
+              }
+          }
+        }
+      }
       case ParentFunction(_) =>
-      case ParentInterface(_, _, _, _) => {
-        maybeParamsP match {
-          case None =>
-          case Some(paramsP) => {
-            if (!paramsP.params.exists(_.virtuality match { case Some(AbstractP(_)) => true case _ => false })) {
-              throw CompileErrorExceptionS(InterfaceMethodNeedsSelf(rangeS))
+      case ParentCitizen(citizenIsInterface, _, _, _, _) => {
+        // When we have traits that can have static methods, this check might need to go away
+        if (citizenIsInterface) {
+          maybeParamsP match {
+            case None =>
+            case Some(paramsP) => {
+              if (!paramsP.params.exists(_.virtuality match { case Some(AbstractP(_)) => true case _ => false })) {
+                throw CompileErrorExceptionS(InterfaceMethodNeedsSelf(rangeS))
+              }
             }
           }
         }
@@ -907,13 +977,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       maybeParent match {
         case FunctionNoParent() => None
         case ParentFunction(parentStackFrame) => Some(parentStackFrame.parentEnv)
-        case ParentInterface(interfaceEnv, _, _, _) => Some(interfaceEnv)
+        case ParentCitizen(_, citizenEnv, _, _, _) => Some(citizenEnv)
       }
     val isInterfaceInternalMethod =
       maybeParent match {
         case FunctionNoParent() => false
         case ParentFunction(parentStackFrame) => false
-        case ParentInterface(_, _, _, _) => true
+        case ParentCitizen(_, _, _, _, _) => true
       }
     val functionEnv =
       postparsing.FunctionEnvironmentS(
@@ -958,7 +1028,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       case ParentFunction(_) => {
         vassert(templateRulesP.isEmpty)
       }
-      case ParentInterface(interfaceEnv, _, interfaceRules, interfaceRuneToExplicitType) => {
+      case ParentCitizen(_, interfaceEnv, _, interfaceRules, interfaceRuneToExplicitType) => {
         // ruleBuilder ++= interfaceRules
         // runeToExplicitType ++= interfaceRuneToExplicitType
         ruleScout.translateRulexes(
@@ -992,7 +1062,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     val paramsP =
       maybeParamsP.toVector.flatMap(_.params).map(param => {
         maybeParent match {
-          case FunctionNoParent() | ParentInterface(_, _, _, _) => {
+          case FunctionNoParent() | ParentCitizen(_, _, _, _, _) => {
             // Should have been caught by LightFunctionMustHaveParamTypes error in parser,
             vassert(vassertSome(param.pattern).templex.nonEmpty)
           }
@@ -1005,7 +1075,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     // like in `(_) => { true }`
     // Later on, we'll make identifying runes for these.
 
-    val explicitParamsS =
+    // For lambdas, untyped explicit params (like `(a, b) => ...` or `(_) => ...`) get a
+    // synthesized coord rune here that will be added to the function's identifying runes.
+    val explicitParamsSAndSynthesizedRunes: Vector[(ParameterS, Option[RuneUsage])] =
       paramsP
         .map({
           case ParameterP(rangeL, maybeAbstractP, maybePreChecked, maybeSelfBorrow, maybePattern) => {
@@ -1023,7 +1095,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                 runeToExplicitType += ((rune.rune, CoordTemplataType()))
                 val patternS =
                   AtomSP(rangeS, Some(CaptureS(CodeVarNameS(keywords.self), false)), Some(rune), None)
-                ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS)
+                (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS), None)
               }
               case (None, Some(patternP)) => {
                 val patternPerhapsWithoutCoordRuneS =
@@ -1033,22 +1105,35 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                     ruleBuilder,
                     runeToExplicitType,
                     patternP)
-                val patternS =
-                  patternPerhapsWithoutCoordRuneS.coordRune match {
-                    case None => {
-                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-                      runeToExplicitType += ((rune.rune, CoordTemplataType()))
-                      patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
-                    }
-                    case Some(_) => patternPerhapsWithoutCoordRuneS
+                patternPerhapsWithoutCoordRuneS.coordRune match {
+                  case None => {
+                    // Untyped param (like in `(a) => a`) so make a rune that will be added to
+                    // genericParams and to the identifying runes. This only happens for lambdas,
+                    // top level functions can't have these (enforced elsewhere).
+                    val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                    runeToExplicitType += ((rune.rune, CoordTemplataType()))
+                    val patternS = patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
+                    (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS), Some(rune))
                   }
-                ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS)
+                  case Some(_) =>
+                    (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternPerhapsWithoutCoordRuneS), None)
+                }
               }
             }
           }
         })
-//    val explicitParamsS = explicitParamPatternsAndIdentifyingRunes.map(_._1).map(ParameterS)
-//    val identifyingRunesFromExplicitParams = explicitParamPatternsAndIdentifyingRunes.flatMap(_._2)
+    val explicitParamsS = explicitParamsSAndSynthesizedRunes.map(_._1)
+    // Untyped lambda params (from `(_) =>` or `(a, b) =>`) contribute their synthesized coord runes here so later
+    // passes see a uniform FunctionS shape regardless of whether the user wrote `<T>` or an untyped param.
+    val extraGenericParamsFromExplicitParamsS =
+      explicitParamsSAndSynthesizedRunes
+          .flatMap(_._2)
+          .map(rune =>
+            GenericParameterS(
+              rune.range,
+              rune,
+              CoordGenericParameterTypeS(None, true, false),
+              None))
 
     // Only if the function actually has a body
     val maybeCaptureDeclarations =
@@ -1058,7 +1143,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           val firstParams =
             maybeParent match {
               case FunctionNoParent() => noDeclarations
-              case ParentInterface(_, _, _, _) => noDeclarations
+              case ParentCitizen(_, _, _, _, _) => noDeclarations
               case ParentFunction(_) => {
                 // Every lambda has a closure as its first arg, even if its empty
                 val closureParamName = interner.intern(ClosureParamNameS(rangeS.begin))
@@ -1084,7 +1169,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             case ParentFunction(_) => {
               None // Infer the return
             }
-            case FunctionNoParent() | ParentInterface(_, _, _, _) => {
+            case FunctionNoParent() | ParentCitizen(_, _, _, _, _) => {
               // If nothing's present, assume void
               val rangeS = PostParser.evalRange(file, retRange)
               val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
@@ -1099,11 +1184,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         }
         case Some(retTypePT) => {
           templexScout.translateMaybeTypeIntoMaybeRune(
-            maybeParent match {
-              case FunctionNoParent() => functionEnv
-              case ParentFunction(_) => functionEnv
-              case ParentInterface(interfaceEnv, _, _, _) => interfaceEnv
-            },
+            functionEnv,
             lidb.child(),
             PostParser.evalRange(myStackFrameWithoutParams.file, retRange),
             ruleBuilder,
@@ -1118,7 +1199,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     maybeParent match {
       case FunctionNoParent() =>
       case ParentFunction(_) =>
-      case ParentInterface(_, _, _, _) => {
+      case ParentCitizen(_, _, _, _, _) => {
         if (attrsP.collect({ case AbstractAttributeP(_) => true }).nonEmpty) {
           throw CompileErrorExceptionS(
             RangedInternalErrorS(rangeS, "Dont need abstract here"))
@@ -1130,11 +1211,16 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       (maybeParent match {
         case FunctionNoParent() => Vector()
         case ParentFunction(_) => Vector()
-        case ParentInterface(_, interfaceGenericParams, _, _) => interfaceGenericParams
+        case ParentCitizen(_, _, interfaceGenericParams, _, _) => interfaceGenericParams
       })
+    extraGenericParamsFromParentS.foreach(gp => {
+      runeToExplicitType += ((gp.rune.rune, gp.tyype.tyype))
+    })
 
     val (maybeBody1, variableUses, extraGenericParamsFromBodyS, maybeClosureParam, magicParams) =
-      if (maybeParent match { case ParentInterface(_, _, _, _) => true case _ => false }) {
+      if (maybeParent match { case ParentCitizen(true, _, _, _, _) => true case _ => false }) {
+        // Only true interface members get an implicit abstract body — struct internal methods
+        // with no body would have been rejected earlier as a parse error.
         val bodyS = AbstractBodyS
         (bodyS, noVariableUses, Vector(), None, Vector())
       } else if (attrsP.collectFirst({ case AbstractAttributeP(_) => }).nonEmpty) {
@@ -1164,7 +1250,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
         val parentStackFrame =
           maybeParent match {
-            case FunctionNoParent() | ParentInterface(_, _, _, _) => None
+            case FunctionNoParent() | ParentCitizen(_, _, _, _, _) => None
             case ParentFunction(parentStackFrame) => Some(parentStackFrame)
           }
         val (body1, variableUses, lambdaMagicParamNames) =
@@ -1181,7 +1267,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
         val (extraGenericParamsFromBodyS, maybeClosureParam, magicParams) =
           maybeParent match {
-            case FunctionNoParent() | ParentInterface(_, _, _, _) => {
+            case FunctionNoParent() | ParentCitizen(_, _, _, _, _) => {
               if (lambdaMagicParamNames.nonEmpty) {
                 throw CompileErrorExceptionS(postparsing.RangedInternalErrorS(rangeS, "Magic param (underscore) in a normal block!"))
               }
@@ -1249,9 +1335,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     vregionmut() // Put back in regions
     val genericParametersS =
-      (extraGenericParamsFromParentS ++
-        functionUserSpecifiedGenericParametersS ++
-        extraGenericParamsFromBodyS)
+      (functionUserSpecifiedGenericParametersS ++
+        extraGenericParamsFromExplicitParamsS ++
+        extraGenericParamsFromBodyS ++
+        // Parent ones go on the end, see @PRIIROZ.
+        extraGenericParamsFromParentS)
           .filter({
             case GenericParameterS(_, _, RegionGenericParameterTypeS(_), _) => false
             case _ => true
@@ -1271,7 +1359,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         case FunctionNoParent() => {
           unfilteredAttrsP.filter({ case AbstractAttributeP(_) => false case _ => true })
         }
-        case ParentInterface(_, _, _, _) => unfilteredAttrsP
+        case ParentCitizen(_, _, _, _, _) => unfilteredAttrsP
         case ParentFunction(_) => unfilteredAttrsP
       })
         //.filter({ case AdditiveAttributeP(_) => false case _ => true })
@@ -1293,7 +1381,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       maybeParent match {
         case FunctionNoParent() => unfilteredRulesArray
         case ParentFunction(_) => unfilteredRulesArray
-        case ParentInterface(_, _, _, _) => {
+        case ParentCitizen(_, _, _, _, _) => {
           unfilteredRulesArray.filter({
             case RuneParentEnvLookupSR(_, _) => false
             case _ => true
@@ -1836,11 +1924,12 @@ fn create_magic_parameters(
     let (function_s, variable_uses) = self.scout_function(
       file_coordinate,
       function_p,
-      IFunctionParent::ParentInterface {
-        interface_env,
-        interface_generic_params,
-        interface_rules: interface_rules.to_vec(),
-        interface_rune_to_explicit_type: interface_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+      IFunctionParent::ParentCitizen {
+        citizen_is_interface: true,
+        citizen_env: interface_env,
+        citizen_generic_params: interface_generic_params,
+        citizen_rules: interface_rules.to_vec(),
+        citizen_rune_to_explicit_type: interface_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
       },
     )?;
     assert!(
@@ -1852,10 +1941,10 @@ fn create_magic_parameters(
   }
 /*
   def scoutInterfaceMember(
-    parentInterface: ParentInterface,
+    parentInterface: ParentCitizen,
     functionP: FunctionP):
   FunctionS = {
-    val file = parentInterface.interfaceEnv.file
+    val file = parentInterface.citizenEnv.file
     val (functionS, variableUses) = scoutFunction(file, functionP, parentInterface)
     vassert(variableUses.uses.isEmpty)
     functionS

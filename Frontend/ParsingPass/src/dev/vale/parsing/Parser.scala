@@ -176,7 +176,7 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
   def parseStruct(functionL: StructL):
   Result[StructP, IParseError] = {
     Profiler.frame(() => {
-      val StructL(structRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, contentsL) = functionL
+      val StructL(structRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, contentsRange, membersL, methodsL) = functionL
 
       val maybeIdentifyingRunes =
         maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
@@ -226,13 +226,21 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
 
       val membersP =
         StructMembersP(
-          contentsL.range,
-          U.map[ScrambleIterator, IStructContent](
-            new ScrambleIterator(contentsL).splitOnSymbol(';', false),
+          contentsRange,
+          U.map[ScrambleLE, IStructContent](
+            membersL,
             member => {
-              parseStructMember(member) match {
+              parseStructMember(new ScrambleIterator(member)) match {
                 case Err(e) => return Err(e)
                 case Ok(x) => x
+              }
+            }).toVector ++
+          U.map[FunctionL, IStructContent](
+            methodsL,
+            methodL => {
+              parseFunction(methodL, true) match {
+                case Err(e) => return Err(e)
+                case Ok(x) => StructMethodP(x)
               }
             }).toVector)
 
@@ -247,7 +255,7 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
           maybeIdentifyingRunes,
           maybeTemplateRulesP,
           maybeDefaultRegionP,
-          contentsL.range,
+          contentsRange,
           membersP)
       Ok(struct)
     })
@@ -600,6 +608,11 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
             None
           }
         })
+      maybeReturnTypeP match {
+        case Some(FuncPT(range, _, _, _, _)) =>
+          return Err(FuncBoundWithoutWhere(range.begin))
+        case _ =>
+      }
       val returnP = FunctionReturnP(RangeL(returnBeginPos, returnEndPos), maybeReturnTypeP)
 
       val maybeRulesP =

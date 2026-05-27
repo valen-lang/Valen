@@ -1284,42 +1284,23 @@ where
 
   fn parse_let(
     &self,
+    pattern_iter: &mut ScrambleIterator<'p, '_>,
     iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<Option<IExpressionPE<'p>>> {
-    // Try to parse a let statement by looking for pattern = expr
-    let original_pos = iter.index;
-
-    // Use try_skip_past_equals_while to find the pattern and source expression
-    // Mirrors ExpressionParser.scala lines 797-804
-    let pattern =
-        match try_skip_past_equals_while(iter, |scouting_iter| match scouting_iter.peek_cloned() {
-          None => false,
-          Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
-          Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
-          _ => true,
-        }) {
-          None => {
-            // No equals found, not a let statement
-            iter.index = original_pos;
-            return Ok(None);
-          }
-          Some(mut pattern_iter) => {
-            let pattern_begin = pattern_iter.get_pos();
-            pattern_parser.parse_pattern(
-              &mut pattern_iter,
-              templex_parser,
-              pattern_begin,
-              0,
-              false,
-              false,
-              false,
-              None,
-            )?
-          }
-        };
+  ) -> ParseResult<LetPE<'p>> {
+    let pattern_begin = pattern_iter.get_pos();
+    let pattern = pattern_parser.parse_pattern(
+      pattern_iter,
+      templex_parser,
+      pattern_begin,
+      0,
+      false,
+      false,
+      false,
+      None,
+    )?;
 
     // Validate the pattern doesn't use 'set' keyword
     if let Some(DestinationLocalP {
@@ -1333,11 +1314,11 @@ where
     let source_expr =
         self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
 
-    Ok(Some(IExpressionPE::Let(LetPE {
+    Ok(LetPE {
       range: RangeL(pattern.range.begin(), source_expr.range().end()),
       pattern: &*self.parse_arena.alloc(pattern),
       source: self.parse_arena.alloc(source_expr),
-    })))
+    })
   }
   /*
     private def parseLet(
@@ -1859,16 +1840,32 @@ where
       return Ok(self.parse_arena.alloc(x));
     }
 
+    assert!(iter.has_next());
+
     // Parse let or lone expression (lines 789-818)
     let let_or_lone_expr: &'p IExpressionPE<'p> = if self.next_is_set_expr(iter) {
       self.parse_arena.alloc(self
           .parse_mut_expr(iter, stop_on_curlied, templex_parser, pattern_parser)?
           .expect("parse_mut_expr should return Some when next_is_set_expr is true"))
     } else {
-      // Try to parse as let statement
-      match self.parse_let(iter, stop_on_curlied, templex_parser, pattern_parser)? {
-        Some(let_expr) => self.parse_arena.alloc(let_expr),
-        None => self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?,
+      match try_skip_past_equals_while(iter, |scouting_iter| match scouting_iter.peek_cloned() {
+        None => false,
+        Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
+        _ => true,
+      }) {
+        Some(mut dest_iter) => {
+          match self.parse_let(&mut dest_iter, iter, stop_on_curlied, templex_parser, pattern_parser) {
+            Ok(let_expr) => self.parse_arena.alloc(IExpressionPE::Let(let_expr)),
+            Err(ParseError::BadThingAfterTypeInPattern(_)) => {
+              return Err(ParseError::ForgotSetKeyword(dest_iter.get_pos()))
+            }
+            Err(e) => return Err(e),
+          }
+        }
+        None => {
+          self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?
+        }
       }
     };
 
@@ -1946,6 +1943,7 @@ where
           }) match {
             case Some(destIter) => {
               parseLet(destIter, iter, stopOnCurlied) match {
+                case Err(BadThingAfterTypeInPattern(_)) => return Err(ForgotSetKeyword(destIter.getPos()))
                 case Err(e) => return Err(e)
                 case Ok(x) => x
               }

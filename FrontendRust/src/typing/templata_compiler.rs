@@ -212,6 +212,8 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules.
+    // Safe because prediction has no actual arguments being inferred that could conflict.
     pub fn assemble_predict_rules(
         &self,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
@@ -225,11 +227,6 @@ where 's: 't,
                         for rule in x.rules.iter() {
                             result.push(**rule);
                         }
-                        result.push(IRulexSR::Equals(EqualsSR {
-                            range: generic_param.range,
-                            left: generic_param.rune,
-                            right: RuneUsage { range: generic_param.range, rune: x.result_rune },
-                        }));
                     }
                     None => {}
                 }
@@ -239,15 +236,13 @@ where 's: 't,
     }
 }
 /*
-  // See SFWPRL
+  // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules.
+  // Safe because prediction has no actual arguments being inferred that could conflict.
   def assemblePredictRules(genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
     genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
       if (index >= numExplicitTemplateArgs) {
         genericParam.default match {
-          case Some(x) => {
-            x.rules :+
-              EqualsSR(genericParam.range, genericParam.rune, RuneUsage(genericParam.range, x.resultRune))
-          }
+          case Some(x) => x.rules
           case None => Vector()
         }
       } else {
@@ -259,38 +254,22 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Per @DRSINI, default rules are no longer added eagerly here. They're added
+    // incrementally by solveForResolving and evaluateGenericFunctionFromCallForPrototype
+    // only for runes that remain unsolved after argument inference.
     pub fn assemble_call_site_rules(
         &self,
         rules: &'s [IRulexSR<'s>],
-        generic_parameters: &'s [&'s GenericParameterS<'s>],
-        num_explicit_template_args: i32,
     ) -> Vec<IRulexSR<'s>> {
-        let mut result: Vec<IRulexSR<'s>> =
-            rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
-        for (index, generic_param) in generic_parameters.iter().enumerate() {
-            if index as i32 >= num_explicit_template_args {
-                match &generic_param.default {
-                    Some(x) => result.extend(x.rules.iter().map(|r| **r)),
-                    None => {}
-                }
-            }
-        }
-        result
+        rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect()
     }
 }
 /*
-  def assembleCallSiteRules(rules: Vector[IRulexSR], genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
-    rules.filter(InferCompiler.includeRuleInCallSiteSolve) ++
-      (genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
-        if (index >= numExplicitTemplateArgs) {
-          genericParam.default match {
-            case Some(x) => x.rules
-            case None => Vector()
-          }
-        } else {
-          Vector()
-        }
-      }))
+  // Per @DRSINI, default rules are no longer added eagerly here. They're added
+  // incrementally by solveForResolving and evaluateGenericFunctionFromCallForPrototype
+  // only for runes that remain unsolved after argument inference.
+  def assembleCallSiteRules(rules: Vector[IRulexSR]): Vector[IRulexSR] = {
+    rules.filter(InferCompiler.includeRuleInCallSiteSolve)
   }
 */
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -860,7 +839,7 @@ where 's: 't,
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.mutability)),
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
-                    self_region: RegionT {},
+                    self_region: RegionT { region: IRegionT::Default },
                 });
                 let new_rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
                     template: rsa_name.template,
@@ -879,7 +858,7 @@ where 's: 't,
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
                     mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.mutability)),
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
-                    self_region: RegionT {},
+                    self_region: RegionT { region: IRegionT::Default },
                 });
                 let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
                     template: ssa_name.template,
@@ -957,7 +936,7 @@ where 's: 't,
                 interner.intern(RawArrayNameT(
                   expectMutability(substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, mutability)),
                   substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, elementType),
-                  RegionT()))))))))
+                  RegionT(DefaultRegionT)))))))))
       }
       case StaticSizedArrayTT(IdT(packageCoord, initSteps, StaticSizedArrayNameT(template, size, variability, RawArrayNameT(mutability, elementType, region)))) => {
         KindTemplataT(
@@ -972,7 +951,7 @@ where 's: 't,
                 interner.intern(RawArrayNameT(
                   expectMutability(substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, mutability)),
                   substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, elementType),
-                  RegionT()))))))))
+                  RegionT(DefaultRegionT)))))))))
       }
       case p @ KindPlaceholderT(id @ IdT(_, _, KindPlaceholderNameT(KindPlaceholderTemplateNameT(index, rune)))) => {
         if (id.initId(interner) == needleTemplateName) {
@@ -2898,8 +2877,8 @@ where 's: 't,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
-        // val regionPlaceholderTemplata = RegionT()
-        let region_placeholder_templata = RegionT;
+        // val regionPlaceholderTemplata = RegionT(DefaultRegionT)
+        let region_placeholder_templata = RegionT { region: IRegionT::Default };
 
         // val kindPlaceholderT =
         //   createKindPlaceholderInner(
@@ -2928,7 +2907,7 @@ where 's: 't,
       kindOwnership: OwnershipT,
       registerWithCompilerOutputs: Boolean
   ): CoordTemplataT = {
-    val regionPlaceholderTemplata = RegionT()
+    val regionPlaceholderTemplata = RegionT(DefaultRegionT)
 
     val kindPlaceholderT =
       createKindPlaceholderInner(
@@ -2991,6 +2970,9 @@ where 's: 't,
             // coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)
             coutputs.declare_type_mutability(kind_placeholder_template_id, mutability);
 
+            // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
+            // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not
+            // here. Lookups walk from the calling env to find them.
             // val placeholderEnv = GeneralEnvironmentT.childOf(interner, env, kindPlaceholderTemplateId, kindPlaceholderTemplateId)
             let placeholder_env = child_of(
                 self.typing_interner,
@@ -3041,6 +3023,9 @@ where 's: 't,
           })
       coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)
 
+      // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
+      // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not
+      // here. Lookups walk from the calling env to find them.
       val placeholderEnv = GeneralEnvironmentT.childOf(interner, env, kindPlaceholderTemplateId, kindPlaceholderTemplateId)
       coutputs.declareTypeOuterEnv(kindPlaceholderTemplateId, placeholderEnv)
       coutputs.declareTypeInnerEnv(kindPlaceholderTemplateId, placeholderEnv)

@@ -141,7 +141,9 @@ pub struct StructL<'p> {
   pub mutability: Option<ScrambleLE<'p>>,
   pub identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
-  pub members: ScrambleLE<'p>,
+  pub contents_range: RangeL,
+  pub members: &'p [ScrambleLE<'p>],
+  pub methods: &'p [FunctionL<'p>],
 }
 /*
 case class StructL(
@@ -151,7 +153,9 @@ case class StructL(
   mutability: Option[ScrambleLE],
   identifyingRunes: Option[AngledLE],
   templateRules: Option[ScrambleLE],
-  members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious();
+  contentsRange: RangeL,
+  members: Vector[ScrambleLE],
+  methods: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 */
 

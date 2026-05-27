@@ -1,3 +1,7 @@
+// mig: struct OwnershipTests
+pub struct OwnershipTests;
+
+/*
 package dev.vale
 
 import dev.vale.postparsing.patterns.AtomSP
@@ -16,6 +20,15 @@ import org.scalatest._
 import dev.vale.von.VonInt
 
 class OwnershipTests extends FunSuite with Matchers {
+*/
+// mig: fn borrowing_a_temporary_mutable_makes_a_local_var
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn borrowing_a_temporary_mutable_makes_a_local_var() {
+    panic!("Unmigrated test: borrowing_a_temporary_mutable_makes_a_local_var");
+}
+
+/*
   test("Borrowing a temporary mutable makes a local var") {
     val compile = RunCompilation.test(
       """
@@ -38,7 +51,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
+*/
+// mig: fn owning_ref_method_call
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn owning_ref_method_call() {
+    panic!("Unmigrated test: owning_ref_method_call");
+}
 
+/*
   test("Owning ref method call") {
     val compile = RunCompilation.test(
       """
@@ -55,7 +76,15 @@ class OwnershipTests extends FunSuite with Matchers {
     val main = compile.expectCompilerOutputs().lookupFunction("main")
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
+*/
+// mig: fn derive_drop
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn derive_drop() {
+    panic!("Unmigrated test: derive_drop");
+}
 
+/*
   test("Derive drop") {
     val compile = RunCompilation.test(
       """
@@ -74,7 +103,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector())
   }
+*/
+// mig: fn custom_drop_result_is_an_owning_ref_calls_destructor
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn custom_drop_result_is_an_owning_ref_calls_destructor() {
+    panic!("Unmigrated test: custom_drop_result_is_an_owning_ref_calls_destructor");
+}
 
+/*
   test("Custom drop result is an owning ref, calls destructor") {
     val compile = RunCompilation.test(
       """
@@ -99,7 +136,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "Destroying!\n"
   }
+*/
+// mig: fn saves_return_value_then_destroys_temporary
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn saves_return_value_then_destroys_temporary() {
+    panic!("Unmigrated test: saves_return_value_then_destroys_temporary");
+}
 
+/*
   test("Saves return value then destroys temporary") {
     val compile = RunCompilation.test(
       """
@@ -123,7 +168,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForKindAndStdout(Vector()) match { case (VonInt(10), "Destroying!\n") => }
   }
+*/
+// mig: fn calls_destructor_on_local_var
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn calls_destructor_on_local_var() {
+    panic!("Unmigrated test: calls_destructor_on_local_var");
+}
 
+/*
   test("Calls destructor on local var") {
     val compile = RunCompilation.test(
       """
@@ -148,7 +201,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "Destroying!\n"
   }
+*/
+// mig: fn calls_destructor_on_local_var_unless_moved
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn calls_destructor_on_local_var_unless_moved() {
+    panic!("Unmigrated test: calls_destructor_on_local_var_unless_moved");
+}
 
+/*
   test("Calls destructor on local var unless moved") {
     // Should call the destructor in moo, but not in main
     val compile = RunCompilation.test(
@@ -199,7 +260,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "Destroying!\n"
   }
+*/
+// mig: fn saves_return_value_then_destroys_local_var
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn saves_return_value_then_destroys_local_var() {
+    panic!("Unmigrated test: saves_return_value_then_destroys_local_var");
+}
 
+/*
   test("Saves return value then destroys local var") {
     val compile = RunCompilation.test(
       """
@@ -225,7 +294,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForKindAndStdout(Vector()) match { case (VonInt(10), "Destroying!\n") => }
   }
+*/
+// mig: fn gets_from_temporary_struct_a_members_member
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn gets_from_temporary_struct_a_members_member() {
+    panic!("Unmigrated test: gets_from_temporary_struct_a_members_member");
+}
 
+/*
   test("Gets from temporary struct a member's member") {
     val compile = RunCompilation.test(
       """
@@ -247,7 +324,15 @@ class OwnershipTests extends FunSuite with Matchers {
   // and hoist to the end its destructor.
 
   // test that when we borrow an owning, we hoist its destructor to the end.
+*/
+// mig: fn unstackifies_local_vars
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn unstackifies_local_vars() {
+    panic!("Unmigrated test: unstackifies_local_vars");
+}
 
+/*
   test("Unstackifies local vars") {
     val compile = RunCompilation.test(
       """
@@ -266,7 +351,15 @@ class OwnershipTests extends FunSuite with Matchers {
       }).size
     Collector.all(main, { case UnletTE(_) => }).size shouldEqual numVariables
   }
+*/
+// mig: fn basic_builder_pattern
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn basic_builder_pattern() {
+    panic!("Unmigrated test: basic_builder_pattern");
+}
 
+/*
   test("Basic builder pattern") {
     val compile = RunCompilation.test(
       """
@@ -287,7 +380,15 @@ class OwnershipTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
+*/
+// mig: fn member_access_on_returned_owning_ref
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn member_access_on_returned_owning_ref() {
+    panic!("Unmigrated test: member_access_on_returned_owning_ref");
+}
 
+/*
   test("Member access on returned owning ref") {
     val compile = RunCompilation.test(
       """
@@ -301,3 +402,5 @@ class OwnershipTests extends FunSuite with Matchers {
   }
 
 }
+
+*/

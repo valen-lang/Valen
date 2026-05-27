@@ -803,6 +803,7 @@ class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptio
         }) match {
           case Some(destIter) => {
             parseLet(destIter, iter, stopOnCurlied) match {
+              case Err(BadThingAfterTypeInPattern(_)) => return Err(ForgotSetKeyword(destIter.getPos()))
               case Err(e) => return Err(e)
               case Ok(x) => x
             }

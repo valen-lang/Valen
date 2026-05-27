@@ -99,7 +99,9 @@ case class StructS(
     membersPredictedRuneToType: Map[IRuneS, ITemplataType],
     memberRules: Vector[IRulexSR],
 
-    members: Vector[IStructMemberS]
+    members: Vector[IStructMemberS],
+
+    internalMethods: Vector[FunctionS]
 ) extends ICitizenS {
 
   vassert(
@@ -346,11 +348,17 @@ case class GenericParameterS(
 //case class ReadWriteRuneAttributeS(range: RangeS) extends IRuneAttributeS
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 
+// Per @DRSINI, these rules are added incrementally (not in the initial rule set) by
+// solveForResolving and evaluateGenericFunctionFromCallForPrototype for unsolved runes.
+// `rules` includes the connecting EqualsSR(paramRune, resultRune) so the default is fully
+// self-contained — it travels intact when GenericParameterS is inherited (e.g. by struct
+// internal methods). `runeToType` carries types for default-only runes (currently just
+// resultRune); these get registered into the solver at default-fire time.
+// DO NOT SUBMIT is this true?
 case class GenericParameterDefaultS(
-  // One day, when we want more rules in here, we might need to have a runeToType map
-  // and other things to make it its own little world.
   resultRune: IRuneS,
-  rules: Vector[IRulexSR])
+  rules: Vector[IRulexSR],
+  runeToType: Map[IRuneS, ITemplataType])
 
 // Underlying class for all XYZFunctionS types
 case class FunctionS(

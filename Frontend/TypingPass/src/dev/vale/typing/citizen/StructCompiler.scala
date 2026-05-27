@@ -52,7 +52,8 @@ trait IStructCompilerDelegate {
     callLocation: LocationInDenizen,
     functionName: IImpreciseNameS,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     contextRegion: RegionT,
     args: Vector[CoordT],
     extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -127,6 +128,15 @@ class StructCompiler(
         TemplatasStore(structTemplateId, Map(), Map())
           .addEntries(
             interner,
+            // Internal methods declared inside the struct body (see IMRFDI). Mirrors the
+            // interface registration below: the struct's outer env is the single home for
+            // its internal methods, and lookups from per-instantiation envs walk up to find
+            // them.
+            structA.internalMethods
+              .map(internalMethod => {
+                val functionName = nameTranslator.translateGenericFunctionName(internalMethod.name)
+                (functionName -> FunctionEnvEntry(internalMethod))
+              }) ++
             // Merge in any things from the global environment that say they're part of this
             // structs's namespace (see IMRFDI and CODME).
             // StructFreeMacro will put a free function here.

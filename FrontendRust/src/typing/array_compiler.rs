@@ -127,6 +127,11 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
+        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+        // site, copy this again (or, preferably, land the shared helper refactor queued in
+        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        // (MKRFA preprocessing not yet wired into this Rust path; tracked alongside the audit-trail fold.)
 
         let initial_knowns: &[InitialKnown<'s, 't>] = &[];
         let initial_sends = &[];
@@ -175,6 +180,7 @@ where 's: 't,
         }
     }
 /*
+Guardian: temp-disable: SPDMX — MACTX mirror pass: same MKRFA comment + empty initial_knowns issue as the sibling _from_values fn. Adding the audit-trail mirror; surrounding simplification predates the edit. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1373-1779476516288/hook-1373/evaluate_static_sized_array_from_callable--79.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 Guardian: temp-disable: SPDMX — Both deviations are direct mirrors of the in-file twin evaluate_static_sized_array_from_values (array_compiler.rs:381-498): pre-populating initially_known_runes for size/mutability/variability (lines 403-409) and the make_solver_state/incrementally_solve/check_resolving_conclusions_and_resolve triple (lines 460-471) are the established Rust adaptation of solveForResolving in this file. Same author, same shape; this is the precedent. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-680-1778981807111/hook-680/evaluate_static_sized_array_from_callable--71.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateStaticSizedArrayFromCallable(
     coutputs: CompilerOutputs,
@@ -228,16 +234,34 @@ Guardian: temp-disable: SPDMX — Both deviations are direct mirrors of the in-f
       case Ok(()) =>
     }
     val rulesA = ruleBuilder.toVector
-
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
     val CompleteResolveSolve(templatas, _) =
       inferCompiler.solveForResolving(
         InferEnv(callingEnv, parentRanges, callLocation, callingEnv, region),
         coutputs,
-        rulesA,
+        rulesWithoutRuneParentEnvLookups,
         runeAToType.toMap,
         parentRanges,
         callLocation,
         Vector(),
+        initialKnowns,
         Vector()) match {
         case Err(e) => throw CompileErrorExceptionT(TypingPassResolvingError(parentRanges, e))
         case Ok(c) => c
@@ -329,18 +353,30 @@ where 's: 't,
       case Ok(()) =>
     }
     val rulesA = ruleBuilder.toVector
-
-    // Elsewhere we do some incremental solving to fill in default generic param values like the
-    // context region, but here I think we can just feed it in directly. There's syntactically no
-    // way for the user to hand it in as a generic param.
-    val initialKnowns = Vector()
-
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
 //    val CompleteCompilerSolve(_, templatas, _, Vector()) =
 //      inferCompiler.solveExpectComplete(
 //        InferEnv(callingEnv, parentRanges, callLocation, callingEnv, region),
 //        coutputs, rulesA, runeAToType.toMap, parentRanges,
 //        callLocation, initialKnowns, Vector(), true, true, Vector())
-    val rules = rulesA
+    val rules = rulesWithoutRuneParentEnvLookups
     val runeToType = runeAToType.toMap
     val invocationRange = parentRanges
     val initialSends = Vector()
@@ -374,10 +410,12 @@ where 's: 't,
 
 //    val variability = getArrayVariability(templatas, variabilityRune)
 
-    if (maybeElementTypeRune.isEmpty) {
-      // Temporary until we can figure out MSAE.
-      throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Must specify element for arrays."))
-    }
+    // MSAE guard removed per @BRRZ. When the user omits the element type,
+    // maybeElementTypeRune is None; the ImmutableT branch below handles that via
+    // `.foreach` (no-op on None, the element type comes directly from
+    // `getArrayGeneratorPrototype`), and the MutableT branch's `findFunction("Array",...)`
+    // goes through the stdlib Array<M,E,G>(n int, generator G) where func(&G,int)E
+    // bound, whose return rune E is now resolved via the relaxed ResolveSR.
 
     mutability match {
       case PlaceholderTemplataT(_, MutabilityTemplataType()) => vimpl()
@@ -425,6 +463,7 @@ where 's: 't,
               RuneParentEnvLookupSR(parentRanges.head, RuneUsage(parentRanges.head, e))
             }),
             Vector(CodeRuneS(keywords.M)) ++ maybeElementTypeRune,
+            Vector.empty,
             region,
             Vector(sizeTE.result.coord) ++
               maybeCallableTE.map(c => c.result.coord),
@@ -531,6 +570,11 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
+        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+        // site, copy this again (or, preferably, land the shared helper refactor queued in
+        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        // (MKRFA preprocessing not yet wired into this Rust path; tracked alongside the audit-trail fold.)
 
         let initial_knowns: &[InitialKnown<'s, 't>] = &[];
         let initial_sends = &[];
@@ -583,6 +627,7 @@ where 's: 't,
         })
     }
 /*
+Guardian: temp-disable: SPDMX — MACTX mirror pass: adding the @MKRFA comment near rules_a/initial_knowns documents that this Rust path doesn't yet wire the RuneParentEnvLookupSR preprocessing fold present in canonical Scala. The surrounding empty-initial_knowns simplification predates this edit; the comment is the audit-trail mirror, not a behavioral change. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1373-1779476516288/hook-1373/evaluate_static_sized_array_from_values--510.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateStaticSizedArrayFromValues(
       coutputs: CompilerOutputs,
       callingEnv: IInDenizenEnvironmentT,
@@ -641,15 +686,30 @@ where 's: 't,
       case Ok(()) =>
     }
     val rulesA = ruleBuilder.toVector
-
-    val initialKnowns = Vector()
-
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
 //    val CompleteCompilerSolve(_, templatas, _, Vector()) =
 //      inferCompiler.solveExpectComplete(
 //        envs,
 //        coutputs, rulesA, runeAToType.toMap, parentRanges,
 //        callLocation, initialKnowns, Vector(), true, true, Vector())
-    val rules = rulesA
+    val rules = rulesWithoutRuneParentEnvLookups
     val runeToType = runeAToType.toMap
     val invocationRange = parentRanges
     val initialSends = Vector()

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use indexmap::IndexMap;
 use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{GenericParameterS, LocationInDenizen};
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
 use crate::postparsing::rules::rules::CoordSendSR;
 use crate::postparsing::names::*;
@@ -178,6 +178,7 @@ case class InitialSend(
   sendTemplata: ITemplataT[ITemplataType])
 
 */
+#[derive(Copy, Clone)]
 pub struct InitialKnown<'s, 't> {
     pub rune: RuneUsage<'s>,
     pub templata: ITemplataT<'s, 't>,
@@ -331,6 +332,11 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
+    //
+    // ⚠ Same MKRFA caller contract as make_solver_state above. Expression-level `rules` must have
+    // RuneParentEnvLookupSR preprocessed into `initial_knowns` before this call (see
+    // OverloadResolver.scala:311-325). Unenforced; violations are silent.
     pub fn solve_for_resolving(
         &self,
         envs: InferEnv<'s, 't>,
@@ -339,20 +345,45 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
+        generic_parameters: &'s [&'s GenericParameterS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
         initial_sends: &[InitialSend<'s, 't>],
     ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let mut solver =
             self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
-        match self.r#continue(envs, coutputs, &mut solver) {
-            Ok(()) => {}
-            Err(e) => return Ok(Err(IResolvingError::ResolvingSolveFailedOrIncomplete(e))),
+        match self.incrementally_solve(envs, coutputs, &mut solver, |_coutputs, solver_state| {
+            match self.get_first_unsolved_identifying_rune(generic_parameters, |rune| solver_state.get_conclusion(&rune).is_some()) {
+                None => false,
+                Some((generic_param, _index)) => {
+                    match &generic_param.default {
+                        Some(default_rules) => {
+                            let default_rule_vec: Vec<IRulexSR<'s>> = default_rules.rules.iter().map(|r| **r).collect();
+                            let new_runes: std::collections::HashSet<IRuneS<'s>> =
+                                default_rules.rune_to_type.iter().map(|(k, _)| *k).collect();
+                            solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
+                                false, vec![], HashMap::new(), default_rule_vec, new_runes
+                            ).unwrap();
+                            true
+                        }
+                        None => false,
+                    }
+                }
+            }
+        }) {
+            Err(f) => return Ok(Err(IResolvingError::ResolvingSolveFailedOrIncomplete(f))),
+            Ok(true) => {}
+            Ok(false) => {}
         }
         self.check_resolving_conclusions_and_resolve(
             envs, coutputs, invocation_range, call_location, rune_to_type, rules, &[], &mut solver)
     }
 /*
 Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IResolvingError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IResolvingError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1198-1778814285524/hook-1198/solve_for_resolving--325.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
+  // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
+  //
+  // ⚠ Same MKRFA caller contract as makeSolver above. Expression-level `rules` must have
+  // RuneParentEnvLookupSR preprocessed into `initialKnowns` before this call (see
+  // OverloadResolver.scala:311-325). Unenforced; violations are silent.
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -360,14 +391,35 @@ Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` 
       runeToType: Map[IRuneS, ITemplataType],
       invocationRange: List[RangeS],
       callLocation: LocationInDenizen,
+      genericParameters: Vector[GenericParameterS],
       initialKnowns: Vector[InitialKnown],
       initialSends: Vector[InitialSend]):
   Result[CompleteResolveSolve, IResolvingError] = {
     val solver =
       makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
-    continue(envs, coutputs, solver) match {
-      case Ok(()) =>
-      case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(e))
+    incrementallySolve(
+      envs, coutputs, solver,
+      (solverState) => {
+        TemplataCompiler.getFirstUnsolvedIdentifyingRune(
+          genericParameters,
+          (rune) => solverState.getConclusion(rune).nonEmpty) match {
+          case None => false
+          case Some((genericParam, _)) => {
+            genericParam.default match {
+              case Some(defaultRules) => {
+                solverState.commitStep[ITypingPassSolverError](
+                  false, Vector(), Map(), defaultRules.rules, defaultRules.runeToType.keySet).getOrDie()
+                true
+              }
+              case None => false
+            }
+          }
+        }
+      }) match {
+      case Err(f @ FailedSolve(_, _, _, _, _)) =>
+        return Err(ResolvingSolveFailedOrIncomplete(f))
+      case Ok(true) =>
+      case Ok(false) =>
     }
     checkResolvingConclusionsAndResolve(
       envs, coutputs, invocationRange, callLocation, runeToType, rules, Vector(), solver)
@@ -422,6 +474,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
+    // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
+    // filtering, CSSNCE env threading, DRSINI incremental defaults).
+    // ⚠ CALLER CONTRACT: if `rules` come from an expression-level postparser output,
+    // they must have had RuneParentEnvLookupSR rules stripped into `initial_knowns` before
+    // being passed here (the MKRFA contract — see OverloadResolver.scala:311-325 for the
+    // canonical fold). This is NOT enforced at the type level; violations produce silent
+    // "couldn't solve" errors at dependent rules rather than faulting at the MKRFA rule.
+    // See docs/refactor-thoughts/mkrfa-protocol-leak.md for the queued enforcement work
+    // (extract shared helper + replace the no-op handler with vwat).
     pub fn make_solver_state(
         &self,
         envs: InferEnv<'s, 't>,
@@ -461,6 +523,16 @@ where 's: 't,
             invocation_range.to_vec(), envs, state, rules, rune_to_type, already_known)
     }
 /*
+  // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
+  // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
+  // filtering, CSSNCE env threading, DRSINI incremental defaults).
+  // ⚠ CALLER CONTRACT: if `initialRules` come from an expression-level postparser output,
+  // they must have had RuneParentEnvLookupSR rules stripped into `initialKnowns` before
+  // being passed here (the MKRFA contract — see OverloadResolver.scala:311-325 for the
+  // canonical fold). This is NOT enforced at the type level; violations produce silent
+  // "couldn't solve" errors at dependent rules rather than faulting at the MKRFA rule.
+  // See docs/refactor-thoughts/mkrfa-protocol-leak.md for the queued enforcement work
+  // (extract shared helper + replace the no-op handler with vwat).
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
@@ -927,6 +999,9 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Counter to @BDPFWDZ: this harvests bound prototypes from citizen-typed param inner envs
+    // for the caller to push into its near-env. Pull-aligned replacement is to walk the citizen's
+    // env at lookup time instead.
     pub fn check_defining_conclusions_and_resolve(
         &self,
         envs: InferEnv<'s, 't>,
@@ -1007,6 +1082,9 @@ where 's: 't,
         Ok(instantiation_bound_args)
     }
 /*
+  // Counter to @BDPFWDZ: this harvests bound prototypes from citizen-typed param inner envs
+  // for the caller to push into its near-env. Pull-aligned replacement is to walk the citizen's
+  // env at lookup time instead.
   def checkDefiningConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,
@@ -1576,7 +1654,7 @@ where 's: 't,
                     _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
                 let mutability = crate::typing::templata::templata::expect_mutability(m);
-                let context_region = RegionT;
+                let context_region = RegionT { region: IRegionT::Default };
                 let _rsa = self.resolve_runtime_sized_array(coord, mutability, context_region);
                 Ok(())
             }
@@ -1591,7 +1669,7 @@ where 's: 't,
                 let size = crate::typing::templata::templata::expect_integer(s);
                 let mutability = crate::typing::templata::templata::expect_mutability(m);
                 let variability = crate::typing::templata::templata::expect_variability(v);
-                let context_region = RegionT;
+                let context_region = RegionT { region: IRegionT::Default };
                 let _ssa = self.resolve_static_sized_array(mutability, variability, size, coord, context_region);
                 Ok(())
             }
@@ -1599,6 +1677,8 @@ where 's: 't,
                 let mut call_ranges = vec![range];
                 call_ranges.extend_from_slice(ranges);
                 let call_ranges_slice = self.typing_interner.alloc_slice_from_vec(call_ranges);
+                // Per @DRSINI, passes partial args (only written template args, not defaults).
+                // resolve_struct adds defaults incrementally via solve_for_resolving for unsolved runes.
                 match self.resolve_struct(state, calling_env, call_ranges_slice, call_location, *it, &args) {
                     IResolveOutcome::ResolveSuccess(_kind) => {}
                     IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
@@ -1609,6 +1689,8 @@ where 's: 't,
                 let mut call_ranges = vec![range];
                 call_ranges.extend_from_slice(ranges);
                 let call_ranges_slice = self.typing_interner.alloc_slice_from_vec(call_ranges);
+                // Per @DRSINI, passes partial args (only written template args, not defaults).
+                // resolve_interface adds defaults incrementally via solve_for_resolving for unsolved runes.
                 match self.resolve_interface(state, calling_env, call_ranges_slice, call_location, *it, &args) {
                     IResolveOutcome::ResolveSuccess(_kind) => {}
                     IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
@@ -1651,7 +1733,7 @@ where 's: 't,
       case RuntimeSizedArrayTemplateTemplataT() => {
         val Vector(m, CoordTemplataT(coord)) = args
         val mutability = ITemplataT.expectMutability(m)
-        val contextRegion = RegionT()
+        val contextRegion = RegionT(DefaultRegionT)
         delegate.resolveRuntimeSizedArrayKind(state, coord, mutability, contextRegion)
         Ok(())
       }
@@ -1660,11 +1742,13 @@ where 's: 't,
         val size = ITemplataT.expectInteger(s)
         val mutability = ITemplataT.expectMutability(m)
         val variability = ITemplataT.expectVariability(v)
-        val contextRegion = RegionT()
+        val contextRegion = RegionT(DefaultRegionT)
         delegate.resolveStaticSizedArrayKind(state, mutability, variability, size, coord, contextRegion)
         Ok(())
       }
       case it @ StructDefinitionTemplataT(_, _) => {
+        // Per @DRSINI, passes partial args (only written template args, not defaults).
+        // resolveStruct adds defaults incrementally via solveForResolving for unsolved runes.
         delegate.resolveStruct(callingEnv, state, range :: ranges, callLocation, it, args.toVector) match {
           case ResolveSuccess(kind) => kind
           case rf @ ResolveFailure(_, _) => return Err(rf)
@@ -1672,6 +1756,8 @@ where 's: 't,
         Ok(())
       }
       case it @ InterfaceDefinitionTemplataT(_, _) => {
+        // Per @DRSINI, passes partial args (only written template args, not defaults).
+        // resolveInterface adds defaults incrementally via solveForResolving for unsolved runes.
         delegate.resolveInterface(callingEnv, state, range :: ranges, callLocation, it, args.toVector) match {
           case ResolveSuccess(kind) => kind
           case rf @ ResolveFailure(_, _) => return Err(rf)
@@ -1766,10 +1852,13 @@ where 's: 't,
 }
 
 object InferCompiler {
-  // Some rules should be excluded from the call site, see SROACSD.
 */
 }
 
+// Per @SROACSD, DefinitionFuncSR and DefinitionCoordIsaSR are excluded from
+// call-site solves so that ResolveSR and its siblings can't see callee-internal
+// prototype declarations. @BRRZ depends on this filter: the relaxed ResolveSR's
+// real-lookup branch assumes no sibling DefinitionFuncSR in the same solve.
 pub fn include_rule_in_call_site_solve(rule: &IRulexSR) -> bool {
     match rule {
         IRulexSR::DefinitionFunc(_) => false,
@@ -1778,6 +1867,10 @@ pub fn include_rule_in_call_site_solve(rule: &IRulexSR) -> bool {
     }
 }
 /*
+  // Per @SROACSD, DefinitionFuncSR and DefinitionCoordIsaSR are excluded from
+  // call-site solves so that ResolveSR and its siblings can't see callee-internal
+  // prototype declarations. @BRRZ depends on this filter: the relaxed ResolveSR's
+  // real-lookup branch assumes no sibling DefinitionFuncSR in the same solve.
   def includeRuleInCallSiteSolve(rule: IRulexSR): Boolean = {
     rule match {
       case DefinitionFuncSR(_, _, _, _, _) => false
@@ -1786,8 +1879,10 @@ pub fn include_rule_in_call_site_solve(rule: &IRulexSR) -> bool {
     }
   }
 
-  // Some rules should be excluded from the call site, see SROACSD.
 */
+// Per @SROACSD, ResolveSR, CallSiteFuncSR, and CallSiteCoordIsaSR are excluded
+// from definition solves — a function's own definition should not resolve
+// its callers' prototypes.
 pub fn include_rule_in_definition_solve(rule: &IRulexSR) -> bool {
     match rule {
         IRulexSR::CallSiteCoordIsa(_) => false,
@@ -1797,6 +1892,9 @@ pub fn include_rule_in_definition_solve(rule: &IRulexSR) -> bool {
     }
 }
 /*
+  // Per @SROACSD, ResolveSR, CallSiteFuncSR, and CallSiteCoordIsaSR are excluded
+  // from definition solves — a function's own definition should not resolve
+  // its callers' prototypes.
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
     rule match {
       case CallSiteCoordIsaSR(_, _, _, _) => false

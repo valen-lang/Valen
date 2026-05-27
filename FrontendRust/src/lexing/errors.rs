@@ -50,6 +50,7 @@ pub enum ParseError {
   BadFunctionName(i32),
   BadParamEnd(i32),
   ForgotSetKeyword(i32),
+  FuncBoundWithoutWhere(i32),
   BadBinaryFunctionName(i32),
   BadTemplateCallee(i32),
   UnknownTupleOrSubExpression(i32),
@@ -157,6 +158,7 @@ impl ParseError {
       ParseError::BadFunctionName(p) => *p,
       ParseError::BadParamEnd(p) => *p,
       ParseError::ForgotSetKeyword(p) => *p,
+      ParseError::FuncBoundWithoutWhere(p) => *p,
       ParseError::BadBinaryFunctionName(p) => *p,
       ParseError::BadTemplateCallee(p) => *p,
       ParseError::UnknownTupleOrSubExpression(p) => *p,
@@ -432,6 +434,9 @@ case class BadParamEnd(pos: Int) extends IParseError { override def errorId: Str
 override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 case class ForgotSetKeyword(pos: Int) extends IParseError { override def errorId: String = "P1005";
+override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class FuncBoundWithoutWhere(pos: Int) extends IParseError { override def errorId: String = "P1001";
 override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 case class BadBinaryFunctionName(pos: Int) extends IParseError { override def errorId: String = "P1005";

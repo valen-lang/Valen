@@ -19,7 +19,7 @@ use crate::typing::env::environment::IInDenizenEnvironmentT;
 /*
 package dev.vale.typing.macros
 
-import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl}
+import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl, vpass}
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
@@ -70,6 +70,9 @@ where 's: 't,
         // Find self, but instead of calling it like a regular function call, call it like an interface.
         // We do this instead of grabbing the prototype out of the environment because we want to get its
         // instantiation bounds too (well, we want them to be added to the coutputs).
+        // Per @DRSINI, this triggers overload resolution with 0 explicit template args and
+        // placeholder-typed self arg. Defaults must not be in the initial rules or they'd
+        // conflict with arg-inferred placeholders.
         let imprecise_name = get_imprecise_name(self.scout_arena, env.id.local_name)
             .expect("vassertSome: TemplatasStore.getImpreciseName env.id.localName");
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
@@ -82,7 +85,8 @@ where 's: 't,
             imprecise_name,
             &[],
             &[],
-            RegionT,
+            &[],
+            RegionT { region: IRegionT::Default },
             &param_types,
             &[],
             true,
@@ -116,6 +120,7 @@ where 's: 't,
         Ok((header, body))
     }
 /*
+Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune; Rust call and audit-trail need twin update. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-796-1779427516899/hook-796/generate_function_body_abstract_body--44.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
@@ -128,6 +133,9 @@ where 's: 't,
     maybeRetCoord: Option[CoordT]):
   (FunctionHeaderT, ReferenceExpressionTE) = {
     val returnReferenceType2 = vassertSome(maybeRetCoord)
+    if (!params2.exists(_.virtuality == Some(AbstractT()))) {
+      vpass()
+    }
     vassert(params2.exists(_.virtuality == Some(AbstractT())))
     val header =
       FunctionHeaderT(
@@ -140,6 +148,9 @@ where 's: 't,
     // Find self, but instead of calling it like a regular function call, call it like an interface.
     // We do this instead of grabbing the prototype out of the environment because we want to get its
     // instantiation bounds too (well, we want them to be added to the coutputs).
+    // Per @DRSINI, this triggers overload resolution with 0 explicit template args and
+    // placeholder-typed self arg. Defaults must not be in the initial rules or they'd
+    // conflict with arg-inferred placeholders.
     val prototype =
       overloadResolver.findFunction(
         env,
@@ -149,7 +160,8 @@ where 's: 't,
         vassertSome(TemplatasStore.getImpreciseName(interner, env.id.localName)),
         Vector(),
         Vector(),
-        RegionT(),
+        Vector(),
+        RegionT(DefaultRegionT),
         params2.map(_.tyype),
         Vector(),
         true) match {

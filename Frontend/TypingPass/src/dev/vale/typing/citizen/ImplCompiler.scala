@@ -14,7 +14,7 @@ import dev.vale.{Accumulator, Err, Interner, Ok, Profiler, RangeS, Result, U, po
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing._
-import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT}
+import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT, StructDefinitionT}
 import dev.vale.typing.env._
 import dev.vale.typing.function._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -83,7 +83,9 @@ class ImplCompiler(
     // This is callingEnv because we might be coming from an abstract function that's trying
     // to evaluate an override.
     val originalCallingEnv = callingEnv
-    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
+    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT(DefaultRegionT))
+    // Per @ECSIIOSZ, this is a per-call-site solver instantiation for impl resolution;
+    // initialKnowns come from the caller via solveImplForCall's preprocessing.
     val solver =
       inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
@@ -148,7 +150,7 @@ class ImplCompiler(
     // This is callingEnv because we might be coming from an abstract function that's trying
     // to evaluate an override.
     val originalCallingEnv = callingEnv
-    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
+    val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT(DefaultRegionT))
     val solverState =
       inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
@@ -217,7 +219,7 @@ class ImplCompiler(
         List(range),
         callLocation,
         outerEnv,
-        RegionT())
+        RegionT(DefaultRegionT))
     val CompleteDefineSolve(inferences, InstantiationBoundArgumentsT(_, reachableBoundsFromSubCitizen, _)) =
       inferCompiler.solveForDefining(
         envs,
@@ -252,6 +254,15 @@ class ImplCompiler(
     val superInterfaceTemplateId =
       TemplataCompiler.getInterfaceTemplate(superInterface.id)
 
+    val subCitizenWeakable =
+      coutputs.lookupCitizen(subCitizen) match {
+        case s: StructDefinitionT => s.weakable
+        case i: InterfaceDefinitionT => i.weakable
+      }
+    val superInterfaceWeakable = coutputs.lookupInterface(superInterface).weakable
+    if (subCitizenWeakable != superInterfaceWeakable) {
+      throw WeakableImplingMismatch(subCitizenWeakable, superInterfaceWeakable)
+    }
 
     val templateArgs = implA.genericParams.map(_.rune.rune).map(inferences)
     val instantiatedId = assembleImplName(implTemplateId, templateArgs, subCitizen)

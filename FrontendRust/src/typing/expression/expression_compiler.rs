@@ -53,9 +53,9 @@ import dev.vale.highertyping.{CompileErrorExceptionA, CouldntSolveRulesA, Functi
 import dev.vale._
 import dev.vale.parsing.ast.{LoadAsBorrowP, LoadAsP, LoadAsWeakP, MoveP, UseP}
 import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.postparsing.rules.{IRulexSR, RuneParentEnvLookupSR, RuneUsage}
+import dev.vale.postparsing.rules.{EqualsSR, IRulexSR, RuneParentEnvLookupSR, RuneUsage}
 import dev.vale.postparsing._
-import dev.vale.typing.{ArrayCompiler, CannotSubscriptT, CantMoveFromGlobal, CantMutateFinalElement, CantMutateFinalMember, CantReconcileBranchesResults, CantUnstackifyOutsideLocalFromInsideWhile, CantUseUnstackifiedLocal, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, CouldntConvertForMutateT, CouldntConvertForReturnT, CouldntFindIdentifierToLoadT, CouldntFindMemberT, HigherTypingInferError, IfConditionIsntBoolean, InferCompiler, OverloadResolver, RangedInternalErrorT, SequenceCompiler, TemplataCompiler, TypingPassOptions, ast, templata}
+import dev.vale.typing.{ArrayCompiler, CannotSubscriptT, CantMutateFinalElement, CantMutateFinalMember, CantReconcileBranchesResults, CantUnstackifyOutsideLocalFromInsideWhile, CantUseUnstackifiedLocal, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, CouldntConvertForMutateT, CouldntConvertForReturnT, CouldntFindIdentifierToLoadT, CouldntFindMemberT, HigherTypingInferError, IfConditionIsntBoolean, InferCompiler, OverloadResolver, RangedInternalErrorT, SequenceCompiler, TemplataCompiler, TypingPassOptions, ast, templata}
 import dev.vale.typing.ast.{AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, BlockTE, BorrowToWeakTE, BreakTE, ConstantBoolTE, ConstantFloatTE, ConstantIntTE, ConstantStrTE, ConstructTE, DestroyTE, ExpressionT, IfTE, LetNormalTE, LocalLookupTE, LocationInFunctionEnvironmentT, MutateTE, PrototypeT, ReferenceExpressionTE, ReferenceMemberLookupTE, ReinterpretTE, ReturnTE, RuntimeSizedArrayLookupTE, StaticSizedArrayLookupTE, VoidLiteralTE, WhileTE}
 import dev.vale.typing.citizen.{ImplCompiler, IsParent, IsntParent, StructCompiler}
 import dev.vale.typing.env._
@@ -275,7 +275,14 @@ where 's: 't,
   Option[ExpressionT] = {
     evaluateAddressibleLookup(coutputs, nenv, range, region, name) match {
       case Some(x) => {
-        val thing = localHelper.softLoad(nenv, range, x, targetOwnership, region)
+        val thing =
+          targetOwnership match {
+            case LoadAsWeakP if x.result.coord.ownership != WeakT => {
+              val borrowExpr = localHelper.softLoad(nenv, range, x, LoadAsBorrowP, region)
+              weakAlias(coutputs, borrowExpr)
+            }
+            case _ => localHelper.softLoad(nenv, range, x, targetOwnership, region)
+          }
         Some(thing)
       }
       case None => {
@@ -331,7 +338,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
@@ -386,7 +393,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val name2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
         val borrowExpr =
           localHelper.borrowSoftLoad(
@@ -420,7 +427,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val borrowExpr =
           localHelper.borrowSoftLoad(
             coutputs,
@@ -485,7 +492,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup AddressibleClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
@@ -515,7 +522,7 @@ where 's: 't,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability"),
                     _ => panic!("implement: evaluate_addressible_lookup ReferenceClosure — unexpected mutability"),
                 };
-                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &rcv.name));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
@@ -574,7 +581,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closureParamVarName2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
 
         val borrowExpr =
@@ -607,7 +614,7 @@ where 's: 't,
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closuredVarsStructDef = coutputs.lookupStruct(closuredVarsStructRef.id)
 
         vassert(closuredVarsStructDef.members.map(_.name).contains(varName))
@@ -1111,7 +1118,7 @@ where 's: 't,
             }
             IExpressionSE::FunctionCall(fc) => {
                 match fc.callable_expr {
-                    IExpressionSE::OutsideLoad(outside_load) => {
+                    IExpressionSE::OverloadSet(overload_set) => {
                         let (args_exprs_2, returns_from_args) =
                             self.evaluate_and_coerce_to_reference_expressions(
                                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location,
@@ -1120,16 +1127,21 @@ where 's: 't,
                                 fc.arg_exprs)?;
                         let mut range_list = vec![fc.range];
                         range_list.extend_from_slice(parent_ranges);
+                        // Per @PRIIROZ, walk parts.dropRight(1) to build finalLookInEnv and
+                        // containerReceivingRuneToExplicitTemplateArgRune. Not yet ported — single-part
+                        // OverloadSet (the only kind expression_scout currently builds) skips the fold.
+                        if overload_set.lookup.parts.len() > 1 {
+                            panic!("Unimplemented: @PRIIROZ container-chain fold for multi-part OverloadSet (see ExpressionCompiler.scala:545-587)");
+                        }
                         let snapshot_env = nenv.snapshot(self.typing_interner);
                         let env_ref = IInDenizenEnvironmentT::Node(snapshot_env);
+                        let last_part = overload_set.lookup.parts.last().expect("OverloadSet parts must be non-empty");
                         let callable_expr = self.new_global_function_group_expression(
                             env_ref,
                             coutputs,
                             nenv.default_region(),
-                            outside_load.name);
-                        let template_arg_runes: Vec<IRuneS<'s>> = outside_load.maybe_template_args
-                            .map(|args| args.iter().map(|a| a.rune).collect::<Vec<_>>())
-                            .unwrap_or_default();
+                            last_part.name);
+                        let template_arg_runes: Vec<IRuneS<'s>> = last_part.explicit_template_args.iter().map(|a| a.rune).collect();
                         let call_expr_2 =
                             self.evaluate_prefix_call(
                                 coutputs,
@@ -1139,7 +1151,7 @@ where 's: 't,
                                 fc.location,
                                 region,
                                 callable_expr,
-                                outside_load.rules,
+                                overload_set.lookup.rules,
                                 &template_arg_runes,
                                 &args_exprs_2)?;
                         Ok((ExpressionTE::Reference(call_expr_2), returns_from_args))
@@ -1865,7 +1877,7 @@ where 's: 't,
                         let tiny_env_snapshot = tiny_env.snapshot(self.typing_interner);
                         let expr = self.new_global_function_group_expression(
                             IInDenizenEnvironmentT::Node(tiny_env_snapshot),
-                            coutputs, RegionT {}, arbitrary_imprecise);
+                            coutputs, RegionT { region: IRegionT::Default }, arbitrary_imprecise);
                         Ok((ExpressionTE::Reference(expr), HashSet::new()))
                     }
                     _ => panic!("implement: evaluate_expression RuneLookup — unexpected templata"),
@@ -1879,37 +1891,43 @@ where 's: 't,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
-            IExpressionSE::OutsideLoad(outside_load) => {
+            IExpressionSE::OverloadSet(overload_set) => {
+                // Per canonical: vassert(rules.isEmpty); val name = parts.head.name
+                assert!(overload_set.lookup.rules.is_empty()); // implement
+                let name = overload_set.lookup.parts.first().expect("OverloadSet parts must be non-empty").name;
                 let mut lookup_filter = std::collections::HashSet::new();
                 lookup_filter.insert(ILookupContext::ExpressionLookupContext);
-                let templatas_from_env = nenv.lookup_all_with_imprecise_name(outside_load.name, &lookup_filter, self.typing_interner);
-                let range_list: Vec<RangeS<'s>> = std::iter::once(outside_load.range).chain(parent_ranges.iter().copied()).collect();
+                let templatas_from_env = nenv.lookup_all_with_imprecise_name(name, &lookup_filter, self.typing_interner);
+                let range_list: Vec<RangeS<'s>> = std::iter::once(overload_set.lookup.range).chain(parent_ranges.iter().copied()).collect();
                 let range_list_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_from_vec(range_list);
                 let templata_from_env = match templatas_from_env.as_slice() {
                     [ITemplataT::Boolean(_value)] => {
-                        panic!("implement: evaluate_expression OutsideLoad — BooleanTemplataT")
+                        panic!("implement: evaluate_expression OverloadSet — BooleanTemplataT")
                     }
                     [ITemplataT::Integer(_value)] => {
-                        panic!("implement: evaluate_expression OutsideLoad — IntegerTemplataT")
+                        panic!("implement: evaluate_expression OverloadSet — IntegerTemplataT")
                     }
                     [ITemplataT::Placeholder(_t)] => {
-                        panic!("implement: evaluate_expression OutsideLoad — PlaceholderTemplataT IntegerTemplataType")
+                        panic!("implement: evaluate_expression OverloadSet — PlaceholderTemplataT IntegerTemplataType")
                     }
                     _ if !templatas_from_env.is_empty() && templatas_from_env.iter().all(|t| matches!(t, ITemplataT::Function(_))) => {
-                        panic!("implement: evaluate_expression OutsideLoad — all functions")
+                        panic!("implement: evaluate_expression OverloadSet — all functions")
                     }
                     _ if templatas_from_env.len() > 1 => {
-                        panic!("implement: evaluate_expression OutsideLoad — too many")
+                        panic!("implement: evaluate_expression OverloadSet — too many")
                     }
                     [] => {
                         return Err(ICompileErrorT::CouldntFindIdentifierToLoadT {
                             range: range_list_t,
-                            name: outside_load.name,
+                            name,
                         });
                     }
-                    _ => panic!("implement: evaluate_expression OutsideLoad — unexpected"),
+                    _ => panic!("implement: evaluate_expression OverloadSet — unexpected"),
                 };
                 Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
+            }
+            IExpressionSE::TemplataLoad(_) => {
+                panic!("Unimplemented: evaluate_expression TemplataLoad (see ExpressionCompiler.scala)")
             }
         }
     }
@@ -1947,14 +1965,82 @@ where 's: 't,
           vassert(nenv.functionEnvironment.id.localName.parameters(index) == paramCoord)
           (ArgLookupTE(index, paramCoord), Set())
         }
-        case FunctionCallSE(range, callLocation, OutsideLoadSE(_, rules, name, maybeTemplateArgs, callableTargetOwnership), argsExprs1) => {
-//          vassert(callableTargetOwnership == PointConstraintP(Some(ReadonlyP)))
+        case FunctionCallSE(range, callLocation, OverloadSetSE(OutsideLoadSE(_, rules, parts)), argsExprs1) => {
           val (argsExprs2, returnsFromArgs) =
             evaluateAndCoerceToReferenceExpressions(
               coutputs, nenv, life + 0, parentRanges, callLocation,
               // See SRIE
               nenv.defaultRegion,
               argsExprs1)
+
+          // # Parent Runes Inherited In Reverse Order (@PRIIROZ)
+          //
+          // This should happen:
+          //  - If S<K, V> has a function func zork<N>(), then zork would actually be zork<N, K, V>.
+          //  - If HashMap<K, V> has a function func create_and_fill<Lam>(capacity int, size int, lam &Lam), then
+          //    create_and_fill would actually be create_and_fill<Lam, K, V>.
+          // TLDR: because a callsite `S<int, str>.zork<N>` wants to specify N positionally because it doesn't know what the
+          // receiving generic parameter is named because it doesn't know what overload it's targeting yet. See example below.
+          //
+          // Note: this reordering is applied at the DEFINITION site (FunctionScout builds zork's genericParams
+          // as [N, K, V]). The callsite's OutsideLoadSE.parts stay in source order; it's ExpressionCompiler
+          // that zips the container's genericParameters names against the callsite's explicit args by rune.
+          //
+          // When we have e.g. this:
+          //     struct S<K, V = bool> {
+          //       ...
+          //       func zork<Q Int>(i int) { ... }
+          //       func zork<Z Int, N Int = 5>(i int, j int) { ... }
+          //     }
+          // and a callsite says something like:
+          //     S<int, str>.zork<42>(10, 20)
+          // and we're ExpressionCompiler, we don't yet even know which `zork` overload we're targeting.
+          // We need to say to it, "Hey, we want to call a `S.zork` with two arguments, and its first generic arg should be 42,
+          // K = int, V = str." (or for that last part, perhaps "S's generic args are int, str.", orthogonal).
+          //
+          // We *cant* say "Q = 42", because we don't know which zork overload we're targeting. In this case, Q = 42 makes no
+          // sense because the second overload is actually correct.
+          //
+          // So, we need to supply zork's first generic arg positionally. Because of that, we want zork's generic params to
+          // still start with Q (or Z + N), so that the callsite's positional args (42) line up with Q or Z.
+          //
+          // For that reason, the zorks should be:
+          // - zork<Q, K, V>
+          // - zork<Z, N, K, V>
+          //
+          // And then the question arises, what happens when S<A, B> contains T<C> contains func foo<N>. Which of these is it?
+          // - foo<N, A, B, C> (foo's generic params, then all the containers', outermost first)
+          // - foo<N, C, A, B> (foo's generic params, then all the containers', innermost first)
+          //
+          // The second one feels better (no solid reasons yet, we can change it) so we'll go with that.
+
+          // First lets conjure an OverloadSet with the right environment that corresponds to the
+          // namespaces specified by the user, e.g. for `Vec<int>.with_capacity` we want the OverloadSet
+          // to be looking for "with_capacity" in the Vec environment.
+          val initialContainerReceivingRuneToExplicitTemplateArgRune = Vector[(RuneUsage, RuneUsage)]()
+          val initialLookInEnv: IInDenizenEnvironmentT = nenv.snapshot
+          val (finalLookInEnv, containerReceivingRuneToExplicitTemplateArgRune) =
+            parts.dropRight(1).foldLeft((initialLookInEnv, initialContainerReceivingRuneToExplicitTemplateArgRune)) {
+              case ((previousLookInEnv, previousContainerReceivingRuneToExplicitTemplateArgRune), LoadPartSE(partName, partExplicitTemplateArgsRunes)) =>
+                val structTemplata =
+                  previousLookInEnv.lookupNearestWithImpreciseName(partName, Set(TemplataLookupContext)) match {
+                    case Some(s: StructDefinitionTemplataT) => s
+                    case _ => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, partName))
+                  }
+                val structTemplateId = templataCompiler.resolveStructTemplate(structTemplata)
+                val lookInEnv = coutputs.getOuterEnvForType(range :: parentRanges, structTemplateId)
+                val partRuneToTemplateArg =
+                  structTemplata.originStruct.genericParameters.map(_.rune).zip(partExplicitTemplateArgsRunes)
+                (lookInEnv, previousContainerReceivingRuneToExplicitTemplateArgRune ++ partRuneToTemplateArg)
+            }
+          val funcGroup =
+            newGlobalFunctionGroupExpression(
+              finalLookInEnv,
+              coutputs,
+              // i suppose this can instead take on the region of whatever's expected?
+              nenv.defaultRegion,
+              parts.last.name)
+
           val callExpr2 =
             callCompiler.evaluatePrefixCall(
               coutputs,
@@ -1963,32 +2049,12 @@ where 's: 't,
               range :: parentRanges,
               callLocation,
               region,
-              newGlobalFunctionGroupExpression(
-                nenv.snapshot,
-                coutputs,
-                // i suppose this can instead take on the region of whatever's expected?
-                nenv.defaultRegion,
-                name),
-              rules.toVector,
-              maybeTemplateArgs.toVector.flatMap(_.map(_.rune)),
-              argsExprs2)
-          (callExpr2, returnsFromArgs)
-        }
-        case FunctionCallSE(range, callLocation, OutsideLoadSE(_, rules, name, templateArgTemplexesS, callableTargetOwnership), argsExprs1) => {
-//          vassert(callableTargetOwnership == PointConstraintP(None))
-          val (argsExprs2, returnsFromArgs) =
-            evaluateAndCoerceToReferenceExpressions(coutputs, nenv, life + 0, parentRanges, callLocation, region, argsExprs1)
-          val callExpr2 =
-            callCompiler.evaluatePrefixCall(
-              coutputs,
-              nenv,
-              life + 1,
-              range :: parentRanges,
-              callLocation,
-              region,
-              newGlobalFunctionGroupExpression(nenv.snapshot, coutputs, RegionT(), name),
-              rules.toVector,
-              templateArgTemplexesS.toVector.flatMap(_.map(_.rune)),
+              funcGroup,
+              rules,
+              // Per @PRIIROZ above, only pass in the last step (the method's template args) as positional ones.
+              // The containers' template args are passed in by rune name.
+              parts.last.explicitTemplateArgs.map(_.rune),
+              containerReceivingRuneToExplicitTemplateArgRune,
               argsExprs2)
           (callExpr2, returnsFromArgs)
         }
@@ -2012,6 +2078,7 @@ where 's: 't,
               callLocation,
               region,
               decayedCallableReferenceExpr2,
+              Vector(),
               Vector(),
               Vector(),
               argsExprs2)
@@ -2086,13 +2153,14 @@ where 's: 't,
             }
           (lookupExpr1, Set())
         }
-        case OutsideLoadSE(range, rules, name, templateArgs, targetOwnership) => {
+        case OverloadSetSE(OutsideLoadSE(range, rules, parts)) => {
           // Note, we don't get here if we're about to call something with this, that's handled
           // by a different case.
 
           // We can't use *anything* from the global environment; we're in expression context,
           // not in templata context.
-
+          vassert(rules.isEmpty) // implement
+          val name = parts.head.name
           val templataFromEnv =
             nenv.lookupAllWithImpreciseName(name, Set(ExpressionLookupContext)) match {
               case Array(BooleanTemplataT(value)) => ConstantBoolTE(value, region)
@@ -2106,9 +2174,6 @@ where 's: 't,
                 ConstantIntTE(PlaceholderTemplataT(name, IntegerTemplataType()), 32, region)
               }
               case templatas if templatas.nonEmpty && templatas.collect({ case FunctionTemplataT(_, _) => }).size == templatas.size => {
-                if (targetOwnership == MoveP) {
-                  throw CompileErrorExceptionT(CantMoveFromGlobal(range :: parentRanges, "Can't move from globals. Name: " + name))
-                }
                 newGlobalFunctionGroupExpression(nenv.snapshot, coutputs, region, name)
               }
               case things if things.size > 1 => {
@@ -2202,10 +2267,6 @@ where 's: 't,
 
           val mutate2 = MutateTE(destinationExpr2, convertedSourceExpr2);
           (mutate2, returnsFromSource ++ returnsFromDestination)
-        }
-        case OutsideLoadSE(range, rules, name, templateArgs1, targetOwnership) => {
-          // So far, we only allow these when they're immediately called like functions
-          throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, "Raw template specified lookups unimplemented!"))
         }
         case IndexSE(range, containerExpr1, indexExpr1) => {
           val (unborrowedContainerExpr2, returnsFromContainerExpr) =
@@ -2485,8 +2546,11 @@ where 's: 't,
                   .addEntries(interner, Vector(ArbitraryNameT() -> TemplataEnvEntry(pt)))
               val expr =
                 newGlobalFunctionGroupExpression(
-                  tinyEnv, coutputs, RegionT(), interner.intern(ArbitraryNameS()))
+                  tinyEnv, coutputs, RegionT(DefaultRegionT), interner.intern(ArbitraryNameS()))
               (expr, Set())
+            }
+            case _ => {
+              throw CompileErrorExceptionT(CantUseRuneValueAsExpression(range :: parentRanges, runeA))
             }
           }
         }
@@ -2577,7 +2641,7 @@ where 's: 't,
                 } else if (commonAncestors.size > 1) {
                   throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, s"More than one common ancestor of two branches of if:\n${a}\n${b}"))
                 } else {
-                  CoordT(ownership, RegionT(), commonAncestors.head)
+                  CoordT(ownership, RegionT(DefaultRegionT), commonAncestors.head)
                 }
               }
               case (a, b) => {
@@ -2688,7 +2752,7 @@ where 's: 't,
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
               bodyExpressionsWithResult.result.coord
             }
@@ -2709,9 +2773,10 @@ where 's: 't,
               outerCallLocation,
               region,
               newGlobalFunctionGroupExpression(
-                callEnv, coutputs, vregionmut(RegionT()), interner.intern(CodeNameS(keywords.List))),
+                callEnv, coutputs, vregionmut(RegionT(DefaultRegionT)), interner.intern(CodeNameS(keywords.List))),
               Vector(RuneParentEnvLookupSR(range, RuneUsage(range, SelfRuneS()))),
               Vector(SelfRuneS()),
+              Vector(),
               Vector())
 
           val listLocal =
@@ -2734,7 +2799,7 @@ where 's: 't,
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
 
               // We store the iteration result in a local because the loop body will have
@@ -2753,7 +2818,8 @@ where 's: 't,
                   range :: parentRanges,
                   outerCallLocation,
                   region,
-                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(), interner.intern(CodeNameS(keywords.add))),
+                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(DefaultRegionT), interner.intern(CodeNameS(keywords.add))),
+                  Vector(),
                   Vector(),
                   Vector(),
                   Vector(
@@ -3095,6 +3161,7 @@ where 's: 't,
             &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
             context_region,
             &[contained_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option some_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
@@ -3120,6 +3187,7 @@ where 's: 't,
             none_constructor_templata,
             &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
             context_region,
+            &[],
             &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option none_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
@@ -3177,7 +3245,7 @@ Guardian: temp-disable: SPDMX — `evaluate_generic_light_function_from_call_for
         callLocation,
         interfaceTemplata,
         Vector(CoordTemplataT(containedCoord))).expect().kind
-    val ownOptCoord = CoordT(OwnT, RegionT(), optInterfaceRef)
+    val ownOptCoord = CoordT(OwnT, RegionT(DefaultRegionT), optInterfaceRef)
 
     val someConstructorTemplata =
       nenv.lookupNearestWithImpreciseName(interner.intern(CodeNameS(keywords.Some)), Set(ExpressionLookupContext)).toList match {
@@ -3292,6 +3360,7 @@ where 's: 't,
             ],
             region,
             &[contained_success_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result ok_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
@@ -3333,6 +3402,7 @@ where 's: 't,
             ],
             region,
             &[contained_fail_coord],
+            &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result err_constructor")) {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")

@@ -1,15 +1,15 @@
 package dev.vale.postparsing
 
 import dev.vale.postparsing.patterns.PatternScout
-import dev.vale.postparsing.rules.{IRulexSR, IntLiteralSL, LiteralSR, MutabilityLiteralSL, RuleScout, RuneUsage, TemplexScout, VariabilityLiteralSL}
+import dev.vale.postparsing.rules.{IRulexSR, IntLiteralSL, LiteralSR, MaybeCoercingCallSR, MutabilityLiteralSL, RuleScout, RuneUsage, TemplexScout, VariabilityLiteralSL}
 import dev.vale.parsing.ast._
 import dev.vale.parsing.{ast, _}
-import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, postparsing, vassert, vassertSome, vcurious, vfail, vwat}
+import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, postparsing, vassert, vassertSome, vcurious, vfail, vimpl, vwat}
 import PostParser.{evalRange, noDeclarations, noVariableUses}
 import dev.vale
 import dev.vale.lexing.RangeL
 import dev.vale.parsing.ast
-import dev.vale.parsing.ast.{AndPE, AugmentPE, BinaryCallPE, BlockPE, BorrowP, BraceCallPE, BreakPE, ConsecutorPE, ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE, DotPE, EachPE, FinalP, FunctionCallPE, FunctionP, IExpressionPE, ITemplexPT, IfPE, IndexPE, LambdaPE, LetPE, LoadAsBorrowP, LoadAsP, LoadAsWeakP, LookupNameP, LookupPE, MagicParamLookupPE, MethodCallPE, MoveP, MutableP, MutatePE, NameP, NotPE, OrPE, PackPE, RangePE, ReturnPE, RuntimeSizedP, ShortcallPE, StaticSizedP, StrInterpolatePE, SubExpressionPE, TemplateArgsP, TuplePE, UnletPE, UseP, VoidPE, WeakP, WhilePE}
+import dev.vale.parsing.ast.{AndPE, AugmentPE, BinaryCallPE, BlockPE, BorrowP, BraceCallPE, BreakPE, CallPT, ConsecutorPE, ConstantBoolPE, ConstantFloatPE, ConstantIntPE, ConstantStrPE, ConstructArrayPE, DestructPE, DotPE, EachPE, FinalP, FunctionCallPE, FunctionP, IExpressionPE, ITemplexPT, IfPE, IndexPE, LambdaPE, LetPE, LoadAsBorrowP, LoadAsP, LoadAsWeakP, LookupNameP, LookupPE, MagicParamLookupPE, MethodCallPE, MoveP, MutableP, MutatePE, NameOrRunePT, NameP, NotPE, OrPE, PackPE, RangePE, ReturnPE, RuntimeSizedP, ShortcallPE, StaticSizedP, StrInterpolatePE, SubExpressionPE, TemplateArgsP, TuplePE, UnletPE, UseP, VoidPE, WeakP, WhilePE}
 import dev.vale.postparsing.patterns.PatternScout
 //import dev.vale.postparsing.predictor.{Conclusions, PredictorEvaluator}
 import dev.vale.postparsing.rules.TemplexScout
@@ -39,7 +39,7 @@ override def hashCode(): Int = vcurious()
 case class OutsideLookupResult(
   range: RangeS,
   name: StrI,
-  templateArgs: Option[Vector[ITemplexPT]]
+  maybeTemplateArgs: Option[Vector[ITemplexPT]]
 ) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
@@ -235,6 +235,23 @@ class ExpressionScout(
   // - new expression
   // - variable uses by self
   // - variable uses by child blocks
+  private def translateMaybeTemplateArgs(
+    parentEnv: IEnvironmentS,
+    lidb: LocationInDenizenBuilder,
+    ruleBuilder: ArrayBuffer[IRulexSR],
+    contextRegion: IRuneS,
+    maybeTemplateArgs: Option[Vector[ITemplexPT]]):
+  Vector[RuneUsage] = {
+    maybeTemplateArgs match {
+      case None => Vector()
+      case Some(templateArgs) => {
+        templateArgs.map(templateArg => {
+          templexScout.translateTemplex(parentEnv, lidb.child(), ruleBuilder, contextRegion, templateArg)
+        })
+      }
+    }
+  }
+
   private def scoutExpression(
     stackFrame0: StackFrame,
     lidb: LocationInDenizenBuilder,
@@ -244,7 +261,7 @@ class ExpressionScout(
       val evalRange = (range: RangeL) => PostParser.evalRange(stackFrame0.file, range)
 
       expr match {
-        case VoidPE(range) => (stackFrame0, NormalResult(vale.postparsing.VoidSE(evalRange(range))), noVariableUses, noVariableUses)
+        case VoidPE(range) => (stackFrame0, NormalResult(VoidSE(evalRange(range))), noVariableUses, noVariableUses)
         case lam @ LambdaPE(captures,_) => {
           val (function1, childUses) =
             delegate.scoutLambda(stackFrame0, lam.function)
@@ -261,9 +278,13 @@ class ExpressionScout(
             partsSE.foldLeft(startingExpr)({
               case (prevExpr, partSE) => {
                 val addCallRange = RangeS(prevExpr.range.end, partSE.range.begin)
-                val callableExpr =
-                  vale.postparsing.OutsideLoadSE(addCallRange, Vector(), interner.intern(CodeNameS(keywords.plus)), None, LoadAsBorrowP)
-                FunctionCallSE(addCallRange, lidb.child().consume(), callableExpr, Vector(prevExpr, partSE))
+                val overloadSetSE =
+                  OverloadSetSE(
+                    OutsideLoadSE(
+                      addCallRange,
+                      Vector(),
+                      Vector(LoadPartSE(interner.intern(CodeNameS(keywords.plus)), Vector()))))
+                FunctionCallSE(addCallRange, lidb.child().consume(), overloadSetSE, Vector(prevExpr, partSE))
               }
             })
           (stackFrame1, NormalResult(addedExpr), partsSelfUses, partsChildUses)
@@ -279,7 +300,7 @@ class ExpressionScout(
           inner1 match {
             case OwnershippedSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
             case LocalLoadSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
-            case OutsideLoadSE(_, _, _, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
+//            case OutsideLoadSE(_, _, _, innerLoadAs) => vassert(loadAs == innerLoadAs) DO NOT SUBMIT
             case _ => vwat()
           }
           (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)
@@ -287,25 +308,35 @@ class ExpressionScout(
         case ReturnPE(range, innerPE) => {
           val (stackFrame1, inner1, innerSelfUses, innerChildUses) =
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), innerPE, UseP)
-          (stackFrame1, NormalResult(vale.postparsing.ReturnSE(evalRange(range), inner1)), innerSelfUses, innerChildUses)
+          (stackFrame1, NormalResult(ReturnSE(evalRange(range), inner1)), innerSelfUses, innerChildUses)
         }
         case BreakPE(range) => {
           (stackFrame0, NormalResult(BreakSE(evalRange(range))), noVariableUses, noVariableUses)
         }
         case NotPE(range, innerPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(keywords.not)), None, LoadAsBorrowP)
+          val overloadSetSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+                evalRange(range),
+                Vector(),
+                Vector(LoadPartSE(interner.intern(CodeNameS(keywords.not)), Vector()))))
 
           val (stackFrame1, innerSE, innerSelfUses, innerChildUses) =
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), innerPE, UseP)
 
           val result =
             NormalResult(
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(innerSE)))
+              FunctionCallSE(evalRange(range), lidb.child().consume(), overloadSetSE, Vector(innerSE)))
 
           (stackFrame1, result, innerSelfUses, innerChildUses)
         }
         case RangePE(range, beginPE, endPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(keywords.range)), None, LoadAsBorrowP)
+          val callableSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+              evalRange(range),
+              Vector(),
+              Vector(LoadPartSE(interner.intern(CodeNameS(keywords.range)), Vector()))))
 
           val loadBeginAs =
             beginPE match {
@@ -328,7 +359,7 @@ class ExpressionScout(
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), endPE, loadEndAs)
 
           val resultSE =
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(beginSE, endSE))
+              FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(beginSE, endSE))
 
           (stackFrame2, NormalResult(resultSE), beginSelfUses.thenMerge(endSelfUses), beginChildUses.thenMerge(endChildUses))
         }
@@ -341,15 +372,15 @@ class ExpressionScout(
           val bits = bitsP.getOrElse(32L).toInt
           (stackFrame0, NormalResult(ConstantIntSE(evalRange(range), value, bits)), noVariableUses, noVariableUses)
         }
-        case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(vale.postparsing.ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
+        case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
         case ConstantStrPE(range, value) => {
-          (stackFrame0, NormalResult(vale.postparsing.ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
+          (stackFrame0, NormalResult(ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
         }
         case ConstantFloatPE(range,value) => (stackFrame0, NormalResult(ConstantFloatSE(evalRange(range), value)), noVariableUses, noVariableUses)
 
         case MagicParamLookupPE(range) => {
           val name = interner.intern(MagicParamNameS(PostParser.evalPos(stackFrame0.file, range.begin)))
-          val lookup = vale.postparsing.LocalLookupResult(evalRange(range), name)
+          val lookup = LocalLookupResult(evalRange(range), name)
           // We dont declare it here, because then scoutBlock will think its a local and
           // hide it from those above.
           //   val declarations = VariableDeclarations(Vector(VariableDeclaration(lookup.name, FinalP)))
@@ -368,7 +399,7 @@ class ExpressionScout(
                     if (stackFrame0.parentEnv.allDeclaredRunes().contains(CodeRuneS(name))) {
                       NormalResult(RuneLookupSE(rangeS, CodeRuneS(name)))
                     } else {
-                      (vale.postparsing.OutsideLookupResult(rangeS, name, None))
+                      OutsideLookupResult(rangeS, name, None)
                     }
                   }
                   case _ => vwat(impreciseNameS)
@@ -384,7 +415,7 @@ class ExpressionScout(
               case _ => vwat()
             }
           val result =
-            vale.postparsing.OutsideLookupResult(
+            OutsideLookupResult(
               evalRange(range),
               templateName,
               Some(templateArgs.toVector))
@@ -417,17 +448,43 @@ class ExpressionScout(
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), innersPE.head, UseP)
           (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)
         }
-        case FunctionCallPE(range, _, callablePE, args) => {
-          val loadCallableAs = LoadAsBorrowP
-          val (stackFrame1, callable1, callableSelfUses, callableChildUses) =
-            scoutExpressionAndCoerce(stackFrame0, lidb.child(), callablePE, loadCallableAs)
-          val (stackFrame2, args1, argsSelfUses, argsChildUses) =
-            scoutElementsAsExpressions(stackFrame1, lidb.child(), args)
-          val result = NormalResult(vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args1.toVector))
-          (stackFrame2, result, callableSelfUses.thenMerge(argsSelfUses), callableChildUses.thenMerge(argsChildUses))
+        case FunctionCallPE(range, _, callablePE, argsPE) => {
+          val (stackFrame0a, subjectUncoercedScoutResult, uncoercedCallableSelfUses, uncoercedCallableChildUses) =
+            scoutExpression(stackFrame0, lidb.child(), callablePE)
+          subjectUncoercedScoutResult match {
+            case OutsideLookupResult(range, containerName, containerMaybeTemplateArgs) => {
+              val ruleBuilder = ArrayBuffer[IRulexSR]()
+              val containerTemplateArgRuneUsages =
+                translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, containerMaybeTemplateArgs)
+              val overloadSetSE =
+                OverloadSetSE(
+                  OutsideLoadSE(
+                    range,
+                    ruleBuilder.toVector,
+                    Vector(LoadPartSE(interner.intern(CodeNameS(containerName)), containerTemplateArgRuneUsages))))
+              val (stackFrame3, argsSE, selfUses, childUses) =
+                scoutElementsAsExpressions(stackFrame0a, lidb.child(), argsPE)
+              val result = NormalResult(FunctionCallSE(range, lidb.child().consume(), overloadSetSE, argsSE))
+              (stackFrame3, result, selfUses, childUses)
+            }
+            case _ => {
+              val callableChildUses = uncoercedCallableChildUses
+              val (stackFrame2, callable1, callableSelfUses) =
+                coerce(stackFrame0a, subjectUncoercedScoutResult, lidb.child(), uncoercedCallableSelfUses, LoadAsBorrowP)
+              val (stackFrame3, args1, argsSelfUses, argsChildUses) =
+                scoutElementsAsExpressions(stackFrame2, lidb.child(), argsPE)
+              val result = NormalResult(FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args1.toVector))
+              (stackFrame3, result, callableSelfUses.thenMerge(argsSelfUses), callableChildUses.thenMerge(argsChildUses))
+            }
+          }
         }
         case BinaryCallPE(range, namePE, leftPE, rightPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(namePE.str)), None, LoadAsBorrowP)
+          val overloadSetSE =
+            OverloadSetSE(
+              OutsideLoadSE(
+              evalRange(range),
+              Vector(),
+              Vector(LoadPartSE(interner.intern(CodeNameS(namePE.str)), Vector()))))
 
           val (stackFrame1, leftSE, leftSelfUses, leftChildUses) =
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), leftPE, LoadAsBorrowP)
@@ -436,7 +493,7 @@ class ExpressionScout(
 
           val result =
             NormalResult(
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(leftSE, rightSE)))
+              FunctionCallSE(evalRange(range), lidb.child().consume(), overloadSetSE, Vector(leftSE, rightSE)))
           (stackFrame2, result, leftSelfUses.thenMerge(rightSelfUses), leftChildUses.thenMerge(rightChildUses))
         }
         case BraceCallPE(range, operatorRange, subjectPE, args, callableReadwrite) => {
@@ -458,29 +515,52 @@ class ExpressionScout(
           val (stackFrame2, argSE, argSelfUses, argChildUses) =
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), argPE, UseP)
 
-          val resultSE = vale.postparsing.IndexSE(evalRange(range), callableSE, argSE)
+          val resultSE = IndexSE(evalRange(range), callableSE, argSE)
           (stackFrame2, NormalResult(resultSE), callableSelfUses.thenMerge(argSelfUses), callableChildUses.thenMerge(argChildUses))
         }
-        case MethodCallPE(range, subjectExpr, operatorRange, memberLookup, methodArgs) => {
-          val loadSubjectAs =
-            subjectExpr match {
-              // For locals, just borrow.
-              case LookupPE(_, _) => LoadAsBorrowP
-              // For anything else, default to moving.
-              case _ => UseP
+        case MethodCallPE(methodCallRangeP, subjectExpr, _, LookupPE(methodName, maybeMethodTemplateArgs), methodArgs) => {
+          val methodCallRangeS = evalRange(methodCallRangeP)
+          val (stackFrame0a, subjectUncoercedScoutResult, uncoercedSubjectSelfUses, uncoercedSubjectChildUses) =
+            scoutExpression(stackFrame0, lidb.child(), subjectExpr)
+          val methodImpreciseNameS = PostParser.translateImpreciseName(interner, stackFrame0.file, methodName)
+          val ruleBuilder = ArrayBuffer[IRulexSR]()
+          val methodTemplateArgRuneUsages =
+            translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, maybeMethodTemplateArgs.map(_.args))
+          val (stackFrame3, args, selfUses, childUses, containerParts) =
+            subjectUncoercedScoutResult match {
+              case OutsideLookupResult(subjectRangeS, containerName, containerMaybeTemplateArgs) => {
+                vassert(uncoercedSubjectSelfUses.isEmpty)
+                vassert(uncoercedSubjectChildUses.isEmpty)
+                val containerTemplateArgRuneUsages =
+                  translateMaybeTemplateArgs(stackFrame0.parentEnv, lidb, ruleBuilder, stackFrame0.contextRegion, containerMaybeTemplateArgs)
+                val (stackFrame3, args, selfUses, childUses) =
+                  scoutElementsAsExpressions(stackFrame0a, lidb.child(), methodArgs)
+                // We don't support more than 2 parts yet
+                val containerParts = Vector(
+                  LoadPartSE(interner.intern(CodeNameS(containerName)), containerTemplateArgRuneUsages))
+                (stackFrame3, args, selfUses, childUses, containerParts)
+              }
+              case _ => {
+                val loadSubjectAs =
+                  subjectExpr match {
+                    // For locals, just borrow.
+                    case LookupPE(_, _) => LoadAsBorrowP
+                    // For anything else, default to moving.
+                    case _ => UseP
+                  }
+                val subjectChildUses = uncoercedSubjectChildUses
+                val (stackFrame1, subject1, subjectSelfUses) =
+                  coerce(stackFrame0a, subjectUncoercedScoutResult, lidb.child(), uncoercedSubjectSelfUses, loadSubjectAs)
+                val (stackFrame3, tailArgs1, tailArgsSelfUses, tailArgsChildUses) =
+                  scoutElementsAsExpressions(stackFrame1, lidb.child(), methodArgs)
+                val containerParts = Vector()
+                (stackFrame3, Vector(subject1) ++ tailArgs1, subjectSelfUses.thenMerge(tailArgsSelfUses), subjectChildUses.thenMerge(tailArgsChildUses), containerParts)
+              }
             }
-          val (stackFrame1, callable1, callableSelfUses, callableChildUses) =
-            scoutExpressionAndCoerce(stackFrame0, lidb.child(), memberLookup, LoadAsBorrowP)
-          val (stackFrame2, subject1, subjectSelfUses, subjectChildUses) =
-            scoutExpressionAndCoerce(stackFrame1, lidb.child(), subjectExpr, loadSubjectAs)
-          val (stackFrame3, tailArgs1, tailArgsSelfUses, tailArgsChildUses) =
-            scoutElementsAsExpressions(stackFrame2, lidb.child(), methodArgs)
-
-          val selfUses = callableSelfUses.thenMerge(subjectSelfUses).thenMerge(tailArgsSelfUses)
-          val childUses = callableChildUses.thenMerge(subjectChildUses).thenMerge(tailArgsChildUses)
-          val args = Vector(subject1) ++ tailArgs1
-
-          val result = NormalResult(vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callable1, args))
+          val parts = containerParts :+ LoadPartSE(methodImpreciseNameS, methodTemplateArgRuneUsages)
+          val overloadSetSE =
+            OverloadSetSE(OutsideLoadSE(methodCallRangeS, ruleBuilder.toVector, parts))
+          val result = NormalResult(FunctionCallSE(methodCallRangeS, lidb.child().consume(), overloadSetSE, args))
           (stackFrame3, result, selfUses, childUses)
         }
         case TuplePE(range, elementsPE) => {
@@ -670,7 +750,7 @@ class ExpressionScout(
                 val childCaseUses = thenChildUses.branchMerge(elseChildUses)
                 val childUses = condChildUses.thenMerge(childCaseUses);
 
-                val ifSE = vale.postparsing.IfSE(evalRange(range), condSE, thenSE, elseSE)
+                val ifSE = IfSE(evalRange(range), condSE, thenSE, elseSE)
                 (stackFrame2, ifSE, selfUses, childUses)
               })
           (stackFrame0, NormalResult(resultSE), selfUses, childUses)
@@ -702,7 +782,7 @@ class ExpressionScout(
             patternScout.translatePattern(
               stackFrame1, lidb.child(), ruleBuilder, runeToExplicitType, patternP)
 
-          val declarationsFromPattern = vale.postparsing.VariableDeclarations(patternScout.getParameterCaptures(patternS))
+          val declarationsFromPattern = VariableDeclarations(patternScout.getParameterCaptures(patternS))
 
           val nameConflictVarNames =
             stackFrame1.locals.vars.map(_.name).intersect(declarationsFromPattern.vars.map(_.name))
@@ -742,7 +822,7 @@ class ExpressionScout(
             // in a constructor, `this` is just an imaginary concept until we actually
             // fill all the variables.
             case LookupPE(LookupNameP(NameP(range, s)), _) if s == keywords.self && (stackFrame0.findVariable(interner.intern(CodeNameS(interner.intern(StrI("self"))))).isEmpty) => {
-              val result = vale.postparsing.LocalLookupResult(evalRange(range), interner.intern(ConstructingMemberNameS(memberName)))
+              val result = LocalLookupResult(evalRange(range), interner.intern(ConstructingMemberNameS(memberName)))
               (stackFrame0, result, noVariableUses, noVariableUses)
             }
             case _ => {
@@ -757,7 +837,7 @@ class ExpressionScout(
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), containerExprPE, LoadAsBorrowP)
           val (stackFrame2, indexExpr1, indexSelfUses, indexChildUses) =
             scoutExpressionAndCoerce(stackFrame1, lidb.child(), indexExprPE, UseP);
-          val dot1 = vale.postparsing.IndexSE(evalRange(range), containerExpr1, indexExpr1)
+          val dot1 = IndexSE(evalRange(range), containerExpr1, indexExpr1)
           (stackFrame2, NormalResult(dot1), containerSelfUses.thenMerge(indexSelfUses), containerChildUses.thenMerge(indexChildUses))
         }
         case ShortcallPE(range, argExprs) => {
@@ -789,50 +869,54 @@ class ExpressionScout(
     val childUses = condChildUses.thenMerge(childCaseUses);
 
     val ifSE =
-      vale.postparsing.IfSE(PostParser.evalRange(stackFrame0.file, range), condSE, thenSE, elseSE)
+      IfSE(PostParser.evalRange(stackFrame0.file, range), condSE, thenSE, elseSE)
     (stackFrame3, ifSE, selfUses, childUses)
   }
 
   // If we load an immutable with targetOwnershipIfLookupResult = Own or Borrow, it will just be Share.
   def scoutExpressionAndCoerce(
-      stackFramePE: StackFrame,
+    stackFrame0: StackFrame,
     lidb: LocationInDenizenBuilder,
     exprPE: IExpressionPE,
     loadAsP: LoadAsP):
   (StackFrame, IExpressionSE, VariableUses, VariableUses) = {
-    val (namesFromInsideFirst, firstResult1, firstInnerSelfUses, firstChildUses) =
-      scoutExpression(stackFramePE, lidb.child(), exprPE);
-    val (firstExpr1, firstSelfUses) =
-      firstResult1 match {
-        case LocalLookupResult(range, name) => {
-          val uses =
-            loadAsP match {
-              case LoadAsBorrowP => firstInnerSelfUses.markBorrowed(name)
-              case LoadAsWeakP => firstInnerSelfUses.markBorrowed(name)
-              case UseP | MoveP => firstInnerSelfUses.markMoved(name)
-            }
-          (vale.postparsing.LocalLoadSE(range, name, loadAsP), uses)
-        }
-        case OutsideLookupResult(range, name, maybeTemplateArgs) => {
-          val ruleBuilder = ArrayBuffer[IRulexSR]()
-          val maybeTemplateArgRunes =
-            maybeTemplateArgs.map(templateArgs => {
-              templateArgs.map(templateArgPT => {
-                templexScout.translateTemplex(
-                  stackFramePE.parentEnv, lidb.child(), ruleBuilder, stackFramePE.contextRegion, templateArgPT)
-              })
-            })
-          val load = vale.postparsing.OutsideLoadSE(range, ruleBuilder.toVector, interner.intern(CodeNameS(name)), maybeTemplateArgRunes, loadAsP)
-          (load, firstInnerSelfUses)
-        }
-        case NormalResult(innerExpr1) => {
+    val (stackFrame1, uncoercedScoutResult, exprSelfUses, exprChildUses) =
+      scoutExpression(stackFrame0, lidb.child(), exprPE)
+    val (stackFrame2, coercedExpr, coercedSelfUses) =
+      coerce(stackFrame1, uncoercedScoutResult, lidb.child(), exprSelfUses, loadAsP)
+    (stackFrame2, coercedExpr, coercedSelfUses, exprChildUses)
+  }
+
+  def coerce(
+      stackFrame0: StackFrame,
+      firstResult1: IScoutResult[IExpressionSE],
+      lidb: LocationInDenizenBuilder,
+      selfUsesBefore: VariableUses,
+      loadAsP: LoadAsP
+  ): (StackFrame, IExpressionSE, VariableUses) = {
+    firstResult1 match {
+      case LocalLookupResult(range, name) => {
+        val selfUsesAfter =
           loadAsP match {
-            case UseP => (innerExpr1, firstInnerSelfUses)
-            case _ => (vale.postparsing.OwnershippedSE(innerExpr1.range, innerExpr1, loadAsP), firstInnerSelfUses)
+            case LoadAsBorrowP => selfUsesBefore.markBorrowed(name)
+            case LoadAsWeakP => selfUsesBefore.markBorrowed(name)
+            case UseP | MoveP => selfUsesBefore.markMoved(name)
           }
+        (stackFrame0, LocalLoadSE(range, name, loadAsP), selfUsesAfter)
+      }
+      case OutsideLookupResult(range, name, maybeTemplateArgs) => {
+        // When we have globals, here's where we'd check that the user declared they're accessing a global.
+        // But since we don't have globals yet, we just throw an error...
+        // V: open question... why don't we coerce to overload set here? Is that done somewhere else?
+        throw CompileErrorExceptionS(CouldntFindVarToMutateS(range, "a"))
+      }
+      case NormalResult(innerExpr1) => {
+        loadAsP match {
+          case UseP => (stackFrame0, innerExpr1, selfUsesBefore)
+          case _ => (stackFrame0, OwnershippedSE(innerExpr1.range, innerExpr1, loadAsP), selfUsesBefore)
         }
       }
-    (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
+    }
   }
 
   // Need a better name for this...

@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.typing.env.ReferenceLocalVariableT
@@ -5,8 +6,19 @@ import dev.vale.typing._
 import dev.vale.typing.types._
 import dev.vale.von.VonInt
 import org.scalatest._
-
+*/
+// mig: struct HashMapTest
+pub struct HashMapTest;
+/*
 class HashMapTest extends FunSuite with Matchers {
+*/
+// mig: fn monomorphize_problem
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn monomorphize_problem() {
+    panic!("Unmigrated test: monomorphize_problem");
+}
+/*
   test("Monomorphize problem") {
     // See NBIFP, the instantiator has to grab bounds from its params too
 
@@ -34,8 +46,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
-
+*/
+// mig: fn supply_bounds_to_child_functions
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn supply_bounds_to_child_functions() {
+    panic!("Unmigrated test: supply_bounds_to_child_functions");
+}
+/*
   test("Supply bounds to child functions") {
     // We need to supply our bounds to our lambdas and drop functions, see LCCPGB and LCNBAFA.
     // This test's `add` function will try to call
@@ -71,8 +89,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
-
+*/
+// mig: fn hash_map_update
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_update() {
+    panic!("Unmigrated test: hash_map_update");
+}
+/*
   test("Hash map update") {
     val compile = RunCompilation.test(
         """
@@ -90,7 +114,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(108) => }
   }
-
+*/
+// mig: fn hash_map_collisions
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_collisions() {
+    panic!("Unmigrated test: hash_map_collisions");
+}
+/*
   test("Hash map collisions") {
     val compile = RunCompilation.test(
         """
@@ -129,7 +160,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(111) => }
   }
-
+*/
+// mig: fn hash_map_with_functors
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_with_functors() {
+    panic!("Unmigrated test: hash_map_with_functors");
+}
+/*
   test("Hash map with functors") {
     val compile = RunCompilation.test(
         """
@@ -147,7 +185,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(100) => }
   }
-
+*/
+// mig: fn hash_map_with_struct_as_key
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_with_struct_as_key() {
+    panic!("Unmigrated test: hash_map_with_struct_as_key");
+}
+/*
   test("Hash map with struct as key") {
     val compile = RunCompilation.test(
         """
@@ -182,7 +227,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(100) => }
   }
-
+*/
+// mig: fn hash_map_has
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_has() {
+    panic!("Unmigrated test: hash_map_has");
+}
+/*
   test("Hash map has") {
     val compile = RunCompilation.test(
         """
@@ -207,7 +259,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(111) => }
   }
-
+*/
+// mig: fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
+    panic!("Unmigrated test: gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots");
+}
+/*
   test("Gathers/substitutes bounds for structs inside things accessed from dots") {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -252,7 +311,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
+    panic!("Unmigrated test: gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots");
+}
+/*
   test("Gathers/substitutes bounds for interfaces inside things accessed from dots") {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
@@ -295,7 +361,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn hash_map_values
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_values() {
+    panic!("Unmigrated test: hash_map_values");
+}
+/*
   test("Hash map values") {
     val compile = RunCompilation.test(
         """
@@ -319,7 +392,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn hash_map_with_mutable_values
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_with_mutable_values() {
+    panic!("Unmigrated test: hash_map_with_mutable_values");
+}
+/*
   test("Hash map with mutable values") {
     val compile = RunCompilation.test(
         """
@@ -345,7 +425,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn hash_map_remove
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_remove() {
+    panic!("Unmigrated test: hash_map_remove");
+}
+/*
   test("Hash map remove") {
     val compile = RunCompilation.test(
         """
@@ -371,7 +458,14 @@ class HashMapTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
-
+*/
+// mig: fn hash_map_remove_2
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn hash_map_remove_2() {
+    panic!("Unmigrated test: hash_map_remove_2");
+}
+/*
   test("Hash map remove 2") {
     val compile = RunCompilation.test(
         """
@@ -400,3 +494,5 @@ class HashMapTest extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
 }
+
+*/

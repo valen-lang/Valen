@@ -11,17 +11,13 @@ I'd like you to translate every Scala mig slice comment to a "Rust mig slice com
 
 # Step 0: Read the migration policy
 
-Read `FrontendRust/docs/migration/migration-policy.md` (fixed path, single universal file across all passes). Find the row in its **Per-pass values** table whose **Path prefix** column matches the target file's path. If no row matches, STOP and report: "no migration-policy.md row for pass containing <file>; need an architect-approved row before rustify can run."
+Before emitting anything, read the central migration policy at `FrontendRust/docs/migration/migration-policy.md` and find the values for this pass (identified by the target file's source dir, e.g. `src/typing/` → typing). If the pass has no entry in the sections you need below (e.g. no **Type-name suffix**), STOP and report "pass `<name>` has no values in `FrontendRust/docs/migration/migration-policy.md`; add them before rustify can run."
 
-If a row's column you would need says `(TBD — defer to architect when first file gets migrated)`, STOP and escalate to the architect for that column's value before continuing.
-
-The columns you use here:
- * **Suffix** — append this to every translated `class`/`case class`/`sealed trait`/`trait` name unless the name already carries it.
- * **Sealed-trait policy** — determines whether `sealed trait Foo` becomes `// mig: enum FooX` + `// mig: impl FooX` (`enum-with-arena-refs` or `enum-with-box`) or `// mig: trait FooX` (`trait-with-impls`).
-
-And these cross-pass conventions from the policy:
+Read the relevant pass's values in full. The sections you use here:
+ * **Type-name suffix** — append this to every translated `class`/`case class`/`sealed trait`/`trait` name unless the name already carries it.
+ * **Sealed-trait policy** — determines whether `sealed trait Foo` becomes `// mig: enum Foo` (with dispatcher impl) or `// mig: trait Foo`.
  * **Naming exceptions (SPDMX exception J)** — pre-approved renames that override the default snake_case conversion.
- * **`equals` / `hashCode` / `unapply` policy** — `override def equals/hashCode` mig comments stay as `// mig: fn eq (realized-by-impl PartialEq)` / `// mig: fn hash_code (realized-by-impl Hash)`; `def unapply` becomes `// mig: fn unapply (realized-by-TryFrom)`. slice-placehold will emit the marker stub.
+ * **`equals`/`hashCode`/`unapply` policy** — `override def equals/hashCode` mig comments stay as `// mig: fn eq` / `// mig: fn hash_code` but get a "(Realized by `impl ... below`)" marker; slice-placehold will emit the marker stub.
 
 # Functions
 
@@ -33,9 +29,9 @@ Scala allows multiple `def` with the same name (overloads). Just translate each 
 
 # Classes
 
-A class Scala mig comment becomes two Rust mig comments: one struct and one impl. For example, `class PostParserVariableTests` -> `struct PostParserVariableTests` and `impl PostParserVariableTests`.
+A class Scala mig comment becomes one Rust mig comment: a struct. For example, `class PostParserVariableTests` -> `struct PostParserVariableTests`. (No impl marker — slice-impl-wrap later wraps each method in its own `impl PostParserVariableTests { ... }` block, anchored on the struct marker.)
 
-**Apply the policy's type-name suffix.** If the policy says suffix `T`, then `class Foo` → `// mig: struct FooT` + `// mig: impl FooT`.
+**Apply the policy's type-name suffix.** If the policy says suffix `T`, then `class Foo` → `// mig: struct FooT`.
 
 **Suffix-replacement rule for cross-pass names.** Scala types in earlier passes often already carry a pass-suffix from their origin pass (`S` = postparsing/scout, `A` = higher-typing, `T` = typing, `I` = instantiating). When the Scala name ends in a single capital letter pass-suffix that differs from the current pass's suffix, **replace it**, do not append. Examples (for an instantiating pass with suffix `I`):
 
@@ -46,11 +42,10 @@ A class Scala mig comment becomes two Rust mig comments: one struct and one impl
 
 If the Scala name already ends in the current pass's suffix, leave it. Test classes (e.g. `class FooTests extends FunSuite`) do NOT get the suffix.
 
-**CRITICAL: When expanding one marker into two, the original Scala `/* */` block below the marker must remain intact.** The expansion is purely about the `// mig:` comment line — it must NEVER delete, move, or modify the Scala code inside the adjacent `/* */` block. After the expansion the layout looks like:
+**CRITICAL: When converting the marker, the original Scala `/* */` block below the marker must remain intact.** The conversion is purely about the `// mig:` comment line — it must NEVER delete, move, or modify the Scala code inside the adjacent `/* */` block. After the conversion the layout looks like:
 
 ```
 // mig: struct FooT
-// mig: impl FooT
 /*
 class Foo(
   field1: Type1,
@@ -58,24 +53,23 @@ class Foo(
 */
 ```
 
-The `class Foo(field1: Type1, field2: Type2) {` lines (or equivalent for `case class` / `object` / `sealed trait`) **must stay in their original `/* */` block** — both the struct and the impl markers share that one block as the parity record. Do NOT remove the field-list lines, the constructor parameters, or the opening `{`. If you find yourself deleting Scala code from a `/* */` block, you are doing it wrong.
+The `class Foo(field1: Type1, field2: Type2) {` lines (or equivalent for `case class` / `object` / `sealed trait`) **must stay in their original `/* */` block** — the struct marker uses that block as the parity record. Do NOT remove the field-list lines, the constructor parameters, or the opening `{`. If you find yourself deleting Scala code from a `/* */` block, you are doing it wrong.
 
 # Case classes
 
-A case class becomes `struct` and `impl` (same as class). Apply the suffix as for classes. Same CRITICAL rule applies: the original `case class Foo(field1, field2) {` declaration lines stay in their `/* */` block — only the `// mig:` marker line is expanded into two markers.
+A case class becomes a `struct` (same as class). Apply the suffix as for classes. Same CRITICAL rule applies: the original `case class Foo(field1, field2) {` declaration lines stay in their `/* */` block — only the `// mig:` marker line is converted.
 
 # Sealed traits
 
-A `sealed trait Foo` becomes a Rust enum + an impl block for dispatcher methods. Emit two mig comments:
+A `sealed trait Foo` becomes a Rust enum. Emit one mig comment:
 
 ```
 // mig: enum FooT
-// mig: impl FooT
 ```
 
-(With suffix applied per the policy.) Abstract `def`s inside the sealed trait body stay as `// mig: fn` comments — slice-placehold will turn them into module-scope dispatcher functions, and slice-impl-wrap will later wrap them in dedicated `impl FooT { fn ... }` blocks.
+(With suffix applied per the policy.) Abstract `def`s inside the sealed trait body stay as `// mig: fn` comments — slice-placehold will turn them into module-scope dispatcher functions, and slice-impl-wrap will later wrap them in dedicated `impl FooT { fn ... }` blocks (anchored on the `// mig: enum FooT` marker).
 
-**CRITICAL: Same rule as classes — when expanding `// mig: sealed trait Foo` into `// mig: enum FooT` + `// mig: impl FooT`, the original `sealed trait Foo { ... }` declaration line and its body must stay intact in the `/* */` block. Do not delete the trait declaration or its body content.**
+**CRITICAL: Same rule as classes — when converting `// mig: sealed trait Foo` into `// mig: enum FooT`, the original `sealed trait Foo { ... }` declaration line and its body must stay intact in the `/* */` block. Do not delete the trait declaration or its body content.**
 
 `case object` declarations inside a sealed trait do NOT get their own struct mig comment — they become unit variants on the enum at placehold time, per the policy's "`case object` / companion `object` policy" section.
 
@@ -110,11 +104,11 @@ Check the policy's "Naming exceptions (SPDMX exception J)" section. Any Scala na
 
 # Example 1
 
-`// mig: class PostParserVariableTests` becomes `// mig: struct PostParserVariableTests` and `// mig: impl PostParserVariableTests`. `// mig: def compileForError` becomes `// mig: fn compile_for_error`. `// mig: test("Regular variable")` becomes `// mig: fn regular_variable`. `// mig: test("Type-less local has no coord rune")` becomes `// mig: fn type_less_local_has_no_coord_rune`.
+`// mig: class PostParserVariableTests` becomes `// mig: struct PostParserVariableTests`. `// mig: def compileForError` becomes `// mig: fn compile_for_error`. `// mig: test("Regular variable")` becomes `// mig: fn regular_variable`. `// mig: test("Type-less local has no coord rune")` becomes `// mig: fn type_less_local_has_no_coord_rune`.
 
 # Example 2
 
-`// mig: class FileCoordinateMap` becomes `// mig: struct FileCoordinateMap` and `// mig: impl FileCoordinateMap`. `// mig: def putPackage` becomes `// mig: fn put_package`. `// mig: def map` becomes `// mig: fn map`. `// mig: def flatMap` becomes `// mig: fn flat_map`.
+`// mig: class FileCoordinateMap` becomes `// mig: struct FileCoordinateMap`. `// mig: def putPackage` becomes `// mig: fn put_package`. `// mig: def map` becomes `// mig: fn map`. `// mig: def flatMap` becomes `// mig: fn flat_map`.
 
 # Example 3
 

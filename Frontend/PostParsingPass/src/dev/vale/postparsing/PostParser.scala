@@ -331,6 +331,9 @@ object PostParser {
       maybeDefault.map(defaultPT => {
         val uncategorizedRules = ArrayBuffer[IRulexSR]()
         val resultRune = templexScout.translateTemplex(env, lidb, uncategorizedRules, contextRegion, defaultPT)
+        // Per @DRSINI, this EqualsSR is hoisted into main rules below. It just aliases the
+        // param rune and the default result rune — harmless until LiteralSR gives the result
+        // rune a value. LiteralSR is added incrementally (not eagerly) by solveForResolving.
         uncategorizedRules += EqualsSR(genericParamRangeS, runeS, resultRune)
 
         val rulesToLeaveInDefaultArgument = new Accumulator[IRulexSR]()
@@ -339,14 +342,24 @@ object PostParser {
           case r @ LiteralSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ MaybeCoercingLookupSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ ResolveSR(_, _, _, _, _) => rulesToLeaveInDefaultArgument.add(r)
-          case r @ EqualsSR(_, _, _) => ruleBuilder += r // Hoist it up into regular rules
+          // Per @DRSINI, this EqualsSR aliases the param rune to the default's resultRune.
+          // We KEEP it in the default's rules (rather than hoisting) so the default is fully
+          // self-contained — it travels intact when GenericParameterS is inherited (e.g. by
+          // struct internal methods). At default-fire time, the typing pass registers the
+          // default-only runes via solverState.registerRunes(default.runeToType.keys).
+          case r @ EqualsSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ CallSiteFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case r @ DefinitionFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case other => vwat(other)
         })
 
+        // Default-only runeToType. resultRune is typed the same as the parent param via
+        // the connecting EqualsSR. (For complex defaults that introduce additional
+        // default-only runes via MaybeCoercingLookupSR/ResolveSR/etc., those runes' types
+        // would also belong here — left as a follow-up.)
+        val defaultRuneToType = Map(resultRune.rune -> genericParamTypeS.tyype)
         GenericParameterDefaultS(
-          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector)
+          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector, defaultRuneToType)
       })
 
 //    val (maybeImplicitRegionGenericParam, maybeCoordRegionS) =
@@ -657,6 +670,7 @@ class PostParser(
         structEnv, lidb.child(), headerRuleBuilder, defaultRegionRuneS, mutability)
     headerRuneToExplicitType += ((mutabilityRuneS.rune, MutabilityTemplataType()))
 
+    val internalMethodsP = mutable.ArrayBuffer[FunctionP]()
     val membersS =
       members.flatMap({
         case NormalStructMemberP(range, name, variability, memberType) => {
@@ -673,8 +687,8 @@ class PostParser(
           membersRuneToExplicitType.put(memberRune.rune, PackTemplataType(CoordTemplataType()))
           Vector(VariadicStructMemberS(PostParser.evalRange(structEnv.file, range), variability, memberRune))
         }
-        case StructMethodP(_) => {
-          // Implement struct methods one day
+        case StructMethodP(funcP) => {
+          internalMethodsP += funcP
           Vector.empty
         }
       })
@@ -708,6 +722,18 @@ class PostParser(
 
 //    val runeSToCanonicalRune = ruleBuilder.runeSToTentativeRune.mapValues(tentativeRune => tentativeRuneToCanonicalRune(tentativeRune))
 
+    val internalMethodsS =
+      internalMethodsP.toVector.map(method => {
+        functionScout.scoutInterfaceMember(
+          ParentCitizen(
+            false,  // not an interface — struct internal methods don't require virtual self
+            structEnv,
+            genericParametersS.toVector,
+            allRulesS,
+            allRuneToExplicitType.toMap),
+          method)
+      })
+
     StructS(
       structRangeS,
       structName,
@@ -723,12 +749,14 @@ class PostParser(
       membersRuneToExplicitType.toMap,
       membersRuneToPredictedType,
       memberRulesS,
-      membersS)
+      membersS,
+      internalMethodsS)
   }
 
   def translateCitizenAttributes(file: FileCoordinate, denizenName: INameS, attrsP: Vector[IAttributeP]): Vector[ICitizenAttributeS] = {
     attrsP.map({
       case ExportAttributeP(_) => ExportS(file.packageCoordinate)
+      case ExternAttributeP(_) => ExternS(file.packageCoordinate)
       case SealedAttributeP(_) => SealedS
       case MacroCallP(range, dontCall, NameP(_, str)) => MacroCallS(PostParser.evalRange(file, range), dontCall, str)
       case x => vimpl(x.toString)
@@ -876,7 +904,8 @@ class PostParser(
     val internalMethodsS =
       internalMethodsP.map(method => {
         functionScout.scoutInterfaceMember(
-          ParentInterface(
+          ParentCitizen(
+            true,  // interface internal methods do require virtual self
             interfaceEnv,
             genericParametersS.toVector,
             rulesS,

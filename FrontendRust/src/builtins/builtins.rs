@@ -9,7 +9,6 @@ use std::path::Path;
 // From Builtins.scala lines 9-39: moduleToFilename
 pub const MODULE_TO_FILENAME: &[(&str, &str)] = &[
     ("arith", "arith.vale"),
-    ("functor1", "functor1.vale"),
     ("logic", "logic.vale"),
     ("migrate", "migrate.vale"),
     ("str", "str.vale"),
@@ -83,7 +82,6 @@ pub fn get_embedded_modulized_code_map<'a>(
 ) -> FileCoordinateMap<'a, String> {
     let entries: &[(&str, &str, &str)] = &[
         ("arith",                          "arith.vale",                          include_str!("resources/arith.vale")),
-        ("functor1",                       "functor1.vale",                       include_str!("resources/functor1.vale")),
         ("logic",                          "logic.vale",                          include_str!("resources/logic.vale")),
         ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
         ("str",                            "str.vale",                            include_str!("resources/str.vale")),
@@ -160,7 +158,6 @@ object Builtins {
   val moduleToFilename =
     Vector(
       "arith" -> "arith.vale",
-      "functor1" -> "functor1.vale",
       "logic" -> "logic.vale",
       "migrate" -> "migrate.vale",
       "str" -> "str.vale",

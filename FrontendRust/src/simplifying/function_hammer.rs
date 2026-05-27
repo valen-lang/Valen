@@ -27,7 +27,24 @@ class FunctionHammer(
     structHammer: StructHammer) {
   val expressionHammer =
     new ExpressionHammer(keywords, typeHammer, nameHammer, structHammer, this)
+*/
 
+// mig: fn translate_functions
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_functions<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        functions2: &[FunctionDefinitionI<'s, 'i>],
+    ) -> Vec<FunctionRefH<'s, 'h>>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_functions");
+    }
+}
+/*
   def translateFunctions(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -40,7 +57,24 @@ class FunctionHammer(
       }
     })
   }
+*/
 
+// mig: fn translate_function
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_function<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        function2: &FunctionDefinitionI<'s, 'i>,
+    ) -> FunctionRefH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_function");
+    }
+}
+/*
   def translateFunction(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -93,60 +127,7 @@ class FunctionHammer(
       }
     }
   }
-
-  def translateFunctionAttributes(attributes: Vector[IFunctionAttributeI]) = {
-    attributes.map({
-      case UserFunctionI => UserFunctionH
-      case PureI => PureH
-      case ExternI(_) => vwat() // Should have been filtered out, hammer cares about extern directly
-      case x => vimpl(x.toString)
-    })
-  }
-
-  def translateFunctionRef(
-      hinputs: HinputsI,
-      hamuts: HamutsBox,
-    currentFunctionHeader: FunctionHeaderI,
-      prototype2: PrototypeI[cI]):
-  (FunctionRefH) = {
-    val (prototypeH) = typeHammer.translatePrototype(hinputs, hamuts, prototype2);
-    val functionRefH = FunctionRefH(prototypeH);
-    (functionRefH)
-  }
-}
 */
-
-// mig: fn translate_functions
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_functions<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        functions2: &[FunctionDefinitionI<'s, 'i>],
-    ) -> Vec<FunctionRefH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_functions");
-    }
-}
-
-// mig: fn translate_function
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_function<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        function2: &FunctionDefinitionI<'s, 'i>,
-    ) -> FunctionRefH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_function");
-    }
-}
 
 // mig: fn translate_function_attributes
 impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
@@ -159,6 +140,16 @@ where 's: 'h,
         panic!("Unimplemented: translate_function_attributes");
     }
 }
+/*
+  def translateFunctionAttributes(attributes: Vector[IFunctionAttributeI]) = {
+    attributes.map({
+      case UserFunctionI => UserFunctionH
+      case PureI => PureH
+      case ExternI(_) => vwat() // Should have been filtered out, hammer cares about extern directly
+      case x => vimpl(x.toString)
+    })
+  }
+*/
 
 // mig: fn translate_function_ref
 impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
@@ -176,3 +167,16 @@ where 's: 'h,
         panic!("Unimplemented: translate_function_ref");
     }
 }
+/*
+  def translateFunctionRef(
+      hinputs: HinputsI,
+      hamuts: HamutsBox,
+    currentFunctionHeader: FunctionHeaderI,
+      prototype2: PrototypeI[cI]):
+  (FunctionRefH) = {
+    val (prototypeH) = typeHammer.translatePrototype(hinputs, hamuts, prototype2);
+    val functionRefH = FunctionRefH(prototypeH);
+    (functionRefH)
+  }
+}
+*/

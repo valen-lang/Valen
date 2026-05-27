@@ -4,7 +4,7 @@ import dev.vale._
 import dev.vale.options.GlobalOptions
 import dev.vale.parsing.ast.{CallMacroP, DontCallMacroP, UseP}
 import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing._
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.citizen._
@@ -18,7 +18,7 @@ import dev.vale.typing.function._
 import dev.vale
 import dev.vale.highertyping.{ExportAsA, FunctionA, InterfaceA, ProgramA, StructA}
 import dev.vale.typing.Compiler.isPrimitive
-import dev.vale.typing.ast.{ConsecutorTE, EdgeT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, PrototypeT, ReferenceExpressionTE, VoidLiteralTE}
+import dev.vale.typing.ast.{ConsecutorTE, EdgeT, ExternT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, PrototypeT, ReferenceExpressionTE, VoidLiteralTE}
 import dev.vale.typing.env._
 import dev.vale.typing.macros.{AbstractBodyMacro, AnonymousInterfaceMacro, AsSubtypeMacro, FunctorHelper, IOnImplDefinedMacro, IOnInterfaceDefinedMacro, IOnStructDefinedMacro, LockWeakMacro, SameInstanceMacro, StructConstructorMacro}
 import dev.vale.typing.macros.citizen._
@@ -388,6 +388,32 @@ class Compiler(
               returnCoord))
         }
 
+        // Per @BRRZ, this is the real overload lookup invoked from inside the ResolveSR
+        // handler when the return rune isn't yet known. Mirrors the outer delegate's
+        // resolveFunction at line 455-477 below, but takes InferEnv so the solver-side
+        // delegate has a uniform shape with predictFunction/assemblePrototype.
+        override def resolveFunction(
+          envs: InferEnv,
+          state: CompilerOutputs,
+          range: List[RangeS],
+          name: StrI,
+          paramCoords: Vector[CoordT]):
+        Result[StampFunctionSuccess, FindFunctionFailure] = {
+          overloadResolver.findFunction(
+            envs.originalCallingEnv,
+            state,
+            range,
+            envs.callLocation,
+            interner.intern(CodeNameS(interner.intern(name))),
+            Vector.empty,
+            Vector.empty,
+            Vector.empty,
+            envs.contextRegion,
+            paramCoords,
+            Vector.empty,
+            true)
+        }
+
         override def assemblePrototype(
             envs: InferEnv,
           state: CompilerOutputs,
@@ -470,6 +496,7 @@ class Compiler(
             interner.intern(CodeNameS(interner.intern(name))),
             Vector.empty,
             Vector.empty,
+            Vector.empty,
             contextRegion,
             coords,
             Vector.empty,
@@ -550,7 +577,8 @@ class Compiler(
           callLocation: LocationInDenizen,
           functionName: IImpreciseNameS,
           explicitTemplateArgRulesS: Vector[IRulexSR],
-          explicitTemplateArgRunesS: Vector[IRuneS],
+          positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+          receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
           contextRegion: RegionT,
           args: Vector[CoordT],
           extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -563,7 +591,8 @@ class Compiler(
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             args,
             extraEnvsToLookIn,
@@ -914,9 +943,9 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -963,7 +992,7 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -1047,103 +1076,6 @@ class Compiler(
                   functionCompiler.evaluateGenericFunctionFromNonCall(
                       coutputs, List(), LocationInDenizen(Vector()), templata)
 
-                  functionA.attributes.collectFirst({ case e @ ExternS(_) => e }) match {
-                    case None =>
-                    case Some(ExternS(packageCoord)) => {
-                      val externName =
-                        functionA.name match {
-                          case FunctionNameS(name, range) => name
-                          case other => vwat(other)
-                        }
-
-                      val templateName = interner.intern(ExternTemplateNameT(functionA.range.begin))
-                      val templateId = IdT(packageId.packageCoord, Vector(), templateName)
-
-                      val regionPlaceholder = RegionT()
-                      val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT()))
-                      val placeholderedExternId = templateId.copy(localName = placeholderedExternName)
-                      val externEnv =
-                        ExternEnvironmentT(
-                          globalEnv, packageEnv, templateId, placeholderedExternId, TemplatasStore(placeholderedExternId, Map(), Map()))
-                      // We evaluate this and then don't do anything for it on purpose, we just do
-                      // this to cause the compiler to make instantiation bounds for all the types
-                      // in terms of this extern. That way, further below, when we do the
-                      // substituting templatas, the bounds are already made for these types.
-                      val externPlaceholderedWrapperPrototype =
-                        functionCompiler.evaluateGenericLightFunctionFromCallForPrototype(
-                          coutputs,
-                          List(functionA.range),
-                          LocationInDenizen(Vector()),
-                          externEnv,
-                          templata,
-                          Vector(),
-                          regionPlaceholder,
-                          Vector()) match {
-                          case ResolveFunctionSuccess(prototype, inferences) => prototype.prototype
-                          case ResolveFunctionFailure(reason) => {
-                            throw CompileErrorExceptionT(TypingPassResolvingError(List(functionA.range), reason))
-                          }
-                        }
-
-//                      val externPerspectivedParams =
-//                        header.params.map(_.tyype).map(typeT => {
-//                          TemplataCompiler.substituteTemplatasInCoord(
-//                            coutputs,
-//                            interner,
-//                            keywords,
-//                            TemplataCompiler.getTemplate(header.id),
-//                            Vector(regionPlaceholder),
-//                            InheritBoundsFromTypeItself,
-//                            typeT)
-//                        })
-//                      val externPerspectivedReturn =
-//                        TemplataCompiler.substituteTemplatasInCoord(
-//                          coutputs,
-//                          interner,
-//                          keywords,
-//                          TemplataCompiler.getTemplate(header.id),
-//                          Vector(regionPlaceholder),
-//                          InheritBoundsFromTypeItself,
-//                          header.returnType)
-//                      val externFunctionId =
-//                        IdT(
-//                          packageCoord,
-//                          Vector.empty,
-//                          interner.intern(ExternFunctionNameT(
-//                            externName, externPerspectivedParams)))
-//                      val externPrototype = PrototypeT(externFunctionId, externPerspectivedReturn)
-
-                      // We don't actually want to call the wrapper function, we want to call the extern.
-                      // The extern's prototype is always similar to the wrapper function, so we do
-                      // a straightforward replace of the names.
-                      // We don't have to worry about placeholders, they're already phrased in terms
-                      // of the calling FunctionExternT.
-                      val externPrototype =
-                        externPlaceholderedWrapperPrototype match {
-                          case PrototypeT(IdT(packageCoord, steps, FunctionNameT(FunctionTemplateNameT(humanName, codeLocation), templateArgs, params)), returnType) => {
-                            PrototypeT(
-                              IdT(
-                                packageCoord,
-                                steps,
-                                interner.intern(ExternFunctionNameT(humanName, params))),
-                              returnType)
-                          }
-                          case other => vwat(other)
-                        }
-                      // Though, we do need to add some instantiation bounds for this new IdT we
-                      // just made.
-                      coutputs.addInstantiationBounds(
-                        opts.globalOptions.sanityCheck,
-                        interner,
-                        templateId,
-                        externPrototype.id,
-                        vassertSome(coutputs.getInstantiationBounds(externPlaceholderedWrapperPrototype.id)))
-
-                      coutputs.addFunctionExtern(
-                        functionA.range, placeholderedExternId, externPrototype, externName)
-                    }
-                  }
-
                   val maybeExport =
                     functionA.attributes.collectFirst { case e@ExportS(_) => e }
                   maybeExport match {
@@ -1155,7 +1087,7 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
                       val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
@@ -1210,7 +1142,7 @@ class Compiler(
               ExportEnvironmentT(
                 globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-            val regionPlaceholder = RegionT()
+            val regionPlaceholder = RegionT(DefaultRegionT)
 
             val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
             val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
@@ -1516,9 +1448,23 @@ class Compiler(
       (Vector(functionExtern.prototype.returnType) ++ functionExtern.prototype.paramTypes)
         .foreach(paramType => {
           if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
-            throw CompileErrorExceptionT(
-              ExternFunctionDependedOnNonExportedKind(
-                List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
+            val kindIsFineInExternFunc =
+              paramType.kind match {
+                case StructTT(id) => coutputs.lookupStruct(id).attributes.exists(_.isInstanceOf[ExternT])
+                // Method-own and container-inherited template params surface here as
+                // placeholders at definition time (e.g. `extern func bar<C>(c C)` inside
+                // `extern struct Foo<A>` has C and A as KindPlaceholderTs in the wrapper
+                // prototype). Placeholders are substitution slots, not concrete types; the
+                // actual concrete kind for each monomorphization is what matters for ABI,
+                // and gets checked at instantiation.
+                case KindPlaceholderT(_) => true
+                case _ => false
+              }
+            if (!kindIsFineInExternFunc) {
+              throw CompileErrorExceptionT(
+                ExternFunctionDependedOnNonExportedKind(
+                  List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
+            }
           }
         })
     })

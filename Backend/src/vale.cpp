@@ -47,6 +47,7 @@
 #include "function/expressions/shared/members.h"
 #include "function/expressions/expressions.h"
 #include "region/naiverc/naiverc.h"
+#include "utils/rustify.h"
 
 #ifdef _WIN32
 #define asmext "asm"
@@ -102,6 +103,14 @@ ValeFuncPtrLE declareFunction(
   GlobalState* globalState,
   Function* functionM);
 
+void doRustyThings(
+    Program* program,
+    GlobalState* globalState,
+    Determinism* determinism,
+    const std::string& rustGeneratedHeaderFilepath,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToHeaderNameToC,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToSourceNameToC);
+
 
 std::string makeIncludeDirectory(GlobalState* globalState);
 std::string makeModuleIncludeDirectory(const GlobalState *globalState, PackageCoordinate *packageCoord);
@@ -114,9 +123,13 @@ void makeExternOrExportFunction(
     std::stringstream* headerC,
     std::stringstream* sourceC,
     const PackageCoordinate *packageCoord, Package *package,
+    const std::string& rustGeneratedHeaderFilepath,
     const std::string &externName,
     Prototype *prototype,
-    bool isExport);
+    bool isExport,
+    // DO NOT SUBMIT
+    const std::string& retRustTypeStr,
+    const std::vector<std::string>& paramRustTypeStrs);
 
 void optimize(GlobalState *globalState);
 
@@ -227,13 +240,19 @@ std::string generateFunctionC(
     const std::string& outsideName,
     Prototype* prototype,
     CFuncLineMode lineMode,
-    bool isExport) {
+    bool isExport,
+    // DO NOT SUBMIT
+    const std::string& rustRetStr,
+    const std::vector<std::string>& rustParamStrs) {
   auto returnTypeExportName =
       globalState->getRegion(prototype->returnType)->getExportName(package, prototype->returnType, true);
   auto projectName = package->packageCoordinate->projectName;
-  std::string userFuncName =
-      (!package->packageCoordinate->projectName.empty() ? package->packageCoordinate->projectName + "_" : "") +
-      outsideName;
+  std::string userFuncName = outsideName;
+  if (!package->packageCoordinate->projectName.empty()) {
+//    if (package->packageCoordinate->projectName != "rust") { // DO NOT SUBMIT
+    userFuncName = projectName + "_" + userFuncName;
+//    }
+  }
   std::string abiFuncName = std::string("vale_abi_") + userFuncName;
 
   bool abiUsingRetOutParam = typeNeedsPointerParameter(globalState, prototype->returnType);
@@ -247,7 +266,13 @@ std::string generateFunctionC(
     }
     case CFuncLineMode::EXTERN_USER_PROTOTYPE:
     case CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE: {
-      s << "extern " << returnTypeExportName << " " << userFuncName << "(";
+      s << "extern ";
+      if (rustRetStr == "usize") {
+        s << "uintptr_t";
+      } else {
+        s << returnTypeExportName;
+      }
+      s << " " << userFuncName << "(";
       break;
     }
     case CFuncLineMode::EXTERN_INTERMEDIATE_BODY: {
@@ -307,6 +332,8 @@ std::string generateFunctionC(
   }
 
   for (int i = 0; i < prototype->params.size(); i++) {
+    std::string rustParamStr = rustParamStrs.empty() ? "" : rustParamStrs[i];
+    bool borrowParam = !rustParamStr.empty() && rustParamStr[0] == '&';
     if (addedAnyParam) {
       s << ", ";
     }
@@ -319,11 +346,44 @@ std::string generateFunctionC(
         s << paramTypeExportName << (abiUsesPointer ? "*" : "") << " param" << i;
         break;
       case CFuncLineMode::EXTERN_USER_PROTOTYPE:
+        // DO NOT SUBMIT: doublecheck logic. The user-facing extern signature passes
+        // structs by value (master convention). For rust externs, `borrowParam`
+        // (rust `&T`) becomes `const T*` and `usize` maps to uintptr_t.
+        // `abiUsesPointer` reflects ABI shim mechanics, not the user-visible C
+        // signature, so it must NOT add a `*` here — doing so was the PR 3.2
+        // regression that broke 14 interface/struct extern/export tests. Verify
+        // the rust-extern path still produces the right C signatures before submit.
+        if (borrowParam) {
+          s << "const ";
+        }
+        if (rustParamStr == "usize") {
+          s << "uintptr_t";
+        } else {
+          s << paramTypeExportName;
+        }
+        if (borrowParam) {
+          s << "*";
+        }
+        s << " param" << i;
+        break;
       case CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE:
         s << paramTypeExportName << " param" << i;
         break;
       case CFuncLineMode::EXTERN_INTERMEDIATE_BODY:
-        s << (abiUsesPointer ? "*" : "") << " param" << i;
+        if (abiUsesPointer) {
+          if (borrowParam) {
+            // No adjustment
+          } else {
+            s << "*";
+          }
+        } else {
+          if (borrowParam) {
+            s << "&";
+          } else {
+            s << "";
+          }
+        }
+        s << "param" << i;
         break;
       case CFuncLineMode::EXPORT_INTERMEDIATE_BODY:
         s << (abiUsesPointer ? "&" : "") << " param" << i;
@@ -370,24 +430,16 @@ std::string generateFunctionC(
   return s.str();
 }
 
-void generateExports(GlobalState* globalState, Prototype* mainM) {
+void generateExports(
+    GlobalState* globalState,
+    Prototype* mainM,
+    const std::string& rustGeneratedHeaderFilepath,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToHeaderNameToC,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToSourceNameToC) {
   auto program = globalState->program;
-  auto packageCoordToHeaderNameToC =
-      std::unordered_map<
-          PackageCoordinate*,
-          std::unordered_map<std::string, std::stringstream>,
-          AddressHasher<PackageCoordinate*>>(
-      0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
-  auto packageCoordToSourceNameToC =
-      std::unordered_map<
-          PackageCoordinate*,
-          std::unordered_map<std::string, std::stringstream>,
-          AddressHasher<PackageCoordinate*>>(
-          0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
-
   for (auto[packageCoord, package] : program->packages) {
     for (auto[exportName, kind] : package->exportNameToKind) {
-      auto& resultC = packageCoordToHeaderNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
+      auto& resultC = (*packageCoordToHeaderNameToC)[packageCoord].emplace(exportName, std::stringstream()).first->second;
 
       if (auto structMT = dynamic_cast<StructKind*>(kind)) {
         auto structDefM = program->getStruct(structMT);
@@ -474,26 +526,37 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
       }
     }
   }
+
   for (auto[packageCoord, package] : program->packages) {
     for (auto[exportName, prototype] : package->exportNameToFunction) {
       bool skipExporting = exportName == "main";
       if (skipExporting)
         continue;
 
-      auto* headerC = &packageCoordToHeaderNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
-      auto* sourceC = &packageCoordToSourceNameToC[packageCoord].emplace(exportName, std::stringstream()).first->second;
-      makeExternOrExportFunction(globalState, headerC, sourceC, packageCoord, package, exportName, prototype, true);
+      auto* headerC = &(*packageCoordToHeaderNameToC)[packageCoord].emplace(exportName, std::stringstream()).first->second;
+      auto* sourceC = &(*packageCoordToSourceNameToC)[packageCoord].emplace(exportName, std::stringstream()).first->second;
+      // DO NOT SUBMIT
+      makeExternOrExportFunction(
+          globalState, headerC, sourceC, packageCoord, package, rustGeneratedHeaderFilepath, exportName, prototype, true, "", {});
     }
   }
   for (auto[packageCoord, package] : program->packages) {
-    for (auto[externName, prototype] : package->externNameToFunction) {
-      if (prototype->name->name.rfind("__vbi_", 0) == 0) {
-        // Dont generate C code for built in externs
-        continue;
+    if (packageCoord->projectName == "rust") {
+      // We handle these elsewhere
+    } else {
+      for (auto[prototype, externFunc] : package->functionToExtern) {
+        auto externName = externFunc->mangledName;
+        assert(!externName.empty());
+        if (externFunc->prototype->name->name.rfind("__vbi_", 0) == 0) {
+          // Dont generate C code for built in externs
+          continue;
+        }
+        auto* headerC = &(*packageCoordToHeaderNameToC)[packageCoord].emplace(externName, std::stringstream()).first->second;
+        auto* sourceC = &(*packageCoordToSourceNameToC)[packageCoord].emplace(externName, std::stringstream()).first->second;
+        // DO NOT SUBMIT
+        makeExternOrExportFunction(
+            globalState, headerC, sourceC, packageCoord, package, rustGeneratedHeaderFilepath, externName, externFunc->prototype, false, "", {});
       }
-      auto* headerC = &packageCoordToHeaderNameToC[packageCoord].emplace(externName, std::stringstream()).first->second;
-      auto* sourceC = &packageCoordToSourceNameToC[packageCoord].emplace(externName, std::stringstream()).first->second;
-      makeExternOrExportFunction(globalState, headerC, sourceC, packageCoord, package, externName, prototype, false);
     }
   }
   if (globalState->opt->outputDir.empty()) {
@@ -503,7 +566,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
   auto outputDir = globalState->opt->outputDir;
 
 
-  for (auto& [packageCoord, headerNameToC] : packageCoordToHeaderNameToC) {
+  for (auto& [packageCoord, headerNameToC] : *packageCoordToHeaderNameToC) {
     for (auto& [headerName, headerCode] : headerNameToC) {
       std::string moduleIncludeDirectory = makeModuleIncludeDirectory(globalState, packageCoord);
 
@@ -518,7 +581,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
       out << "#endif" << std::endl;
     }
   }
-  for (auto& [packageCoord, sourceNameToC] : packageCoordToSourceNameToC) {
+  for (auto& [packageCoord, sourceNameToC] : *packageCoordToSourceNameToC) {
     for (auto& [sourceName, sourceCode] : sourceNameToC) {
       std::string moduleAbiDirectory = makeModuleAbiDirectory(globalState, packageCoord);
 
@@ -555,9 +618,13 @@ void makeExternOrExportFunction(
     std::stringstream* sourceC,
     const PackageCoordinate *packageCoord,
     Package *package,
+    const std::string& rustGeneratedHeaderFilepath,
     const std::string &externName,
     Prototype *prototype,
-    bool isExport) {
+    bool isExport,
+    // DO NOT SUBMIT
+    const std::string& retRustTypeStr,
+    const std::vector<std::string>& paramRustTypeStrs) {
   for (auto param : prototype->params) {
     auto kind = param->kind;
     if (translatesToCVoid(globalState, param) ||
@@ -566,11 +633,14 @@ void makeExternOrExportFunction(
         dynamic_cast<Float *>(kind) ||
         dynamic_cast<Str *>(kind)) {
       // Do nothing, no need to include anything for these
+    } else if (dynamic_cast<Opaque*>(kind)) {
+      (*headerC) << "#include \"" << rustGeneratedHeaderFilepath << "\"" << std::endl;
     } else {
       auto paramTypeExportName = package->getKindExportName(kind, false);
-//      if (ownershipToMutability(param->ownership) == Mutability::MUTABLE) {
-//        paramTypeExportName += "Ref";
-//      }
+      // if (ownershipToMutability(param->ownership) == Mutability::MUTABLE) {
+      //   paramTypeExportName += "Ref";
+      // }
+      assert(paramTypeExportName.size());
       (*headerC) << "#include \"" << packageCoord->projectName << "/" << paramTypeExportName << ".h\"" << std::endl;
     }
   }
@@ -582,24 +652,29 @@ void makeExternOrExportFunction(
         dynamic_cast<Float *>(kind) ||
         dynamic_cast<Str *>(kind)) {
       // Do nothing, no need to include anything for these
+    } else if (dynamic_cast<Opaque*>(kind)) {
+      (*headerC) << "#include \"" << rustGeneratedHeaderFilepath << "\"" << std::endl;
     } else {
       // We need to include the actual header for interfaces, because the user func hands them around by value
-      auto paramTypeExportName = package->getKindExportName(kind, false);
-//      if (ownershipToMutability(prototype->returnType->ownership) == Mutability::MUTABLE) {
-//        paramTypeExportName += "Ref";
-//      }
-      (*headerC) << "#include \"" << packageCoord->projectName << "/" << paramTypeExportName << ".h\"" << std::endl;
+      auto returnTypeExportName = package->getKindExportName(kind, false);
+      assert(returnTypeExportName.size());
+      // if (ownershipToMutability(prototype->returnType->ownership) == Mutability::MUTABLE) {
+      //   returnTypeExportName += "Ref";
+      // }
+      (*headerC) << "#include \"" << packageCoord->projectName << "/" << returnTypeExportName << ".h\"" << std::endl;
     }
   }
-  auto userHeaderC = generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_USER_PROTOTYPE : CFuncLineMode::EXTERN_USER_PROTOTYPE, isExport);
-  auto abiHeaderC = generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE : CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE, isExport);
+  auto userHeaderC = generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_USER_PROTOTYPE : CFuncLineMode::EXTERN_USER_PROTOTYPE, isExport, retRustTypeStr, paramRustTypeStrs);
+  auto abiHeaderC = generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE : CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE, isExport, retRustTypeStr, paramRustTypeStrs);
   (*headerC) << userHeaderC << ";" << std::endl;
   (*headerC) << abiHeaderC << ";" << std::endl;
 
+  std::cerr << "Doing extern thing: " << prototype->name->name << std::endl;
   auto userSourceC = std::stringstream{};
+  assert(externName.size());
   userSourceC << "#include \"" << packageCoord->projectName << "/" << externName << ".h\"" << std::endl;
-  userSourceC << generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE : CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE, isExport) << " {" << std::endl;
-  userSourceC << "  " << generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_BODY : CFuncLineMode::EXTERN_INTERMEDIATE_BODY, isExport) << ";" << std::endl;
+  userSourceC << generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_PROTOTYPE : CFuncLineMode::EXTERN_INTERMEDIATE_PROTOTYPE, isExport, retRustTypeStr, paramRustTypeStrs) << " {" << std::endl;
+  userSourceC << "  " << generateFunctionC(globalState, package, externName, prototype, isExport ? CFuncLineMode::EXPORT_INTERMEDIATE_BODY : CFuncLineMode::EXTERN_INTERMEDIATE_BODY, isExport, retRustTypeStr, paramRustTypeStrs) << ";" << std::endl;
   userSourceC << "}" << std::endl;
   (*sourceC) << userSourceC.str();
 }
@@ -637,7 +712,9 @@ void makeDirectory(const std::string& dir, bool reuse) {
 }
 
 std::string makeIncludeDirectory(GlobalState* globalState) {
-  return globalState->opt->outputDir + "/include";
+  auto includeDirectory = globalState->opt->outputDir + "/include";
+  makeDirectory(includeDirectory, true);
+  return includeDirectory;
 }
 
 std::string makeModuleIncludeDirectory(const GlobalState *globalState, PackageCoordinate *packageCoord) {
@@ -898,17 +975,21 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
       auto region = globalState->getRegion(structM->regionId);
       region->declareStruct(structM);
 
-      // std::cout << "Declaring struct " << packageCoord->projectName;
-      // for (auto step : packageCoord->packageSteps) {
-      //   std::cout << "." << step;
-      // }
-      // std::cout << "." << name;
-      // std::cout << std::endl;
-
       if (structM->mutability == Mutability::IMMUTABLE) {
         // TODO: https://github.com/ValeLang/Vale/issues/479
         globalState->linearRegion->declareStruct(structM);
       }
+    }
+  }
+
+
+  for (auto packageCoordAndPackage : program.packages) {
+    auto[packageCoord, package] = packageCoordAndPackage;
+    for (auto [opaqueMT, kindExtern] : package->kindToExtern) {
+//      auto region = globalState->getRegion(structM->regionId);
+      globalState->rcImm->declareOpaque(opaqueMT);
+      // TODO: https://github.com/ValeLang/Vale/issues/479
+      globalState->linearRegion->declareOpaque(opaqueMT);
     }
   }
 
@@ -1012,14 +1093,34 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
     }
   }
 
+  std::string rustGeneratedHeaderFilepath = "rust_deps.h";
+  auto packageCoordToHeaderNameToC =
+      std::unordered_map<
+          PackageCoordinate*,
+          std::unordered_map<std::string, std::stringstream>,
+          AddressHasher<PackageCoordinate*>>(
+          0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
+  auto packageCoordToSourceNameToC =
+      std::unordered_map<
+          PackageCoordinate*,
+          std::unordered_map<std::string, std::stringstream>,
+          AddressHasher<PackageCoordinate*>>(
+          0, globalState->addressNumberer->makeHasher<PackageCoordinate*>());
+  doRustyThings(&program, globalState, &determinism, rustGeneratedHeaderFilepath, &packageCoordToHeaderNameToC, &packageCoordToSourceNameToC);
+
   for (auto[packageCoord, package] : program.packages) {
-    for (auto p : package->structs) {
-      auto name = p.first;
-      auto structM = p.second;
+    for (auto [name, structM] : package->structs) {
       assert(name == structM->name->name);
-      globalState->getRegion(structM->regionId)->defineStruct(structM);
-      if (structM->mutability == Mutability::IMMUTABLE) {
-        globalState->linearRegion->defineStruct(structM);
+      if (structM->exterrn) {
+        // skip, we handle these elsewhere
+//        std::cout << "TODO: extern struct " << structM->name->name << " extern name " << package->getKindExternName(structM->kind) << std::endl;
+////        assert(false); // impl
+
+      } else {
+        globalState->getRegion(structM->regionId)->defineStruct(structM);
+        if (structM->mutability == Mutability::IMMUTABLE) {
+          globalState->linearRegion->defineStruct(structM);
+        }
       }
     }
   }
@@ -1121,16 +1222,17 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
   }
 
   for (auto[packageCoord, package] : program.packages) {
-    for (auto[externName, prototype] : package->externNameToFunction) {
+    for (auto[prototype, funcExtern] : package->functionToExtern) {
       if (prototype->name->name.rfind("__vbi_", 0) == 0) {
         // Dont generate C code for built in externs
         continue;
       }
-      declareExternFunction(globalState, package, prototype);
-      determinism.registerFunction(prototype);
+      if (prototype->name->packageCoord->projectName != "rust") { // DO NOT SUBMIT
+        declareExternFunction(globalState, package, prototype, funcExtern->mangledName);
+        determinism.registerFunction(prototype);
+      }
     }
   }
-
   for (auto[packageCoord, package] : program.packages) {
     for (auto[name, function] : package->functions) {
       declareFunction(globalState, function);
@@ -1211,8 +1313,244 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
           globalState, stringSetupFunctionL, mainSetupFuncProto, mainM, mainCleanupFuncProto);
   auto entryFuncL = makeEntryFunction(globalState, valeMainPrototype);
 
-  generateExports(globalState, mainM);
+  generateExports(
+      globalState,
+      mainM,
+      rustGeneratedHeaderFilepath,
+      &packageCoordToHeaderNameToC,
+      &packageCoordToSourceNameToC);
 }
+
+// DO NOT SUBMIT name
+void doRustyThings(
+    Program* program,
+    GlobalState* globalState,
+    Determinism* determinism,
+    const std::string& rustGeneratedHeaderFilepath,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToHeaderNameToC,
+    std::unordered_map<PackageCoordinate*, std::unordered_map<std::string, std::stringstream>, AddressHasher<PackageCoordinate*>>* packageCoordToSourceNameToC) {
+  std::unordered_map<Prototype*, std::string> prototypeToRustFuncStr;
+  std::unordered_map<Opaque*, std::string> kindToRustKindStr;
+  std::stringstream divinationInput;
+  for (auto[packageCoord, package] : program->packages) {
+    if (packageCoord->projectName == "rust") { // DO NOT SUBMIT just lookup?
+      for (auto [prototype, externFunc]: package->functionToExtern) {
+        std::string rustFuncStr = rustifySimpleId(externFunc->simpleId, true); // Per @SMLRZ
+        prototypeToRustFuncStr.emplace(externFunc->prototype, rustFuncStr);
+        divinationInput << "#pragma rsfn " << rustFuncStr << std::endl;
+      }
+    }
+  }
+  for (auto[packageCoord, package] : program->packages) {
+    if (packageCoord->projectName == "rust") { // DO NOT SUBMIT but we cant just lookup because there are multiple packages under rust
+      for (auto [externName, externKind]: package->kindToExtern) {
+        std::string rustKindStr = rustifySimpleId(externKind->simpleId, true); // Per @SMLRZ
+        kindToRustKindStr.emplace(externKind->kind, rustKindStr);
+        divinationInput << "#pragma rsuse " << rustKindStr << std::endl;
+      }
+    }
+  }
+
+  std::string divinationInputStr = divinationInput.str();
+  std::cout << "Using divination input:" << std::endl;
+  std::cout << divinationInputStr << std::endl;
+
+  // No rust externs in this program — nothing for Divination to do, and the downstream
+  // kindToExtern/functionToExtern loops are no-ops. Skip the whole pipeline so we don't try
+  // to invoke an unconfigured Divination binary.
+  if (divinationInputStr.empty()) {
+    return;
+  }
+
+  // Check Rust interop config — all three paths must be provided when there's rust work to do.
+  if (globalState->opt->divinationPath.empty() ||
+      globalState->opt->rustCargoToml.empty() ||
+      globalState->opt->rustOutputDir.empty()) {
+    std::cerr << "Rust interop required but missing one of: "
+                 "--divination_path, --rust_cargo_toml, --rust_output_dir" << std::endl;
+    exit(1);
+  }
+
+  std::string rustExternsFilename = "rust_externs.h";
+  std::ofstream rustExternsFile(rustExternsFilename);
+  if (!rustExternsFile.is_open()) {
+    std::cerr << "Error creating " << rustExternsFilename << std::endl;
+    exit(1);
+  }
+  rustExternsFile << divinationInputStr;
+  rustExternsFile.close();
+
+  std::string sizesFilePath = globalState->opt->rustOutputDir + "/sizes.txt";
+
+  // Per @DSLFNPZ, redirect Divination's stdout/stderr to a log file. cargo cbuild produces
+  // ~MB of output (rebuilding core/std/alloc) which would otherwise flood the parent's
+  // stdout pipe and deadlock callers like the Coordinator that capture this process's
+  // output (Vale stdlib's Subprocess reads via blocking fgetc char-at-a-time).
+  std::string divinationLogPath = globalState->opt->rustOutputDir + "/divination.log";
+
+  std::stringstream rusterCmd;
+  rusterCmd << globalState->opt->divinationPath;
+  rusterCmd << " --crate std";
+  rusterCmd << " --cargo_toml " << globalState->opt->rustCargoToml;
+  rusterCmd << " --output_dir " << globalState->opt->rustOutputDir;
+  rusterCmd << " --output_sizes " << sizesFilePath;
+  rusterCmd << " --input_file " << rustExternsFilename;
+  rusterCmd << " instantiate";
+  rusterCmd << " > " << divinationLogPath << " 2>&1";
+  std::string rusterCmdStr = rusterCmd.str();
+  std::cout << "Running Divination: " << rusterCmdStr << std::endl;
+  std::cout << "  (output → " << divinationLogPath << ")" << std::endl;
+  int exitCode = std::system(rusterCmdStr.c_str());
+  if (exitCode != 0) {
+    std::cerr << "Error running Divination! See " << divinationLogPath << " for details." << std::endl;
+    exit(1);
+  }
+
+  std::ifstream sizesFile(sizesFilePath);
+  if (!sizesFile.is_open()) {
+    throw std::runtime_error("Could not open file: " + sizesFilePath);
+  }
+
+  std::unordered_map<std::string, std::tuple<std::string, int, int>> typeStrToMangledNameAndSizeAndAlignment;
+  std::unordered_map<std::string, std::tuple<std::string, std::string, std::vector<std::string>>> funcStrToMangledNameAndRetAndParams;
+  for (std::string line; std::getline(sizesFile, line); ) {
+    std::cerr << "Line from sizes.txt: " << line << std::endl;
+    std::vector<std::string> lineParts = split(line, '/');
+    if (lineParts.size() < 1) {
+      std::cerr << "Bad output line from Divination: " << line << std::endl;
+      exit(1);
+    }
+    if (lineParts[0] == "type") {
+      if (lineParts.size() != 5) {
+        std::cerr << "Bad output line from Divination: " << line << std::endl;
+        exit(1);
+      }
+      std::string typeStr = lineParts[1];
+      std::string mangledName = lineParts[2];
+      std::string sizeStr = lineParts[3];
+      std::string alignmentStr = lineParts[4];
+      int size = 0;
+      int alignment = 0;
+      try {
+        size = std::stoi(sizeStr);
+        alignment = std::stoi(alignmentStr);
+      } catch (const std::invalid_argument& e) {
+        std::cerr << "Bad output line from Divination: " << line << std::endl;
+        exit(1);
+      } catch (const std::out_of_range& e) {
+        std::cerr << "Bad output line from Divination: " << line << std::endl;
+        exit(1);
+      }
+      std::cout << "Adding to typeStrToSizeAndAlignment " << typeStr << " " << size << " " << alignment << std::endl;
+      typeStrToMangledNameAndSizeAndAlignment.emplace(typeStr, std::make_tuple(mangledName, size, alignment));
+    } else if (lineParts[0] == "fn") {
+      if (lineParts.size() < 4) {
+        std::cerr << "Bad output line from Divination: " << line << std::endl;
+        exit(1);
+      }
+      std::string funcRustStr = lineParts[1];
+      std::string mangledName = lineParts[2];
+      std::cout << "Adding to funcStrToMangledName " << funcRustStr << " " << mangledName << std::endl;
+      std::string retRustTypeStr = lineParts[3];
+      std::vector<std::string> paramRustTypeStrs;
+      for (int i = 4; i < lineParts.size(); i++) {
+        paramRustTypeStrs.push_back(lineParts[i]);
+      }
+      funcStrToMangledNameAndRetAndParams.emplace(funcRustStr, std::make_tuple(mangledName, retRustTypeStr, paramRustTypeStrs));
+    } else {
+      std::cerr << "Bad output line from Divination: " << line << std::endl;
+      exit(1);
+    }
+  }
+  sizesFile.close();
+
+  for (auto[packageCoord, package] : program->packages) {
+    for (auto [opaque, kindExtern] : package->kindToExtern) {
+      auto iter1 = kindToRustKindStr.find(opaque);
+      assert(iter1 != kindToRustKindStr.end());
+      auto rustKindStr = iter1->second;
+      auto iter2 = typeStrToMangledNameAndSizeAndAlignment.find(rustKindStr);
+      assert(iter2 != typeStrToMangledNameAndSizeAndAlignment.end());
+      auto [mangledName, size, alignment] = iter2->second;
+
+      package->kindToExtern[opaque]->mangledName = mangledName;
+
+      globalState->rcImm->defineOpaque(opaque, size, alignment);
+      globalState->linearRegion->defineOpaque(opaque, size, alignment);
+    }
+  }
+
+  for (auto[packageCoord, package] : program->packages) {
+    if (packageCoord->projectName == "rust") { // DO NOT SUBMIT but we cant just lookup because there are multiple packages under rust
+      for (auto [prototype, externFunc]: package->functionToExtern) {
+        std::cerr << "Looking for prototype: " << prototype->name->name << std::endl;
+        auto iter1 = prototypeToRustFuncStr.find(prototype);
+        assert(iter1 != prototypeToRustFuncStr.end());
+        auto funcRustStr = iter1->second;
+        auto iter2 = funcStrToMangledNameAndRetAndParams.find(funcRustStr);
+        assert(iter2 != funcStrToMangledNameAndRetAndParams.end());
+        auto [mangledName, retRustTypeStr, paramsRustTypeStrs] = iter2->second;
+
+        package->functionToExtern[externFunc->prototype]->mangledName = mangledName;
+
+        if (externFunc->prototype->name->name.rfind("__vbi_", 0) == 0) {
+          // Dont generate C code for built in externs
+          continue;
+        }
+        std::string name;
+        if (!externFunc->mangledName.empty()) {
+          name = externFunc->mangledName;
+        } else {
+          assert(false);
+          auto iter = prototypeToRustFuncStr.find(externFunc->prototype);
+          if (iter != prototypeToRustFuncStr.end()) {
+            name = iter->second;
+          } else {
+            std::cerr << "No extern name found for extern prototype!" << std::endl;
+            assert(false);
+            exit(1);
+          }
+        }
+        declareExternFunction(globalState, package, externFunc->prototype, externFunc->mangledName);
+        determinism->registerFunction(externFunc->prototype);
+      }
+    }
+  }
+
+  for (auto[packageCoord, package] : program->packages) {
+    if (packageCoord->projectName == "rust") {
+      for (auto[prototype, externFunc] : package->functionToExtern) {
+        auto externName = externFunc->mangledName;
+        assert(!externName.empty());
+        if (externFunc->prototype->name->name.rfind("__vbi_", 0) == 0) {
+          // Dont generate C code for built in externs
+          continue;
+        }
+
+        auto rustFuncStrIter = prototypeToRustFuncStr.find(prototype);
+        assert(rustFuncStrIter != prototypeToRustFuncStr.end());
+        auto rustFuncStr = rustFuncStrIter->second;
+        auto funcInfoIter = funcStrToMangledNameAndRetAndParams.find(rustFuncStr);
+        assert(funcInfoIter != funcStrToMangledNameAndRetAndParams.end());
+        auto [mangledName, retRustTypeStr, paramRustTypeStrs] = funcInfoIter->second;
+
+        auto* headerC = &(*packageCoordToHeaderNameToC)[packageCoord].emplace(externName, std::stringstream()).first->second;
+        auto* sourceC = &(*packageCoordToSourceNameToC)[packageCoord].emplace(externName, std::stringstream()).first->second;
+        // DO NOT SUBMIT
+//        std::vector<std::string> paramRustTypeStrs;
+//        assert(prototype->params.size() == paramRustTypeStrs.size());
+//        for (int i = 0; i < prototype->params.size(); i++) {
+//          auto valeParamMT = prototype->params[i];
+//          auto rustTypeStr = paramRustTypeStrs[i];
+//          bool rustTypeTakesReference = rustTypeStr[0] == '&'; // DO NOT SUBMIT unicode concerns?
+//          borrowParams.push_back(rustTypeTakesReference);
+//        }
+        makeExternOrExportFunction(globalState, headerC, sourceC, packageCoord, package, rustGeneratedHeaderFilepath, externName, externFunc->prototype, false, retRustTypeStr, paramRustTypeStrs);
+      }
+    }
+  }
+}
+
 
 void createModule(std::vector<std::string>& inputFilepaths, GlobalState *globalState) {
   globalState->mod = LLVMModuleCreateWithNameInContext("build", globalState->context);

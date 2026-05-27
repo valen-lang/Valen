@@ -839,6 +839,7 @@ where 's: 't,
             members_rune_to_type,
             member_rules_slice,
             members_slice,
+            &[],
         );
         self.scout_arena.alloc(struct_a)
     }
@@ -1045,7 +1046,8 @@ where 's: 't,
       rulesBuilder.buildArray(),
       Map(),
       Vector(),
-      members)
+      members,
+      Vector())
   }
 
 */

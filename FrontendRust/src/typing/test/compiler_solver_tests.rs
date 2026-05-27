@@ -44,7 +44,7 @@ use crate::typing::names::names::StructNameValT;
 use crate::typing::names::names::StructTemplateNameT;
 use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::typing::types::types::InterfaceTTValT;
-use crate::typing::types::types::RegionT;
+use crate::typing::types::types::{IRegionT, RegionT};
 use crate::typing::types::types::StructTTValT;
 use crate::typing::ast::expressions::UpcastTE;
 use crate::postparsing::names::{IStructDeclarationNameS, TopLevelStructDeclarationNameS};
@@ -340,9 +340,9 @@ fn test_calling_a_generic_function_with_a_concept_function() {
             _,
             FunctionNameT(
               FunctionTemplateNameT(StrI("bork"), _),
-              Vector(CoordTemplataT(CoordT(ShareT,RegionT(), IntT(32)))),
-              Vector(CoordT(ShareT,RegionT(), IntT(32))))),
-          CoordT(ShareT,RegionT(), IntT(32))),
+              Vector(CoordTemplataT(CoordT(ShareT,RegionT(DefaultRegionT), IntT(32)))),
+              Vector(CoordT(ShareT,RegionT(DefaultRegionT), IntT(32))))),
+          CoordT(ShareT,RegionT(DefaultRegionT), IntT(32))),
         Vector(ConstantIntTE(IntegerTemplataT(3),32, _)),
         _) =>
     }
@@ -514,7 +514,7 @@ fn test_calling_a_generic_function_with_a_drop_concept_function() {
               FunctionTemplateNameT(StrI("bork"), _),
               Vector(CoordTemplataT(templateArgCoord)),
               Vector(arg))),
-          CoordT(ShareT,RegionT(), VoidT())) => {
+          CoordT(ShareT,RegionT(DefaultRegionT), VoidT())) => {
 
         templateArgCoord match {
           case CoordT(
@@ -556,7 +556,7 @@ fn humanize_errors() {
     region_init_steps.push(func_template_id.local_name);
     let region_init_steps_slice: &[INameT] = typing_bump.alloc_slice_copy(&region_init_steps);
     let _region_name = typing_interner.intern_id(IdValT { package_coord: func_template_id.package_coord, init_steps: region_init_steps_slice, local_name: INameT::KindPlaceholder(kp_name) });
-    let region = RegionT {};
+    let region = RegionT { region: IRegionT::Default };
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: std::marker::PhantomData });
@@ -601,10 +601,10 @@ fn humanize_errors() {
     let _firefly_signature = SignatureT { id: *myfunc_id };
 
     let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin, _phantom: std::marker::PhantomData });
-    let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT {} });
+    let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(firefly_export_name) });
     let _firefly_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
-    let serenity_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT {} });
+    let serenity_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let serenity_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(serenity_export_name) });
     let _serenity_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *serenity_export_id, exported_name: scout_arena.intern_str("Serenity") };
 
@@ -689,7 +689,7 @@ fn humanize_errors() {
     val funcTemplateId = IdT(testPackageCoord, Vector(), funcTemplateName)
     val funcName = IdT(testPackageCoord, Vector(), FunctionNameT(FunctionTemplateNameT(interner.intern(StrI("main")), tzCodeLoc), Vector(), Vector()))
     val regionName = funcTemplateId.addStep(interner.intern(KindPlaceholderNameT(interner.intern(KindPlaceholderTemplateNameT(0, DenizenDefaultRegionRuneS(FunctionNameS(funcTemplateName.humanName, funcTemplateName.codeLocation)))))))
-    val region = RegionT()
+    val region = RegionT(DefaultRegionT)
 
 
     val fireflyKind = StructTT(IdT(testPackageCoord, Vector(), StructNameT(StructTemplateNameT(StrI("Firefly")), Vector())))
@@ -701,9 +701,9 @@ fn humanize_errors() {
     val unrelatedKind = StructTT(IdT(testPackageCoord, Vector(), StructNameT(StructTemplateNameT(StrI("Spoon")), Vector())))
     val unrelatedCoord = CoordT(OwnT,region,unrelatedKind)
     val fireflySignature = SignatureT(IdT(testPackageCoord, Vector(), interner.intern(FunctionNameT(interner.intern(FunctionTemplateNameT(interner.intern(StrI("myFunc")), tz.head.begin)), Vector(), Vector(fireflyCoord)))))
-    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val fireflyExport = KindExportT(tz.head, fireflyKind, fireflyExportId, interner.intern(StrI("Firefly")));
-    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val serenityExport = KindExportT(tz.head, fireflyKind, serenityExportId, interner.intern(StrI("Serenity")));
 
     val codeStr = "Hello I am A large piece Of code [that has An error]"
@@ -915,6 +915,49 @@ fn components() {
     }
 }
 /*
+  test("Default generic param should not conflict with arg inference") {
+    // H has a default of 5, but calling moo(MyStruct<10>()) should infer H=10 from
+    // the argument type. The default should act as a fallback, not an eager constraint
+    // that conflicts with argument inference.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<H Int = 5> { }
+        |func moo<H Int = 5>(s MyStruct<H>) int { return H; }
+        |exported func main() int {
+        |  return moo(MyStruct<10>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI interface default generic arg in struct member") {
+    // MyInterface<bool> must resolve H=5 from default during resolveInterface.
+    // Before fix: the interface's abstract drop function conflicts (H=5 vs H=placeholder).
+    val compile = CompilerTestCompilation.test(
+      """
+        |sealed interface MyInterface<K Ref, H Int = 5> { }
+        |struct MyStruct {
+        |  x MyInterface<bool>;
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI multiple defaults with partial override") {
+    // A has a default of 10, B has a default of 20.
+    // Calling with MyStruct<7>() overrides A=7 but B should still default to 20.
+    // Returning A verifies the override; compiling at all verifies B's default works.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<A Int = 10, B Int = 20> { }
+        |func moo<A Int = 10, B Int = 20>(s MyStruct<A, B>) int { return A; }
+        |exported func main() int {
+        |  return moo(MyStruct<7>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
   test("Components") {
     val compile = CompilerTestCompilation.test(
       """
@@ -1312,7 +1355,7 @@ fn reports_incomplete_solve() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() int where N Int {\n  M\n}\n";
+    let code = "\n\nexported func main() int where N Int {\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
@@ -1338,7 +1381,6 @@ fn reports_incomplete_solve() {
       """
         |
         |exported func main() int where N Int {
-        |  M
         |}
         |""".stripMargin,
       interner)
@@ -1473,8 +1515,8 @@ fn detects_conflict_between_types() {
         |""".stripMargin
     )
     compile.getCompilerOutputs() match {
-      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
-      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _, _)))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipB")),Vector()))))))))) =>
@@ -1505,7 +1547,7 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
         _ => panic!("expected Function local_name"),
     };
     let last = *template_args.last().unwrap();
-    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, region: RegionT {}, kind: KindT::Int(IntT::I32) } })));
+    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT::I32) } })));
 }
 /*
 Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses +T erasure (design v3 §6.0): `IdT.local_name: INameT` is widened, narrowed at use sites via match — precedents at compiler_tests.rs:1776 and earlier in this file (test_having_drop_function_concept_function:151). — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-056-1779049047476/hook-056/can_match_kind_templata_type_against_struct_env_entry_struct_templata--1452.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
@@ -1528,7 +1570,7 @@ Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunc
         |""".stripMargin
     )
     val coutputs = compile.expectCompilerOutputs()
-    coutputs.lookupFunction("bork").header.id.localName.templateArgs.last shouldEqual CoordTemplataT(CoordT(ShareT, RegionT(), IntT(32)))
+    coutputs.lookupFunction("bork").header.id.localName.templateArgs.last shouldEqual CoordTemplataT(CoordT(ShareT, RegionT(DefaultRegionT), IntT(32)))
   }
 */
 // mig: fn can_destructure_and_assemble_static_sized_array

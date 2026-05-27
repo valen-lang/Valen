@@ -12,6 +12,11 @@ import org.scalatest._
 import scala.collection.immutable.Map
 
 class HighlighterTests extends FunSuite with Matchers {
+*/
+
+// mig: fn highlight
+fn highlight() { panic!("Unimplemented: highlight"); }
+/*
   private def highlight(code: String): String = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -37,7 +42,13 @@ class HighlighterTests extends FunSuite with Matchers {
       }
     }
   }
+*/
 
+// mig: fn highlighter_simple_function
+#[test]
+#[ignore = "unmigrated - pending highlighter body migration"]
+fn highlighter_simple_function() { panic!("Unmigrated test: highlighter_simple_function"); }
+/*
   test("Highlighter simple function") {
     val code =
       """
@@ -48,7 +59,13 @@ class HighlighterTests extends FunSuite with Matchers {
     highlight(code) shouldEqual
       """<span class="Prog"><br /><span class="Fn">func <span class="FnName">main</span><span class="Params">()</span> <span class="Block">&#123;<br />  <span class="Num">3</span><br />&#125;</span></span><br /></span>"""
   }
+*/
 
+// mig: fn highlighter_with_comments
+#[test]
+#[ignore = "unmigrated - pending highlighter body migration"]
+fn highlighter_with_comments() { panic!("Unmigrated test: highlighter_with_comments"); }
+/*
   test("Highlighter with comments") {
     val code =
       """

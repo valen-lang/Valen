@@ -123,7 +123,7 @@ add_executable(backend
 		src/region/common/migration.h
 		src/region/common/migration.cpp
 		src/region/iregion.cpp
-		src/utils/randomgeneration.cpp)
+		src/utils/randomgeneration.cpp src/utils/rustify.cpp src/utils/rustify.h)
 
 target_link_libraries(backend ${llvm_libs})
 

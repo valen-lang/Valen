@@ -30,7 +30,7 @@ package dev.vale.typing
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverErrorHumanizer}
+import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverConflict, SolverErrorHumanizer}
 import dev.vale.typing.types._
 import dev.vale.SourceCodeUtils.{humanizePos, lineBegin, lineContaining, lineRangeContaining, linesBetween}
 import dev.vale.highertyping.FunctionA
@@ -51,6 +51,11 @@ import dev.vale.typing.citizen.ResolveFailure
 
 object CompilerErrorHumanizer {
 */
+// Mirror of canonical Scala CompilerErrorHumanizer.humanize. Per MACTX, several canonical
+// arms (CantUseRuneValueAsExpression, KindIsNotStruct, CouldntFindImpl, CantSharePlaceholder,
+// NoCommonAncestors, CantDetermineNarrowestKind, FunctionDoesntHaveName, InternalSolverError)
+// are present in the audit-trail above but their Rust ICompileErrorT variants haven't been
+// added yet — they fall through to the catch-all `_ => panic!` below until ported.
 pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: ICompileErrorT<'s, 't>) -> String {
   let error_str_body = match &err {
     ICompileErrorT::TypingPassDefiningError { range: _, inner } => {
@@ -143,8 +148,8 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Couldn't find any type named `{:?}`!", name)
     }
     ICompileErrorT::CouldntNarrowDownCandidates { range: _, candidates } => {
-      let parts: Vec<String> = candidates.iter().map(|range| {
-        format!("\n{}: \n  {}", code_map(range.begin), line_containing(range.begin))
+      let parts: Vec<String> = candidates.iter().map(|proto| {
+        format!("\n  {}", humanize_id(scout_arena, typing_interner, code_map, proto.id, None))
       }).collect();
       format!("Multiple candidates for call:{}", parts.join(""))
     }
@@ -215,9 +220,6 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
     }
     ICompileErrorT::WhileConditionIsntBoolean { range: _, actual_type } => {
       format!("If condition should be a bool, but was: {:?}", actual_type)
-    }
-    ICompileErrorT::CantMoveFromGlobal { range: _, name: _ } => {
-      panic!("implement: humanize CantMoveFromGlobal")
     }
     ICompileErrorT::CantImplNonInterface { range: _, templata } => {
       format!("Can't extend a non-interface: {:?}", templata)
@@ -349,15 +351,18 @@ Guardian: temp-disable: SPDMX — Scala's `+ signature + " depends on kind " + n
         case CouldntFindIdentifierToLoadT(range, name) => {
           "Couldn't find anything named `" + PostParserErrorHumanizer.humanizeImpreciseName(name) + "`!"
         }
+        case CantUseRuneValueAsExpression(range, rune) => {
+          "Can't use rune `" + humanizeRune(rune) + "` as a value expression. Did you mean a local variable with a similar name?"
+        }
         case NonReadonlyReferenceFoundInPureFunctionParameter(range, name) => {
           "Parameter `" + name + "` should be readonly, because it's in a pure function."
         }
         case CouldntFindTypeT(range, name) => {
           "Couldn't find any type named `" + name + "`!"
         }
-        case CouldntNarrowDownCandidates(range, candidateRanges) => {
+        case CouldntNarrowDownCandidates(range, candidates) => {
           "Multiple candidates for call:" +
-            candidateRanges.map(range => "\n" + codeMap(range.begin) + ":\n  " + lineContaining(range.begin)).mkString("")
+            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id)).mkString("")
         }
         case ImmStructCantHaveVaryingMember(range, structName, memberName) => {
           "Immutable struct (\"" + printableName(codeMap, structName) + "\") cannot have varying member (\"" + memberName + "\")."
@@ -641,6 +646,7 @@ fn printable_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typing
     name match {
       case CodeVarNameS(name) => name.str
       case TopLevelCitizenDeclarationNameS(name, codeLocation) => name.str
+      case AnonymousSubstructTemplateNameS(TopLevelInterfaceDeclarationNameS(name, _)) => name.str + ".anonymous"
       case LambdaDeclarationNameS(codeLocation) => codeMap(codeLocation) + ": " + "(lambda)"
       case FunctionNameS(name, codeLocation) => codeMap(codeLocation) + ": " + name.str
       case ConstructorNameS(TopLevelCitizenDeclarationNameS(name, range)) => codeMap(range.begin) + ": " + name.str
@@ -872,6 +878,40 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
           params.map({ case (rune, coord) =>
             humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
           }).mkString(", ")
+      }
+      case KindIsNotStruct(kind) => {
+        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind)
+      }
+      case CouldntFindImpl(range, fail) => {
+        "Couldn't find impl: " + fail
+      }
+      case CantSharePlaceholder(kind) => {
+        "Can't share a placeholder kind: " + humanizeTemplata(codeMap, KindTemplataT(kind))
+      }
+      case NoCommonAncestors(params) => {
+        "No common ancestors: " +
+          params.map({ case (rune, coord) =>
+            humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
+          }).mkString(", ")
+      }
+      case CantDetermineNarrowestKind(kinds) => {
+        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _)).mkString(", ")
+      }
+      case FunctionDoesntHaveName(range, name) => {
+        "Function doesn't have name: " + humanizeName(codeMap, name)
+      }
+      case InternalSolverError(range, err) => {
+        err match {
+          case SolverConflict(rune, previousConclusion, newConclusion) => {
+            "Solver conflict on rune " + humanizeRune(rune) + ": was " + humanizeTemplata(codeMap, previousConclusion) + " but now concluding " + humanizeTemplata(codeMap, newConclusion)
+          }
+          case RuleError(innerErr) => {
+            humanizeRuleError(codeMap, linesBetween, lineRangeContaining, lineContaining, innerErr)
+          }
+          case SolveIncomplete() => {
+            "Solve incomplete"
+          }
+        }
       }
     }
   }
@@ -1241,12 +1281,26 @@ pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typ
           humanizeGenericArgs(codeMap, templateArgs, None) +
           "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
       }
+      case PredictedFunctionTemplateNameT(humanName) => humanName.str
+      case PredictedFunctionNameT(template, templateArgs, parameters) => {
+        humanizeName(codeMap, template) +
+          humanizeGenericArgs(codeMap, templateArgs, None) +
+          "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
+      }
       case KindPlaceholderNameT(template) => humanizeName(codeMap, template)
       case KindPlaceholderTemplateNameT(index, rune) => humanizeRune(rune)
       case CodeVarNameT(name) => name.str
       case LambdaCitizenNameT(template) => humanizeName(codeMap, template) + "<>"
       case FunctionTemplateNameT(humanName, codeLoc) => humanName.str
-      case ExternFunctionNameT(humanName, parameters) => humanName.str
+      case ExternFunctionNameT(humanName, templateArgs, parameters) => {
+        humanName.str +
+          humanizeGenericArgs(codeMap, templateArgs, containingRegion) +
+          (if (parameters.nonEmpty) {
+            "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
+          } else {
+            ""
+          })
+      }
       case FunctionNameT(templateName, templateArgs, parameters) => {
         humanizeName(codeMap, templateName) +
           humanizeGenericArgs(codeMap, templateArgs, containingRegion) +

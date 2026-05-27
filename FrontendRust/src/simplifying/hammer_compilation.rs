@@ -5,6 +5,10 @@ use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::scout_arena::ScoutArena;
+use crate::parse_arena::ParseArena;
+use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
+use bumpalo::Bump;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -60,7 +64,7 @@ where 's: 'h,
 {
   pub interner: &'ctx HammerInterner<'s, 'h>,
   pub keywords: &'ctx Keywords<'s>,
-  pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
+  pub packages_to_build: Vec<&'p PackageCoordinate<'p>>,
   pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   pub options: HammerCompilationOptions,
   pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'p>,
@@ -78,19 +82,68 @@ class HammerCompilation(
   packagesToBuild: Vector[PackageCoordinate],
   packageToContentsResolver: IPackageResolver[Map[String, String]],
   options: HammerCompilationOptions = HammerCompilationOptions()) {
+*/
 
-  var instantiatedCompilation =
-    new InstantiatedCompilation(
+// mig: fn new
+// (Slice pipeline emitted no `new` stub — TL-added per NNDX escalation, mirroring
+// InstantiatedCompilation::new's hoisted-arena signature plus a hammer Bump-backed
+// HammerInterner. The Scala constructor body is the class param block below.)
+impl<'s, 'h, 'ctx, 't, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'p>
+where
+    's: 'h,
+    's: 't,
+    'p: 'ctx,
+{
+  pub fn new(
+    interner: &'ctx HammerInterner<'s, 'h>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
+    packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+    options: HammerCompilationOptions,
+    typing_bump: &'t Bump,
+  ) -> Self {
+    let instantiator_options = InstantiatorCompilationOptions {
+      debug_out: options.debug_out.clone(),
+    };
+    let instantiated_compilation =
+        InstantiatedCompilation::new(
+          scout_arena,
+          keywords,
+          parser_keywords,
+          parse_arena,
+          packages_to_build.clone(),
+          package_to_contents_resolver,
+          options.global_options.clone(),
+          instantiator_options,
+          typing_bump,
+        );
+    HammerCompilation {
       interner,
       keywords,
-      packagesToBuild,
-      packageToContentsResolver,
-      InstantiatorCompilationOptions(
-        options.globalOptions,
-        options.debugOut))
-  var hamutsCache: Option[ProgramH] = None
-  var vonHammerCache: Option[VonHammer] = None
-*/
+      packages_to_build,
+      package_to_contents_resolver,
+      options,
+      instantiated_compilation,
+      hamuts_cache: None,
+    }
+  }
+  /*
+    var instantiatedCompilation =
+      new InstantiatedCompilation(
+        interner,
+        keywords,
+        packagesToBuild,
+        packageToContentsResolver,
+        InstantiatorCompilationOptions(
+          options.globalOptions,
+          options.debugOut))
+    var hamutsCache: Option[ProgramH] = None
+    var vonHammerCache: Option[VonHammer] = None
+  */
+}
 // mig: fn get_von_hammer
 pub fn get_von_hammer() -> () {
   panic!("Unimplemented: get_von_hammer");

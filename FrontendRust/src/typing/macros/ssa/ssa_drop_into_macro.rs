@@ -69,7 +69,7 @@ where 's: 't,
             call_location,
             arr_arg,
             callable_arg,
-            RegionT,
+            RegionT { region: IRegionT::Default },
         )?;
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
@@ -104,7 +104,7 @@ where 's: 't,
             callLocation,
             ArgLookupTE(0, paramCoords(0).tyype),
             ArgLookupTE(1, paramCoords(1).tyype),
-            RegionT())))
+            RegionT(DefaultRegionT))))
     (header, body)
   }
 }

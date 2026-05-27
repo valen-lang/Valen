@@ -1,3 +1,5 @@
+// mig: struct ArrayListTest
+pub struct ArrayListTest;
 /*
 package dev.vale
 
@@ -10,6 +12,12 @@ import dev.vale.von.VonInt
 import org.scalatest._
 
 class ArrayListTest extends FunSuite with Matchers {
+*/
+// mig: fn simple_array_list_no_optionals
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn simple_array_list_no_optionals() { panic!("Unmigrated test: simple_array_list_no_optionals"); }
+/*
   test("Simple ArrayList, no optionals") {
     val compile = RunCompilation.test(
         """
@@ -45,7 +53,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn doubling_array_list
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn doubling_array_list() { panic!("Unmigrated test: doubling_array_list"); }
+/*
   test("Doubling ArrayList") {
     val compile = RunCompilation.test(
       """
@@ -63,7 +76,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn array_list_zero_constructor
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_list_zero_constructor() { panic!("Unmigrated test: array_list_zero_constructor"); }
+/*
   test("Array list zero-constructor") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -80,7 +98,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn array_list_len
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_list_len() { panic!("Unmigrated test: array_list_len"); }
+/*
   test("Array list len") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -96,7 +119,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn array_list_set
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_list_set() { panic!("Unmigrated test: array_list_set"); }
+/*
   test("Array list set") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -113,7 +141,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(11) => }
   }
-
+*/
+// mig: fn array_list_with_optionals_with_mutable_element
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn array_list_with_optionals_with_mutable_element() { panic!("Unmigrated test: array_list_with_optionals_with_mutable_element"); }
+/*
   test("Array list with optionals with mutable element") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -134,7 +167,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn mutate_mutable_from_in_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutate_mutable_from_in_lambda() { panic!("Unmigrated test: mutate_mutable_from_in_lambda"); }
+/*
   test("Mutate mutable from in lambda") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -161,7 +199,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn move_mutable_from_in_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn move_mutable_from_in_lambda() { panic!("Unmigrated test: move_mutable_from_in_lambda"); }
+/*
   test("Move mutable from in lambda") {
     val compile = RunCompilation.test(
       """import list.*;
@@ -183,8 +226,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(6) => }
   }
-
-
+*/
+// mig: fn remove_from_middle
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn remove_from_middle() { panic!("Unmigrated test: remove_from_middle"); }
+/*
   test("Remove from middle") {
     val compile = RunCompilation.test(
         """import list.*;
@@ -208,10 +255,12 @@ class ArrayListTest extends FunSuite with Matchers {
 
     compile.evalForKind(Vector())
   }
-
-
-
-
+*/
+// mig: fn remove_from_beginning
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn remove_from_beginning() { panic!("Unmigrated test: remove_from_beginning"); }
+/*
   test("Remove from beginning") {
     val compile = RunCompilation.test(
         """import list.*;

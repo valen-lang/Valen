@@ -28,15 +28,17 @@ import dev.vale.{FileCoordinate, Interner, Keywords, PackageCoordinate, vassert,
 // In previous stages, this is referred to as a "coord", because these four things can be
 // thought of as dimensions of a coordinate.
 case class CoordH[+T <: KindHT](
-    ownership: OwnershipH, location: LocationH, kind: T) {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
+    ownership: OwnershipH,
+    location: LocationH,
+    kind: T) {
+  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 
-  (ownership, location) match {
-    case (OwnH, YonderH) =>
-    case (ImmutableShareH | MutableShareH, _) =>
-    case (MutableBorrowH | ImmutableBorrowH, YonderH) =>
-    case (WeakH, YonderH) =>
+  (ownership, location, kind) match {
+    case (OwnH, YonderH, _) =>
+    case (OwnH, InlineH, OpaqueHT(_, _, _)) =>
+    case (ImmutableShareH | MutableShareH, _, _) =>
+    case (MutableBorrowH | ImmutableBorrowH, YonderH, _) =>
+    case (WeakH, YonderH, _) =>
     case _ => vfail()
   }
 
@@ -53,7 +55,11 @@ case class CoordH[+T <: KindHT](
       vassert(ownership == ImmutableShareH || ownership == MutableShareH)
       vassert(location == YonderH)
     }
-    case StructHT(name) => {
+    case s @ OpaqueHT(_, _, _) => {
+      vassert(ownership == ImmutableShareH || ownership == MutableShareH)
+      vassert(location == InlineH)
+    }
+    case s @ StructHT(name) => {
       val isBox = name.fullyQualifiedName.startsWith("__Box")
 
       if (isBox) {
@@ -96,6 +102,7 @@ case class CoordH[+T <: KindHT](
 // A value, a thing that can be pointed at. See ReferenceH for more information.
 sealed trait KindHT {
   def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate
+//  def isRustOpaqueType(): Boolean
 }
 object IntHT {
   val i32 = IntHT(32)
@@ -104,26 +111,40 @@ case class IntHT(bits: Int) extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
 case class VoidHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
+}
+case class OpaqueHT(
+  packageCoord: PackageCoordinate,
+  structId: IdH,
+  simpleId: SimpleId
+) extends KindHT {
+  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = packageCoord
+//    override def isRustOpaqueType(): Boolean = false
 }
 case class BoolHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
 case class StrHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
 case class FloatHT() extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
 // A primitive which can never be instantiated. If something returns this, it
 // means that it will never actually return. For example, the return type of
@@ -135,6 +156,7 @@ case class NeverHT(fromBreak: Boolean) extends KindHT {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = PackageCoordinate.BUILTIN(interner, keywords)
+//  override def isRustOpaqueType(): Boolean = false
 }
 
 case class InterfaceHT(
@@ -144,6 +166,7 @@ case class InterfaceHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
 }
 
 case class StructHT(
@@ -153,6 +176,7 @@ case class StructHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = id.packageCoordinate.module.str == "rust"
 }
 
 // An array whose size is known at compile time, and therefore doesn't need to
@@ -164,6 +188,7 @@ case class StaticSizedArrayHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = id.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
 }
 
 // An array whose size is known at compile time, and therefore doesn't need to
@@ -189,6 +214,7 @@ case class RuntimeSizedArrayHT(
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
   override def packageCoord(interner: Interner, keywords: Keywords): PackageCoordinate = name.packageCoordinate
+//  override def isRustOpaqueType(): Boolean = false
 }
 
 case class RuntimeSizedArrayDefinitionHT(
@@ -289,3 +315,21 @@ case object Mutable extends Mutability
 sealed trait Variability
 case object Final extends Variability
 case object Varying extends Variability
+
+
+case class SimpleId(steps: Vector[SimpleIdStep]) {
+  vassert(steps.length > 0)
+}
+case class SimpleIdStep(
+    name: String, // Could also be & or &mut
+    templateArgs: Vector[SimpleId])
+
+case class HamutsFunctionExtern(
+    maybeExternName: String,
+    prototype: PrototypeH,
+    simpleId: SimpleId)
+
+case class HamutsKindExtern(
+    maybeExternName: String,
+    kind: KindHT,
+    simpleId: SimpleId)

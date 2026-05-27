@@ -1,7 +1,7 @@
 use crate::higher_typing::ast::{FunctionA, InterfaceA, StructA};
-use crate::postparsing::ast::{ICitizenAttributeS, IStructMemberS, LocationInDenizen};
+use crate::postparsing::ast::{ExternS, ICitizenAttributeS, IStructMemberS, LocationInDenizen};
 use crate::postparsing::names::IFunctionDeclarationNameS;
-use crate::typing::ast::ast::ICitizenAttributeT;
+use crate::typing::ast::ast::{ExternT, ICitizenAttributeT};
 use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
 use crate::typing::names::names::{CodeVarNameT, IVarNameT};
 use crate::typing::compiler::Compiler;
@@ -56,7 +56,7 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.postparsing._
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
-import dev.vale.typing.ast.{ICitizenAttributeT, SealedT}
+import dev.vale.typing.ast.{ExternT, ICitizenAttributeT, SealedT}
 import dev.vale.typing.{CompileErrorExceptionT, CompilerOutputs, ImmStructCantHaveVaryingMember, RangedInternalErrorT, TypingPassOptions, env}
 import dev.vale.typing.{ast, _}
 import dev.vale.typing.env._
@@ -395,6 +395,7 @@ where 's: 't,
         attrs.iter().map(|attr| {
             match attr {
                 ICitizenAttributeS::Sealed(_) => ICitizenAttributeT::Sealed,
+                ICitizenAttributeS::Extern(ExternS { package_coord: p }) => ICitizenAttributeT::Extern(ExternT { package_coord: **p }),
                 ICitizenAttributeS::MacroCall(_) => panic!("vwat: MacroCallS should have been processed"),
                 x => panic!("vimpl: {:?}", x),
             }
@@ -404,6 +405,7 @@ where 's: 't,
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
     attrs.map({
       case SealedS => SealedT
+      case ExternS(p) => ExternT(p)
       case MacroCallS(_, _, _) => vwat() // Should have been processed
       case x => vimpl(x.toString)
     })

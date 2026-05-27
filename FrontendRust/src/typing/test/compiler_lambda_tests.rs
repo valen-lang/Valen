@@ -6,7 +6,7 @@ use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
-use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
+use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, OwnershipT, RegionT};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use crate::typing::test::traverse::NodeRefT;
@@ -72,7 +72,7 @@ fn simple_lambda() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let expected = CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) };
+    let expected = CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT { bits: 32 }) };
     assert_eq!(coutputs.lookup_lambda_in("main").header.return_type, expected);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type, expected);
 }
@@ -85,8 +85,8 @@ fn simple_lambda() {
     val coutputs = compile.expectCompilerOutputs()
 
     // Make sure it inferred the param type and return type correctly
-    coutputs.lookupLambdaIn("main").header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
-    coutputs.lookupFunction("main").header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    coutputs.lookupLambdaIn("main").header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
+    coutputs.lookupFunction("main").header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 */
 // mig: fn lambda_with_one_magic_arg
@@ -124,7 +124,7 @@ fn lambda_with_one_magic_arg() {
     );
     assert_eq!(
         coutputs.lookup_lambda_in("main").header.return_type,
-        CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) },
+        CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT { bits: 32 }) },
     );
 }
 /*
@@ -141,7 +141,7 @@ fn lambda_with_one_magic_arg() {
       { case ParameterT(_, None, _, CoordT(ShareT, _, IntT.i32)) => })
 
     coutputs.lookupLambdaIn("main").header.returnType shouldEqual
-      CoordT(ShareT, RegionT(), IntT.i32)
+      CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 */
 // mig: fn lambda_is_reused

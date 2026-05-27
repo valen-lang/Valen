@@ -289,7 +289,31 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           FLAG_STR(),
           "Overrides all regions.",
           "resilient-v3",
-          "Sets all regions to use the given allocator.")];
+          "Sets all regions to use the given allocator."),
+        Flag(
+          "--vale_ruster_path",
+          FLAG_STR(),
+          "Path to the ValeRuster binary for Rust interop.",
+          "",
+          "When set (along with --rust_cargo_toml and --rust_output_dir), the Frontend will invoke ValeRuster to generate .vale bindings for `import rust.*` statements."),
+        Flag(
+          "--divination_path",
+          FLAG_STR(),
+          "Path to the Divination binary for Rust interop.",
+          "",
+          "When set (along with --rust_cargo_toml and --rust_output_dir), the Backend will invoke Divination to measure sizes/alignments of imported Rust types."),
+        Flag(
+          "--rust_cargo_toml",
+          FLAG_STR(),
+          "Path to the Cargo.toml with Rust dependencies for interop.",
+          "",
+          "The Cargo.toml file listing the Rust crates this program depends on."),
+        Flag(
+          "--rust_output_dir",
+          FLAG_STR(),
+          "Directory for Rust interop outputs (bindings + generated Rust code).",
+          "",
+          "Where ValeRuster and Divination write their outputs. Defaults to <output_dir>/rust when Rust interop is active.")];
 
   parsed_flags = flags.parse_all_flags(all_args);
 
@@ -342,6 +366,25 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
   no_std = parsed_flags.get_bool_flag("--no_std", false);
 
   maybe_region_override = parsed_flags.get_string_flag("--region_override");
+  vale_ruster_path = parsed_flags.get_string_flag("--vale_ruster_path", "");
+  divination_path = parsed_flags.get_string_flag("--divination_path", "");
+  rust_cargo_toml = parsed_flags.get_string_flag("--rust_cargo_toml", "");
+  rust_output_dir_str = parsed_flags.get_string_flag("--rust_output_dir", "");
+  // If any rust interop flag is set, derive a default rust_output_dir from output_dir.
+  rust_interop_active =
+      vale_ruster_path != "" or divination_path != "" or rust_cargo_toml != "" or rust_output_dir_str != "";
+  rust_output_dir =
+      if rust_interop_active and rust_output_dir_str == "" {
+        // Don't resolve() here — the path doesn't exist yet, and resolve requires existence.
+        output_dir./("rust").str()
+      } else {
+        rust_output_dir_str
+      };
+  if rust_interop_active {
+    if vale_ruster_path == "" or divination_path == "" or rust_cargo_toml == "" {
+      panic("Rust interop requires all of: --vale_ruster_path, --divination_path, --rust_cargo_toml (and optionally --rust_output_dir).");
+    }
+  }
   maybe_opt_level = parsed_flags.get_string_flag("--opt_level");
   maybe_cpu = parsed_flags.get_string_flag("--cpu");
   executable_name = parsed_flags.get_string_flag("-o", "main");
@@ -444,7 +487,10 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
             include_builtins,
             output_vast,
             output_vpst,
-            &output_dir);
+            &output_dir,
+            vale_ruster_path,
+            rust_cargo_toml,
+            rust_output_dir);
     println("Running:\n" + frontend_process.command);
     frontend_return_code = (frontend_process).print_and_join();
     if frontend_return_code != 0 {
@@ -514,11 +560,55 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           use_atomic_rc,
           gen_size,
           force_all_known_live,
-          include_bounds_checks);
+          include_bounds_checks,
+          divination_path,
+          rust_cargo_toml,
+          rust_output_dir);
   println("Running:\n" + backend_process.command);
   backend_return_code = (backend_process).print_and_join();
   if backend_return_code != 0 {
     panic("Backend returned error code {backend_return_code}, aborting.");
+  }
+
+  // If the Backend's doRustyThings ran Divination's cbuild, it already produced a static
+  // library under target/<triple>/release/. Locate it, the include dir containing
+  // rust_deps.h (cbindgen output), and the target triple Divination used. We pass the
+  // first two to clang for linking/compilation, and derive -arch from the triple so clang
+  // matches Divination's architecture (otherwise clang defaults may disagree with the .a,
+  // especially when valec is x86_64 but the rust lib is arm64).
+  maybe_rust_static_lib Opt<Path> = None<Path>();
+  maybe_rust_include_dir Opt<Path> = None<Path>();
+  if rust_interop_active {
+    rust_cargo_path = Path(rust_output_dir)./("Cargo.toml");
+    if rust_cargo_path.exists() {
+      // Walk target/*/release/ for lib*.a files at the top level (not in deps/).
+      // cbuild writes two variants: libNAME.a with hyphens (from capi.library.name) and
+      // libNAME.a with underscores (from crate name). Either works for linking.
+      // rust_deps.h lives in the same directory, written by cbindgen.
+      target_dir = Path(rust_output_dir)./("target");
+      if target_dir.exists() {
+        target_dir.iterdir()&.each((triple_dir) => {
+          if triple_dir.is_dir() {
+            triple_release = triple_dir./("release");
+            if triple_release.exists() {
+              triple_release.iterdir()&.each((child) => {
+                name = child.name();
+                // Top-level lib*.a only (skip deps/ which has intermediate compilation artifacts).
+                if name.startsWith("lib") and name.endsWith(".a") and child.is_file() {
+                  if maybe_rust_static_lib.isEmpty() {
+                    set maybe_rust_static_lib = Some(child.clone());
+                    set maybe_rust_include_dir = Some(triple_release.clone());
+                  }
+                }
+              });
+            }
+          }
+        });
+      }
+      if maybe_rust_static_lib.isEmpty() {
+        panic("Expected Rust static library under " + target_dir.str() + "/*/release/lib*.a but found none.");
+      }
+    }
   }
 
   if not run_clang {
@@ -531,6 +621,11 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
   }
 
   clang_inputs = List<Path>();
+  if maybe_rust_static_lib.isEmpty() {
+    (maybe_rust_static_lib);
+  } else {
+    clang_inputs.add((maybe_rust_static_lib).get());
+  }
   if windows {
     clang_inputs.add(output_dir./("build.obj"));
   } else {
@@ -609,6 +704,13 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
     println("Invoking cc...")
   }
 
+  rust_include_dir_str =
+      if maybe_rust_include_dir.isEmpty() {
+        (maybe_rust_include_dir);
+        ""
+      } else {
+        (maybe_rust_include_dir).get().str()
+      };
   clang_process =
       invoke_clang(
           windows,
@@ -620,7 +722,8 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           debug_symbols,
           &output_dir,
           pic,
-          pie);
+          pie,
+          rust_include_dir_str);
   println("Running:\n" + clang_process.command);
   clang_return_code = (clang_process).print_and_join();
   if clang_return_code != 0 {

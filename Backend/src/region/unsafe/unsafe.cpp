@@ -332,8 +332,7 @@ void Unsafe::declareStruct(
   kindStructs.declareStruct(structM->kind, structM->weakability);
 }
 
-void Unsafe::defineStruct(
-    StructDefinition* structM) {
+void Unsafe::defineStruct(StructDefinition* structM) {
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
@@ -1089,4 +1088,11 @@ LiveRef Unsafe::immutabilify(
     Reference* targetRefMT) {
   assert(refMT->ownership == Ownership::MUTABLE_BORROW);
   { assert(false); throw 1337; }
+}
+
+void Unsafe::declareOpaque(Opaque* opaque) {
+  { assert(false); throw 1337; } // impl
+}
+void Unsafe::defineOpaque(Opaque* opaque, int size, int alignment) {
+  { assert(false); throw 1337; } // impl
 }

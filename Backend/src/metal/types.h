@@ -27,6 +27,7 @@ class StructKind;
 class RawArrayT;
 class StaticSizedArrayT;
 class RuntimeSizedArrayT;
+class SimpleId;
 
 enum class Ownership {
   OWN,
@@ -97,7 +98,10 @@ public:
   {
 
     if (location == Location::INLINE) {
-      assert(ownership == Ownership::OWN || ownership == Ownership::MUTABLE_SHARE);
+      assert(
+          ownership == Ownership::OWN ||
+          ownership == Ownership::MUTABLE_SHARE ||
+          ownership == Ownership::IMMUTABLE_SHARE);
     }
     if (ownership == Ownership::MUTABLE_BORROW || ownership == Ownership::IMMUTABLE_BORROW || ownership == Ownership::WEAK) {
       assert(location == Location::YONDER);
@@ -279,6 +283,22 @@ class IContainer {
 public:
     std::string humanName;
     CodeLocation* location;
+};
+
+// Interned
+class Opaque : public Kind {
+public:
+  Name* name;
+  SimpleId* structSimpleId;
+
+  PackageCoordinate* getPackageCoordinate() const override { return name->packageCoord; }
+
+  Opaque(
+      Name* name_,
+      SimpleId* structSimpleId_) :
+      name(name_),
+      structSimpleId(structSimpleId_)
+  {}
 };
 
 #endif

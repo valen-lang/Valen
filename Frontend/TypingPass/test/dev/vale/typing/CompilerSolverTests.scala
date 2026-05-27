@@ -113,9 +113,9 @@ class CompilerSolverTests extends FunSuite with Matchers {
             _,
             FunctionNameT(
               FunctionTemplateNameT(StrI("bork"), _),
-              Vector(CoordTemplataT(CoordT(ShareT,RegionT(), IntT(32)))),
-              Vector(CoordT(ShareT,RegionT(), IntT(32))))),
-          CoordT(ShareT,RegionT(), IntT(32))),
+              Vector(CoordTemplataT(CoordT(ShareT,RegionT(DefaultRegionT), IntT(32)))),
+              Vector(CoordT(ShareT,RegionT(DefaultRegionT), IntT(32))))),
+          CoordT(ShareT,RegionT(DefaultRegionT), IntT(32))),
         Vector(ConstantIntTE(IntegerTemplataT(3),32, _)),
         _) =>
     }
@@ -181,7 +181,7 @@ class CompilerSolverTests extends FunSuite with Matchers {
               FunctionTemplateNameT(StrI("bork"), _),
               Vector(CoordTemplataT(templateArgCoord)),
               Vector(arg))),
-          CoordT(ShareT,RegionT(), VoidT())) => {
+          CoordT(ShareT,RegionT(DefaultRegionT), VoidT())) => {
 
         templateArgCoord match {
           case CoordT(
@@ -207,7 +207,7 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val funcTemplateId = IdT(testPackageCoord, Vector(), funcTemplateName)
     val funcName = IdT(testPackageCoord, Vector(), FunctionNameT(FunctionTemplateNameT(interner.intern(StrI("main")), tzCodeLoc), Vector(), Vector()))
     val regionName = funcTemplateId.addStep(interner.intern(KindPlaceholderNameT(interner.intern(KindPlaceholderTemplateNameT(0, DenizenDefaultRegionRuneS(FunctionNameS(funcTemplateName.humanName, funcTemplateName.codeLocation)))))))
-    val region = RegionT()
+    val region = RegionT(DefaultRegionT)
 
 
     val fireflyKind = StructTT(IdT(testPackageCoord, Vector(), StructNameT(StructTemplateNameT(StrI("Firefly")), Vector())))
@@ -219,9 +219,9 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val unrelatedKind = StructTT(IdT(testPackageCoord, Vector(), StructNameT(StructTemplateNameT(StrI("Spoon")), Vector())))
     val unrelatedCoord = CoordT(OwnT,region,unrelatedKind)
     val fireflySignature = SignatureT(IdT(testPackageCoord, Vector(), interner.intern(FunctionNameT(interner.intern(FunctionTemplateNameT(interner.intern(StrI("myFunc")), tz.head.begin)), Vector(), Vector(fireflyCoord)))))
-    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val fireflyExport = KindExportT(tz.head, fireflyKind, fireflyExportId, interner.intern(StrI("Firefly")));
-    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val serenityExport = KindExportT(tz.head, fireflyKind, serenityExportId, interner.intern(StrI("Serenity")));
 
     val codeStr = "Hello I am A large piece Of code [that has An error]"
@@ -328,6 +328,49 @@ class CompilerSolverTests extends FunSuite with Matchers {
     )
     val coutputs = compile.expectCompilerOutputs()
     Collector.only(coutputs.lookupFunction("main"), { case ConstantIntTE(IntegerTemplataT(3), 32, _) => })
+  }
+
+  test("Default generic param should not conflict with arg inference") {
+    // H has a default of 5, but calling moo(MyStruct<10>()) should infer H=10 from
+    // the argument type. The default should act as a fallback, not an eager constraint
+    // that conflicts with argument inference.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<H Int = 5> { }
+        |func moo<H Int = 5>(s MyStruct<H>) int { return H; }
+        |exported func main() int {
+        |  return moo(MyStruct<10>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI interface default generic arg in struct member") {
+    // MyInterface<bool> must resolve H=5 from default during resolveInterface.
+    // Before fix: the interface's abstract drop function conflicts (H=5 vs H=placeholder).
+    val compile = CompilerTestCompilation.test(
+      """
+        |sealed interface MyInterface<K Ref, H Int = 5> { }
+        |struct MyStruct {
+        |  x MyInterface<bool>;
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI multiple defaults with partial override") {
+    // A has a default of 10, B has a default of 20.
+    // Calling with MyStruct<7>() overrides A=7 but B should still default to 20.
+    // Returning A verifies the override; compiling at all verifies B's default works.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<A Int = 10, B Int = 20> { }
+        |func moo<A Int = 10, B Int = 20>(s MyStruct<A, B>) int { return A; }
+        |exported func main() int {
+        |  return moo(MyStruct<7>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
   }
 
   test("Components") {
@@ -506,7 +549,6 @@ class CompilerSolverTests extends FunSuite with Matchers {
       """
         |
         |exported func main() int where N Int {
-        |  M
         |}
         |""".stripMargin,
       interner)
@@ -572,8 +614,8 @@ class CompilerSolverTests extends FunSuite with Matchers {
         |""".stripMargin
     )
     compile.getCompilerOutputs() match {
-      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
-      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _, _)))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))))))) =>
       case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipB")),Vector()))))))))) =>
@@ -601,7 +643,7 @@ class CompilerSolverTests extends FunSuite with Matchers {
         |""".stripMargin
     )
     val coutputs = compile.expectCompilerOutputs()
-    coutputs.lookupFunction("bork").header.id.localName.templateArgs.last shouldEqual CoordTemplataT(CoordT(ShareT, RegionT(), IntT(32)))
+    coutputs.lookupFunction("bork").header.id.localName.templateArgs.last shouldEqual CoordTemplataT(CoordT(ShareT, RegionT(DefaultRegionT), IntT(32)))
   }
 
   test("Can destructure and assemble static sized array") {

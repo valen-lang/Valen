@@ -76,6 +76,7 @@ public:
       strs(0, addressNumberer->makeHasher<RegionId*>()),
       floats(0, addressNumberer->makeHasher<RegionId*>()),
       nevers(0, addressNumberer->makeHasher<RegionId*>()),
+      opaques(0, addressNumberer->makeHasher<Name*>()),
       voids(0, addressNumberer->makeHasher<RegionId*>()),
       runtimeSizedArrays(0, addressNumberer->makeHasher<Name*>()),
       staticSizedArrays(0, addressNumberer->makeHasher<Name*>()),
@@ -207,6 +208,13 @@ public:
         [&](){ return new Reference(ownership, location, kind); });
   }
 
+  Opaque* getOpaque(Name* structId, SimpleId* structSimpleId) {
+    return makeIfNotPresent<Name*, Opaque*>(
+        &opaques,
+        structId,
+        [&](){ return new Opaque(structId, structSimpleId); });
+  }
+
   Prototype* getPrototype(Name* name, Reference* returnType, std::vector<Reference*> paramTypes) {
     return makeIfNotPresent(
         &makeIfNotPresent(
@@ -241,6 +249,7 @@ public:
   std::unordered_map<RegionId*, Float*, AddressHasher<RegionId*>> floats;
   std::unordered_map<RegionId*, Void*, AddressHasher<RegionId*>> voids;
   std::unordered_map<RegionId*, Never*, AddressHasher<RegionId*>> nevers;
+  std::unordered_map<Name*, Opaque*, AddressHasher<Name*>> opaques;
 
   std::unordered_map<Name*, RuntimeSizedArrayT*, AddressHasher<Name*>> runtimeSizedArrays;
   std::unordered_map<Name*, StaticSizedArrayT*, AddressHasher<Name*>> staticSizedArrays;

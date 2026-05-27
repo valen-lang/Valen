@@ -36,6 +36,7 @@ class InterfaceDropMacro(
 
     val rules = new Accumulator[IRulexSR]()
     // Use the same rules as the original interface, see MDSFONARFO.
+    // Per @DRSINI, this copies the hoisted EqualsSR from default generic params.
     interfaceA.rules.foreach(r => rules.add(r))
     val runeToType = mutable.HashMap[IRuneS, ITemplataType]()
     // Use the same runes as the original interface, see MDSFONARFO.
@@ -74,6 +75,8 @@ class InterfaceDropMacro(
         RuneUsage(interfaceA.name.range, selfKindRune)))
 
     // Use the same generic parameters as the interface, see MDSFONARFO.
+    // Per @DRSINI, defaults are harmless here because they're only added incrementally
+    // for unsolved runes during solveForResolving, not eagerly.
     val functionGenericParameters = interfaceA.genericParameters
 
     val functionTemplataType =

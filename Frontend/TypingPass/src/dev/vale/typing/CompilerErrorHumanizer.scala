@@ -3,7 +3,7 @@ package dev.vale.typing
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverErrorHumanizer}
+import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverConflict, SolverErrorHumanizer}
 import dev.vale.typing.types._
 import dev.vale.SourceCodeUtils.{humanizePos, lineBegin, lineContaining, lineRangeContaining, linesBetween}
 import dev.vale.highertyping.FunctionA
@@ -109,15 +109,18 @@ object CompilerErrorHumanizer {
         case CouldntFindIdentifierToLoadT(range, name) => {
           "Couldn't find anything named `" + PostParserErrorHumanizer.humanizeImpreciseName(name) + "`!"
         }
+        case CantUseRuneValueAsExpression(range, rune) => {
+          "Can't use rune `" + humanizeRune(rune) + "` as a value expression. Did you mean a local variable with a similar name?"
+        }
         case NonReadonlyReferenceFoundInPureFunctionParameter(range, name) => {
           "Parameter `" + name + "` should be readonly, because it's in a pure function."
         }
         case CouldntFindTypeT(range, name) => {
           "Couldn't find any type named `" + name + "`!"
         }
-        case CouldntNarrowDownCandidates(range, candidateRanges) => {
+        case CouldntNarrowDownCandidates(range, candidates) => {
           "Multiple candidates for call:" +
-            candidateRanges.map(range => "\n" + codeMap(range.begin) + ":\n  " + lineContaining(range.begin)).mkString("")
+            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id)).mkString("")
         }
         case ImmStructCantHaveVaryingMember(range, structName, memberName) => {
           "Immutable struct (\"" + printableName(codeMap, structName) + "\") cannot have varying member (\"" + memberName + "\")."
@@ -341,6 +344,7 @@ object CompilerErrorHumanizer {
     name match {
       case CodeVarNameS(name) => name.str
       case TopLevelCitizenDeclarationNameS(name, codeLocation) => name.str
+      case AnonymousSubstructTemplateNameS(TopLevelInterfaceDeclarationNameS(name, _)) => name.str + ".anonymous"
       case LambdaDeclarationNameS(codeLocation) => codeMap(codeLocation) + ": " + "(lambda)"
       case FunctionNameS(name, codeLocation) => codeMap(codeLocation) + ": " + name.str
       case ConstructorNameS(TopLevelCitizenDeclarationNameS(name, range)) => codeMap(range.begin) + ": " + name.str
@@ -513,6 +517,40 @@ object CompilerErrorHumanizer {
           params.map({ case (rune, coord) =>
             humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
           }).mkString(", ")
+      }
+      case KindIsNotStruct(kind) => {
+        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind)
+      }
+      case CouldntFindImpl(range, fail) => {
+        "Couldn't find impl: " + fail
+      }
+      case CantSharePlaceholder(kind) => {
+        "Can't share a placeholder kind: " + humanizeTemplata(codeMap, KindTemplataT(kind))
+      }
+      case NoCommonAncestors(params) => {
+        "No common ancestors: " +
+          params.map({ case (rune, coord) =>
+            humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
+          }).mkString(", ")
+      }
+      case CantDetermineNarrowestKind(kinds) => {
+        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _)).mkString(", ")
+      }
+      case FunctionDoesntHaveName(range, name) => {
+        "Function doesn't have name: " + humanizeName(codeMap, name)
+      }
+      case InternalSolverError(range, err) => {
+        err match {
+          case SolverConflict(rune, previousConclusion, newConclusion) => {
+            "Solver conflict on rune " + humanizeRune(rune) + ": was " + humanizeTemplata(codeMap, previousConclusion) + " but now concluding " + humanizeTemplata(codeMap, newConclusion)
+          }
+          case RuleError(innerErr) => {
+            humanizeRuleError(codeMap, linesBetween, lineRangeContaining, lineContaining, innerErr)
+          }
+          case SolveIncomplete() => {
+            "Solve incomplete"
+          }
+        }
       }
     }
   }
@@ -731,12 +769,26 @@ object CompilerErrorHumanizer {
           humanizeGenericArgs(codeMap, templateArgs, None) +
           "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
       }
+      case PredictedFunctionTemplateNameT(humanName) => humanName.str
+      case PredictedFunctionNameT(template, templateArgs, parameters) => {
+        humanizeName(codeMap, template) +
+          humanizeGenericArgs(codeMap, templateArgs, None) +
+          "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
+      }
       case KindPlaceholderNameT(template) => humanizeName(codeMap, template)
       case KindPlaceholderTemplateNameT(index, rune) => humanizeRune(rune)
       case CodeVarNameT(name) => name.str
       case LambdaCitizenNameT(template) => humanizeName(codeMap, template) + "<>"
       case FunctionTemplateNameT(humanName, codeLoc) => humanName.str
-      case ExternFunctionNameT(humanName, parameters) => humanName.str
+      case ExternFunctionNameT(humanName, templateArgs, parameters) => {
+        humanName.str +
+            humanizeGenericArgs(codeMap, templateArgs, containingRegion) +
+            (if (parameters.nonEmpty) {
+              "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
+            } else {
+              ""
+            })
+      }
       case FunctionNameT(templateName, templateArgs, parameters) => {
         humanizeName(codeMap, templateName) +
           humanizeGenericArgs(codeMap, templateArgs, containingRegion) +

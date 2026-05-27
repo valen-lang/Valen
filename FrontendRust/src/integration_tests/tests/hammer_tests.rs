@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.passmanager.FullCompilationOptions
@@ -11,10 +12,20 @@ import org.scalatest._
 
 import scala.collection.immutable.List
 
+*/
+// mig: struct HammerTests
+pub struct HammerTests;
+/*
 class HammerTests extends FunSuite with Matchers {
   // Hammer tests only test the general structure of things, not the generated nodes.
   // The generated nodes will be tested by end-to-end tests.
 
+*/
+// mig: fn simple_main
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn simple_main() { panic!("Unmigrated test: simple_main"); }
+/*
   test("Simple main") {
     val compile = RunCompilation.test(
       "exported func main() int { return 3; }")
@@ -38,6 +49,12 @@ class HammerTests extends FunSuite with Matchers {
 //    hamuts.structs.find(_.fullName.parts.last.humanName == "ListNode").get;
 //  }
 
+*/
+// mig: fn two_templated_structs_make_it_into_hamuts
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn two_templated_structs_make_it_into_hamuts() { panic!("Unmigrated test: two_templated_structs_make_it_into_hamuts"); }
+/*
   test("Two templated structs make it into hamuts") {
     val compile = RunCompilation.test(
       """
@@ -89,6 +106,12 @@ class HammerTests extends FunSuite with Matchers {
 //    vassert(packageH.getAllUserFunctions.size == 1)
 //  }
 
+*/
+// mig: fn tests_stripping_things_after_panic
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_stripping_things_after_panic() { panic!("Unmigrated test: tests_stripping_things_after_panic"); }
+/*
   test("Tests stripping things after panic") {
     val compile = RunCompilation.test(
       """
@@ -107,6 +130,12 @@ class HammerTests extends FunSuite with Matchers {
     }
   }
 
+*/
+// mig: fn panic_in_expr
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn panic_in_expr() { panic!("Unmigrated test: panic_in_expr"); }
+/*
   test("panic in expr") {
     val compile = RunCompilation.test(
       """
@@ -134,6 +163,12 @@ class HammerTests extends FunSuite with Matchers {
     })
   }
 
+*/
+// mig: fn tests_export_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_function() { panic!("Unmigrated test: tests_export_function"); }
+/*
   test("Tests export function") {
     val compile = RunCompilation.test(
       """
@@ -144,6 +179,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToFunction(compile.interner.intern(StrI("moo"))) shouldEqual moo.prototype
   }
 
+*/
+// mig: fn tests_export_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_struct() { panic!("Unmigrated test: tests_export_struct"); }
+/*
   test("Tests export struct") {
     val compile = RunCompilation.test(
       """
@@ -154,6 +195,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToKind(compile.interner.intern(StrI("Moo"))) shouldEqual moo.getRef
   }
 
+*/
+// mig: fn tests_export_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_export_interface() { panic!("Unmigrated test: tests_export_interface"); }
+/*
   test("Tests export interface") {
     val compile = RunCompilation.test(
       """
@@ -164,6 +211,12 @@ class HammerTests extends FunSuite with Matchers {
     packageH.exportNameToKind(compile.interner.intern(StrI("Moo"))) shouldEqual moo.getRef
   }
 
+*/
+// mig: fn tests_exports_from_two_modules_different_names
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn tests_exports_from_two_modules_different_names() { panic!("Unmigrated test: tests_exports_from_two_modules_different_names"); }
+/*
   test("Tests exports from two modules, different names") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -232,4 +285,110 @@ class HammerTests extends FunSuite with Matchers {
 //
 //    vassert(fullNameA != fullNameB)
 //  }
+*/
+
+// mig: fn top_level_extern_functions_wire_format_simple_id_has_flat_shape
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn top_level_extern_functions_wire_format_simple_id_has_flat_shape() { panic!("Unmigrated test: top_level_extern_functions_wire_format_simple_id_has_flat_shape"); }
+/*
+  test("Top-level extern function's wire-format SimpleId has flat shape") {
+    // numInheritedGenericParameters is 0 for a top-level extern, so Hammer should not reshape.
+    // The leaf step retains whatever templateArgs the function has (empty here, since this is
+    // a non-generic extern). This is a smoke test that the no-reshape path returns rawSimpleId.
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm;
+        |extern func VecOuterNew<T>() Vec<T>;
+        |exported func main() int {
+        |  v = VecOuterNew<int>();
+        |  return 42;
+        |}
+        |""".stripMargin,
+      false)
+    val hamuts = compile.getHamuts()
+    val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
+    val externs = packageH.prototypeToExtern.values.toVector
+    val outerNew = externs.find(_.simpleId.steps.last.name == "VecOuterNew").get
+    // VecOuterNew<int>: leaf step keeps own template arg, no reshape (no parent citizen).
+    val leaf = outerNew.simpleId.steps.last
+    vassert(leaf.name == "VecOuterNew")
+    vassert(leaf.templateArgs.size == 1)  // <int>
+  }
+*/
+
+// mig: fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id() { panic!("Unmigrated test: mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id"); }
+/*
+  test("Mixed own + inherited template args split correctly in wire-format SimpleId") {
+    // Per @PRIIROZ, the function's templateArgs are ordered [own..., inherited...]. For
+    // `Foo<A>.bar<C>(c C)` monomorphized as `Foo<i32>.bar<i64>(42i64)`, the leaf step's
+    // templateArgs are [i64, i32] (C own first, A inherited last). After reshape, the
+    // 1 trailing inherited arg moves to the Foo step:
+    //   [..., Foo<i32>, bar<i64>]
+    // Asserts both the splitAt count (1, not 0 or 2) and the splitAt direction. Uses
+    // i32 + i64 (not bool/str etc.) because NameHammer.simplifyKind currently only
+    // handles IntIT.
+    val compile = RunCompilation.test(
+      """
+        |extern struct Foo<A> imm {
+        |  extern func bar<C>(c C) int;
+        |}
+        |exported func main() int {
+        |  return Foo<int>.bar<str>("hello");
+        |}
+        |""".stripMargin,
+      false)
+    val hamuts = compile.getHamuts()
+    val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
+    val externs = packageH.prototypeToExtern.values.toVector
+    val barExtern = externs.find(_.simpleId.steps.last.name == "bar").get
+    val steps = barExtern.simpleId.steps
+    vassert(steps.size >= 2)
+    val leaf = steps.last
+    val parent = steps(steps.size - 2)
+    vassert(leaf.name == "bar")
+    vassert(leaf.templateArgs.size == 1)  // C (own) remains on the leaf.
+    vassert(parent.name == "Foo")
+    vassert(parent.templateArgs.size == 1)  // A (inherited) moved up to the citizen.
+  }
+*/
+
+// mig: fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id() { panic!("Unmigrated test: extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id"); }
+/*
+  test("Extern method in generic extern struct puts container args on citizen step in wire-format SimpleId") {
+    // The reshape moves the inherited container template args (T -> i32) off the leaf function
+    // step onto the immediately preceding citizen step. Final shape: [..., Vec<i32>, new]
+    // rather than [..., Vec, new<i32>]. This is what Backend's rustifySimpleId expects per
+    // @SMLRZ, so it can emit `Vec<i32>::new` rather than `Vec::new<i32>`.
+    val compile = RunCompilation.test(
+      """
+        |extern struct Vec<T> imm {
+        |  extern func new() Vec<T>;
+        |}
+        |exported func main() int {
+        |  v = Vec<int>.new();
+        |  return 42;
+        |}
+        |""".stripMargin,
+      false)
+    val hamuts = compile.getHamuts()
+    val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
+    val externs = packageH.prototypeToExtern.values.toVector
+    val newExtern = externs.find(_.simpleId.steps.last.name == "new").get
+    val steps = newExtern.simpleId.steps
+    vassert(steps.size >= 2)
+    val leaf = steps.last
+    val parent = steps(steps.size - 2)
+    vassert(leaf.name == "new")
+    vassert(leaf.templateArgs.isEmpty)  // No own template args, no surviving args after reshape.
+    vassert(parent.name == "Vec")
+    vassert(parent.templateArgs.size == 1)  // <i32> moved up from the leaf.
+  }
 }
+*/

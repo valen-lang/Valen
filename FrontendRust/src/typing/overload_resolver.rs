@@ -212,7 +212,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function_name: IImpreciseNameS<'s>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
@@ -225,7 +226,8 @@ where 's: 't,
             call_location,
             function_name,
             explicit_template_arg_rules_s,
-            explicit_template_arg_runes_s,
+            positional_explicit_template_arg_runes_s,
+            receiving_rune_to_explicit_template_arg_rune,
             context_region,
             args,
             extra_envs_to_look_in,
@@ -248,7 +250,8 @@ where 's: 't,
     callLocation: LocationInDenizen,
     functionName: IImpreciseNameS,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     contextRegion: RegionT,
     args: Vector[CoordT],
     extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -262,7 +265,8 @@ where 's: 't,
         callLocation,
         functionName,
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         contextRegion,
         args,
         extraEnvsToLookIn,
@@ -397,8 +401,14 @@ where 's: 't,
     getCandidateBannersInner(env, coutputs, range, functionName, searchedEnvs, results)
     getParamEnvironments(coutputs, range, paramFilters)
       .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
+    // When calling a method on a placeholder (well, any function involving a
+    // placeholder argument really), also look in the environments for any interfaces that we know
+    // that placeholder impls (see @BDPFWDZ). See also `AfterRegionsIntegrationTests."Method call on impl-bounded
+    // generic dispatches through interface"` in IntegrationTests.
+    getPlaceholderExtraCallEnvs(env, coutputs, range, paramFilters)
+      .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
     extraEnvsToLookIn
-      .foreach(e => getCandidateBannersInner(env, coutputs, range, functionName, searchedEnvs, results))
+      .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
   }
 
 */
@@ -518,8 +528,9 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        explicit_template_arg_rules_without_connections: &[IRulexSR<'s>],
+        positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
         candidate: ICalleeCandidate<'s, 't>,
@@ -551,19 +562,44 @@ where 's: 't,
             ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
                 // See OFCBT.
                 let identifying_rune_templata_types = ft.function.tyype.param_types;
-                if explicit_template_arg_runes_s.len() > identifying_rune_templata_types.len() {
+                if positional_explicit_template_arg_runes_s.len() > identifying_rune_templata_types.len() {
                     panic!("implement: attemptCandidateBanner WrongNumberOfTemplateArguments");
                 } else {
+                    let explicit_template_arg_rules_with_connections: Vec<IRulexSR<'s>> = {
+                        let mut v = explicit_template_arg_rules_without_connections.to_vec();
+                        for (receiving_rune, callsite_rune) in receiving_rune_to_explicit_template_arg_rune.iter() {
+                            if !ft.function.generic_parameters.iter().any(|gp| gp.rune.rune == receiving_rune.rune) {
+                                panic!("Supplied rune {:?} that doesn't exist in called function {:?}", receiving_rune, ft.function.name);
+                            }
+                            v.push(IRulexSR::Equals(EqualsSR { range: callsite_rune.range, left: *receiving_rune, right: *callsite_rune }));
+                        }
+                        v
+                    };
                     // Now that we know what types are expected, we can FINALLY rule-type these explicitly
                     // specified template args! (The rest of the rule-typing happened back in the astronomer,
                     // this is the one time we delay it, see MDRTCUT).
-
+                    // Args supplied through receivingRuneToExplicitTemplateArgRune (the named channel for
+                    // container template args) also need their callsite rune seeded with the expected type,
+                    // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
+                    let receiving_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                        ft.function.generic_parameters.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
+                    let callsite_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                        receiving_rune_to_explicit_template_arg_rune.iter()
+                            .filter_map(|(receiving_rune, callsite_rune)| {
+                                receiving_rune_to_type.get(&receiving_rune.rune).map(|t| (callsite_rune.rune, *t))
+                            })
+                            .collect();
                     // There might be less explicitly specified template args than there are types, and that's
                     // fine. Hopefully the rest will be figured out by the rule evaluator.
-                    let explicit_template_arg_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
-                        explicit_template_arg_runes_s.iter().copied()
+                    let explicit_template_arg_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = {
+                        let mut m = callsite_rune_to_type;
+                        for (r, t) in positional_explicit_template_arg_runes_s.iter().copied()
                             .zip(identifying_rune_templata_types.iter().copied())
-                            .collect();
+                        {
+                            m.insert(r, t);
+                        }
+                        m
+                    };
 
                     let rune_type_solve_env =
                         OverloadRuneTypeSolverEnv { calling_env, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
@@ -571,7 +607,12 @@ where 's: 't,
                     // Scala: runeTypeSolver.solve(sanityCheck, useOptimizedSolver, env, ...)
                     // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)
                     let rules_s_deref: Vec<IRulexSR<'s>> =
-                        explicit_template_arg_rules_s.to_vec();
+                        explicit_template_arg_rules_with_connections.clone();
+                    let combined_explicit_runes: Vec<IRuneS<'s>> = {
+                        let mut v = positional_explicit_template_arg_runes_s.to_vec();
+                        v.extend(receiving_rune_to_explicit_template_arg_rune.iter().map(|(_, callsite_rune)| callsite_rune.rune));
+                        v
+                    };
                     match solve_rune_type(
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
@@ -579,7 +620,7 @@ where 's: 't,
                         call_range.to_vec(),
                         false,
                         &rules_s_deref,
-                        explicit_template_arg_runes_s,
+                        &combined_explicit_runes,
                         true,
                         explicit_template_arg_rune_to_type.clone(),
                     ) {
@@ -652,6 +693,7 @@ where 's: 't,
                                 &combined_rune_to_type,
                                 call_range,
                                 call_location,
+                                &[],
                                 &initial_knowns,
                                 &[],
                             )? {
@@ -659,16 +701,26 @@ where 's: 't,
                                     panic!("implement: attemptCandidateBanner FindFunctionResolveFailure");
                                 }
                                 Ok(complete_resolve_solve) => {
-                                    let explicitly_specified_template_arg_templatas: Vec<ITemplataT<'s, 't>> =
-                                        explicit_template_arg_runes_s.iter()
+                                    let positional_explicitly_specified_template_arg_templatas: Vec<ITemplataT<'s, 't>> =
+                                        positional_explicit_template_arg_runes_s.iter()
                                             .map(|r| *complete_resolve_solve.conclusions.get(r).unwrap())
+                                            .collect();
+                                    let receiving_rune_to_explicit_template_arg_templata: Vec<InitialKnown<'s, 't>> =
+                                        receiving_rune_to_explicit_template_arg_rune.iter()
+                                            .map(|(receiving_rune, explicit_template_arg_rune)| {
+                                                InitialKnown {
+                                                    rune: *receiving_rune,
+                                                    templata: *complete_resolve_solve.conclusions.get(&explicit_template_arg_rune.rune).unwrap(),
+                                                }
+                                            })
                                             .collect();
 
                                     if ft.function.is_lambda() {
+                                        assert!(receiving_rune_to_explicit_template_arg_templata.is_empty(), "implement: lambda receiving rune templatas");
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_templated_function_from_call_for_prototype(
                                             coutputs, calling_env, call_range, call_location, ft,
-                                            &explicitly_specified_template_arg_templatas, context_region, args,
+                                            &positional_explicitly_specified_template_arg_templatas, context_region, args,
                                         )? {
                                             IEvaluateFunctionResult::EvaluateFunctionFailure(failure) => {
                                                 Ok(Err(IFindFunctionFailureReason::CouldntEvaluateTemplateError { reason: failure.reason }))
@@ -690,7 +742,7 @@ where 's: 't,
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_generic_light_function_from_call_for_prototype(
                                             coutputs, call_range, call_location, calling_env, ft,
-                                            &explicitly_specified_template_arg_templatas, RegionT, args,
+                                            &positional_explicitly_specified_template_arg_templatas, RegionT { region: IRegionT::Default }, args, &receiving_rune_to_explicit_template_arg_templata,
                                         )? {
                                             IResolveFunctionResult::ResolveFunctionFailure(failure) => {
                                                 Ok(Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason }))
@@ -746,8 +798,9 @@ where 's: 't,
     coutputs: CompilerOutputs,
     callRange: List[RangeS],
     callLocation: LocationInDenizen,
-    explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    explicitTemplateArgRulesWithoutConnections: Vector[IRulexSR],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     contextRegion: RegionT,
     args: Vector[CoordT],
     candidate: ICalleeCandidate,
@@ -760,20 +813,36 @@ where 's: 't,
 //          function.tyype match {
 //            case TemplateTemplataType(identifyingRuneTemplataTypes, FunctionTemplataType()) => {
         val identifyingRuneTemplataTypes = function.tyype.paramTypes
-        if (explicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size) {
-          Err(WrongNumberOfTemplateArguments(explicitTemplateArgRunesS.size, identifyingRuneTemplataTypes.size))
-        } else {
+        // DO NOT SUBMIT this is the wrong logic, see test "Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes"
+        if (positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size) {
+          return Err(WrongNumberOfTemplateArguments(positionalExplicitTemplateArgRunesS.size, identifyingRuneTemplataTypes.size))
+        }
+        val explicitTemplateArgRulesWithConnections =
+          explicitTemplateArgRulesWithoutConnections ++
+            receivingRuneToExplicitTemplateArgRune.map({ case (receivingRune, callsiteRune) =>
+              if (!function.genericParameters.exists(_.rune.rune == receivingRune.rune)) {
+                throw CompileErrorExceptionT(RangedInternalErrorT(callRange, s"Supplied rune $receivingRune that doesn't exist in called function ${function.name}"))
+              }
+              EqualsSR(callsiteRune.range, receivingRune, callsiteRune)
+            })
 
           // Now that we know what types are expected, we can FINALLY rule-type these explicitly
           // specified template args! (The rest of the rule-typing happened back in the astronomer,
           // this is the one time we delay it, see MDRTCUT).
-
+          // Args supplied through receivingRuneToExplicitTemplateArgRune (the named channel for
+          // container template args) also need their callsite rune seeded with the expected type,
+          // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
+          val receivingRuneToType: Map[IRuneS, ITemplataType] =
+            function.genericParameters.map(gp => gp.rune.rune -> gp.tyype.tyype).toMap
+          val callsiteRuneToType: Map[IRuneS, ITemplataType] =
+            receivingRuneToExplicitTemplateArgRune.flatMap({ case (receivingRune, callsiteRune) =>
+              receivingRuneToType.get(receivingRune.rune).map(callsiteRune.rune -> _)
+            }).toMap
+          val explicitTemplateArgRuneToType =
+            callsiteRuneToType ++
           // There might be less explicitly specified template args than there are types, and that's
           // fine. Hopefully the rest will be figured out by the rule evaluator.
-          val explicitTemplateArgRuneToType =
-          explicitTemplateArgRunesS.zip(identifyingRuneTemplataTypes).toMap
-
-
+              positionalExplicitTemplateArgRunesS.zip(identifyingRuneTemplataTypes).toMap
           val runeTypeSolveEnv =
             new IRuneTypeSolverEnv {
               override def lookup(range: RangeS, nameS: IImpreciseNameS):
@@ -794,8 +863,8 @@ where 's: 't,
             runeTypeSolveEnv,
             callRange,
             false,
-            explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            explicitTemplateArgRulesWithConnections,
+            positionalExplicitTemplateArgRunesS ++ receivingRuneToExplicitTemplateArgRune.map(_._2.rune),
             true,
             explicitTemplateArgRuneToType) match {
             case Err(e@RuneTypeSolveError(_, _)) => {
@@ -816,14 +885,23 @@ where 's: 't,
               val ruleBuilder = ArrayBuffer[IRulexSR]()
               explicifyLookups(
                 runeTypeSolveEnv,
-                runeAToType, ruleBuilder, explicitTemplateArgRulesS) match {
+                runeAToType, ruleBuilder, explicitTemplateArgRulesWithConnections) match {
                 case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: callRange, name))
                 case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: callRange, name))
                 case Ok(()) =>
               }
               val rulesWithoutImplicitCoercionsA = ruleBuilder.toVector
 
-              // We preprocess out the rune parent env lookups, see MKRFA.
+              // We preprocess out the rune parent env lookups, see MKRFA. Per @ECSIIOSZ, this is
+              // the canonical per-call-site setup; other call-site solvers (ArrayCompiler etc.)
+              // should mirror this shape before calling makeSolver/solveForResolving.
+              //
+              // ⚠ This fold is a recurring-bug pattern. MKRFA is unenforced; the value
+              // solver's RuneParentEnvLookupSR handler is a silent no-op, so forgetting to
+              // run this produces unrelated "couldn't solve" errors elsewhere. ArrayCompiler
+              // sat in violation for ~4 years until April 2026. When adding a new
+              // expression-scoped solver caller, either copy this fold verbatim OR (preferably)
+              // land the shared-helper refactor in docs/refactor-thoughts/mkrfa-protocol-leak.md.
               val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
                 rulesWithoutImplicitCoercionsA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
                   case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
@@ -851,19 +929,27 @@ where 's: 't,
                 explicitTemplateArgRuneToType ++ runeAToType,
                 callRange,
                 callLocation,
+                Vector(),
                 initialKnowns,
                 Vector()) match {
                 case (Err(e)) => {
                   Err(FindFunctionResolveFailure(e))
                 }
                 case (Ok(CompleteResolveSolve(explicitRuneSToTemplata, _))) => {
-                  val explicitlySpecifiedTemplateArgTemplatas =
-                    explicitTemplateArgRunesS.map(explicitRuneSToTemplata)
+                  val positionalExplicitlySpecifiedTemplateArgTemplatas =
+                    positionalExplicitTemplateArgRunesS.map(explicitRuneSToTemplata)
+                  val receivingRuneToExplicitTemplateArgTemplata =
+                    receivingRuneToExplicitTemplateArgRune.map({ case (receivingRune, explicitTemplateArgRune) =>
+                      InitialKnown(
+                        receivingRune,
+                        vassertSome(explicitRuneSToTemplata.get(explicitTemplateArgRune.rune)))
+                    })
 
                   if (ft.function.isLambda()) {
+                    vassert(receivingRuneToExplicitTemplateArgTemplata.isEmpty) // implement
                     // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                     functionCompiler.evaluateTemplatedFunctionFromCallForPrototype(
-                      coutputs, callingEnv, callRange, callLocation, ft, explicitlySpecifiedTemplateArgTemplatas.toVector, contextRegion, args) match {
+                      coutputs, callingEnv, callRange, callLocation, ft, positionalExplicitlySpecifiedTemplateArgTemplatas.toVector, contextRegion, args) match {
                       case (EvaluateFunctionFailure(reason)) => Err(CouldntEvaluateTemplateError(reason))
                       case (EvaluateFunctionSuccess(prototype, conclusions, _)) => {
                         paramsMatch(coutputs, callingEnv, callRange, callLocation, args, prototype.prototype.paramTypes, exact) match {
@@ -878,7 +964,8 @@ where 's: 't,
                   } else {
                     // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                     functionCompiler.evaluateGenericLightFunctionFromCallForPrototype(
-                      coutputs, callRange, callLocation, callingEnv, ft, explicitlySpecifiedTemplateArgTemplatas.toVector, RegionT(), args) match {
+                      coutputs, callRange, callLocation, callingEnv, ft, positionalExplicitlySpecifiedTemplateArgTemplatas.toVector, RegionT(DefaultRegionT), args,
+                      receivingRuneToExplicitTemplateArgTemplata) match {
                       case (ResolveFunctionFailure(reason)) => Err(FindFunctionResolveFailure(reason))
                       case (ResolveFunctionSuccess(prototype, conclusions)) => {
                         paramsMatch(coutputs, callingEnv, callRange, callLocation, args, prototype.prototype.paramTypes, exact) match {
@@ -896,7 +983,6 @@ where 's: 't,
             }
           }
         }
-      }
       case HeaderCalleeCandidate(header) => {
         paramsMatch(coutputs, callingEnv, callRange, callLocation, args, header.paramTypes, exact) match {
           case Ok(_) => {
@@ -975,6 +1061,43 @@ where 's: 't,
     })
   }
 
+  private def getPlaceholderExtraCallEnvs(
+    callingEnv: IInDenizenEnvironmentT,
+    coutputs: CompilerOutputs,
+    range: List[RangeS],
+    paramFilters: Vector[CoordT]
+  ): Vector[IInDenizenEnvironmentT] = {
+    val collected = ArrayBuffer[IInDenizenEnvironmentT]()
+    val seen = mutable.Set[IdT[INameT]]()
+    // Look through each parameter, and if it's a placeholder that impls an interface, grab
+    // the interface env so that callers can look inside them for methods too (see @BDPFWDZ).
+    paramFilters.foreach({ case tyype =>
+      tyype.kind match {
+        case KindPlaceholderT(id) => {
+          val placeholderImprecise =
+            TemplatasStore.getImpreciseName(interner, id.localName) match {
+              case None => vfail("Placeholder localName had no imprecise name: " + id.localName)
+              case Some(n) => n
+            }
+          val implKey = interner.intern(ImplSubCitizenImpreciseNameS(placeholderImprecise))
+          val matching = callingEnv.lookupAllWithImpreciseName(implKey, Set(TemplataLookupContext))
+          matching.foreach({
+            case IsaTemplataT(_, _, _, InterfaceTT(superId)) => {
+              val templateId = TemplataCompiler.getInterfaceTemplate(superId)
+              if (!seen.contains(templateId)) {
+                seen.add(templateId)
+                collected += coutputs.getOuterEnvForType(range, templateId)
+              }
+            }
+            case _ =>
+          })
+        }
+        case _ =>
+      }
+    })
+    collected.toVector
+  }
+
 */
 }
 
@@ -989,7 +1112,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function_name: IImpreciseNameS<'s>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
-        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        positional_explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
@@ -1009,7 +1133,9 @@ where 's: 't,
         for candidate in candidates.iter() {
             match self.attempt_candidate_banner(
                 env, coutputs, call_range, call_location, explicit_template_arg_rules_s,
-                explicit_template_arg_runes_s, context_region, args, *candidate, exact)?
+                positional_explicit_template_arg_runes_s,
+                receiving_rune_to_explicit_template_arg_rune,
+                context_region, args, *candidate, exact)?
             {
                 Ok(s) => { successes.push(s); }
                 Err(e) => { failed_to_reason.push((*candidate, e)); }
@@ -1038,6 +1164,7 @@ where 's: 't,
   // overrides that interfaceTT in that position. If we ever support multimethods we
   // might need to take a list of these, same length as the arg types... or combine
   // them somehow.
+  // sure that we're really looking for only a "potential" function?
   def findPotentialFunction(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -1045,7 +1172,8 @@ where 's: 't,
     callLocation: LocationInDenizen,
     functionName: IImpreciseNameS,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     contextRegion: RegionT,
     args: Vector[CoordT],
     extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -1061,7 +1189,9 @@ where 's: 't,
       candidates.map(candidate => {
         attemptCandidateBanner(
           env, coutputs, callRange, callLocation, explicitTemplateArgRulesS,
-          explicitTemplateArgRunesS, contextRegion, args, candidate, exact)
+          positionalExplicitTemplateArgRunesS,
+          receivingRuneToExplicitTemplateArgRune,
+          contextRegion, args, candidate, exact)
           .mapError(e => (candidate -> e))
       })
     val (successes, failedToReason) = Result.split(attempted)
@@ -1341,8 +1471,7 @@ where 's: 't,
         throw CompileErrorExceptionT(
           CouldntNarrowDownCandidates(
             callRange,
-            vimpl(duplicateBanners)))
-        //            duplicateBanners.map(_.range.getOrElse(RangeS.internal(interner, -296729)))))
+            duplicateBanners.toVector))
       } else if (normalIndicesAndCandidates.size == 1) {
         normalIndicesAndCandidates.head._1
       } else if (boundIndicesAndCandidates.nonEmpty) {
@@ -1466,11 +1595,11 @@ where 's: 't,
             callable_te.result().underlying_coord(),
             CoordT {
                 ownership: OwnershipT::Share,
-                region: RegionT,
+                region: RegionT { region: IRegionT::Default },
                 kind: KindT::Int(IntT { bits: 32 }),
             },
         ];
-        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], context_region, &param_filters, &[], false)
+        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)
             .unwrap_or_else(|_e| panic!("Unimplemented: get_array_generator_prototype — propagated ICompileErrorT"))
         {
             Err(_e) => panic!("CouldntFindFunctionToCallT"),
@@ -1490,9 +1619,9 @@ where 's: 't,
     val paramFilters =
       Vector(
         callableTE.result.underlyingCoord,
-        CoordT(ShareT, RegionT(), IntT.i32))
+        CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
       findFunction(
-        callingEnv, coutputs, range, callLocation, funcName, Vector.empty, Vector.empty, contextRegion,
+        callingEnv, coutputs, range, callLocation, funcName, Vector.empty, Vector.empty, Vector.empty, contextRegion,
         paramFilters, Vector.empty, false) match {
         case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
         case Ok(x) => x.prototype
@@ -1520,7 +1649,7 @@ where 's: 't,
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![callable_te.result().underlying_coord(), element_type];
         let calling_env = IInDenizenEnvironmentT::from(fate);
-        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], context_region, &param_filters, &[], false)?
+        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)?
         {
             Err(_e) => panic!("CouldntFindFunctionToCallT"),
             Ok(sfs) => Ok(sfs.prototype),
@@ -1542,7 +1671,7 @@ where 's: 't,
         callableTE.result.underlyingCoord,
         elementType)
     findFunction(
-      fate.snapshot, coutputs, range, callLocation, funcName, Vector.empty, Vector.empty, contextRegion, paramFilters, Vector.empty, false) match {
+      fate.snapshot, coutputs, range, callLocation, funcName, Vector.empty, Vector.empty, Vector.empty, contextRegion, paramFilters, Vector.empty, false) match {
       case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
       case Ok(x) => x.prototype
     }

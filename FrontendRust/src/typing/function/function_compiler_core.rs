@@ -288,7 +288,7 @@ where 's: 't,
     instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT]):
   (FunctionHeaderT) = {
     fullEnv.id match {
-      case IdT(_, Vector(), FunctionNameT(FunctionTemplateNameT(StrI("drop"), _), Vector(CoordTemplataT(CoordT(_, RegionT(), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1"))))))))), Vector(CoordT(_, RegionT(), StructTT(IdT(_, Vector(), StructNameT(StructTemplateNameT(StrI("Tup2")), Vector(CoordTemplataT(CoordT(_, RegionT(), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1")))))))))))))))) => {
+      case IdT(_, Vector(), FunctionNameT(FunctionTemplateNameT(StrI("drop"), _), Vector(CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1"))))))))), Vector(CoordT(_, RegionT(DefaultRegionT), StructTT(IdT(_, Vector(), StructNameT(StructTemplateNameT(StrI("Tup2")), Vector(CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1")))))))))))))))) => {
         vpass()
       }
       case _ =>
@@ -715,7 +715,7 @@ where 's: 't,
         maybe_origin: Option<FunctionTemplataT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         match env.id.local_name {
-            INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name, .. }, template_args, parameters, .. }) if template_args.is_empty() => {
+            INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name, .. }, template_args: template_params, parameters, .. }) => {
                 let header = self.typing_interner.alloc(FunctionHeaderT {
                     id: env.id,
                     attributes: self.typing_interner.alloc_slice_from_vec(attributes),
@@ -725,10 +725,10 @@ where 's: 't,
                 });
 
                 let extern_function_name = self.typing_interner.intern_name(
-                    INameValT::ExternFunction(ExternFunctionNameValT { human_name: *human_name, parameters }));
+                    INameValT::ExternFunction(ExternFunctionNameValT { human_name: *human_name, template_args: template_params, parameters }));
                 let extern_function_id = self.typing_interner.intern_id(IdValT {
                     package_coord: env.id.package_coord,
-                    init_steps: &[],
+                    init_steps: env.id.init_steps,
                     local_name: extern_function_name,
                 });
                 let extern_prototype = self.typing_interner.alloc(PrototypeT {
@@ -792,7 +792,7 @@ where 's: 't,
       maybeOrigin: Option[FunctionTemplataT]):
   (FunctionHeaderT) = {
     env.id.localName match {
-      case FunctionNameT(FunctionTemplateNameT(humanName, _), Vector(), params) => {
+      case FunctionNameT(FunctionTemplateNameT(humanName, _), templateParams, params) => {
         val header =
           ast.FunctionHeaderT(
             env.id,
@@ -802,7 +802,7 @@ where 's: 't,
             returnType2,
             maybeOrigin)
 
-        val externFunctionId = IdT(env.id.packageCoord, Vector.empty, interner.intern(ExternFunctionNameT(humanName, params)))
+        val externFunctionId = IdT(env.id.packageCoord, env.id.initSteps, interner.intern(ExternFunctionNameT(humanName, templateParams, params)))
         val externPrototype = PrototypeT[ExternFunctionNameT](externFunctionId, header.returnType)
 
         coutputs.addInstantiationBounds(
@@ -822,6 +822,34 @@ where 's: 't,
 
         coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
         coutputs.addFunction(function2)
+        // Register the extern with coutputs so it survives to HinputsT.functionExterns and reaches
+        // the Backend's pragma generation. The placeholderedExternId mirrors what Compiler.scala
+        // used to construct: a top-level IdT with an ExternNameT carrying a fresh ExternTemplateNameT
+        // keyed on the function's range. Fires for both top-level externs and externs declared
+        // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
+        val placeholderedExternId =
+          IdT(
+            env.id.packageCoord,
+            Vector(),
+            interner.intern(
+              ExternNameT(
+                interner.intern(ExternTemplateNameT(range.begin)),
+                RegionT(DefaultRegionT))))
+        // Per @PRIIROZ, internal-method externs inherit the container's generic params at the end
+        // of their templateArgs. Hammer uses this count to reshape the wire-format SimpleId so the
+        // inherited args land on the citizen step instead of the function step (i.e.
+        // `Vec<i32>::capacity` rather than `Vec::capacity<i32>`), which is what Backend's
+        // rustifySimpleId expects per @SMLRZ.
+        val maybeInheritance =
+          externPrototype.id.initId(interner) match {
+            case IdT(paackage, initSteps, ctn: ICitizenTemplateNameT) => {
+              val citizen = coutputs.lookupCitizen(IdT(paackage, initSteps, ctn))
+              Some(GenericParametersInheritance(citizen.genericParamTypes.size))
+            }
+            case _ => None
+          }
+        coutputs.addFunctionExtern(
+          range, placeholderedExternId, externPrototype, humanName, maybeInheritance)
         (header)
       }
       case _ => {

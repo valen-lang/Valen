@@ -22,7 +22,7 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::solver::solver::*;
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::IStructTemplateNameT;
-use crate::typing::types::types::{StructTTValT, RegionT};
+use crate::typing::types::types::{IRegionT, StructTTValT, RegionT};
 use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -91,10 +91,9 @@ where 's: 't,
                 InitialKnown { rune: generic_param.rune, templata: *template_arg }
             }).collect();
 
-        let call_site_rules = self.assemble_call_site_rules(
-            struct_a.header_rules, struct_a.generic_parameters, template_args.len() as i32);
+        let call_site_rules = self.assemble_call_site_rules(struct_a.header_rules);
 
-        let context_region = RegionT { };
+        let context_region = RegionT { region: IRegionT::Default };
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -109,7 +108,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &header_rune_to_type_map,
-            call_range, call_location, &initial_knowns, &[],
+            call_range, call_location, struct_a.generic_parameters, &initial_knowns, &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
@@ -157,42 +156,30 @@ where 's: 't,
       //   vassert(templateArgs.size == structA.genericParameters.size)
       // because we have default generic arguments now.
 
+      // Per @ECSIIOSZ, this sets up a per-call-site solver for resolving Foo<X>-style struct
+      // instantiations; explicit template args become InitialKnowns, assembleCallSiteRules
+      // handles SROACSD filtering, and solveForResolving applies DRSINI defaults incrementally.
       val initialKnowns =
         structA.genericParameters.zip(templateArgs).map({ case (genericParam, templateArg) =>
           InitialKnown(RuneUsage(callRange.head, genericParam.rune.rune), templateArg)
         })
 
       val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-          structA.headerRules.toVector, structA.genericParameters, templateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(structA.headerRules.toVector)
 
-      val contextRegion = RegionT()
+      val contextRegion = RegionT(DefaultRegionT)
 
-      // Check if its a valid use of this template
-      val envs = InferEnv(originalCallingEnv, callRange, callLocation, declaringEnv, contextRegion)
-      val solver =
-        inferCompiler.makeSolverState(
-          envs,
+      val CompleteResolveSolve(inferences, runeToFunctionBound) =
+        inferCompiler.solveForResolving(
+          InferEnv(originalCallingEnv, callRange, callLocation, declaringEnv, contextRegion),
           coutputs,
           callSiteRules,
           structA.headerRuneToType,
-          callRange,
-          initialKnowns,
-          Vector())
-      inferCompiler.continue(envs, coutputs, solver) match {
-        case Ok(()) =>
-        case Err(x) => return ResolveFailure(callRange, ResolvingSolveFailedOrIncomplete(x))
-      }
-      val CompleteResolveSolve(inferences, runeToFunctionBound) =
-        inferCompiler.checkResolvingConclusionsAndResolve(
-          envs,
-          coutputs,
           callRange,
           callLocation,
-          structA.headerRuneToType,
-          callSiteRules,
-          Vector(),
-          solver) match {
+          structA.genericParameters,
+          initialKnowns,
+          Vector()) match {
           case Ok(ccs) => ccs
           case Err(x) => return ResolveFailure(callRange, x)
         }
@@ -247,13 +234,22 @@ where 's: 't,
             interface_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
+        let defaults_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            interface_a.generic_parameters.iter()
+                .filter_map(|gp| gp.default.as_ref())
+                .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
+                .collect();
         let rune_to_type_for_prediction: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
-            runes_for_prediction.iter().map(|r| (*r, *interface_a.rune_to_type.get(r).expect("rune not in runeToType"))).collect();
+            runes_for_prediction.iter().map(|r|
+                (*r,
+                 interface_a.rune_to_type.get(r).copied()
+                    .unwrap_or_else(|| *defaults_rune_to_type.get(r).expect("rune not in runeToType or defaultsRuneToType")))
+            ).collect();
 
         // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
         // just to populate any generic parameter default values.
 
-        let context_region = RegionT;
+        let context_region = RegionT { region: IRegionT::Default };
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -315,10 +311,13 @@ where 's: 't,
       val runesForPrediction =
         (interfaceA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
+      val defaultsRuneToType =
+        interfaceA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =
-        runesForPrediction.toVector.map(r => r -> interfaceA.runeToType(r)).toMap
+        runesForPrediction.toVector.map(r =>
+          r -> interfaceA.runeToType.getOrElse(r, defaultsRuneToType(r))).toMap
 
-      val contextRegion = RegionT()
+      val contextRegion = RegionT(DefaultRegionT)
 
       // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
       // just to populate any generic parameter default values.
@@ -387,15 +386,24 @@ where 's: 't,
             struct_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
+        let defaults_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            struct_a.generic_parameters.iter()
+                .filter_map(|gp| gp.default.as_ref())
+                .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
+                .collect();
         let rune_to_type_for_prediction: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
-            runes_for_prediction.iter().map(|r| (*r, *struct_a.header_rune_to_type.get(r).expect("rune not in headerRuneToType"))).collect();
+            runes_for_prediction.iter().map(|r|
+                (*r,
+                 struct_a.header_rune_to_type.get(r).copied()
+                    .unwrap_or_else(|| *defaults_rune_to_type.get(r).expect("rune not in headerRuneToType or defaultsRuneToType")))
+            ).collect();
 
         // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
         // just to populate any generic parameter default values.
 
         // Maybe we should make this incremental too, like when solving definitions?
 
-        let context_region = RegionT {};
+        let context_region = RegionT { region: IRegionT::Default };
 
         // We're just predicting, see STCMBDP.
         let inferences =
@@ -457,15 +465,18 @@ where 's: 't,
       val runesForPrediction =
         (structA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
+      val defaultsRuneToType =
+        structA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =
-        runesForPrediction.toVector.map(r => r -> structA.headerRuneToType(r)).toMap
+        runesForPrediction.toVector.map(r =>
+          r -> structA.headerRuneToType.getOrElse(r, defaultsRuneToType(r))).toMap
 
       // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
       // just to populate any generic parameter default values.
 
       // Maybe we should make this incremental too, like when solving definitions?
 
-      val contextRegion = RegionT()
+      val contextRegion = RegionT(DefaultRegionT)
 
       val inferences =
       // We're just predicting, see STCMBDP.
@@ -526,10 +537,9 @@ where 's: 't,
                 InitialKnown { rune: generic_param.rune, templata: *template_arg }
             }).collect();
 
-        let call_site_rules = self.assemble_call_site_rules(
-            interface_a.rules, interface_a.generic_parameters, template_args.len() as i32);
+        let call_site_rules = self.assemble_call_site_rules(interface_a.rules);
 
-        let context_region = RegionT { };
+        let context_region = RegionT { region: IRegionT::Default };
         let envs = InferEnv {
             original_calling_env,
             parent_ranges: call_range,
@@ -544,7 +554,7 @@ where 's: 't,
         // This checks to make sure it's a valid use of this template.
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &rune_to_type_map,
-            call_range, call_location, &initial_knowns, &[],
+            call_range, call_location, interface_a.generic_parameters, &initial_knowns, &[],
         ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
@@ -598,10 +608,9 @@ where 's: 't,
         })
 
       val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-          interfaceA.rules.toVector, interfaceA.genericParameters, templateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(interfaceA.rules.toVector)
 
-      val contextRegion = RegionT()
+      val contextRegion = RegionT(DefaultRegionT)
 
       // This checks to make sure it's a valid use of this template.
       val CompleteResolveSolve(inferences, runeToFunctionBound) =
@@ -612,6 +621,7 @@ where 's: 't,
           interfaceA.runeToType,
           callRange,
         callLocation,
+          interfaceA.genericParameters,
           initialKnowns,
           Vector()) match {
           case Ok(ccs) => ccs
@@ -674,7 +684,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![struct_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[], &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
@@ -696,7 +706,7 @@ where 's: 't,
                             let mut m = HashMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![]).unwrap();
+                        }, vec![], std::collections::HashSet::new()).unwrap();
                     true
                 }
             }
@@ -771,7 +781,7 @@ where 's: 't,
       val allRuneToType = structA.headerRuneToType ++ structA.membersRuneToType
       val definitionRules = allRulesS.filter(InferCompiler.includeRuleInDefinitionSolve)
 
-      val envs = InferEnv(outerEnv, List(structA.range), callLocation, outerEnv, RegionT())
+      val envs = InferEnv(outerEnv, List(structA.range), callLocation, outerEnv, RegionT(DefaultRegionT))
       val solver =
         inferCompiler.makeSolverState(
           envs, coutputs, definitionRules, allRuneToType, structA.range :: parentRanges, Vector(), Vector())
@@ -888,7 +898,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![interface_a.range]),
             call_location,
             self_env: outer_env_ienv,
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &rune_to_type, &all_ranges, &[], &[]);
         let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
@@ -910,7 +920,7 @@ where 's: 't,
                             let mut m = HashMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![]).unwrap();
+                        }, vec![], std::collections::HashSet::new()).unwrap();
                     true
                 }
             }
@@ -985,7 +995,7 @@ where 's: 't,
 
       val definitionRules = interfaceA.rules.filter(InferCompiler.includeRuleInDefinitionSolve)
 
-      val envs = InferEnv(outerEnv, List(interfaceA.range), callLocation, outerEnv, RegionT())
+      val envs = InferEnv(outerEnv, List(interfaceA.range), callLocation, outerEnv, RegionT(DefaultRegionT))
       val solver =
         inferCompiler.makeSolverState(
           envs, coutputs, definitionRules, interfaceA.runeToType, interfaceA.range :: parentRanges, Vector(), Vector())

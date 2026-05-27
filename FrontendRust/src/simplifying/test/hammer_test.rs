@@ -28,6 +28,7 @@ class HammerTest extends FunSuite with Matchers with Collector {
 */
 // mig: fn local_ids_unique
 #[test]
+#[ignore = "unmigrated - pending simplifying-pass body migration"]
 fn local_ids_unique() {
     panic!("Unmigrated test: local_ids_unique");
 }
@@ -64,3 +65,15 @@ fn local_ids_unique() {
 }
 
 */
+// NOVEL CODE: no Scala counterpart. Minimal end-to-end driving test for hammer
+// body migration — the simplest possible program (return an int; no control flow,
+// no generics), modeled structurally on `local_ids_unique` above. Running it drives
+// the hammer pipeline from the first `panic!()` outward (currently
+// `HammerTestCompilation::test`). As the harness + entry points get real bodies,
+// grow this to mirror local_ids_unique's shape: get_hamuts() →
+// lookup_package(TEST_TLD) → lookup_function("main") → assert the export exists.
+#[test]
+fn returns_int() {
+    use super::test_compilation::test;
+    let _compile = test("exported func main() int { return 7; }");
+}

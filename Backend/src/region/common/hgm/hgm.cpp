@@ -809,5 +809,7 @@ void HybridGenerationalMemory::deallocate(
           "genPtr");
   adjustCounterV(globalState, builder, globalState->metalCache->i32, genPtrLE, 1, false);
 
-  innerDeallocate(from, globalState, functionState, kindStructs, builder, sourceRefMT, sourceRef);
+//  innerDeallocate(from, globalState, functionState, kindStructs, builder, sourceRefMT, sourceRef);
+  // DO NOT SUBMIT we're pretending everything is heap
+  innerDeallocateYonder(from, globalState, functionState, kindStructs, builder, sourceRefMT, sourceRef);
 }

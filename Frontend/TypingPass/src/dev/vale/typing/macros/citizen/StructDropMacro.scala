@@ -41,6 +41,7 @@ class StructDropMacro(
 
     val rules = new Accumulator[IRulexSR]()
     // Use the same rules as the original struct, see MDSFONARFO.
+    // Per @DRSINI, this copies the hoisted EqualsSR from default generic params.
     structA.headerRules.foreach(r => rules.add(r))
     val runeToType = mutable.HashMap[IRuneS, ITemplataType]()
     // Use the same runes as the original struct, see MDSFONARFO.
@@ -79,7 +80,9 @@ class StructDropMacro(
         RuneUsage(structA.name.range, selfKindRune)))
 
 
-    // Use the same generic parameters as the struct
+    // Use the same generic parameters as the struct.
+    // Per @DRSINI, defaults are harmless here because they're only added incrementally
+    // for unsolved runes during solveForResolving, not eagerly.
     val functionGenericParameters = structA.genericParameters
 
     val functionTemplataType =
@@ -177,9 +180,9 @@ class StructDropMacro(
         case MutabilityTemplataT(ImmutableT) => ShareT
         case PlaceholderTemplataT(idT, MutabilityTemplataType()) => OwnT
       }
-    val structType = CoordT(structOwnership, RegionT(), structTT)
+    val structType = CoordT(structOwnership, RegionT(DefaultRegionT), structTT)
 
-    val ret = CoordT(ShareT, RegionT(), VoidT())
+    val ret = CoordT(ShareT, RegionT(DefaultRegionT), VoidT())
     val header = ast.FunctionHeaderT(env.id, Vector.empty, params2, ret, Some(env.templata))
 
     coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
@@ -221,12 +224,12 @@ class StructDropMacro(
                         coutputs,
                         originFunction1.map(_.range).toList ++ callRange,
                         callLocation,
-                        RegionT(),
+                        RegionT(DefaultRegionT),
                         UnletTE(v))
                     }))
               }
             },
-            ReturnTE(VoidLiteralTE(RegionT())))))
+            ReturnTE(VoidLiteralTE(RegionT(DefaultRegionT))))))
     (header, body)
   }
 }

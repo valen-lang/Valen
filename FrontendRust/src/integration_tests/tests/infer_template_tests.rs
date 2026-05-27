@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.typing.ast.{FunctionCallTE, ParameterT, PrototypeT}
@@ -8,8 +9,19 @@ import dev.vale.typing.templata.simpleNameT
 import dev.vale.typing.types.StructTT
 import dev.vale.von.VonInt
 import org.scalatest._
-
+*/
+// mig: struct InferTemplateTests
+pub struct InferTemplateTests;
+/*
 class InferTemplateTests extends FunSuite with Matchers {
+*/
+// mig: fn test_inferring_a_borrowed_argument
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn test_inferring_a_borrowed_argument() {
+  panic!("Unmigrated test: test_inferring_a_borrowed_argument");
+}
+/*
   test("Test inferring a borrowed argument") {
     val compile = RunCompilation.test(
       """
@@ -38,6 +50,14 @@ class InferTemplateTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
+*/
+// mig: fn test_inferring_a_borrowed_static_sized_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn test_inferring_a_borrowed_static_sized_array() {
+  panic!("Unmigrated test: test_inferring_a_borrowed_static_sized_array");
+}
+/*
   test("Test inferring a borrowed static sized array") {
     val compile = RunCompilation.test(
       """
@@ -51,6 +71,14 @@ class InferTemplateTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
+*/
+// mig: fn test_inferring_an_owning_static_sized_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+pub fn test_inferring_an_owning_static_sized_array() {
+  panic!("Unmigrated test: test_inferring_an_owning_static_sized_array");
+}
+/*
   test("Test inferring an owning static sized array") {
     val compile = RunCompilation.test(
       """
@@ -65,3 +93,5 @@ class InferTemplateTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
 }
+
+*/

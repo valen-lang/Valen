@@ -24,7 +24,7 @@ class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
         |  a = 3;
         |  set x = 7 )
         """.stripMargin).expectErr() match {
-      case BadExpressionEnd(_) =>
+      case BadStartOfStatementError(_) =>
     }
   }
 

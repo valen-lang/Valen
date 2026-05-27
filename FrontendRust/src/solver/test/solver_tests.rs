@@ -855,7 +855,7 @@ fn advance(
         let mut new_conclusions = std::collections::HashMap::new();
         new_conclusions.insert(-1i64, "Firefly".to_string());
         solver_state
-            .commit_step::<String>(false, vec![], new_conclusions, vec![])
+            .commit_step::<String>(false, vec![], new_conclusions, vec![], std::collections::HashSet::new())
             .expect("commit_step");
 
         while advance(&mut solver_state, &test_solver).expect("advance") {}

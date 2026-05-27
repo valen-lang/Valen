@@ -209,7 +209,7 @@ case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     val mutability = expectMutability(templateArgs(1))
     val variability = expectVariability(templateArgs(2))
     val elementType = expectCoordTemplata(templateArgs(3)).coord
-    val selfRegion = vregionmut(RegionT())
+    val selfRegion = vregionmut(RegionT(DefaultRegionT))
     interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
   }
 }
@@ -228,7 +228,7 @@ case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     vassert(templateArgs.size == 2)
     val mutability = expectMutability(templateArgs(0))
     val elementType = expectCoordTemplata(templateArgs(1)).coord
-    val region = vregionmut(RegionT())
+    val region = vregionmut(RegionT(DefaultRegionT))
     interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
   }
 }
@@ -338,6 +338,7 @@ case class ExternNameT(
 
 case class ExternFunctionNameT(
   humanName: StrI,
+  templateArgs: Vector[ITemplataT[ITemplataType]],
   parameters: Vector[CoordT]
 ) extends IFunctionNameT with IFunctionTemplateNameT {
   override def template: IFunctionTemplateNameT = this
@@ -348,8 +349,6 @@ case class ExternFunctionNameT(
     templateArgs: Vector[ITemplataT[ITemplataType]],
     params: Vector[CoordT]):
   IFunctionNameT = this
-
-  override def templateArgs: Vector[ITemplataT[ITemplataType]] = Vector.empty
 }
 
 case class FunctionNameT(
@@ -417,6 +416,7 @@ case class FunctionTemplateNameT(
   }
 }
 
+// Per @LAGTNGZ, paramTypes is part of the template name so different arg tuples produce distinct names.
 case class LambdaCallFunctionTemplateNameT(
   codeLocation: CodeLocationS,
   paramTypes: Vector[CoordT]
@@ -428,6 +428,7 @@ case class LambdaCallFunctionTemplateNameT(
   }
 }
 
+// Per @LAGTNGZ, one closure struct can correspond to many of these — one per distinct call-site arg tuple.
 case class LambdaCallFunctionNameT(
   template: LambdaCallFunctionTemplateNameT,
   templateArgs: Vector[ITemplataT[ITemplataType]],
@@ -563,6 +564,7 @@ case class InterfaceNameT(
   vpass()
 }
 
+// Per @LAGTNGZ, the closure struct doesnt have its own generic parameters, but its associated LambdaCallFunctionTemplateNameT does.
 case class LambdaCitizenTemplateNameT(
   codeLocation: CodeLocationS
 ) extends IStructTemplateNameT {

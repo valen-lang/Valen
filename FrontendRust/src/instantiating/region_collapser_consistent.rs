@@ -67,12 +67,13 @@ pub fn collapse_function_name() { panic!("Unimplemented: collapse_function_name"
           })
         FunctionNameIX[nI](templateC, templateArgsC, paramsC)
       }
-      case ExternFunctionNameI(humanName, parameters) => {
+      case ExternFunctionNameI(humanName, templateArgs, parameters) => {
         val paramsC =
           parameters.map(param => {
             collapseCoord(map, param)
           })
-        ExternFunctionNameI[nI](humanName, paramsC)
+        val templateArgsC = templateArgs.map(collapseTemplata(map, _))
+        ExternFunctionNameI[nI](humanName, templateArgsC, paramsC)
       }
       case LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
         val templateC = LambdaCallFunctionTemplateNameI[nI](codeLocation, paramsTT)
@@ -155,6 +156,7 @@ pub fn collapse_name() { panic!("Unimplemented: collapse_name"); }
         collapseFunctionName(map, n.asInstanceOf[IFunctionNameI[sI]])
       }
       case n @ LambdaCallFunctionNameI(_, _, _) => collapseFunctionName(map, n)
+      case s @ StructNameI(_, _) => collapseStructName(map, s)
       case other => vimpl(other)
     }
   }

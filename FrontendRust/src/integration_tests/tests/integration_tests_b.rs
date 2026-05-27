@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import dev.vale.finalast._
@@ -7,10 +8,19 @@ import dev.vale.typing.ast._
 import dev.vale.typing.types._
 import dev.vale.von.{VonBool, VonFloat, VonInt}
 import org.scalatest._
-
-
+*/
+// mig: struct IntegrationTestsB
+pub struct IntegrationTestsB;
+/*
 class IntegrationTestsB extends FunSuite with Matchers {
-
+*/
+// mig: fn tests_single_expression_and_single_statement_functions_returns
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_single_expression_and_single_statement_functions_returns() {
+    panic!("Unmigrated test: tests_single_expression_and_single_statement_functions_returns");
+}
+/*
   test("Tests single expression and single statement functions' returns") {
     val compile = RunCompilation.test(
       """
@@ -20,7 +30,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
       """.stripMargin)
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_calling_a_templated_struct_constructor
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_calling_a_templated_struct_constructor() {
+    panic!("Unmigrated test: tests_calling_a_templated_struct_constructor");
+}
+/*
   test("Tests calling a templated struct's constructor") {
     val compile = RunCompilation.test(
       """
@@ -34,7 +51,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
       """.stripMargin)
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn test_array_push_pop_len_capacity_drop
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_array_push_pop_len_capacity_drop() {
+    panic!("Unmigrated test: test_array_push_pop_len_capacity_drop");
+}
+/*
   test("Test array push, pop, len, capacity, drop") {
     val compile = RunCompilation.test(
       """
@@ -55,7 +79,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn test_int_generic
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_int_generic() {
+    panic!("Unmigrated test: test_int_generic");
+}
+/*
   test("Test int generic") {
     val compile = RunCompilation.test(
       """
@@ -72,17 +103,38 @@ class IntegrationTestsB extends FunSuite with Matchers {
       """.stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }
-
+*/
+// mig: fn tests_upcasting_from_a_struct_to_an_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_upcasting_from_a_struct_to_an_interface() {
+    panic!("Unmigrated test: tests_upcasting_from_a_struct_to_an_interface");
+}
+/*
   test("Tests upcasting from a struct to an interface") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/virtuals/upcasting.vale"))
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_upcasting_from_if
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_upcasting_from_if() {
+    panic!("Unmigrated test: tests_upcasting_from_if");
+}
+/*
   test("Tests upcasting from if") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/if/upcastif.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn tests_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_lambda() {
+    panic!("Unmigrated test: tests_lambda");
+}
+/*
   test("Tests lambda") {
     val compile =
       RunCompilation.test(
@@ -94,7 +146,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
           |""".stripMargin)
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_generic_with_a_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_generic_with_a_lambda() {
+    panic!("Unmigrated test: tests_generic_with_a_lambda");
+}
+/*
   test("Tests generic with a lambda") {
     val compile =
       RunCompilation.test(
@@ -108,7 +167,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
           |""".stripMargin)
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_generic_s_lambda_calling_parent_function_s_bound
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_generic_s_lambda_calling_parent_function_s_bound() {
+    panic!("Unmigrated test: tests_generic_s_lambda_calling_parent_function_s_bound");
+}
+/*
   test("Tests generic's lambda calling parent function's bound") {
     // See LCCPGB for explanation.
     val compile =
@@ -124,7 +190,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
           |""".stripMargin)
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_generic_with_a_polymorphic_lambda
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_generic_with_a_polymorphic_lambda() {
+    panic!("Unmigrated test: tests_generic_with_a_polymorphic_lambda");
+}
+/*
   test("Tests generic with a polymorphic lambda") {
     // This lambda has an implicit <Y> template param
     val compile =
@@ -139,7 +212,14 @@ class IntegrationTestsB extends FunSuite with Matchers {
           |""".stripMargin)
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_generic_with_a_polymorphic_lambda_invoked_twice
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
+    panic!("Unmigrated test: tests_generic_with_a_polymorphic_lambda_invoked_twice");
+}
+/*
   test("Tests generic with a polymorphic lambda invoked twice") {
     // This lambda has an implicit <Y> template param, invoked with a bool then a string
     val compile =
@@ -173,17 +253,38 @@ class IntegrationTestsB extends FunSuite with Matchers {
 //        |""".stripMargin)
 //    compile.evalForKind(Vector()) match { case VonInt(5) => }
 //  }
-
+*/
+// mig: fn tests_double_closure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_double_closure() {
+    panic!("Unmigrated test: tests_double_closure");
+}
+/*
   test("Tests double closure") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/lambdas/doubleclosure.vale"))
     compile.run(Vector())
   }
-
+*/
+// mig: fn tests_from_subdir_file
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_from_subdir_file() {
+    panic!("Unmigrated test: tests_from_subdir_file");
+}
+/*
   test("Tests from subdir file") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/virtuals/round.vale"))
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
-
+*/
+// mig: fn test_generic_param_default
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_generic_param_default() {
+    panic!("Unmigrated test: test_generic_param_default");
+}
+/*
   test("Test generic param default") {
     val compile = RunCompilation.test(
       """
@@ -192,12 +293,26 @@ class IntegrationTestsB extends FunSuite with Matchers {
       """.stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn tests_calling_a_virtual_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_calling_a_virtual_function() {
+    panic!("Unmigrated test: tests_calling_a_virtual_function");
+}
+/*
   test("Tests calling a virtual function") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/virtuals/calling.vale"))
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn tests_making_a_variable_with_a_pattern
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_making_a_variable_with_a_pattern() {
+    panic!("Unmigrated test: tests_making_a_variable_with_a_pattern");
+}
+/*
   test("Tests making a variable with a pattern") {
     // Tests putting MyOption<int> as the type of x.
     val compile = RunCompilation.test(
@@ -218,32 +333,67 @@ class IntegrationTestsB extends FunSuite with Matchers {
       """.stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn tests_a_linked_list
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_linked_list() {
+    panic!("Unmigrated test: tests_a_linked_list");
+}
+/*
 
   test("Tests a linked list") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/virtuals/ordinarylinkedlist.vale"))
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn tests_a_templated_linked_list
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_templated_linked_list() {
+    panic!("Unmigrated test: tests_a_templated_linked_list");
+}
+/*
   test("Tests a templated linked list") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/genericvirtuals/templatedlinkedlist.vale"))
     compile.evalForKind(Vector())
   }
-
+*/
+// mig: fn tests_calling_an_abstract_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_calling_an_abstract_function() {
+    panic!("Unmigrated test: tests_calling_an_abstract_function");
+}
+/*
   test("Tests calling an abstract function") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/genericvirtuals/callingAbstract.vale"))
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn template_overrides_are_stamped
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn template_overrides_are_stamped() {
+    panic!("Unmigrated test: template_overrides_are_stamped");
+}
+/*
   test("Template overrides are stamped") {
     // See TIBANFC: Translate Impl Bound Argument Names For Case
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/genericvirtuals/templatedoption.vale"), false)
     compile.evalForKind(Vector()) match { case VonInt(1) => }
   }
-
+*/
+// mig: fn tests_a_foreach_for_a_linked_list
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_a_foreach_for_a_linked_list() {
+    panic!("Unmigrated test: tests_a_foreach_for_a_linked_list");
+}
+/*
   test("Tests a foreach for a linked list") {
     val compile = RunCompilation.test(
         Tests.loadExpected("programs/genericvirtuals/foreachlinkedlist.vale"))
@@ -261,12 +411,26 @@ class IntegrationTestsB extends FunSuite with Matchers {
 //    val coutputs = compile.expectCompilerOutputs()
 //    compile.evalForKind(Vector())
 //  }
-
+*/
+// mig: fn tests_recursion
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_recursion() {
+    panic!("Unmigrated test: tests_recursion");
+}
+/*
   test("Tests recursion") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/functions/recursion.vale"))
     compile.evalForKind(Vector()) match { case VonInt(120) => }
   }
-
+*/
+// mig: fn tests_generic_recursion
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn tests_generic_recursion() {
+    panic!("Unmigrated test: tests_generic_recursion");
+}
+/*
   test("Tests generic recursion") {
     val compile = RunCompilation.test(
       """
@@ -289,3 +453,5 @@ class IntegrationTestsB extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(120) => }
   }
 }
+
+*/

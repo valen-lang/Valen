@@ -5,8 +5,8 @@ import dev.vale.parsing.ast.LoadAsBorrowP
 import dev.vale.postparsing._
 import dev.vale.postparsing.patterns._
 import dev.vale.{Err, Interner, Keywords, Ok, Profiler, RangeS, Result, vassert, vassertSome, vfail, vimpl}
-import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
-import dev.vale.typing.{ArrayCompiler, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, InferCompiler, InitialSend, RangedInternalErrorT, TypingPassOptions, WrongNumberOfDestructuresError}
+import dev.vale.postparsing.rules.{IRulexSR, RuneParentEnvLookupSR, RuneUsage}
+import dev.vale.typing.{ArrayCompiler, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, InferCompiler, InitialKnown, InitialSend, RangedInternalErrorT, TypingPassOptions, WrongNumberOfDestructuresError}
 import dev.vale.typing.ast.{ConstantIntTE, DestroyMutRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, LetNormalTE, LocalLookupTE, LocationInFunctionEnvironmentT, ReferenceExpressionTE, ReferenceMemberLookupTE, SoftLoadTE}
 import dev.vale.typing.env.{ILocalVariableT, NodeEnvironmentBox, TemplataEnvEntry}
 import dev.vale.typing.function.DestructorCompiler
@@ -151,17 +151,33 @@ class PatternCompiler(
             }
             val rulesA = ruleBuilder.toVector
 
+            // We preprocess out the rune parent env lookups, see MKRFA.
+            val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+              rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+                case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+                  val templata =
+                    vassertSome(
+                      nenv.snapshot.lookupNearestWithImpreciseName(
+                        interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+                  val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+                  (newConclusions, remainingRules)
+                }
+                case ((previousConclusions, remainingRules), rule) => {
+                  (previousConclusions, remainingRules :+ rule)
+                }
+              })
+
             val CompleteDefineSolve(templatasByRune, _) =
               // We could probably just solveForResolving (see DBDAR) but seems right to solveForDefining since we're
               // declaring a bunch of things.
               inferCompiler.solveForDefining(
                 InferEnv(nenv.snapshot, parentRanges, callLocation, nenv.snapshot, nenv.defaultRegion),
                 coutputs,
-                rulesA,
+                rulesWithoutRuneParentEnvLookups,
                 runeAToType.toMap,
                 pattern.range :: parentRanges,
                 callLocation,
-                Vector(),
+                initialKnowns,
                 Vector(
                   InitialSend(
                     RuneUsage(pattern.range, PatternInputRuneS(pattern.range.begin)),
@@ -616,6 +632,6 @@ class PatternCompiler(
       containerAlias: ReferenceExpressionTE,
       index: Int): StaticSizedArrayLookupTE = {
     arrayCompiler.lookupInStaticSizedArray(
-      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT()), staticSizedArrayT)
+      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT(DefaultRegionT)), staticSizedArrayT)
   }
 }

@@ -21,7 +21,26 @@ import dev.vale.instantiating.ast._
 import dev.vale.{vassert, vcurious, vfail, vimpl, vwat, finalast => m}
 
 class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
+*/
 
+// mig: fn translate_block
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_block<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        parent_locals: &mut Locals<'s, 'i, 'h>,
+        block2: &BlockIE<'s, 'i, cI>,
+    ) -> &'h BlockH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_block");
+    }
+}
+/*
   def translateBlock(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -63,10 +82,29 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
     unstackifiedLocalsFromParent.foreach(parentLocals.markUnstackified)
     parentLocals.setNextLocalIdNumber(blockLocals.nextLocalIdNumber)
 
-//    start here, we're returning locals and thats not optimal
+//    start here, we're returning locals and thats not optimal DO NOT SUBMIT?
     BlockH(exprH)
   }
+*/
 
+// mig: fn translate_mutabilify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_mutabilify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        node: &MutabilifyIE<'s, 'i, cI>,
+    ) -> &'h MutabilifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_mutabilify");
+    }
+}
+/*
   def translateMutabilify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -93,7 +131,26 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
 
     MutabilifyH(innerHE)
   }
+*/
 
+// mig: fn translate_immutabilify
+impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+where 's: 'h,
+{
+    pub fn translate_immutabilify<'i>(
+        &self,
+        hinputs: &HinputsI<'s, 'i>,
+        hamuts: &mut Hamuts<'s, 'i, 'h>,
+        current_function_header: &FunctionHeaderI<'s, 'i>,
+        locals: &mut Locals<'s, 'i, 'h>,
+        node: &ImmutabilifyIE<'s, 'i, cI>,
+    ) -> &'h ImmutabilifyH<'s, 'h>
+    where 's: 'i, 'i: 'h,
+    {
+        panic!("Unimplemented: translate_immutabilify");
+    }
+}
+/*
   def translateImmutabilify(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -122,57 +179,3 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
   }
 }
 */
-
-// mig: fn translate_block
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_block<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        parent_locals: &mut Locals<'s, 'i, 'h>,
-        block2: &BlockIE<'s, 'i, cI>,
-    ) -> &'h BlockH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_block");
-    }
-}
-
-// mig: fn translate_mutabilify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_mutabilify<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        node: &MutabilifyIE<'s, 'i, cI>,
-    ) -> &'h MutabilifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_mutabilify");
-    }
-}
-
-// mig: fn translate_immutabilify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
-{
-    pub fn translate_immutabilify<'i>(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        node: &ImmutabilifyIE<'s, 'i, cI>,
-    ) -> &'h ImmutabilifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
-    {
-        panic!("Unimplemented: translate_immutabilify");
-    }
-}

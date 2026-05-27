@@ -2,10 +2,10 @@ package dev.vale.instantiating.ast
 
 import dev.vale.postparsing.IRuneS
 import dev.vale.typing.ast._
-import dev.vale.typing.names.{CitizenNameT, CitizenTemplateNameT, IdT, FunctionNameT, IFunctionNameT, LambdaCitizenNameT}
+import dev.vale.typing.names.{CitizenNameT, CitizenTemplateNameT, FunctionNameT, IFunctionNameT, IdT, LambdaCitizenNameT}
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
-import dev.vale.{StrI, vassertOne, vassertSome, vcurious, vfail, vimpl}
+import dev.vale.{StrI, vassert, vassertOne, vassertSome, vcurious, vfail, vimpl}
 import dev.vale.typing.ast._
 import dev.vale.typing.names._
 import dev.vale.typing.types._
@@ -33,9 +33,10 @@ case class HinputsI(
 
   kindExports: Vector[KindExportI],
   functionExports: Vector[FunctionExportI],
-//  kindExterns: Vector[KindExternI],
+  kindExterns: Map[StructIT[cI], KindExternI],
   functionExterns: Vector[FunctionExternI],
 ) {
+  override def toString: String = "HinputsI#()"
 
   private val subCitizenToInterfaceToEdgeMutable = mutable.HashMap[IdI[cI, ICitizenNameI[cI]], mutable.HashMap[IdI[cI, IInterfaceNameI[cI]], EdgeI]]()
   interfaceToSubCitizenToEdge.foreach({ case (interface, subCitizenToEdge) =>
@@ -49,7 +50,7 @@ case class HinputsI(
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
   override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+  override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 
   def lookupStruct(structId: IdI[cI, IStructNameI[cI]]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))
@@ -57,6 +58,11 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
   def lookupInterface(interfaceId: IdI[cI, IInterfaceNameI[cI]]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
+  }
+
+  def lookupCitizen(citizenId: IdI[cI, ICitizenNameI[cI]]): CitizenDefinitionI = {
+    vassertOne(
+      structs.find(_.instantiatedCitizen.id == citizenId) ++ interfaces.find(_.instantiatedCitizen.id == citizenId))
   }
 
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameI[cI]): StructDefinitionI = {

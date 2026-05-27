@@ -1,3 +1,5 @@
+// mig: struct StructTests
+/*
 package dev.vale
 
 import dev.vale.testvm.PanicException
@@ -5,6 +7,12 @@ import dev.vale.von.VonInt
 import org.scalatest._
 
 class StructTests extends FunSuite with Matchers {
+*/
+// mig: fn make_empty_imm_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_empty_imm_struct() { panic!("Unmigrated test: make_empty_imm_struct"); }
+/*
   test("Make empty imm struct") {
     val compile = RunCompilation.test(
       """
@@ -16,7 +24,12 @@ class StructTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn make_imm_struct_with_one_member
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_imm_struct_with_one_member() { panic!("Unmigrated test: make_imm_struct_with_one_member"); }
+/*
   test("Make imm struct with one member") {
     val compile = RunCompilation.test(
       """
@@ -28,7 +41,12 @@ class StructTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn make_nested_imm_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_nested_imm_struct() { panic!("Unmigrated test: make_nested_imm_struct"); }
+/*
   test("Make nested imm struct") {
     val compile = RunCompilation.test(
       """
@@ -41,7 +59,12 @@ class StructTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn make_empty_mut_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_empty_mut_struct() { panic!("Unmigrated test: make_empty_mut_struct"); }
+/*
   test("Make empty mut struct") {
     val compile = RunCompilation.test(
       """
@@ -53,13 +76,23 @@ class StructTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn constructor_with_self
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn constructor_with_self() { panic!("Unmigrated test: constructor_with_self"); }
+/*
   test("Constructor with self") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/structs/constructor.vale"))
 
     compile.evalForKind(Vector()) match { case VonInt(10) => }
   }
-
+*/
+// mig: fn make_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_struct() { panic!("Unmigrated test: make_struct"); }
+/*
   test("Make struct") {
     val compile = RunCompilation.test(
       """
@@ -71,17 +104,32 @@ class StructTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
+*/
+// mig: fn make_struct_and_get_member
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_struct_and_get_member() { panic!("Unmigrated test: make_struct_and_get_member"); }
+/*
   test("Make struct and get member") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/structs/getMember.vale"))
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn mutate_struct
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn mutate_struct() { panic!("Unmigrated test: mutate_struct"); }
+/*
   test("Mutate struct") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/structs/mutate.vale"))
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
-
+*/
+// mig: fn normal_destructure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn normal_destructure() { panic!("Unmigrated test: normal_destructure"); }
+/*
   test("Normal destructure") {
     val compile = RunCompilation.test(
       """
@@ -98,7 +146,12 @@ class StructTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
-
+*/
+// mig: fn sugar_destructure
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn sugar_destructure() { panic!("Unmigrated test: sugar_destructure"); }
+/*
   test("Sugar destructure") {
     val compile = RunCompilation.test(
       """
@@ -115,7 +168,12 @@ class StructTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn destroy_members_at_right_times
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn destroy_members_at_right_times() { panic!("Unmigrated test: destroy_members_at_right_times"); }
+/*
   test("Destroy members at right times") {
     val compile = RunCompilation.test(
       """
@@ -142,7 +200,8 @@ class StructTests extends FunSuite with Matchers {
 
     compile.evalForStdout(Vector()) shouldEqual "Destroying marine!\nDestroying weapon!\n"
   }
-
+*/
+/*
   // Known failure 2020-08-20
 //  test("Mutate destroys member after moving it out of the object") {
 //    val compile = RunCompilation.test(
@@ -191,6 +250,12 @@ class StructTests extends FunSuite with Matchers {
 //  }
 
 
+*/
+// mig: fn panic_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn panic_function() { panic!("Unmigrated test: panic_function"); }
+/*
   test("Panic function") {
     val compile = RunCompilation.test(
       """
@@ -222,7 +287,12 @@ class StructTests extends FunSuite with Matchers {
       case PanicException() =>
     }
   }
-
+*/
+// mig: fn odmfrc
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn odmfrc() { panic!("Unmigrated test: odmfrc"); }
+/*
   test("ODMFRC") {
     // Order doesnt matter for resolving calls (ODMFRC)
     //
@@ -280,3 +350,5 @@ class StructTests extends FunSuite with Matchers {
     }
   }
 }
+
+*/

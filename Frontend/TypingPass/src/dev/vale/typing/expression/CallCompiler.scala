@@ -2,12 +2,14 @@ package dev.vale.typing.expression
 
 import dev.vale._
 import dev.vale.postparsing._
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing.GlobalFunctionFamilyNameS
-import dev.vale.typing.OverloadResolver.FindFunctionFailure
+import dev.vale.solver.{FailedSolve, RuleError}
+import dev.vale.typing.OverloadResolver.{FindFunctionFailure, FindFunctionResolveFailure, InferFailure}
 import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
+import dev.vale.typing.infer.IsaFailed
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing.function._
@@ -36,7 +38,8 @@ class CallCompiler(
     contextRegion: RegionT,
     callableExpr: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     callableExpr.result.coord.kind match {
@@ -47,6 +50,28 @@ class CallCompiler(
           "wot " + callableExpr.result.coord.kind))
       }
       case OverloadSetT(overloadSetEnv, functionName) => {
+        // Here we have a special case for overload sets.
+        // It makes cases like these work:
+        //     myOverloadSet = print;
+        //     myOverloadSet("hello");
+        // However, this code here only works when the user is specifically doing that form:
+        // an overload set, then some parens. We then do a lookup of the overload set's
+        // stored name ("print") in the overload set's stored env.
+        //
+        // This might not be the best long-term approach because it doesn't work in other cases:
+        //     fn myFunc<F>(f &F) where func(&F)void { f() }
+        //     myFunc(print);
+        // The below code doesn't match this example because it's not literally overloadset
+        // then parens; this example is instead trying to feed an overloadset argument into a
+        // parameter that has a __call method available. OverloadSet is not that; OverloadSet is
+        // a very surface level judo trick.
+        //
+        // See (failing) test "Pass overload set into placeholder parameter" (see @POSIPP).
+        //
+        // I think the right solution long term is to give OverloadSet some sort of __call
+        // function that under the hood calls some sort of builtin that knows how to do the
+        // below machinery.
+
         val unconvertedArgsPointerTypes2 =
           givenArgsExprs2.map(_.result.expectReference().coord)
 
@@ -62,11 +87,30 @@ class CallCompiler(
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             unconvertedArgsPointerTypes2,
             Vector.empty,
             false) match {
+            case Err(e @ FindFunctionFailure(CodeNameS(asName), _, _)) if asName == keywords.as => {
+              val isaFailures = e.rejectedCalleeToReason.flatMap { case (_, reason) =>
+                reason match {
+                  case InferFailure(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper)))) =>
+                    Some((sub, suuper, fs))
+                  case FindFunctionResolveFailure(ResolvingSolveFailedOrIncomplete(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper))))) =>
+                    Some((sub, suuper, fs))
+                  case _ => None
+                }
+              }
+              if (isaFailures.nonEmpty) {
+                val (sub, suuper, _) = isaFailures.head
+                val failedSolves = isaFailures.map(_._3).toVector
+                throw CompileErrorExceptionT(CantDowncastUnrelatedTypes(range, suuper, sub, failedSolves))
+              } else {
+                throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
+              }
+            }
             case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
             case Ok(x) => x
           }
@@ -98,7 +142,8 @@ class CallCompiler(
           contextRegion,
           callableExpr.result.coord.kind,
           explicitTemplateArgRulesS,
-          explicitTemplateArgRunesS,
+          positionalExplicitTemplateArgRunesS,
+          receivingRuneToExplicitTemplateArgRune,
           callableExpr,
           givenArgsExprs2)
       }
@@ -128,7 +173,8 @@ class CallCompiler(
     contextRegion: RegionT,
     kind: KindT,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenCallableUnborrowedExpr2: ReferenceExpressionTE,
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
     (FunctionCallTE) = {
@@ -157,7 +203,7 @@ class CallCompiler(
 //      }
 
     val argsTypes2 = givenArgsExprs2.map(_.result.coord)
-    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(), kind)
+    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(DefaultRegionT), kind)
     val paramFilters = Vector(closureParamType) ++ argsTypes2
     val resolved =
       overloadCompiler.findFunction(
@@ -167,7 +213,8 @@ class CallCompiler(
         callLocation,
         interner.intern(CodeNameS(keywords.underscoresCall)),
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         contextRegion,
         paramFilters,
         Vector.empty,
@@ -260,9 +307,9 @@ class CallCompiler(
     region: RegionT,
     callableReferenceExpr2: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
-    argsExprs2: Vector[ReferenceExpressionTE]
-  ):
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
+    argsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     val callExpr =
       evaluateCall(
@@ -274,7 +321,8 @@ class CallCompiler(
         region,
         callableReferenceExpr2,
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         argsExprs2)
     (callExpr)
   }

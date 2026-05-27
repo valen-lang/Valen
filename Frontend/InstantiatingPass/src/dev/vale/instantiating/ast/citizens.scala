@@ -68,8 +68,6 @@ case class StructMemberI(
 }
 
 sealed trait IMemberTypeI  {
-  def reference: CoordI[cI]
-
   def expectReferenceMember(): ReferenceMemberTypeI = {
     this match {
       case r @ ReferenceMemberTypeI(_) => r

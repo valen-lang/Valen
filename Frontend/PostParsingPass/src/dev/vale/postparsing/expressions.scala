@@ -298,26 +298,68 @@ override def hashCode(): Int = vcurious()
 
 case class FunctionCallSE(range: RangeS, location: LocationInDenizen, callableExpr: IExpressionSE, argsExprs1: Vector[IExpressionSE]) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
+  override def hashCode(): Int = vcurious()
 }
 
 
 case class LocalLoadSE(range: RangeS, name: IVarNameS, targetOwnership: LoadAsP) extends IExpressionSE {
   vpass()
 }
-// Loads a non-local. In well formed code, this will be a function, but the user also likely
-// tried to access a variable they forgot to declare.
+
+// One step in a OutsideLoadSE. See OutsideLoadSE comments.
+case class LoadPartSE(
+  name: IImpreciseNameS,
+  explicitTemplateArgs: Vector[RuneUsage]
+) {
+  vpass()
+}
+
+// A load from something that lives outside the current definition.
+// For example:
+//     v = Vec<int>.with_capacity(42)
+// would have a OutsideLoadSE for the `Vec<int>.with_capacity` part.
+// It would look like this:
+// - parts: [LoadPartSE("Vec", [$0]), LoadPartSE("with_capacity", [])]
+// - rules: [$0 = LookupSR("int")]
+// Per @PRIIROZ, we add containers' generic params *after* the function's generic params.
+// Example:
+//     number_to_corresponding_string = HashMap<int, str>.create_and_fill(64, 42, i => to_string(i))
+// Would look like this:
+// - parts: [LoadPartSE("HashMap", [$0, $1]), LoadPartSE("create_and_fill", [$2])]
+// - rules: [$0 = "int", $1 = "str", $2 = main:lambda:1]
+//
+// This is only used by OverloadSetSE so far, but someday it could be used for looking up associated aliases on structs
+// or something.
 case class OutsideLoadSE(
   range: RangeS,
   rules: Vector[IRulexSR],
-  name: IImpreciseNameS,
-  maybeTemplateArgs: Option[Vector[RuneUsage]],
-  targetOwnership: LoadAsP
-) extends IExpressionSE {
+  // parts' explicitArgs are runes that refer to the above rules.
+  parts: Vector[LoadPartSE]
+) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
   vpass()
 }
+
+case class OverloadSetSE(
+    lookup: OutsideLoadSE
+) extends IExpressionSE {
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
+  override def range = lookup.range
+}
+
+case class TemplataLoadSE(
+    range: RangeS,
+    rules: Vector[IRulexSR],
+    targetOwnership: LoadAsP
+)  extends IExpressionSE {
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
+  vpass()
+}
+
+
 case class RuneLookupSE(range: RangeS, rune: IRuneS) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()

@@ -1179,23 +1179,16 @@ case class BuildingFunctionNameWithClosuredsI[+R <: IRegionsModeI](
 // (was cfg-gated)
 pub struct ExternFunctionNameI<'s, 'i, R> {
     pub human_name: StrI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i, R>],
     pub parameters: &'i[CoordI<'s, 'i, R>],
 }
 /*
 case class ExternFunctionNameI[+R <: IRegionsModeI](
   humanName: StrI,
+  templateArgs: Vector[ITemplataI[R]],
   parameters: Vector[CoordI[R]]
 ) extends IFunctionNameI[R] with IFunctionTemplateNameI[R] {
   override def template: IFunctionTemplateNameI[R] = this
-
-//  override def makeFunctionName(
-//    interner: Interner,
-//    keywords: Keywords,
-//    templateArgs: Vector[ITemplataI[R]],
-//    params: Vector[CoordI]):
-//  IFunctionNameI = this
-
-  override def templateArgs: Vector[ITemplataI[R]] = Vector.empty
 }
 
 */
@@ -1330,6 +1323,7 @@ case class FunctionTemplateNameI[+R <: IRegionsModeI](
 }
 
 */
+// Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 // mig: struct LambdaCallFunctionTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1341,6 +1335,7 @@ pub struct LambdaCallFunctionTemplateNameI<'s, 'i, R> {
 }
 
 /*
+// Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS,
   paramTypes: Vector[CoordT]
@@ -1571,6 +1566,7 @@ case class InterfaceNameI[+R <: IRegionsModeI](
 }
 
 */
+// Per @LAGTNGZ, closure struct isn't parameterized; one struct corresponds to many LambdaCallFunctionNameIs.
 // mig: struct LambdaCitizenTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1581,6 +1577,7 @@ pub struct LambdaCitizenTemplateNameI<'s, 'i, R> {
 }
 
 /*
+// Per @LAGTNGZ, closure struct isn't parameterized; one struct corresponds to many LambdaCallFunctionNameIs.
 case class LambdaCitizenTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS
 ) extends IStructTemplateNameI[R] {

@@ -121,8 +121,7 @@ where 's: 't,
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) =
@@ -194,9 +193,7 @@ where 's: 't,
         // Check preconditions
         self.check_closure_concerns_handled(declaring_env);
 
-        let call_site_rules =
-            self.assemble_call_site_rules(
-                function.rules, function.generic_parameters, 0);
+        let call_site_rules = self.assemble_call_site_rules(function.rules);
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
@@ -299,8 +296,7 @@ where 's: 't,
     checkClosureConcernsHandled(declaringEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, 0)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) = {
@@ -377,9 +373,10 @@ where 's: 't,
             _ => {}
         }
 
-        let call_site_rules =
-            self.assemble_call_site_rules(
-                function.rules, function.generic_parameters, explicit_template_args.len() as i32);
+        // Per @ECSIIOSZ, this is the per-call-site solver for function call resolution: argument
+        // types become InitialSends, explicit template args become InitialKnowns, and
+        // assemble_call_site_rules filters per SROACSD.
+        let call_site_rules = self.assemble_call_site_rules(function.rules);
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
         let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
@@ -457,6 +454,7 @@ where 's: 't,
     }
 
 /*
+Guardian: temp-disable: SPDMX — MACTX mirror pass: adding @ECSIIOSZ comment. Surrounding instantiation_bound_args simplification predates this edit. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1382-1779476926595/hook-1382/evaluate_templated_light_banner_from_call--358.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateTemplatedLightBannerFromCall(
       // The environment the function was defined in.
       nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -475,9 +473,11 @@ where 's: 't,
       case _ =>
     }
 
+    // Per @ECSIIOSZ, this is the per-call-site solver for function call resolution: argument
+    // types become InitialSends, explicit template args become InitialKnowns, and
+    // assembleCallSiteRules filters per SROACSD.
     val callSiteRules =
-      TemplataCompiler.assembleCallSiteRules(
-        function.rules, function.genericParameters, explicitTemplateArgs.size)
+      TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
@@ -600,12 +600,17 @@ where 's: 't,
   }
 
   // IOW, add the necessary data to turn the near env into the runed env.
+  // The reachableBoundsFromParamsAndReturn harvest violates @BDPFWDZ — the bound prototypes
+  // are pushed downward from each citizen-typed param's inner env into this near-env.
 */
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // IOW, add the necessary data to turn the near env into the runed env.
+    // The reachable_bounds_from_params_and_return harvest violates @BDPFWDZ — the bound prototypes
+    // are pushed downward from each citizen-typed param's inner env into this near-env.
     pub fn add_runed_data_to_near_env(
         &self,
         near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -638,7 +643,7 @@ where 's: 't,
         // newEntries = templatas.addEntries(interner, entries_list)
         let new_entries = self.typing_interner.alloc(near_env.templatas.add_entries(self.typing_interner, self.scout_arena, entries_list));
 
-        let default_region = RegionT;
+        let default_region = RegionT { region: IRegionT::Default };
 
         let template_args: &'t [ITemplataT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(identifying_templatas);
         BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
@@ -674,7 +679,7 @@ where 's: 't,
         templatasByRune.toVector
           .map({ case (k, v) => (interner.intern(RuneNameT(k)), TemplataEnvEntry(v)) }))
 
-    val defaultRegion = RegionT()
+    val defaultRegion = RegionT(DefaultRegionT)
 
     BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
       globalEnv,
@@ -710,12 +715,12 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
+        container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = outer_env.function;
         self.check_closure_concerns_handled(outer_env);
 
-        let call_site_rules = self.assemble_call_site_rules(
-            function.rules, function.generic_parameters, explicit_template_args.len() as i32);
+        let call_site_rules = self.assemble_call_site_rules(function.rules);
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
 
@@ -732,18 +737,28 @@ where 's: 't,
         let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
         let invocation_range = call_range;
-        let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
+        let initial_knowns: Vec<InitialKnown<'s, 't>> = {
+            let mut v = self.assemble_known_templatas(function, explicit_template_args);
+            v.extend(container_rune_initial_knowns.iter().copied());
+            v
+        };
         let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
             function.params.iter()
                 .flat_map(|p| p.pattern.coord_rune.map(|ru| ru.rune))
                 .chain(function.maybe_ret_coord_rune.map(|ru| ru.rune))
                 .collect();
 
+        // No MKRFA preprocessing needed: `function.rules` is declaration-scoped (same solver as
+        // the function's own generic params), so the postparser never emits RuneParentEnvLookupSR
+        // into it. If this site ever starts consuming expression-level rules, MKRFA preprocessing
+        // MUST be added — see OverloadResolver.scala:311 and docs/refactor-thoughts/mkrfa-protocol-leak.md.
         let mut solver = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
 
         let mut loop_check = function.generic_parameters.len() as i32 + 1;
 
+        // Per @DRSINI, defaults are added here incrementally as a fallback, only for runes
+        // that remain unsolved after argument inference.
         match self.incrementally_solve(
             envs, coutputs, &mut solver,
             |_coutputs, solver_state| {
@@ -765,7 +780,7 @@ where 's: 't,
                                 match solver_state.commit_step::<ITypingPassSolverError>(
                                     false, vec![], std::collections::HashMap::new(),
                                     default_rules.rules.iter().map(|r| **r).collect(),
-                                ) {
+                                    default_rules.rune_to_type.iter().map(|(k, _)| *k).collect()) {
                                     Ok(()) => {}
                                     Err(_) => panic!("getOrDie"),
                                 };
@@ -839,15 +854,15 @@ Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` 
     callLocation: LocationInDenizen,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]],
     contextRegion: RegionT,
-    args: Vector[Option[CoordT]]):
+    args: Vector[Option[CoordT]],
+    containerRuneInitialKnowns: Vector[InitialKnown] = Vector.empty):
   (IResolveFunctionResult) = {
     val function = outerEnv.function
     // Check preconditions
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args)
 
@@ -856,16 +871,21 @@ Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` 
     val rules = callSiteRules
     val runeToType = function.runeToType
     val invocationRange = callRange
-    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
+    val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs) ++ containerRuneInitialKnowns
     val includeReachableBoundsForRunes =
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 
+    // No MKRFA preprocessing needed: `function.rules` is declaration-scoped (same solver as
+    // the function's own generic params), so the postparser never emits RuneParentEnvLookupSR
+    // into it. If this site ever starts consuming expression-level rules, MKRFA preprocessing
+    // MUST be added — see OverloadResolver.scala:311 and docs/refactor-thoughts/mkrfa-protocol-leak.md.
     val solver =
       inferCompiler.makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 
     var loopCheck = function.genericParameters.size + 1
 
-    // Incrementally solve and add default generic parameters (and context region).
+    // Per @DRSINI, defaults are added here incrementally as a fallback, only for runes
+    // that remain unsolved after argument inference.
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
       (solverState) => {
@@ -884,7 +904,8 @@ Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` 
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
+                solverState.commitStep[ITypingPassSolverError](
+                  false, Vector(), Map(), defaultRules.rules, defaultRules.runeToType.keySet).getOrDie()
                 true
               }
               case None => {
@@ -963,7 +984,7 @@ where 's: 't,
             parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
             call_location,
             self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-            context_region: RegionT {},
+            context_region: RegionT { region: IRegionT::Default },
         };
         let preliminary_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
@@ -1003,7 +1024,7 @@ where 's: 't,
                     parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
                     call_location,
                     self_env: IEnvironmentT::BuildingWithClosureds(near_env),
-                    context_region: RegionT {},
+                    context_region: RegionT { region: IRegionT::Default },
                 },
                 coutputs,
                 &function_definition_rules,
@@ -1077,7 +1098,7 @@ where 's: 't,
     //   func map<T, F>(self Opt<T>, f F, t T) { ... }
     // into a:
     //   func map<F>(self Opt<$0>, f F, t $0) { ... }
-    val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT())
+    val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT(DefaultRegionT))
     val preliminarySolverState =
       inferCompiler.makeSolverState(
         preliminaryEnvs,
@@ -1109,12 +1130,10 @@ where 's: 't,
           case Some(x) => Some(InitialKnown(genericParam.rune, x))
           case None => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
-//            val runeType = vassertSome(function.runeToType.get(genericParam.rune.rune))
-            vimpl()
             val placeholderPureHeight = vregionmut(None)
             val templata =
               templataCompiler.createPlaceholder(
-                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, false)
+                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, true)
             Some(InitialKnown(genericParam.rune, templata))
           }
         }
@@ -1125,7 +1144,7 @@ where 's: 't,
 
     val CompleteDefineSolve(inferences, instantiationBoundParams) =
       inferCompiler.solveForDefining(
-        InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT()),
+        InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT(DefaultRegionT)),
         coutputs,
         functionDefinitionRules,
         function.runeToType,
@@ -1216,7 +1235,7 @@ where 's: 't,
             parent_ranges: parent_ranges_alloc,
             call_location,
             self_env: near_env_as_env,
-            context_region: RegionT,
+            context_region: RegionT { region: IRegionT::Default },
         };
 
         let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = function.rune_to_type.iter()
@@ -1246,7 +1265,7 @@ where 's: 't,
                                 let mut m = HashMap::new();
                                 m.insert(generic_param.rune.rune, templata);
                                 m
-                            }, vec![]).unwrap();
+                            }, vec![], std::collections::HashSet::new()).unwrap();
                         true
                     }
                 }
@@ -1323,7 +1342,7 @@ where 's: 't,
     val paramAndReturnRunes =
       (function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)).distinct.toVector
 
-    val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT())
+    val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT(DefaultRegionT))
     val solver =
       inferCompiler.makeSolverState(
         envs, coutputs, definitionRules, function.runeToType, range, Vector(), Vector())

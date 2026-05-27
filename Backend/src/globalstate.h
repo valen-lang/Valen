@@ -103,7 +103,7 @@ public:
   std::unordered_map<Edge*, LLVMValueRef, AddressHasher<Edge*>> interfaceTablePtrs;
 
   std::unordered_map<std::string, ValeFuncPtrLE> functions;
-  std::unordered_map<std::string, RawFuncPtrLE> externFunctions;
+  std::unordered_map<Prototype*, RawFuncPtrLE> externFunctions;
 
   // This is temporary, Valestrom should soon embed mutability and region into the kind for us
   // so we won't have to do this.
@@ -181,7 +181,10 @@ public:
       return iter->second;
     }
     auto funcIter = functions.find(prototype->name->name);
-    assert(funcIter != functions.end());
+    if (funcIter == functions.end()) {
+      std::cerr << "Couldn't find function: " << prototype->name->name << std::endl;
+      exit(1);
+    }
     return funcIter->second;
   }
 
@@ -241,6 +244,18 @@ public:
 //  IRegion* resilientV4Region = nullptr;
   Linear* linearRegion = nullptr;
   std::unordered_map<RegionId*, IRegion*, AddressHasher<RegionId*>> regions;
+
+  std::unordered_map<Opaque*, std::pair<int, int>, AddressHasher<Opaque*>> opaqueToMeasurements;
+  std::pair<int, int> getOpaqueMeasurements(Opaque* opaque) const {
+    auto iter = opaqueToMeasurements.find(opaque);
+    assert(iter != opaqueToMeasurements.end());
+    return iter->second;
+  }
+  void setOpaqueMeasurements(Opaque* opaque, std::pair<int, int> sizeAndAlignment) {
+    auto iter = opaqueToMeasurements.find(opaque);
+    assert(iter == opaqueToMeasurements.end());
+    opaqueToMeasurements.emplace(opaque, std::move(sizeAndAlignment));
+  }
 
 
   std::vector<ValeFuncPtrLE> getEdgeFunctions(Edge* edge);

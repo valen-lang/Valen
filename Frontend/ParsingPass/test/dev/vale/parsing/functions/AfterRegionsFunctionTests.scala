@@ -1,9 +1,9 @@
 package dev.vale.parsing.functions
 
-import dev.vale.lexing.{BadFunctionBodyError, LightFunctionMustHaveParamTypes}
+import dev.vale.lexing.{BadFunctionBodyError, FailedParse, FuncBoundWithoutWhere, LightFunctionMustHaveParamTypes}
 import dev.vale.parsing._
 import dev.vale.parsing.ast._
-import dev.vale.{Collector, StrI, vassertOne, vimpl}
+import dev.vale.{Collector, StrI, vassertOne}
 import org.scalatest._
 
 
@@ -11,9 +11,8 @@ class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUt
 
   // This test does not pass yet, use #[ignore].
   test("Func with func bound with missing 'where'") {
-    // It parses that func moo as a templex, and apparently a return can be a templex
     compileDenizen("func sum<T>() func moo(&T)void {3}").expectErr() match {
-      case null => vimpl()
+      case FailedParse(_, _, FuncBoundWithoutWhere(_)) =>
     }
   }
 

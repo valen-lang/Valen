@@ -56,6 +56,17 @@ class AfterRegionsErrorTests extends FunSuite with Matchers with Collector {
     }
   }
 
+  test("Abstract func without virtual") {
+    val err = compileForError(
+      """
+        |sealed interface ISpaceship<X Ref, Y Ref, Z Ref> { }
+        |abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop(X)void;
+        |""".stripMargin)
+    err match {
+      case VirtualAndAbstractGoTogether(_) =>
+    }
+  }
+
   test("Test one-anonymous-param lambda identifying runes") {
     val bork = compile(
       """
@@ -66,12 +77,14 @@ class AfterRegionsErrorTests extends FunSuite with Matchers with Collector {
     // We dont support regions yet, so scout should filter them out.
     main.genericParams.size shouldEqual 0
     val lambda = Collector.onlyOf(main.body, classOf[FunctionSE])
+    // Per @LAGTNGZ, the postparser creates one GenericParameterS per untyped lambda
+    // param, regardless of whether the user wrote `<T>` or `(_)`. LAGTNGZ still governs how the typing pass
+    // specializes the lambda (per-call template expansion into LambdaCallFunctionTemplateNameT).
     lambda.function.genericParams.size shouldEqual 1
-
-    // The above vale code seems to work even if we dont disambiguate lambda function
-    // instantiations with different identifying runes.
-    // We still need to decide whether we want to or not.
-    // See also "Test two instantiations of anonymous-param lambda"
-    vimpl()
+    val underscoreParam =
+      lambda.function.params.find(p => p.pattern.name.isEmpty).get // the `_` ignored-name param
+    val underscoreRune = underscoreParam.pattern.coordRune.get.rune
+    lambda.function.runeToPredictedType(underscoreRune) shouldEqual CoordTemplataType()
+    lambda.function.genericParams.map(_.rune.rune) should contain (underscoreRune)
   }
 }

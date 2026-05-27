@@ -56,7 +56,12 @@ case object YonderT extends LocationT {
   override def toString: String = "heap"
 }
 
-case class RegionT()
+sealed trait IRegionT
+case object IsoRegionT extends IRegionT
+// TODO: Get rid of this when we have an actual default region
+case object DefaultRegionT extends IRegionT
+
+case class RegionT(region: IRegionT)
 
 case class CoordT(
   ownership: OwnershipT,

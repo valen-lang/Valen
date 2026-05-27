@@ -96,7 +96,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: default_region");
     }
 /*
-  def defaultRegion: RegionT = RegionT()
+  def defaultRegion: RegionT = RegionT(DefaultRegionT)
 */
 }
 impl<'s, 't> StructDefinitionT<'s, 't> {
@@ -302,7 +302,7 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: default_region");
     }
 /*
-  def defaultRegion: RegionT = RegionT()
+  def defaultRegion: RegionT = RegionT(DefaultRegionT)
 */
 }
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {

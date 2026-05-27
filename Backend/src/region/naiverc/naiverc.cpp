@@ -1120,3 +1120,10 @@ LiveRef NaiveRC::immutabilify(
   assert(refMT->ownership == Ownership::MUTABLE_BORROW);
   { assert(false); throw 1337; } // impl
 }
+
+void NaiveRC::declareOpaque(Opaque* opaque) {
+  { assert(false); throw 1337; } // impl
+}
+void NaiveRC::defineOpaque(Opaque* opaque, int size, int alignment) {
+  { assert(false); throw 1337; } // impl
+}

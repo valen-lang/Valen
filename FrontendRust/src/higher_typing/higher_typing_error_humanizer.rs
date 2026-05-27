@@ -10,6 +10,11 @@ import dev.vale.postparsing.PostParserErrorHumanizer
 import dev.vale.solver.FailedSolve
 
 object HigherTypingErrorHumanizer {
+*/
+
+// mig: fn assemble_error
+pub fn assemble_error() -> String { panic!("Unimplemented: assemble_error"); }
+/*
   def assembleError(
     filenamesAndSources: CodeLocationS => String,
     lineContaining: (CodeLocationS) => String,
@@ -20,7 +25,11 @@ object HigherTypingErrorHumanizer {
     val errorId = "A"
     f"${posStr} error ${errorId}: ${errorStrBody}\n${nextStuff}\n"
   }
+*/
 
+// mig: fn humanize_rune_type_solve_error
+pub fn humanize_rune_type_solve_error() -> String { panic!("Unimplemented: humanize_rune_type_solve_error"); }
+/*
   def humanizeRuneTypeSolveError(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
@@ -43,7 +52,11 @@ object HigherTypingErrorHumanizer {
       PostParserErrorHumanizer.humanizeRule,
       err.failedSolve)._1
   }
+*/
 
+// mig: fn humanize
+pub fn humanize() -> String { panic!("Unimplemented: humanize"); }
+/*
   def humanize(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],

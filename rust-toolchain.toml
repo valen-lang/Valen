@@ -1,2 +1,31 @@
+# Pins the Rust toolchain for all Cargo projects in this repo (ValeRuster, FrontendRust,
+# CoordinatorRust). rustup picks this up automatically when running cargo/rustc from any
+# subdirectory.
+#
+# Why pin:
+# - ValeRuster parses rustdoc JSON via `rustdoc-types`; the JSON format changes across
+#   nightlies, breaking ValeRuster when its crate version lags. Pinning keeps them in sync.
+# - Divination's `cargo cbuild` compiles core/std/alloc from the installed nightly; new
+#   nightlies occasionally rename/remove flags (e.g. `panic_immediate_abort`) and break it.
+#
+# To bump: pick a nightly, update rustdoc-types in ValeRuster/Cargo.toml to match, test
+# the end-to-end pipeline, then change `channel` here.
+#
+# Note: Divination (separate repo) and the generated Rust crate it emits at runtime are
+# outside this toolchain file's reach. For full end-to-end reproducibility, Divination
+# should also pin or emit a matching rust-toolchain.toml alongside its generated Cargo.toml.
 [toolchain]
-channel = "nightly"
+channel = "nightly-2025-12-09"
+# Components required by the pipeline:
+#   - rust-src: ValeRuster's `cargo rustdoc -p std` and Divination's `-Zbuild-std`
+#     both need the stdlib source.
+#   - rust-docs-json: ValeRuster prefers pre-built rustdoc JSON at
+#     share/doc/rust/json/{std,alloc,core}.json. Without this component it falls back
+#     to invoking `cargo rustdoc -p std` which fails (std isn't a regular package).
+#   - rust-analyzer: Guardian's opencode-backed shields spawn rust-analyzer for
+#     context-defs lookups when validating Rust edits. Without it in the pinned
+#     toolchain, rustup looks for rust-analyzer in nightly-2025-12-09 (which lacks
+#     it by default), prints "Unknown binary", and the LSP client hangs until
+#     opencode's 45 s initialize timeout fires — making every Edit on a Rust
+#     migration file fail-closed.
+components = ["rust-src", "rust-docs-json", "rust-analyzer"]

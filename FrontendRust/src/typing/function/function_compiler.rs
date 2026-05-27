@@ -20,6 +20,7 @@ use crate::typing::templata::templata::PrototypeTemplataT;
 use crate::postparsing::names::IRuneS;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::infer_compiler::IDefiningError;
+use crate::typing::infer_compiler::InitialKnown;
 use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
@@ -42,7 +43,7 @@ import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
 import dev.vale.highertyping.FunctionA
-import dev.vale.typing.{CompilerOutputs, ConvertHelper, IFunctionGenerator, InferCompiler, TemplataCompiler, TypingPassOptions}
+import dev.vale.typing.{CompilerOutputs, ConvertHelper, IFunctionGenerator, InferCompiler, InitialKnown, TemplataCompiler, TypingPassOptions}
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, PrototypeT, ReferenceExpressionTE}
 import dev.vale.typing.citizen.StructCompiler
 import dev.vale.typing.env._
@@ -378,6 +379,7 @@ where 's: 't,
         }
     }
 /*
+  // Per @LAGTNGZ, the isLight branch routes top-level functions through the generic path and closures through the template path.
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -523,11 +525,12 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
+        container_rune_initial_knowns: &[InitialKnown<'s, 't>],
     ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env: env, function } = function_templata;
         self.evaluate_generic_light_function_from_call_for_prototype2(
             env, coutputs, calling_env, call_range, call_location, function, explicit_template_args,
-            context_region, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>())
+            context_region, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>(), container_rune_initial_knowns)
     }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype(
@@ -538,13 +541,14 @@ where 's: 't,
     functionTemplata: FunctionTemplataT,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]],
     contextRegion: RegionT,
-    args: Vector[CoordT]):
+    args: Vector[CoordT],
+    containerRuneInitialKnowns: Vector[InitialKnown] = Vector.empty):
   IResolveFunctionResult = {
     Profiler.frame(() => {
       val FunctionTemplataT(env, function) = functionTemplata
       closureOrLightLayer.evaluateGenericLightFunctionFromCallForPrototype2(
         env, coutputs, callingEnv, callRange, callLocation, function, explicitTemplateArgs,
-        contextRegion, args.map(Some(_)))
+        contextRegion, args.map(Some(_)), containerRuneInitialKnowns)
     })
   }
 

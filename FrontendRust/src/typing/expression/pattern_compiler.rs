@@ -32,8 +32,8 @@ import dev.vale.parsing.ast.LoadAsBorrowP
 import dev.vale.postparsing._
 import dev.vale.postparsing.patterns._
 import dev.vale.{Err, Interner, Keywords, Ok, Profiler, RangeS, Result, vassert, vassertSome, vfail, vimpl}
-import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
-import dev.vale.typing.{ArrayCompiler, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, InferCompiler, InitialSend, RangedInternalErrorT, TypingPassOptions, WrongNumberOfDestructuresError}
+import dev.vale.postparsing.rules.{IRulexSR, RuneParentEnvLookupSR, RuneUsage}
+import dev.vale.typing.{ArrayCompiler, CompileErrorExceptionT, Compiler, CompilerOutputs, ConvertHelper, InferCompiler, InitialKnown, InitialSend, RangedInternalErrorT, TypingPassOptions, WrongNumberOfDestructuresError}
 import dev.vale.typing.ast.{ConstantIntTE, DestroyMutRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, LetNormalTE, LocalLookupTE, LocationInFunctionEnvironmentT, ReferenceExpressionTE, ReferenceMemberLookupTE, SoftLoadTE}
 import dev.vale.typing.env.{ILocalVariableT, NodeEnvironmentBox, TemplataEnvEntry}
 import dev.vale.typing.function.DestructorCompiler
@@ -274,6 +274,10 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     Ok(()) => {}
                 }
                 let rules_a = rule_builder;
+                // We preprocess out the rune parent env lookups, see MKRFA. Canonical Scala
+                // pattern_compiler does a foldLeft over rulesA splitting RuneParentEnvLookupSR
+                // into initial_knowns. Rust path doesn't yet wire that preprocessing;
+                // tracked alongside the audit-trail fold.
                 let invocation_range: Vec<RangeS<'s>> =
                     std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 let complete_define_solve =
@@ -342,6 +346,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             })
     }
 /*
+Guardian: temp-disable: SPDMX — MACTX mirror pass: adding the @MKRFA comment to document that this Rust path doesn't yet wire the RuneParentEnvLookupSR preprocessing fold. Surrounding empty initial_knowns + unfiltered rules_a simplification predates this edit; the comment is the audit-trail mirror, not a behavioral change. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1379-1779476780255/hook-1379/infer_and_translate_pattern--228.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // Note: This will unlet/drop the input expression. Be warned.
   def inferAndTranslatePattern(
     coutputs: CompilerOutputs,
@@ -389,17 +394,33 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             }
             val rulesA = ruleBuilder.toVector
 
+            // We preprocess out the rune parent env lookups, see MKRFA.
+            val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+              rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+                case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+                  val templata =
+                    vassertSome(
+                      nenv.snapshot.lookupNearestWithImpreciseName(
+                        interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+                  val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+                  (newConclusions, remainingRules)
+                }
+                case ((previousConclusions, remainingRules), rule) => {
+                  (previousConclusions, remainingRules :+ rule)
+                }
+              })
+
             val CompleteDefineSolve(templatasByRune, _) =
               // We could probably just solveForResolving (see DBDAR) but seems right to solveForDefining since we're
               // declaring a bunch of things.
               inferCompiler.solveForDefining(
                 InferEnv(nenv.snapshot, parentRanges, callLocation, nenv.snapshot, nenv.defaultRegion),
                 coutputs,
-                rulesA,
+                rulesWithoutRuneParentEnvLookups,
                 runeAToType.toMap,
                 pattern.range :: parentRanges,
                 callLocation,
-                Vector(),
+                initialKnowns,
                 Vector(
                   InitialSend(
                     RuneUsage(pattern.range, PatternInputRuneS(pattern.range.begin)),
@@ -1517,7 +1538,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         let index_expr = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
             value: ITemplataT::Integer(index as i64),
             bits: 32,
-            region: RegionT,
+            region: RegionT { region: IRegionT::Default },
         }));
         let lookup = self.lookup_in_static_sized_array(range, container_alias, index_expr, static_sized_array_t);
         AddressExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup))
@@ -1531,7 +1552,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
       containerAlias: ReferenceExpressionTE,
       index: Int): StaticSizedArrayLookupTE = {
     arrayCompiler.lookupInStaticSizedArray(
-      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT()), staticSizedArrayT)
+      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT(DefaultRegionT)), staticSizedArrayT)
   }
 }
 */

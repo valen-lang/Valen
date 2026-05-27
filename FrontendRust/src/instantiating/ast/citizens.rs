@@ -22,6 +22,15 @@ trait CitizenDefinitionI {
   def instantiatedCitizen: ICitizenIT[cI]
 }
 */
+// Rust-only dispatch enum for the `CitizenDefinitionI` trait (architect-directed).
+// Scala uses `CitizenDefinitionI` polymorphically (StructDefinitionI / InterfaceDefinitionI
+// both extend it); per NEDCX we use a concrete enum here instead of a `&dyn` trait object.
+// Mirrors the kind-level `ICitizenIT` dispatch enum. No Scala counterpart, so no audit-trail.
+#[derive(Copy, Clone)]
+pub enum ICitizenDefinitionI<'s, 'i, R> {
+    StructDefinitionI(&'i StructDefinitionI<'s, 'i, R>),
+    InterfaceDefinitionI(&'i InterfaceDefinitionI<'s, 'i, R>),
+}
 // mig: struct StructDefinitionI
 /// Temporary state
 pub struct StructDefinitionI<'s, 'i, R> {
@@ -126,18 +135,6 @@ pub enum IMemberTypeI<'s, 'i, R> {
 // mig: impl IMemberTypeI
 /*
 sealed trait IMemberTypeI  {
-*/
-// mig: fn reference
-/* Guardian: disable-all */
-impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
-    pub fn reference(&self) -> () {
-        match self {
-            _ => panic!("Unimplemented: IMemberTypeI::reference dispatch"),
-        }
-    }
-}
-/*
-  def reference: CoordI[cI]
 */
 // mig: fn expect_reference_member
 /* Guardian: disable-all */

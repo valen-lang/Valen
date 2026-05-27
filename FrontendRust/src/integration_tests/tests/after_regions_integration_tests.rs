@@ -1,3 +1,5 @@
+// mig: struct AfterRegionsIntegrationTests
+pub struct AfterRegionsIntegrationTests;
 /*
 package dev.vale
 
@@ -21,8 +23,13 @@ import org.scalatest._
 
 
 class AfterRegionsIntegrationTests extends FunSuite with Matchers {
-
-  test("TODO") {
+*/
+// mig: fn todo
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn todo() { panic!("Unmigrated test: todo"); }
+/*
+  ignore("TODO") {
     // only look at function bounds from the caller's environment, dont get any actual functions
     // from there. we can get actual functions from the type's environment, however.
     vimpl()
@@ -48,7 +55,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     // this cause some mayhem further down when a name didnt match.
     vimpl()
   }
-
+*/
+// mig: fn test_returning_empty_seq
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_returning_empty_seq() { panic!("Unmigrated test: test_returning_empty_seq"); }
+/*
   test("Test returning empty seq") {
     val compile = RunCompilation.test(
       """
@@ -61,22 +73,112 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.run(Vector())
   }
-
-  test("Map function") {
+*/
+// mig: fn map_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn map_function() { panic!("Unmigrated test: map_function"); }
+/*
+  // Family 3: generic virtual dispatcher with abstract generics not reachable from
+  // self-interface. Exercises `abstract func map<T, R>(virtual opt &Opt<T>, ...) Opt<R>`,
+  // where `R` doesn't appear in `self`. The typing-pass → instantiator pipeline was
+  // built around the invariant "every dispatcher placeholder mimics an impl placeholder";
+  // this test breaks that. Three layered fixes already landed (FunctionCompilerSolvingLayer
+  // vimpl removal, optutils.vale getOr signature rewrite, EdgeCompiler fresh-placeholder
+  // inclusion), but the final Instantiator.translateOverride patch (Layer 4) was prototyped
+  // and reverted pending owner review.
+  //
+  // See:
+  //   - docs/historical/after-regions-test-fixing-quest.md (Family 3 section)
+  //   - investigations/family3_map_function.md (collapsed call tree, instrumentation,
+  //     architectural audit, git archaeology)
+  //   - docs/Generics.md §§ GTCII, CDFGI, FODAIR, AFCTD, OMCNAGP
+  ignore("Map function") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/genericvirtuals/mapFunc.vale"))
     compile.expectCompilerOutputs()
 
     compile.evalForKind(Vector()) match { case VonBool(true) => }
   }
-
+*/
+// mig: fn imm_tuple_access
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn imm_tuple_access() { panic!("Unmigrated test: imm_tuple_access"); }
+/*
   test("imm tuple access") {
-    vfail() // these tuples are actually mutable
     val compile = RunCompilation.test(Tests.loadExpected("programs/tuples/immtupleaccess.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
+*/
+// mig: fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() { panic!("Unmigrated test: interface_method_call_on_impl_bounded_generic_dispatches_through_interface"); }
+/*
+  test("Interface Method call on impl-bounded generic dispatches through interface") {
+    // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
+    // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
+    // getFuel, then dispatch virtually to Raza's override at runtime.
+    //
+    // Why this isn't automatic: Vale's interface abstract methods don't sit at the package
+    // level. They live inside the interface's own outer env, reachable only via
+    // coutputs.getOuterEnvForType(getInterfaceTemplate(IShip)). For a *concrete* &IShip
+    // receiver, OverloadResolver.getParamEnvironments mechanically returns IShip's outer
+    // env (because the receiver's type names IShip directly). For a *placeholder* &T
+    // receiver, the type doesn't name IShip — IShip is one indirection away, declared via
+    // the where-clause as an IsaTemplataT(T, IShip) entry in genericGetFuel's near-env.
+    // Without something following that indirection, the lookup of getFuel finds only the
+    // free function `getFuel(self &Raza)` (which type-mismatches T) and never reaches
+    // IShip's outer env where the abstract method lives. Pre-fix, this produced
+    // "No ancestors satisfy call" and the program failed to type-check.
+    //
+    // What we changed: OverloadResolver.getCandidateBanners now also calls
+    // getPlaceholderImplBoundEnvs alongside getParamEnvironments. For each placeholder-
+    // typed param, it looks up ambient impl bounds keyed by the placeholder's imprecise
+    // name (ImplSubCitizenImpreciseNameS, populated automatically when addRunedDataToNearEnv
+    // writes the IsaTemplataT into the near-env), pulls each IsaTemplataT, and adds each
+    // super-interface's outer env to the candidate search. With that, the abstract
+    // getFuel(virtual self &IShip) becomes a candidate; the inner per-call-site solve
+    // verifies T isa IShip via the same IsaTemplataT (through ImplCompiler.isParent); the
+    // call resolves; the instantiator monomorphizes genericGetFuel<Raza>; and the backend
+    // dispatches getFuel virtually through Raza's vtable, returning 42.
+    //
+    // The fix is principle-aligned with @BDPFWDZ (By Default Pull From Where Declared):
+    // IShip's methods stay in IShip's outer env where they were declared; the resolver
+    // walks (via the where-clause's IsaTemplataT link) to find them; nothing is copied
+    // into the calling function's near-env. See
+    // docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md for the broader principle.
 
-  test("Test overload set") {
+    val compile =
+      RunCompilation.test(
+        """
+          |sealed interface IShip {
+          |  func getFuel(virtual self &IShip) int;
+          |}
+          |struct Raza { fuel int; }
+          |impl IShip for Raza;
+          |func getFuel(self &Raza) int { return self.fuel; }
+          |
+          |func genericGetFuel<T>(x &T) int
+          |where implements(T, IShip) {
+          |  return x.getFuel();
+          |}
+          |
+          |exported func main() int {
+          |  return genericGetFuel(&Raza(42));
+          |}
+          |""".stripMargin)
+    compile.evalForKind(Vector()) match { case VonInt(42) => }
+  }
+*/
+// mig: fn test_overload_set
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
+/*
+  ignore("Test overload set") {
+    // Search @POSIPP for why this doesn't work.
     val compile =
       RunCompilation.test(
         """
@@ -90,8 +192,33 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
           |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
-  test("Upcasting in a generic function") {
+*/
+// mig: fn pass_overload_set_into_placeholder_parameter_posipp
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated test: pass_overload_set_into_placeholder_parameter_posipp"); }
+/*
+  ignore("Pass overload set into placeholder parameter (@POSIPP)") {
+    // Search @POSIPP for why this doesn't work.
+    val compile =
+      RunCompilation.test(
+        """
+          |func myOtherFunc() { }
+          |func myFunc<F>(f &F) void where func(&F)void { f() }
+          |exported func main() int {
+          |  myFunc(myOtherFunc);
+          |  42
+          |}
+          |""".stripMargin)
+    compile.evalForKind(Vector()) match { case VonInt(42) => }
+  }
+*/
+// mig: fn upcasting_in_a_generic_function
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn upcasting_in_a_generic_function() { panic!("Unmigrated test: upcasting_in_a_generic_function"); }
+/*
+  ignore("Upcasting in a generic function") {
     // This is testing two things:
     //  - Upcasting inside a generic function
     //  - The return type's ownership is actually calculated from the parameter. This will
@@ -125,8 +252,13 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector())
   }
-
-  test("Diff iter") {
+*/
+// mig: fn diff_iter
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn diff_iter() { panic!("Unmigrated test: diff_iter"); }
+/*
+  ignore("Diff iter") {
     // When we try to compile this:
     //   HashSetDiffIterator<K>(a.table, b, 0)
     // it makes sure all the struct rules pass, including its members, including this:
@@ -169,7 +301,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(14) => }
   }
-
+*/
+// mig: fn call_array_without_element_type
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn call_array_without_element_type() { panic!("Unmigrated test: call_array_without_element_type"); }
+/*
   test("Call Array<> without element type") {
     val compile = RunCompilation.test(
       """
@@ -183,7 +320,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
-
+*/
+// mig: fn make_array_without_type
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn make_array_without_type() { panic!("Unmigrated test: make_array_without_type"); }
+/*
   test("Make array without type") {
     val compile = RunCompilation.test(
       """
@@ -196,7 +338,12 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
-
+*/
+// mig: fn borrowing_to_array
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn borrowing_to_array() { panic!("Unmigrated test: borrowing_to_array"); }
+/*
   test("Borrowing toArray") {
     val compile = RunCompilation.test(
       """import list.*;
@@ -210,15 +357,20 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
         |  add(&l, 5);
         |  add(&l, 9);
         |  add(&l, 7);
-        |  return l.toArray().get(1);
+        |  return l.toArray()[1];
         |}
         |
         """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
-  test("Infinite lambda call") {
+*/
+// mig: fn infinite_lambda_call
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn infinite_lambda_call() { panic!("Unmigrated test: infinite_lambda_call"); }
+/*
+  ignore("Infinite lambda call") {
     val compile = RunCompilation.test(
       """
         |exported func main() int {
@@ -232,6 +384,5 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     compile.evalForKind(Vector()) match { case VonInt(8) => }
   }
-
 }
 */

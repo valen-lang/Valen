@@ -2,7 +2,7 @@ package dev.vale.parsing
 
 import dev.vale.lexing.ImportL
 import dev.vale.options.GlobalOptions
-import dev.vale.{Collector, FileCoordinate, FileCoordinateMap, IPackageResolver, Interner, PackageCoordinate, StrI, vassertOne, vassertSome}
+import dev.vale.{Collector, FileCoordinate, FileCoordinateMap, IPackageResolver, Interner, PackageCoordinate, StrI, vassert, vassertOne, vassertSome}
 import dev.vale.parsing.ast.{BorrowP, CallPT, ExportAttributeP, FinalP, GenericParameterP, GenericParametersP, ImmutableP, IntTypePR, InterpretedPT, MutabilityPT, MutableP, NameOrRunePT, NameP, NormalStructMemberP, OwnP, RuntimeSizedArrayPT, ShareP, StaticSizedArrayPT, StructMembersP, StructP, TemplateRulesP, TopLevelStructP, TypedPR, VariabilityPT, VariadicStructMemberP, VaryingP, WeakP}
 import dev.vale.parsing.ast._
 import org.scalatest._
@@ -192,5 +192,28 @@ class StructTests extends FunSuite with Collector with TestParseUtils {
 //          Some(TemplateRulesP(_,Vector(TypedPR(_,Some(NameP(_,StrI("N"))),IntTypePR)))),
 //          StructMembersP(_,Vector(NormalStructMemberP(_,NameP(_,StrI("values")),FinalP,StaticSizedArrayPT(_,MutabilityPT(_,mut),VariabilityPT(_,final),NameOrRunePT(NameP(_,StrI(N))),NameOrRunePT(NameP(_,StrI(float)))))))))
     }
+  }
+
+  test("Struct with internal extern methods") {
+    val denizen =
+      vassertOne(
+        compileFile(
+          """
+            |extern struct Vec<T> imm {
+            |  extern func with_capacity(c i64) Vec<T>;
+            |  extern func capacity(self &Vec<T>) i64;
+            |}
+            |""".stripMargin).getOrDie().denizens)
+    val struct =
+      denizen match {
+        case TopLevelStructP(s) => s
+      }
+    val methods =
+      struct.members.contents.collect { case StructMethodP(f) => f }
+    vassert(methods.length == 2)
+    methods(0).header.name match { case Some(NameP(_, StrI("with_capacity"))) => }
+    vassertOne(methods(0).header.attributes.collect({ case ExternAttributeP(_) => }))
+    methods(1).header.name match { case Some(NameP(_, StrI("capacity"))) => }
+    vassertOne(methods(1).header.attributes.collect({ case ExternAttributeP(_) => }))
   }
 }

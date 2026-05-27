@@ -1,3 +1,6 @@
+// mig: struct OptTests
+pub struct OptTests;
+/*
 package dev.vale
 
 import dev.vale.typing.env.ReferenceLocalVariableT
@@ -7,6 +10,12 @@ import dev.vale.von.VonInt
 import org.scalatest._
 
 class OptTests extends FunSuite with Matchers {
+*/
+// mig: fn test_empty_and_get_for_some
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_empty_and_get_for_some() { panic!("Unmigrated test: test_empty_and_get_for_some"); }
+/*
   test("Test empty and get for Some") {
     val compile = RunCompilation.test(
         """
@@ -21,7 +30,12 @@ class OptTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
-
+*/
+// mig: fn test_empty_and_get_for_none
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_empty_and_get_for_none() { panic!("Unmigrated test: test_empty_and_get_for_none"); }
+/*
   test("Test empty and get for None") {
     val compile = RunCompilation.test(
         """
@@ -34,7 +48,12 @@ class OptTests extends FunSuite with Matchers {
 
     compile.evalForKind(Vector()) match { case VonInt(0) => }
   }
-
+*/
+// mig: fn test_empty_and_get_for_borrow
+#[test]
+#[ignore = "unmigrated - pending integration-tests body migration"]
+fn test_empty_and_get_for_borrow() { panic!("Unmigrated test: test_empty_and_get_for_borrow"); }
+/*
   test("Test empty and get for borrow") {
     val compile = RunCompilation.test(
         """
@@ -53,3 +72,5 @@ class OptTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
 }
+
+*/

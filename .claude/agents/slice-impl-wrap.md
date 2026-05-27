@@ -1,6 +1,6 @@
 ---
 name: slice-impl-wrap
-description: Wrap each module-scope fn in its own dedicated impl block, using `// mig: impl Foo` markers to determine the receiver type
+description: Wrap each module-scope fn in its own dedicated impl block, using `// mig: struct Foo` / `// mig: enum Foo` markers to determine the receiver type
 tools: [Read, Edit, Grep]
 model: haiku
 ---
@@ -11,16 +11,16 @@ This is the inverse of the "open impl, emit many methods inside, close impl" pat
 
 # Step 0: Read the pass migration policy
 
-Find the `migration-policy.md` for this pass by walking up from the target file's directory. If only the template at `FrontendRust/docs/migration/migration-policy.md` is found and no per-pass override exists, STOP and report "no per-pass migration-policy.md found." Otherwise, read it for **lifetimes** and **where-clauses** to apply to each impl opener.
+Read the central migration policy at `FrontendRust/docs/migration/migration-policy.md` and find the values for this pass (identified by the target file's source dir, e.g. `src/typing/` → typing). If the pass has no values there, STOP and report "pass `<name>` has no values in `FrontendRust/docs/migration/migration-policy.md`." Otherwise, read its **lifetimes** and **where-clauses** to apply to each impl opener.
 
 # Algorithm
 
-Walk the `// mig:` markers top to bottom, maintaining a **current receiver type** — the name of the most recent `// mig: impl Foo` marker you've crossed. Initially the receiver is `None`.
+Walk the `// mig:` markers top to bottom, maintaining a **current receiver type** — the name of the most recent `// mig: struct Foo` / `// mig: enum Foo` marker you've crossed. Initially the receiver is `None`.
 
 For each `// mig:` marker:
 
-1. **`// mig: struct Foo` / `// mig: enum Foo` / `// mig: trait Foo`** — do nothing; leave the existing stub.
-2. **`// mig: impl Foo`** — update the current receiver to `Foo`. Do not emit anything.
+1. **`// mig: struct Foo` / `// mig: enum Foo`** — update the current receiver to `Foo`. Leave the existing stub; emit nothing here.
+2. **`// mig: trait Foo`** — do nothing, and do NOT set a receiver (a plain trait's fns are not impl-wrapped this way). Leave the existing stub.
 3. **`// mig: fn foo`** — find the module-scope `pub fn foo(...)` stub directly below this marker. If the current receiver is `Some(Foo)`, wrap that stub in its own dedicated impl block:
    ```rust
    impl<'s, 't> Foo<'s, 't>
@@ -35,11 +35,11 @@ For each `// mig:` marker:
    - The closing `}` of the impl goes immediately after the closing `}` of the wrapped fn.
    - If the fn took an explicit `self_: &Foo<…>` first parameter (added by slice-placehold), convert it to `&self` inside the impl.
    - If the current receiver is `None` (i.e. the fn is logically module-scope — e.g. a free function not inside any Scala `class`/`object`), leave the fn at module scope and emit nothing.
-4. **Dispatchers emitted under `// mig: impl Foo`** (the `/* Guardian: disable-all */ pub fn method(this: &Foo, ...)` stubs from slice-placehold) — wrap each in its own `impl<...> Foo<...> { fn method(&self, ...) ... }` block too. Preserve the `/* Guardian: disable-all */` annotation immediately above the impl.
+4. **Sealed-trait dispatchers** (the `/* Guardian: disable-all */ pub fn method(this: &Foo, ...)` stubs slice-placehold emits for a `// mig: enum Foo` from a sealed trait) — wrap each in its own `impl<...> Foo<...> { fn method(&self, ...) ... }` block too. Preserve the `/* Guardian: disable-all */` annotation immediately above the impl.
 
 # Scope-end heuristic
 
-The Scala class body has a closing `}` inside its `/* */` block. When you cross it, reset the current receiver to `None`. The next `// mig: fn` after that point is at module scope until another `// mig: impl Foo` re-opens a receiver.
+The Scala class body has a closing `}` inside its `/* */` block. When you cross it, reset the current receiver to `None`. The next `// mig: fn` after that point is at module scope until another `// mig: struct Foo` / `// mig: enum Foo` re-opens a receiver.
 
 # Guidelines
 

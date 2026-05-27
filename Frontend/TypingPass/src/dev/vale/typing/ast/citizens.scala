@@ -28,7 +28,7 @@ case class StructDefinitionT(
   isClosure: Boolean,
   instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT]
 ) extends CitizenDefinitionT {
-  def defaultRegion: RegionT = RegionT()
+  def defaultRegion: RegionT = RegionT(DefaultRegionT)
 
   override def genericParamTypes: Vector[ITemplataType] = {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
@@ -118,7 +118,7 @@ case class InterfaceDefinitionT(
   // See IMRFDI for why we need to remember only the internal methods here.
   internalMethods: Vector[(PrototypeT[IFunctionNameT], Int)]
 ) extends CitizenDefinitionT {
-  def defaultRegion: RegionT = RegionT()
+  def defaultRegion: RegionT = RegionT(DefaultRegionT)
 
   override def genericParamTypes: Vector[ITemplataType] = {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
