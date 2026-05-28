@@ -4,6 +4,8 @@ This document describes the general design thinking and strategies used when tra
 
 This is a reference for understanding *why* the Rust code looks the way it does and for guiding future migration work.
 
+> **Partially stale — needs curation.** Part 2 (Memory Management) still describes the original **four-arena** model (`'a` Interner / `'p` / `'s` / `'ctx`) and references the deleted `early-lifetimes.mdc`. The current model is **per-pass arenas** (`'p` parser, `'s` scout; no long-lived `'a` Interner) — see `docs/background/arenas.md` for canonical lifetimes. Parts 5–8 and the appendix largely restate individual `Luz/shields/` rules; the durable, non-duplicated value here is the Part 1 (type-system) and Part 3 (code-organization) translation narrative.
+
 ---
 
 ## Part 1: Type System Translation

@@ -160,6 +160,9 @@ SPDMX checks shape, not only behavior. Mirror Scala's control structure: a singl
 ### When canonical throws and Rust silently succeeds, the Rust is wrong
 If canonical Scala throws an error on a path where the Rust silently wraps/succeeds (or vice versa), the Rust diverged. Align to Scala. This may break tests that were asserting the wrong-Rust behavior — **update or delete those tests to match canonical's test set** (the test corpus is the spec). This is the DCCR-sanctioned exception: changing a test because it encoded wrong behavior, with canonical as the witness. A test passing on wrong-Rust behavior is worse than one failing on correct-Rust behavior.
 
+### DCCR architect escape-hatch: edit the Scala first, don't annotate a divergence
+When the Scala carries dead-weight machinery whose mutation/dispatch surface is unused on the call paths being ported (`FunctionEnvironmentBoxT`'s `setReturnType`/`addEntry` mutators on read-only paths is the canonical case), do **not** write the Rust without it and add a "diverges from Scala" note — those rot, and reviewers can't verify the divergence. Instead: edit the Scala source first to match what the Rust will become, update the Rust audit-trail `/* ... */` blocks to reflect the new Scala, then make the Rust change. Only valid when the wrapper is unused on the ported paths (verify with `grep`), the replacement is design-doc-blessed, and SCPX `--check-all` still passes after. **TL/architect-level only — juniors must escalate.**
+
 ### Unmigrated tests are `#[ignore]`'d panic-stubs
 A not-yet-migrated test is `#[test] #[ignore = "unmigrated - pending <pass> body migration"] fn x() { panic!("Unmigrated test: x"); }`. An unconditional `panic!` **without** `#[ignore]` fails the suite — always ignore them. The body-migration loop un-ignores one at a time, fills the panicked paths it hits, and repeats.
 

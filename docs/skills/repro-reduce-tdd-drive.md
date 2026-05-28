@@ -11,8 +11,8 @@ This loop is for when the typing pass is mostly migrated but you want to **find 
 
 1. First, look at these files in full. Do not skip any. You will need to adhere to all of these.
     * `./docs/skills/migration-drive.md` — base TDD/escalation rules; this skill is a specialization, not a replacement.
-    * `./FrontendRust/zen/migration_principles.md` — DCCR, RCSBASC, architect-level escape hatch.
-    * `./FrontendRust/zen/testing.md` — test conventions.
+    * `FrontendRust/docs/migration/migration-policy.md` — DCCR, RCSBASC, architect-level escape hatch.
+    * `FrontendRust/docs/usage/test-helpers.md` — test conventions.
     * `./Luz/shields/ScalaParityDuringMigration-SPDMX.md`
     * `./Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md`
     * `./Luz/shields/NoNewDefinitions-NNDX.md`

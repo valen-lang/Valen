@@ -8,8 +8,8 @@ description: Iteratively replace panics in a Scala-to-Rust migration with minima
 Here's what I want you to do:
 
 1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
-    * ./FrontendRust/zen/migration_principles.md
-    * ./FrontendRust/zen/testing.md
+    * FrontendRust/docs/migration/migration-policy.md
+    * FrontendRust/docs/usage/test-helpers.md
     * ./Luz/shields/NoValidSimplifications-NVSEX.md
     * ./Luz/shields/ScalaSealedTraitsToRustEnums-SSTREX.md
     * ./Luz/shields/TodosAndUnimplementedCodeMustPanic-TUCMPX.md

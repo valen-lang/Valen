@@ -32,7 +32,7 @@ Read these in full before driving any reconciliation:
 1. **This file.**
 2. **`TL.md`** — current migration state, what's expected of you.
 3. **`docs/architecture/typing-pass-design-v3.md`** — typing-pass arena and design decisions (if reconciling typing-pass files).
-4. **`FrontendRust/zen/migration_principles.md`** — DCCR, RCSBASC, architect-level escape hatch.
+4. **`FrontendRust/docs/migration/migration-policy.md`** — DCCR, RCSBASC, architect-level escape hatch.
 5. **`Luz/shields/ScalaCommentParity-SCPX.md`** — the spec for the shield that gates your edits.
 6. **`Luz/shields/ScalaParityDuringMigration-SPDMX.md`** — body-translation rules; Rust must mirror Scala's shape.
 7. **`Luz/shields/MigrateAllCommentsToo-MACTX.md`** — explanatory comments in Scala must reappear in Rust.

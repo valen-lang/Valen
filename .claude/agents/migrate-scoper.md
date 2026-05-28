@@ -9,7 +9,7 @@ If you don't see a "tmp/migrate-direction.md" file, please stop here and say "VE
 
 Here's what I want you to do:
 
-First, please look at FrontendRust/zen/migration_principles.md. The information will be necessary for this.
+First, please look at FrontendRust/docs/migration/migration-policy.md. The information will be necessary for this.
 
 Then, please answer these questions:
 

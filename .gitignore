@@ -41,7 +41,6 @@ test_output/
 */.claude/settings.local.json
 */.claude/worktrees/
 .DS_Store
-FrontendRust/zen/logs
 guardian-cache
 target
 Frontend/lib/scala-reflect-2.12.8.jar

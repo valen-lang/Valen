@@ -14,7 +14,7 @@ You will also be told:
 
 Here's what I want you to do:
 
- * First, look at FrontendRust/zen/migration_principles.md.
+ * First, look at FrontendRust/docs/migration/migration-policy.md.
  * Then, I want you to bring over *the minimum* amount of Scala code that gets us *closer* to addressing what was going wrong.
 
 Your changes should build; make sure to run `cargo build --lib`. If that fails, then please correct your changes.

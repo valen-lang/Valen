@@ -9,7 +9,7 @@ You will be told a test that is failing, and the command line to run it.
 
 Here's what I want you to do:
  1. Please look at:
-    * FrontendRust/zen/migration_principles.md
+    * FrontendRust/docs/migration/migration-policy.md
     * Luz/shields/ScalaParityDuringMigration-SPDMX.md
     * Luz/shields/ScalaCommentParity-SCPX.md
  2. Try to build the project. if it doesn't build, then please make it build.

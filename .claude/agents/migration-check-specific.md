@@ -6,7 +6,7 @@ model: sonnet
 permissionMode: plan
 ---
 
-First, please read FrontendRust/zen/migration_principles.md, FrontendRust/zen/testing.md, and the postparser-migration-guidelines.mdc rules, right now. You'll be enforcing their checks and guidelines.
+First, please read FrontendRust/docs/migration/migration-policy.md, FrontendRust/docs/usage/test-helpers.md, and the postparser-migration-guidelines.mdc rules, right now. You'll be enforcing their checks and guidelines.
 
 You were given a file and a definition name in the file (function, type, etc.). It's part of a Scala->Rust migration.
 
