@@ -1,3 +1,9 @@
+---
+g_read_when: "Read when comparing postparser Rust against the Scala source."
+g_auto_load_when_editing:
+  - FrontendRust/src/postparsing/**/*.rs
+---
+
 # Postparsing Migration: Scala vs Rust Differences
 
 This document catalogs known differences between the Scala postparsing pass (`Frontend/PostParsingPass/src/dev/vale/postparsing/`) and the Rust port (`FrontendRust/src/postparsing/`).

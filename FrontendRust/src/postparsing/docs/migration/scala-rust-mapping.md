@@ -1,0 +1,194 @@
+---
+g_read_when: "Read when mapping postparser code between Scala and Rust."
+g_auto_load_when_editing:
+  - FrontendRust/src/postparsing/**/*.rs
+---
+
+# Postparser Implementation Mapping (Scala -> Rust)
+
+- Scala dir: `/Volumes/V/Sylvan/Frontend/PostParsingPass/src/dev/vale/postparsing`
+- Rust dir: `/Volumes/V/Sylvan/FrontendRust/src/postparsing`
+
+- ExpressionScout.scala:53 class ExpressionScout -> expression_scout in postparsing/mod.rs
+- FunctionScout.scala:38 class FunctionScout -> function_scout in postparsing/mod.rs
+- ast.scala:406 class LocationInDenizenBuilder -> LocationInDenizenBuilder in postparsing/ast.rs
+- LoopPostParser.scala:9 class LoopPostParser -> loop_post_parser in postparsing/mod.rs
+- patterns/PatternScout.scala:16 class PatternScout -> pattern_scout in postparsing/patterns/mod.rs
+- PostParser.scala:373 class PostParser -> post_parser in postparsing/mod.rs
+- rules/RuleScout.scala:15 class RuleScout -> rule_scout in postparsing/rules/mod.rs
+- RuneTypeSolver.scala:79 class RuneTypeSolver -> rune_type_solver in postparsing/mod.rs
+- PostParser.scala:922 class ScoutCompilation -> ScoutCompilation in postparsing/post_parser.rs
+- rules/TemplexScout.scala:13 class TemplexScout -> templex_scout in postparsing/rules/mod.rs
+- rules/TemplexScout.scala:16 def addLiteralRule -> add_literal_rule in postparsing/rules/templex_scout.rs
+- rules/TemplexScout.scala:38 def addLookupRule -> add_lookup_rule in postparsing/rules/templex_scout.rs
+- rules/TemplexScout.scala:27 def addRuneParentEnvLookupRule -> add_rune_parent_env_lookup_rule in postparsing/rules/templex_scout.rs
+- PostParser.scala:122 def allDeclarations -> all_declarations in postparsing/post_parser.rs
+- PostParser.scala:63 def allDeclaredRunes -> all_declared_runes in postparsing/post_parser.rs
+- VariableUses.scala:51 def allUsedNames -> all_used_names in postparsing/variable_uses.rs
+- ast.scala:437 def before -> before in postparsing/ast.rs
+- VariableUses.scala:65 def branchMerge -> branch_merge_certainty in postparsing/variable_uses.rs
+- RuneTypeSolver.scala:575 def checkGenericCall -> check_generic_call in postparsing/rune_type_solver.rs
+- RuneTypeSolver.scala:553 def checkGenericCallWithoutDefaults -> check_generic_call_without_defaults in postparsing/rune_type_solver.rs
+- PostParser.scala:778 def checkIdentifiability -> check_identifiability in postparsing/post_parser.rs
+- PostParser.scala:105 def child -> child in postparsing/post_parser.rs
+- ast.scala:413 def child -> child in postparsing/post_parser.rs
+- ast.scala:475 def citizen -> citizen in postparsing/ast.rs
+- VariableUses.scala:86 def combine -> combine in postparsing/variable_uses.rs
+- IdentifiabilitySolver.scala:275 def complexSolve -> complex_solve in postparsing/rune_type_solver.rs
+- RuneTypeSolver.scala:514 def complexSolve -> complex_solve in postparsing/rune_type_solver.rs
+- PostParser.scala:231 def consecutive -> consecutive in postparsing/post_parser.rs
+- ast.scala:419 def consume -> consume in postparsing/ast.rs
+- FunctionScout.scala:567 def createClosureParam -> create_closure_param in postparsing/function_scout.rs
+- FunctionScout.scala:614 def createMagicParameters -> create_magic_parameters in postparsing/function_scout.rs
+- PostParser.scala:164 def determineDenizenType -> determine_denizen_type in postparsing/post_parser.rs
+- ExpressionScout.scala:62 def endsWithReturn -> ends_with_return in postparsing/expression_scout.rs
+- PostParser.scala:150 def evalPos -> eval_pos in postparsing/post_parser.rs
+- PostParser.scala:146 def evalRange -> eval_range in postparsing/post_parser.rs
+- ast.scala:293 def expectRegion -> expect_region in postparsing/ast.rs
+- PostParser.scala:951 def expectScoutput -> expect_scoutput in postparsing/post_parser.rs
+- PostParser.scala:61 def file -> file in postparsing/function_scout.rs
+- VariableUses.scala:28 def find -> find in postparsing/variable_uses.rs
+- ExpressionScout.scala:221 def findLocal -> find_local in postparsing/expression_scout.rs
+- rules/RuleScout.scala:278 def findTransitivelyEquivalentInto -> find_transitively_equivalent_into in postparsing/rules/rule_scout.rs
+- PostParser.scala:125 def findVariable -> find_variable in postparsing/post_parser.rs
+- ExpressionScout.scala:895 def flattenExpressions -> flatten_expressions in postparsing/expression_scout.rs
+- ast.scala:70 def genericParams -> generic_params in postparsing/ast.rs
+- patterns/PatternScout.scala:25 def getCaptureCaptures -> get_capture_captures in postparsing/patterns/pattern_scout.rs
+- PostParser.scala:931 def getCodeMap -> get_code_map in postparsing/post_parser.rs
+- PostParser.scala:187 def getHumanName -> get_human_name in postparsing/post_parser.rs
+- rules/RuleScout.scala:287 def getKindEquivalentRunes -> get_kind_equivalent_runes_iter in postparsing/rules/rule_scout.rs
+- patterns/PatternScout.scala:19 def getParameterCaptures -> get_parameter_captures in postparsing/patterns/pattern_scout.rs
+- PostParser.scala:932 def getParseds -> get_parseds in postparsing/post_parser.rs
+- IdentifiabilitySolver.scala:57 def getPuzzles -> get_puzzles in postparsing/identifiability_solver.rs
+- RuneTypeSolver.scala:116 def getPuzzles -> get_puzzles_rune_type in postparsing/rune_type_solver.rs
+- rules/RuleScout.scala:227 def getRuneKindTemplate -> get_rune_kind_template in postparsing/rules/rule_scout.rs
+- IdentifiabilitySolver.scala:21 def getRunes -> get_runes in postparsing/identifiability_solver.rs
+- RuneTypeSolver.scala:80 def getRunes -> get_runes_rune_type in postparsing/rune_type_solver.rs
+- PostParser.scala:935 def getScoutput -> get_scoutput in postparsing/post_parser.rs
+- rules/rules.scala:298 def getType -> get_type in postparsing/rules/rules.rs
+- PostParser.scala:933 def getVpstMap -> get_vpst_map in postparsing/post_parser.rs
+- PostParserErrorHumanizer.scala:12 def humanize -> humanize in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:101 def humanizeIdentifiabilityRuleErrorr -> humanize_identifiability_rule_errorr in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:134 def humanizeImpreciseName -> humanize_imprecise_name in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:275 def humanizeLiteral -> humanize_literal in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:286 def humanizeMutability -> humanize_mutability in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:110 def humanizeName -> humanize_name in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:300 def humanizeOwnership -> humanize_ownership in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:309 def humanizeRegion -> humanize_region in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:226 def humanizeRule -> humanize_rule in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:149 def humanizeRune -> humanize_rune in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:80 def humanizeRuneTypeError -> humanize_rune_type_error in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:207 def humanizeTemplataType -> humanize_templata_type in postparsing/post_parser_error_humanizer.rs
+- PostParserErrorHumanizer.scala:293 def humanizeVariability -> humanize_variability in postparsing/post_parser_error_humanizer.rs
+- VariableUses.scala:68 def isBorrowed -> is_borrowed in postparsing/variable_uses.rs
+- ast.scala:394 def isLight -> is_light in postparsing/ast.rs
+- VariableUses.scala:74 def isMoved -> is_moved in postparsing/variable_uses.rs
+- VariableUses.scala:80 def isMutated -> is_mutated in postparsing/variable_uses.rs
+- PostParser.scala:64 def localDeclaredRunes -> local_declared_runes in postparsing/post_parser.rs
+- PostParser.scala:759 def lookup -> lookup in postparsing/expression_scout.rs
+- RuneTypeSolver.scala:75 def lookup -> lookup_rune_type in postparsing/rune_type_solver.rs
+- ast.scala:25 def lookupFunction -> lookup_function in postparsing/ast.rs
+- ast.scala:32 def lookupInterface -> lookup_interface in postparsing/ast.rs
+- ast.scala:39 def lookupStruct -> lookup_struct in postparsing/ast.rs
+- VariableUses.scala:52 def markBorrowed -> mark_borrowed in postparsing/variable_uses.rs
+- rules/RuleScout.scala:249 def markKindEquivalent -> mark_kind_equivalent in postparsing/rules/rule_scout.rs
+- VariableUses.scala:55 def markMoved -> mark_moved in postparsing/variable_uses.rs
+- VariableUses.scala:58 def markMutated -> mark_mutated in postparsing/variable_uses.rs
+- VariableUses.scala:100 def merge -> merge_uses in postparsing/variable_uses.rs
+- PostParser.scala:62 def name -> name in postparsing/ast.rs
+- ast.scala:68 def name -> name in postparsing/ast.rs
+- names.scala:57 def name -> name in postparsing/ast.rs
+- ExpressionScout.scala:129 def newBlock -> new_block in postparsing/expression_scout.rs
+- ExpressionScout.scala:802 def newIf -> new_if in postparsing/expression_scout.rs
+- names.scala:9 def packageCoordinate -> package_coordinate in postparsing/function_scout.rs
+- PostParser.scala:565 def predictMutability -> predict_mutability in postparsing/post_parser.rs
+- PostParser.scala:738 def predictRuneTypes -> predict_rune_types in postparsing/post_parser.rs
+- ExpressionScout.scala:50 def range -> range in postparsing/expressions.rs
+- ast.scala:13 def range -> range in postparsing/expressions.rs
+- expressions.scala:136 def range -> range in postparsing/expressions.rs
+- names.scala:16 def range -> range in postparsing/expressions.rs
+- rules/rules.scala:21 def range -> range in postparsing/expressions.rs
+- rules/rules.scala:22 def runeUsages -> rune_usages in postparsing/rules/rules.rs
+- IdentifiabilitySolver.scala:273 def sanityCheckConclusion -> sanity_check_conclusion in postparsing/rune_type_solver.rs
+- RuneTypeSolver.scala:512 def sanityCheckConclusion -> sanity_check_conclusion in postparsing/rune_type_solver.rs
+- ExpressionScout.scala:70 def scoutBlock -> scout_block in postparsing/expression_scout.rs
+- FunctionScout.scala:650 def scoutBody -> scout_body in postparsing/function_scout.rs
+- LoopPostParser.scala:31 def scoutEach -> scout_each in postparsing/loop_post_parser.rs
+- LoopPostParser.scala:102 def scoutEachBody -> scout_each_body in postparsing/loop_post_parser.rs
+- ExpressionScout.scala:873 def scoutElementsAsExpressions -> scout_elements_as_expressions in postparsing/expression_scout.rs
+- PostParser.scala:530 def scoutExportAs -> scout_export_as in postparsing/post_parser.rs
+- ExpressionScout.scala:235 def scoutExpression -> scout_expression in postparsing/expression_scout.rs
+- ExpressionScout.scala:829 def scoutExpressionAndCoerce -> scout_expression_and_coerce in postparsing/expression_scout.rs
+- FunctionScout.scala:59 def scoutFunction -> scout_function in postparsing/function_scout.rs
+- PostParser.scala:245 def scoutGenericParameter -> scout_generic_parameter in postparsing/post_parser.rs
+- PostParser.scala:406 def scoutImpl -> scout_impl in postparsing/post_parser.rs
+- PostParser.scala:557 def scoutImport -> scout_import in postparsing/post_parser.rs
+- ExpressionScout.scala:113 def scoutImpureBlock -> scout_impure_block in postparsing/expression_scout.rs
+- PostParser.scala:793 def scoutInterface -> scout_interface in postparsing/post_parser.rs
+- FunctionScout.scala:738 def scoutInterfaceMember -> scout_interface_member in postparsing/function_scout.rs
+- ExpressionScout.scala:24 def scoutLambda -> scout_lambda in postparsing/function_scout.rs
+- FunctionScout.scala:48 def scoutLambda -> scout_lambda in postparsing/function_scout.rs
+- LoopPostParser.scala:10 def scoutLoop -> scout_loop in postparsing/loop_post_parser.rs
+- PostParser.scala:381 def scoutProgram -> scout_program in postparsing/post_parser.rs
+- PostParser.scala:580 def scoutStruct -> scout_struct in postparsing/post_parser.rs
+- LoopPostParser.scala:201 def scoutWhile -> scout_while in postparsing/loop_post_parser.rs
+- LoopPostParser.scala:238 def scoutWhileBody -> scout_while_body in postparsing/loop_post_parser.rs
+- IdentifiabilitySolver.scala:256 def solve -> solve_identifiability in postparsing/identifiability_solver.rs
+- RuneTypeSolver.scala:412 def solve -> solve_rune_type in postparsing/rune_type_solver.rs
+- IdentifiabilitySolver.scala:102 def solveRule -> solve_rule in postparsing/rune_type_solver.rs
+- RuneTypeSolver.scala:185 def solveRule -> solve_rule in postparsing/rune_type_solver.rs
+- VariableUses.scala:62 def thenMerge -> then_merge_certainty in postparsing/variable_uses.rs
+- ast.scala:425 def toString -> to_string in postparsing/function_scout.rs
+- PostParser.scala:728 def translateCitizenAttributes -> translate_citizen_attributes in postparsing/post_parser.rs
+- PostParser.scala:154 def translateImpreciseName -> translate_imprecise_name in postparsing/post_parser.rs
+- rules/TemplexScout.scala:349 def translateMaybeTypeIntoMaybeRune -> translate_maybe_type_into_maybe_rune in postparsing/rules/templex_scout.rs
+- rules/TemplexScout.scala:330 def translateMaybeTypeIntoRune -> translate_maybe_type_into_rune in postparsing/rules/templex_scout.rs
+- patterns/PatternScout.scala:36 def translatePattern -> translate_pattern in postparsing/patterns/pattern_scout.rs
+- rules/RuleScout.scala:30 def translateRulex -> translate_rulex in postparsing/rules/rule_scout.rs
+- rules/RuleScout.scala:19 def translateRulexes -> translate_rulexes in postparsing/rules/rule_scout.rs
+- rules/TemplexScout.scala:65 def translateTemplex -> translate_templex in postparsing/rules/templex_scout.rs
+- rules/RuleScout.scala:210 def translateType -> translate_type in postparsing/rules/rule_scout.rs
+- rules/TemplexScout.scala:308 def translateTypeIntoRune -> translate_type_into_rune in postparsing/rules/templex_scout.rs
+- rules/TemplexScout.scala:50 def translateValueTemplex -> translate_value_templex in postparsing/rules/templex_scout.rs
+- ast.scala:125 def typeRune -> type_rune in postparsing/ast.rs
+- ast.scala:69 def tyype -> tyype in postparsing/ast.rs
+- ast.scala:124 def variability -> variability in postparsing/ast.rs
+- ExpressionScout.scala:894 object ExpressionScout -> expression_scout in postparsing/mod.rs
+- ast.scala:465 object ICitizenDenizenS -> ICitizenDenizenS in postparsing/ast.rs
+- IdentifiabilitySolver.scala:20 object IdentifiabilitySolver -> identifiability_solver in postparsing/mod.rs
+- ast.scala:292 object IGenericParameterTypeS -> IGenericParameterTypeS in postparsing/ast.rs
+- ast.scala:223 object interfaceSName -> interface_s_name in postparsing/ast.rs
+- PostParser.scala:138 object PostParser -> post_parser in postparsing/mod.rs
+- PostParserErrorHumanizer.scala:11 object PostParserErrorHumanizer -> post_parser_error_humanizer in postparsing/mod.rs
+- rules/RuleScout.scala:208 object RuleScout -> rule_scout in postparsing/rules/mod.rs
+- RuneTypeSolver.scala:552 object RuneTypeSolver -> rune_type_solver in postparsing/mod.rs
+- ast.scala:230 object structSName -> struct_s_name in postparsing/ast.rs
+- names.scala:62 object TopLevelCitizenDeclarationNameS -> TopLevelCitizenDeclarationNameS in postparsing/names.rs
+- ast.scala:12 trait IExpressionSE -> IExpressionSE in postparsing/ast.rs
+- names.scala:8 trait IFunctionDeclarationNameS -> IFunctionDeclarationNameS in postparsing/function_scout.rs
+- names.scala:6 trait IImpreciseNameS -> IImpreciseNameS in postparsing/expressions.rs
+- names.scala:5 trait INameS -> INameS in postparsing/post_parser_error_humanizer.rs
+- rules/rules.scala:20 trait IRulexSR -> IRulexSR in postparsing/expressions.rs
+- rules/RuleScout.scala:247 class Equivalencies in <missing>
+- ExpressionScout.scala:33 def equals in <missing>
+- ITemplataType.scala:23 def equals in <missing>
+- PostParser.scala:28 def equals in <missing>
+- RuneTypeSolver.scala:47 def equals in <missing>
+- VariableUses.scala:21 def equals in <missing>
+- ast.scala:23 def equals in <missing>
+- expressions.scala:17 def equals in <missing>
+- patterns/patterns.scala:13 def equals in <missing>
+- rules/rules.scala:26 def equals in <missing>
+- names.scala:10 def getImpreciseName in <missing>
+- names.scala:15 trait ICitizenDeclarationNameS in <missing>
+- ExpressionScout.scala:23 trait IExpressionScoutDelegate in <missing>
+- names.scala:12 trait IImplDeclarationNameS in <missing>
+- RuneTypeSolver.scala:74 trait IRuneTypeSolverEnv in <missing>
+- <missing> -> canonical_ptr in postparsing/names.rs
+- <missing> -> ptr_eq in postparsing/names.rs
+- <missing> -> from in postparsing/names.rs
+
+- Total found: `160`
+- Total missing: `15`
+- Total checked: `175`
+- Extra rust functions: `3`

@@ -1,6 +1,8 @@
 ---
-description: Interning and arena allocation patterns in FrontendRust
-paths: src/interner.rs, src/postparsing/names.rs
+g_read_when: "Read when interning values or allocating into an arena."
+g_auto_load_when_editing:
+  - FrontendRust/src/interner.rs
+  - FrontendRust/src/postparsing/names.rs
 ---
 
 # Interning Patterns

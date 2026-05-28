@@ -1,6 +1,7 @@
 ---
-description: Scala scout organization to Rust PostParser file split
-paths: src/postparsing/*.rs
+g_read_when: "Read when navigating how Scala scout classes map to PostParser files."
+g_auto_load_when_editing:
+  - FrontendRust/src/postparsing/*.rs
 ---
 
 # Postparsing Organization Map

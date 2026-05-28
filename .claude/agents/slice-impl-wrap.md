@@ -1,6 +1,6 @@
 ---
 name: slice-impl-wrap
-description: Wrap each module-scope fn in its own dedicated impl block, using `// mig: struct Foo` / `// mig: enum Foo` markers to determine the receiver type
+description: "Wrap each module-scope fn in its own dedicated impl block, using `// mig: struct Foo` / `// mig: enum Foo` markers to determine the receiver type"
 tools: [Read, Edit, Grep]
 model: haiku
 ---

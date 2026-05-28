@@ -19,22 +19,11 @@ Remaining work is the **cleanup tail** below.
 
 ## Remaining work
 
-### `.claude/rules/` — convert to docs + auto-load symlinks (not started)
+### `.claude/rules/` — DONE
 
-These 12 are still hand-written real files, not docs-with-symlinks. Move each into the right pass `docs/` (usage or architecture), give it `g_auto_load_when_editing` frontmatter, and let `manifest-sync` generate the `.claude/rules/` symlink. Watch for overlap with newer docs (esp. interning).
+Converted all 12 hand-written `.mdc`/`.md` rules into `docs/` docs with `g_read_when` + `g_auto_load_when_editing` frontmatter; `manifest-sync` now generates the `.claude/rules/*.mdc` (flat dashed names, project-root-relative globs). Homes: build-test, interning-patterns, style-guide → `FrontendRust/docs/usage/`; context, no-unsolicited-restructuring → `FrontendRust/docs/migration/`; solver/parser/postparser mappings, guidelines, organization, IDEPFL interning, differences → the respective `src/<pass>/docs/{migration,architecture}/`. Also fixed `slice-impl-wrap.md` malformed YAML that had been breaking manifest-sync.
 
-- [ ] `general/frontendrust-build-test.mdc` → `FrontendRust/docs/usage/build-test.md`
-- [ ] `general/interning-patterns.mdc` → `FrontendRust/docs/usage/` (check overlap with arena/interning arcana)
-- [ ] `general/no-unsolicited-restructuring.mdc` → shield, or keep Claude-only
-- [ ] `general/style-guide.mdc` → `FrontendRust/docs/usage/style.md`
-- [ ] `migration/frontendrust-migration-context.mdc` → `FrontendRust/docs/migration/`
-- [ ] `migration/solver-migration.mdc` → `src/solver/docs/migration/`
-- [ ] `parser/parser_impl_scala_rust_mapping.mdc` → `src/parsing/docs/migration/`
-- [ ] `postparser/postparser-migration-guidelines.mdc` → `src/postparsing/docs/migration/`
-- [ ] `postparser/postparser-organization-map.mdc` → `src/postparsing/docs/architecture/`
-- [ ] `postparser/postparser_impl_scala_rust_mapping.mdc` → `src/postparsing/docs/migration/`
-- [ ] `postparser/IDEPFL-postparser-interning.md` → `src/postparsing/docs/usage/` or `architecture/`
-- [ ] `postparser/postparser-migration.md` → `src/postparsing/docs/migration/differences.md`
+**Follow-up:** `usage/interning-patterns.md` overlaps `architecture/interning-dual-enum.md` (IDEPFL) and the arena arcana — dedup in a later curation pass.
 
 ### Migration doc pruning
 
@@ -43,15 +32,15 @@ These 12 are still hand-written real files, not docs-with-symlinks. Move each in
 
 ### FrontendRust loose files
 
-- [ ] `FrontendRust/todo.md`
-- [ ] `FrontendRust/cursor_setup.md`
-- [ ] `FrontendRust/thoughts.md`
-- [ ] `FrontendRust/manual/building.md` → `FrontendRust/docs/usage/building.md`
-- [ ] `FrontendRust/src/gripes.md`
+- [ ] `FrontendRust/todo.md` (kept per request)
+- [x] `FrontendRust/cursor_setup.md` — deleted
+- [ ] `FrontendRust/thoughts.md` — design scratchpad (Coord/region/ownership musings); decide reasoning-doc vs leave
+- [ ] `FrontendRust/manual/building.md` — 2-line build/test command ref; fold into `docs/usage/build-test.md` or leave
+- [ ] `FrontendRust/src/gripes.md` (leave per request)
 
-### Skills
+### Skills — DONE
 
-- [ ] 1 of 19 `.claude/skills/*/SKILL.md` is still a real file (not a `docs/skills/` symlink) — migrate it for consistency.
+All `.claude/skills/*/SKILL.md` are now symlinks to `docs/skills/` sources. Fixed this pass: `collapsed-call-tree` (was direct-to-Luz; now `docs/skills/collapsed-call-tree.md` → Luz symlink); `good-testing`/`tdd`/`feature-development-flow` (were verbatim copies; now symlinks into Luz, avoiding SEE ALSO double-mention); `drift-reconcile` (was a diverged real file; now a symlink). `repro-reduce-tdd-drive` gained its `.claude/skills` entry.
 
 ### CLAUDE.md content audit (Phase 9)
 

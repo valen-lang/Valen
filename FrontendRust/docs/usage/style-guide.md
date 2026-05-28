@@ -1,7 +1,7 @@
 ---
-description: Rust style guide
-paths: **/*.rs
-alwaysApply: true
+g_read_when: "Read when writing Rust imports or referencing types by path."
+g_auto_load_when_editing:
+  - "FrontendRust/**/*.rs"
 ---
 
 # Rust Import Style

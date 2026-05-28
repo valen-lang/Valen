@@ -1,0 +1,307 @@
+---
+g_read_when: "Read when mapping parser code between Scala and Rust."
+g_auto_load_when_editing:
+  - FrontendRust/src/parsing/**/*.rs
+---
+
+# Parser Implementation Mapping (Scala -> Rust)
+
+- Scala dir: `/Volumes/V/Sylvan/Frontend/ParsingPass/src/dev/vale/parsing`
+- Rust dir: `/Volumes/V/Sylvan/FrontendRust/src/parsing`
+
+- ExpressionParser.scala:239 class ExpressionParser -> ExpressionParser in parsing/expression_parser.rs
+- ParsedLoader.scala:9 class ParsedLoader -> parsed_loader in parsing/mod.rs
+- Parser.scala:18 class Parser -> parser in parsing/mod.rs
+- Parser.scala:699 class ParserCompilation -> ParserCompilation in parsing/parser.rs
+- PatternParser.scala:11 class PatternParser -> pattern_parser in parsing/mod.rs
+- ExpressionParser.scala:36 class ScrambleIterator -> ScrambleIterator in parsing/scramble_iterator.rs
+- templex/TemplexParser.scala:13 class TemplexParser -> TemplexParser in parsing/templex_parser.rs
+- ExpressionParser.scala:120 def advance -> advance in parsing/scramble_iterator.rs
+- ExpressionParser.scala:46 def atEnd -> at_end in parsing/scramble_iterator.rs
+- ExpressionParser.scala:1924 def atExpressionEnd -> at_expression_end in parsing/expression_parser.rs
+- ExpressionParser.scala:81 def clone -> clone in parsing/expression_parser.rs
+- ast/ast.scala:17 def equals -> Equals in parsing/parsed_loader.rs
+- ast/expressions.scala:14 def equals -> Equals in parsing/parsed_loader.rs
+- ast/pattern.scala:42 def equals -> Equals in parsing/parsed_loader.rs
+- ast/templex.scala:13 def equals -> Equals in parsing/parsed_loader.rs
+- Parser.scala:785 def expectCodeMap -> expect_code_map in parsing/parser.rs
+- ParsedLoader.scala:22 def expectNumber -> expect_number in parsing/parsed_loader.rs
+- ParsedLoader.scala:10 def expectObject -> expect_object in parsing/parsed_loader.rs
+- ParsedLoader.scala:28 def expectObjectTyped -> expect_object_typed in parsing/parsed_loader.rs
+- Parser.scala:805 def expectParseds -> expect_parseds in parsing/parser.rs
+- ParsedLoader.scala:16 def expectString -> expect_string in parsing/parsed_loader.rs
+- ParsedLoader.scala:89 def expectType -> expect_type in parsing/parsed_loader.rs
+- Parser.scala:832 def expectVpstMap -> expect_vpst_map in parsing/parser.rs
+- ExpressionParser.scala:173 def expectWord -> expect_word in parsing/scramble_iterator.rs
+- ExpressionParser.scala:189 def findIndexWhere -> find_index_where in parsing/scramble_iterator.rs
+- ParsedLoader.scala:83 def getArrayField -> get_array_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:77 def getBooleanField -> get_boolean_field in parsing/parsed_loader.rs
+- Parser.scala:779 def getCodeMap -> get_code_map in parsing/parser.rs
+- ParsedLoader.scala:36 def getField -> get_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:71 def getFloatField -> get_float_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:58 def getIntField -> get_int_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:64 def getLongField -> get_long_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:42 def getObjectField -> get_object_field in parsing/parsed_loader.rs
+- ast/rules.scala:42 def getOrderedRuneDeclarationsFromRulexesWithDuplicates -> get_ordered_rune_declarations_from_rulexes_with_duplicates in parsing/ast/rules.rs
+- ast/rules.scala:47 def getOrderedRuneDeclarationsFromRulexWithDuplicates -> get_ordered_rune_declarations_from_rulex_with_duplicates in parsing/ast/rules.rs
+- ast/rules.scala:61 def getOrderedRuneDeclarationsFromTemplexesWithDuplicates -> get_ordered_rune_declarations_from_templexes_with_duplicates in parsing/ast/rules.rs
+- ast/rules.scala:65 def getOrderedRuneDeclarationsFromTemplexWithDuplicates -> get_ordered_rune_declarations_from_templex_with_duplicates in parsing/ast/rules.rs
+- Parser.scala:789 def getParseds -> get_parseds in parsing/parser.rs
+- ExpressionParser.scala:61 def getPos -> get_pos in parsing/scramble_iterator.rs
+- ExpressionParser.scala:831 def getPrecedence -> get_precedence in parsing/expression_parser.rs
+- ExpressionParser.scala:68 def getPrevEndPos -> get_prev_end_pos in parsing/scramble_iterator.rs
+- ParsedLoader.scala:50 def getStringField -> get_string_field in parsing/parsed_loader.rs
+- ParsedLoader.scala:95 def getType -> get_type in parsing/parsed_loader.rs
+- Parser.scala:814 def getVpstMap -> get_vpst_map in parsing/parser.rs
+- ExpressionParser.scala:82 def hasNext -> has_next in parsing/scramble_iterator.rs
+- ParseErrorHumanizer.scala:17 def humanize -> humanize in parsing/parse_error_humanizer.rs
+- ParsedLoader.scala:111 def load -> load in parsing/parsed_loader.rs
+- Parser.scala:708 def loadAndParse -> load_and_parse in parsing/parser.rs
+- ParsedLoader.scala:536 def loadArraySize -> load_array_size in parsing/parsed_loader.rs
+- ParsedLoader.scala:715 def loadAttribute -> load_attribute in parsing/parsed_loader.rs
+- ParsedLoader.scala:288 def loadBlock -> load_block in parsing/parsed_loader.rs
+- ParsedLoader.scala:296 def loadConsecutor -> load_consecutor in parsing/parsed_loader.rs
+- ParsedLoader.scala:544 def loadConstructArray -> load_construct_array in parsing/parsed_loader.rs
+- ParsedLoader.scala:249 def loadDestinationLocal -> load_destination_local in parsing/parsed_loader.rs
+- ParsedLoader.scala:243 def loadDestructure -> load_destructure in parsing/parsed_loader.rs
+- ParsedLoader.scala:153 def loadExportAs -> load_export_as in parsing/parsed_loader.rs
+- ParsedLoader.scala:318 def loadExpression -> load_expression in parsing/parsed_loader.rs
+- ParsedLoader.scala:207 def loadFileCoord -> load_file_coord in parsing/parsed_loader.rs
+- ParsedLoader.scala:136 def loadFunction -> load_function in parsing/parsed_loader.rs
+- ParsedLoader.scala:195 def loadFunctionHeader -> load_function_header in parsing/parsed_loader.rs
+- ParsedLoader.scala:301 def loadFunctionReturn -> load_function_return in parsing/parsed_loader.rs
+- ParsedLoader.scala:694 def loadGenericParameterType -> load_generic_parameter_type in parsing/parsed_loader.rs
+- ParsedLoader.scala:871 def loadIdentifyingRune -> load_identifying_rune in parsing/parsed_loader.rs
+- ParsedLoader.scala:866 def loadIdentifyingRunes -> load_identifying_runes in parsing/parsed_loader.rs
+- ParsedLoader.scala:143 def loadImpl -> load_impl in parsing/parsed_loader.rs
+- ParsedLoader.scala:160 def loadImport -> load_import in parsing/parsed_loader.rs
+- ParsedLoader.scala:266 def loadImpreciseName -> load_imprecise_name in parsing/parsed_loader.rs
+- ParsedLoader.scala:181 def loadInterface -> load_interface in parsing/parsed_loader.rs
+- ParsedLoader.scala:555 def loadLookup -> load_lookup in parsing/parsed_loader.rs
+- ParsedLoader.scala:741 def loadMutability -> load_mutability in parsing/parsed_loader.rs
+- ParsedLoader.scala:104 def loadName -> load_name in parsing/parsed_loader.rs
+- ParsedLoader.scala:255 def loadNameDeclaration -> load_name_declaration in parsing/parsed_loader.rs
+- ParsedLoader.scala:613 def loadOptionalObject -> load_optional_object in parsing/parsed_loader.rs
+- ParsedLoader.scala:755 def loadOwnership -> load_ownership in parsing/parsed_loader.rs
+- ParsedLoader.scala:854 def loadOwnershipPT -> load_ownership_pt in parsing/parsed_loader.rs
+- ParsedLoader.scala:213 def loadPackageCoord -> load_package_coord in parsing/parsed_loader.rs
+- ParsedLoader.scala:225 def loadParameter -> load_parameter in parsing/parsed_loader.rs
+- ParsedLoader.scala:219 def loadParams -> load_params in parsing/parsed_loader.rs
+- ParsedLoader.scala:234 def loadPattern -> load_pattern in parsing/parsed_loader.rs
+- ParsedLoader.scala:98 def loadRange -> load_range in parsing/parsed_loader.rs
+- ParsedLoader.scala:860 def loadRegionRune -> load_region_rune in parsing/parsed_loader.rs
+- ParsedLoader.scala:633 def loadRulex -> load_rulex in parsing/parsed_loader.rs
+- ParsedLoader.scala:676 def loadRulexType -> load_rulex_type in parsing/parsed_loader.rs
+- ParsedLoader.scala:700 def loadRuneAttribute -> load_rune_attribute in parsing/parsed_loader.rs
+- ParsedLoader.scala:168 def loadStruct -> load_struct in parsing/parsed_loader.rs
+- ParsedLoader.scala:591 def loadStructContent -> load_struct_content in parsing/parsed_loader.rs
+- ParsedLoader.scala:312 def loadStructMembers -> load_struct_members in parsing/parsed_loader.rs
+- ParsedLoader.scala:561 def loadTemplateArgs -> load_template_args in parsing/parsed_loader.rs
+- ParsedLoader.scala:627 def loadTemplateRules -> load_template_rules in parsing/parsed_loader.rs
+- ParsedLoader.scala:764 def loadTemplex -> load_templex in parsing/parsed_loader.rs
+- ParsedLoader.scala:669 def loadTypedPR -> load_typed_pr in parsing/parsed_loader.rs
+- ParsedLoader.scala:307 def loadUnit -> load_unit in parsing/parsed_loader.rs
+- ParsedLoader.scala:748 def loadVariability -> load_variability in parsing/parsed_loader.rs
+- ParsedLoader.scala:577 def loadVirtuality -> load_virtuality in parsing/parsed_loader.rs
+- ast/expressions.scala:9 def needsSemicolonBeforeNextStatement -> needs_semicolon_before_next_statement in parsing/ast/expressions.rs
+- ExpressionParser.scala:483 def nextIsSetExpr -> next_is_set_expr in parsing/expression_parser.rs
+- ExpressionParser.scala:164 def nextWord -> next_word in parsing/scramble_iterator.rs
+- ParseAndExplore.scala:30 def parseAndExplore -> parse_and_explore in parsing/parse_and_explore.rs
+- ExpressionParser.scala:1729 def parseArray -> parse_array in parsing/expression_parser.rs
+- templex/TemplexParser.scala:14 def parseArray -> parse_array in parsing/expression_parser.rs
+- ExpressionParser.scala:955 def parseAtom -> parse_atom in parsing/expression_parser.rs
+- ExpressionParser.scala:1246 def parseAtomAndTightSuffixes -> parse_atom_and_tight_suffixes in parsing/expression_parser.rs
+- Parser.scala:518 def parseAttribute -> parse_attribute in parsing/parser.rs
+- ExpressionParser.scala:1881 def parseBinaryCall -> parse_binary_call in parsing/expression_parser.rs
+- ExpressionParser.scala:586 def parseBlock -> parse_block in parsing/expression_parser.rs
+- ExpressionParser.scala:590 def parseBlockContents -> parse_block_contents in parsing/expression_parser.rs
+- Parser.scala:660 def parseBodyDefaultRegion -> parse_body_default_region in parsing/parser.rs
+- ExpressionParser.scala:940 def parseBoolean -> parse_boolean in parsing/expression_parser.rs
+- ExpressionParser.scala:1544 def parseBracedBody -> parse_braced_body in parsing/expression_parser.rs
+- ExpressionParser.scala:1353 def parseBracePack -> parse_brace_pack in parsing/expression_parser.rs
+- ExpressionParser.scala:733 def parseBreak -> parse_break in parsing/expression_parser.rs
+- ExpressionParser.scala:1273 def parseChevronPack -> parse_chevron_pack in parsing/expression_parser.rs
+- ExpressionParser.scala:678 def parseDestruct -> parse_destruct in parsing/expression_parser.rs
+- templex/TemplexParser.scala:306 def parseEndingRegion -> parse_ending_region in parsing/templex_parser.rs
+- ExpressionParser.scala:281 def parseExplicitBlock -> parse_explicit_block in parsing/expression_parser.rs
+- Parser.scala:465 def parseExportAs -> parse_export_as in parsing/parser.rs
+- ExpressionParser.scala:845 def parseExpression -> parse_expression in parsing/expression_parser.rs
+- ExpressionParser.scala:1418 def parseExpressionDataElement -> parse_expression_data_element in parsing/expression_parser.rs
+- ExpressionParser.scala:315 def parseForeach -> parse_foreach in parsing/expression_parser.rs
+- Parser.scala:552 def parseFunction -> parse_function in parsing/parser.rs
+- ExpressionParser.scala:1224 def parseFunctionCall -> parse_function_call in parsing/expression_parser.rs
+- templex/TemplexParser.scala:87 def parseFunctionName -> parse_function_name in parsing/templex_parser.rs
+- Parser.scala:23 def parseGenericParameter -> parse_generic_parameter in parsing/parser.rs
+- Parser.scala:112 def parseIdentifyingRunes -> parse_identifying_runes in parsing/parser.rs
+- ExpressionParser.scala:388 def parseIfLadder -> parse_if_ladder in parsing/expression_parser.rs
+- ExpressionParser.scala:555 def parseIfPart -> parse_if_part in parsing/expression_parser.rs
+- Parser.scala:397 def parseImpl -> parse_impl in parsing/parser.rs
+- Parser.scala:499 def parseImport -> parse_import in parsing/parser.rs
+- Parser.scala:256 def parseInterface -> parse_interface in parsing/parser.rs
+- templex/TemplexParser.scala:273 def parseInterpreted -> parse_interpreted in parsing/templex_parser.rs
+- ExpressionParser.scala:1635 def parseLambda -> parse_lambda in parsing/expression_parser.rs
+- ExpressionParser.scala:531 def parseLet -> parse_let in parsing/expression_parser.rs
+- ExpressionParser.scala:642 def parseLoneBlock -> parse_lone_block in parsing/expression_parser.rs
+- ExpressionParser.scala:898 def parseLookup -> parse_lookup in parsing/expression_parser.rs
+- ExpressionParser.scala:1586 def parseMultiArgLambdaBegin -> parse_multi_arg_lambda_begin in parsing/expression_parser.rs
+- ExpressionParser.scala:494 def parseMutExpr -> parse_mut_expr in parsing/expression_parser.rs
+- ExpressionParser.scala:1314 def parsePack -> parse_pack in parsing/expression_parser.rs
+- PatternParser.scala:13 def parseParameter -> parse_parameter in parsing/pattern_parser.rs
+- PatternParser.scala:74 def parsePattern -> parse_pattern in parsing/pattern_parser.rs
+- Parser.scala:839 def parsePrefixingRegion -> parse_prefixing_region in parsing/parser.rs
+- templex/TemplexParser.scala:163 def parsePrototype -> parse_prototype in parsing/templex_parser.rs
+- Parser.scala:861 def parseRegion -> parse_region in parsing/parse_utils.rs
+- ExpressionParser.scala:711 def parseReturn -> parse_return in parsing/expression_parser.rs
+- templex/TemplexParser.scala:691 def parseRule -> parse_rule in parsing/templex_parser.rs
+- templex/TemplexParser.scala:634 def parseRuleAtom -> parse_rule_atom in parsing/templex_parser.rs
+- templex/TemplexParser.scala:573 def parseRuleCall -> parse_rule_call in parsing/templex_parser.rs
+- templex/TemplexParser.scala:609 def parseRuleDestructure -> parse_rule_destructure in parsing/templex_parser.rs
+- templex/TemplexParser.scala:661 def parseRuleUpToEqualsPrecedence -> parse_rule_up_to_equals_precedence in parsing/templex_parser.rs
+- templex/TemplexParser.scala:695 def parseRuneType -> parse_rune_type in parsing/templex_parser.rs
+- ExpressionParser.scala:1562 def parseSingleArgLambdaBegin -> parse_single_arg_lambda_begin in parsing/expression_parser.rs
+- ExpressionParser.scala:1093 def parseSpreeStep -> parse_spree_step in parsing/expression_parser.rs
+- ExpressionParser.scala:1334 def parseSquarePack -> parse_square_pack in parsing/expression_parser.rs
+- ExpressionParser.scala:746 def parseStatement -> parse_statement in parsing/expression_parser.rs
+- Parser.scala:176 def parseStruct -> parse_struct in parsing/parser.rs
+- Parser.scala:127 def parseStructMember -> parse_struct_member in parsing/parser.rs
+- templex/TemplexParser.scala:443 def parseTemplateCallArgs -> parse_template_call_args in parsing/templex_parser.rs
+- ExpressionParser.scala:1293 def parseTemplateLookup -> parse_template_lookup in parsing/expression_parser.rs
+- templex/TemplexParser.scala:541 def parseTemplex -> parse_templex in parsing/templex_parser.rs
+- templex/TemplexParser.scala:336 def parseTemplexAtom -> parse_templex_atom in parsing/templex_parser.rs
+- templex/TemplexParser.scala:483 def parseTemplexAtomAndCall -> parse_templex_atom_and_call in parsing/templex_parser.rs
+- templex/TemplexParser.scala:501 def parseTemplexAtomAndCallAndPrefixes -> parse_templex_atom_and_call_and_prefixes in parsing/templex_parser.rs
+- templex/TemplexParser.scala:326 def parseTemplexAtomAndCallAndPrefixesAndSuffixes -> parse_templex_atom_and_call_and_prefixes_and_suffixes in parsing/templex_parser.rs
+- templex/TemplexParser.scala:463 def parseTuple -> parse_tuple in parsing/templex_parser.rs
+- ExpressionParser.scala:1372 def parseTupleOrSubExpression -> parse_tuple_or_sub_expression in parsing/expression_parser.rs
+- templex/TemplexParser.scala:547 def parseTypedRune -> parse_typed_rune in parsing/templex_parser.rs
+- ExpressionParser.scala:696 def parseUnlet -> parse_unlet in parsing/expression_parser.rs
+- ExpressionParser.scala:242 def parseWhile -> parse_while in parsing/expression_parser.rs
+- ExpressionParser.scala:83 def peek -> peek in parsing/scramble_iterator.rs
+- ExpressionParser.scala:103 def peek2 -> peek2 in parsing/scramble_iterator.rs
+- ExpressionParser.scala:108 def peek3 -> peek3 in parsing/scramble_iterator.rs
+- ExpressionParser.scala:114 def peekWord -> peek_word in parsing/scramble_iterator.rs
+- ast/expressions.scala:10 def producesResult -> produces_result in parsing/ast/expressions.rs
+- ExpressionParser.scala:50 def range -> range in parsing/scramble_iterator.rs
+- ast/ast.scala:117 def range -> range in parsing/scramble_iterator.rs
+- ast/expressions.scala:8 def range -> range in parsing/scramble_iterator.rs
+- ast/pattern.scala:46 def range -> range in parsing/scramble_iterator.rs
+- ast/rules.scala:7 def range -> range in parsing/scramble_iterator.rs
+- ast/templex.scala:9 def range -> range in parsing/scramble_iterator.rs
+- Parser.scala:744 def resolve -> resolve in parsing/parser.rs
+- ExpressionParser.scala:75 def skipTo -> skip_to in parsing/scramble_iterator.rs
+- ExpressionParser.scala:208 def splitOnSymbol -> split_on_symbol in parsing/scramble_iterator.rs
+- ExpressionParser.scala:78 def stop -> stop in parsing/scramble_iterator.rs
+- ExpressionParser.scala:87 def take -> take in parsing/scramble_iterator.rs
+- ExpressionParser.scala:40 def this -> this in parsing/parse_error_humanizer.rs
+- Parser.scala:693 def toName -> to_name in parsing/parser.rs
+- ParseUtils.scala:13 def trySkipPastEqualsWhile -> try_skip_past_equals_while in parsing/parse_utils.rs
+- ParseUtils.scala:77 def trySkipPastKeywordWhile -> try_skip_past_keyword_while in parsing/parse_utils.rs
+- ExpressionParser.scala:140 def trySkipSymbol -> try_skip_symbol in parsing/scramble_iterator.rs
+- ExpressionParser.scala:149 def trySkipSymbols -> try_skip_symbols in parsing/scramble_iterator.rs
+- ExpressionParser.scala:177 def trySkipWord -> try_skip_word in parsing/scramble_iterator.rs
+- ParserVonifier.scala:1143 def vonifyArraySize -> vonify_array_size in parsing/vonifier.rs
+- ParserVonifier.scala:380 def vonifyAttribute -> vonify_attribute in parsing/vonifier.rs
+- ParserVonifier.scala:786 def vonifyBlock -> vonify_block in parsing/vonifier.rs
+- ParserVonifier.scala:798 def vonifyConsecutor -> vonify_consecutor in parsing/vonifier.rs
+- ParserVonifier.scala:1157 def vonifyConstructArray -> vonify_construct_array in parsing/vonifier.rs
+- ParserVonifier.scala:32 def vonifyDenizen -> vonify_denizen in parsing/vonifier.rs
+- ParserVonifier.scala:300 def vonifyDestinationLocal -> vonify_destination_local in parsing/vonifier.rs
+- ParserVonifier.scala:361 def vonifyDestructure -> vonify_destructure in parsing/vonifier.rs
+- ParserVonifier.scala:166 def vonifyExportAs -> vonify_export_as in parsing/vonifier.rs
+- ParserVonifier.scala:807 def vonifyExpression -> vonify_expression in parsing/vonifier.rs
+- ParserVonifier.scala:18 def vonifyFile -> vonify_file in parsing/vonifier.rs
+- ParserVonifier.scala:191 def vonifyFileCoord -> vonify_file_coord in parsing/vonifier.rs
+- ParserVonifier.scala:221 def vonifyFunction -> vonify_function in parsing/vonifier.rs
+- ParserVonifier.scala:232 def vonifyFunctionHeader -> vonify_function_header in parsing/vonifier.rs
+- ParserVonifier.scala:541 def vonifyGenericParameter -> vonify_generic_parameter in parsing/vonifier.rs
+- ParserVonifier.scala:43 def vonifyGenericParameterType -> vonify_generic_parameter_type in parsing/vonifier.rs
+- ParserVonifier.scala:531 def vonifyIdentifyingRunes -> vonify_identifying_runes in parsing/vonifier.rs
+- ParserVonifier.scala:151 def vonifyImpl -> vonify_impl in parsing/vonifier.rs
+- ParserVonifier.scala:178 def vonifyImport -> vonify_import in parsing/vonifier.rs
+- ParserVonifier.scala:321 def vonifyImpreciseName -> vonify_imprecise_name in parsing/vonifier.rs
+- ParserVonifier.scala:134 def vonifyInterface -> vonify_interface in parsing/vonifier.rs
+- ParserVonifier.scala:777 def vonifyLoadAs -> _vonify_load_as in parsing/vonifier.rs
+- ParserVonifier.scala:761 def vonifyLocation -> vonify_location in parsing/vonifier.rs
+- ParserVonifier.scala:754 def vonifyMutability -> vonify_mutability in parsing/vonifier.rs
+- ParserVonifier.scala:555 def vonifyName -> vonify_name in parsing/vonifier.rs
+- ParserVonifier.scala:310 def vonifyNameDeclaration -> vonify_name_declaration in parsing/vonifier.rs
+- ParserVonifier.scala:11 def vonifyOptional -> vonify_optional in parsing/vonifier.rs
+- ParserVonifier.scala:768 def vonifyOwnership -> vonify_ownership in parsing/vonifier.rs
+- ParserVonifier.scala:201 def vonifyPackageCoord -> vonify_package_coord in parsing/vonifier.rs
+- ParserVonifier.scala:265 def vonifyParameter -> vonify_parameter in parsing/vonifier.rs
+- ParserVonifier.scala:255 def vonifyParams -> vonify_params in parsing/vonifier.rs
+- ParserVonifier.scala:278 def vonifyPattern -> vonify_pattern in parsing/vonifier.rs
+- ParserVonifier.scala:211 def vonifyRange -> vonify_range in parsing/vonifier.rs
+- ParserVonifier.scala:744 def vonifyRegionRune -> vonify_region_rune in parsing/vonifier.rs
+- ParserVonifier.scala:420 def vonifyRule -> vonify_rule in parsing/vonifier.rs
+- ParserVonifier.scala:53 def vonifyRuneAttribute -> vonify_rune_attribute in parsing/vonifier.rs
+- ParserVonifier.scala:514 def vonifyRuneType -> vonify_rune_type in parsing/vonifier.rs
+- ParserVonifier.scala:67 def vonifyStruct -> vonify_struct in parsing/vonifier.rs
+- ParserVonifier.scala:94 def vonifyStructContents -> vonify_struct_contents in parsing/vonifier.rs
+- ParserVonifier.scala:102 def vonifyStructMember -> vonify_struct_member in parsing/vonifier.rs
+- ParserVonifier.scala:84 def vonifyStructMembers -> vonify_struct_members in parsing/vonifier.rs
+- ParserVonifier.scala:125 def vonifyStructMethod -> vonify_struct_method in parsing/vonifier.rs
+- ParserVonifier.scala:1173 def vonifyTemplateArgs -> vonify_template_args in parsing/vonifier.rs
+- ParserVonifier.scala:410 def vonifyTemplateRules -> vonify_template_rules in parsing/vonifier.rs
+- ParserVonifier.scala:565 def vonifyTemplex -> vonify_templex in parsing/vonifier.rs
+- ParserVonifier.scala:371 def vonifyUnit -> vonify_unit in parsing/vonifier.rs
+- ParserVonifier.scala:330 def vonifyVariability -> vonify_variability in parsing/vonifier.rs
+- ParserVonifier.scala:114 def vonifyVariadicStructMember -> vonify_variadic_struct_member in parsing/vonifier.rs
+- ParserVonifier.scala:337 def vonifyVirtuality -> vonify_virtuality in parsing/vonifier.rs
+- ast/pattern.scala:74 object capture -> capture in parsing/parsed_loader.rs
+- ExpressionParser.scala:31 object ExpressionParser -> ExpressionParser in parsing/expression_parser.rs
+- Formatter.scala:6 object Formatter -> formatter in parsing/mod.rs
+- ParseAndExplore.scala:11 object ParseAndExplore -> parse_and_explore in parsing/mod.rs
+- ParseErrorHumanizer.scala:8 object ParseErrorHumanizer -> ParseErrorHumanizer in parsing/parse_error_humanizer.rs
+- Parser.scala:837 object Parser -> parser in parsing/mod.rs
+- ParserVonifier.scala:9 object ParserVonifier -> ParserVonifier in parsing/vonifier.rs
+- ParseUtils.scala:6 object ParseUtils -> parse_utils in parsing/mod.rs
+- ast/pattern.scala:60 object Patterns -> patterns in parsing/expression_parser.rs
+- ast/expressions.scala:7 trait IExpressionPE -> IExpressionPE in parsing/expression_parser.rs
+- Formatter.scala:18 def apply in <missing>
+- ExpressionParser.scala:1823 def descramble in <missing>
+- ast/templex.scala:38 def hashCode in <missing>
+- ParseErrorHumanizer.scala:9 def humanizeFromMap in <missing>
+- ParsedLoader.scala:275 def loadCaptureName in <missing>
+- ParsedLoader.scala:567 def loadLoadAs in <missing>
+- ParsedLoader.scala:620 def loadOptional in <missing>
+- ast/ast.scala:18 def lookupFunction in <missing>
+- ParseAndExplore.scala:14 def parseAndExploreAndCollect in <missing>
+- ExpressionParser.scala:126 def trySkip in <missing>
+- ExpressionParser.scala:130 def trySkipAll in <missing>
+- ParseUtils.scala:46 def trySkipPastSemicolonWhile in <missing>
+- ParseUtils.scala:104 def trySkipTo in <missing>
+- ast/pattern.scala:98 object capturedWithType in <missing>
+- ast/pattern.scala:61 object capturedWithTypeRune in <missing>
+- ast/pattern.scala:82 object fromEnv in <missing>
+- ast/rules.scala:40 object RulePUtils in <missing>
+- Formatter.scala:17 object Span in <missing>
+- ast/pattern.scala:90 object withDestructure in <missing>
+- ast/pattern.scala:69 object withType in <missing>
+- <missing> -> str in parsing/ast/ast.rs
+- <missing> -> as_str in parsing/ast/ast.rs
+- <missing> -> new in parsing/expression_parser.rs
+- <missing> -> descramble_elements in parsing/expression_parser.rs
+- <missing> -> get_error_message in parsing/parse_error_humanizer.rs
+- <missing> -> new in parsing/parser.rs
+- <missing> -> parse_file in parsing/parser.rs
+- <missing> -> parse_denizen in parsing/parser.rs
+- <missing> -> new in parsing/pattern_parser.rs
+- <missing> -> new in parsing/scramble_iterator.rs
+- <missing> -> with_bounds in parsing/scramble_iterator.rs
+- <missing> -> peek_prev in parsing/scramble_iterator.rs
+- <missing> -> peek_cloned in parsing/scramble_iterator.rs
+- <missing> -> peek_n in parsing/scramble_iterator.rs
+- <missing> -> peek2_cloned in parsing/scramble_iterator.rs
+- <missing> -> peek3_cloned in parsing/scramble_iterator.rs
+- <missing> -> remaining in parsing/scramble_iterator.rs
+- <missing> -> has_at_least in parsing/scramble_iterator.rs
+- <missing> -> consume_rest in parsing/scramble_iterator.rs
+- <missing> -> test_basic_iteration in parsing/scramble_iterator.rs
+- <missing> -> test_split_on_symbol in parsing/scramble_iterator.rs
+- <missing> -> new in parsing/templex_parser.rs
+
+- Total found: `249`
+- Total missing: `20`
+- Total checked: `269`
+- Extra rust functions: `22`

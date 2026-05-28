@@ -1,6 +1,7 @@
 ---
-description: FrontendRust Scala-to-Rust Migration Context
-paths: src/**/*.rs
+g_read_when: "Read when working on the Scala-to-Rust migration."
+g_auto_load_when_editing:
+  - FrontendRust/src/**/*.rs
 ---
 
 # FrontendRust Migration Context
