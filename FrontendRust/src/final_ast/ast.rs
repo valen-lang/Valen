@@ -108,16 +108,62 @@ case class PackageH(
 ) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-
+*/
+// mig: fn extern_functions
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
+    panic!("Unimplemented: extern_functions");
+  }
+}
+/*
   // These are convenience functions for the tests to look up various functions.
   def externFunctions = functions.filter(_.isExtern)
+*/
+// mig: fn abstract_functions
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn abstract_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
+    panic!("Unimplemented: abstract_functions");
+  }
+}
+/*
   def abstractFunctions = functions.filter(_.isAbstract)
+*/
+// mig: fn get_all_user_implemented_functions
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn get_all_user_implemented_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
+    panic!("Unimplemented: get_all_user_implemented_functions");
+  }
+}
+/*
   // Functions that are neither extern nor abstract
   def getAllUserImplementedFunctions = functions.filter(f => f.isUserFunction && !f.isExtern && !f.isAbstract)
+*/
+// mig: fn non_extern_functions
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn non_extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
+    panic!("Unimplemented: non_extern_functions");
+  }
+}
+/*
   // Abstract or implemented
   def nonExternFunctions = functions.filter(!_.isExtern)
+*/
+// mig: fn get_all_user_functions
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn get_all_user_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
+    panic!("Unimplemented: get_all_user_functions");
+  }
+}
+/*
   def getAllUserFunctions = functions.filter(_.isUserFunction)
-
+*/
+// mig: fn lookup_function
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
+    panic!("Unimplemented: lookup_function");
+  }
+}
+/*
   // Convenience function for the tests to look up a function.
   // Function must be at the top level of the program.
   def lookupFunction(readableName: String) = {
@@ -130,7 +176,14 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     vassert(matches.size <= 1)
     functions.find(_.prototype == matches.head).get
   }
-
+*/
+// mig: fn lookup_struct
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
+    panic!("Unimplemented: lookup_struct");
+  }
+}
+/*
   // Convenience function for the tests to look up a struct.
   // Struct must be at the top level of the program.
   def lookupStruct(humanName: String) = {
@@ -138,7 +191,14 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     vassert(matches.size == 1)
     matches.head
   }
-
+*/
+// mig: fn lookup_interface
+impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
+  pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
+    panic!("Unimplemented: lookup_interface");
+  }
+}
+/*
   // Convenience function for the tests to look up an interface.
   // Interface must be at the top level of the program.
   def lookupInterface(humanName: String) = {
@@ -159,8 +219,14 @@ case class ProgramH(
   packages: PackageCoordinateMap[PackageH]) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-
-
+*/
+// mig: fn lookup_package
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_package(&self, package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>) -> PackageH<'s, 'h> {
+    panic!("Unimplemented: lookup_package");
+  }
+}
+/*
   def lookupPackage(packageCoordinate: PackageCoordinate): PackageH = {
     vassertSome(packages.get(packageCoordinate))
   }
@@ -440,7 +506,7 @@ pub struct IdH<'s, 'h> where 's: 'h {
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
     pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
-    _phantom_h: PhantomData<&'h ()>,
+    pub _phantom_h: PhantomData<&'h ()>,
 }
 /*
 // A unique name for something in the program.
@@ -489,8 +555,11 @@ pub struct IdHValH<'s, 'h> where 's: 'h {
     pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
-    _phantom_h: PhantomData<&'h ()>,
+    pub _phantom_h: PhantomData<&'h ()>,
 }
+/*
+Guardian: temp-disable: NCWSRX — False positive: `_phantom_h` is a Rust mechanical PhantomData required so the `'h` lifetime parameter isn't vacuous (no other field uses `'h`); Scala's `IdH` has no `'h` and no phantom — this is the documented Rust-only adaptation. Adding `pub` is needed so `hammer_interner` (the only legitimate constructor per the `MustIntern` seal) can fill the field at intern time. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1455-1780105540747/hook-1455/IdHValH--503.0.NoChangesWithoutScalaReference-NCWSRX.NoChangesWithoutScalaReference-NCWSRX.verdict.md
+*/
 
 // --- Auxiliary types referenced by hammer files ---
 

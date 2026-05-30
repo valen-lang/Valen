@@ -45,7 +45,12 @@ pub fn expect_coord_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> Coor
   }
 */
 // mig: fn expect_integer_templata
-pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> IntegerTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_integer_templata"); }
+pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> IntegerTemplataI<'s, 'i, R> {
+    match templata {
+        ITemplataI::Integer(t) => t,
+        _ => panic!("vfail"),
+    }
+}
 /*
   def expectIntegerTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): IntegerTemplataI[R] = {
     templata match {

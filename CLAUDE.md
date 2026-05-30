@@ -223,3 +223,6 @@ Instead, use the same file.
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → Luz/skills/feature-development-flow.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → Luz/skills/good-testing.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → Luz/skills/tdd.md
+- **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
+- **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
+- **Read when promoting an LLM-mode shield to Rust mode with a deterministic companion program.** → docs/skills/guardian-rustify.md

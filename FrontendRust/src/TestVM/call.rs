@@ -1,3 +1,4 @@
+/*
 package dev.vale.testvm
 
 import dev.vale.finalast.{KindHT, CoordH}
@@ -7,11 +8,29 @@ import dev.vale.vfail
 
 import scala.collection.mutable
 
+*/
+// mig: struct CallV
+/// Temporary state
+pub struct CallV<'v> {
+  pub call_id: CallIdV,
+  pub in_args: &'v [ReferenceV<'v>],
+  pub args: Cell<HashMap<i32, Option<ReferenceV<'v>>>>,
+  pub locals: Cell<HashMap<VariableAddressV, VariableV<'v>>>,
+}
+/*
 class Call(callId: CallId, in_args: Vector[ReferenceV]) {
   private val args = mutable.HashMap[Int, Option[ReferenceV]]() ++ in_args.indices.zip(in_args.map(arg => Some(arg))).toMap
 
   private val locals = mutable.HashMap[VariableAddressV, VariableV]()
 
+*/
+// mig: fn add_local
+impl<'v> CallV<'v> {
+  pub fn add_local(&self, var_addr: VariableAddressV, reference: ReferenceV, tyype: CoordH) {
+    panic!("Unimplemented: add_local");
+  }
+}
+/*
   def addLocal(varAddr: VariableAddressV, reference: ReferenceV, tyype: CoordH[KindHT]): Unit = {
     vassert(varAddr.callId == callId)
     vassert(!locals.contains(varAddr))
@@ -19,20 +38,52 @@ class Call(callId: CallId, in_args: Vector[ReferenceV]) {
     locals.put(varAddr, VariableV(varAddr, reference, tyype))
   }
 
+*/
+// mig: fn remove_local
+impl<'v> CallV<'v> {
+  pub fn remove_local(&self, var_addr: VariableAddressV) {
+    panic!("Unimplemented: remove_local");
+  }
+}
+/*
   def removeLocal(varAddr: VariableAddressV): Unit = {
     vassert(varAddr.callId == callId)
     vassert(locals.contains(varAddr))
     locals.remove(varAddr)
   }
 
+*/
+// mig: fn get_local
+impl<'v> CallV<'v> {
+  pub fn get_local(&self, addr: VariableAddressV) -> VariableV {
+    panic!("Unimplemented: get_local");
+  }
+}
+/*
   def getLocal(addr: VariableAddressV) = {
     vassertSome(locals.get(addr))
   }
 
+*/
+// mig: fn mutate_local
+impl<'v> CallV<'v> {
+  pub fn mutate_local(&self, var_addr: VariableAddressV, reference: ReferenceV, expected_type: CoordH) {
+    panic!("Unimplemented: mutate_local");
+  }
+}
+/*
   def mutateLocal(varAddr: VariableAddressV, reference: ReferenceV, expectedType: CoordH[KindHT]): Unit = {
     locals(varAddr).reference = reference
   }
 
+*/
+// mig: fn take_argument
+impl<'v> CallV<'v> {
+  pub fn take_argument(&self, index: i32) -> ReferenceV {
+    panic!("Unimplemented: take_argument");
+  }
+}
+/*
   def takeArgument(index: Int): ReferenceV = {
     vassert(index < args.size)
     args(index) match {
@@ -46,6 +97,14 @@ class Call(callId: CallId, in_args: Vector[ReferenceV]) {
     }
   }
 
+*/
+// mig: fn prepare_to_die
+impl<'v> CallV<'v> {
+  pub fn prepare_to_die(&self) {
+    panic!("Unimplemented: prepare_to_die");
+  }
+}
+/*
   def prepareToDie() = {
     vassert(locals.isEmpty)
 
@@ -79,3 +138,5 @@ class Call(callId: CallId, in_args: Vector[ReferenceV]) {
 //    }
   }
 }
+
+*/

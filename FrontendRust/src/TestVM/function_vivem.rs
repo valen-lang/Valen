@@ -1,3 +1,4 @@
+/*
 package dev.vale.testvm
 
 import dev.vale.finalast.{FunctionH, ProgramH, PrototypeH}
@@ -8,6 +9,19 @@ import dev.vale.{vimpl, vwat}
 import dev.vale.{finalast => m}
 
 object FunctionVivem {
+*/
+// mig: fn execute_function
+pub fn execute_function<'h, 's, 'v>(
+    program_h: &ProgramH<'h, 's>,
+    stdin: Box<dyn Fn() -> StrI<'s>>,
+    stdout: Box<dyn Fn(StrI<'s>)>,
+    heap: &Heap<'v>,
+    args: &'v [ReferenceV<'v>],
+    function_h: &FunctionH<'h, 's>,
+) -> (CallId, NodeReturn<'v>) {
+    panic!("Unimplemented: execute_function");
+}
+/*
   def executeFunction(
       programH: ProgramH,
       stdin: (() => String),
@@ -47,7 +61,15 @@ object FunctionVivem {
 
     (callId, returnRef)
   }
-
+*/
+// mig: fn get_extern_function
+pub fn get_extern_function<'h, 's, 'v>(
+    program_h: &ProgramH<'h, 's>,
+    ref_: &PrototypeH<'h, 's>,
+) -> Box<dyn Fn(&AdapterForExterns, &'v [ReferenceV<'v>]) -> ReferenceV<'v>> {
+    panic!("Unimplemented: get_extern_function");
+}
+/*
   def getExternFunction(programH: ProgramH, ref: PrototypeH): (AdapterForExterns, Vector[ReferenceV]) => ReferenceV = {
     ref.id.fullyQualifiedName
       // The tests have a mode where they can interpret the builtins as separate packages, instead
@@ -100,7 +122,14 @@ object FunctionVivem {
       case """__vbi_lessThanOrEqI64""" => VivemExterns.lessThanOrEqI64
       case """__vbi_modI64""" => VivemExterns.modI64
       case """TruncateI64ToI32""" => VivemExterns.truncateI64ToI32
+      case """VecOuterNew<i32>""" => VivemExterns.newVec(_, ref, _)
+      case """Vec.new<i32>""" => VivemExterns.newVec(_, ref, _)
+      case """Vec.with_capacity<i32>""" => VivemExterns.newVecWithCapacity(_, ref, _)
+      case """Vec.capacity<i32>""" => VivemExterns.vecCapacity(_, ref, _)
       case _ => vimpl(ref.id.fullyQualifiedName)
     }
   }
+*/
+/*
 }
+*/

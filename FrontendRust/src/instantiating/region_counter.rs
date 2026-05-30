@@ -9,10 +9,23 @@ import scala.collection.mutable
 
 object RegionCounter {
 */
+use crate::instantiating::ast::names::{IdI, INameI, IFunctionNameI, FunctionNameIX, ExternFunctionNameI};
+use crate::instantiating::ast::ast::PrototypeI;
+use crate::instantiating::ast::types::{CoordI, KindIT};
+use crate::instantiating::ast::types::sI;
+use crate::instantiating::ast::templata::RegionTemplataI;
+
 // mig: struct CounterI
-pub struct CounterI;
-// TODO: populate fields when names.rs / templata.rs are fully migrated.
+pub struct CounterI {
+    set: std::collections::HashSet<i32>,
+}
 // mig: impl CounterI
+// mig: fn new
+impl CounterI {
+    pub fn new() -> Self {
+        CounterI { set: std::collections::HashSet::new() }
+    }
+}
 /*
   class Counter {
     // TODO(optimize): Use an array for this, with a minimum index and maximum index (similar to
@@ -22,7 +35,9 @@ pub struct CounterI;
 */
 // mig: fn count
 impl CounterI {
-    pub fn count(&mut self) { panic!("Unimplemented: count"); }
+    pub fn count<'s, 'i>(&mut self, region: RegionTemplataI<'s, 'i, sI>) where 's: 'i {
+        self.set.insert(region.pure_height);
+    }
 }
 /*
     def count(region: RegionTemplataI[sI]): Unit = {
@@ -33,7 +48,16 @@ impl CounterI {
 // mig: fn assemble_map
 impl CounterI {
     pub fn assemble_map(&self) -> std::collections::HashMap<i32, i32> {
-        panic!("Unimplemented: assemble_map");
+        let num_regions = self.set.len();
+        // Let's say we have a set that contains 3, 5, -2, 0, 4, it becomes...
+        let mut sorted = self.set.iter().copied().collect::<Vec<i32>>();
+        sorted.sort(); // -2, 0, 3, 4, 5
+        sorted.into_iter().enumerate() // (-2, 0), (0, 1), (3, 2), (4, 3), (5, 4)
+            .map(|(i, subjective_region)| {
+                // If we have 4 regions, then they should go from -3 to 0
+                (subjective_region, i as i32 - num_regions as i32 + 1)
+            }) // (-2, -4), (0, -3), (3, -2), (4, -1), (5, 0)
+            .collect()
     }
 }
 /*
@@ -81,8 +105,11 @@ impl CounterI {
 
 */
 // mig: fn count_prototype
-pub fn count_prototype() {
-    panic!("Unimplemented: count_prototype");
+pub fn count_prototype<'s, 'i>(counter: &mut CounterI, prototype: &PrototypeI<'s, 'i, sI>)
+where 's: 'i {
+    let PrototypeI { id, return_type, .. } = *prototype;
+    count_function_id(counter, &id);
+    count_coord(counter, &return_type);
 }
 /*
   def countPrototype(counter: Counter, prototype: PrototypeI[sI]): Unit = {
@@ -93,8 +120,13 @@ pub fn count_prototype() {
 
 */
 // mig: fn count_id
-pub fn count_id() {
-    panic!("Unimplemented: count_id");
+pub fn count_id<'s, 'i>(counter: &mut CounterI, id_i: &IdI<'s, 'i, sI>, func: impl Fn(&mut CounterI, &INameI<'s, 'i, sI>))
+where 's: 'i {
+    let IdI { package_coord: _package_coord, init_steps, local_name } = *id_i;
+    for x in init_steps {
+        count_name(counter, x);
+    }
+    func(counter, &local_name);
 }
 /*
   def countId[T <: INameI[sI]](
@@ -109,8 +141,9 @@ pub fn count_id() {
 
 */
 // mig: fn count_function_id
-pub fn count_function_id() {
-    panic!("Unimplemented: count_function_id");
+pub fn count_function_id<'s, 'i>(counter: &mut CounterI, id: &IdI<'s, 'i, sI>)
+where 's: 'i {
+    count_id(counter, id, |counter, x| count_function_name(counter, &IFunctionNameI::try_from(*x).unwrap()))
 }
 /*
   def countFunctionId(
@@ -125,8 +158,24 @@ pub fn count_function_id() {
 
 */
 // mig: fn count_function_name
-pub fn count_function_name() {
-    panic!("Unimplemented: count_function_name");
+pub fn count_function_name<'s, 'i>(counter: &mut CounterI, name: &IFunctionNameI<'s, 'i, sI>)
+where 's: 'i {
+    match *name {
+        IFunctionNameI::Function(n) => {
+            let FunctionNameIX { template_args, parameters, .. } = *n;
+            for _template_arg in template_args { panic!("Unimplemented: count_function_name Function countTemplata") }
+            for _param in parameters { panic!("Unimplemented: count_function_name Function countCoord") }
+        }
+        IFunctionNameI::ExternFunction(n) => {
+            let ExternFunctionNameI { template_args, parameters, .. } = *n;
+            for _template_arg in template_args { panic!("Unimplemented: count_function_name ExternFunction countTemplata") }
+            for param in parameters { count_coord(counter, param) }
+        }
+        IFunctionNameI::LambdaCallFunction(_) => panic!("Unimplemented: count_function_name LambdaCallFunction"),
+        IFunctionNameI::AnonymousSubstructConstructor(_) => panic!("Unimplemented: count_function_name AnonymousSubstructConstructor"),
+        IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: count_function_name ForwarderFunction"),
+        _ => panic!("Unimplemented: count_function_name other"),
+    }
 }
 /*
   def countFunctionName(
@@ -213,8 +262,17 @@ pub fn count_var_name() {
 
 */
 // mig: fn count_name
-pub fn count_name() {
-    panic!("Unimplemented: count_name");
+pub fn count_name<'s, 'i>(counter: &mut CounterI, name: &INameI<'s, 'i, sI>)
+where 's: 'i {
+    match name {
+        INameI::Export(export_name) => {
+            counter.count(export_name.region);
+        }
+        INameI::Extern(extern_name) => {
+            counter.count(extern_name.region);
+        }
+        _ => panic!("Unimplemented: count_name"),
+    }
 }
 /*
   def countName(
@@ -281,8 +339,10 @@ pub fn count_templata() {
 
 */
 // mig: fn count_coord
-pub fn count_coord() {
-    panic!("Unimplemented: count_coord");
+pub fn count_coord<'s, 'i>(counter: &mut CounterI, coord: &CoordI<'s, 'i, sI>)
+where 's: 'i {
+    let CoordI { ownership: _ownership, kind } = *coord;
+    count_kind(counter, &kind);
 }
 /*
   def countCoord(
@@ -307,8 +367,20 @@ pub fn count_kind_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_kind
-pub fn count_kind() {
-    panic!("Unimplemented: count_kind");
+pub fn count_kind<'s, 'i>(counter: &mut CounterI, kind: &KindIT<'s, 'i, sI>)
+where 's: 'i {
+    match kind {
+        KindIT::NeverIT(_) => {}
+        KindIT::VoidIT(_) => {}
+        KindIT::IntIT(_) => {}
+        KindIT::BoolIT(_) => {}
+        KindIT::FloatIT(_) => {}
+        KindIT::StrIT(_) => {}
+        KindIT::StructIT(_) => panic!("Unimplemented: count_kind StructIT"),
+        KindIT::InterfaceIT(_) => panic!("Unimplemented: count_kind InterfaceIT"),
+        KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: count_kind StaticSizedArray"),
+        KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: count_kind RuntimeSizedArray"),
+    }
 }
 /*
   def countKind(
@@ -519,8 +591,11 @@ pub fn count_impl_template_name() {
 
 */
 // mig: fn count_export_id
-pub fn count_export_id() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_export_id");
+pub fn count_export_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+where 's: 'i {
+    let mut counter = CounterI::new();
+    count_id(&mut counter, id_i, |counter, x| count_name(counter, x));
+    counter.assemble_map()
 }
 /*
   def countExportId(idI: IdI[sI, ExportNameI[sI]]): Map[Int, Int] = {
@@ -531,8 +606,11 @@ pub fn count_export_id() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_extern_id
-pub fn count_extern_id() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_extern_id");
+pub fn count_extern_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+where 's: 'i {
+    let mut counter = CounterI::new();
+    count_id(&mut counter, id_i, |counter, x| count_name(counter, x));
+    counter.assemble_map()
 }
 /*
   def countExternId(idI: IdI[sI, ExternNameI[sI]]): Map[Int, Int] = {
@@ -661,8 +739,11 @@ pub fn count_runtime_sized_array_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_prototype
-pub fn count_prototype_map() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_prototype");
+pub fn count_prototype_map<'s, 'i>(prototype: &PrototypeI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+where 's: 'i {
+    let mut counter = CounterI::new();
+    count_prototype(&mut counter, prototype);
+    counter.assemble_map()
 }
 /*
   def countPrototype(prototype: PrototypeI[sI]): Map[Int, Int] = {
@@ -673,8 +754,11 @@ pub fn count_prototype_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_function_name
-pub fn count_function_name_map() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_function_name");
+pub fn count_function_name_map<'s, 'i>(name: &IFunctionNameI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+where 's: 'i {
+    let mut counter = CounterI::new();
+    count_function_name(&mut counter, name);
+    counter.assemble_map()
 }
 /*
   def countFunctionName(

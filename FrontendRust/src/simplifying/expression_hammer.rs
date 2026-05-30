@@ -40,10 +40,10 @@ class ExpressionHammer(
 // mig: fn translate_expression (Scala `ExpressionHammer.translate` — disambiguated
 // from `Hammer.translate` per overload-suffix pattern, since both methods now
 // live on the same `impl Hammer` per typing-pass collapse.)
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_expression<'i>(
+    pub fn translate_expression(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -51,9 +51,122 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         expr2: ExpressionIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_expression");
+        use crate::instantiating::ast::expressions::ReferenceExpressionIE as RE;
+        match expr2 {
+            ExpressionIE::Reference(r) => match r {
+                RE::ConstantInt(c) => {
+                    (ExpressionH::ConstantIntH(self.interner.alloc(crate::final_ast::instructions::ConstantIntH { value: c.value, bits: c.bits })), Vec::new())
+                }
+                RE::VoidLiteral(_) => panic!("translate_expression: VoidLiteral branch"),
+                RE::ConstantStr(c) => panic!("translate_expression: ConstantStr branch"),
+                RE::ConstantFloat(c) => panic!("translate_expression: ConstantFloat branch"),
+                RE::ConstantBool(c) => {
+                    (ExpressionH::ConstantBoolH(self.interner.alloc(crate::final_ast::instructions::ConstantBoolH { value: c.value })), Vec::new())
+                }
+                RE::LetNormal(let2) => {
+                    let let_h = self.translate_let(hinputs, hamuts, current_function_header, locals, let2);
+                    (let_h, Vec::new())
+                }
+                RE::Restackify(let2) => panic!("translate_expression: Restackify branch"),
+                RE::LetAndLend(let2) => panic!("translate_expression: LetAndLend branch"),
+                RE::Destroy(des2) => panic!("translate_expression: Destroy branch"),
+                RE::DestroyStaticSizedArrayIntoLocals(des2) => panic!("translate_expression: DestroyStaticSizedArrayIntoLocals branch"),
+                RE::Unlet(unlet2) => {
+                    let value_access = self.translate_unlet(hinputs, hamuts, current_function_header, locals, unlet2);
+                    (value_access, Vec::new())
+                }
+                RE::Mutate(mutate2) => panic!("translate_expression: Mutate branch"),
+                RE::Mutabilify(b) => panic!("translate_expression: Mutabilify branch"),
+                RE::Immutabilify(b) => panic!("translate_expression: Immutabilify branch"),
+                RE::Block(b) => {
+                    let block_h = self.translate_block(hinputs, hamuts, current_function_header, locals, b);
+                    (ExpressionH::BlockH(block_h), Vec::new())
+                }
+                RE::FunctionCall(call2) => panic!("translate_expression: FunctionCall branch"),
+                RE::PreCheckBorrow(p) => panic!("translate_expression: PreCheckBorrow branch"),
+                RE::InterfaceFunctionCall(ic) => panic!("translate_expression: InterfaceFunctionCall branch"),
+                RE::Consecutor(c) => {
+                    let exprs_ie = c.exprs;
+                    let mut exprs_he: Vec<ExpressionH<'s, 'h>> = Vec::new();
+                    for next_ie in exprs_ie.iter() {
+                        let last_is_never = match exprs_he.last().map(|e| e.result_type().kind) {
+                            Some(crate::final_ast::types::KindHT::NeverHT(_)) => true,
+                            _ => false,
+                        };
+                        if last_is_never {
+                            continue;
+                        }
+                        let (next_he, next_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(*next_ie));
+                        let next_expr_with_deferreds_he = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, next_he, next_deferreds);
+                        exprs_he.push(next_expr_with_deferreds_he);
+                    }
+                    let last_is_never = match exprs_he.last().map(|e| e.result_type().kind) {
+                        Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                            return (crate::simplifying::hammer::consecrash(locals, &exprs_he), Vec::new());
+                        }
+                        _ => {}
+                    };
+                    let _ = last_is_never;
+                    (crate::simplifying::hammer::consecutive(&exprs_he), Vec::new())
+                }
+                RE::ArrayLength(a) => panic!("translate_expression: ArrayLength branch"),
+                RE::RuntimeSizedArrayCapacity(a) => panic!("translate_expression: RuntimeSizedArrayCapacity branch"),
+                RE::ArraySize(a) => panic!("translate_expression: ArraySize branch"),
+                RE::LockWeak(a) => panic!("translate_expression: LockWeak branch"),
+                RE::BorrowToWeak(a) => panic!("translate_expression: BorrowToWeak branch"),
+                RE::Defer(a) => panic!("translate_expression: Defer branch"),
+                RE::If(if2) => {
+                    let maybe_access = self.translate_if(hinputs, hamuts, current_function_header, locals, if2);
+                    (maybe_access, Vec::new())
+                }
+                RE::While(a) => panic!("translate_expression: While branch"),
+                RE::Return(return_ie) => {
+                    let inner_expr = return_ie.source_expr;
+                    let inner_result = ExpressionIE::Reference(inner_expr).result();
+                    assert!(matches!(inner_result.kind, crate::instantiating::ast::types::KindIT::NeverIT(crate::instantiating::ast::types::NeverIT { from_break: false, .. })) || inner_result == current_function_header.return_type);
+                    let (inner_expr_he, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
+                    let inner_with_deferreds = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, inner_expr_he, inner_deferreds);
+                    match inner_with_deferreds.result_type().kind {
+                        crate::final_ast::types::KindHT::NeverHT(_) => {
+                            return (inner_with_deferreds, Vec::new());
+                        }
+                        _ => {}
+                    }
+                    assert!(ExpressionIE::Reference(inner_expr).result() == current_function_header.return_type);
+                    (ExpressionH::ReturnH(self.interner.alloc(crate::final_ast::instructions::ReturnH { source_expression: inner_with_deferreds })), Vec::new())
+                }
+                RE::Break(a) => panic!("translate_expression: Break branch"),
+                RE::Discard(discard_ie) => {
+                    let inner_expr = discard_ie.expr;
+                    let (undiscarded_inner_expr_h, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
+                    assert!(inner_deferreds.is_empty());
+                    let inner_expr_h = ExpressionH::DiscardH(self.interner.alloc(crate::final_ast::instructions::DiscardH { source_expression: undiscarded_inner_expr_h }));
+                    let inner_with_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, inner_expr_h, inner_deferreds);
+                    (inner_with_deferreds_expr_h, Vec::new())
+                }
+                RE::Tuple(a) => panic!("translate_expression: Tuple branch"),
+                RE::StaticArrayFromValues(a) => panic!("translate_expression: StaticArrayFromValues branch"),
+                RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
+                RE::AsSubtype(a) => panic!("translate_expression: AsSubtype branch"),
+                RE::ArgLookup(a) => panic!("translate_expression: ArgLookup branch"),
+                RE::ExternFunctionCall(a) => panic!("translate_expression: ExternFunctionCall branch"),
+                RE::Reinterpret(a) => panic!("translate_expression: Reinterpret branch"),
+                RE::Construct(a) => panic!("translate_expression: Construct branch"),
+                RE::NewMutRuntimeSizedArray(a) => panic!("translate_expression: NewMutRuntimeSizedArray branch"),
+                RE::StaticArrayFromCallable(a) => panic!("translate_expression: StaticArrayFromCallable branch"),
+                RE::DestroyStaticSizedArrayIntoFunction(a) => panic!("translate_expression: DestroyStaticSizedArrayIntoFunction branch"),
+                RE::DestroyMutRuntimeSizedArray(a) => panic!("translate_expression: DestroyMutRuntimeSizedArray branch"),
+                RE::PushRuntimeSizedArray(a) => panic!("translate_expression: PushRuntimeSizedArray branch"),
+                RE::PopRuntimeSizedArray(a) => panic!("translate_expression: PopRuntimeSizedArray branch"),
+                RE::InterfaceToInterfaceUpcast(a) => panic!("translate_expression: InterfaceToInterfaceUpcast branch"),
+                RE::Upcast(a) => panic!("translate_expression: Upcast branch"),
+                RE::SoftLoad(a) => panic!("translate_expression: SoftLoad branch"),
+                RE::DestroyImmRuntimeSizedArray(a) => panic!("translate_expression: DestroyImmRuntimeSizedArray branch"),
+                RE::NewImmRuntimeSizedArray(a) => panic!("translate_expression: NewImmRuntimeSizedArray branch"),
+            },
+            ExpressionIE::Address(_) => panic!("translate_expression: Address branch"),
+        }
     }
 }
 /*
@@ -661,10 +774,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_deferreds
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_deferreds<'i>(
+    pub fn translate_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -673,9 +786,11 @@ where 's: 'h,
         original_expr: ExpressionH<'s, 'h>,
         deferreds: Vec<ExpressionIE<'s, 'i, cI>>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_deferreds");
+        if deferreds.is_empty() {
+            return original_expr;
+        }
+        panic!("Unimplemented: translate_deferreds non-empty branch");
     }
 }
 /*
@@ -733,10 +848,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_expressions_until_never
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_expressions_until_never<'i>(
+    pub fn translate_expressions_until_never(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -744,7 +859,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         exprs_ie: &[ExpressionIE<'s, 'i, cI>],
     ) -> (Vec<ExpressionH<'s, 'h>>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_expressions_until_never");
     }
@@ -782,10 +896,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_expressions_and_deferreds
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_expressions_and_deferreds<'i>(
+    pub fn translate_expressions_and_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -793,9 +907,12 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         exprs2: &[ExpressionIE<'s, 'i, cI>],
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_expressions_and_deferreds");
+        let exprs: Vec<ExpressionH<'s, 'h>> = exprs2.iter().map(|expr2| {
+            let (first_he, first_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, *expr2);
+            self.translate_deferreds(hinputs, hamuts, current_function_header, locals, first_he, first_deferreds)
+        }).collect();
+        crate::simplifying::hammer::consecutive(&exprs)
     }
 }
 /*
@@ -819,10 +936,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_extern_function_call
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_extern_function_call<'i>(
+    pub fn translate_extern_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -831,7 +948,6 @@ where 's: 'h,
         prototype2: &'i PrototypeI<'s, 'i, cI>,
         args_exprs2: &[ReferenceExpressionIE<'s, 'i, cI>],
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_extern_function_call");
     }
@@ -869,10 +985,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_function_pointer_call
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_function_pointer_call<'i>(
+    pub fn translate_function_pointer_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -882,7 +998,6 @@ where 's: 'h,
         args: &[ExpressionIE<'s, 'i, cI>],
         result_type2: CoordI<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_function_pointer_call");
     }
@@ -931,10 +1046,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_new_mut_runtime_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_new_mut_runtime_sized_array<'i>(
+    pub fn translate_new_mut_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -942,7 +1057,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_new_mut_runtime_sized_array");
     }
@@ -982,10 +1096,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_new_imm_runtime_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_new_imm_runtime_sized_array<'i>(
+    pub fn translate_new_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -993,7 +1107,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         construct_array2: &NewImmRuntimeSizedArrayIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_new_imm_runtime_sized_array");
     }
@@ -1042,10 +1155,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_static_array_from_callable
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_static_array_from_callable<'i>(
+    pub fn translate_static_array_from_callable(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1053,7 +1166,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         expr_ie: &StaticArrayFromCallableIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_static_array_from_callable");
     }
@@ -1098,10 +1210,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_destroy_static_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_destroy_static_sized_array<'i>(
+    pub fn translate_destroy_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1109,7 +1221,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         das2: &DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_destroy_static_sized_array");
     }
@@ -1157,10 +1268,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_destroy_imm_runtime_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_destroy_imm_runtime_sized_array<'i>(
+    pub fn translate_destroy_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1168,7 +1279,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         das2: &DestroyImmRuntimeSizedArrayIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
     }
@@ -1220,10 +1330,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_if
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_if<'i>(
+    pub fn translate_if(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1231,9 +1341,55 @@ where 's: 'h,
         parent_locals: &mut Locals<'s, 'i, 'h>,
         if2: &IfIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_if");
+        let condition2 = if2.condition;
+        let then_block2 = if2.then_call;
+        let else_block2 = if2.else_call;
+        let (condition_block_h, cond_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, parent_locals, ExpressionIE::Reference(condition2));
+        assert!(cond_deferreds.is_empty());
+        assert_eq!(condition_block_h.result_type(), crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::BoolHT(crate::final_ast::types::BoolHT) });
+        let mut then_locals = parent_locals.snapshot();
+        let (then_block_h, then_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, &mut then_locals, ExpressionIE::Reference(then_block2));
+        assert!(then_deferreds.is_empty());
+        let then_result_coord = then_block_h.result_type();
+        parent_locals.set_next_local_id_number(then_locals.next_local_id_number);
+        let mut else_locals = parent_locals.snapshot();
+        let (else_block_h, else_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, &mut else_locals, ExpressionIE::Reference(else_block2));
+        assert!(else_deferreds.is_empty());
+        let else_result_coord = else_block_h.result_type();
+        parent_locals.set_next_local_id_number(else_locals.next_local_id_number);
+        let common_supertype_h = self.translate_coord(hinputs, hamuts, if2.result);
+        let if_call_node = ExpressionH::IfH(self.interner.alloc(crate::final_ast::instructions::IfH {
+            condition_block: condition_block_h.expect_bool_access(),
+            then_block: then_block_h,
+            else_block: else_block_h,
+            common_supertype: common_supertype_h,
+        }));
+        let then_continues = match then_result_coord.kind { crate::final_ast::types::KindHT::NeverHT(_) => false, _ => true };
+        let else_continues = match else_result_coord.kind { crate::final_ast::types::KindHT::NeverHT(_) => false, _ => true };
+        let unstackifies_of_parent_locals: std::collections::HashSet<crate::final_ast::instructions::VariableIdH<'s, 'h>> =
+            if then_continues && else_continues {
+                let parent_locals_after_then: std::collections::HashSet<_> = then_locals.locals.keys().copied().filter(|k| !then_locals.unstackified_vars.contains(k)).collect();
+                let parent_locals_after_else: std::collections::HashSet<_> = else_locals.locals.keys().copied().filter(|k| !else_locals.unstackified_vars.contains(k)).collect();
+                if parent_locals_after_then != parent_locals_after_else {
+                    panic!("Internal error: Mismatch in if branches' parent-unstackifies");
+                }
+                then_locals.unstackified_vars.iter().copied().collect()
+            } else if then_continues {
+                then_locals.unstackified_vars.iter().copied().collect()
+            } else if else_continues {
+                else_locals.unstackified_vars.iter().copied().collect()
+            } else {
+                std::collections::HashSet::new()
+            };
+        let parent_locals_to_unstackify: Vec<_> = parent_locals.locals.keys().copied()
+            .filter(|k| !parent_locals.unstackified_vars.contains(k))
+            .filter(|k| unstackifies_of_parent_locals.contains(k))
+            .collect();
+        for var in parent_locals_to_unstackify {
+            parent_locals.mark_unstackified(var);
+        }
+        if_call_node
     }
 }
 /*
@@ -1308,10 +1464,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_while
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_while<'i>(
+    pub fn translate_while(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1319,7 +1475,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         while2: &WhileIE<'s, 'i, cI>,
     ) -> &'h WhileH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_while");
     }
@@ -1345,10 +1500,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_interface_function_call
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_interface_function_call<'i>(
+    pub fn translate_interface_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -1359,7 +1514,6 @@ where 's: 'h,
         result_type2: CoordI<'s, 'i, cI>,
         args_exprs2: &[ExpressionIE<'s, 'i, cI>],
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_interface_function_call");
     }

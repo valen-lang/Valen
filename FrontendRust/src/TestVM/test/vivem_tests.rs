@@ -1,3 +1,4 @@
+/*
 package dev.vale.testvm
 
 import dev.vale.{Interner, Keywords, PackageCoordinate, PackageCoordinateMap, StrI, finalast}
@@ -5,8 +6,17 @@ import dev.vale.finalast._
 import dev.vale.finalast._
 import dev.vale.von.{VonArray, VonInt, VonMember, VonObject, VonStr}
 import org.scalatest._
-
+*/
+// mig: struct VivemTests
+pub struct VivemTests {}
+/*
 class VivemTests extends FunSuite with Matchers {
+*/
+// mig: fn return_7
+#[test]
+#[ignore = "unmigrated - pending testvm body migration"]
+fn return_7() { panic!("Unmigrated test: return_7"); }
+/*
   test("Return 7") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -30,7 +40,12 @@ class VivemTests extends FunSuite with Matchers {
       Vivem.executeWithPrimitiveArgs(programH, Vector(), System.out, Vivem.emptyStdin, Vivem.nullStdout)
     result match { case VonInt(7) => }
   }
-
+*/
+// mig: fn adding
+#[test]
+#[ignore = "unmigrated - pending testvm body migration"]
+fn adding() { panic!("Unmigrated test: adding"); }
+/*
   test("Adding") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -82,8 +97,16 @@ class VivemTests extends FunSuite with Matchers {
             ArgumentH(CoordH(MutableShareH,InlineH,IntHT.i32), 1))))
 
     val packages = new PackageCoordinateMap[PackageH]()
-    packages.put(PackageCoordinate.BUILTIN(interner, keywords), PackageH(Vector.empty, Vector.empty, Vector(addExtern), Vector.empty, Vector.empty, Map(), Map(), Map(interner.intern(StrI("__vbi_addI32")) -> addPrototype), Map()))
-    packages.put(PackageCoordinate.TEST_TLD(interner, keywords), PackageH(Vector.empty, Vector.empty, Vector(main), Vector.empty, Vector.empty, Map(interner.intern(StrI("main")) -> main.prototype), Map(), Map(), Map()))
+    packages.put(
+      PackageCoordinate.BUILTIN(interner, keywords),
+      PackageH(
+        Vector.empty, Vector.empty, Vector(addExtern), Vector.empty, Vector.empty, Map(), Map(),
+        Map(addPrototype -> HamutsFunctionExtern("__vbi_addI32", addPrototype, SimpleId(Vector(SimpleIdStep("", Vector()), SimpleIdStep("__vbi_addI32", Vector()))))), Map()))
+    packages.put(
+      PackageCoordinate.TEST_TLD(interner, keywords),
+      PackageH(
+        Vector.empty, Vector.empty, Vector(main), Vector.empty, Vector.empty,
+        Map(interner.intern(StrI("main")) -> main.prototype), Map(), Map(), Map()))
     val programH = ProgramH(packages)
 
     val result =
@@ -91,3 +114,5 @@ class VivemTests extends FunSuite with Matchers {
     result match { case VonInt(159) => }
   }
 }
+
+*/

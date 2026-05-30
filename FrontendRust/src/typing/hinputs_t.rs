@@ -253,7 +253,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     */
     // mig: fn get_instantiation_bound_args
     pub fn get_instantiation_bound_args(&self, instantiation_name: IdT<'s, 't>) -> &'t InstantiationBoundArgumentsT<'s, 't> {
-        panic!("Unimplemented: get_instantiation_bound_args");
+        *self.instantiation_name_to_instantiation_bounds.get(&instantiation_name).unwrap()
     }
     /*
       def getInstantiationBoundArgs(instantiationName: IdT[IInstantiationNameT]): InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT] = {

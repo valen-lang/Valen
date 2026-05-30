@@ -1,3 +1,14 @@
+# RETIRED — typing-pass core test migration complete
+
+All tracked tests below are done (`- [x]`). This was the driver for the core
+typing-pass test suite (compiler_tests / solver / virtual / mutate); the active
+migration frontier has since moved to the **instantiating pass**. The remaining
+`after_regions_*` typing tests were never tracked here — their pass/deferred split
+is the Scala-side record at `docs/historical/after-regions-test-fixing-quest.md`.
+Kept for historical reference only.
+
+---
+
 - [x] parenthesized_method_syntax_will_move_instead_of_borrow
 - [x] calling_a_method_on_a_returned_own_ref_will_supply_owning_arg
 - [x] explicit_borrow_method_call

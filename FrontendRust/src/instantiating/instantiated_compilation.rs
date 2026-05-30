@@ -15,6 +15,9 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::instantiating::instantiator;
 
 
 /*
@@ -65,12 +68,19 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 
 // mig: struct InstantiatedCompilation
-pub struct InstantiatedCompilation<'s, 'ctx, 't, 'p>
-where 's: 't,
+pub struct InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
+where 's: 't, 's: 'i,
 {
   typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 't, 'p>,
-  #[allow(dead_code)]
-  monouts_cache: Option<()>, // HinputsI not yet ported
+  // Retained from `new` to feed `Instantiator::translate` in `get_monouts`
+  // (Scala's `val keywords` + `options` class fields).
+  keywords: &'ctx Keywords<'s>,
+  global_options: crate::compile_options::GlobalOptions,
+  // The instantiating arena's interner, built from the externally-owned 'i Bump
+  // passed to `new` — mirrors TypingPassCompilation's `typing_interner` (built
+  // from `typing_bump: &'t Bump`).
+  pub instantiating_interner: InstantiatingInterner<'s, 'i>,
+  monouts_cache: Option<HinputsI<'s, 'i>>,
 }
 /*
 class InstantiatedCompilation(
@@ -83,9 +93,10 @@ class InstantiatedCompilation(
 
 // mig: impl InstantiatedCompilation
 // mig: fn new
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   // From InstantiatedCompilation.scala lines 19-34
@@ -99,6 +110,7 @@ where
     global_options: crate::compile_options::GlobalOptions,
     options: InstantiatorCompilationOptions,
     typing_bump: &'t Bump,
+    instantiating_bump: &'i Bump,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
       debug_out: options.debug_out.clone(),
@@ -111,13 +123,18 @@ where
       parse_arena,
       packages_to_build,
       package_to_contents_resolver,
-      global_options,
+      global_options.clone(),
       typing_options,
       typing_bump,
     );
 
+    let instantiating_interner = InstantiatingInterner::new(instantiating_bump);
+
     InstantiatedCompilation {
       typing_pass_compilation,
+      keywords,
+      global_options,
+      instantiating_interner,
       monouts_cache: None,
     }
   }
@@ -135,9 +152,10 @@ where
   var monoutsCache: Option[HinputsI] = None
 */
 // mig: fn get_code_map
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
@@ -148,9 +166,10 @@ where
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = typingPassCompilation.getCodeMap()
 */
 // mig: fn get_parseds
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
@@ -161,9 +180,10 @@ where
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = typingPassCompilation.getParseds()
 */
 // mig: fn get_vpst_map
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
@@ -174,9 +194,10 @@ where
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = typingPassCompilation.getVpstMap()
 */
 // mig: fn get_scoutput
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_scoutput(&mut self) -> Result<(), String> {
@@ -187,9 +208,10 @@ where
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = typingPassCompilation.getScoutput()
 */
 // mig: fn get_astrouts
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_astrouts(&mut self) -> Result<(), String> {
@@ -200,9 +222,10 @@ where
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = typingPassCompilation.getAstrouts()
 */
 // mig: fn get_compiler_outputs
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
@@ -213,9 +236,10 @@ where
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = typingPassCompilation.getCompilerOutputs()
 */
 // mig: fn expect_compiler_outputs
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
   pub fn expect_compiler_outputs(&mut self) -> () {
@@ -227,18 +251,27 @@ where
 
 */
 // mig: fn get_monouts
-impl<'s, 'ctx, 't, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
+    's: 'i,
     'p: 'ctx,
 {
-  // Phase E (Slab 16j) signature: returns HinputsI<'s, 'i>.
-  // 'i tied to 's by the bare-placeholder shape; instantiating arena is
-  // managed by the InstantiatedCompilation itself (not yet wired — Slab 16j
-  // sets the type-signature handoff only, body stays panic).
-  pub fn get_monouts<'i>(&mut self) -> crate::instantiating::ast::hinputs::HinputsI<'s, 'i>
-  where 's: 'i {
-    panic!("InstantiatedCompilation.get_monouts not yet implemented - see InstantiatedCompilation.scala lines 44-55")
+  // Returns HinputsI<'s, 'i>, where 'i is the InstantiatedCompilation's own
+  // instantiating-arena lifetime (the `instantiating_interner` field), mirroring
+  // how TypingPassCompilation::get_compiler_outputs returns HinputsT<'s, 't>.
+  pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
+    if self.monouts_cache.is_some() {
+      return self.monouts_cache.as_ref().unwrap();
+    }
+    // Populate the typing-pass output cache (the `&mut` borrow ends here), so the two reads below —
+    // the typing_interner and the cached outputs, both fields of typing_pass_compilation — can coexist.
+    self.typing_pass_compilation.expect_compiler_outputs();
+    let monouts =
+      instantiator::translate(
+        &self.global_options, &self.instantiating_interner, &self.typing_pass_compilation.typing_interner, self.keywords, self.typing_pass_compilation.cached_compiler_outputs());
+    self.monouts_cache = Some(monouts);
+    self.monouts_cache.as_ref().unwrap()
   }
 }
 /*
@@ -258,3 +291,19 @@ where
 /*
 }
 */
+impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
+where
+    's: 't,
+    's: 'i,
+    'p: 'ctx,
+{
+  /*
+  */
+  // Rust adaptation: `&self` read of the already-computed monouts so a caller can borrow it
+  // alongside another field of this struct in one expression (`&mut get_monouts` would
+  // conflict). Caller must have run `get_monouts` first to populate the cache.
+  pub fn cached_monouts(&self) -> &HinputsI<'s, 'i> {
+    self.monouts_cache.as_ref().expect("monouts not computed")
+  }
+  /* Guardian: disable-all */
+}

@@ -181,22 +181,19 @@ impl IRegionsModeIT for sI {}
 // casting from collapsed to subjective ASTs.
 class sI() extends IRegionsModeI
 */
+// Region modes are covariant in Scala (`nI <: sI`); Rust erases that covariance (same rationale as
+// +T-erasure). Per CCFCTS the modes are inert zero-member tags, so `nI`/`cI` alias `sI` to make ASTs
+// across modes interchangeable (e.g. passing `PrototypeI<nI>` where `PrototypeI<sI>` is expected).
 // mig: struct nI
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(non_camel_case_types)]
-pub struct nI;
-impl region_mode_sealed::Sealed for nI {}
-impl IRegionsModeIT for nI {}
+pub type nI = sI;
 // mig: impl nI
 /*
 class nI() extends sI // Stands for new. Serves as a starting point for a new instantiation.
 */
 // mig: struct cI
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[allow(non_camel_case_types)]
-pub struct cI;
-impl region_mode_sealed::Sealed for cI {}
-impl IRegionsModeIT for cI {}
+pub type cI = sI;
 // mig: impl cI
 /*
 class cI() extends IRegionsModeI

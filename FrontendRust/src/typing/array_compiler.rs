@@ -995,7 +995,7 @@ where 's: 't,
             local_name,
         });
         // vassert(TemplataCompiler.getTemplate(id) == templateId)
-        assert!(*self.get_template(*id) == *template_id);
+        assert!(*Compiler::get_template(self.typing_interner, *id) == *template_id);
 
         // val arrayInnerEnv =
         //   arrayOuterEnv.copy(

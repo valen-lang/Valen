@@ -9,8 +9,22 @@ import dev.vale.{vassertSome, vimpl}
 object RegionCollapserConsistent {
 
 */
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
+use crate::instantiating::ast::ast::{PrototypeI, PrototypeIValI};
+use crate::instantiating::ast::names::{IdI, INameI, IFunctionNameI, FunctionNameIX, FunctionTemplateNameI};
+use crate::instantiating::ast::types::{sI, nI, CoordI, KindIT, VoidIT};
+use crate::instantiating::ast::templata::ITemplataI;
+use std::collections::HashMap;
+
 // mig: fn collapse_prototype
-pub fn collapse_prototype() { panic!("Unimplemented: collapse_prototype"); }
+pub fn collapse_prototype<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: HashMap<i32, i32>, prototype: &PrototypeI<'s, 'i, sI>) -> PrototypeI<'s, 'i, nI>
+where 's: 'i {
+    let PrototypeI { id, return_type, .. } = *prototype;
+    *interner.intern_prototype_ni(PrototypeIValI {
+        id: collapse_function_id(interner, &map, &id),
+        return_type: collapse_coord(interner, &map, &return_type),
+    })
+}
 /*
   def collapsePrototype(map: Map[Int, Int], prototype: PrototypeI[sI]): PrototypeI[nI] = {
     val PrototypeI(id, returnType) = prototype
@@ -21,7 +35,15 @@ pub fn collapse_prototype() { panic!("Unimplemented: collapse_prototype"); }
 
 */
 // mig: fn collapse_id
-pub fn collapse_id() { panic!("Unimplemented: collapse_id"); }
+pub fn collapse_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, id_i: &IdI<'s, 'i, sI>, func: impl Fn(&INameI<'s, 'i, sI>) -> INameI<'s, 'i, nI>) -> IdI<'s, 'i, nI>
+where 's: 'i {
+    let init_steps_c = id_i.init_steps.iter().map(|x| collapse_name(interner, map, x)).collect::<Vec<_>>();
+    IdI {
+        package_coord: id_i.package_coord,
+        init_steps: interner.alloc_slice_from_vec(init_steps_c),
+        local_name: func(&id_i.local_name),
+    }
+}
 /*
   def collapseId[T <: INameI[sI], Y <: INameI[nI]](
       map: Map[Int, Int],
@@ -37,7 +59,10 @@ pub fn collapse_id() { panic!("Unimplemented: collapse_id"); }
 
 */
 // mig: fn collapse_function_id
-pub fn collapse_function_id() { panic!("Unimplemented: collapse_function_id"); }
+pub fn collapse_function_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, id: &IdI<'s, 'i, sI>) -> IdI<'s, 'i, nI>
+where 's: 'i {
+    collapse_id(interner, map, id, |x| INameI::from(collapse_function_name(interner, map, &IFunctionNameI::try_from(*x).unwrap())))
+}
 /*
   def collapseFunctionId(
       map: Map[Int, Int],
@@ -51,7 +76,23 @@ pub fn collapse_function_id() { panic!("Unimplemented: collapse_function_id"); }
 
 */
 // mig: fn collapse_function_name
-pub fn collapse_function_name() { panic!("Unimplemented: collapse_function_name"); }
+pub fn collapse_function_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, name: &IFunctionNameI<'s, 'i, sI>) -> IFunctionNameI<'s, 'i, nI>
+where 's: 'i {
+    match *name {
+        IFunctionNameI::Function(n) => {
+            let FunctionNameIX { template: FunctionTemplateNameI { human_name, code_location, .. }, template_args, parameters, .. } = *n;
+            let template_c = FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location };
+            let template_args_c = interner.alloc_slice_from_vec(template_args.iter().map(|template_arg| collapse_templata(interner, map, template_arg)).collect::<Vec<_>>());
+            let params_c = interner.alloc_slice_from_vec(parameters.iter().map(|param| collapse_coord(interner, map, param)).collect::<Vec<_>>());
+            IFunctionNameI::Function(interner.intern_function_name_x_ni(FunctionNameIX { template: template_c, template_args: template_args_c, parameters: params_c }))
+        }
+        IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: collapse_function_name ExternFunction"),
+        IFunctionNameI::LambdaCallFunction(_) => panic!("Unimplemented: collapse_function_name LambdaCallFunction"),
+        IFunctionNameI::AnonymousSubstructConstructor(_) => panic!("Unimplemented: collapse_function_name AnonymousSubstructConstructor"),
+        IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: collapse_function_name ForwarderFunction"),
+        _ => panic!("Unimplemented: collapse_function_name other"),
+    }
+}
 /*
   def collapseFunctionName(
       map: Map[Int, Int],
@@ -136,7 +177,10 @@ pub fn collapse_var_name() { panic!("Unimplemented: collapse_var_name"); }
 
 */
 // mig: fn collapse_name
-pub fn collapse_name() { panic!("Unimplemented: collapse_name"); }
+pub fn collapse_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, name: &INameI<'s, 'i, sI>) -> INameI<'s, 'i, nI>
+where 's: 'i {
+    panic!("Unimplemented: collapse_name")
+}
 /*
   def collapseName(
       map: Map[Int, Int],
@@ -175,7 +219,10 @@ pub fn collapse_coord_templata() { panic!("Unimplemented: collapse_coord_templat
 
 */
 // mig: fn collapse_templata
-pub fn collapse_templata() { panic!("Unimplemented: collapse_templata"); }
+pub fn collapse_templata<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, templata: &ITemplataI<'s, 'i, sI>) -> ITemplataI<'s, 'i, nI>
+where 's: 'i {
+    panic!("Unimplemented: collapse_templata")
+}
 /*
   def collapseTemplata(
     map: Map[Int, Int],
@@ -206,7 +253,11 @@ pub fn collapse_region_templata() { panic!("Unimplemented: collapse_region_templ
 
 */
 // mig: fn collapse_coord
-pub fn collapse_coord() { panic!("Unimplemented: collapse_coord"); }
+pub fn collapse_coord<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, coord: &CoordI<'s, 'i, sI>) -> CoordI<'s, 'i, nI>
+where 's: 'i {
+    let CoordI { ownership, kind } = *coord;
+    CoordI { ownership, kind: collapse_kind(interner, map, &kind) }
+}
 /*
   def collapseCoord(
       map: Map[Int, Int],
@@ -218,7 +269,21 @@ pub fn collapse_coord() { panic!("Unimplemented: collapse_coord"); }
 
 */
 // mig: fn collapse_kind
-pub fn collapse_kind() { panic!("Unimplemented: collapse_kind"); }
+pub fn collapse_kind<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, kind: &KindIT<'s, 'i, sI>) -> KindIT<'s, 'i, nI>
+where 's: 'i {
+    match kind {
+        KindIT::NeverIT(_) => panic!("Unimplemented: collapse_kind NeverIT"),
+        KindIT::VoidIT(_) => KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }),
+        KindIT::IntIT(_) => panic!("Unimplemented: collapse_kind IntIT"),
+        KindIT::BoolIT(_) => panic!("Unimplemented: collapse_kind BoolIT"),
+        KindIT::FloatIT(_) => panic!("Unimplemented: collapse_kind FloatIT"),
+        KindIT::StrIT(_) => panic!("Unimplemented: collapse_kind StrIT"),
+        KindIT::StructIT(_) => panic!("Unimplemented: collapse_kind StructIT"),
+        KindIT::InterfaceIT(_) => panic!("Unimplemented: collapse_kind InterfaceIT"),
+        KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: collapse_kind StaticSizedArray"),
+        KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: collapse_kind RuntimeSizedArray"),
+    }
+}
 /*
   def collapseKind(
       map: Map[Int, Int],

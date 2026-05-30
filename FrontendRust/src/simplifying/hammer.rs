@@ -13,6 +13,7 @@ use crate::final_ast::instructions::{
     ConsecutorH, ConstantVoidH, ExpressionH, Local, StackifyH, VariableIdH,
 };
 use crate::final_ast::types::{CoordH, KindHT, NeverHT, Variability, VoidHT};
+use crate::instantiating::ast::ast::{FunctionDefinitionI, FunctionExportI, FunctionExternI};
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::{IdI, INameI, IVarNameI};
 use crate::instantiating::ast::templata::ITemplataI;
@@ -62,8 +63,18 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 */
 
 // mig: fn snapshot
-// (LocalsBox.snapshot returned `inner`; with the LocalsBox/Locals collapse,
-// snapshot becomes a clone-equivalent. Not yet exposed — body migration.)
+impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
+where 's: 'i, 'i: 'h,
+{
+    pub fn snapshot(&self) -> Locals<'s, 'i, 'h> {
+        Locals {
+            typing_pass_locals: self.typing_pass_locals.clone(),
+            unstackified_vars: self.unstackified_vars.clone(),
+            locals: self.locals.clone(),
+            next_local_id_number: self.next_local_id_number,
+        }
+    }
+}
 /*
   def snapshot = inner
 */
@@ -121,11 +132,12 @@ where 's: 'i, 'i: 'h,
 impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
-    pub fn get_by_var_name(&self, id: &'i IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
-        panic!("Unimplemented: get_by_var_name");
+    pub fn get_by_var_name(&self, id: &IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
+        self.typing_pass_locals.get(id).copied().and_then(|var_id| self.locals.get(&var_id).copied())
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct, same as HamutsBox/Hamuts collapse documented in hamuts.rs lines 4-12): Scala's outer `def get(id) = inner.get(id)` delegated to the inner Locals' two-step lookup. Rust collapsed both into a single mutable Locals. The "inner" version's body (typingPassLocals.get → locals.get) IS the collapsed implementation; see the audit-trail `def get(varId: IVarNameI[cI]): Option[Local]` Scala block at hammer.rs:411 which shows the two-step lookup. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1873-1780116603775/hook-1873/next_local_id_number--122.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def get(id: IVarNameI[cI]) = inner.get(id)
 */
 
@@ -231,7 +243,7 @@ where 's: 'i, 'i: 'h,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_typing_pass_local");
+        self.add_compiler_local(var_id, var_id_name_h, variability, tyype)
     }
 }
 /*
@@ -291,7 +303,17 @@ where 's: 'i, 'i: 'h,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_compiler_local");
+        if self.typing_pass_locals.contains_key(&var_id) {
+            panic!("There's already a typingpass local named: {:?}", var_id);
+        }
+        let new_local_height = self.locals.len() as i32;
+        let new_local_id_number = self.next_local_id_number;
+        let new_local_id = VariableIdH { number: new_local_id_number, height: new_local_height, name: Some(var_id_name_h) };
+        let new_local = Local { id: new_local_id, variability, type_h: tyype };
+        self.typing_pass_locals.insert(var_id, new_local_id);
+        self.locals.insert(new_local_id, new_local);
+        self.next_local_id_number = new_local_id_number + 1;
+        new_local
     }
 }
 /*
@@ -410,11 +432,13 @@ where 's: 'i, 'i: 'h,
 // fields from Scala (`nameHammer`, `structHammer`, `typeHammer`,
 // `functionHammer`, `vonHammer`) NOT held as Rust fields — their methods
 // become `impl Hammer { ... }` blocks colocated in per-area files.
-pub struct Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+pub struct Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'i, 's: 'h, 'i: 'h,
 {
     pub interner: &'ctx HammerInterner<'s, 'h>,
     pub keywords: &'ctx Keywords<'s>,
+    pub scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
+    pub instantiating_interner: &'ctx crate::instantiating::instantiating_interner::InstantiatingInterner<'s, 'i>,
 }
 /*
 class Hammer(interner: Interner, keywords: Keywords) {
@@ -432,7 +456,7 @@ class Hammer(interner: Interner, keywords: Keywords) {
 */
 
 // mig: fn mangle_func
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_func(&self, id: &IdI<'s, 'i, cI>) -> String {
@@ -467,7 +491,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_name
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_name(&self, name: &INameI<'s, 'i, cI>, stuff_after: bool) -> String {
@@ -490,7 +514,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_struct
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_struct(&self, id: &IdI<'s, 'i, cI>) -> String {
@@ -506,7 +530,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_kind
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_kind(&self, kind: &KindIT<'s, 'i, cI>) -> String {
@@ -524,7 +548,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_coord
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_coord(&self, coord: &CoordI<'s, 'i, cI>) -> String {
@@ -547,7 +571,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_templata
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i, cI>) -> String {
@@ -565,14 +589,85 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn translate(&self, hinputs: &HinputsI<'s, 'i>) -> &'h ProgramH<'s, 'h> {
-        panic!("Unimplemented: translate");
+        let HinputsI {
+            interfaces,
+            structs,
+            functions,
+            interface_to_edge_blueprints,
+            interface_to_sub_citizen_to_edge: edges,
+            kind_exports,
+            function_exports,
+            kind_externs,
+            function_externs,
+        } = hinputs;
+
+        let mut hamuts = Hamuts {
+            human_name_to_full_name_to_id: HashMap::new(),
+            struct_t_to_opaque_h: HashMap::new(),
+            struct_t_to_struct_h: HashMap::new(),
+            struct_t_to_struct_def_h: HashMap::new(),
+            struct_defs: Vec::new(),
+            static_sized_arrays: HashMap::new(),
+            runtime_sized_arrays: HashMap::new(),
+            interface_t_to_interface_h: HashMap::new(),
+            interface_t_to_interface_def_h: HashMap::new(),
+            function_refs: HashMap::new(),
+            function_defs: HashMap::new(),
+            package_coord_to_export_name_to_function: HashMap::new(),
+            package_coord_to_export_name_to_kind: HashMap::new(),
+            package_coord_to_prototype_to_extern: HashMap::new(),
+            package_coord_to_kind_to_extern: HashMap::new(),
+        };
+
+        for _ in kind_exports.iter() {
+            panic!("Unimplemented: translate kindExports");
+        }
+
+        for FunctionExportI { range: _, prototype, export_id, exported_name } in function_exports.iter() {
+            let prototype_h = self.translate_prototype(hinputs, &mut hamuts, prototype);
+            hamuts.add_function_export(prototype_h, *export_id.package_coord, *exported_name);
+        }
+
+        for _ in kind_externs.iter() {
+            panic!("Unimplemented: translate kindExterns");
+        }
+
+        for FunctionExternI { prototype, num_inherited_generic_parameters } in function_externs.iter() {
+            let num_inherited = *num_inherited_generic_parameters;
+            let export_name = if prototype.id.package_coord.module.0 == "rust" {
+                panic!("translate functionExterns: rust-package empty-name branch")
+            } else {
+                match prototype.id.local_name {
+                    crate::instantiating::ast::names::INameI::ExternFunction(extern_fn) => extern_fn.human_name,
+                    other => panic!("translate functionExterns: unexpected local_name variant {:?}", std::mem::discriminant(&other)),
+                }
+            };
+            let raw_simple_id = crate::simplifying::name_hammer::simplify_id(self.interner, &prototype.id);
+            let export_simplified_id = if num_inherited == 0 {
+                raw_simple_id
+            } else {
+                panic!("translate functionExterns: numInherited != 0 branch")
+            };
+            let prototype_h = self.translate_prototype(hinputs, &mut hamuts, prototype);
+            hamuts.add_function_extern(prototype_h, export_simplified_id, export_name);
+        }
+
+        self.translate_interfaces(hinputs, &mut hamuts);
+        self.translate_structs(hinputs, &mut hamuts);
+        let user_functions: Vec<&FunctionDefinitionI> = functions.iter().filter(|f| f.header.is_user_function()).copied().collect();
+        let non_user_functions: Vec<&FunctionDefinitionI> = functions.iter().filter(|f| !f.header.is_user_function()).copied().collect();
+        self.translate_functions(hinputs, &mut hamuts, &user_functions);
+        self.translate_functions(hinputs, &mut hamuts, &non_user_functions);
+
+        panic!("Unimplemented: translate packaging");
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hammer.rs lines 1-9): sub-hammers like TypeHammer are NOT held as Rust struct fields under the typing-pass `Compiler` god-struct precedent. Their methods are colocated `impl Hammer` blocks, so `typeHammer.translatePrototype(...)` correctly ports to `self.translate_prototype(...)`. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1327-1780102559874/hook-1327/translate--571.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translate(hinputs: HinputsI): ProgramH = {
     val HinputsI(
     interfaces,

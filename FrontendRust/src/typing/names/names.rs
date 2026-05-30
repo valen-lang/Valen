@@ -137,8 +137,12 @@ impl<'s, 't> IdT<'s, 't> {
         }
       }
     */
-    fn init_non_package_id() {
-        panic!("Unimplemented IdT init-non-package ID");
+    pub fn init_non_package_id(&self) -> Option<IdT<'s, 't>> {
+        if self.init_steps.is_empty() {
+            None
+        } else {
+            panic!("Unimplemented IdT init-non-package ID non-empty");
+        }
     }
     /*
       def initNonPackageId(): Option[IdT[INameT]] = {

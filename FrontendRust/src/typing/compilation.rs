@@ -220,4 +220,11 @@ pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
 }
   /*
   */
+  // Rust adaptation: `&self` read of the already-computed compiler outputs, so a caller can borrow it
+  // alongside another field of this struct in one expression (`&mut expect_compiler_outputs` would
+  // conflict). Caller must have run `expect_compiler_outputs` first.
+  pub fn cached_compiler_outputs(&self) -> &HinputsT<'s, 't> {
+    self.hinputs_cache.as_ref().expect("compiler outputs not computed")
+  }
+  /* Guardian: disable-all */
 }

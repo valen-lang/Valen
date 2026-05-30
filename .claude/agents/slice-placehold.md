@@ -81,11 +81,7 @@ Always emit a module-scope stub: `pub fn foo(…) -> … { panic!("Unimplemented
 
 Signature inference:
  * Translate Scala types via the policy's collection/string rules.
- * If the Scala body intern-allocates (look for `interner.intern(` / `arena.alloc(` / `new FooT(...)` patterns in the body), thread the policy's **Interner type** as the first parameter, named `interner`. Above the fn emit:
-   ```rust
-   // Rust adaptation (SPDMX-B): interner threaded explicitly because the Rust pass
-   // arena-allocates where Scala used GC.
-   ```
+ * If the Scala body intern-allocates (look for `interner.intern(` / `arena.alloc(` / `new FooT(...)` patterns in the body), thread the policy's **Interner type** as the first parameter, named `interner`.
  * If the Scala code is `test("…")`, emit `#[test]` and `panic!("Unmigrated test: foo");` at module scope (tests never go inside an impl).
 
 If the `// mig: fn` is suffixed `(realized-by-impl PartialEq)`, `(realized-by-impl Hash)`, or `(realized-by-TryFrom)`, do NOT emit a `pub fn`. Instead emit a marker stub per the policy's equals/hashCode/unapply policy:

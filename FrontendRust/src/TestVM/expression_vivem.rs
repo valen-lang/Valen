@@ -1,3 +1,4 @@
+/*
 package dev.vale.testvm
 
 import dev.vale.finalast._
@@ -7,43 +8,89 @@ import dev.vale.finalast._
 import scala.collection.mutable
 
 object ExpressionVivem {
+*/
+// mig: enum INodeExecuteResultV
+/// Polyvalue
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub enum INodeExecuteResultV<'v> {
+  Continue(&'v NodeContinueV<'v>),
+  Return(&'v NodeReturnV<'v>),
+  Break(&'v NodeBreakV<'v>),
+}
+/*
   // The contained reference has a ResultToObjectReferrer pointing at it.
   // This is so if we do something like [4, 5].0, and that 4 is being
   // returned to the parent node, it's not deallocated from its ref count
   // going to 0.
   sealed trait INodeExecuteResult
+*/
+// mig: struct NodeContinueV
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct NodeContinueV<'v> {
+  pub result_ref: ReferenceV<'v>,
+}
+/*
   case class NodeContinue(resultRef: ReferenceV) extends INodeExecuteResult {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
+*/
+// mig: struct NodeReturnV
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct NodeReturnV<'v> {
+  pub return_ref: ReferenceV<'v>,
+}
+/*
   case class NodeReturn(returnRef: ReferenceV) extends INodeExecuteResult {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
+*/
+// mig: struct NodeBreakV
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct NodeBreakV<'v> {
+  pub _phantom: std::marker::PhantomData<&'v ()>,
+}
+/*
   case class NodeBreak() extends INodeExecuteResult {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
-
+*/
+// mig: fn make_primitive
+pub fn make_primitive(heap: &Heap, call_id: CallId, location: LocationH, kind: KindV) -> ReferenceV { panic!("Unimplemented: make_primitive"); }
+/*
   def makePrimitive(heap: Heap, callId: CallId, location: LocationH, kind: KindV) = {
     vassert(kind != VoidV)
     val ref = heap.allocateTransient(MutableShareH, location, kind)
     heap.incrementReferenceRefCount(RegisterToObjectReferrer(callId, MutableShareH), ref)
     ref
   }
-
+*/
+// mig: fn take_argument
+pub fn take_argument(heap: &Heap, call_id: CallId, argument_index: i32, result_type: CoordH<KindHT>) -> ReferenceV { panic!("Unimplemented: take_argument"); }
+/*
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
     heap.incrementReferenceRefCount(RegisterToObjectReferrer(callId, resultType.ownership), ref)
     ref
   }
-
+*/
+// mig: fn possess_callee_return
+pub fn possess_callee_return(heap: &Heap, call_id: CallId, callee_call_id: CallId, result: &NodeReturnV) -> ReferenceV { panic!("Unimplemented: possess_callee_return"); }
+/*
   def possessCalleeReturn(heap: Heap, callId: CallId, calleeCallId: CallId, result: NodeReturn) = {
     heap.decrementReferenceRefCount(RegisterToObjectReferrer(calleeCallId, result.returnRef.ownership), result.returnRef)
     heap.incrementReferenceRefCount(RegisterToObjectReferrer(callId, result.returnRef.ownership), result.returnRef)
     result.returnRef
   }
-
+*/
+// mig: fn upcast
+pub fn upcast(source_reference: ReferenceV, target_interface_ref: InterfaceHT) -> ReferenceV { panic!("Unimplemented: upcast"); }
+/*
   def upcast(sourceReference: ReferenceV, targetInterfaceRef: InterfaceHT): ReferenceV = {
     ReferenceV(
       sourceReference.actualKind,
@@ -52,7 +99,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
       sourceReference.location,
       sourceReference.num)
   }
-
+*/
+// mig: fn execute_node
+pub fn execute_node(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, node: &ExpressionH<KindHT>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node"); }
+/*
   def executeNode(
     programH: ProgramH,
     stdin: (() => String),
@@ -66,7 +116,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
     heap.vivemDout.println("</" + node.getClass.getSimpleName + ">")
     result
   }
-
+*/
+// mig: fn execute_node_inner
+pub fn execute_node_inner(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, node: &ExpressionH<KindHT>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node_inner"); }
+/*
   def executeNodeInner(
                    programH: ProgramH,
                    stdin: (() => String),
@@ -1035,7 +1088,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
       }
     }
   }
-
+*/
+// mig: fn consume_elements
+pub fn consume_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, call_id: CallId, array_reference: ReferenceV, consumer_reference: ReferenceV, consumer_prototype: PrototypeH, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV)) { panic!("Unimplemented: consume_elements"); }
+/*
   private def consumeElements(
     programH: ProgramH,
     stdin: () => String,
@@ -1085,7 +1141,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
       receiver(i, returnRef)
     });
   }
-
+*/
+// mig: fn generate_elements
+pub fn generate_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, call_id: CallId, generator_reference: ReferenceV, generator_prototype: PrototypeH, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV)) { panic!("Unimplemented: generate_elements"); }
+/*
   private def generateElements(
     programH: ProgramH,
     stdin: () => String,
@@ -1130,7 +1189,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
       receiver(i, returnRef)
     });
   }
-
+*/
+// mig: fn execute_interface_function
+pub fn execute_interface_function(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, undeviewed_arg_references: &[ReferenceV], virtual_param_index: i32, interface_ref_h: InterfaceHT, index_in_edge: i32, function_type: PrototypeH) -> (FunctionH, (CallId, INodeExecuteResultV)) { panic!("Unimplemented: execute_interface_function"); }
+/*
   private def executeInterfaceFunction(
       programH: ProgramH,
       stdin: () => String,
@@ -1189,7 +1251,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
         functionH)
     (functionH, maybeReturnReference)
   }
-
+*/
+// mig: fn discard
+pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<KindHT>, actual_reference: ReferenceV) { panic!("Unimplemented: discard"); }
+/*
   def discard(
     programH: ProgramH,
     heap: Heap,
@@ -1202,7 +1267,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
     heap.decrementReferenceRefCount(RegisterToObjectReferrer(callId, actualReference.ownership), actualReference)
     cleanup(programH, heap, stdout, stdin, callId, expectedReference, actualReference)
   }
-
+*/
+// mig: fn cleanup
+pub fn cleanup(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<KindHT>, actual_reference: ReferenceV) { panic!("Unimplemented: cleanup"); }
+/*
   def cleanup(
     programH: ProgramH,
     heap: Heap,
@@ -1222,7 +1290,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
         case MutableBorrowH | ImmutableBorrowH => // Do nothing.
         case MutableShareH | ImmutableShareH => {
           expectedReference.kind match {
-            case VoidHT() | IntHT(_) | BoolHT() | StrHT() | FloatHT() => {
+            case VoidHT() | IntHT(_) | BoolHT() | StrHT() | FloatHT() | OpaqueHT(_, _, _) => {
               heap.zero(actualReference)
               heap.deallocateIfNoWeakRefs(actualReference)
             }
@@ -1299,3 +1367,5 @@ override def equals(obj: Any): Boolean = vcurious(); }
     }
   }
 }
+
+*/

@@ -441,31 +441,14 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_template(
-        &self,
+        interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> &'t IdT<'s, 't> {
-        // val IdT(packageCoord, initSteps, last) = id
-        // IdT(packageCoord, initSteps, last.template)
-        let template_name = match id.local_name {
-            INameT::StaticSizedArray(ssa) => INameT::StaticSizedArrayTemplate(ssa.template),
-            INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
-            INameT::Struct(s) => {
-                match s.template {
-                    IStructTemplateNameT::StructTemplate(tmpl) => INameT::StructTemplate(tmpl),
-                    IStructTemplateNameT::LambdaCitizenTemplate(tmpl) => INameT::LambdaCitizenTemplate(tmpl),
-                    IStructTemplateNameT::AnonymousSubstructTemplate(tmpl) => INameT::AnonymousSubstructTemplate(tmpl),
-                }
-            }
-            INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
-            INameT::Function(f) => INameT::FunctionTemplate(f.template),
-            INameT::FunctionBound(fb) => INameT::FunctionBoundTemplate(fb.template),
-            INameT::AnonymousSubstruct(a) => INameT::AnonymousSubstructTemplate(a.template),
-            _ => panic!("get_template: not yet implemented for {:?}", id.local_name),
-        };
-        self.typing_interner.intern_id(IdValT {
+        let last = IInstantiationNameT::try_from(id.local_name).unwrap();
+        interner.intern_id(IdValT {
             package_coord: id.package_coord,
-            init_steps: id.init_steps,
-            local_name: template_name,
+            init_steps: id.init_steps, //.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
+            local_name: INameT::from(last.template()),
         })
     }
 }
@@ -1846,7 +1829,7 @@ where 's: 't,
             top_level_denizen_id.local_name.try_into()
                 .unwrap_or_else(|_| panic!("get_placeholder_substituter: topLevelDenizenId.localName must be IInstantiationNameT, got {:?}", top_level_denizen_id.local_name));
         let template_args: &[ITemplataT<'s, 't>] = top_level_local_name.template_args();
-        let top_level_denizen_template_id = self.get_template(top_level_denizen_id);
+        let top_level_denizen_template_id = Compiler::get_template(self.typing_interner, top_level_denizen_id);
         self.get_placeholder_substituter_ext(
             sanity_check,
             original_calling_denizen_id,

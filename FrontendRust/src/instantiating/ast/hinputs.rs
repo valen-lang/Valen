@@ -46,8 +46,8 @@ case class InstantiationBoundArgumentsI(
 /// Temporary state (see @TFITCX) — top-level container for instantiated output.
 pub struct HinputsI<'s, 'i> where 's: 'i {
     pub interfaces: &'i [InterfaceDefinitionI<'s, 'i, cI>],
-    pub structs: &'i [StructDefinitionI<'s, 'i, cI>],
-    pub functions: &'i [FunctionDefinitionI<'s, 'i>],
+    pub structs: &'i [&'i StructDefinitionI<'s, 'i, cI>],
+    pub functions: &'i [&'i FunctionDefinitionI<'s, 'i>],
     pub interface_to_edge_blueprints:
         ArenaIndexMap<'i, IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>>,
     pub interface_to_sub_citizen_to_edge:

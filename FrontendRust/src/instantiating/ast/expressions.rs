@@ -30,8 +30,68 @@ pub enum ExpressionIE<'s, 'i, R> {
 trait ExpressionI  {
 */
 // mig: fn result
-impl<'s, 'i, R> ExpressionIE<'s, 'i, R> {
-    pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+impl<'s, 'i, R: Copy> ExpressionIE<'s, 'i, R> {
+    pub fn result(&self) -> CoordI<'s, 'i, R> {
+        match self {
+            ExpressionIE::Reference(r) => r.result(),
+            ExpressionIE::Address(a) => panic!("ExpressionIE::result: Address branch"),
+        }
+    }
+}
+impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
+    pub fn result(&self) -> CoordI<'s, 'i, R> {
+        match self {
+            ReferenceExpressionIE::LetAndLend(x) => x.result,
+            ReferenceExpressionIE::LockWeak(_) => panic!("RE::result: LockWeak"),
+            ReferenceExpressionIE::BorrowToWeak(_) => panic!("RE::result: BorrowToWeak"),
+            ReferenceExpressionIE::LetNormal(x) => x.result,
+            ReferenceExpressionIE::Restackify(_) => panic!("RE::result: Restackify"),
+            ReferenceExpressionIE::Unlet(_) => panic!("RE::result: Unlet"),
+            ReferenceExpressionIE::Discard(_) => panic!("RE::result: Discard"),
+            ReferenceExpressionIE::Defer(_) => panic!("RE::result: Defer"),
+            ReferenceExpressionIE::If(x) => x.result,
+            ReferenceExpressionIE::While(_) => panic!("RE::result: While"),
+            ReferenceExpressionIE::Mutate(_) => panic!("RE::result: Mutate"),
+            ReferenceExpressionIE::Return(_) => panic!("RE::result: Return"),
+            ReferenceExpressionIE::Break(_) => panic!("RE::result: Break"),
+            ReferenceExpressionIE::Block(x) => x.result,
+            ReferenceExpressionIE::Mutabilify(_) => panic!("RE::result: Mutabilify"),
+            ReferenceExpressionIE::Immutabilify(_) => panic!("RE::result: Immutabilify"),
+            ReferenceExpressionIE::PreCheckBorrow(_) => panic!("RE::result: PreCheckBorrow"),
+            ReferenceExpressionIE::Consecutor(x) => x.result,
+            ReferenceExpressionIE::Tuple(_) => panic!("RE::result: Tuple"),
+            ReferenceExpressionIE::StaticArrayFromValues(_) => panic!("RE::result: StaticArrayFromValues"),
+            ReferenceExpressionIE::ArraySize(_) => panic!("RE::result: ArraySize"),
+            ReferenceExpressionIE::IsSameInstance(_) => panic!("RE::result: IsSameInstance"),
+            ReferenceExpressionIE::AsSubtype(_) => panic!("RE::result: AsSubtype"),
+            ReferenceExpressionIE::VoidLiteral(_) => panic!("RE::result: VoidLiteral"),
+            ReferenceExpressionIE::ConstantInt(x) => x.result(),
+            ReferenceExpressionIE::ConstantBool(_) => panic!("RE::result: ConstantBool"),
+            ReferenceExpressionIE::ConstantStr(_) => panic!("RE::result: ConstantStr"),
+            ReferenceExpressionIE::ConstantFloat(_) => panic!("RE::result: ConstantFloat"),
+            ReferenceExpressionIE::ArgLookup(_) => panic!("RE::result: ArgLookup"),
+            ReferenceExpressionIE::ArrayLength(_) => panic!("RE::result: ArrayLength"),
+            ReferenceExpressionIE::InterfaceFunctionCall(_) => panic!("RE::result: InterfaceFunctionCall"),
+            ReferenceExpressionIE::ExternFunctionCall(_) => panic!("RE::result: ExternFunctionCall"),
+            ReferenceExpressionIE::FunctionCall(_) => panic!("RE::result: FunctionCall"),
+            ReferenceExpressionIE::Reinterpret(_) => panic!("RE::result: Reinterpret"),
+            ReferenceExpressionIE::Construct(_) => panic!("RE::result: Construct"),
+            ReferenceExpressionIE::NewMutRuntimeSizedArray(_) => panic!("RE::result: NewMutRuntimeSizedArray"),
+            ReferenceExpressionIE::StaticArrayFromCallable(_) => panic!("RE::result: StaticArrayFromCallable"),
+            ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(_) => panic!("RE::result: DestroyStaticSizedArrayIntoFunction"),
+            ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
+            ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => panic!("RE::result: DestroyMutRuntimeSizedArray"),
+            ReferenceExpressionIE::RuntimeSizedArrayCapacity(_) => panic!("RE::result: RuntimeSizedArrayCapacity"),
+            ReferenceExpressionIE::PushRuntimeSizedArray(_) => panic!("RE::result: PushRuntimeSizedArray"),
+            ReferenceExpressionIE::PopRuntimeSizedArray(_) => panic!("RE::result: PopRuntimeSizedArray"),
+            ReferenceExpressionIE::InterfaceToInterfaceUpcast(_) => panic!("RE::result: InterfaceToInterfaceUpcast"),
+            ReferenceExpressionIE::Upcast(_) => panic!("RE::result: Upcast"),
+            ReferenceExpressionIE::SoftLoad(_) => panic!("RE::result: SoftLoad"),
+            ReferenceExpressionIE::Destroy(_) => panic!("RE::result: Destroy"),
+            ReferenceExpressionIE::DestroyImmRuntimeSizedArray(_) => panic!("RE::result: DestroyImmRuntimeSizedArray"),
+            ReferenceExpressionIE::NewImmRuntimeSizedArray(_) => panic!("RE::result: NewImmRuntimeSizedArray"),
+        }
+    }
 }
 /*
   def result: CoordI[cI]
@@ -1011,7 +1071,12 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI {
+			ownership: crate::instantiating::ast::types::OwnershipI::MutableShare,
+			kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: self.bits, _marker: std::marker::PhantomData }),
+		}
+	}
 }
 /*
   override def result = CoordI[cI](MutableShareI, IntIT(bits))

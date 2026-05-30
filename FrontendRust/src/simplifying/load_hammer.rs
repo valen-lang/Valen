@@ -33,10 +33,10 @@ class LoadHammer(
 */
 
 // mig: fn translate_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_load<'i>(
+    pub fn translate_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -44,7 +44,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         load2: &SoftLoadIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_load");
     }
@@ -154,10 +153,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_runtime_sized_array_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_runtime_sized_array_load<'i>(
+    pub fn translate_mundane_runtime_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -168,7 +167,6 @@ where 's: 'h,
         target_ownership_i: OwnershipI,
         result_type2: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_runtime_sized_array_load");
     }
@@ -227,10 +225,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_static_sized_array_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_static_sized_array_load<'i>(
+    pub fn translate_mundane_static_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -241,7 +239,6 @@ where 's: 'h,
         target_ownership_i: OwnershipI,
         result_type2: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_static_sized_array_load");
     }
@@ -299,10 +296,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_addressible_member_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_addressible_member_load<'i>(
+    pub fn translate_addressible_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -313,7 +310,6 @@ where 's: 'h,
         target_ownership_i: OwnershipI,
         expected_member_coord: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_member_load");
     }
@@ -389,10 +385,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_member_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_member_load<'i>(
+    pub fn translate_mundane_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -403,7 +399,6 @@ where 's: 'h,
         target_ownership_i: OwnershipI,
         expected_member_coord: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_member_load");
     }
@@ -454,10 +449,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_addressible_local_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_addressible_local_load<'i>(
+    pub fn translate_addressible_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -468,7 +463,6 @@ where 's: 'h,
         local_reference2: CoordI<'s, 'i, cI>,
         target_ownership_i: OwnershipI,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_local_load");
     }
@@ -519,10 +513,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_local_load
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_local_load<'i>(
+    pub fn translate_mundane_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -532,7 +526,6 @@ where 's: 'h,
         local_type: CoordI<'s, 'i, cI>,
         target_ownership_i: OwnershipI,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_local_load");
     }
@@ -572,10 +565,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_local_address
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_local_address<'i>(
+    pub fn translate_local_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -583,7 +576,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         lookup2: &LocalLookupIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_local_address");
     }
@@ -616,10 +608,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_member_address
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_member_address<'i>(
+    pub fn translate_member_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -627,7 +619,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         lookup2: &AddressMemberLookupIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_member_address");
     }

@@ -1254,7 +1254,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> ConsecutorTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> {
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
         let never_coord = self.exprs.iter()
             .map(|e| e.result().coord)
             .find(|c| matches!(c, CoordT { ownership: OwnershipT::Share, kind: KindT::Never(_), .. }));

@@ -1,5 +1,7 @@
 // From Frontend/InstantiatingPass/src/dev/vale/instantiating/
 pub mod ast;
+// Rust-only port of Scala's reflective Collector, specialized for the I-side value AST.
+pub mod collector;
 pub mod instantiated_compilation;
 pub mod instantiating_arena;
 pub mod instantiating_interner;

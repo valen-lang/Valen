@@ -24,10 +24,10 @@ class BlockHammer(expressionHammer: ExpressionHammer, typeHammer: TypeHammer) {
 */
 
 // mig: fn translate_block
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_block<'i>(
+    pub fn translate_block(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -35,9 +35,30 @@ where 's: 'h,
         parent_locals: &mut Locals<'s, 'i, 'h>,
         block2: &BlockIE<'s, 'i, cI>,
     ) -> &'h BlockH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_block");
+        let mut block_locals = parent_locals.snapshot();
+        let expr_h = self.translate_expressions_and_deferreds(
+            hinputs, hamuts, current_function_header, &mut block_locals,
+            &[crate::instantiating::ast::expressions::ExpressionIE::Reference(block2.inner)]);
+        let parent_local_ids: std::collections::HashSet<_> = parent_locals.locals.keys().copied().collect();
+        let local_ids_in_this_block: std::collections::HashSet<_> = block_locals.locals.keys().copied().filter(|k| !parent_local_ids.contains(k)).collect();
+        let unstackified_local_ids_in_this_block: std::collections::HashSet<_> = block_locals.unstackified_vars.iter().copied().filter(|k| local_ids_in_this_block.contains(k)).collect();
+        if local_ids_in_this_block != unstackified_local_ids_in_this_block {
+            match expr_h.result_type().kind {
+                crate::final_ast::types::KindHT::NeverHT(_) => {}
+                _ => panic!("Ununstackified local: {:?}", local_ids_in_this_block.difference(&unstackified_local_ids_in_this_block).collect::<Vec<_>>()),
+            }
+        }
+        let parent_unstackified: std::collections::HashSet<_> = parent_locals.unstackified_vars.iter().copied().collect();
+        let unstackified_locals_from_parent: Vec<_> = parent_locals.locals.keys().copied()
+            .filter(|k| !parent_unstackified.contains(k))
+            .filter(|k| block_locals.unstackified_vars.contains(k))
+            .collect();
+        for var in unstackified_locals_from_parent {
+            parent_locals.mark_unstackified(var);
+        }
+        parent_locals.set_next_local_id_number(block_locals.next_local_id_number);
+        self.interner.alloc(crate::final_ast::instructions::BlockH { inner: expr_h })
     }
 }
 /*
@@ -88,10 +109,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mutabilify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mutabilify<'i>(
+    pub fn translate_mutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -99,7 +120,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         node: &MutabilifyIE<'s, 'i, cI>,
     ) -> &'h MutabilifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mutabilify");
     }
@@ -134,10 +154,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_immutabilify
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_immutabilify<'i>(
+    pub fn translate_immutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -145,7 +165,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         node: &ImmutabilifyIE<'s, 'i, cI>,
     ) -> &'h ImmutabilifyH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_immutabilify");
     }

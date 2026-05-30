@@ -18,12 +18,14 @@ The core values for each pass. The schema sections below expand on these; the de
 | typing | `src/typing/` | `T` | `'s, 't` | `&'ctx TypingInterner<'s,'t>` | `&'t [X]`, `ArenaIndexMap<'t,…>` | `StrI<'s>` |
 | instantiating | `src/instantiating/` | `I` | `'s, 'i` (+ region-mode generic `R: IRegionsModeI`) | `InstantiatingInterner<'s,'i>` / `InstantiatingArena<'i>` | `&'i [X]`, `ArenaIndexMap` | `StrI<'s>` |
 | simplifying + final_ast | `src/simplifying/`, `src/final_ast/` | `H` | `'s, 'h` | `HammerInterner<'s,'h>` / `HammerArena` | `&'h [X]` | `StrI<'s>` |
+| testvm | `src/TestVM/` | `V` | `'v` (reads `ProgramH` → borrows `'h`/`'s`) | `VivemArena<'v>` / `VivemInterner<'v>` (refcounted internally) | `&'v [X]`; mutable heap = owned `Vec`/`HashMap` + `Cell` | `StrI<'s>` |
 | integration_tests | `src/integration_tests/` | (test classes: none) | n/a — `#[test]` module-scope fns | n/a (assert on frontend output only) | n/a | n/a |
 
 Notes:
 - **instantiating** carries an extra region-mode type parameter `R: IRegionsModeI` on most types (`Foo<'s,'i,R>`) — the T-erased region representation (`IdI<'s,'i,R>`). It is a generic *type* param, not a lifetime.
 - **simplifying** emits the final AST (the `H`-suffixed types in `src/final_ast/`) and uses the `MustIntern` seal. Per typing-pass precedent the `VonHammer` and `HamutsBox` compiler classes were collapsed onto `Hammer`/`Hamuts` — there is no separate `VonHammer`/`HamutsBox` state.
 - **integration_tests** is a test-only module: its `.rs` files are mostly `#[test]` fns that assert on frontend pipeline output (compile-succeeds / expected hamuts), not on executed programs. Test classes (`class FooTests extends FunSuite`) get **no** type suffix and are not impl-wrapped.
+- **testvm** is the Vivem reference interpreter (`src/TestVM/`) — unlike every other (immutable-AST) pass it has a **mutable runtime heap**. It uses a dedicated `VivemArena<'v>` and reads the `ProgramH` final AST (so it borrows `'h`/`'s`). Mutation goes through **interior mutability**, not `&mut`: per architect decision `Cell` is used heavily — every refcount lives in a `Cell`, and value fields are usually enums containing a `Cell`. So a Scala `var` field → a Rust `Cell<…>` field, and a `this`-mutating Scala `def` stays a `&self` Rust method (no `&mut self` collapse like the typing pass). A refcount free-list for manual GC is **deliberately deferred** — do **not** build it during slicing or body migration; it lands later as explicit Rust-only arena infra.
 
 ---
 
@@ -38,13 +40,13 @@ Short identifier used in agent output, e.g. `typing`, `instantiating`, `simplify
 Pass-local source root, e.g. `FrontendRust/src/typing/`.
 
 ### Type-name suffix
-Single ASCII letter appended to every Scala type name on translation. Typing: `T`. Postparsing: `S`. Parsing: `P`. Higher-typing: `A`. Instantiating: `I`. Simplifying / final AST: `H`. If a Scala class name already carries this suffix, it stays unchanged; otherwise the agent appends it. Applies to `struct`, `enum`, `trait` mig comments. **Test classes** (`class FooTests extends FunSuite`) get no suffix.
+Single ASCII letter appended to every Scala type name on translation. Typing: `T`. Postparsing: `S`. Parsing: `P`. Higher-typing: `A`. Instantiating: `I`. Simplifying / final AST: `H`. Testvm: `V` (the Vivem runtime-value types — `ReferenceV`, `PrimitiveKindV`, etc. — already carry it). If a Scala class name already carries this suffix, it stays unchanged; otherwise the agent appends it. Applies to `struct`, `enum`, `trait` mig comments. **Test classes** (`class FooTests extends FunSuite`) get no suffix.
 
 ### Lifetimes
-Ordered list of lifetime parameters every `struct`/`enum`/`trait`/`impl` carries by default, e.g. `'s, 't`. Plus any default `where`-clause (e.g. `where 's: 't`). slice-placehold emits these on every type definition and impl block unless the policy says otherwise for a specific case. Per pass: parsing `'p`; postparsing/higher_typing `'s`; typing `'s, 't`; instantiating `'s, 'i` plus the region-mode type generic `R: IRegionsModeI`; simplifying/final_ast `'s, 'h`.
+Ordered list of lifetime parameters every `struct`/`enum`/`trait`/`impl` carries by default, e.g. `'s, 't`. Plus any default `where`-clause (e.g. `where 's: 't`). slice-placehold emits these on every type definition and impl block unless the policy says otherwise for a specific case. Per pass: parsing `'p`; postparsing/higher_typing `'s`; typing `'s, 't`; instantiating `'s, 'i` plus the region-mode type generic `R: IRegionsModeI`; simplifying/final_ast `'s, 'h`; testvm `'v` (plus `'h`/`'s` where it touches the `ProgramH` it reads).
 
 ### Interner type
-The arena/interner type that body-emitting methods take as a parameter. Typing: `&'ctx TypingInterner<'s, 't>`. Postparsing/higher_typing: `&'ctx ScoutArena<'s>`. Parsing: `&'ctx ParseArena<'p>`. Instantiating: `&'ctx InstantiatingInterner<'s, 'i>` (arena `InstantiatingArena<'i>`). Simplifying/final_ast: `&'ctx HammerInterner<'s, 'h>` (arena `HammerArena`). The agent threads this as an extra leading parameter on every method whose Scala body calls `interner.intern(...)` — i.e. methods that *produce* an interned value. (SPDMX-B adaptation; documented as a `// Rust adaptation (SPDMX-B): ...` comment above the fn.)
+The arena/interner type that body-emitting methods take as a parameter. Typing: `&'ctx TypingInterner<'s, 't>`. Postparsing/higher_typing: `&'ctx ScoutArena<'s>`. Parsing: `&'ctx ParseArena<'p>`. Instantiating: `&'ctx InstantiatingInterner<'s, 'i>` (arena `InstantiatingArena<'i>`). Simplifying/final_ast: `&'ctx HammerInterner<'s, 'h>` (arena `HammerArena`). Testvm: `&'ctx VivemInterner<'v>` (arena `VivemArena<'v>`, refcounted internally). The agent threads this as an extra leading parameter on every method whose Scala body calls `interner.intern(...)` — i.e. methods that *produce* an interned value. (Sanctioned under SPDMX exception B.)
 
 ### Default collection types
 Scala → Rust mapping for collection literals. Typing pass:
@@ -52,11 +54,12 @@ Scala → Rust mapping for collection literals. Typing pass:
 - `Map[K, V]` → `ArenaIndexMap<'t, K, V>` (insertion-ordered, arena-keyed). `mutable.Map` → builder `IndexMap`.
 - `Set[X]` → `ArenaIndexSet<'t, X>`.
 - Postparsing differs (uses `&'s [X]` and `IndexMap<...>` on the ScoutArena).
+- Testvm: stable/AST-derived data → `&'v [X]`. The **mutable runtime heap** uses owned `Vec`/`HashMap` (Scala `mutable.HashMap`/`mutable.ArrayBuffer`), with mutated cells wrapped in `Cell` (see the testvm Notes bullet).
 
 If the default is wrong for a specific stub, the agent leaves it and a manual fix happens in body migration — but the default needs to be right *most* of the time.
 
 ### String type
-Scala `String` → … . Typing pass: `StrI<'s>` (interned). Most occurrences of `String` in a Scala signature are an interned identifier, not a free string.
+Scala `String` → … . Typing pass: `StrI<'s>` (interned). Testvm: `StrI<'s>` (inherited from the `ProgramH`/final_ast names it reads). Most occurrences of `String` in a Scala signature are an interned identifier, not a free string.
 
 ### Sealed-trait policy
 How `sealed trait Foo` translates. Options:
@@ -65,6 +68,8 @@ How `sealed trait Foo` translates. Options:
 - `trait-with-impls`: keep as Rust `trait` with concrete `impl Foo for Variant1` blocks. Rare; only when no closed-set guarantee is needed.
 
 The policy file must also state: *does the sealed trait become Polyvalue?* (i.e. should the enum `#[derive(PartialEq, Eq, Hash, Clone, Copy)]`?) — per @PVECFPZ.
+
+Testvm: `enum-with-arena-refs` on `VivemArena<'v>`. The Vivem value/kind hierarchies (e.g. `KindV`, `ReferenceV`) become enums; because the heap is mutable, variant payload fields that Scala declared `var` are wrapped in `Cell` (see the testvm Notes bullet). Not Polyvalue.
 
 ### Abstract-def dispatcher policy
 When a `sealed trait` declares abstract `def`s, what to emit. Options:
@@ -138,6 +143,8 @@ What slice-placehold emits as the body of a freshly-stubbed `fn`. Options:
 
 Typing pass: default `whole-panic` everywhere; iteration-skeleton whitelist is empty (filled in as TL handles SPDMX escalations).
 
+Testvm: default `whole-panic` everywhere; iteration-skeleton whitelist is empty.
+
 ### Naming exceptions (SPDMX exception J)
 Pre-approved Scala → Rust renames, for cases where the literal translation collides or reads badly. Each entry: `Scala name → Rust name`. slice-rustify applies these instead of the default snake_case conversion.
 
@@ -149,7 +156,7 @@ Typing pass:
 
 ## Conventions & lessons learned
 
-Durable lessons from the migration so far. These govern how slicing and body migration should be done; see also `TL.md`, `tl-handoff.md`, and the shields (SPDMX, SCPX, DCCR, PSMONMX) for the authoritative rules.
+Durable lessons from the migration so far. These govern how slicing and body migration should be done; see also `TL.md`, `docs/architecture/typing-pass-ai-guide.md`, the `guardian-tl` skill, and the shields (SPDMX, SCPX, DCCR, PSMONMX) for the authoritative rules.
 
 ### `vimpl`/`vfail`/`vwat` → `panic!` is faithful, not a gap
 Scala's `vimpl()`, `vfail()`, `vwat()`, `vcurious()`, and a failed `vassertSome` translate to Rust `panic!(...)`. These are correct 1:1 translations. A high panic count in a migrated file is mostly faithful translation, **not** incompleteness — distinguish genuine not-yet-migrated stubs (`panic!("Unimplemented: …")` / `"Unmigrated …"`) from faithful `vimpl`-style panics when gauging progress.

@@ -1,3 +1,4 @@
+/*
 package dev.vale.testvm
 
 import dev.vale.finalast._
@@ -8,21 +9,56 @@ import dev.vale.finalast.ProgramH
 import dev.vale.von.IVonData
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct PanicExceptionV
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct PanicExceptionV;
+/*
 case class PanicException() extends Throwable {
   val hash = runtime.ScalaRunTime._hashCode(this)
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for PanicExceptionV` below.)
+/*
   override def hashCode(): Int = hash;
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for PanicExceptionV` below.)
+/*
 override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
+*/
+// mig: struct ConstraintViolatedExceptionV
+/// Temporary state
+#[derive(PartialEq, Eq, Hash)]
+pub struct ConstraintViolatedExceptionV {
+    pub msg: StrI<'s>,
+}
+/*
 case class ConstraintViolatedException(msg: String) extends Throwable {
   val hash = runtime.ScalaRunTime._hashCode(this)
+*/
+// mig: fn hash_code (realized-by-impl Hash)
+// (Realized by `impl Hash for ConstraintViolatedExceptionV` below.)
+/*
   override def hashCode(): Int = hash;
+*/
+// mig: fn eq (realized-by-impl PartialEq)
+// (Realized by `impl PartialEq for ConstraintViolatedExceptionV` below.)
+/*
 override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 
 object Vivem {
+*/
+// mig: fn execute_with_primitive_args
+pub fn execute_with_primitive_args(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+    panic!("Unimplemented: execute_with_primitive_args")
+}
+/*
   def executeWithPrimitiveArgs(
       programH: ProgramH,
       externalArgumentKinds: Vector[PrimitiveKindV],
@@ -36,7 +72,12 @@ object Vivem {
       });
     innerExecute(programH, argReferences, heap, vivemDout, stdin, stdout)
   }
-
+*/
+// mig: fn execute_with_heap
+pub fn execute_with_heap(program_h: &'h ProgramH<'s, 'h>, input_heap: &Heap<'v, 's, 'h>, input_argument_references: &'v [ReferenceV<'s, 'h>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+    panic!("Unimplemented: execute_with_heap")
+}
+/*
   def executeWithHeap(
       programH: ProgramH,
       inputHeap: Heap,
@@ -48,17 +89,38 @@ object Vivem {
     vassert(inputHeap.countUnreachableAllocations(inputArgumentReferences) == 0)
     innerExecute(programH, inputArgumentReferences, inputHeap, vivemDout, stdin, stdout)
   }
-
+*/
+// mig: fn empty_stdin
+pub fn empty_stdin() -> StrI<'s> {
+    panic!("Unimplemented: empty_stdin")
+}
+/*
   def emptyStdin() = {
     vfail("Empty stdin!")
   }
-
+*/
+// mig: fn null_stdout
+pub fn null_stdout(str: StrI<'s>) {
+    panic!("Unimplemented: null_stdout")
+}
+/*
   def nullStdout(str: String) = {
   }
+*/
+// mig: fn regular_stdout
+pub fn regular_stdout(str: StrI<'s>) {
+    panic!("Unimplemented: regular_stdout")
+}
+/*
   def regularStdout(str: String) = {
     print(str)
   }
-
+*/
+// mig: fn stdin_from_list
+pub fn stdin_from_list(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -> StrI<'s>> {
+    panic!("Unimplemented: stdin_from_list")
+}
+/*
   def stdinFromList(stdinList: Vector[String]) = {
     var remainingStdin = stdinList
     val stdin = (() => {
@@ -69,13 +131,23 @@ object Vivem {
     })
     stdin
   }
-
+*/
+// mig: fn stdout_collector
+pub fn stdout_collector() -> (String, Box<dyn Fn(StrI<'s>)>) {
+    panic!("Unimplemented: stdout_collector")
+}
+/*
   def stdoutCollector(): (StringBuilder, String => Unit) = {
     val stdoutput = new StringBuilder()
     val func = (str: String) => { print(str); stdoutput.append(str); }: Unit
     (stdoutput, func)
   }
-
+*/
+// mig: fn inner_execute
+pub fn inner_execute(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'s, 'h>], heap: &Heap<'v, 's, 'h>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+    panic!("Unimplemented: inner_execute")
+}
+/*
   def innerExecute(
       programH: ProgramH,
       argumentReferences: Vector[ReferenceV],
@@ -115,3 +187,5 @@ object Vivem {
     von
   }
 }
+
+*/

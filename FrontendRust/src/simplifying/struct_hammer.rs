@@ -34,17 +34,18 @@ class StructHammer(
 */
 
 // mig: fn translate_interfaces
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_interfaces<'i>(
+    pub fn translate_interfaces(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
     )
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_interfaces");
+        for interface in hinputs.interfaces.iter() {
+            self.translate_interface(hinputs, hamuts, interface.instantiated_interface);
+        }
     }
 }
 /*
@@ -54,16 +55,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_interface_methods
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_interface_methods<'i>(
+    pub fn translate_interface_methods(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         interface_tt: &'i InterfaceIT<'s, 'i, cI>,
     ) -> Vec<InterfaceMethodH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_interface_methods");
     }
@@ -89,16 +89,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_interface
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_interface<'i>(
+    pub fn translate_interface(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         interface_it: &'i InterfaceIT<'s, 'i, cI>,
     ) -> &'h InterfaceHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_interface");
     }
@@ -152,17 +151,22 @@ where 's: 'h,
 */
 
 // mig: fn translate_structs
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_structs<'i>(
+    pub fn translate_structs(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
     )
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_structs");
+        for struct_def_i in hinputs.structs.iter() {
+            if hinputs.kind_externs.contains_key(struct_def_i.instantiated_citizen) {
+                self.translate_opaque_i(hinputs, hamuts, struct_def_i.instantiated_citizen);
+            } else {
+                self.translate_struct_i(hinputs, hamuts, struct_def_i.instantiated_citizen);
+            }
+        }
     }
 }
 /*
@@ -178,16 +182,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_struct_i
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_struct_i<'i>(
+    pub fn translate_struct_i(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_it: &'i StructIT<'s, 'i, cI>,
     ) -> &'h StructHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_struct_i");
     }
@@ -245,16 +248,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_opaque_i
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_opaque_i<'i>(
+    pub fn translate_opaque_i(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_it: &'i StructIT<'s, 'i, cI>,
     ) -> &'h OpaqueHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_opaque_i");
     }
@@ -296,10 +298,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_members
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_members<'i>(
+    pub fn translate_members(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -307,7 +309,6 @@ where 's: 'h,
         struct_mutability_h: Mutability,
         members: &[StructMemberI<'s, 'i, cI>],
     ) -> Vec<StructMemberH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_members");
     }
@@ -320,10 +321,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_member
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_member<'i>(
+    pub fn translate_member(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -331,7 +332,6 @@ where 's: 'h,
         struct_mutability_h: Mutability,
         member2: &StructMemberI<'s, 'i, cI>,
     ) -> StructMemberH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_member");
     }
@@ -368,10 +368,10 @@ where 's: 'h,
 */
 
 // mig: fn make_box
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn make_box<'i>(
+    pub fn make_box(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -379,7 +379,6 @@ where 's: 'h,
         type2: CoordI<'s, 'i, cI>,
         type_h: CoordH<'s, 'h>,
     ) -> &'h StructHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: make_box");
     }
@@ -432,17 +431,16 @@ where 's: 'h,
 */
 
 // mig: fn translate_edges_for_struct (Scala overload — disambiguated.)
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_edges_for_struct<'i>(
+    pub fn translate_edges_for_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_ref_h: &'h StructHT<'s, 'h>,
         struct_tt: &'i StructIT<'s, 'i, cI>,
     ) -> Vec<EdgeH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_edges_for_struct");
     }
@@ -459,17 +457,16 @@ where 's: 'h,
 */
 
 // mig: fn translate_edges_for_struct_with_edges (Scala overload — disambiguated.)
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_edges_for_struct_with_edges<'i>(
+    pub fn translate_edges_for_struct_with_edges(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_ref_h: &'h StructHT<'s, 'h>,
         edges2: &[EdgeI<'s, 'i>],
     ) -> Vec<EdgeH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_edges_for_struct_with_edges");
     }
@@ -485,10 +482,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_edge
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_edge<'i>(
+    pub fn translate_edge(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -496,7 +493,6 @@ where 's: 'h,
         interface_it: &'i InterfaceIT<'s, 'i, cI>,
         edge2: &EdgeI<'s, 'i>,
     ) -> EdgeH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_edge");
     }
@@ -524,16 +520,15 @@ where 's: 'h,
 */
 
 // mig: fn lookup_struct
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn lookup_struct<'i>(
+    pub fn lookup_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
         struct_tt: &'i StructIT<'s, 'i, cI>,
     ) -> &'i StructDefinitionI<'s, 'i, cI>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: lookup_struct");
     }
@@ -545,16 +540,15 @@ where 's: 'h,
 */
 
 // mig: fn lookup_interface
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn lookup_interface<'i>(
+    pub fn lookup_interface(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
         interface_tt: &'i InterfaceIT<'s, 'i, cI>,
     ) -> &'i InterfaceDefinitionI<'s, 'i, cI>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: lookup_interface");
     }

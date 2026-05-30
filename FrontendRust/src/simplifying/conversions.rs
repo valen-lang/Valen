@@ -81,7 +81,10 @@ pub fn evaluate_location(location: LocationI) -> LocationH {
 */
 // mig: fn evaluate_variability
 pub fn evaluate_variability(variability: VariabilityI) -> Variability {
-    panic!("Unimplemented: evaluate_variability");
+    match variability {
+        VariabilityI::Final => Variability::Final,
+        VariabilityI::Varying => Variability::Varying,
+    }
 }
 /*
   def evaluateVariability(variability: VariabilityI): Variability = {
@@ -93,7 +96,14 @@ pub fn evaluate_variability(variability: VariabilityI) -> Variability {
 */
 // mig: fn evaluate_ownership
 pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
-    panic!("Unimplemented: evaluate_ownership");
+    match ownership {
+        OwnershipI::Own => OwnershipH::OwnH,
+        OwnershipI::ImmutableBorrow => OwnershipH::ImmutableBorrowH,
+        OwnershipI::MutableBorrow => OwnershipH::MutableBorrowH,
+        OwnershipI::ImmutableShare => OwnershipH::ImmutableShareH,
+        OwnershipI::MutableShare => OwnershipH::MutableShareH,
+        OwnershipI::Weak => OwnershipH::WeakH,
+    }
 }
 /*
   def evaluateOwnership(ownership: OwnershipI): OwnershipH = {

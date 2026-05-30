@@ -28,10 +28,10 @@ class MutateHammer(
 */
 
 // mig: fn translate_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mutate<'i>(
+    pub fn translate_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -39,7 +39,6 @@ where 's: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         mutate2: &MutateIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mutate");
     }
@@ -87,10 +86,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_runtime_sized_array_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_runtime_sized_array_mutate<'i>(
+    pub fn translate_mundane_runtime_sized_array_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -100,7 +99,6 @@ where 's: 'h,
         array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
         index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_runtime_sized_array_mutate");
     }
@@ -136,10 +134,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_static_sized_array_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_static_sized_array_mutate<'i>(
+    pub fn translate_mundane_static_sized_array_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -149,7 +147,6 @@ where 's: 'h,
         array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
         index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
     }
@@ -185,10 +182,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_addressible_member_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_addressible_member_mutate<'i>(
+    pub fn translate_addressible_member_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -198,7 +195,6 @@ where 's: 'h,
         struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
         member_name: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_member_mutate");
     }
@@ -270,10 +266,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_member_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_member_mutate<'i>(
+    pub fn translate_mundane_member_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -283,7 +279,6 @@ where 's: 'h,
         struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
         member_name: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_member_mutate");
     }
@@ -326,10 +321,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_addressible_local_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_addressible_local_mutate<'i>(
+    pub fn translate_addressible_local_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -341,7 +336,6 @@ where 's: 'h,
         variability: VariabilityI,
         reference: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_local_mutate");
     }
@@ -384,10 +378,10 @@ where 's: 'h,
 */
 
 // mig: fn translate_mundane_local_mutate
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_mundane_local_mutate<'i>(
+    pub fn translate_mundane_local_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
@@ -396,7 +390,6 @@ where 's: 'h,
         source_expr_result_line: ExpressionH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_local_mutate");
     }

@@ -15,9 +15,9 @@ object InstantiatedHumanizer {
 */
 // mig: fn humanize_templata
 pub fn humanize_templata<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
-    templata: &'i ITemplataI<'s, 'i, R>,
-) -> StrI<'s> {
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+    templata: &ITemplataI<'s, 'i, R>,
+) -> String {
     panic!("Unimplemented: humanize_templata");
 }
 /*
@@ -73,9 +73,9 @@ pub fn humanize_templata<'s, 'i, R>(
 */
 // mig: fn humanize_coord
 pub fn humanize_coord<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     coord: &'i CoordI<'s, 'i, R>,
-) -> StrI<'s> {
+) -> String {
     panic!("Unimplemented: humanize_coord");
 }
 /*
@@ -100,9 +100,9 @@ pub fn humanize_coord<'s, 'i, R>(
 */
 // mig: fn humanize_kind
 pub fn humanize_kind<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     kind: &'i KindIT<'s, 'i, R>,
-) -> StrI<'s> {
+) -> String {
     panic!("Unimplemented: humanize_kind");
 }
 /*
@@ -125,12 +125,17 @@ pub fn humanize_kind<'s, 'i, R>(
   }
 */
 // mig: fn humanize_id
-pub fn humanize_id<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
-    name: &'i IdI<'s, 'i, R>,
-    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
-) -> StrI<'s> {
-    panic!("Unimplemented: humanize_id");
+pub fn humanize_id<'s, 'i, R: Copy + PartialEq>(
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+    name: &IdI<'s, 'i, R>,
+    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+) -> String {
+    let prefix = if !name.init_steps.is_empty() {
+        name.init_steps.iter().map(|n| humanize_name(code_map, *n, None)).collect::<Vec<_>>().join(".") + "."
+    } else {
+        String::new()
+    };
+    prefix + &humanize_name(code_map, name.local_name, containing_region)
 }
 /*
   def humanizeId[R <: IRegionsModeI, I <: INameI[R]](
@@ -147,12 +152,31 @@ pub fn humanize_id<'s, 'i, R>(
   }
 */
 // mig: fn humanize_name
-pub fn humanize_name<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
-    name: &'i INameI<'s, 'i, R>,
-    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
-) -> StrI<'s> {
-    panic!("Unimplemented: humanize_name");
+pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+    name: INameI<'s, 'i, R>,
+    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+) -> String {
+    match name {
+        INameI::FunctionNameIX(f) => {
+            let template_str = humanize_name(code_map, INameI::FunctionTemplate(&f.template), None);
+            let args_str = humanize_generic_args(code_map, f.template_args, containing_region);
+            let params_str = if !f.parameters.is_empty() {
+                "(".to_string() + &f.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
+            } else {
+                String::new()
+            };
+            template_str + &args_str + &params_str
+        }
+        INameI::FunctionTemplate(f) => f.human_name.0.to_string(),
+        INameI::ExternFunction(f) => f.human_name.0.to_string() + &humanize_generic_args(code_map, f.template_args, containing_region),
+        INameI::PackageTopLevel(_) => panic!("humanize_name: PackageTopLevel branch"),
+        INameI::CodeVar(c) => c.name.0.to_string(),
+        INameI::TypingPassBlockResultVar(b) => panic!("humanize_name: TypingPassBlockResultVar branch"),
+        INameI::TypingPassFunctionResultVar(_) => panic!("humanize_name: TypingPassFunctionResultVar branch"),
+        INameI::TypingPassTemporaryVar(t) => panic!("humanize_name: TypingPassTemporaryVar branch"),
+        other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
+    }
 }
 /*
   def humanizeName[R <: IRegionsModeI, I <: INameI[R]](
@@ -239,12 +263,24 @@ pub fn humanize_name<'s, 'i, R>(
   }
 */
 // mig: fn humanize_generic_args
-pub fn humanize_generic_args<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
-    template_args: &'i[ITemplataI<'s, 'i, R>],
-    containing_region: Option<&'i ITemplataI<'s, 'i, R>>,
-) -> StrI<'s> {
-    panic!("Unimplemented: humanize_generic_args");
+pub fn humanize_generic_args<'s, 'i, R: Copy + PartialEq>(
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+    template_args: &[ITemplataI<'s, 'i, R>],
+    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+) -> String {
+    if !template_args.is_empty() {
+        let (last, init) = template_args.split_last().unwrap();
+        let init_strs: Vec<String> = init.iter().map(|t| humanize_templata(code_map, t)).collect();
+        let last_str = match containing_region {
+            None => humanize_templata(code_map, last),
+            Some(r) => { assert!(r == last); "_".to_string() }
+        };
+        let mut all = init_strs;
+        all.push(last_str);
+        "<".to_string() + &all.join(",") + ">"
+    } else {
+        String::new()
+    }
 }
 /*
   private def humanizeGenericArgs[R <: IRegionsModeI](
@@ -270,9 +306,9 @@ pub fn humanize_generic_args<'s, 'i, R>(
 */
 // mig: fn humanize_signature
 pub fn humanize_signature<'s, 'i, R>(
-    code_map: fn(&CodeLocationS) -> StrI<'s>,
+    code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     signature: &'i SignatureI<'s, 'i, R>,
-) -> StrI<'s> {
+) -> String {
     panic!("Unimplemented: humanize_signature");
 }
 /*

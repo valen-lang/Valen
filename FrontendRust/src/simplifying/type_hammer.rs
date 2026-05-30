@@ -3,12 +3,14 @@
 // Per typing-pass `Compiler` precedent, `TypeHammer` is not a Rust struct.
 // Methods become `impl Hammer { ... }` blocks colocated here.
 
-use crate::final_ast::ast::{PrototypeH, RegionH};
-use crate::final_ast::types::{CoordH, KindHT, RuntimeSizedArrayHT, StaticSizedArrayHT};
+use crate::final_ast::ast::{PrototypeH, PrototypeHValH, RegionH};
+use crate::final_ast::types::{CoordH, KindHT, LocationH, RuntimeSizedArrayHT, StaticSizedArrayHT};
+use crate::instantiating::ast::types::OwnershipI;
+use crate::simplifying::conversions::evaluate_ownership;
 use crate::instantiating::ast::ast::PrototypeI;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::templata::RegionTemplataI;
-use crate::instantiating::ast::types::{cI, CoordI, KindIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
+use crate::instantiating::ast::types::{cI, CoordI, IntIT, KindIT, NeverIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
 
@@ -28,18 +30,34 @@ class TypeHammer(
 */
 
 // mig: fn translate_kind
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_kind<'i>(
+    pub fn translate_kind(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         tyype: KindIT<'s, 'i, cI>,
     ) -> KindHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_kind");
+        match tyype {
+            KindIT::NeverIT(NeverIT { from_break, .. }) => KindHT::NeverHT(crate::final_ast::types::NeverHT { from_break }),
+            KindIT::IntIT(IntIT { bits, .. }) => KindHT::IntHT(crate::final_ast::types::IntHT { bits }),
+            KindIT::BoolIT(_) => KindHT::BoolHT(crate::final_ast::types::BoolHT),
+            KindIT::FloatIT(_) => KindHT::FloatHT(crate::final_ast::types::FloatHT),
+            KindIT::StrIT(_) => KindHT::StrHT(crate::final_ast::types::StrHT),
+            KindIT::VoidIT(_) => KindHT::VoidHT(crate::final_ast::types::VoidHT),
+            KindIT::StructIT(s) => {
+                if hinputs.kind_externs.contains_key(s) {
+                    panic!("translate_kind: StructIT kindExterns translateOpaqueI branch")
+                } else {
+                    panic!("translate_kind: StructIT translateStructI branch")
+                }
+            }
+            KindIT::InterfaceIT(_) => panic!("translate_kind: InterfaceIT translateInterface branch"),
+            KindIT::StaticSizedArrayIT(_) => panic!("translate_kind: StaticSizedArrayIT branch"),
+            KindIT::RuntimeSizedArrayIT(_) => panic!("translate_kind: RuntimeSizedArrayIT branch"),
+        }
     }
 }
 /*
@@ -81,16 +99,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_region
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_region<'i>(
+    pub fn translate_region(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         region: &RegionTemplataI<'s, 'i, cI>,
     ) -> RegionH
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_region");
     }
@@ -106,18 +123,30 @@ where 's: 'h,
 */
 
 // mig: fn translate_coord
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_coord<'i>(
+    pub fn translate_coord(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         coord: CoordI<'s, 'i, cI>,
     ) -> CoordH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_coord");
+        let CoordI { ownership, kind: inner_type } = coord;
+        let location = match (ownership, inner_type) {
+            (OwnershipI::Own, _) => LocationH::YonderH,
+            (OwnershipI::ImmutableBorrow | OwnershipI::MutableBorrow, _) => LocationH::YonderH,
+            (OwnershipI::Weak, _) => LocationH::YonderH,
+            (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => {
+                panic!("translate_coord: kindExterns InlineH branch")
+            }
+            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::VoidIT(_) | KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::NeverIT(_)) => LocationH::InlineH,
+            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::StrIT(_)) => LocationH::YonderH,
+            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, _) => LocationH::YonderH,
+        };
+        let inner_h = self.translate_kind(hinputs, hamuts, inner_type);
+        CoordH { ownership: evaluate_ownership(ownership), location, kind: inner_h }
     }
 }
 /*
@@ -146,18 +175,17 @@ where 's: 'h,
 */
 
 // mig: fn translate_coords
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_coords<'i>(
+    pub fn translate_coords(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         references2: &[CoordI<'s, 'i, cI>],
     ) -> Vec<CoordH<'s, 'h>>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_coords");
+        references2.iter().map(|c| self.translate_coord(hinputs, hamuts, *c)).collect()
     }
 }
 /*
@@ -171,8 +199,8 @@ where 's: 'h,
 */
 
 // mig: fn check_conversion
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn check_conversion(
         &self,
@@ -191,16 +219,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_static_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_static_sized_array<'i>(
+    pub fn translate_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>,
     ) -> &'h StaticSizedArrayHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_static_sized_array");
     }
@@ -234,16 +261,15 @@ where 's: 'h,
 */
 
 // mig: fn translate_runtime_sized_array
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_runtime_sized_array<'i>(
+    pub fn translate_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>,
     ) -> &'h RuntimeSizedArrayHT<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_runtime_sized_array");
     }
@@ -272,18 +298,26 @@ where 's: 'h,
 */
 
 // mig: fn translate_prototype
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_prototype<'i>(
+    pub fn translate_prototype(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         prototype2: &'i PrototypeI<'s, 'i, cI>,
     ) -> &'h PrototypeH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_prototype");
+        let PrototypeI { id: full_name2, return_type: return_type2, _must_intern: _ } = prototype2;
+        let params_types_h = self.translate_coords(hinputs, hamuts, &prototype2.param_types());
+        let return_type_h = self.translate_coord(hinputs, hamuts, *return_type2);
+        let full_name_h = self.translate_full_name(hinputs, hamuts, full_name2);
+        let prototype_h = self.interner.intern_prototype(PrototypeHValH {
+            id: full_name_h,
+            params: self.interner.alloc_slice_from_vec(params_types_h),
+            return_type: return_type_h,
+        });
+        prototype_h
     }
 }
 /*

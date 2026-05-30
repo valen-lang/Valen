@@ -10,6 +10,7 @@ use crate::instantiating::ast::names::{
     ExportNameI, FunctionBoundNameI, ImplBoundNameI,
 };
 use crate::instantiating::instantiating_interner::MustIntern;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::expressions::ReferenceExpressionIE;
 
 /*
@@ -541,7 +542,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 // mig: fn is_user_function
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_user_function(&self) -> bool {
-        panic!("Unimplemented: is_user_function")
+        self.attributes.contains(&IFunctionAttributeI::UserFunctionI)
     }
 }
 /*
@@ -599,8 +600,12 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 */
 // mig: fn to_prototype
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
-    pub fn to_prototype(&self) -> PrototypeI<'_, '_, ()> {
-        panic!("Unimplemented: to_prototype")
+    pub fn to_prototype(&self, interner: &InstantiatingInterner<'s, 'i>) -> PrototypeI<'s, 'i, cI> {
+        //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
+        //    val paramTypes = params.map(_.tyype).map(substituter.substituteForCoord)
+        //    val newLastStep = fullName.last.makeFunctionName(interner, keywords, templateArgs, paramTypes)
+        //    val newName = FullNameI(fullName.packageCoord, fullName.initSteps, newLastStep)
+        *interner.intern_prototype_ci(PrototypeIValI { id: self.id, return_type: self.return_type })
     }
 }
 /*
@@ -679,9 +684,9 @@ case class PrototypeI[+R <: IRegionsModeI](
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 'i, R> PrototypeI<'s, 'i, R> {
-    pub fn param_types(&self) -> Vec<()> {
-        panic!("Unimplemented: param_types")
+impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> where 's: 'i {
+    pub fn param_types(&self) -> Vec<CoordI<'s, 'i, R>> {
+        IFunctionNameI::try_from(self.id.local_name).unwrap().parameters().to_vec()
     }
 }
 /*
@@ -751,8 +756,11 @@ sealed trait ILocalVariableI extends IVariableI {
 // mig: impl ILocalVariableI
 // mig: fn name
 impl<'s, 'i> ILocalVariableI<'s, 'i> {
-    pub fn name(&self) -> () {
-        panic!("Unimplemented: name")
+    pub fn name(&self) -> IVarNameI<'s, 'i, cI> {
+        match self {
+            ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.name,
+            ILocalVariableI::AddressibleLocalVariableI(alv) => alv.name,
+        }
     }
 }
 /*

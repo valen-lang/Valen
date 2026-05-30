@@ -288,10 +288,12 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn forward_declare_function (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_ref_h: FunctionRefH<'s, 'h>) {
-        panic!("Unimplemented: forward_declare_function");
+        assert!(!self.function_refs.contains_key(&function_ref2));
+        self.function_refs.insert(function_ref2, function_ref_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's HamutsBox.forwardDeclareFunction delegated to inner.forwardDeclareFunction because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. Same precedent as add_function_export (line 330) and add_function_extern (line 360) which already have SPDMX temp-disables for this exact pattern. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1676-1780111880574/hook-1676/forward_declare_function--290.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def forwardDeclareFunction(functionRef2: PrototypeI[cI], functionRefH: FunctionRefH): Unit = {
     inner = inner.forwardDeclareFunction(functionRef2, functionRefH)
   }
@@ -328,10 +330,15 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_function_export (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function_export(&mut self, prototype: &'h PrototypeH<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
-        panic!("Unimplemented: add_function_export");
+        let export_name_to_function = self.package_coord_to_export_name_to_function.entry(package_coordinate).or_insert_with(HashMap::new);
+        if let Some(existing_full_name) = export_name_to_function.get(&exported_name) {
+            panic!("Already exported a `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing_full_name);
+        }
+        export_name_to_function.insert(exported_name, prototype);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's `HamutsBox.addFunctionExport` delegated to `inner.addFunctionExport` because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. The "inner" delegation has nowhere to go — the mutator IS the collapsed `Hamuts.addFunctionExport` (architect-blessed god-struct, same pattern as the file's other 14 HamutsBox mutators). SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1501-1780107270452/hook-1501/add_function_export--330.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunctionExport(prototype: PrototypeH, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addFunctionExport(prototype, packageCoordinate, exportedName)
   }
@@ -352,10 +359,16 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_function_extern (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function_extern(&mut self, prototype: &'h PrototypeH<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: StrI<'s>) {
-        panic!("Unimplemented: add_function_extern");
+        let package_coordinate = prototype.id.package_coordinate;
+        let prototype_to_extern = self.package_coord_to_prototype_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
+        if let Some(existing) = prototype_to_extern.get(prototype) {
+            panic!("Already exported a `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing);
+        }
+        prototype_to_extern.insert(prototype, HamutsFunctionExtern { maybe_extern_name: exported_name, prototype, simple_id });
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's `HamutsBox.addFunctionExtern` delegated to `inner.addFunctionExtern` because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. Same precedent as `add_function_export` above (line 330) which already has an SPDMX temp-disable for this exact pattern. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1539-1780108002041/hook-1539/add_function_extern--359.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunctionExtern(prototype: PrototypeH, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addFunctionExtern(prototype, simpleId, exportedName)
   }

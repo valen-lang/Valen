@@ -34,18 +34,27 @@ class NameHammer() {
 */
 
 // mig: fn translate_full_name
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn translate_full_name<'i>(
+    pub fn translate_full_name(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
         full_name2: &IdI<'s, 'i, cI>,
     ) -> &'h IdH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
-        panic!("Unimplemented: translate_full_name");
+        let IdI { package_coord, init_steps: _, local_name: local_name_t } = full_name2;
+        let code_map = |loc: crate::utils::range::CodeLocationS<'s>| format!("{:?}", loc);
+        let long_name = crate::instantiating::instantiated_humanizer::humanize_id(&code_map, full_name2, None);
+        let local_name = crate::instantiating::instantiated_humanizer::humanize_name(&code_map, *local_name_t, None);
+        self.interner.intern_id_h(crate::final_ast::ast::IdHValH {
+            local_name: self.scout_arena.intern_str(&local_name),
+            package_coordinate: **package_coord,
+            shortened_name: self.scout_arena.intern_str(&long_name),
+            fully_qualified_name: self.scout_arena.intern_str(&long_name),
+            _phantom_h: std::marker::PhantomData,
+        })
     }
 }
 /*
@@ -62,16 +71,15 @@ where 's: 'h,
 */
 
 // mig: fn add_step
-impl<'s, 'h, 'ctx> Hammer<'s, 'h, 'ctx>
-where 's: 'h,
+impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
+where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn add_step<'i>(
+    pub fn add_step(
         &self,
         hamuts: &Hamuts<'s, 'i, 'h>,
         full_name: &IdH<'s, 'h>,
         s: StrI<'s>,
     ) -> &'h IdH<'s, 'h>
-    where 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: add_step");
     }
@@ -144,10 +152,21 @@ pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObj
 */
 
 // mig: fn simplify_id (object NameHammer free function)
-pub fn simplify_id<'s, 'i, 'h>(id: &IdI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_id<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, id: &IdI<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
-    panic!("Unimplemented: simplify_id");
+    let IdI { package_coord, init_steps, local_name } = id;
+    let PackageCoordinate { module, packages } = **package_coord;
+    let mut steps: Vec<SimpleIdStep<'s, 'h>> = Vec::new();
+    steps.push(SimpleIdStep { name: module, template_args: &[] });
+    for paackage in packages.iter() {
+        steps.push(SimpleIdStep { name: *paackage, template_args: &[] });
+    }
+    for step in init_steps.iter() {
+        steps.push(simplify_name(interner, step));
+    }
+    steps.push(simplify_name(interner, local_name));
+    SimpleId { steps: interner.alloc_slice_from_vec(steps) }
 }
 /*
   def simplifyId(id: IdI[cI, INameI[cI]]): SimpleId = {
@@ -162,10 +181,20 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_name (object NameHammer free function)
-pub fn simplify_name<'s, 'i, 'h>(name: &INameI<'s, 'i, cI>) -> SimpleIdStep<'s, 'h>
+pub fn simplify_name<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, name: &INameI<'s, 'i, cI>) -> SimpleIdStep<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
-    panic!("Unimplemented: simplify_name");
+    match name {
+        INameI::StructName(s) => panic!("simplify_name: StructName branch"),
+        INameI::StructTemplate(s) => panic!("simplify_name: StructTemplate branch"),
+        INameI::InterfaceName(i) => panic!("simplify_name: InterfaceName branch"),
+        INameI::InterfaceTemplate(i) => panic!("simplify_name: InterfaceTemplate branch"),
+        INameI::ExternFunction(f) => SimpleIdStep {
+            name: f.human_name,
+            template_args: interner.alloc_slice_from_vec(f.template_args.iter().map(|t| simplify_templata(interner, t)).collect()),
+        },
+        other => panic!("simplify_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+    }
 }
 /*
   def simplifyName(name: INameI[cI]): SimpleIdStep = {
@@ -186,10 +215,13 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_templata (object NameHammer free function)
-pub fn simplify_templata<'s, 'i, 'h>(templata: &ITemplataI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_templata<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, templata: &ITemplataI<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
-    panic!("Unimplemented: simplify_templata");
+    match templata {
+        ITemplataI::Coord(c) => panic!("simplify_templata: Coord branch"),
+        other => panic!("simplify_templata: unimplemented variant {:?}", std::mem::discriminant(other)),
+    }
 }
 /*
   def simplifyTemplata(templata: ITemplataI[cI]): SimpleId = {

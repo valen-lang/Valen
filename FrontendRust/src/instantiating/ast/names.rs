@@ -5,6 +5,7 @@ use crate::postparsing::names::IRuneS;
 use crate::instantiating::ast::types::{CoordI, ICitizenIT, MutabilityI, VariabilityI};
 use crate::instantiating::ast::templata::{ITemplataI, CoordTemplataI, RegionTemplataI};
 use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::typing::types::types::CoordT;
 
 /*
@@ -111,7 +112,9 @@ object INameI {
 */
 // mig: fn add_step
 // (was cfg-gated)
-pub fn add_step<'s, 'i, R>(old: &IdI<'s, 'i, R>, new_last: INameI<'s, 'i, R>) -> IdI<'s, 'i, R> { panic!("Unimplemented: add_step"); }
+pub fn add_step<'s, 'i, R>(old: &IdI<'s, 'i, R>, new_last: INameI<'s, 'i, R>) -> IdI<'s, 'i, R> {
+    IdI { package_coord: old.package_coord, init_steps: old.init_steps, local_name: new_last }
+}
 /*
   def addStep[R <: IRegionsModeI, I <: INameI[R], Y <: INameI[R]](old: IdI[R, I], newLast: Y): IdI[R, Y] = {
     IdI[R, Y](old.packageCoord, old.steps, newLast)
@@ -286,18 +289,73 @@ sealed trait INameI[+R <: IRegionsModeI]
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ITemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    ExportTemplate(&'i ExportTemplateNameI<'s, 'i, R>),
+    ImplTemplate(&'i ImplTemplateNameI<'s, 'i, R>),
+    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s, 'i, R>),
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<'s, 'i, R>),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<'s, 'i, R>),
+    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i, R>),
+    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i, R>),
+    ExternTemplate(&'i ExternTemplateNameI<'s, 'i, R>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
+    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s, 'i, R>),
+    FunctionTemplate(&'i FunctionTemplateNameI<'s, 'i, R>),
+    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i, R>),
+    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i, R>),
+    ConstructorTemplate(&'i ConstructorTemplateNameI<'s, 'i, R>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, 'i, R>),
+    StructTemplate(&'i StructTemplateNameI<'s, 'i, R>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
 }
 // mig: impl ITemplateNameI
 /*
 sealed trait ITemplateNameI[+R <: IRegionsModeI] extends INameI[R]
 */
+// Rust-only narrowing INameI -> ITemplateNameI (mirrors T-side TryFrom<INameT>). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ITemplateNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::ExportTemplate(x) => Ok(ITemplateNameI::ExportTemplate(x)),
+            INameI::ImplTemplate(x) => Ok(ITemplateNameI::ImplTemplate(x)),
+            INameI::ImplBoundTemplate(x) => Ok(ITemplateNameI::ImplBoundTemplate(x)),
+            INameI::StaticSizedArrayTemplate(x) => Ok(ITemplateNameI::StaticSizedArrayTemplate(x)),
+            INameI::RuntimeSizedArrayTemplate(x) => Ok(ITemplateNameI::RuntimeSizedArrayTemplate(x)),
+            INameI::OverrideDispatcherTemplate(x) => Ok(ITemplateNameI::OverrideDispatcherTemplate(x)),
+            INameI::OverrideDispatcherCase(x) => Ok(ITemplateNameI::OverrideDispatcherCase(x)),
+            INameI::ExternTemplate(x) => Ok(ITemplateNameI::ExternTemplate(x)),
+            INameI::ExternFunction(x) => Ok(ITemplateNameI::ExternFunction(x)),
+            INameI::FunctionBoundTemplate(x) => Ok(ITemplateNameI::FunctionBoundTemplate(x)),
+            INameI::FunctionTemplate(x) => Ok(ITemplateNameI::FunctionTemplate(x)),
+            INameI::LambdaCallFunctionTemplate(x) => Ok(ITemplateNameI::LambdaCallFunctionTemplate(x)),
+            INameI::ForwarderFunctionTemplate(x) => Ok(ITemplateNameI::ForwarderFunctionTemplate(x)),
+            INameI::ConstructorTemplate(x) => Ok(ITemplateNameI::ConstructorTemplate(x)),
+            INameI::LambdaCitizenTemplate(x) => Ok(ITemplateNameI::LambdaCitizenTemplate(x)),
+            INameI::StructTemplate(x) => Ok(ITemplateNameI::StructTemplate(x)),
+            INameI::InterfaceTemplate(x) => Ok(ITemplateNameI::InterfaceTemplate(x)),
+            INameI::AnonymousSubstructImplTemplate(x) => Ok(ITemplateNameI::AnonymousSubstructImplTemplate(x)),
+            INameI::AnonymousSubstructTemplate(x) => Ok(ITemplateNameI::AnonymousSubstructTemplate(x)),
+            INameI::AnonymousSubstructConstructorTemplate(x) => Ok(ITemplateNameI::AnonymousSubstructConstructorTemplate(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: enum IFunctionTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IFunctionTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i, R>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
+    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s, 'i, R>),
+    FunctionTemplate(&'i FunctionTemplateNameI<'s, 'i, R>),
+    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i, R>),
+    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i, R>),
+    ConstructorTemplate(&'i ConstructorTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
 }
 // mig: impl IFunctionTemplateNameI
 /*
@@ -305,12 +363,46 @@ sealed trait IFunctionTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[
 //  def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI
 }
 */
+// Rust-only narrowing INameI -> IFunctionTemplateNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionTemplateNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::OverrideDispatcherTemplate(x) => Ok(IFunctionTemplateNameI::OverrideDispatcherTemplate(x)),
+            INameI::ExternFunction(x) => Ok(IFunctionTemplateNameI::ExternFunction(x)),
+            INameI::FunctionBoundTemplate(x) => Ok(IFunctionTemplateNameI::FunctionBoundTemplate(x)),
+            INameI::FunctionTemplate(x) => Ok(IFunctionTemplateNameI::FunctionTemplate(x)),
+            INameI::LambdaCallFunctionTemplate(x) => Ok(IFunctionTemplateNameI::LambdaCallFunctionTemplate(x)),
+            INameI::ForwarderFunctionTemplate(x) => Ok(IFunctionTemplateNameI::ForwarderFunctionTemplate(x)),
+            INameI::ConstructorTemplate(x) => Ok(IFunctionTemplateNameI::ConstructorTemplate(x)),
+            INameI::AnonymousSubstructConstructorTemplate(x) => Ok(IFunctionTemplateNameI::AnonymousSubstructConstructorTemplate(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: enum IInstantiationNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-// (was cfg-gated)
 pub enum IInstantiationNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    Export(&'i ExportNameI<'s, 'i, R>),
+    Impl(&'i ImplNameI<'s, 'i, R>),
+    ImplBound(&'i ImplBoundNameI<'s, 'i, R>),
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
+    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i, R>),
+    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i, R>),
+    Extern(&'i ExternNameI<'s, 'i, R>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
+    Function(&'i FunctionNameIX<'s, 'i, R>),
+    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i, R>),
+    FunctionBound(&'i FunctionBoundNameI<'s, 'i, R>),
+    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i, R>),
+    Struct(&'i StructNameI<'s, 'i, R>),
+    Interface(&'i InterfaceNameI<'s, 'i, R>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s, 'i, R>),
+    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i, R>),
+    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i, R>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
 }
 // mig: impl IInstantiationNameI
 /*
@@ -319,12 +411,112 @@ sealed trait IInstantiationNameI[+R <: IRegionsModeI] extends INameI[R] {
   def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i, R: Copy {
+    // Rust adaptation (SPDMX-B): Scala's templateArgs is GC and interner-free, but the computed arms
+    // (e.g. Export's `Vector(region)`) must arena-allocate their slice, so we take the interner.
+    // Stored-slice arms ignore it.
+    pub fn template_args(&self, interner: &InstantiatingInterner<'s, 'i>) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            IInstantiationNameI::Export(x) => interner.alloc_slice_from_vec(vec![ITemplataI::Region(x.region)]),
+            IInstantiationNameI::Impl(x) => x.template_args,
+            IInstantiationNameI::ImplBound(x) => x.template_args,
+            IInstantiationNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
+            IInstantiationNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            IInstantiationNameI::OverrideDispatcher(x) => x.template_args,
+            IInstantiationNameI::OverrideDispatcherCase(x) => x.independent_impl_template_args,
+            IInstantiationNameI::Extern(x) => interner.alloc_slice_from_vec(vec![ITemplataI::Region(x.region)]),
+            IInstantiationNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
+            IInstantiationNameI::Function(x) => x.template_args,
+            IInstantiationNameI::ForwarderFunction(_) => panic!("Unimplemented: template_args on ForwarderFunctionNameI (Scala: inner.templateArgs — recurse through IFunctionNameI)"),
+            IInstantiationNameI::FunctionBound(x) => x.template_args,
+            IInstantiationNameI::LambdaCallFunction(x) => x.template_args,
+            IInstantiationNameI::Struct(x) => x.template_args,
+            IInstantiationNameI::Interface(x) => x.template_args,
+            IInstantiationNameI::LambdaCitizen(_) => &[],
+            IInstantiationNameI::AnonymousSubstructImpl(x) => x.template_args,
+            IInstantiationNameI::AnonymousSubstructConstructor(x) => x.template_args,
+            IInstantiationNameI::AnonymousSubstruct(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i {
+    pub fn template(&self) -> ITemplateNameI<'s, 'i, R> {
+        match self {
+            IInstantiationNameI::Export(x) => ITemplateNameI::ExportTemplate(&x.template),
+            IInstantiationNameI::Impl(x) => match x.template {
+                IImplTemplateNameI::ImplTemplate(t) => ITemplateNameI::ImplTemplate(t),
+                IImplTemplateNameI::ImplBoundTemplate(t) => ITemplateNameI::ImplBoundTemplate(t),
+                IImplTemplateNameI::AnonymousSubstructImplTemplate(t) => ITemplateNameI::AnonymousSubstructImplTemplate(t),
+            },
+            IInstantiationNameI::ImplBound(x) => ITemplateNameI::ImplBoundTemplate(&x.template),
+            IInstantiationNameI::StaticSizedArray(x) => ITemplateNameI::StaticSizedArrayTemplate(&x.template),
+            IInstantiationNameI::RuntimeSizedArray(x) => ITemplateNameI::RuntimeSizedArrayTemplate(&x.template),
+            IInstantiationNameI::OverrideDispatcher(x) => ITemplateNameI::OverrideDispatcherTemplate(&x.template),
+            IInstantiationNameI::OverrideDispatcherCase(x) => ITemplateNameI::OverrideDispatcherCase(x),
+            IInstantiationNameI::Extern(x) => ITemplateNameI::ExternTemplate(&x.template),
+            IInstantiationNameI::ExternFunction(x) => ITemplateNameI::ExternFunction(x),
+            IInstantiationNameI::Function(x) => ITemplateNameI::FunctionTemplate(&x.template),
+            IInstantiationNameI::ForwarderFunction(x) => ITemplateNameI::ForwarderFunctionTemplate(&x.template),
+            IInstantiationNameI::FunctionBound(x) => ITemplateNameI::FunctionBoundTemplate(&x.template),
+            IInstantiationNameI::LambdaCallFunction(x) => ITemplateNameI::LambdaCallFunctionTemplate(&x.template),
+            IInstantiationNameI::Struct(x) => match x.template {
+                IStructTemplateNameI::StructTemplate(t) => ITemplateNameI::StructTemplate(t),
+                IStructTemplateNameI::LambdaCitizenTemplate(t) => ITemplateNameI::LambdaCitizenTemplate(t),
+                IStructTemplateNameI::AnonymousSubstructTemplate(t) => ITemplateNameI::AnonymousSubstructTemplate(t),
+            },
+            IInstantiationNameI::Interface(x) => match x.template {
+                IInterfaceTemplateNameI::InterfaceTemplate(t) => ITemplateNameI::InterfaceTemplate(t),
+            },
+            IInstantiationNameI::LambdaCitizen(x) => ITemplateNameI::LambdaCitizenTemplate(&x.template),
+            IInstantiationNameI::AnonymousSubstructImpl(x) => ITemplateNameI::AnonymousSubstructImplTemplate(&x.template),
+            IInstantiationNameI::AnonymousSubstructConstructor(x) => ITemplateNameI::AnonymousSubstructConstructorTemplate(&x.template),
+            IInstantiationNameI::AnonymousSubstruct(x) => ITemplateNameI::AnonymousSubstructTemplate(&x.template),
+        }
+    }
+}
+// Rust-only narrowing from the wide INameI to the IInstantiationNameI subset
+// (mirrors the T-side `TryFrom<INameT> for IInstantiationNameT`). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInstantiationNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::Export(x) => Ok(IInstantiationNameI::Export(x)),
+            INameI::Impl(x) => Ok(IInstantiationNameI::Impl(x)),
+            INameI::ImplBound(x) => Ok(IInstantiationNameI::ImplBound(x)),
+            INameI::StaticSizedArray(x) => Ok(IInstantiationNameI::StaticSizedArray(x)),
+            INameI::RuntimeSizedArray(x) => Ok(IInstantiationNameI::RuntimeSizedArray(x)),
+            INameI::OverrideDispatcher(x) => Ok(IInstantiationNameI::OverrideDispatcher(x)),
+            INameI::OverrideDispatcherCase(x) => Ok(IInstantiationNameI::OverrideDispatcherCase(x)),
+            INameI::Extern(x) => Ok(IInstantiationNameI::Extern(x)),
+            INameI::ExternFunction(x) => Ok(IInstantiationNameI::ExternFunction(x)),
+            INameI::FunctionNameIX(x) => Ok(IInstantiationNameI::Function(x)),
+            INameI::ForwarderFunction(x) => Ok(IInstantiationNameI::ForwarderFunction(x)),
+            INameI::FunctionBound(x) => Ok(IInstantiationNameI::FunctionBound(x)),
+            INameI::LambdaCallFunction(x) => Ok(IInstantiationNameI::LambdaCallFunction(x)),
+            INameI::StructName(x) => Ok(IInstantiationNameI::Struct(x)),
+            INameI::InterfaceName(x) => Ok(IInstantiationNameI::Interface(x)),
+            INameI::LambdaCitizen(x) => Ok(IInstantiationNameI::LambdaCitizen(x)),
+            INameI::AnonymousSubstructImpl(x) => Ok(IInstantiationNameI::AnonymousSubstructImpl(x)),
+            INameI::AnonymousSubstructConstructor(x) => Ok(IInstantiationNameI::AnonymousSubstructConstructor(x)),
+            INameI::AnonymousSubstruct(x) => Ok(IInstantiationNameI::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: enum IFunctionNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IFunctionNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i, R>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
+    Function(&'i FunctionNameIX<'s, 'i, R>),
+    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i, R>),
+    FunctionBound(&'i FunctionBoundNameI<'s, 'i, R>),
+    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i, R>),
+    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i, R>),
 }
 // mig: impl IFunctionNameI
 /*
@@ -334,12 +526,85 @@ sealed trait IFunctionNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] 
   def parameters: Vector[CoordI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            IFunctionNameI::OverrideDispatcher(x) => x.template_args,
+            IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
+            IFunctionNameI::Function(x) => x.template_args,
+            IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: template_args on ForwarderFunctionNameI (Scala: inner.templateArgs — recurse through IFunctionNameI)"),
+            IFunctionNameI::FunctionBound(x) => x.template_args,
+            IFunctionNameI::LambdaCallFunction(x) => x.template_args,
+            IFunctionNameI::AnonymousSubstructConstructor(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
+    pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i, R> {
+        match self {
+            IFunctionNameI::OverrideDispatcher(x) => IFunctionTemplateNameI::OverrideDispatcherTemplate(&x.template),
+            IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template on ExternFunctionNameI (Scala: override def template = ExternFunctionTemplateNameI(humanName) — needs interner)"),
+            IFunctionNameI::Function(x) => IFunctionTemplateNameI::FunctionTemplate(&x.template),
+            IFunctionNameI::ForwarderFunction(x) => IFunctionTemplateNameI::ForwarderFunctionTemplate(&x.template),
+            IFunctionNameI::FunctionBound(x) => IFunctionTemplateNameI::FunctionBoundTemplate(&x.template),
+            IFunctionNameI::LambdaCallFunction(x) => IFunctionTemplateNameI::LambdaCallFunctionTemplate(&x.template),
+            IFunctionNameI::AnonymousSubstructConstructor(x) => IFunctionTemplateNameI::AnonymousSubstructConstructorTemplate(&x.template),
+        }
+    }
+}
+// mig: fn parameters
+impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
+    pub fn parameters(&self) -> &'i [CoordI<'s, 'i, R>] {
+        match self {
+            IFunctionNameI::OverrideDispatcher(f) => f.parameters,
+            IFunctionNameI::ExternFunction(f) => f.parameters,
+            IFunctionNameI::Function(f) => f.parameters,
+            IFunctionNameI::ForwarderFunction(f) => f.inner.parameters(),
+            IFunctionNameI::FunctionBound(f) => f.parameters,
+            IFunctionNameI::LambdaCallFunction(f) => f.parameters,
+            IFunctionNameI::AnonymousSubstructConstructor(f) => f.parameters,
+        }
+    }
+}
+// Rust-only narrowing INameI -> IFunctionNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::OverrideDispatcher(x) => Ok(IFunctionNameI::OverrideDispatcher(x)),
+            INameI::ExternFunction(x) => Ok(IFunctionNameI::ExternFunction(x)),
+            INameI::FunctionNameIX(x) => Ok(IFunctionNameI::Function(x)),
+            INameI::ForwarderFunction(x) => Ok(IFunctionNameI::ForwarderFunction(x)),
+            INameI::FunctionBound(x) => Ok(IFunctionNameI::FunctionBound(x)),
+            INameI::LambdaCallFunction(x) => Ok(IFunctionNameI::LambdaCallFunction(x)),
+            INameI::AnonymousSubstructConstructor(x) => Ok(IFunctionNameI::AnonymousSubstructConstructor(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening IFunctionNameI -> INameI (mirrors Scala `IFunctionNameI extends INameI`
+// subtyping; reverse of the TryFrom above, same as the template-name From widenings below). No Scala counterpart.
+impl<'s, 'i, R> From<IFunctionNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IFunctionNameI<'s, 'i, R>) -> Self {
+        match name {
+            IFunctionNameI::OverrideDispatcher(x) => INameI::OverrideDispatcher(x),
+            IFunctionNameI::ExternFunction(x) => INameI::ExternFunction(x),
+            IFunctionNameI::Function(x) => INameI::FunctionNameIX(x),
+            IFunctionNameI::ForwarderFunction(x) => INameI::ForwarderFunction(x),
+            IFunctionNameI::FunctionBound(x) => INameI::FunctionBound(x),
+            IFunctionNameI::LambdaCallFunction(x) => INameI::LambdaCallFunction(x),
+            IFunctionNameI::AnonymousSubstructConstructor(x) => INameI::AnonymousSubstructConstructor(x),
+        }
+    }
+}
 // mig: enum ISuperKindTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ISuperKindTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, 'i, R>),
 }
 // mig: impl ISuperKindTemplateNameI
 /*
@@ -350,7 +615,12 @@ sealed trait ISuperKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ISubKindTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<'s, 'i, R>),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<'s, 'i, R>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, 'i, R>),
+    StructTemplate(&'i StructTemplateNameI<'s, 'i, R>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
 }
 // mig: impl ISubKindTemplateNameI
 /*
@@ -361,7 +631,12 @@ sealed trait ISubKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ICitizenTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<'s, 'i, R>),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<'s, 'i, R>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, 'i, R>),
+    StructTemplate(&'i StructTemplateNameI<'s, 'i, R>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
 }
 // mig: impl ICitizenTemplateNameI
 /*
@@ -374,7 +649,33 @@ sealed trait ICitizenTemplateNameI[+R <: IRegionsModeI] extends ISubKindTemplate
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IStructTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, 'i, R>),
+    StructTemplate(&'i StructTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
+}
+// Widening conversions mirroring the Scala `extends` hierarchy of the template-name traits
+// (IStructTemplateNameI <: ICitizenTemplateNameI <: ISubKindTemplateNameI). Rust-only (no Scala
+// counterpart — Scala uses subtyping); the T-side encodes the same widenings as `From` impls.
+impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for ICitizenTemplateNameI<'s, 'i, R> {
+    fn from(t: IStructTemplateNameI<'s, 'i, R>) -> Self {
+        match t {
+            IStructTemplateNameI::LambdaCitizenTemplate(x) => ICitizenTemplateNameI::LambdaCitizenTemplate(x),
+            IStructTemplateNameI::StructTemplate(x) => ICitizenTemplateNameI::StructTemplate(x),
+            IStructTemplateNameI::AnonymousSubstructTemplate(x) => ICitizenTemplateNameI::AnonymousSubstructTemplate(x),
+        }
+    }
+}
+impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for ISubKindTemplateNameI<'s, 'i, R> {
+    fn from(t: ICitizenTemplateNameI<'s, 'i, R>) -> Self {
+        match t {
+            ICitizenTemplateNameI::StaticSizedArrayTemplate(x) => ISubKindTemplateNameI::StaticSizedArrayTemplate(x),
+            ICitizenTemplateNameI::RuntimeSizedArrayTemplate(x) => ISubKindTemplateNameI::RuntimeSizedArrayTemplate(x),
+            ICitizenTemplateNameI::LambdaCitizenTemplate(x) => ISubKindTemplateNameI::LambdaCitizenTemplate(x),
+            ICitizenTemplateNameI::StructTemplate(x) => ISubKindTemplateNameI::StructTemplate(x),
+            ICitizenTemplateNameI::InterfaceTemplate(x) => ISubKindTemplateNameI::InterfaceTemplate(x),
+            ICitizenTemplateNameI::AnonymousSubstructTemplate(x) => ISubKindTemplateNameI::AnonymousSubstructTemplate(x),
+        }
+    }
 }
 // mig: impl IStructTemplateNameI
 /*
@@ -391,7 +692,7 @@ sealed trait IStructTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateN
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IInterfaceTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, 'i, R>),
 }
 // mig: impl IInterfaceTemplateNameI
 /*
@@ -404,7 +705,7 @@ sealed trait IInterfaceTemplateNameI[+R <: IRegionsModeI] extends ICitizenTempla
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ISuperKindNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    Interface(&'i InterfaceNameI<'s, 'i, R>),
 }
 // mig: impl ISuperKindNameI
 /*
@@ -413,12 +714,45 @@ sealed trait ISuperKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R]
   def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            ISuperKindNameI::Interface(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
+    pub fn template(&self) -> ISuperKindTemplateNameI<'s, 'i, R> {
+        match self {
+            ISuperKindNameI::Interface(x) => match x.template {
+                IInterfaceTemplateNameI::InterfaceTemplate(t) => ISuperKindTemplateNameI::InterfaceTemplate(t),
+            },
+        }
+    }
+}
+// Rust-only narrowing INameI -> ISuperKindNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISuperKindNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::InterfaceName(x) => Ok(ISuperKindNameI::Interface(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: enum ISubKindNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ISubKindNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
+    Struct(&'i StructNameI<'s, 'i, R>),
+    Interface(&'i InterfaceNameI<'s, 'i, R>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s, 'i, R>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
 }
 // mig: impl ISubKindNameI
 /*
@@ -427,12 +761,60 @@ sealed trait ISubKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
   def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            ISubKindNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ISubKindNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ISubKindNameI::Struct(x) => x.template_args,
+            ISubKindNameI::Interface(x) => x.template_args,
+            ISubKindNameI::LambdaCitizen(_) => &[],
+            ISubKindNameI::AnonymousSubstruct(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i, R: Copy {
+    pub fn template(&self) -> ISubKindTemplateNameI<'s, 'i, R> {
+        match self {
+            ISubKindNameI::StaticSizedArray(x) => ISubKindTemplateNameI::StaticSizedArrayTemplate(&x.template),
+            ISubKindNameI::RuntimeSizedArray(x) => ISubKindTemplateNameI::RuntimeSizedArrayTemplate(&x.template),
+            ISubKindNameI::Struct(x) => ISubKindTemplateNameI::from(ICitizenTemplateNameI::from(x.template)),
+            ISubKindNameI::Interface(x) => match x.template {
+                IInterfaceTemplateNameI::InterfaceTemplate(t) => ISubKindTemplateNameI::InterfaceTemplate(t),
+            },
+            ISubKindNameI::LambdaCitizen(x) => ISubKindTemplateNameI::LambdaCitizenTemplate(&x.template),
+            ISubKindNameI::AnonymousSubstruct(x) => ISubKindTemplateNameI::AnonymousSubstructTemplate(&x.template),
+        }
+    }
+}
+// Rust-only narrowing INameI -> ISubKindNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISubKindNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::StaticSizedArray(x) => Ok(ISubKindNameI::StaticSizedArray(x)),
+            INameI::RuntimeSizedArray(x) => Ok(ISubKindNameI::RuntimeSizedArray(x)),
+            INameI::StructName(x) => Ok(ISubKindNameI::Struct(x)),
+            INameI::InterfaceName(x) => Ok(ISubKindNameI::Interface(x)),
+            INameI::LambdaCitizen(x) => Ok(ISubKindNameI::LambdaCitizen(x)),
+            INameI::AnonymousSubstruct(x) => Ok(ISubKindNameI::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: enum ICitizenNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum ICitizenNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
+    Struct(&'i StructNameI<'s, 'i, R>),
+    Interface(&'i InterfaceNameI<'s, 'i, R>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s, 'i, R>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
 }
 // mig: impl ICitizenNameI
 /*
@@ -441,12 +823,71 @@ sealed trait ICitizenNameI[+R <: IRegionsModeI] extends ISubKindNameI[R] {
   def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            ICitizenNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ICitizenNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ICitizenNameI::Struct(x) => x.template_args,
+            ICitizenNameI::Interface(x) => x.template_args,
+            ICitizenNameI::LambdaCitizen(_) => &[],
+            ICitizenNameI::AnonymousSubstruct(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i, R: Copy {
+    pub fn template(&self) -> ICitizenTemplateNameI<'s, 'i, R> {
+        match self {
+            ICitizenNameI::StaticSizedArray(x) => ICitizenTemplateNameI::StaticSizedArrayTemplate(&x.template),
+            ICitizenNameI::RuntimeSizedArray(x) => ICitizenTemplateNameI::RuntimeSizedArrayTemplate(&x.template),
+            ICitizenNameI::Struct(x) => ICitizenTemplateNameI::from(x.template),
+            ICitizenNameI::Interface(x) => match x.template {
+                IInterfaceTemplateNameI::InterfaceTemplate(t) => ICitizenTemplateNameI::InterfaceTemplate(t),
+            },
+            ICitizenNameI::LambdaCitizen(x) => ICitizenTemplateNameI::LambdaCitizenTemplate(&x.template),
+            ICitizenNameI::AnonymousSubstruct(x) => ICitizenTemplateNameI::AnonymousSubstructTemplate(&x.template),
+        }
+    }
+}
+// Rust-only narrowing INameI -> ICitizenNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::StaticSizedArray(x) => Ok(ICitizenNameI::StaticSizedArray(x)),
+            INameI::RuntimeSizedArray(x) => Ok(ICitizenNameI::RuntimeSizedArray(x)),
+            INameI::StructName(x) => Ok(ICitizenNameI::Struct(x)),
+            INameI::InterfaceName(x) => Ok(ICitizenNameI::Interface(x)),
+            INameI::LambdaCitizen(x) => Ok(ICitizenNameI::LambdaCitizen(x)),
+            INameI::AnonymousSubstruct(x) => Ok(ICitizenNameI::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening ICitizenNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
+// same family as the IFunctionNameI widening — feeds translateCitizenId's IdI.local_name). No Scala counterpart.
+impl<'s, 'i, R> From<ICitizenNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: ICitizenNameI<'s, 'i, R>) -> Self {
+        match name {
+            ICitizenNameI::StaticSizedArray(x) => INameI::StaticSizedArray(x),
+            ICitizenNameI::RuntimeSizedArray(x) => INameI::RuntimeSizedArray(x),
+            ICitizenNameI::Struct(x) => INameI::StructName(x),
+            ICitizenNameI::Interface(x) => INameI::InterfaceName(x),
+            ICitizenNameI::LambdaCitizen(x) => INameI::LambdaCitizen(x),
+            ICitizenNameI::AnonymousSubstruct(x) => INameI::AnonymousSubstruct(x),
+        }
+    }
+}
 // mig: enum IStructNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IStructNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    Struct(&'i StructNameI<'s, 'i, R>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s, 'i, R>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
 }
 // mig: impl IStructNameI
 /*
@@ -455,12 +896,55 @@ sealed trait IStructNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with ISu
   override def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            IStructNameI::Struct(x) => x.template_args,
+            IStructNameI::LambdaCitizen(_) => &[],
+            IStructNameI::AnonymousSubstruct(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i, R: Copy {
+    pub fn template(&self) -> IStructTemplateNameI<'s, 'i, R> {
+        match self {
+            IStructNameI::Struct(x) => x.template,
+            IStructNameI::LambdaCitizen(x) => IStructTemplateNameI::LambdaCitizenTemplate(&x.template),
+            IStructNameI::AnonymousSubstruct(x) => IStructTemplateNameI::AnonymousSubstructTemplate(&x.template),
+        }
+    }
+}
+// Rust-only narrowing INameI -> IStructNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IStructNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::StructName(x) => Ok(IStructNameI::Struct(x)),
+            INameI::LambdaCitizen(x) => Ok(IStructNameI::LambdaCitizen(x)),
+            INameI::AnonymousSubstruct(x) => Ok(IStructNameI::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening IStructNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
+// same family as the IFunctionNameI widening — feeds translateStructId's IdI.local_name). No Scala counterpart.
+impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IStructNameI<'s, 'i, R>) -> Self {
+        match name {
+            IStructNameI::Struct(x) => INameI::StructName(x),
+            IStructNameI::LambdaCitizen(x) => INameI::LambdaCitizen(x),
+            IStructNameI::AnonymousSubstruct(x) => INameI::AnonymousSubstruct(x),
+        }
+    }
+}
 // mig: enum IInterfaceNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IInterfaceNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    Interface(&'i InterfaceNameI<'s, 'i, R>),
 }
 // mig: impl IInterfaceNameI
 /*
@@ -469,12 +953,51 @@ sealed trait IInterfaceNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with 
   override def templateArgs: Vector[ITemplataI[R]]
 }
 */
+// mig: fn template_args
+impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            IInterfaceNameI::Interface(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
+    pub fn template(&self) -> &'i InterfaceTemplateNameI<'s, 'i, R> {
+        match self {
+            IInterfaceNameI::Interface(x) => match x.template {
+                IInterfaceTemplateNameI::InterfaceTemplate(t) => t,
+            },
+        }
+    }
+}
+// Rust-only narrowing INameI -> IInterfaceNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInterfaceNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::InterfaceName(x) => Ok(IInterfaceNameI::Interface(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening IInterfaceNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
+// same family as the IFunctionNameI widening — feeds translateInterfaceId's IdI.local_name). No Scala counterpart.
+impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IInterfaceNameI<'s, 'i, R>) -> Self {
+        match name {
+            IInterfaceNameI::Interface(x) => INameI::InterfaceName(x),
+        }
+    }
+}
 // mig: enum IImplTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IImplTemplateNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    ImplTemplate(&'i ImplTemplateNameI<'s, 'i, R>),
+    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s, 'i, R>),
+    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
 }
 // mig: impl IImplTemplateNameI
 /*
@@ -487,7 +1010,9 @@ sealed trait IImplTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R] {
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IImplNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    Impl(&'i ImplNameI<'s, 'i, R>),
+    ImplBound(&'i ImplBoundNameI<'s, 'i, R>),
+    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i, R>),
 }
 // mig: impl IImplNameI
 /*
@@ -496,6 +1021,49 @@ sealed trait IImplNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
 }
 
 */
+// mig: fn template_args
+impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+        match self {
+            IImplNameI::Impl(x) => x.template_args,
+            IImplNameI::ImplBound(x) => x.template_args,
+            IImplNameI::AnonymousSubstructImpl(x) => x.template_args,
+        }
+    }
+}
+// mig: fn template
+impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i, R: Copy {
+    pub fn template(&self) -> IImplTemplateNameI<'s, 'i, R> {
+        match self {
+            IImplNameI::Impl(x) => x.template,
+            IImplNameI::ImplBound(x) => IImplTemplateNameI::ImplBoundTemplate(&x.template),
+            IImplNameI::AnonymousSubstructImpl(x) => IImplTemplateNameI::AnonymousSubstructImplTemplate(&x.template),
+        }
+    }
+}
+// Rust-only narrowing INameI -> IImplNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IImplNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::Impl(x) => Ok(IImplNameI::Impl(x)),
+            INameI::ImplBound(x) => Ok(IImplNameI::ImplBound(x)),
+            INameI::AnonymousSubstructImpl(x) => Ok(IImplNameI::AnonymousSubstructImpl(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening IImplNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
+// same family as the IFunctionNameI widening — feeds translateImplId's IdI.local_name). No Scala counterpart.
+impl<'s, 'i, R> From<IImplNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IImplNameI<'s, 'i, R>) -> Self {
+        match name {
+            IImplNameI::Impl(x) => INameI::Impl(x),
+            IImplNameI::ImplBound(x) => INameI::ImplBound(x),
+            IImplNameI::AnonymousSubstructImpl(x) => INameI::AnonymousSubstructImpl(x),
+        }
+    }
+}
 // mig: enum IRegionNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -919,12 +1487,80 @@ case class CaseFunctionFromImplTemplateNameI[+R <: IRegionsModeI](
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
 pub enum IVarNameI<'s, 'i, R> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'i (), R)>),
+    TypingPassBlockResultVar(&'i TypingPassBlockResultVarNameI<'s, 'i, R>),
+    TypingPassFunctionResultVar(&'i TypingPassFunctionResultVarNameI<'s, 'i, R>),
+    TypingPassTemporaryVar(&'i TypingPassTemporaryVarNameI<'s, 'i, R>),
+    TypingPassPatternMember(&'i TypingPassPatternMemberNameI<'s, 'i, R>),
+    TypingIgnoredParam(&'i TypingIgnoredParamNameI<'s, 'i, R>),
+    TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'s, 'i, R>),
+    UnnamedLocal(&'i UnnamedLocalNameI<'s, 'i, R>),
+    ClosureParam(&'i ClosureParamNameI<'s, 'i, R>),
+    ConstructingMember(&'i ConstructingMemberNameI<'s, 'i, R>),
+    WhileCondResult(&'i WhileCondResultNameI<'s, 'i, R>),
+    Iterable(&'i IterableNameI<'s, 'i, R>),
+    Iterator(&'i IteratorNameI<'s, 'i, R>),
+    IterationOption(&'i IterationOptionNameI<'s, 'i, R>),
+    MagicParam(&'i MagicParamNameI<'s, 'i, R>),
+    CodeVar(&'i CodeVarNameI<'s, 'i, R>),
+    AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI<'s, 'i, R>),
+    Self_(&'i SelfNameI<'s, 'i, R>),
 }
 // mig: impl IVarNameI
 /*
 sealed trait IVarNameI[+R <: IRegionsModeI] extends INameI[R]
 */
+// Rust-only narrowing INameI -> IVarNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IVarNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::TypingPassBlockResultVar(x) => Ok(IVarNameI::TypingPassBlockResultVar(x)),
+            INameI::TypingPassFunctionResultVar(x) => Ok(IVarNameI::TypingPassFunctionResultVar(x)),
+            INameI::TypingPassTemporaryVar(x) => Ok(IVarNameI::TypingPassTemporaryVar(x)),
+            INameI::TypingPassPatternMember(x) => Ok(IVarNameI::TypingPassPatternMember(x)),
+            INameI::TypingIgnoredParam(x) => Ok(IVarNameI::TypingIgnoredParam(x)),
+            INameI::TypingPassPatternDestructuree(x) => Ok(IVarNameI::TypingPassPatternDestructuree(x)),
+            INameI::UnnamedLocal(x) => Ok(IVarNameI::UnnamedLocal(x)),
+            INameI::ClosureParam(x) => Ok(IVarNameI::ClosureParam(x)),
+            INameI::ConstructingMember(x) => Ok(IVarNameI::ConstructingMember(x)),
+            INameI::WhileCondResult(x) => Ok(IVarNameI::WhileCondResult(x)),
+            INameI::Iterable(x) => Ok(IVarNameI::Iterable(x)),
+            INameI::Iterator(x) => Ok(IVarNameI::Iterator(x)),
+            INameI::IterationOption(x) => Ok(IVarNameI::IterationOption(x)),
+            INameI::MagicParam(x) => Ok(IVarNameI::MagicParam(x)),
+            INameI::CodeVar(x) => Ok(IVarNameI::CodeVar(x)),
+            INameI::AnonymousSubstructMember(x) => Ok(IVarNameI::AnonymousSubstructMember(x)),
+            INameI::Self_(x) => Ok(IVarNameI::Self_(x)),
+            _ => Err(()),
+        }
+    }
+}
+// Rust-only widening IVarNameI -> INameI (mirrors Scala `IVarNameI extends INameI` subtyping;
+// reverse of the TryFrom above, same shape as the From<IFunctionNameI> widening). No Scala counterpart.
+impl<'s, 'i, R> From<IVarNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IVarNameI<'s, 'i, R>) -> Self {
+        match name {
+            IVarNameI::TypingPassBlockResultVar(x) => INameI::TypingPassBlockResultVar(x),
+            IVarNameI::TypingPassFunctionResultVar(x) => INameI::TypingPassFunctionResultVar(x),
+            IVarNameI::TypingPassTemporaryVar(x) => INameI::TypingPassTemporaryVar(x),
+            IVarNameI::TypingPassPatternMember(x) => INameI::TypingPassPatternMember(x),
+            IVarNameI::TypingIgnoredParam(x) => INameI::TypingIgnoredParam(x),
+            IVarNameI::TypingPassPatternDestructuree(x) => INameI::TypingPassPatternDestructuree(x),
+            IVarNameI::UnnamedLocal(x) => INameI::UnnamedLocal(x),
+            IVarNameI::ClosureParam(x) => INameI::ClosureParam(x),
+            IVarNameI::ConstructingMember(x) => INameI::ConstructingMember(x),
+            IVarNameI::WhileCondResult(x) => INameI::WhileCondResult(x),
+            IVarNameI::Iterable(x) => INameI::Iterable(x),
+            IVarNameI::Iterator(x) => INameI::Iterator(x),
+            IVarNameI::IterationOption(x) => INameI::IterationOption(x),
+            IVarNameI::MagicParam(x) => INameI::MagicParam(x),
+            IVarNameI::CodeVar(x) => INameI::CodeVar(x),
+            IVarNameI::AnonymousSubstructMember(x) => INameI::AnonymousSubstructMember(x),
+            IVarNameI::Self_(x) => INameI::Self_(x),
+        }
+    }
+}
+/* Guardian: disable-all */
 // mig: struct TypingPassBlockResultVarNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

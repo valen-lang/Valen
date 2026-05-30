@@ -100,7 +100,7 @@ This loop is for when the typing pass is mostly migrated but you want to **find 
 
 * **Adjacent helper calls.** Many Scala bodies call helpers like `localHelper.makeTemporaryLocal(...)`, `destructorCompiler.drop(...)`, `templataCompiler.getPlaceholderSubstituter(...)`. In Rust, these flatten onto `Compiler` (per design v3 §2.1 god struct). Call them as `self.make_temporary_local(...)`, `self.drop(...)`, `self.get_placeholder_substituter(...)`. If the helper is itself a stub, that's fine — the next iteration of step 6 (or 7's continuation) will hit it.
 
-* **Adding `interner` / `scout_arena` / `keywords` parameters is fine.** Scala uses GC; Rust often needs an arena handle to allocate. SPDMX Exception B covers it. Document with a one-line `// Rust adaptation (SPDMX-B): <why>` comment above any new arena-taking function.
+* **Adding `interner` / `scout_arena` / `keywords` parameters is fine.** Scala uses GC; Rust often needs an arena handle to allocate. SPDMX Exception B covers it.
 
 * **Stop when you escalate, don't keep driving in parallel.** When you escalate (lifetime puzzle, NNDX-blocked test add, structural change, ambiguous Scala source, anything in `migration-drive.md`'s "stop and escalate" bullets), stop and wait for the TL response in `for-jr.md`. Never defer or skip the current probe iteration to move on.
 
