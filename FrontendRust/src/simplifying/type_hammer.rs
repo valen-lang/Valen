@@ -51,10 +51,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 if hinputs.kind_externs.contains_key(s) {
                     panic!("translate_kind: StructIT kindExterns translateOpaqueI branch")
                 } else {
-                    panic!("translate_kind: StructIT translateStructI branch")
+                    KindHT::StructHT(self.translate_struct_i(hinputs, hamuts, s))
                 }
             }
-            KindIT::InterfaceIT(_) => panic!("translate_kind: InterfaceIT translateInterface branch"),
+            KindIT::InterfaceIT(i) => KindHT::InterfaceHT(self.translate_interface(hinputs, hamuts, i)),
             KindIT::StaticSizedArrayIT(_) => panic!("translate_kind: StaticSizedArrayIT branch"),
             KindIT::RuntimeSizedArrayIT(_) => panic!("translate_kind: RuntimeSizedArrayIT branch"),
         }

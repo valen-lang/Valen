@@ -45,7 +45,10 @@ pub fn evaluate_mutability(mutability: MutabilityI) -> Mutability {
 */
 // mig: fn evaluate_mutability_templata
 pub fn evaluate_mutability_templata(mutability: MutabilityI) -> Mutability {
-    panic!("Unimplemented: evaluate_mutability_templata");
+    match mutability {
+        MutabilityI::Mutable => Mutability::Mutable,
+        MutabilityI::Immutable => Mutability::Immutable,
+    }
 }
 /*
   def evaluateMutabilityTemplata(mutability: MutabilityI): Mutability = {

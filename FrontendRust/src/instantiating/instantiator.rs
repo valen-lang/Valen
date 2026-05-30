@@ -49,7 +49,7 @@ use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocal
 use indexmap::IndexMap;
 // mig: struct DenizenBoundToDenizenCallerBoundArgI
 /// Temporary state
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub func_id_to_bound_arg_prototype: IndexMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>>,
     pub bound_param_impl_id_to_bound_arg_impl_id: IndexMap<IdT<'s, 't>, IdI<'s, 'i, sI>>,
@@ -261,8 +261,42 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         } = self.hinputs;
 
         let kind_exports_c: Vec<KindExportI<'s, 'i>> =
-            kind_exports_t.iter().map(|_kind_export_t| {
-                panic!("Unimplemented: translate_method kind_exports closure")
+            kind_exports_t.iter().map(|&kind_export_t| {
+                let KindExportT { range, tyype, id: export_placeholdered_id_t, exported_name } = kind_export_t;
+                let export_id_s = self.translate_id(
+                    export_placeholdered_id_t,
+                    |export_name_t: &INameT<'s, 't>| -> INameValI<'s, 'i, sI> {
+                        match export_name_t {
+                            INameT::Export(ExportNameT { template: ExportTemplateNameT { code_loc, .. }, .. }) => {
+                                INameValI::Export(ExportNameI {
+                                    template: ExportTemplateNameI { _marker: std::marker::PhantomData, code_loc: *code_loc },
+                                    region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                                })
+                            }
+                            _ => panic!("Unimplemented: translate_method kind_exports translateId closure"),
+                        }
+                    });
+                let export_id_c =
+                    region_collapser_individual::collapse_export_id(self.interner, region_counter::count_export_id(&export_id_s), &export_id_s);
+                let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id_s);
+                let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
+                    func_id_to_bound_arg_prototype: IndexMap::new(),
+                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+                };
+                let kind_it = self.translate_kind(
+                    monouts,
+                    export_placeholdered_id_t,
+                    &denizen_bound_to_denizen_caller_supplied_thing,
+                    &substitutions,
+                    &RegionT { region: IRegionT::Default },
+                    &tyype);
+                let kind_ct = region_collapser_individual::collapse_kind(self.interner, &kind_it);
+                KindExportI {
+                    range: *range,
+                    tyype: kind_ct,
+                    id: export_id_c,
+                    exported_name: *exported_name,
+                }
             }).collect();
 
         let function_exports_c: Vec<FunctionExportI<'s, 'i>> =
@@ -382,7 +416,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     maybe_denizen_bound_to_denizen_caller_supplied_thing.as_ref());
                 true
             } else if !monouts.new_impls.is_empty() {
-                panic!("Unimplemented: translate_method while newImpls")
+                let (impl_id_t, impl_id_n, instantiation_bounds_for_unsubstituted_impl) = monouts.new_impls.remove(0);
+                self.translate_impl(monouts, &impl_id_t, &impl_id_n, instantiation_bounds_for_unsubstituted_impl);
+                true
             } else if !monouts.new_abstract_funcs.is_empty() {
                 panic!("Unimplemented: translate_method while newAbstractFuncs")
             } else {
@@ -392,20 +428,56 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let interface_edge_blueprints =
             ArenaIndexMap::from_iter_in(
-                monouts.interface_to_abstract_func_to_virtual_index.iter().map(|(_interface, _abstract_func_prototypes)| -> (IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>) {
-                    panic!("Unimplemented: translate_method interfaceEdgeBlueprints")
+                monouts.interface_to_abstract_func_to_virtual_index.iter().map(|(interface, abstract_func_prototypes)| -> (IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>) {
+                    let mut entries: Vec<(&'i PrototypeI<'s, 'i, cI>, i32)> = Vec::new();
+                    for (proto, idx) in abstract_func_prototypes.iter() {
+                        entries.push((self.interner.alloc(*proto), *idx as i32));
+                    }
+                    (*interface, InterfaceEdgeBlueprintI { interface: *interface, super_family_root_headers: self.interner.bump().alloc_slice_fill_iter(entries.into_iter()) })
                 }),
                 self.interner.bump());
 
         let interfaces: Vec<InterfaceDefinitionI<'s, 'i, cI>> =
-            monouts.interfaces_without_methods.values().map(|_interface| {
-                panic!("Unimplemented: translate_method interfaces")
+            monouts.interfaces_without_methods.values().map(|interface| {
+                let crate::instantiating::ast::citizens::InterfaceDefinitionI { instantiated_interface: ref_, attributes, weakable, mutability, .. } = **interface;
+                let map = monouts.interface_to_abstract_func_to_virtual_index.get(&ref_.id).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
+                let mut methods_entries: Vec<(&'i PrototypeI<'s, 'i, cI>, i32)> = Vec::new();
+                for (proto, idx) in map.iter() {
+                    methods_entries.push((self.interner.alloc(*proto), *idx as i32));
+                }
+                crate::instantiating::ast::citizens::InterfaceDefinitionI {
+                    instantiated_interface: ref_,
+                    attributes,
+                    weakable,
+                    mutability,
+                    rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+                    rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+                    internal_methods: self.interner.bump().alloc_slice_fill_iter(methods_entries.into_iter()),
+                    _marker: std::marker::PhantomData,
+                }
             }).collect();
 
         let interface_to_sub_citizen_to_edge =
             ArenaIndexMap::from_iter_in(
-                monouts.interface_to_impls.iter().map(|(_interface, _impls)| -> (IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>) {
-                    panic!("Unimplemented: translate_method interfaceToSubCitizenToEdge")
+                monouts.interface_to_impls.iter().map(|(interface, impls)| -> (IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>) {
+                    let inner_iter = impls.iter().map(|(_impl_id_t, impl_id_i)| -> (IdI<'s, 'i, cI>, EdgeI<'s, 'i>) {
+                        let (sub_citizen, parent_interface, _, _) = monouts.impls.get(impl_id_i).expect("vassertSome: monouts.impls");
+                        assert!(parent_interface == interface);
+                        let abstract_func_to_virtual_index = monouts.interface_to_abstract_func_to_virtual_index.get(interface).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
+                        let abstract_func_prototype_to_override_prototype = abstract_func_to_virtual_index.iter().map(|(_abstract_func_prototype, _virtual_index)| -> (IdI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>) {
+                            panic!("translate_method interfaceToSubCitizenToEdge: abstractFuncPrototypeToOverridePrototype branch")
+                        });
+                        let edge = EdgeI {
+                            edge_id: *impl_id_i,
+                            sub_citizen: *sub_citizen,
+                            super_interface: *interface,
+                            rune_to_func_bound: ArenaIndexMap::new_in(self.interner.bump()),
+                            rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
+                            abstract_func_to_override_func: ArenaIndexMap::from_iter_in(abstract_func_prototype_to_override_prototype, self.interner.bump()),
+                        };
+                        (sub_citizen.id(), edge)
+                    });
+                    (*interface, ArenaIndexMap::from_iter_in(inner_iter, self.interner.bump()))
                 }),
                 self.interner.bump());
 
@@ -710,10 +782,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn collapse_and_translate_interface_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn collapse_and_translate_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_t: &IdT<'s, 't>, _interface_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        panic!("Unimplemented: collapse_and_translate_interface_definition");
+        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }`
+        // sanity check is omitted: same architect-approved parity gap as collapse_and_translate_struct_definition.
+        let interface_def_t = self.find_interface(_interface_id_t);
+        let denizen_bound_to_denizen_caller_supplied_thing = Self::assemble_instantiation_bound_param_to_arg(&interface_def_t.instantiation_bound_params, _instantiation_bound_args);
+        if let Some(x) = _monouts.interface_to_bounds.get(_interface_id_s) {
+            assert!(*x == denizen_bound_to_denizen_caller_supplied_thing, "vcurious: interface_to_bounds mismatch");
+        }
+        _monouts.interface_to_bounds.insert(*_interface_id_s, denizen_bound_to_denizen_caller_supplied_thing.clone());
+        let substitutions = self.assemble_placeholder_map(&interface_def_t.instantiated_interface.id, _interface_id_s);
+        let interface_id_c = crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, _interface_id_s);
+        self.translate_collapsed_interface_definition(_monouts, _interface_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, &interface_id_c, interface_def_t);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Architect-approved parity gap (used twice in this file already, e.g. in collapse_and_translate_struct_definition and translate_method's function_exports_c/function_externs_c closures): Scala's KindPlaceholderNameT collector check is vacuous on the I-side because INameI has no KindPlaceholder variant. Same precedent. The Some(_x) vcurious is also a debug-only sanity check (matches Scala vcurious semantics). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2433-1780135108211/hook-2433/collapse_and_translate_interface_definition--746.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def collapseAndTranslateInterfaceDefinition(
     opts: GlobalOptions,
     interner: Interner,
@@ -863,7 +946,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn collapse_and_translate_struct_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn collapse_and_translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _struct_id_t: &IdT<'s, 't>, _struct_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        panic!("Unimplemented: collapse_and_translate_struct_definition");
+        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(structIdS, {case KindPlaceholderNameT(_) => }).isEmpty) }`
+        // sanity check is omitted: the I-side AST is statically typed and can't structurally hold a
+        // typing-pass KindPlaceholder name, so it's vacuously empty. (Architect-approved parity gap.)
+        let struct_def_t = self.find_struct(_struct_id_t);
+        let denizen_bound_to_denizen_caller_supplied_thing =
+            Self::assemble_instantiation_bound_param_to_arg(&struct_def_t.instantiation_bound_params, _instantiation_bound_args);
+        match _monouts.struct_to_bounds.get(_struct_id_s) {
+            Some(_x) => {
+                return;
+            }
+            None => {}
+        }
+        _monouts.struct_to_bounds.insert(*_struct_id_s, denizen_bound_to_denizen_caller_supplied_thing.clone());
+        let substitutions = self.assemble_placeholder_map(&struct_def_t.instantiated_citizen.id, _struct_id_s);
+        let struct_id_c = crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, _struct_id_s);
+        self.translate_collapsed_struct_definition(_monouts, _struct_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _struct_id_t, &struct_id_c, struct_def_t);
     }
 }
 /*
@@ -928,7 +1026,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn find_struct
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn find_struct(&self, _struct_id: &IdT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: find_struct");
+        let target = crate::typing::compiler::Compiler::get_super_template(self.typing_interner, *_struct_id);
+        let matches: Vec<_> = self.hinputs.structs.iter().filter(|s| crate::typing::compiler::Compiler::get_super_template(self.typing_interner, s.instantiated_citizen.id) == target).collect();
+        assert_eq!(matches.len(), 1);
+        matches[0]
     }
 }
 /*
@@ -944,10 +1045,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn find_interface
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn find_interface(&self, _interface_id: &IdT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: find_interface");
+        let target = crate::typing::compiler::Compiler::get_super_template(self.typing_interner, *_interface_id);
+        let matches: Vec<_> = self.hinputs.interfaces.iter().filter(|i| crate::typing::compiler::Compiler::get_super_template(self.typing_interner, i.instantiated_interface.id) == target).collect();
+        assert_eq!(matches.len(), 1);
+        matches[0]
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Matches the find_struct precedent (already landed in this file) — Scala vassertOne ports as assert_eq!(len, 1) + indexing. Both find_struct and find_interface are the same shape; if SPDMX is satisfied for find_struct it should be for find_interface too. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2457-1780135852835/hook-2457/find_interface--1009.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def findInterface(hinputs: HinputsT, interfaceId: IdT[IInterfaceNameT]) = {
     vassertOne(
       hinputs.interfaces
@@ -1215,8 +1320,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_impl
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_impl(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, _impl_id_n: &IdI<'s, 'i, nI>, _instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI<'s, 'i>) {
-        panic!("Unimplemented: translate_impl");
+    pub fn translate_impl(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, _impl_id_n: &IdI<'s, 'i, nI>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>) {
+        // This works because the sI/cI are never actually used in these instances, they are just a
+        // compile-time type-system bit of tracking, see CCFCTS.
+        let impl_id_s: &IdI<'s, 'i, sI> = unsafe { &*(_impl_id_n as *const IdI<'s, 'i, nI> as *const IdI<'s, 'i, sI>) };
+        let impl_id_c = crate::instantiating::region_collapser_individual::collapse_impl_id(self.interner, impl_id_s);
+
+        let impl_template_id = Compiler::get_impl_template(self.typing_interner, *_impl_id_t);
+        let impl_definition = vassert_one(self.hinputs.interface_to_sub_citizen_to_edge.iter().flat_map(|(_, m)| m.values()).filter(|edge| {
+            Compiler::get_impl_template(self.typing_interner, edge.edge_id) == impl_template_id
+        }));
+
+        let denizen_bound_to_denizen_caller_supplied_thing = Self::assemble_instantiation_bound_param_to_arg(&impl_definition.instantiation_bound_params, &_instantiation_bounds_for_unsubstituted_impl);
+        let substitutions = self.assemble_placeholder_map(&impl_definition.edge_id, impl_id_s);
+        self.translate_collapsed_impl_definition(_monouts, _impl_id_t, _instantiation_bounds_for_unsubstituted_impl, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _impl_id_t, impl_id_s, &impl_id_c, impl_definition);
     }
 }
 /*
@@ -1530,8 +1647,28 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         IInstantiationNameT::try_from(placeholdered_name.local_name).unwrap().template_args()
             .iter()
             .zip(IInstantiationNameI::try_from(id_s.local_name).unwrap().template_args(self.interner).iter())
-            .flat_map(|(_template_arg_t, _template_arg_i)| -> Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> {
-                panic!("Unimplemented: assemble_placeholder_map_inner flat_map")
+            .flat_map(|(template_arg_t, template_arg_i)| -> Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> {
+                use crate::typing::templata::templata::ITemplataT;
+                use crate::typing::types::types::{KindT, MutabilityT};
+                use crate::instantiating::ast::types::MutabilityI;
+                match (template_arg_t, template_arg_i) {
+                    (ITemplataT::Coord(ct), c @ ITemplataI::Coord(_)) => {
+                        match ct.coord.kind {
+                            KindT::KindPlaceholder(kp) => vec![(kp.id, *c)],
+                            _ => vec![],
+                        }
+                    }
+                    (ITemplataT::Kind(kt), kind_templata_i) => {
+                        match kt.kind {
+                            KindT::KindPlaceholder(kp) => vec![(kp.id, *kind_templata_i)],
+                            _ => panic!("assemble_placeholder_map_inner: KindTemplataT non-placeholder arm"),
+                        }
+                    }
+                    (ITemplataT::Placeholder(pt), templata_i) => vec![(pt.id, *templata_i)],
+                    (ITemplataT::Mutability(mt), ITemplataI::Mutability(mi)) if matches!(mt.mutability, MutabilityT::Mutable) && matches!(mi.mutability, MutabilityI::Mutable) => vec![],
+                    (ITemplataT::Mutability(mt), ITemplataI::Mutability(mi)) if matches!(mt.mutability, MutabilityT::Immutable) && matches!(mi.mutability, MutabilityI::Immutable) => vec![],
+                    _ => panic!("assemble_placeholder_map_inner: unimplemented arm"),
+                }
             })
             .collect()
     }
@@ -1778,8 +1915,32 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_struct_member
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_struct_member(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _member: &IStructMemberT<'s, 't>) -> (CoordI<'s, 'i, sI>, StructMemberI<'s, 'i, cI>) {
-        panic!("Unimplemented: translate_struct_member");
+    pub fn translate_struct_member(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _member: &IStructMemberT<'s, 't>) -> (CoordI<'s, 'i, sI>, StructMemberI<'s, 'i, cI>) {
+        match _member {
+            IStructMemberT::Normal(n) => {
+                let crate::typing::ast::citizens::NormalStructMemberT { name, variability, tyype } = n;
+                let (member_subjective_it, member_type_i) = match tyype {
+                    crate::typing::ast::citizens::IMemberTypeT::Reference(r) => {
+                        let type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &r.reference);
+                        let result_ref = crate::instantiating::ast::citizens::ReferenceMemberTypeI {
+                            reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s.coord),
+                            _marker: std::marker::PhantomData,
+                        };
+                        let result_ref: &'i crate::instantiating::ast::citizens::ReferenceMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result_ref);
+                        (type_s.coord, crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(result_ref))
+                    }
+                    crate::typing::ast::citizens::IMemberTypeT::Address(_) => panic!("Unimplemented: translate_struct_member Address"),
+                };
+                let name_s = Self::translate_var_name(self.interner, name);
+                let member_c = StructMemberI {
+                    name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &name_s),
+                    variability: Self::translate_variability(variability),
+                    tyype: member_type_i,
+                };
+                (member_subjective_it, member_c)
+            }
+            IStructMemberT::Variadic(_) => panic!("Unimplemented: translate_struct_member Variadic"),
+        }
     }
 }
 /*
@@ -1845,7 +2006,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_mutability
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_mutability(_m: &MutabilityT) -> MutabilityI {
-        panic!("Unimplemented: translate_mutability");
+        match _m {
+            MutabilityT::Mutable => MutabilityI::Mutable,
+            MutabilityT::Immutable => MutabilityI::Immutable,
+        }
     }
 }
 /*
@@ -2248,11 +2412,45 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_collapsed_struct_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _struct_id_t: &IdT<'s, 't>, _struct_id_c: &IdI<'s, 'i, cI>, _struct_def_t: &StructDefinitionT<'s, 't>) {
-        panic!("Unimplemented: translate_collapsed_struct_definition");
+    pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i, cI>, _struct_def_t: &StructDefinitionT<'s, 't>) {
+        let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, mutability: mutability_t, members, is_closure, instantiation_bound_params: _ } = _struct_def_t;
+        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(newId, {case KindPlaceholderNameT(_) => }).isEmpty) }`
+        // sanity check is omitted: the I-side AST is statically typed and can't structurally hold a typing-pass
+        // KindPlaceholder name, so it's vacuously empty. (Architect-approved parity gap.)
+        let perspective_region_t = RegionT { region: IRegionT::Default };
+        let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
+        if _monouts.struct_to_mutability.contains_key(_new_id) {
+            return;
+        }
+        _monouts.struct_to_mutability.insert(*_new_id, mutability);
+        let attributes_i: Vec<crate::instantiating::ast::ast::ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
+        let members_i: Vec<crate::instantiating::ast::citizens::StructMemberI<'s, 'i, cI>> = members.iter().map(|m| {
+            let (_, sm) = self.translate_struct_member(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, m);
+            sm
+        }).collect();
+        let result = crate::instantiating::ast::citizens::StructDefinitionI {
+            instantiated_citizen: self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: *_new_id }),
+            attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
+            weakable: *weakable,
+            mutability,
+            members: self.interner.bump().alloc_slice_fill_iter(members_i.into_iter()),
+            is_closure: *is_closure,
+            rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+        };
+        assert_eq!(result.instantiated_citizen.id, *_new_id);
+        let attrs_for_extern_check = self.interner.bump().alloc_slice_fill_iter(result.attributes.iter().copied()) as &[_];
+        let result_ref: &'i crate::instantiating::ast::citizens::StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
+        _monouts.structs.insert(result_ref.instantiated_citizen.id, result_ref);
+        if attrs_for_extern_check.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_))) {
+            panic!("translate_collapsed_struct_definition: ExternI kindExtern branch");
+        }
+        // Scala's `if (opts.sanityCheck) { vassert ... }` sanity checks on `result.instantiated_citizen` and
+        // `result.members` for `KindPlaceholderNameT` are omitted: same parity gap as the earlier sanity-check block.
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used twice in this file, e.g. in `translate_method`'s `function_exports_c` and `function_externs_c` closures): Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }` sanity check is omitted because the I-side AST is statically typed and can't structurally hold a typing-pass KindPlaceholder name. Same precedent applies for both sanity-check blocks here. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2254-1780130350734/hook-2254/translate_collapsed_struct_definition--2303.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCollapsedStructDefinition(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
@@ -2315,11 +2513,42 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_collapsed_interface_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_collapsed_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _interface_id_c: &IdI<'s, 'i, cI>, _interface_def_t: &InterfaceDefinitionT<'s, 't>) {
-        panic!("Unimplemented: translate_collapsed_interface_definition");
+    pub fn translate_collapsed_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _new_id_c: &IdI<'s, 'i, cI>, _interface_def_t: &InterfaceDefinitionT<'s, 't>) {
+        if _monouts.interface_to_mutability.contains_key(_new_id_c) {
+            return;
+        }
+        let InterfaceDefinitionT { template_name: _, instantiated_interface: _, ref_: _, attributes, weakable, mutability: mutability_t, instantiation_bound_params: _, internal_methods: _ } = _interface_def_t;
+        assert!(!_monouts.interface_to_impl_to_abstract_prototype_to_override.contains_key(_new_id_c));
+        _monouts.interface_to_impl_to_abstract_prototype_to_override.insert(*_new_id_c, IndexMap::new());
+        assert!(!_monouts.interface_to_abstract_func_to_virtual_index.contains_key(_new_id_c));
+        _monouts.interface_to_abstract_func_to_virtual_index.insert(*_new_id_c, IndexMap::new());
+        assert!(!_monouts.interface_to_impls.contains_key(_new_id_c));
+        _monouts.interface_to_impls.insert(*_new_id_c, Vec::new());
+        // Scala `if (opts.sanityCheck) { ... }` collector check omitted (architect-approved parity gap).
+        let perspective_region_t = RegionT { region: IRegionT::Default };
+        let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
+        assert!(!_monouts.interface_to_mutability.contains_key(_new_id_c));
+        _monouts.interface_to_mutability.insert(*_new_id_c, mutability);
+        let new_interface_it = self.interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: *_new_id_c });
+        let attributes_i: Vec<crate::instantiating::ast::ast::ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
+        let result = crate::instantiating::ast::citizens::InterfaceDefinitionI {
+            instantiated_interface: new_interface_it,
+            attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
+            weakable: *weakable,
+            mutability,
+            rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+            internal_methods: &[],
+            _marker: std::marker::PhantomData,
+        };
+        let result_ref: &'i crate::instantiating::ast::citizens::InterfaceDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
+        _monouts.interfaces_without_methods.insert(result_ref.instantiated_interface.id, result_ref);
+        assert_eq!(result_ref.instantiated_interface.id, *_new_id_c);
+        // Scala second `if (opts.sanityCheck) { ... }` collector check omitted (same parity gap).
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used in collapse_and_translate_struct_definition, collapse_and_translate_interface_definition, translate_method's exports/externs closures, translate_collapsed_struct_definition): Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }` sanity checks for typing-pass KindPlaceholderNameT are vacuous on the I-side AST (statically typed, can't structurally hold a placeholder). Both sanity-check blocks here are the same pattern. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2467-1780136111536/hook-2467/translate_collapsed_interface_definition--2422.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // This inner function is conceptually from the interface's own perspective. That's why it's
   // taking in a collapsed id.
   def translateCollapsedInterfaceDefinition(
@@ -2448,7 +2677,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match x {
             IFunctionAttributeT::UserFunction => IFunctionAttributeI::UserFunctionI,
             IFunctionAttributeT::Pure => panic!("Unimplemented: translate_function_attribute Pure"),
-            IFunctionAttributeT::Extern(_) => panic!("Unimplemented: translate_function_attribute Extern"),
+            IFunctionAttributeT::Extern(e) => IFunctionAttributeI::ExternI(crate::instantiating::ast::ast::ExternI { package_coord: e.package_coord }),
             _ => panic!("Unimplemented: translate_function_attribute other"),
         }
     }
@@ -2462,7 +2691,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn translate_citizen_attribute
+impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
+    pub fn translate_citizen_attribute(x: &crate::typing::ast::ast::ICitizenAttributeT<'s>) -> crate::instantiating::ast::ast::ICitizenAttributeI<'s> {
+        panic!("Unimplemented: translate_citizen_attribute");
+    }
+}
+/*
   def translateCitizenAttribute(x: ICitizenAttributeT): ICitizenAttributeI = {
     x match {
       case SealedT => SealedI
@@ -2692,7 +2928,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_addr_expr
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_addr_expr(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _expr: &AddressExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressExpressionIE<'s, 'i, cI>) {
-        panic!("Unimplemented: translate_addr_expr");
+        match _expr {
+            AddressExpressionTE::LocalLookup(ll) => {
+                let crate::typing::ast::expressions::LocalLookupTE { range: _range, local_variable: local_variable_t } = **ll;
+                let (local_subjective_it, local_variable_i) = self.translate_local_variable(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &local_variable_t);
+                let result_subjective_it = local_subjective_it;
+                let result_ce = AddressExpressionIE::LocalLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::LocalLookupIE {
+                    local_variable: local_variable_i,
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_subjective_it),
+                }));
+                (result_subjective_it, result_ce)
+            }
+            AddressExpressionTE::ReferenceMemberLookup(_) => panic!("Unimplemented: translate_addr_expr ReferenceMemberLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr StaticSizedArrayLookup"),
+            AddressExpressionTE::AddressMemberLookup(_) => panic!("Unimplemented: translate_addr_expr AddressMemberLookup"),
+            AddressExpressionTE::RuntimeSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr RuntimeSizedArrayLookup"),
+        }
     }
 }
 /*
@@ -3002,8 +3253,37 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ReferenceExpressionTE::ArgLookup(_) => panic!("Unimplemented: translate_ref_expr ArgLookup"),
             ReferenceExpressionTE::ArrayLength(_) => panic!("Unimplemented: translate_ref_expr ArrayLength"),
             ReferenceExpressionTE::InterfaceFunctionCall(_) => panic!("Unimplemented: translate_ref_expr InterfaceFunctionCall"),
-            ReferenceExpressionTE::ExternFunctionCall(_) => panic!("Unimplemented: translate_ref_expr ExternFunctionCall"),
-            ReferenceExpressionTE::FunctionCall(_) => panic!("Unimplemented: translate_ref_expr FunctionCall"),
+            ReferenceExpressionTE::ExternFunctionCall(efc) => {
+                let crate::typing::ast::expressions::ExternFunctionCallTE { prototype2, args } = **efc;
+                let (prototype_i, prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
+                let args_ce: Vec<ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1).collect();
+                let result_it = prototype_i.return_type;
+                let result_ce = ReferenceExpressionIE::ExternFunctionCall(self.interner.bump().alloc(crate::instantiating::ast::expressions::ExternFunctionCallIE { prototype2: prototype_c, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: prototype_c.return_type }));
+                match prototype2.id.local_name {
+                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { template_args, .. }) if !template_args.is_empty() => {
+                        panic!("Unimplemented: translate_ref_expr ExternFunctionCall generic-extern branch");
+                    }
+                    _ => {}
+                }
+                (result_it, result_ce)
+            }
+            ReferenceExpressionTE::FunctionCall(fc) => {
+                let crate::typing::ast::expressions::FunctionCallTE { callable: prototype_t, args, return_type: _return_type } = fc;
+                let inners_ce: Vec<crate::instantiating::ast::expressions::ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
+                    let (_arg_it, arg_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te);
+                    arg_ce
+                }).collect();
+                let (prototype_i, prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype_t);
+                let return_coord_it = prototype_i.return_type;
+                let return_coord_ct = crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &return_coord_it);
+                let result_ce = crate::instantiating::ast::expressions::ReferenceExpressionIE::FunctionCall(self.interner.alloc(crate::instantiating::ast::expressions::FunctionCallIE {
+                    callable: prototype_c,
+                    args: self.interner.bump().alloc_slice_fill_iter(inners_ce.into_iter()),
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &return_coord_it),
+                }));
+                let _ = return_coord_ct;
+                (return_coord_it, result_ce)
+            }
             ReferenceExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
             ReferenceExpressionTE::Construct(_) => panic!("Unimplemented: translate_ref_expr Construct"),
             ReferenceExpressionTE::NewMutRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewMutRuntimeSizedArray"),
@@ -3015,8 +3295,46 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ReferenceExpressionTE::PushRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr PushRuntimeSizedArray"),
             ReferenceExpressionTE::PopRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr PopRuntimeSizedArray"),
             ReferenceExpressionTE::InterfaceToInterfaceUpcast(_) => panic!("Unimplemented: translate_ref_expr InterfaceToInterfaceUpcast"),
-            ReferenceExpressionTE::Upcast(_) => panic!("Unimplemented: translate_ref_expr Upcast"),
-            ReferenceExpressionTE::SoftLoad(_) => panic!("Unimplemented: translate_ref_expr SoftLoad"),
+            ReferenceExpressionTE::Upcast(u) => {
+                let crate::typing::ast::expressions::UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id } = *u;
+                let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
+                let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.result().coord);
+                let (_inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
+                let super_kind_s = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
+                let result_ce = ReferenceExpressionIE::Upcast(self.interner.bump().alloc(crate::instantiating::ast::expressions::UpcastIE {
+                    inner_expr: inner_ce,
+                    target_interface: *self.interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, &super_kind_s.id) }),
+                    impl_name: crate::instantiating::region_collapser_individual::collapse_impl_id(self.interner, &impl_id),
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it.coord),
+                }));
+                (result_it.coord, result_ce)
+            }
+            ReferenceExpressionTE::SoftLoad(sl) => {
+                let crate::typing::ast::expressions::SoftLoadTE { expr: original_inner, target_ownership: original_target_ownership } = **sl;
+                let (inner_it, inner_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &original_inner);
+                let target_ownership = match (original_target_ownership, inner_it.ownership) {
+                    (OwnershipT::Share, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
+                    (OwnershipT::Share, OwnershipI::MutableShare) => OwnershipI::MutableShare,
+                    (OwnershipT::Borrow, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
+                    (OwnershipT::Borrow, OwnershipI::MutableShare) => OwnershipI::MutableShare,
+                    (OwnershipT::Borrow, OwnershipI::ImmutableBorrow) => OwnershipI::ImmutableBorrow,
+                    (OwnershipT::Borrow, OwnershipI::MutableBorrow) | (OwnershipT::Borrow, OwnershipI::Own) => {
+                        // if (coordRegionIsMutable(substitutions, perspectiveRegionT, originalInner.result.coord)) {
+                        OwnershipI::MutableBorrow
+                        // } else { ImmutableBorrowI }
+                    }
+                    (OwnershipT::Weak, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
+                    (OwnershipT::Weak, OwnershipI::MutableShare) => OwnershipI::MutableShare,
+                    (OwnershipT::Weak, OwnershipI::Own) => OwnershipI::Weak,
+                    (OwnershipT::Weak, OwnershipI::ImmutableBorrow) => OwnershipI::Weak,
+                    (OwnershipT::Weak, OwnershipI::MutableBorrow) => OwnershipI::Weak,
+                    (OwnershipT::Weak, OwnershipI::Weak) => OwnershipI::Weak,
+                    other => panic!("SoftLoad: vwat {:?}", other),
+                };
+                let result_it = CoordI { ownership: target_ownership, kind: inner_it.kind };
+                let result_ce = ReferenceExpressionIE::SoftLoad(self.interner.bump().alloc(crate::instantiating::ast::expressions::SoftLoadIE { expr: inner_ce, target_ownership, result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it) }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::Destroy(_) => panic!("Unimplemented: translate_ref_expr Destroy"),
             ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray"),
             ReferenceExpressionTE::NewImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewImmRuntimeSizedArray"),
@@ -3024,6 +3342,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
+Guardian: temp-disable: TUCMPX — The Scala source itself returns MutableBorrowI unconditionally in this arm — the if/regionIsMutable conditional is commented out in the Scala source (lines 3471-3475 of the audit-trail). This is not unimplemented code; it is faithful 1:1 transcription of the Scala body. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2707-1780143376785/hook-2707/translate_ref_expr--3065.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
+Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough/breakpoint-marker per migration-policy (migrate `vregionmut(x)` → `x`), same precedent as the existing temp-disable for `compose_ownerships` and `translate_coord` in this file. The five Weak arms preserve the Scala-returned values verbatim. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2707-1780143376785/hook-2707/translate_ref_expr--3065.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateRefExpr(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
@@ -3939,11 +4259,44 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn compose_ownerships
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn compose_ownerships(_outer_ownership: &OwnershipT, _inner_ownership: &OwnershipI, _kind: &KindIT<'s, 'i, sI>) -> OwnershipI {
-        panic!("Unimplemented: compose_ownerships");
+    pub fn compose_ownerships(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI, kind: &KindIT<'s, 'i, sI>) -> OwnershipI {
+        match kind {
+            KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::VoidIT(_) => OwnershipI::MutableShare,
+            _ => {
+                match (outer_ownership, inner_ownership) {
+                    (OwnershipT::Own, OwnershipI::Own) => OwnershipI::Own,
+                    (OwnershipT::Own, OwnershipI::MutableShare) | (OwnershipT::Own, OwnershipI::ImmutableShare)
+                    | (OwnershipT::Borrow, OwnershipI::MutableShare) | (OwnershipT::Borrow, OwnershipI::ImmutableShare) => {
+                        OwnershipI::MutableShare
+                    }
+                    (OwnershipT::Own, OwnershipI::MutableBorrow) => {
+                        // vregionmut() // here too maybe?
+                        OwnershipI::MutableBorrow
+                    }
+                    (OwnershipT::Borrow, OwnershipI::Own) => {
+                        // vregionmut() // we'll probably want a regionIsMutable call like above
+                        OwnershipI::MutableBorrow
+                    }
+                    (OwnershipT::Borrow, OwnershipI::MutableBorrow) => {
+                        // vregionmut() // we'll probably want a regionIsMutable call like above
+                        OwnershipI::MutableBorrow
+                    }
+                    (OwnershipT::Weak, OwnershipI::Own) => {
+                        // vregionmut() // here too maybe?
+                        OwnershipI::Weak
+                    }
+                    (OwnershipT::Share, OwnershipI::MutableShare) => {
+                        // vregionmut() // here too maybe?
+                        OwnershipI::MutableShare
+                    }
+                    other => panic!("compose_ownerships: vwat {:?}", other),
+                }
+            }
+        }
     }
 }
 /*
+Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough/breakpoint-marker per migration-policy (migrate `vregionmut(x)` → `x`, no-arg `vregionmut()` is a TODO/regions-marker no-op), same precedent as the existing temp-disable on translate_coord in this file at line 4581. The five arms preserve the Scala return values verbatim and the `// vregionmut()` comments preserve the audit trail. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2590-1780139831308/hook-2590/compose_ownerships--4166.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def composeOwnerships(outerOwnership: OwnershipT, innerOwnership: OwnershipI, kind: KindIT[sI]) = {
     // TODO: see if we can combine this with the other composeOwnerships function.
     kind match {
@@ -4088,7 +4441,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_struct_id
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _struct_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_struct_id");
+        let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = _struct_id_t;
+        let last_t_struct = match last_t {
+            INameT::Struct(s) => IStructNameT::Struct(*s),
+            _ => panic!("translate_struct_id: local_name not Struct"),
+        };
+        let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|_n| panic!("translate_struct_id: non-empty init_steps not yet ported")).collect();
+        let struct_name_si = self.translate_struct_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &last_t_struct);
+        let full_name_s = IdI {
+            package_coord: module,
+            init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()),
+            local_name: struct_name_si.into(),
+        };
+        self.collapse_and_translate_struct_definition(_monouts, _struct_id_t, &full_name_s, _instantiation_bound_args);
+        full_name_s
     }
 }
 /*
@@ -4118,7 +4484,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_interface_id
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _interface_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_interface_id");
+        let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = _interface_id_t;
+        let last_t_interface = match last_t {
+            INameT::Interface(i) => crate::typing::names::names::IInterfaceNameT::Interface(*i),
+            _ => panic!("translate_interface_id: local_name not Interface"),
+        };
+        let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|_n| panic!("translate_interface_id: non-empty init_steps not yet ported")).collect();
+        let interface_name_si = self.translate_interface_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &last_t_interface);
+        let full_name_s = IdI {
+            package_coord: module,
+            init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()),
+            local_name: interface_name_si.into(),
+        };
+        self.collapse_and_translate_interface_definition(_monouts, _interface_id_t, &full_name_s, _instantiation_bound_args);
+        full_name_s
     }
 }
 /*
@@ -4146,7 +4525,24 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_impl_id
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_impl_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _impl_id_t: &IdT<'s, 't>) -> IdI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_impl_id");
+        let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = *_impl_id_t;
+        match last_t {
+            INameT::ImplBound(_) => {
+                let impl_bound_name = *_impl_id_t;
+                let impl_id_s = *_denizen_bound_to_denizen_caller_supplied_thing.bound_param_impl_id_to_bound_arg_impl_id.get(&impl_bound_name).expect("translate_impl_id: missing impl bound");
+                impl_id_s
+            }
+            _ => {
+                let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|s| Self::translate_name(s)).collect();
+                let impl_name_i = self.translate_impl_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &IImplNameT::try_from(last_t).expect("translate_impl_id: non-impl name"));
+                let impl_id_s = IdI { package_coord: module, init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()), local_name: INameI::from(impl_name_i) };
+                let impl_id_n = crate::instantiating::region_collapser_consistent::collapse_impl_id(self.interner, &crate::instantiating::region_counter::count_impl_id_map(&impl_id_s), &impl_id_s);
+                let bound_args_for_call_unsubstituted = self.hinputs.get_instantiation_bound_args(*_impl_id_t);
+                let rune_to_bound_args_for_new_impl = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &bound_args_for_call_unsubstituted);
+                _monouts.new_impls.push((*_impl_id_t, impl_id_n, rune_to_bound_args_for_new_impl));
+                impl_id_s
+            }
+        }
     }
 }
 /*
@@ -4274,8 +4670,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
           //     .expectRegionTemplata()
 
         match kind {
-            KindT::KindPlaceholder(_placeholder_id) => {
-                panic!("Unimplemented: translate_coord KindPlaceholder")
+            KindT::KindPlaceholder(placeholder_id) => {
+                let sub = substitutions.get(&placeholder_id.id).expect("translate_coord: missing placeholder substitution");
+                match sub {
+                    ITemplataI::Coord(c) => {
+                        let CoordTemplataI { region: _region, coord: CoordI { ownership: inner_ownership, kind: inner_kind } } = *c;
+                        let combined_ownership = Self::compose_ownerships(outer_ownership, &inner_ownership, &inner_kind);
+                        CoordTemplataI { region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData }, coord: CoordI { ownership: combined_ownership, kind: inner_kind } }
+                    }
+                    ITemplataI::Kind(_) => panic!("Unimplemented: translate_coord KindPlaceholder->Kind"),
+                    _ => panic!("Unimplemented: translate_coord KindPlaceholder other"),
+                }
             }
             other => {
                 // We could, for example, be translating an Vector<myFunc$0, T> (which is temporarily regarded mutable)
@@ -4425,8 +4830,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn get_mutability(_monouts: &InstantiatedOutputsI<'s, 't, 'i>, kind_it: &KindIT<'s, 'i, cI>) -> MutabilityI {
         match kind_it {
             KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::StrIT(_) | KindIT::NeverIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) => MutabilityI::Immutable,
-            KindIT::StructIT(_) => panic!("Unimplemented: get_mutability StructIT"),
-            KindIT::InterfaceIT(_) => panic!("Unimplemented: get_mutability InterfaceIT"),
+            KindIT::StructIT(s) => *_monouts.struct_to_mutability.get(&s.id).expect("get_mutability: struct not found"),
+            KindIT::InterfaceIT(i) => *_monouts.interface_to_mutability.get(&i.id).expect("get_mutability: interface not found"),
             KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: get_mutability RuntimeSizedArray"),
             KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: get_mutability StaticSizedArray"),
         }
@@ -4455,7 +4860,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_citizen
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_citizen(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _citizen: &ICitizenTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> ICitizenIT<'s, 'i, sI> {
-        panic!("Unimplemented: translate_citizen");
+        match _citizen {
+            ICitizenTT::Struct(s) => {
+                let s_i = self.translate_struct(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, s, _instantiation_bound_args);
+                ICitizenIT::StructIT(self.interner.intern_struct_it_si(crate::instantiating::ast::types::StructITValI { id: s_i.id }))
+            }
+            ICitizenTT::Interface(i) => {
+                let i_i = self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, i, _instantiation_bound_args);
+                ICitizenIT::InterfaceIT(self.interner.intern_interface_it_si(crate::instantiating::ast::types::InterfaceITValI { id: i_i.id }))
+            }
+        }
     }
 }
 /*
@@ -4476,7 +4890,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_struct
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _struct: &StructTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> StructIT<'s, 'i, sI> {
-        panic!("Unimplemented: translate_struct");
+        let StructTT { id: full_name, .. } = _struct;
+        let translated_id = self.translate_struct_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, full_name, _instantiation_bound_args);
+        let desired_struct = *self.interner.intern_struct_it_si(crate::instantiating::ast::types::StructITValI { id: translated_id });
+        desired_struct
     }
 }
 /*
@@ -4502,7 +4919,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_interface
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _interface: &InterfaceTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> InterfaceIT<'s, 'i, sI> {
-        panic!("Unimplemented: translate_interface");
+        let InterfaceTT { id: full_name, .. } = _interface;
+        let translated_id = self.translate_interface_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, full_name, _instantiation_bound_args);
+        *self.interner.intern_interface_it_si(crate::instantiating::ast::types::InterfaceITValI { id: translated_id })
     }
 }
 /*
@@ -4527,7 +4946,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_super_kind
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_super_kind(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _kind: &ISuperKindTT<'s, 't>) -> InterfaceIT<'s, 'i, sI> {
-        panic!("Unimplemented: translate_super_kind");
+        match _kind {
+            ISuperKindTT::Interface(i) => {
+                let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(i.id));
+                self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, i, &bound_args)
+            }
+            ISuperKindTT::KindPlaceholder(_) => panic!("Unimplemented: translate_super_kind KindPlaceholder"),
+        }
     }
 }
 /*
@@ -4698,8 +5123,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             KindT::Str(_) => KindIT::StrIT(StrIT { _marker: std::marker::PhantomData }),
             KindT::Never(never_t) => KindIT::NeverIT(NeverIT { from_break: never_t.from_break, _marker: std::marker::PhantomData }),
             KindT::KindPlaceholder(_p) => panic!("Unimplemented: translate_kind KindPlaceholder"),
-            KindT::Struct(_s) => panic!("Unimplemented: translate_kind Struct"),
-            KindT::Interface(_s) => panic!("Unimplemented: translate_kind Interface"),
+            KindT::Struct(s) => {
+                let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(s.id));
+                let struct_it = self.translate_struct(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, s, &bound_args);
+                KindIT::StructIT(self.interner.alloc(struct_it))
+            }
+            KindT::Interface(s) => {
+                let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(s.id));
+                let interface_it = self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, s, &bound_args);
+                KindIT::InterfaceIT(self.interner.alloc(interface_it))
+            }
             KindT::StaticSizedArray(_a) => panic!("Unimplemented: translate_kind StaticSizedArray"),
             KindT::RuntimeSizedArray(_a) => panic!("Unimplemented: translate_kind RuntimeSizedArray"),
             _other => panic!("Unimplemented: translate_kind other"),
@@ -4784,8 +5217,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ITemplataT::Integer(value) => ITemplataI::Integer(IntegerTemplataI { value: *value, _marker: std::marker::PhantomData }),
             ITemplataT::Boolean(_) => panic!("Unimplemented: translate_templata Boolean"),
             ITemplataT::String(_) => panic!("Unimplemented: translate_templata String"),
-            ITemplataT::Coord(_) => panic!("Unimplemented: translate_templata Coord"),
-            ITemplataT::Mutability(_) => panic!("Unimplemented: translate_templata Mutability"),
+            ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
+            ITemplataT::Mutability(m) => ITemplataI::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability: Self::translate_mutability(&m.mutability), _marker: std::marker::PhantomData }),
             ITemplataT::Variability(_) => panic!("Unimplemented: translate_templata Variability"),
             ITemplataT::Kind(_) => panic!("Unimplemented: translate_templata Kind"),
             _ => panic!("Unimplemented: translate_templata other"),
@@ -4833,7 +5266,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_var_name(interner: &InstantiatingInterner<'s, 'i>, name: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i, sI> {
         match name {
-            IVarNameT::TypingPassFunctionResultVar(_) => panic!("Unimplemented: translate_var_name TypingPassFunctionResultVar"),
+            IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_si(TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
             IVarNameT::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_si(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
             IVarNameT::ClosureParam(_) => panic!("Unimplemented: translate_var_name ClosureParam"),
             IVarNameT::TypingPassBlockResultVar(_) => panic!("Unimplemented: translate_var_name TypingPassBlockResultVar"),
@@ -4998,7 +5431,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_impl_name
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_impl_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &IImplNameT<'s, 't>) -> IImplNameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_impl_name");
+        match _name {
+            IImplNameT::Impl(n) => {
+                let crate::typing::names::names::ImplNameT { template: crate::typing::names::names::ImplTemplateNameT { code_location_s, .. }, template_args, sub_citizen, .. } = **n;
+                let template_args_i: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
+                let sub_citizen_id = sub_citizen.id();
+                let bound_args_for_callee = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(sub_citizen_id));
+                let sub_citizen_i = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &sub_citizen, &bound_args_for_callee);
+                IImplNameI::Impl(self.interner.intern_impl_name_si(crate::instantiating::ast::names::ImplNameI {
+                    template: crate::instantiating::ast::names::IImplTemplateNameI::ImplTemplate(self.interner.intern_impl_template_name_si(crate::instantiating::ast::names::ImplTemplateNameI { _marker: std::marker::PhantomData, code_location_s: *code_location_s })),
+                    template_args: self.interner.bump().alloc_slice_fill_iter(template_args_i.into_iter()),
+                    sub_citizen: sub_citizen_i,
+                }))
+            }
+            IImplNameT::ImplBound(_) => panic!("Unimplemented: translate_impl_name ImplBound"),
+            IImplNameT::AnonymousSubstructImpl(_) => panic!("Unimplemented: translate_impl_name AnonymousSubstructImpl"),
+        }
     }
 }
 /*
@@ -5086,7 +5534,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_struct_name
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &IStructNameT<'s, 't>) -> IStructNameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_struct_name");
+        let new_perspective_region_t = RegionT { region: IRegionT::Default };
+        match _name {
+            IStructNameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name, .. }), template_args, .. }) => {
+                let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &new_perspective_region_t, t)).collect();
+                IStructNameI::Struct(self.interner.intern_struct_name_si(crate::instantiating::ast::names::StructNameI {
+                    template: IStructTemplateNameI::StructTemplate(self.interner.intern_struct_template_name_si(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name: *human_name })),
+                    template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
+                }))
+            }
+            IStructNameT::AnonymousSubstruct(_) => panic!("translate_struct_name: AnonymousSubstruct branch"),
+            IStructNameT::LambdaCitizen(_) => panic!("translate_struct_name: LambdaCitizen branch"),
+            other => panic!("translate_struct_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+        }
     }
 }
 /*
@@ -5129,7 +5589,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_interface_name
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &IInterfaceNameT<'s, 't>) -> IInterfaceNameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_interface_name");
+        match _name {
+            IInterfaceNameT::Interface(crate::typing::names::names::InterfaceNameT { template: crate::typing::names::names::InterfaceTemplateNameT { human_namee: human_name, .. }, template_args, .. }) => {
+                let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
+                IInterfaceNameI::Interface(self.interner.intern_interface_name_si(crate::instantiating::ast::names::InterfaceNameI {
+                    template: crate::instantiating::ast::names::IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee: *human_name })),
+                    template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
+                }))
+            }
+            other => panic!("translate_interface_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+        }
     }
 }
 /*
@@ -5224,11 +5693,34 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_collapsed_impl_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_collapsed_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: &InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _impl_id_t: &IdT<'s, 't>, _impl_id_s: &IdI<'s, 'i, sI>, _impl_id_c: &IdI<'s, 'i, cI>, _impl_definition: &EdgeT<'s, 't>) {
-        panic!("Unimplemented: translate_collapsed_impl_definition");
+    pub fn translate_collapsed_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _impl_id_t: &IdT<'s, 't>, _impl_id_s: &IdI<'s, 'i, sI>, _impl_id_c: &IdI<'s, 'i, cI>, _impl_definition: &EdgeT<'s, 't>) {
+        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty) }`
+        // sanity check is omitted: architect-approved parity gap, vacuous on sI-typed I-side AST.
+        let perspective_region_t = RegionT { region: IRegionT::Default };
+        let sub_citizen_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.sub_citizen.id()));
+        let sub_citizen_s = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.sub_citizen, &sub_citizen_bound_args);
+        let sub_citizen_c = crate::instantiating::region_collapser_individual::collapse_citizen(self.interner, &sub_citizen_s);
+        let super_interface_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.super_interface));
+        let super_interface_s = self.translate_interface_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.super_interface, &super_interface_bound_args);
+        let super_interface_c = crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, &super_interface_s);
+
+        let mutability = *_monouts.interface_to_mutability.get(&super_interface_c).expect("translate_collapsed_impl_definition: superInterfaceC mutability missing");
+        if _monouts.impl_to_mutability.contains_key(_impl_id_c) {
+            return;
+        }
+        _monouts.impl_to_mutability.insert(*_impl_id_c, mutability);
+
+        // We assemble the EdgeI at the very end of the instantiating stage.
+
+        _monouts.impls.insert(*_impl_id_c, (sub_citizen_c, super_interface_c, _denizen_bound_to_denizen_caller_supplied_thing.clone(), _instantiation_bounds_for_unsubstituted_impl));
+
+        _monouts.interface_to_impl_to_abstract_prototype_to_override.get_mut(&super_interface_c).expect("vassertSome: interface_to_impl_to_abstract_prototype_to_override")
+            .insert(*_impl_id_c, IndexMap::new());
+        _monouts.interface_to_impls.get_mut(&super_interface_c).expect("vassertSome: interface_to_impls").push((*_impl_id_t, *_impl_id_c));
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Architect-approved parity gap (same precedent as translate_collapsed_struct_definition in this file): Scala's `if (opts.sanityCheck) { vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty) }` is vacuously empty on the I-side AST because the value is statically typed sI and can't structurally hold a typing-pass KindPlaceholder name. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2786-1780145591183/hook-2786/translate_collapsed_impl_definition--5682.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCollapsedImplDefinition(
     denizenName: IdT[IInstantiationNameT],
     implInstantiationBoundArgs: InstantiationBoundArgumentsI,

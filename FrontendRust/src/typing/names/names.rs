@@ -3276,6 +3276,17 @@ impl<'s, 't> From<IFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> {
     }
 }
 
+impl<'s, 't> From<IImplTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: IImplTemplateNameT<'s, 't>) -> Self {
+        match f {
+            IImplTemplateNameT::ImplTemplate(x) => x.into(),
+            IImplTemplateNameT::ImplBoundTemplate(x) => x.into(),
+            IImplTemplateNameT::AnonymousSubstructImplTemplate(x) => x.into(),
+        }
+    }
+}
+/* Guardian: disable-all */
+
 impl<'s, 't> From<IInstantiationNameT<'s, 't>> for INameT<'s, 't> {
     fn from(f: IInstantiationNameT<'s, 't>) -> Self {
         match f {

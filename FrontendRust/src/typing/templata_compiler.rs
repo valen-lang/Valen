@@ -617,10 +617,13 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_impl_template(
-        &self,
+        interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let IdT { package_coord, init_steps, local_name, .. } = id;
+        let impl_name = IImplNameT::try_from(local_name).expect("get_impl_template: not an impl name");
+        let template = INameT::from(impl_name.template());
+        *interner.intern_id(crate::typing::names::names::IdValT { package_coord, init_steps, local_name: template })
     }
 }
 /*

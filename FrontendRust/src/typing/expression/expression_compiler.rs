@@ -1415,7 +1415,48 @@ where 's: 't,
                     (KindT::Never(NeverT { from_break: true }), _) => uncoerced_else_block_2.result().coord,
                     (_, KindT::Never(NeverT { from_break: true })) => uncoerced_then_block_2.result().coord,
                     (a, b) if a == b => uncoerced_then_block_2.result().coord,
-                    _ => panic!("implement: evaluate_expression If — commonType complex branch"),
+                    (a, b) => {
+                        let a_citizen = ICitizenTT::try_from(a);
+                        let b_citizen = ICitizenTT::try_from(b);
+                        match (a_citizen, b_citizen) {
+                            (Ok(a_c), Ok(b_c)) => {
+                                let nenv_snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+                                let a_ancestors: std::collections::HashSet<ISuperKindTT<'s, 't>> =
+                                    self.get_parents(coutputs, parent_ranges, outer_call_location, nenv_snap, ISubKindTT::try_from(a).unwrap()).into_iter().collect();
+                                let b_ancestors: std::collections::HashSet<ISuperKindTT<'s, 't>> =
+                                    self.get_parents(coutputs, parent_ranges, outer_call_location, nenv_snap, ISubKindTT::try_from(b).unwrap()).into_iter().collect();
+                                let common_ancestors: Vec<ISuperKindTT<'s, 't>> = a_ancestors.intersection(&b_ancestors).copied().collect();
+
+                                if uncoerced_else_block_2.result().coord.ownership != uncoerced_else_block_2.result().coord.ownership {
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                    let _ = range_with_parent;
+                                    panic!("CompileErrorExceptionT RangedInternalErrorT: Two branches of if have different ownerships!\n{:?}\n{:?}", a_c, b_c);
+                                }
+                                let ownership = uncoerced_else_block_2.result().coord.ownership;
+
+                                if common_ancestors.is_empty() {
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                    let _ = range_with_parent;
+                                    panic!("CompileErrorExceptionT RangedInternalErrorT: No common ancestors of two branches of if:\n{:?}\n{:?}", a_c, b_c);
+                                } else if common_ancestors.len() > 1 {
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                    let _ = range_with_parent;
+                                    panic!("CompileErrorExceptionT RangedInternalErrorT: More than one common ancestor of two branches of if:\n{:?}\n{:?}", a_c, b_c);
+                                } else {
+                                    CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::from(common_ancestors[0]) }
+                                }
+                            }
+                            _ => {
+                                let range_with_parent: Vec<RangeS<'s>> =
+                                    std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                let _ = range_with_parent;
+                                panic!("CantReconcileBranchesResults: {:?} vs {:?}", a, b);
+                            }
+                        }
+                    }
                 };
 
                 let then_fate_snap = IInDenizenEnvironmentT::Node(then_fate.snapshot(self.typing_interner));

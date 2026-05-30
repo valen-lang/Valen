@@ -14,11 +14,23 @@ import dev.vale.instantiating.ast._
 object InstantiatedHumanizer {
 */
 // mig: fn humanize_templata
-pub fn humanize_templata<'s, 'i, R>(
+pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     templata: &ITemplataI<'s, 'i, R>,
 ) -> String {
-    panic!("Unimplemented: humanize_templata");
+    match templata {
+        ITemplataI::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
+        ITemplataI::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
+        ITemplataI::InterfaceDefinition(t) => humanize_id(code_map, &t.env_id, None),
+        ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
+        ITemplataI::Variability(v) => panic!("humanize_templata: Variability branch"),
+        ITemplataI::Integer(i) => i.value.to_string(),
+        ITemplataI::Mutability(m) => panic!("humanize_templata: Mutability branch"),
+        ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
+        ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
+        ITemplataI::Region(r) => r.pure_height.to_string(),
+        _ => panic!("humanize_templata: unimplemented variant"),
+    }
 }
 /*
   def humanizeTemplata[R <: IRegionsModeI](
@@ -72,11 +84,20 @@ pub fn humanize_templata<'s, 'i, R>(
   }
 */
 // mig: fn humanize_coord
-pub fn humanize_coord<'s, 'i, R>(
+pub fn humanize_coord<'s, 'i, R: Copy + PartialEq>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    coord: &'i CoordI<'s, 'i, R>,
+    coord: &CoordI<'s, 'i, R>,
 ) -> String {
-    panic!("Unimplemented: humanize_coord");
+    let ownership_str = match coord.ownership {
+        crate::instantiating::ast::types::OwnershipI::Own => "",
+        crate::instantiating::ast::types::OwnershipI::MutableShare => "",
+        crate::instantiating::ast::types::OwnershipI::MutableBorrow => "&",
+        crate::instantiating::ast::types::OwnershipI::ImmutableShare => "#",
+        crate::instantiating::ast::types::OwnershipI::ImmutableBorrow => "&#",
+        crate::instantiating::ast::types::OwnershipI::Weak => "weak&",
+    };
+    let kind_str = humanize_kind(code_map, &coord.kind);
+    ownership_str.to_string() + &kind_str
 }
 /*
   private def humanizeCoord[R <: IRegionsModeI](
@@ -99,11 +120,22 @@ pub fn humanize_coord<'s, 'i, R>(
   }
 */
 // mig: fn humanize_kind
-pub fn humanize_kind<'s, 'i, R>(
+pub fn humanize_kind<'s, 'i, R: Copy + PartialEq>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    kind: &'i KindIT<'s, 'i, R>,
+    kind: &KindIT<'s, 'i, R>,
 ) -> String {
-    panic!("Unimplemented: humanize_kind");
+    match kind {
+        KindIT::IntIT(b) => format!("i{}", b.bits),
+        KindIT::BoolIT(_) => "bool".to_string(),
+        KindIT::StrIT(_) => "str".to_string(),
+        KindIT::NeverIT(_) => "never".to_string(),
+        KindIT::VoidIT(_) => "void".to_string(),
+        KindIT::FloatIT(_) => "float".to_string(),
+        KindIT::InterfaceIT(i) => humanize_id(code_map, &i.id, None),
+        KindIT::StructIT(s) => humanize_id(code_map, &s.id, None),
+        KindIT::RuntimeSizedArrayIT(_) => panic!("humanize_kind: RuntimeSizedArrayIT branch"),
+        KindIT::StaticSizedArrayIT(_) => panic!("humanize_kind: StaticSizedArrayIT branch"),
+    }
 }
 /*
   private def humanizeKind[R <: IRegionsModeI](
@@ -170,10 +202,14 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
         }
         INameI::FunctionTemplate(f) => f.human_name.0.to_string(),
         INameI::ExternFunction(f) => f.human_name.0.to_string() + &humanize_generic_args(code_map, f.template_args, containing_region),
+        INameI::StructName(s) => humanize_name(code_map, s.template.into(), None) + &humanize_generic_args(code_map, s.template_args, containing_region),
+        INameI::InterfaceName(i) => humanize_name(code_map, i.template.into(), None) + &humanize_generic_args(code_map, i.template_args, containing_region),
+        INameI::StructTemplate(t) => t.human_name.0.to_string(),
+        INameI::InterfaceTemplate(t) => t.human_namee.0.to_string(),
         INameI::PackageTopLevel(_) => panic!("humanize_name: PackageTopLevel branch"),
         INameI::CodeVar(c) => c.name.0.to_string(),
         INameI::TypingPassBlockResultVar(b) => panic!("humanize_name: TypingPassBlockResultVar branch"),
-        INameI::TypingPassFunctionResultVar(_) => panic!("humanize_name: TypingPassFunctionResultVar branch"),
+        INameI::TypingPassFunctionResultVar(_) => "(result)".to_string(),
         INameI::TypingPassTemporaryVar(t) => panic!("humanize_name: TypingPassTemporaryVar branch"),
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }

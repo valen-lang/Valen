@@ -516,6 +516,15 @@ pub enum ICitizenIT<'s, 'i, R> where 's: 'i {
   InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
 }
 // mig: impl ICitizenIT
+// mig: fn id (Scala `def id: IdI[R, ICitizenNameI[R]]` on trait)
+impl<'s, 'i, R: Copy> ICitizenIT<'s, 'i, R> where 's: 'i {
+    pub fn id(&self) -> IdI<'s, 'i, R> {
+        match self {
+            ICitizenIT::StructIT(s) => s.id,
+            ICitizenIT::InterfaceIT(i) => i.id,
+        }
+    }
+}
 /*
 sealed trait ICitizenIT[+R <: IRegionsModeI] extends ISubKindIT[R] {
   def id: IdI[R, ICitizenNameI[R]]

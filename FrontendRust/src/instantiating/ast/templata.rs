@@ -60,7 +60,12 @@ pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> In
   }
 */
 // mig: fn expect_mutability_templata
-pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> MutabilityTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_mutability_templata"); }
+pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> MutabilityTemplataI<'s, 'i, R> {
+    match templata {
+        ITemplataI::Mutability(m) => m,
+        _ => panic!("expect_mutability_templata: not a MutabilityTemplataI"),
+    }
+}
 /*
   def expectMutabilityTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): MutabilityTemplataI[R] = {
     templata match {

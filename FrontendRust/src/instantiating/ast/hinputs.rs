@@ -117,7 +117,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         &self,
         _struct_id: &IdI<'s, 'i, cI>,
     ) -> &'i StructDefinitionI<'s, 'i, cI> {
-        panic!("Unimplemented: lookup_struct")
+        self.structs.iter().find(|s| s.instantiated_citizen.id == *_struct_id).copied().expect("lookup_struct: not found")
     }
 }
 /*
@@ -132,7 +132,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         &self,
         _interface_id: &IdI<'s, 'i, cI>,
     ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
-        panic!("Unimplemented: lookup_interface")
+        self.interfaces.iter().find(|i| i.instantiated_interface.id == *_interface_id).expect("lookup_interface: not found")
     }
 }
 /*

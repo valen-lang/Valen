@@ -562,8 +562,13 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 */
 // mig: fn get_abstract_interface
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
-    pub fn get_abstract_interface(&self) -> Option<()> {
-        panic!("Unimplemented: get_abstract_interface")
+    pub fn get_abstract_interface(&self) -> Option<&'i crate::instantiating::ast::types::InterfaceIT<'s, 'i, cI>> {
+        let abstract_interfaces: Vec<_> = self.params.iter().filter_map(|p| match (p.virtuality, p.tyype.kind) {
+            (Some(AbstractI), crate::instantiating::ast::types::KindIT::InterfaceIT(ir)) => Some(ir),
+            _ => None,
+        }).collect();
+        assert!(abstract_interfaces.len() <= 1);
+        abstract_interfaces.into_iter().next()
     }
 }
 /*

@@ -510,8 +510,8 @@ pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
             //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(Vector(innerRune.rune), Vector(resultRune.rune))
             IRulexSR::Augment(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
             //     // See SAIRFU, this will replace itself with other rules.
-            //     case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune), Vector(receiverRune.rune))
-            IRulexSR::CoordSend(r) => vec![vec![r.sender_rune.rune], vec![r.receiver_rune.rune]],
+            //     case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune))
+            IRulexSR::CoordSend(r) => vec![vec![r.sender_rune.rune]],
             //     case DefinitionCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
             IRulexSR::DefinitionCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
             //     case CallSiteCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
@@ -563,7 +563,7 @@ pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
 //      case StaticSizedArraySR(range, resultRune, mutabilityRune, variabilityRune, sizeRune, elementRune) => Vector(Vector(resultRune.rune), Vector(mutabilityRune.rune, variabilityRune.rune, sizeRune.rune, elementRune.rune))
 //      case RuntimeSizedArraySR(range, resultRune, mutabilityRune, elementRune) => Vector(Vector(resultRune.rune), Vector(mutabilityRune.rune, elementRune.rune))
       // See SAIRFU, this will replace itself with other rules.
-      case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune), Vector(receiverRune.rune))
+      case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune))
       case DefinitionCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
       case CallSiteCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
       case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(Vector(coordListRune.rune))

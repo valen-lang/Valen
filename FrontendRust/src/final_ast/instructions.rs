@@ -1253,7 +1253,10 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
 // mig: fn expect_struct_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_struct_access(&self) -> Self {
-        panic!("Unimplemented: expect_struct_access");
+        match self.result_type().kind {
+            crate::final_ast::types::KindHT::StructHT(_) => *self,
+            _ => panic!("expect_struct_access: not a struct"),
+        }
     }
 }
 /* Guardian: disable-all */
@@ -1306,7 +1309,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn result_type(&self) -> CoordH<'s, 'h> {
         match self {
-            ExpressionH::ConstantVoidH(_) => panic!("Unimplemented: result_type for ConstantVoidH"),
+            ExpressionH::ConstantVoidH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::ConstantIntH(c) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: c.bits }) },
             ExpressionH::ConstantBoolH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) },
             ExpressionH::ConstantStrH(_) => panic!("Unimplemented: result_type for ConstantStrH"),
@@ -1314,13 +1317,24 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ArgumentH(_) => panic!("Unimplemented: result_type for ArgumentH"),
             ExpressionH::StackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::RestackifyH(_) => panic!("Unimplemented: result_type for RestackifyH"),
-            ExpressionH::UnstackifyH(_) => panic!("Unimplemented: result_type for UnstackifyH"),
+            ExpressionH::UnstackifyH(u) => u.local.type_h,
             ExpressionH::DestroyH(_) => panic!("Unimplemented: result_type for DestroyH"),
             ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => panic!("Unimplemented: result_type for DestroyStaticSizedArrayIntoLocalsH"),
-            ExpressionH::StructToInterfaceUpcastH(_) => panic!("Unimplemented: result_type for StructToInterfaceUpcastH"),
+            ExpressionH::StructToInterfaceUpcastH(u) => {
+                let src = u.source_expression.result_type();
+                CoordH { ownership: src.ownership, location: src.location, kind: crate::final_ast::types::KindHT::InterfaceHT(u.target_interface) }
+            }
             ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH"),
             ExpressionH::LocalStoreH(_) => panic!("Unimplemented: result_type for LocalStoreH"),
-            ExpressionH::LocalLoadH(_) => panic!("Unimplemented: result_type for LocalLoadH"),
+            ExpressionH::LocalLoadH(l) => {
+                let location = match (l.target_ownership, l.local.type_h.location) {
+                    (OwnershipH::ImmutableBorrowH, _) | (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
+                    (OwnershipH::WeakH, _) => LocationH::YonderH,
+                    (OwnershipH::OwnH, loc) => loc,
+                    (OwnershipH::MutableShareH, loc) | (OwnershipH::ImmutableShareH, loc) => loc,
+                };
+                CoordH { ownership: l.target_ownership, location, kind: l.local.type_h.kind }
+            }
             ExpressionH::MemberStoreH(_) => panic!("Unimplemented: result_type for MemberStoreH"),
             ExpressionH::MemberLoadH(_) => panic!("Unimplemented: result_type for MemberLoadH"),
             ExpressionH::NewArrayFromValuesH(_) => panic!("Unimplemented: result_type for NewArrayFromValuesH"),
@@ -1328,16 +1342,21 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayLoadH"),
             ExpressionH::StaticSizedArrayLoadH(_) => panic!("Unimplemented: result_type for StaticSizedArrayLoadH"),
-            ExpressionH::CallH(_) => panic!("Unimplemented: result_type for CallH"),
-            ExpressionH::ExternCallH(_) => panic!("Unimplemented: result_type for ExternCallH"),
+            ExpressionH::CallH(c) => c.function.return_type,
+            ExpressionH::ExternCallH(c) => c.function.return_type,
             ExpressionH::InterfaceCallH(_) => panic!("Unimplemented: result_type for InterfaceCallH"),
-            ExpressionH::IfH(_) => panic!("Unimplemented: result_type for IfH"),
-            ExpressionH::WhileH(_) => panic!("Unimplemented: result_type for WhileH"),
-            ExpressionH::ConsecutorH(_) => panic!("Unimplemented: result_type for ConsecutorH"),
+            ExpressionH::IfH(i) => i.common_supertype,
+            ExpressionH::WhileH(w) => match w.body_block.result_type().kind {
+                KindHT::VoidHT(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
+                KindHT::NeverHT(NeverHT { from_break: true }) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
+                KindHT::NeverHT(NeverHT { from_break: false }) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
+                _ => panic!("WhileH::result_type: unexpected body_block kind"),
+            },
+            ExpressionH::ConsecutorH(c) => c.exprs.last().expect("ConsecutorH exprs nonEmpty").result_type(),
             ExpressionH::BlockH(b) => b.inner.result_type(),
             ExpressionH::MutabilifyH(_) => panic!("Unimplemented: result_type for MutabilifyH"),
             ExpressionH::ImmutabilifyH(_) => panic!("Unimplemented: result_type for ImmutabilifyH"),
-            ExpressionH::ReturnH(_) => panic!("Unimplemented: result_type for ReturnH"),
+            ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
             ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for NewImmRuntimeSizedArrayH"),
             ExpressionH::NewMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for NewMutRuntimeSizedArrayH"),
             ExpressionH::PushRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for PushRuntimeSizedArrayH"),
@@ -1346,7 +1365,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => panic!("Unimplemented: result_type for DestroyStaticSizedArrayIntoFunctionH"),
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
             ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyMutRuntimeSizedArrayH"),
-            ExpressionH::BreakH(_) => panic!("Unimplemented: result_type for BreakH"),
+            ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
             ExpressionH::NewStructH(_) => panic!("Unimplemented: result_type for NewStructH"),
             ExpressionH::ArrayLengthH(_) => panic!("Unimplemented: result_type for ArrayLengthH"),
             ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
@@ -1354,7 +1373,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::IsSameInstanceH(_) => panic!("Unimplemented: result_type for IsSameInstanceH"),
             ExpressionH::AsSubtypeH(_) => panic!("Unimplemented: result_type for AsSubtypeH"),
             ExpressionH::LockWeakH(_) => panic!("Unimplemented: result_type for LockWeakH"),
-            ExpressionH::DiscardH(_) => panic!("Unimplemented: result_type for DiscardH"),
+            ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
         }
     }

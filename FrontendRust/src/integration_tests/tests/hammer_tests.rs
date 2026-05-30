@@ -23,8 +23,32 @@ class HammerTests extends FunSuite with Matchers {
 */
 // mig: fn simple_main
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn simple_main() { panic!("Unmigrated test: simple_main"); }
+pub fn simple_main() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "exported func main() int { return 3; }";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let hamuts = compile.get_hamuts();
+    let test_package = hamuts.lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    assert_eq!(test_package.get_all_user_functions().len(), 1);
+    assert_eq!(test_package.get_all_user_functions()[0].prototype.id.fully_qualified_name.0, "main");
+}
+/* Guardian: disable-all */
 /*
   test("Simple main") {
     val compile = RunCompilation.test(
@@ -52,8 +76,49 @@ pub fn simple_main() { panic!("Unmigrated test: simple_main"); }
 */
 // mig: fn two_templated_structs_make_it_into_hamuts
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn two_templated_structs_make_it_into_hamuts() { panic!("Unmigrated test: two_templated_structs_make_it_into_hamuts"); }
+pub fn two_templated_structs_make_it_into_hamuts() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "
+func __pretend<T>() T { __vbi_panic() }
+
+interface MyOption<T Ref imm> imm { }
+struct MyNone<T Ref imm> imm { }
+impl<T Ref imm> MyOption<T> for MyNone<T>;
+struct MySome<T Ref imm> imm { value T; }
+impl<T Ref imm> MyOption<T> for MySome<T>;
+
+exported func main() {
+  x = __pretend<MySome<int>>();
+  y = __pretend<MyNone<int>>();
+  z MyOption<int> = x;
+}
+";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    assert!(package_h.interfaces.iter().any(|i| i.id.fully_qualified_name.0 == "MyOption<i32>"));
+    let my_some = package_h.structs.iter().find(|s| s.id.fully_qualified_name.0 == "MySome<i32>").expect("MySome<i32> missing");
+    assert_eq!(my_some.members.len(), 1);
+    assert_eq!(my_some.members[0].tyype, crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) });
+    let my_none = package_h.structs.iter().find(|s| s.id.fully_qualified_name.0 == "MyNone<i32>").expect("MyNone<i32> missing");
+    assert!(my_none.members.is_empty());
+}
+/* Guardian: disable-all */
 /*
   test("Two templated structs make it into hamuts") {
     val compile = RunCompilation.test(
@@ -109,8 +174,47 @@ pub fn two_templated_structs_make_it_into_hamuts() { panic!("Unmigrated test: tw
 */
 // mig: fn tests_stripping_things_after_panic
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn tests_stripping_things_after_panic() { panic!("Unmigrated test: tests_stripping_things_after_panic"); }
+pub fn tests_stripping_things_after_panic() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "
+exported func main() int {
+  __vbi_panic();
+  a = 42;
+  return a;
+}
+";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let main = package_h.lookup_function("main");
+    match main.body {
+        crate::final_ast::instructions::ExpressionH::BlockH(b) => match b.inner {
+            crate::final_ast::instructions::ExpressionH::CallH(c) => {
+                assert_eq!(c.args_expressions.len(), 0);
+                assert!(matches!(c.function.return_type.kind, crate::final_ast::types::KindHT::NeverHT(_)));
+                assert!(c.function.id.fully_qualified_name.0.contains("__vbi_panic"));
+            }
+            _ => panic!("inner not CallH"),
+        },
+        _ => panic!("body not BlockH"),
+    }
+}
+/* Guardian: disable-all */
 /*
   test("Tests stripping things after panic") {
     val compile = RunCompilation.test(
@@ -133,8 +237,61 @@ pub fn tests_stripping_things_after_panic() { panic!("Unmigrated test: tests_str
 */
 // mig: fn panic_in_expr
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn panic_in_expr() { panic!("Unmigrated test: panic_in_expr"); }
+pub fn panic_in_expr() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "
+import intrange.*;
+
+exported func main() int {
+  return 3 + __vbi_panic();
+}
+";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let main = package_h.lookup_function("main");
+    let int_expr = match main.body {
+        crate::final_ast::instructions::ExpressionH::BlockH(b) => match b.inner {
+            crate::final_ast::instructions::ExpressionH::ConsecutorH(c) => {
+                assert_eq!(c.exprs.len(), 2);
+                let int_expr = c.exprs[0];
+                match c.exprs[1] {
+                    crate::final_ast::instructions::ExpressionH::CallH(call) => {
+                        assert_eq!(call.args_expressions.len(), 0);
+                        assert!(matches!(call.function.return_type.kind, crate::final_ast::types::KindHT::NeverHT(_)));
+                    }
+                    _ => panic!("expected CallH for last consecutor expr"),
+                }
+                int_expr
+            }
+            _ => panic!("expected ConsecutorH inside BlockH"),
+        },
+        _ => panic!("expected BlockH body"),
+    };
+    match int_expr {
+        crate::final_ast::instructions::ExpressionH::ConstantIntH(ci) => {
+            assert_eq!(ci.value, 3);
+            assert_eq!(ci.bits, 32);
+        }
+        _ => panic!("expected ConstantIntH(3, 32) at int_expr"),
+    }
+}
+/* Guardian: disable-all */
 /*
   test("panic in expr") {
     val compile = RunCompilation.test(
@@ -166,8 +323,32 @@ pub fn panic_in_expr() { panic!("Unmigrated test: panic_in_expr"); }
 */
 // mig: fn tests_export_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn tests_export_function() { panic!("Unmigrated test: tests_export_function"); }
+pub fn tests_export_function() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "exported func moo() int { return 42; }";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let moo = package_h.lookup_function("moo");
+    let exported_moo = *package_h.export_name_to_function.get(&scout_arena.intern_str("moo")).expect("moo export missing");
+    assert_eq!(exported_moo, moo.prototype);
+}
+/* Guardian: disable-all */
 /*
   test("Tests export function") {
     val compile = RunCompilation.test(
@@ -182,8 +363,33 @@ pub fn tests_export_function() { panic!("Unmigrated test: tests_export_function"
 */
 // mig: fn tests_export_struct
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn tests_export_struct() { panic!("Unmigrated test: tests_export_struct"); }
+pub fn tests_export_struct() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "exported struct Moo { }";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let moo = package_h.lookup_struct("Moo");
+    let moo_ref = crate::final_ast::types::KindHT::StructHT(hammer_interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: moo.id }));
+    let exported_moo = *package_h.export_name_to_kind.get(&scout_arena.intern_str("Moo")).expect("Moo export missing");
+    assert_eq!(exported_moo, moo_ref);
+}
+/* Guardian: disable-all */
 /*
   test("Tests export struct") {
     val compile = RunCompilation.test(
@@ -198,8 +404,33 @@ pub fn tests_export_struct() { panic!("Unmigrated test: tests_export_struct"); }
 */
 // mig: fn tests_export_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn tests_export_interface() { panic!("Unmigrated test: tests_export_interface"); }
+pub fn tests_export_interface() {
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let code = "exported interface Moo { }";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let moo = package_h.lookup_interface("Moo");
+    let moo_ref = crate::final_ast::types::KindHT::InterfaceHT(hammer_interner.intern_interface_ht(crate::final_ast::types::InterfaceHTValH { id: moo.id }));
+    let exported_moo = *package_h.export_name_to_kind.get(&scout_arena.intern_str("Moo")).expect("Moo export missing");
+    assert_eq!(exported_moo, moo_ref);
+}
+/* Guardian: disable-all */
 /*
   test("Tests export interface") {
     val compile = RunCompilation.test(

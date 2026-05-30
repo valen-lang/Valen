@@ -150,8 +150,8 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 */
 // mig: fn get_all_user_functions
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
-  pub fn get_all_user_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
-    panic!("Unimplemented: get_all_user_functions");
+  pub fn get_all_user_functions(&self) -> Vec<&FunctionH<'s, 'h>> {
+    self.functions.iter().filter(|f| f.is_user_function()).collect()
   }
 }
 /*
@@ -160,7 +160,18 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 // mig: fn lookup_function
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
-    panic!("Unimplemented: lookup_function");
+    let from_exports: Vec<&'h PrototypeH<'s, 'h>> = self.export_name_to_function.iter().filter(|(k, _)| k.0 == readable_name).map(|(_, v)| *v).collect();
+    let from_functions: Vec<&'h PrototypeH<'s, 'h>> = self.functions.iter().filter(|f| f.prototype.id.local_name.0 == readable_name).map(|f| f.prototype).collect();
+    let mut matches: Vec<&'h PrototypeH<'s, 'h>> = Vec::new();
+    for p in from_exports.into_iter().chain(from_functions.into_iter()) {
+        if !matches.iter().any(|q| std::ptr::eq(*q as *const _, p as *const _)) {
+            matches.push(p);
+        }
+    }
+    assert!(!matches.is_empty());
+    assert!(matches.len() <= 1);
+    let first = matches[0];
+    self.functions.iter().find(|f| std::ptr::eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
 }
 /*
@@ -180,7 +191,9 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 // mig: fn lookup_struct
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
-    panic!("Unimplemented: lookup_struct");
+    let matches: Vec<&StructDefinitionH<'s, 'h>> = self.structs.iter().filter(|s| s.id.local_name.0 == human_name).collect();
+    assert_eq!(matches.len(), 1);
+    matches[0]
   }
 }
 /*
@@ -195,7 +208,9 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 // mig: fn lookup_interface
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
-    panic!("Unimplemented: lookup_interface");
+    let matches: Vec<&InterfaceDefinitionH<'s, 'h>> = self.interfaces.iter().filter(|i| i.id.shortened_name.0 == human_name).collect();
+    assert_eq!(matches.len(), 1);
+    matches[0]
   }
 }
 /*
@@ -223,7 +238,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_package
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   pub fn lookup_package(&self, package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>) -> PackageH<'s, 'h> {
-    panic!("Unimplemented: lookup_package");
+    *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
 }
 /*
@@ -264,9 +279,16 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 pub struct StructDefinitionH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s, 'h>,
     pub weakable: bool,
+    pub extern_: bool,
     pub mutability: Mutability,
     pub edges: &'h [EdgeH<'s, 'h>],
     pub members: &'h [StructMemberH<'s, 'h>],
+}
+// mig: fn get_ref (on StructDefinitionH — see Scala `def getRef: StructHT = StructHT(id)` in the StructDefinitionH audit block below)
+impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
+    pub fn get_ref(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h crate::final_ast::types::StructHT<'s, 'h> {
+        interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: self.id })
+    }
 }
 /*
 // The struct definition, which defines a struct's name, members, and so on.
@@ -338,6 +360,12 @@ pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
     pub mutability: Mutability,
     pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
     pub methods: &'h [InterfaceMethodH<'s, 'h>],
+}
+// mig: fn get_ref (on InterfaceDefinitionH — see Scala `def getRef = InterfaceHT(id)` in audit-trail below)
+impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
+    pub fn get_ref(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h crate::final_ast::types::InterfaceHT<'s, 'h> {
+        interner.intern_interface_ht(crate::final_ast::types::InterfaceHTValH { id: self.id })
+    }
 }
 /*
 // An interface definition containing name, methods, etc.
@@ -467,6 +495,13 @@ override def equals(obj: Any): Boolean = vcurious();
   def isUserFunction = attributes.contains(UserFunctionH)
 }
 */
+// mig: fn is_user_function
+impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
+    pub fn is_user_function(&self) -> bool {
+        self.attributes.contains(&IFunctionAttributeH::UserFunctionH)
+    }
+}
+/* Guardian: disable-all */
 
 // mig: case class PrototypeH
 /// Interning permanent (see @TFITCX)

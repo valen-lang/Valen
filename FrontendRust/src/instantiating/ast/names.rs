@@ -939,6 +939,64 @@ impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i
         }
     }
 }
+// Rust-only widening IStructNameI -> ICitizenNameI (mirrors Scala `IStructNameI extends ICitizenNameI`
+// subtyping; same shape as the INameI widening just above). No Scala counterpart.
+impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IStructNameI<'s, 'i, R>) -> Self {
+        match name {
+            IStructNameI::Struct(x) => ICitizenNameI::Struct(x),
+            IStructNameI::LambdaCitizen(x) => ICitizenNameI::LambdaCitizen(x),
+            IStructNameI::AnonymousSubstruct(x) => ICitizenNameI::AnonymousSubstruct(x),
+        }
+    }
+}
+/* Guardian: disable-all */
+// Rust-only widening IInterfaceNameI -> ICitizenNameI (mirrors Scala `IInterfaceNameI extends
+// ICitizenNameI` subtyping; same family as the IStructNameI widening just above). No Scala counterpart.
+impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IInterfaceNameI<'s, 'i, R>) -> Self {
+        match name {
+            IInterfaceNameI::Interface(x) => ICitizenNameI::Interface(x),
+        }
+    }
+}
+/* Guardian: disable-all */
+// Rust-only widening IStructTemplateNameI -> INameI (mirrors Scala `IStructTemplateNameI extends
+// ITemplateNameI extends INameI`; needed so humanize_name can recurse on a struct name's `template`
+// without inline matching at the call site). No Scala counterpart.
+impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IStructTemplateNameI<'s, 'i, R>) -> Self {
+        match name {
+            IStructTemplateNameI::StructTemplate(x) => INameI::StructTemplate(x),
+            IStructTemplateNameI::AnonymousSubstructTemplate(x) => INameI::AnonymousSubstructTemplate(x),
+            IStructTemplateNameI::LambdaCitizenTemplate(x) => INameI::LambdaCitizenTemplate(x),
+        }
+    }
+}
+/* Guardian: disable-all */
+// Rust-only widening IInterfaceTemplateNameI -> INameI. No Scala counterpart.
+impl<'s, 'i, R> From<IInterfaceTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: IInterfaceTemplateNameI<'s, 'i, R>) -> Self {
+        match name {
+            IInterfaceTemplateNameI::InterfaceTemplate(x) => INameI::InterfaceTemplate(x),
+        }
+    }
+}
+/* Guardian: disable-all */
+// Rust-only widening ICitizenTemplateNameI -> INameI. No Scala counterpart.
+impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
+    fn from(name: ICitizenTemplateNameI<'s, 'i, R>) -> Self {
+        match name {
+            ICitizenTemplateNameI::StaticSizedArrayTemplate(x) => INameI::StaticSizedArrayTemplate(x),
+            ICitizenTemplateNameI::RuntimeSizedArrayTemplate(x) => INameI::RuntimeSizedArrayTemplate(x),
+            ICitizenTemplateNameI::LambdaCitizenTemplate(x) => INameI::LambdaCitizenTemplate(x),
+            ICitizenTemplateNameI::StructTemplate(x) => INameI::StructTemplate(x),
+            ICitizenTemplateNameI::InterfaceTemplate(x) => INameI::InterfaceTemplate(x),
+            ICitizenTemplateNameI::AnonymousSubstructTemplate(x) => INameI::AnonymousSubstructTemplate(x),
+        }
+    }
+}
+/* Guardian: disable-all */
 // mig: enum IInterfaceNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]

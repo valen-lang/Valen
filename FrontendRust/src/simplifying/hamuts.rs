@@ -192,7 +192,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn forward_declare_struct (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_struct(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_ref_h: &'h StructHT<'s, 'h>) {
-        panic!("Unimplemented: forward_declare_struct");
+        self.struct_t_to_struct_h.insert(struct_it, struct_ref_h);
     }
 }
 /*
@@ -204,10 +204,13 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_struct_originating_from_typing_pass (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_struct_originating_from_typing_pass(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_def_h: StructDefinitionH<'s, 'h>) {
-        panic!("Unimplemented: add_struct_originating_from_typing_pass");
+        assert!(self.struct_t_to_struct_h.contains_key(&struct_it));
+        self.struct_t_to_struct_def_h.insert(struct_it, struct_def_h);
+        self.struct_defs.push(struct_def_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Scala outer `def addStructOriginatingFromTypingPass = inner.addStructOriginatingFromTypingPass(...)` delegated to inner, whose body (assert struct_t_to_struct_h.contains, insert struct_def_h into struct_t_to_struct_def_h, push to struct_defs) IS what Rust implements. Same precedent as add_function_export, add_function_extern, forward_declare_function, add_function. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2383-1780133839838/hook-2383/add_struct_originating_from_typing_pass--206.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addStructOriginatingFromTypingPass(structIT: StructIT[cI], structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromTypingPass(structIT, structDefH)
   }
@@ -240,7 +243,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn forward_declare_interface (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_ref_h: &'h InterfaceHT<'s, 'h>) {
-        panic!("Unimplemented: forward_declare_interface");
+        self.interface_t_to_interface_h.insert(interface_it, interface_ref_h);
     }
 }
 /*
@@ -252,7 +255,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_interface (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_def_h: InterfaceDefinitionH<'s, 'h>) {
-        panic!("Unimplemented: add_interface");
+        self.interface_t_to_interface_def_h.insert(interface_it, interface_def_h);
     }
 }
 /*
@@ -302,10 +305,15 @@ Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.r
 // mig: fn add_function (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_def_h: FunctionH<'s, 'h>) {
-        panic!("Unimplemented: add_function");
+        assert!(self.function_refs.contains_key(&function_ref2));
+        if self.function_defs.values().any(|f| f.prototype.id == function_def_h.prototype.id) {
+            panic!("Internal error: Can't add function (already has function with same hammer name)");
+        }
+        self.function_defs.insert(function_ref2, function_def_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Scala outer `def addFunction = inner.addFunction(...)` delegated to inner whose body (assert function_refs.contains, check no existing function with same hammer name, insert) IS what Rust implements. Same precedent as add_function_export, add_function_extern, forward_declare_function above. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1973-1780118809688/hook-1973/add_function--304.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunction(functionRef2: PrototypeI[cI], functionDefH: FunctionH): Unit = {
     inner = inner.addFunction(functionRef2, functionDefH)
   }
@@ -314,10 +322,15 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_kind_export (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_kind_export(&mut self, kind: KindHT<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
-        panic!("Unimplemented: add_kind_export");
+        let export_name_to_kind = self.package_coord_to_export_name_to_kind.entry(package_coordinate).or_insert_with(HashMap::new);
+        if let Some(existing) = export_name_to_kind.get(&exported_name) {
+            panic!("Already exported a kind `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing);
+        }
+        export_name_to_kind.insert(exported_name, kind);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Same SPDMX Exception Q (god-struct merging) precedent as add_function_export, add_function_extern, add_struct_originating_from_typing_pass, forward_declare_function, etc. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2387-1780133990596/hook-2387/add_kind_export--324.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addKindExport(kind: KindHT, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addKindExport(kind, packageCoordinate, exportedName)
   }

@@ -208,7 +208,7 @@ pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
         vfail(errorText)
       }
 */
-    Err(_err) => panic!("Not yet implemented: CompilerErrorHumanizer.humanize"),
+    Err(_err) => panic!("Not yet implemented: CompilerErrorHumanizer.humanize: {:?}", _err),
 /*
       case Ok(x) => x
     }

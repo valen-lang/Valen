@@ -45,7 +45,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
         load2: &SoftLoadIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_load");
+        use crate::instantiating::ast::expressions::{AddressExpressionIE, LocalLookupIE};
+        use crate::instantiating::ast::ast::ILocalVariableI;
+        let SoftLoadIE { expr: source_expr2, target_ownership, .. } = *load2;
+        let (loaded_access_h, source_deferreds) = match source_expr2 {
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::ReferenceLocalVariableI(r), .. }) => {
+                let combined_target_ownership = target_ownership;
+                self.translate_mundane_local_load(hinputs, hamuts, current_function_header, locals, &r.name, r.collapsed_coord, combined_target_ownership)
+            }
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::AddressibleLocalVariableI(_), .. }) => panic!("translate_load: Addressible branch"),
+            AddressExpressionIE::ReferenceMemberLookup(_) => panic!("translate_load: ReferenceMemberLookup branch"),
+            AddressExpressionIE::AddressMemberLookup(_) => panic!("translate_load: AddressMemberLookup branch"),
+            AddressExpressionIE::RuntimeSizedArrayLookup(_) => panic!("translate_load: RuntimeSizedArrayLookup branch"),
+            AddressExpressionIE::StaticSizedArrayLookup(_) => panic!("translate_load: StaticSizedArrayLookup branch"),
+        };
+        (loaded_access_h, source_deferreds)
     }
 }
 /*
@@ -527,7 +541,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
         target_ownership_i: OwnershipI,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_local_load");
+        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let local = locals.get_by_var_name(var_id).expect("wot");
+        assert!(!locals.unstackified_vars.contains(&local.id));
+        let loaded_node = ExpressionH::LocalLoadH(self.interner.alloc(crate::final_ast::instructions::LocalLoadH {
+            local,
+            target_ownership,
+            local_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*var_id).into())),
+        }));
+        (loaded_node, Vec::new())
     }
 }
 /*

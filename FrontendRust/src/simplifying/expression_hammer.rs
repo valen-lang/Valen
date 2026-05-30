@@ -58,7 +58,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::ConstantInt(c) => {
                     (ExpressionH::ConstantIntH(self.interner.alloc(crate::final_ast::instructions::ConstantIntH { value: c.value, bits: c.bits })), Vec::new())
                 }
-                RE::VoidLiteral(_) => panic!("translate_expression: VoidLiteral branch"),
+                RE::VoidLiteral(_) => {
+                    let construct_h = ExpressionH::ConstantVoidH(self.interner.alloc(crate::final_ast::instructions::ConstantVoidH));
+                    (construct_h, Vec::new())
+                }
                 RE::ConstantStr(c) => panic!("translate_expression: ConstantStr branch"),
                 RE::ConstantFloat(c) => panic!("translate_expression: ConstantFloat branch"),
                 RE::ConstantBool(c) => {
@@ -83,7 +86,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let block_h = self.translate_block(hinputs, hamuts, current_function_header, locals, b);
                     (ExpressionH::BlockH(block_h), Vec::new())
                 }
-                RE::FunctionCall(call2) => panic!("translate_expression: FunctionCall branch"),
+                RE::FunctionCall(call2) => {
+                    let args_ie: Vec<ExpressionIE<'s, 'i, cI>> = call2.args.iter().map(|a| ExpressionIE::Reference(*a)).collect();
+                    let access = self.translate_function_pointer_call(hinputs, hamuts, current_function_header, locals, &call2.callable, &args_ie, call2.result);
+                    (access, Vec::new())
+                }
                 RE::PreCheckBorrow(p) => panic!("translate_expression: PreCheckBorrow branch"),
                 RE::InterfaceFunctionCall(ic) => panic!("translate_expression: InterfaceFunctionCall branch"),
                 RE::Consecutor(c) => {
@@ -108,7 +115,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                         _ => {}
                     };
                     let _ = last_is_never;
-                    (crate::simplifying::hammer::consecutive(&exprs_he), Vec::new())
+                    (crate::simplifying::hammer::consecutive(self.interner, &exprs_he), Vec::new())
                 }
                 RE::ArrayLength(a) => panic!("translate_expression: ArrayLength branch"),
                 RE::RuntimeSizedArrayCapacity(a) => panic!("translate_expression: RuntimeSizedArrayCapacity branch"),
@@ -120,7 +127,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let maybe_access = self.translate_if(hinputs, hamuts, current_function_header, locals, if2);
                     (maybe_access, Vec::new())
                 }
-                RE::While(a) => panic!("translate_expression: While branch"),
+                RE::While(while2) => {
+                    let while_h = self.translate_while(hinputs, hamuts, current_function_header, locals, while2);
+                    (ExpressionH::WhileH(while_h), Vec::new())
+                }
                 RE::Return(return_ie) => {
                     let inner_expr = return_ie.source_expr;
                     let inner_result = ExpressionIE::Reference(inner_expr).result();
@@ -136,7 +146,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     assert!(ExpressionIE::Reference(inner_expr).result() == current_function_header.return_type);
                     (ExpressionH::ReturnH(self.interner.alloc(crate::final_ast::instructions::ReturnH { source_expression: inner_with_deferreds })), Vec::new())
                 }
-                RE::Break(a) => panic!("translate_expression: Break branch"),
+                RE::Break(_) => (ExpressionH::BreakH(self.interner.alloc(crate::final_ast::instructions::BreakH)), Vec::new()),
                 RE::Discard(discard_ie) => {
                     let inner_expr = discard_ie.expr;
                     let (undiscarded_inner_expr_h, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
@@ -150,7 +160,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
                 RE::AsSubtype(a) => panic!("translate_expression: AsSubtype branch"),
                 RE::ArgLookup(a) => panic!("translate_expression: ArgLookup branch"),
-                RE::ExternFunctionCall(a) => panic!("translate_expression: ExternFunctionCall branch"),
+                RE::ExternFunctionCall(efc) => {
+                    let access = self.translate_extern_function_call(hinputs, hamuts, current_function_header, locals, &efc.prototype2, efc.args);
+                    (access, Vec::new())
+                }
                 RE::Reinterpret(a) => panic!("translate_expression: Reinterpret branch"),
                 RE::Construct(a) => panic!("translate_expression: Construct branch"),
                 RE::NewMutRuntimeSizedArray(a) => panic!("translate_expression: NewMutRuntimeSizedArray branch"),
@@ -160,8 +173,30 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::PushRuntimeSizedArray(a) => panic!("translate_expression: PushRuntimeSizedArray branch"),
                 RE::PopRuntimeSizedArray(a) => panic!("translate_expression: PopRuntimeSizedArray branch"),
                 RE::InterfaceToInterfaceUpcast(a) => panic!("translate_expression: InterfaceToInterfaceUpcast branch"),
-                RE::Upcast(a) => panic!("translate_expression: Upcast branch"),
-                RE::SoftLoad(a) => panic!("translate_expression: SoftLoad branch"),
+                RE::Upcast(up) => {
+                    let target_pointer_type2 = up.result;
+                    let source_pointer_type2 = ExpressionIE::Reference(up.inner_expr).result();
+                    let source_pointer_type_h = self.translate_coord(hinputs, hamuts, source_pointer_type2);
+                    let target_pointer_type_h = self.translate_coord(hinputs, hamuts, target_pointer_type2);
+                    let _source_struct_ref_h = match source_pointer_type_h.kind {
+                        crate::final_ast::types::KindHT::StructHT(s) => s,
+                        _ => panic!("Upcast: source not struct"),
+                    };
+                    let target_interface_ref_h = match target_pointer_type_h.kind {
+                        crate::final_ast::types::KindHT::InterfaceHT(i) => i,
+                        _ => panic!("Upcast: target not interface"),
+                    };
+                    let (inner_expr_he, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(up.inner_expr));
+                    let upcast_node = ExpressionH::StructToInterfaceUpcastH(self.interner.alloc(crate::final_ast::instructions::StructToInterfaceUpcastH {
+                        source_expression: inner_expr_he.expect_struct_access(),
+                        target_interface: target_interface_ref_h,
+                    }));
+                    (upcast_node, inner_deferreds)
+                }
+                RE::SoftLoad(load2) => {
+                    let (loaded_access_h, deferreds) = self.translate_load(hinputs, hamuts, current_function_header, locals, load2);
+                    (loaded_access_h, deferreds)
+                }
                 RE::DestroyImmRuntimeSizedArray(a) => panic!("translate_expression: DestroyImmRuntimeSizedArray branch"),
                 RE::NewImmRuntimeSizedArray(a) => panic!("translate_expression: NewImmRuntimeSizedArray branch"),
             },
@@ -860,7 +895,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         exprs_ie: &[ExpressionIE<'s, 'i, cI>],
     ) -> (Vec<ExpressionH<'s, 'h>>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_expressions_until_never");
+        let (exprs_he, deferreds) = exprs_ie.iter().fold((Vec::<ExpressionH<'s, 'h>>::new(), Vec::<ExpressionIE<'s, 'i, cI>>::new()), |(prev_exprs_he, prev_deferreds), next_ie| {
+            let prev_is_never = match prev_exprs_he.last().map(|e| e.result_type().kind) {
+                Some(crate::final_ast::types::KindHT::NeverHT(_)) => true,
+                _ => false,
+            };
+            if prev_is_never {
+                (prev_exprs_he, Vec::new())
+            } else {
+                let (next_he, next_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, *next_ie);
+                let mut new_exprs = prev_exprs_he;
+                new_exprs.push(next_he);
+                let mut new_deferreds = prev_deferreds;
+                new_deferreds.extend(next_deferreds);
+                (new_exprs, new_deferreds)
+            }
+        });
+        // We'll never get to the deferreds, so forget them.
+        match exprs_he.last().map(|e| e.result_type().kind) {
+            Some(crate::final_ast::types::KindHT::NeverHT(_)) => (exprs_he, Vec::new()),
+            _ => (exprs_he, deferreds),
+        }
     }
 }
 /*
@@ -912,7 +967,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             let (first_he, first_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, *expr2);
             self.translate_deferreds(hinputs, hamuts, current_function_header, locals, first_he, first_deferreds)
         }).collect();
-        crate::simplifying::hammer::consecutive(&exprs)
+        crate::simplifying::hammer::consecutive(self.interner, &exprs)
     }
 }
 /*
@@ -949,7 +1004,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
         args_exprs2: &[ReferenceExpressionIE<'s, 'i, cI>],
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_extern_function_call");
+        let args_ie: Vec<ExpressionIE<'s, 'i, cI>> = args_exprs2.iter().map(|a| ExpressionIE::Reference(*a)).collect();
+        let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &args_ie);
+        // Don't evaluate anything that can't ever be run, see BRCOBS
+        if !args_he.is_empty() && matches!(args_he.last().unwrap().result_type().kind, crate::final_ast::types::KindHT::NeverHT(crate::final_ast::types::NeverHT { from_break: true })) {
+            return crate::simplifying::hammer::consecrash(locals, &args_he);
+        }
+        let param_types = self.translate_coords(hinputs, hamuts, &prototype2.param_types());
+        assert!(args_he.iter().map(|e| e.result_type()).collect::<Vec<_>>() == param_types);
+        let function_ref_h = self.translate_function_ref(hinputs, hamuts, current_function_header, prototype2);
+        let call_result_node = ExpressionH::ExternCallH(self.interner.alloc(crate::final_ast::instructions::ExternCallH { function: function_ref_h.prototype, args_expressions: self.interner.bump().alloc_slice_fill_iter(args_he.into_iter()) }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_result_node, args_deferreds)
     }
 }
 /*
@@ -999,7 +1064,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
         result_type2: CoordI<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_function_pointer_call");
+        let return_type2 = function.return_type;
+        let param_types = function.param_types();
+        let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, args);
+        // Don't evaluate anything that can't ever be run, see BRCOBS
+        match args_he.last().map(|e| e.result_type().kind) {
+            Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                return crate::simplifying::hammer::consecrash(locals, &args_he);
+            }
+            _ => {}
+        }
+        let prototype_h = self.translate_prototype(hinputs, hamuts, function);
+        let param_types_h = self.translate_coords(hinputs, hamuts, &param_types);
+        assert!(args_he.iter().map(|e| e.result_type()).collect::<Vec<_>>() == param_types_h);
+        let return_type_h = self.translate_coord(hinputs, hamuts, return_type2);
+        let result_type_h = self.translate_coord(hinputs, hamuts, result_type2);
+        assert!(return_type_h == result_type_h);
+        let call_result_node = ExpressionH::CallH(self.interner.alloc(crate::final_ast::instructions::CallH { function: prototype_h, args_expressions: self.interner.bump().alloc_slice_fill_iter(args_he.into_iter()) }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_result_node, args_deferreds)
     }
 }
 /*
@@ -1473,10 +1555,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        while2: &WhileIE<'s, 'i, cI>,
+        while2: &'i WhileIE<'s, 'i, cI>,
     ) -> &'h WhileH<'s, 'h>
     {
-        panic!("Unimplemented: translate_while");
+        let body_expr2 = &while2.block;
+        let (expr_without_deferreds, deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(ReferenceExpressionIE::Block(body_expr2)));
+        let expr = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, expr_without_deferreds, deferreds);
+        let while_call_node = self.interner.alloc(crate::final_ast::instructions::WhileH { body_block: expr });
+        while_call_node
     }
 }
 /*

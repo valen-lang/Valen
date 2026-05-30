@@ -175,7 +175,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         attributes: &[IFunctionAttributeI<'s>],
     ) -> Vec<IFunctionAttributeH> {
-        panic!("Unimplemented: translate_function_attributes");
+        attributes.iter().map(|a| match a {
+            IFunctionAttributeI::UserFunctionI => IFunctionAttributeH::UserFunctionH,
+            IFunctionAttributeI::PureI => IFunctionAttributeH::PureH,
+            IFunctionAttributeI::ExternI(_) => panic!("translate_function_attributes: ExternI vwat (should have been filtered)"),
+            other => panic!("translate_function_attributes: unimplemented {:?}", other),
+        }).collect()
     }
 }
 /*
@@ -201,7 +206,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         prototype2: &'i PrototypeI<'s, 'i, cI>,
     ) -> FunctionRefH<'s, 'h>
     {
-        panic!("Unimplemented: translate_function_ref");
+        let prototype_h = self.translate_prototype(hinputs, hamuts, prototype2);
+        FunctionRefH { prototype: prototype_h }
     }
 }
 /*

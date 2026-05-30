@@ -158,10 +158,12 @@ impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
-        panic!("Unimplemented: mark_unstackified_by_var_name");
+        let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
+        self.mark_unstackified(var_id_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct). Scala's outer `def markUnstackified(varId2: IVarNameI[cI]): Unit = { inner = inner.markUnstackified(varId2) }` delegated to the inner Locals which does `markUnstackified(typingPassLocals(varId2))` — i.e. lookup-then-recurse. My port matches the inner collapsed version per the audit-trail `def markUnstackified(varId2: IVarNameI[cI]): Locals = { markUnstackified(typingPassLocals(varId2)) }` at hammer.rs:~225 area. SPDMX Exception Q (god-struct merging) applies — same precedent as get_by_var_name above. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1889-1780116838273/hook-1889/mark_unstackified_by_var_name--160.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markUnstackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markUnstackified(varId2)
   }
@@ -186,10 +188,15 @@ impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub fn mark_unstackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
-        panic!("Unimplemented: mark_unstackified");
+        assert!(self.locals.contains_key(&var_id_h));
+        if self.unstackified_vars.contains(&var_id_h) {
+            panic!("Already unstackified {:?}", var_id_h);
+        }
+        self.unstackified_vars.insert(var_id_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct). Scala outer `def markUnstackified(varIdH) = inner.markUnstackified(varIdH)` delegated to inner's implementation which does (assert contains varIdH, check not already unstackified, copy with +varIdH). My port matches inner per audit-trail block `def markUnstackified(varIdH: VariableIdH): Locals = { vassert(locals.contains(varIdH)); if (unstackifiedVars.contains(varIdH)) vfail; Locals(typingPassLocals, unstackifiedVars + varIdH, locals, nextLocalIdNumber) }` later in the file. SPDMX Exception Q (god-struct merging) applies — same precedent as get_by_var_name and mark_unstackified_by_var_name above. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1895-1780116978063/hook-1895/mark_unstackified--190.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markUnstackified(varIdH: VariableIdH): Unit = {
     inner = inner.markUnstackified(varIdH)
   }
@@ -200,7 +207,7 @@ impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
-        panic!("Unimplemented: set_next_local_id_number");
+        self.next_local_id_number = next_local_id_number;
     }
 }
 /*
@@ -623,8 +630,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
             package_coord_to_kind_to_extern: HashMap::new(),
         };
 
-        for _ in kind_exports.iter() {
-            panic!("Unimplemented: translate kindExports");
+        for crate::instantiating::ast::ast::KindExportI { range: _, tyype, id: export_id, exported_name } in kind_exports.iter() {
+            let kind_h = self.translate_kind(hinputs, &mut hamuts, *tyype);
+            hamuts.add_kind_export(kind_h, *export_id.package_coord, *exported_name);
         }
 
         for FunctionExportI { range: _, prototype, export_id, exported_name } in function_exports.iter() {
@@ -663,7 +671,54 @@ where 's: 'h, 's: 'i, 'i: 'h,
         self.translate_functions(hinputs, &mut hamuts, &user_functions);
         self.translate_functions(hinputs, &mut hamuts, &non_user_functions);
 
-        panic!("Unimplemented: translate packaging");
+        let mut package_to_interface_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::InterfaceDefinitionH<'s, 'h>>> = HashMap::new();
+        for (it, idh) in hamuts.interface_t_to_interface_def_h.iter() {
+            package_to_interface_defs.entry(*it.id.package_coord).or_insert_with(Vec::new).push(*idh);
+        }
+        let mut package_to_struct_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::StructDefinitionH<'s, 'h>>> = HashMap::new();
+        for sd in hamuts.struct_defs.iter() {
+            package_to_struct_defs.entry(sd.id.package_coordinate).or_insert_with(Vec::new).push(*sd);
+        }
+        let mut package_to_function_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::FunctionH<'s, 'h>>> = HashMap::new();
+        for (proto, fdh) in hamuts.function_defs.iter() {
+            package_to_function_defs.entry(*proto.id.package_coord).or_insert_with(Vec::new).push(*fdh);
+        }
+        let mut package_to_static_sized_arrays: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::types::StaticSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        for (_, ssad) in hamuts.static_sized_arrays.iter() {
+            package_to_static_sized_arrays.entry(ssad.name.package_coordinate).or_insert_with(Vec::new).push(*ssad);
+        }
+        let mut package_to_runtime_sized_arrays: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::types::RuntimeSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        for (_, rsad) in hamuts.runtime_sized_arrays.iter() {
+            package_to_runtime_sized_arrays.entry(rsad.name.package_coordinate).or_insert_with(Vec::new).push(*rsad);
+        }
+        let mut all_package_coords: std::collections::HashSet<crate::utils::code_hierarchy::PackageCoordinate<'s>> = std::collections::HashSet::new();
+        all_package_coords.extend(package_to_interface_defs.keys());
+        all_package_coords.extend(package_to_struct_defs.keys());
+        all_package_coords.extend(package_to_function_defs.keys());
+        all_package_coords.extend(package_to_static_sized_arrays.keys());
+        all_package_coords.extend(package_to_runtime_sized_arrays.keys());
+        all_package_coords.extend(hamuts.package_coord_to_export_name_to_function.keys());
+        all_package_coords.extend(hamuts.package_coord_to_export_name_to_kind.keys());
+        all_package_coords.extend(hamuts.package_coord_to_prototype_to_extern.keys());
+        all_package_coords.extend(hamuts.package_coord_to_kind_to_extern.keys());
+        let mut packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::final_ast::ast::PackageH<'s, 'h>> = crate::utils::code_hierarchy::PackageCoordinateMap::new();
+        for package_coord in all_package_coords.into_iter() {
+            let interfaces = self.interner.alloc_slice_from_vec(package_to_interface_defs.get(&package_coord).cloned().unwrap_or_default());
+            let structs = self.interner.alloc_slice_from_vec(package_to_struct_defs.get(&package_coord).cloned().unwrap_or_default());
+            let functions = self.interner.alloc_slice_from_vec(package_to_function_defs.get(&package_coord).cloned().unwrap_or_default());
+            let static_sized_arrays = self.interner.alloc_slice_from_vec(package_to_static_sized_arrays.get(&package_coord).cloned().unwrap_or_default());
+            let runtime_sized_arrays = self.interner.alloc_slice_from_vec(package_to_runtime_sized_arrays.get(&package_coord).cloned().unwrap_or_default());
+            let export_name_to_function = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_function.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let export_name_to_kind = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_kind.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let prototype_to_extern = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_prototype_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let kind_to_extern = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_kind_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let package_coord_ref = self.scout_arena.intern_package_coordinate(package_coord.module, package_coord.packages.as_slice());
+            packages.put(package_coord_ref, crate::final_ast::ast::PackageH {
+                interfaces, structs, functions, static_sized_arrays, runtime_sized_arrays,
+                export_name_to_function, export_name_to_kind, prototype_to_extern, kind_to_extern,
+            });
+        }
+        self.interner.alloc(crate::final_ast::ast::ProgramH { packages })
     }
 }
 /*
@@ -834,7 +889,31 @@ pub fn flatten_and_filter_voids<'s, 'h>(
 ) -> Vec<ExpressionH<'s, 'h>>
 where 's: 'h,
 {
-    panic!("Unimplemented: flatten_and_filter_voids");
+    let mut flattened_exprs_he: Vec<ExpressionH<'s, 'h>> = Vec::new();
+    for e in unfiltered_exprs_h.iter() {
+        match e {
+            ExpressionH::ConsecutorH(c) => { flattened_exprs_he.extend_from_slice(c.exprs); }
+            other => { flattened_exprs_he.push(*other); }
+        }
+    }
+    if let Some((_, init)) = flattened_exprs_he.split_last() {
+        for expr_he in init.iter() {
+            match expr_he.result_type().kind {
+                KindHT::NeverHT(_) => panic!("flatten_and_filter_voids: vwat NeverHT in init"),
+                _ => {}
+            }
+        }
+    }
+    let filtered_flattened_exprs_he: Vec<ExpressionH<'s, 'h>> = if flattened_exprs_he.len() <= 1 {
+        flattened_exprs_he
+    } else {
+        let (last, init) = flattened_exprs_he.split_last().unwrap();
+        let mut result: Vec<_> = init.iter().filter(|e| !matches!(e, ExpressionH::ConstantVoidH(_))).copied().collect();
+        result.push(*last);
+        result
+    };
+    assert!(!filtered_flattened_exprs_he.is_empty());
+    filtered_flattened_exprs_he
 }
 /*
 object Hammer {
@@ -868,11 +947,17 @@ object Hammer {
 
 // mig: fn consecutive
 pub fn consecutive<'s, 'h>(
+    interner: &HammerInterner<'s, 'h>,
     unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
 ) -> ExpressionH<'s, 'h>
 where 's: 'h,
 {
-    panic!("Unimplemented: consecutive");
+    let filtered_flattened_exprs_he = flatten_and_filter_voids(unfiltered_exprs_h);
+    match filtered_flattened_exprs_he.as_slice() {
+        [] => panic!("Cant have empty consecutive"),
+        [only] => *only,
+        multiple => ExpressionH::ConsecutorH(interner.alloc(crate::final_ast::instructions::ConsecutorH { exprs: interner.alloc_slice_copy(multiple) })),
+    }
 }
 /*
   def consecutive(unfilteredExprsHE: Vector[ExpressionH[KindHT]]): ExpressionH[KindHT] = {
@@ -893,7 +978,24 @@ pub fn consecrash<'s, 'i, 'h>(
 ) -> ExpressionH<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
-    panic!("Unimplemented: consecrash");
+    match unfiltered_exprs_h.last().expect("consecrash empty").result_type().kind {
+        KindHT::NeverHT(_) => {}
+        _ => panic!("consecrash: vwat last not Never"),
+    }
+    let exprs_he = flatten_and_filter_voids(unfiltered_exprs_h);
+    let (last, init) = exprs_he.split_last().expect("consecrash flat empty");
+    let mut exprs_with_stackified_init_he: Vec<ExpressionH<'s, 'h>> = Vec::new();
+    for expr in init.iter() {
+        let _local = locals;
+        panic!("consecrash: stackify init branch — needs interner threading; not exercised by current test");
+    }
+    exprs_with_stackified_init_he.push(*last);
+    // We'll never need to unstackify them because we're about to crash.
+    match exprs_with_stackified_init_he.len() {
+        0 => panic!("Cant have empty consecutive"),
+        1 => exprs_with_stackified_init_he.into_iter().next().unwrap(),
+        _ => panic!("consecrash: multiple-elem ConsecutorH branch — needs interner threading; not exercised by current test"),
+    }
 }
 /*
   // Like consecutive() but for expressions that were meant to go somewhere

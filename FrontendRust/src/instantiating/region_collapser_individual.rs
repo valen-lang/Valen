@@ -11,7 +11,7 @@ import scala.collection.immutable.Map
 // It creates a new collapsing map for each one.
 object RegionCollapserIndividual {
 */
-use crate::instantiating::ast::names::{IdI, INameI, INameValI, IFunctionNameI, FunctionNameIX, FunctionTemplateNameI, ExportNameI, ExportTemplateNameI, ExternNameI, ExternTemplateNameI, ExternFunctionNameI, IVarNameI, CodeVarNameI};
+use crate::instantiating::ast::names::{IdI, INameI, INameValI, IFunctionNameI, FunctionNameIX, FunctionTemplateNameI, ExportNameI, ExportTemplateNameI, ExternNameI, ExternTemplateNameI, ExternFunctionNameI, IVarNameI, CodeVarNameI, IStructNameI, IInterfaceNameI};
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::instantiating::ast::types::{sI, cI};
 use crate::instantiating::ast::templata::RegionTemplataI;
@@ -200,7 +200,7 @@ where 's: 'i {
         IVarNameI::TypingPassBlockResultVar(_) => panic!("Unimplemented: collapse_var_name TypingPassBlockResultVar"),
         IVarNameI::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_ci(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
         IVarNameI::TypingPassTemporaryVar(_) => panic!("Unimplemented: collapse_var_name TypingPassTemporaryVar"),
-        IVarNameI::TypingPassFunctionResultVar(_) => panic!("Unimplemented: collapse_var_name TypingPassFunctionResultVar"),
+        IVarNameI::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_ci(crate::instantiating::ast::names::TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
         IVarNameI::ClosureParam(_) => panic!("Unimplemented: collapse_var_name ClosureParam"),
         IVarNameI::MagicParam(_) => panic!("Unimplemented: collapse_var_name MagicParam"),
         IVarNameI::Iterable(_) => panic!("Unimplemented: collapse_var_name Iterable"),
@@ -267,8 +267,12 @@ where 's: 'i {
   }
 */
 // mig: fn collapse_coord_templata
-pub fn collapse_coord_templata() {
-    panic!("Unimplemented: collapse_coord_templata")
+pub fn collapse_coord_templata<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, templata: crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, sI>) -> crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, cI> where 's: 'i {
+    let crate::instantiating::ast::templata::CoordTemplataI { region, coord } = templata;
+    crate::instantiating::ast::templata::CoordTemplataI {
+        region: collapse_region_templata(map, region),
+        coord: collapse_coord(interner, &coord),
+    }
 }
 /*
   def collapseCoordTemplata(
@@ -282,7 +286,16 @@ pub fn collapse_coord_templata() {
 // mig: fn collapse_templata
 pub fn collapse_templata<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, templata: &ITemplataI<'s, 'i, sI>) -> ITemplataI<'s, 'i, cI>
 where 's: 'i {
-    panic!("Unimplemented: collapse_templata")
+    use crate::instantiating::ast::templata::{ITemplataI, MutabilityTemplataI, IntegerTemplataI, VariabilityTemplataI};
+    match templata {
+        ITemplataI::Coord(c) => ITemplataI::Coord(collapse_coord_templata(interner, map, *c)),
+        ITemplataI::Kind(k) => ITemplataI::Kind(crate::instantiating::ast::templata::KindTemplataI { kind: collapse_kind(interner, &k.kind) }),
+        ITemplataI::Region(r) => ITemplataI::Region(collapse_region_templata(map, *r)),
+        ITemplataI::Mutability(m) => ITemplataI::Mutability(MutabilityTemplataI { mutability: m.mutability, _marker: std::marker::PhantomData }),
+        ITemplataI::Integer(i) => ITemplataI::Integer(IntegerTemplataI { value: i.value, _marker: std::marker::PhantomData }),
+        ITemplataI::Variability(v) => ITemplataI::Variability(VariabilityTemplataI { variability: v.variability, _marker: std::marker::PhantomData }),
+        _ => panic!("collapse_templata: unimplemented variant"),
+    }
 }
 /*
   def collapseTemplata(
@@ -339,8 +352,8 @@ where 's: 'i {
         KindIT::BoolIT(_) => KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }),
         KindIT::FloatIT(_) => KindIT::FloatIT(FloatIT { _marker: std::marker::PhantomData }),
         KindIT::StrIT(_) => KindIT::StrIT(StrIT { _marker: std::marker::PhantomData }),
-        KindIT::StructIT(_) => panic!("Unimplemented: collapse_kind StructIT"),
-        KindIT::InterfaceIT(_) => panic!("Unimplemented: collapse_kind InterfaceIT"),
+        KindIT::StructIT(s) => KindIT::StructIT(interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: collapse_struct_id(interner, &s.id) })),
+        KindIT::InterfaceIT(i) => KindIT::InterfaceIT(interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: collapse_interface_id(interner, &i.id) })),
         KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: collapse_kind StaticSizedArray"),
         KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: collapse_kind RuntimeSizedArray"),
     }
@@ -412,8 +425,15 @@ pub fn collapse_static_sized_array() {
   }
 */
 // mig: fn collapse_interface_id
-pub fn collapse_interface_id() {
-    panic!("Unimplemented: collapse_interface_id")
+pub fn collapse_interface_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, interface_id: &IdI<'s, 'i, sI>) -> IdI<'s, 'i, cI> where 's: 'i {
+    collapse_id(interner, interface_id, |x| {
+        match x {
+            INameI::InterfaceName(i) => INameI::InterfaceName(match collapse_interface_name(interner, &IInterfaceNameI::Interface(i)) {
+                IInterfaceNameI::Interface(r) => r,
+            }),
+            _ => panic!("collapse_interface_id: non-InterfaceName local name"),
+        }
+    })
 }
 /*
   def collapseInterfaceId(
@@ -425,8 +445,16 @@ pub fn collapse_interface_id() {
   }
 */
 // mig: fn collapse_struct_id
-pub fn collapse_struct_id() {
-    panic!("Unimplemented: collapse_struct_id")
+pub fn collapse_struct_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, struct_id: &IdI<'s, 'i, sI>) -> IdI<'s, 'i, cI> where 's: 'i {
+    collapse_id(interner, struct_id, |x| {
+        match x {
+            INameI::StructName(s) => INameI::StructName(match collapse_struct_name(interner, &IStructNameI::Struct(s)) {
+                IStructNameI::Struct(r) => r,
+                _ => panic!("collapse_struct_id: collapse_struct_name returned non-Struct"),
+            }),
+            _ => panic!("collapse_struct_id: non-StructName local name"),
+        }
+    })
 }
 /*
   def collapseStructId(
@@ -438,8 +466,20 @@ pub fn collapse_struct_id() {
   }
 */
 // mig: fn collapse_struct_name
-pub fn collapse_struct_name() {
-    panic!("Unimplemented: collapse_struct_name")
+pub fn collapse_struct_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, struct_name: &IStructNameI<'s, 'i, sI>) -> IStructNameI<'s, 'i, cI> where 's: 'i {
+    match struct_name {
+        IStructNameI::Struct(crate::instantiating::ast::names::StructNameI { template, template_args }) => {
+            let map = crate::instantiating::region_counter::count_citizen_name_map(&(*struct_name).into());
+            let template_c = collapse_struct_template_name(interner, template);
+            let template_args_c: Vec<ITemplataI<'s, 'i, cI>> = template_args.iter().map(|t| collapse_templata(interner, &map, t)).collect();
+            IStructNameI::Struct(interner.intern_struct_name_ci(crate::instantiating::ast::names::StructNameI {
+                template: template_c,
+                template_args: interner.bump().alloc_slice_fill_iter(template_args_c.into_iter()),
+            }))
+        }
+        IStructNameI::LambdaCitizen(_) => panic!("collapse_struct_name: LambdaCitizen branch"),
+        IStructNameI::AnonymousSubstruct(_) => panic!("collapse_struct_name: AnonymousSubstruct branch"),
+    }
 }
 /*
   def collapseStructName(
@@ -465,8 +505,24 @@ pub fn collapse_struct_name() {
   }
 */
 // mig: fn collapse_impl_name
-pub fn collapse_impl_name() {
-    panic!("Unimplemented: collapse_impl_name")
+pub fn collapse_impl_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, name: &crate::instantiating::ast::names::IImplNameI<'s, 'i, sI>) -> crate::instantiating::ast::names::IImplNameI<'s, 'i, cI>
+where 's: 'i {
+    use crate::instantiating::ast::names::{IImplNameI, ImplNameI};
+    match name {
+        IImplNameI::Impl(ImplNameI { template, template_args, sub_citizen }) => {
+            let map = crate::instantiating::region_counter::count_impl_name_map(name);
+            let template_c = collapse_impl_template_name(interner, template);
+            let template_args_c: Vec<ITemplataI<'s, 'i, cI>> = template_args.iter().map(|t| collapse_templata(interner, &map, t)).collect();
+            let sub_citizen_c = collapse_citizen(interner, sub_citizen);
+            IImplNameI::Impl(interner.intern_impl_name_ci(ImplNameI {
+                template: template_c,
+                template_args: interner.bump().alloc_slice_fill_iter(template_args_c.into_iter()),
+                sub_citizen: sub_citizen_c,
+            }))
+        }
+        IImplNameI::AnonymousSubstructImpl(_) => panic!("collapse_impl_name: AnonymousSubstructImpl branch"),
+        IImplNameI::ImplBound(_) => panic!("collapse_impl_name: ImplBound branch"),
+    }
 }
 /*
   def collapseImplName(
@@ -497,8 +553,18 @@ pub fn collapse_impl_name() {
   }
 */
 // mig: fn collapse_interface_name
-pub fn collapse_interface_name() {
-    panic!("Unimplemented: collapse_interface_name")
+pub fn collapse_interface_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, interface_name: &IInterfaceNameI<'s, 'i, sI>) -> IInterfaceNameI<'s, 'i, cI> where 's: 'i {
+    use crate::instantiating::ast::names::{InterfaceNameI, IInterfaceTemplateNameI, InterfaceTemplateNameI};
+    match interface_name {
+        IInterfaceNameI::Interface(InterfaceNameI { template: IInterfaceTemplateNameI::InterfaceTemplate(InterfaceTemplateNameI { human_namee, .. }), template_args }) => {
+            let map = crate::instantiating::region_counter::count_citizen_name_map(&(*interface_name).into());
+            let template_args_c: Vec<ITemplataI<'s, 'i, cI>> = template_args.iter().map(|t| collapse_templata(interner, &map, t)).collect();
+            IInterfaceNameI::Interface(interner.intern_interface_name_ci(InterfaceNameI {
+                template: IInterfaceTemplateNameI::InterfaceTemplate(interner.intern_interface_template_name_ci(InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee: *human_namee })),
+                template_args: interner.bump().alloc_slice_fill_iter(template_args_c.into_iter()),
+            }))
+        }
+    }
 }
 /*
   def collapseInterfaceName(
@@ -574,8 +640,13 @@ where 's: 'i {
   }
 */
 // mig: fn collapse_struct_template_name
-pub fn collapse_struct_template_name() {
-    panic!("Unimplemented: collapse_struct_template_name")
+pub fn collapse_struct_template_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, struct_name: &crate::instantiating::ast::names::IStructTemplateNameI<'s, 'i, sI>) -> crate::instantiating::ast::names::IStructTemplateNameI<'s, 'i, cI> where 's: 'i {
+    use crate::instantiating::ast::names::{IStructTemplateNameI, StructTemplateNameI};
+    match struct_name {
+        IStructTemplateNameI::StructTemplate(StructTemplateNameI { human_name, .. }) => IStructTemplateNameI::StructTemplate(interner.intern_struct_template_name_ci(StructTemplateNameI { _marker: std::marker::PhantomData, human_name: *human_name })),
+        IStructTemplateNameI::AnonymousSubstructTemplate(_) => panic!("collapse_struct_template_name: AnonymousSubstructTemplate branch"),
+        IStructTemplateNameI::LambdaCitizenTemplate(_) => panic!("collapse_struct_template_name: LambdaCitizenTemplate branch (no Scala counterpart in collapseStructTemplateName)"),
+    }
 }
 /*
   def collapseStructTemplateName(
@@ -601,8 +672,17 @@ pub fn collapse_interface_template_name() {
   }
 */
 // mig: fn collapse_impl_id
-pub fn collapse_impl_id() {
-    panic!("Unimplemented: collapse_impl_id")
+pub fn collapse_impl_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, impl_id: &IdI<'s, 'i, sI>) -> IdI<'s, 'i, cI>
+where 's: 'i {
+    collapse_id(interner, impl_id, |x| {
+        match x {
+            INameI::Impl(i) => INameI::Impl(match collapse_impl_name(interner, &crate::instantiating::ast::names::IImplNameI::Impl(i)) {
+                crate::instantiating::ast::names::IImplNameI::Impl(r) => r,
+                _ => panic!("collapse_impl_id: collapse_impl_name returned non-Impl"),
+            }),
+            _ => panic!("collapse_impl_id: non-Impl local name"),
+        }
+    })
 }
 /*
   def collapseImplId(
@@ -622,8 +702,15 @@ pub fn collapse_impl_id() {
   // }
 */
 // mig: fn collapse_impl_template_name
-pub fn collapse_impl_template_name() {
-    panic!("Unimplemented: collapse_impl_template_name")
+pub fn collapse_impl_template_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, name: &crate::instantiating::ast::names::IImplTemplateNameI<'s, 'i, sI>) -> crate::instantiating::ast::names::IImplTemplateNameI<'s, 'i, cI>
+where 's: 'i {
+    use crate::instantiating::ast::names::{IImplTemplateNameI, ImplTemplateNameI};
+    match name {
+        IImplTemplateNameI::ImplTemplate(ImplTemplateNameI { code_location_s, .. }) => {
+            IImplTemplateNameI::ImplTemplate(interner.intern_impl_template_name_ci(ImplTemplateNameI { _marker: std::marker::PhantomData, code_location_s: *code_location_s }))
+        }
+        _ => panic!("collapse_impl_template_name: other"),
+    }
 }
 /*
   def collapseImplTemplateName(
@@ -636,8 +723,13 @@ pub fn collapse_impl_template_name() {
   }
 */
 // mig: fn collapse_citizen
-pub fn collapse_citizen() {
-    panic!("Unimplemented: collapse_citizen")
+pub fn collapse_citizen<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, citizen: &crate::instantiating::ast::types::ICitizenIT<'s, 'i, sI>) -> crate::instantiating::ast::types::ICitizenIT<'s, 'i, cI>
+where 's: 'i {
+    use crate::instantiating::ast::types::{ICitizenIT, StructITValI, InterfaceITValI};
+    match citizen {
+        ICitizenIT::StructIT(s) => ICitizenIT::StructIT(interner.intern_struct_it_ci(StructITValI { id: collapse_struct_id(interner, &s.id) })),
+        ICitizenIT::InterfaceIT(i) => ICitizenIT::InterfaceIT(interner.intern_interface_it_ci(InterfaceITValI { id: collapse_interface_id(interner, &i.id) })),
+    }
 }
 /*
   def collapseCitizen(

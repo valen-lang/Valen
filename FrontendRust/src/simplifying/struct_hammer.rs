@@ -65,7 +65,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         interface_tt: &'i InterfaceIT<'s, 'i, cI>,
     ) -> Vec<InterfaceMethodH<'s, 'h>>
     {
-        panic!("Unimplemented: translate_interface_methods");
+        let edge_blueprint = hinputs.interface_to_edge_blueprints.get(&interface_tt.id).expect("vassertSome: interface_to_edge_blueprints");
+        edge_blueprint.super_family_root_headers.iter().map(|(super_family_prototype, virtual_param_index)| {
+            let prototype_h = self.translate_prototype(hinputs, hamuts, super_family_prototype);
+            crate::final_ast::ast::InterfaceMethodH { prototype_h, virtual_param_index: *virtual_param_index }
+        }).collect()
     }
 }
 /*
@@ -99,7 +103,30 @@ where 's: 'h, 's: 'i, 'i: 'h,
         interface_it: &'i InterfaceIT<'s, 'i, cI>,
     ) -> &'h InterfaceHT<'s, 'h>
     {
-        panic!("Unimplemented: translate_interface");
+        match hamuts.interface_t_to_interface_h.get(&interface_it).copied() {
+            Some(struct_ref_h) => struct_ref_h,
+            None => {
+                let full_name_h = self.translate_full_name(hinputs, hamuts, &interface_it.id);
+                let temporary_interface_ref_h = self.interner.intern_interface_ht(crate::final_ast::types::InterfaceHTValH { id: full_name_h });
+                hamuts.forward_declare_interface(interface_it, temporary_interface_ref_h);
+                let interface_def_i = hinputs.lookup_interface(&interface_it.id);
+                let methods_h = self.translate_interface_methods(hinputs, hamuts, interface_it);
+                let interface_def_h = crate::final_ast::ast::InterfaceDefinitionH {
+                    id: full_name_h,
+                    weakable: interface_def_i.weakable,
+                    mutability: crate::simplifying::conversions::evaluate_mutability_templata(interface_def_i.mutability),
+                    super_interfaces: &[],
+                    methods: self.interner.alloc_slice_from_vec(methods_h),
+                };
+                hamuts.add_interface(interface_it, interface_def_h);
+                assert!(std::ptr::eq(interface_def_h.get_ref(self.interner) as *const _, temporary_interface_ref_h as *const _));
+                match interface_def_i.mutability {
+                    crate::instantiating::ast::types::MutabilityI::Mutable => {}
+                    crate::instantiating::ast::types::MutabilityI::Immutable => {}
+                }
+                interface_def_h.get_ref(self.interner)
+            }
+        }
     }
 }
 /*
@@ -192,7 +219,35 @@ where 's: 'h, 's: 'i, 'i: 'h,
         struct_it: &'i StructIT<'s, 'i, cI>,
     ) -> &'h StructHT<'s, 'h>
     {
-        panic!("Unimplemented: translate_struct_i");
+        match hamuts.struct_t_to_struct_h.get(&struct_it).copied() {
+            Some(struct_ref_h) => struct_ref_h,
+            None => {
+                let full_name_h = self.translate_full_name(hinputs, hamuts, &struct_it.id);
+                let temporary_struct_ref_h = self.interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: full_name_h });
+                hamuts.forward_declare_struct(struct_it, temporary_struct_ref_h);
+                let struct_def_i = hinputs.lookup_struct(&struct_it.id);
+                let mutability_h = crate::simplifying::conversions::evaluate_mutability_templata(struct_def_i.mutability);
+                let members_h = self.translate_members(hinputs, hamuts, &struct_def_i.instantiated_citizen.id, mutability_h, struct_def_i.members);
+                let edges_h_vec = self.translate_edges_for_struct(hinputs, hamuts, temporary_struct_ref_h, struct_it);
+                let edges_h: &'h [crate::final_ast::ast::EdgeH<'s, 'h>] = self.interner.alloc_slice_from_vec(edges_h_vec);
+                let extern_ = struct_def_i.attributes.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_)));
+                let struct_def_h = crate::final_ast::ast::StructDefinitionH {
+                    id: full_name_h,
+                    weakable: struct_def_i.weakable,
+                    extern_,
+                    mutability: mutability_h,
+                    edges: edges_h,
+                    members: self.interner.alloc_slice_from_vec(members_h),
+                };
+                hamuts.add_struct_originating_from_typing_pass(struct_it, struct_def_h);
+                assert!(std::ptr::eq(struct_def_h.get_ref(self.interner) as *const _, temporary_struct_ref_h as *const _));
+                match struct_def_i.mutability {
+                    crate::instantiating::ast::types::MutabilityI::Mutable => {}
+                    crate::instantiating::ast::types::MutabilityI::Immutable => {}
+                }
+                struct_def_h.get_ref(self.interner)
+            }
+        }
     }
 }
 /*
@@ -310,7 +365,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         members: &[StructMemberI<'s, 'i, cI>],
     ) -> Vec<StructMemberH<'s, 'h>>
     {
-        panic!("Unimplemented: translate_members");
+        members.iter().map(|m| self.translate_member(hinputs, hamuts, struct_name, struct_mutability_h, m)).collect()
     }
 }
 /*
@@ -333,10 +388,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         member2: &StructMemberI<'s, 'i, cI>,
     ) -> StructMemberH<'s, 'h>
     {
-        panic!("Unimplemented: translate_member");
+        let (variability, member_type) = match member2.tyype {
+            crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(r) => {
+                (member2.variability, self.translate_coord(hinputs, hamuts, r.reference))
+            }
+            crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => panic!("Unimplemented: translate_member AddressMemberTypeI"),
+        };
+        let added_name = crate::instantiating::ast::names::add_step(struct_name, member2.name.into());
+        StructMemberH {
+            name: self.translate_full_name(hinputs, hamuts, &added_name),
+            variability: crate::simplifying::conversions::evaluate_variability(variability),
+            tyype: member_type,
+        }
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Scala's `translateReference` is a closure parameter of StructHammer wired in Hammer.scala line 174 to `typeHammer.translateCoord(...)`. Under the SPDMX Exception Q god-struct collapse, the closure indirection vanishes and the call lands on translate_coord — exactly what Scala dispatches to. Same precedent as the existing temp-disable on `translate` in hammer.rs:725. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2833-1780146824579/hook-2833/translate_member--382.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, member2: StructMemberI):
   (StructMemberH) = {
     val (variability, memberType) =
@@ -442,7 +509,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         struct_tt: &'i StructIT<'s, 'i, cI>,
     ) -> Vec<EdgeH<'s, 'h>>
     {
-        panic!("Unimplemented: translate_edges_for_struct");
+        let edges2: Vec<&EdgeI<'s, 'i>> = hinputs.interface_to_sub_citizen_to_edge.iter()
+            .flat_map(|(_, sub_map)| sub_map.iter().map(|(_, e)| e))
+            .filter(|e| e.sub_citizen.id() == struct_tt.id)
+            .collect();
+        self.translate_edges_for_struct_with_edges(hinputs, hamuts, struct_ref_h, &edges2)
     }
 }
 /*
@@ -465,10 +536,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_ref_h: &'h StructHT<'s, 'h>,
-        edges2: &[EdgeI<'s, 'i>],
+        edges2: &[&EdgeI<'s, 'i>],
     ) -> Vec<EdgeH<'s, 'h>>
     {
-        panic!("Unimplemented: translate_edges_for_struct_with_edges");
+        edges2.iter().map(|e| self.translate_edge(hinputs, hamuts, struct_ref_h, self.instantiating_interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: e.super_interface }), e)).collect()
     }
 }
 /*
@@ -494,7 +565,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         edge2: &EdgeI<'s, 'i>,
     ) -> EdgeH<'s, 'h>
     {
-        panic!("Unimplemented: translate_edge");
+        // Purposefully not trying to translate the entire struct here, because we might hit a circular dependency
+        let interface_ref_h = self.translate_interface(hinputs, hamuts, interface_it);
+        let interface_prototypes_h = self.translate_interface_methods(hinputs, hamuts, interface_it);
+
+        let prototypes_h: Vec<&'h crate::final_ast::ast::PrototypeH<'s, 'h>> = hinputs.interface_to_edge_blueprints.get(&interface_it.id).expect("vassertSome: interface_to_edge_blueprints")
+            .super_family_root_headers.iter().map(|(super_family_prototype, _virtual_param_index)| {
+                let override_prototype_i = *edge2.abstract_func_to_override_func.get(&super_family_prototype.id).expect("vassertSome: abstract_func_to_override_func");
+                self.translate_prototype(hinputs, hamuts, override_prototype_i)
+            }).collect();
+
+        let struct_prototypes_by_interface_method: Vec<(InterfaceMethodH<'s, 'h>, &'h crate::final_ast::ast::PrototypeH<'s, 'h>)> = interface_prototypes_h.iter().zip(prototypes_h.iter()).map(|(im, p)| (*im, *p)).collect();
+        EdgeH {
+            struct_: struct_ref_h,
+            interface: interface_ref_h,
+            struct_prototypes_by_interface_method: self.interner.bump().alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(struct_prototypes_by_interface_method.into_iter(), self.interner.bump())),
+        }
     }
 }
 /*
