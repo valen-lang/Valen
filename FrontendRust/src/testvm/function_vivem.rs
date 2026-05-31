@@ -12,12 +12,12 @@ object FunctionVivem {
 */
 // mig: fn execute_function
 pub fn execute_function<'h, 's, 'v>(
-    program_h: &ProgramH<'h, 's>,
+    program_h: &ProgramH<'s, 'h>,
     stdin: Box<dyn Fn() -> StrI<'s>>,
     stdout: Box<dyn Fn(StrI<'s>)>,
     heap: &Heap<'v>,
     args: &'v [ReferenceV<'v>],
-    function_h: &FunctionH<'h, 's>,
+    function_h: &FunctionH<'s, 'h>,
 ) -> (CallId, NodeReturn<'v>) {
     panic!("Unimplemented: execute_function");
 }
@@ -64,8 +64,8 @@ pub fn execute_function<'h, 's, 'v>(
 */
 // mig: fn get_extern_function
 pub fn get_extern_function<'h, 's, 'v>(
-    program_h: &ProgramH<'h, 's>,
-    ref_: &PrototypeH<'h, 's>,
+    program_h: &ProgramH<'s, 'h>,
+    ref_: &PrototypeH<'s, 'h>,
 ) -> Box<dyn Fn(&AdapterForExterns, &'v [ReferenceV<'v>]) -> ReferenceV<'v>> {
     panic!("Unimplemented: get_extern_function");
 }

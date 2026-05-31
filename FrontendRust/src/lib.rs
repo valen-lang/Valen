@@ -21,6 +21,8 @@ pub mod postparsing;
 pub mod simplifying;
 pub mod typing;
 pub mod tests;
+#[cfg(test)]
+pub mod testvm;
 pub mod utils;
 pub mod von;
 #[path = "solver/lib.rs"]

@@ -1,3 +1,11 @@
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use crate::interner::StrI;
+use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, OpaqueHT};
+use crate::final_ast::ast::{PrototypeH, StructDefinitionH};
+use crate::final_ast::instructions::Local;
+
 /*
 package dev.vale.testvm
 
@@ -11,8 +19,11 @@ import dev.vale.vimpl
 */
 // mig: struct RRReferenceV
 /// Temporary state
-pub struct RRReferenceV<'v, 'h> {
-  pub hamut: CoordH<KindHT>,
+pub struct RRReferenceV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub hamut: CoordH<'s, 'h>,
+  pub _phantom: std::marker::PhantomData<&'v ()>,
 }
 /*
 case class RRReference(hamut: CoordH[KindHT]) {
@@ -25,8 +36,11 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RRKindV
 /// Temporary state
-pub struct RRKindV<'v, 'h> {
-  pub hamut: KindHT,
+pub struct RRKindV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub hamut: KindHT<'s, 'h>,
+  pub _phantom: std::marker::PhantomData<&'v ()>,
 }
 /*
 case class RRKind(hamut: KindHT) {
@@ -39,10 +53,10 @@ override def hashCode(): Int = hash; }
 */
 // mig: struct AllocationV
 /// Temporary state
-pub struct AllocationV<'v, 'h> {
-  pub reference: ReferenceV<'v, 'h>,
-  pub kind: KindV<'v, 'h>,
-  pub referrers: Cell<HashMap<IObjectReferrerV<'v, 'h>, i32>>,
+pub struct AllocationV<'v, 'h, 's> {
+  pub reference: ReferenceV<'v, 'h, 's>,
+  pub kind: KindV<'v, 'h, 's>,
+  pub referrers: Cell<HashMap<IObjectReferrerV<'v, 'h, 's>, i32>>,
 }
 /*
 class Allocation(
@@ -52,8 +66,8 @@ class Allocation(
   private var referrers = Map[IObjectReferrer, Int]()
 */
 // mig: fn id
-impl<'v, 'h> AllocationV<'v, 'h> {
-  pub fn id(&self) -> AllocationIdV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
+  pub fn id(&self) -> AllocationIdV<'v, 'h, 's> {
     panic!("Unimplemented: id");
   }
 }
@@ -61,8 +75,8 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   def id = reference.allocId
 */
 // mig: fn increment_ref_count
-impl<'v, 'h> AllocationV<'v, 'h> {
-  pub fn increment_ref_count(&self, referrer: IObjectReferrerV<'v, 'h>) {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
+  pub fn increment_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     panic!("Unimplemented: increment_ref_count");
   }
 }
@@ -86,8 +100,8 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn decrement_ref_count
-impl<'v, 'h> AllocationV<'v, 'h> {
-  pub fn decrement_ref_count(&self, referrer: IObjectReferrerV<'v, 'h>) {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
+  pub fn decrement_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     panic!("Unimplemented: decrement_ref_count");
   }
 }
@@ -108,7 +122,7 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn get_ref_count
-impl<'v, 'h> AllocationV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn get_ref_count(&self) -> i32 {
     panic!("Unimplemented: get_ref_count");
   }
@@ -126,7 +140,7 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn ensure_ref_count
-impl<'v, 'h> AllocationV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn ensure_ref_count(&self, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
     panic!("Unimplemented: ensure_ref_count");
   }
@@ -155,7 +169,7 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn print_refs
-impl<'v, 'h> AllocationV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn print_refs(&self) {
     panic!("Unimplemented: print_refs");
   }
@@ -168,7 +182,7 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn get_total_ref_count
-impl<'v, 'h> AllocationV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn get_total_ref_count(&self, maybe_ownership_filter: Option<OwnershipH>) -> i32 {
     panic!("Unimplemented: get_total_ref_count");
   }
@@ -186,7 +200,7 @@ impl<'v, 'h> AllocationV<'v, 'h> {
   }
 */
 // mig: fn finalize
-impl<'v, 'h> AllocationV<'v, 'h> {
+impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn finalize(&self) {
     panic!("Unimplemented: finalize");
   }
@@ -214,22 +228,22 @@ object Allocation {
 */
 // mig: enum KindV
 /// Temporary state
-pub enum KindV<'v, 'h> {
+pub enum KindV<'v, 'h, 's> {
   Void(&'v VoidV),
-  Int(&'v IntV<'v, 'h>),
-  Bool(&'v BoolV<'v, 'h>),
-  Float(&'v FloatV<'v, 'h>),
-  Str(&'v StrV<'v, 'h>),
-  Opaque(&'v OpaqueV<'v, 'h>),
-  StructInstance(&'v StructInstanceV<'v, 'h>),
-  ArrayInstance(&'v ArrayInstanceV<'v, 'h>),
+  Int(&'v IntV<'v, 'h, 's>),
+  Bool(&'v BoolV<'v, 'h, 's>),
+  Float(&'v FloatV<'v, 'h, 's>),
+  Str(&'v StrV<'v, 'h, 's>),
+  Opaque(&'v OpaqueV<'v, 'h, 's>),
+  StructInstance(&'v StructInstanceV<'v, 'h, 's>),
+  ArrayInstance(&'v ArrayInstanceV<'v, 'h, 's>),
 }
 /*
 sealed trait KindV {
 */
 // mig: fn tyype
-impl<'v, 'h> KindV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> KindV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype");
   }
 }
@@ -239,13 +253,13 @@ impl<'v, 'h> KindV<'v, 'h> {
 */
 // mig: enum PrimitiveKindV
 /// Temporary state
-pub enum PrimitiveKindV<'v, 'h> {
+pub enum PrimitiveKindV<'v, 'h, 's> {
   Void(&'v VoidV),
-  Int(&'v IntV<'v, 'h>),
-  Bool(&'v BoolV<'v, 'h>),
-  Float(&'v FloatV<'v, 'h>),
-  Str(&'v StrV<'v, 'h>),
-  Opaque(&'v OpaqueV<'v, 'h>),
+  Int(&'v IntV<'v, 'h, 's>),
+  Bool(&'v BoolV<'v, 'h, 's>),
+  Float(&'v FloatV<'v, 'h, 's>),
+  Str(&'v StrV<'v, 'h, 's>),
+  Opaque(&'v OpaqueV<'v, 'h, 's>),
 }
 /*
 sealed trait PrimitiveKindV extends KindV
@@ -267,16 +281,19 @@ impl VoidV {
 */
 // mig: struct IntV
 /// Temporary state
-pub struct IntV<'v, 'h> {
+pub struct IntV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub value: i64,
   pub bits: i32,
+  pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 /*
 case class IntV(value: Long, bits: Int) extends PrimitiveKindV {
 */
 // mig: fn tyype
-impl<'v, 'h> IntV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> IntV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_int");
   }
 }
@@ -286,15 +303,18 @@ impl<'v, 'h> IntV<'v, 'h> {
 */
 // mig: struct BoolV
 /// Temporary state
-pub struct BoolV<'v, 'h> {
+pub struct BoolV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub value: bool,
+  pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 /*
 case class BoolV(value: Boolean) extends PrimitiveKindV {
 */
 // mig: fn tyype
-impl<'v, 'h> BoolV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_bool");
   }
 }
@@ -304,15 +324,18 @@ impl<'v, 'h> BoolV<'v, 'h> {
 */
 // mig: struct FloatV
 /// Temporary state
-pub struct FloatV<'v, 'h> {
+pub struct FloatV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub value: f64,
+  pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 /*
 case class FloatV(value: Double) extends PrimitiveKindV {
 */
 // mig: fn tyype
-impl<'v, 'h> FloatV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_float");
   }
 }
@@ -322,15 +345,18 @@ impl<'v, 'h> FloatV<'v, 'h> {
 */
 // mig: struct StrV
 /// Temporary state
-pub struct StrV<'v, 'h> {
+pub struct StrV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub value: StrI<'s>,
+  pub _phantom: PhantomData<(&'v (), &'h ())>,
 }
 /*
 case class StrV(value: String) extends PrimitiveKindV {
 */
 // mig: fn tyype
-impl<'v, 'h> StrV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> StrV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_str");
   }
 }
@@ -340,15 +366,18 @@ impl<'v, 'h> StrV<'v, 'h> {
 */
 // mig: struct OpaqueV
 /// Temporary state
-pub struct OpaqueV<'v, 'h> {
-  pub opaque_ht: OpaqueHT,
+pub struct OpaqueV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub opaque_ht: OpaqueHT<'s, 'h>,
+  pub _phantom: PhantomData<&'v ()>,
 }
 /*
 case class OpaqueV(opaqueHT: OpaqueHT) extends PrimitiveKindV {
 */
 // mig: fn tyype
-impl<'v, 'h> OpaqueV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_opaque");
   }
 }
@@ -358,9 +387,11 @@ impl<'v, 'h> OpaqueV<'v, 'h> {
 */
 // mig: struct StructInstanceV
 /// Temporary state
-pub struct StructInstanceV<'v, 'h> {
-  pub struct_h: StructDefinitionH,
-  pub members: Cell<Option<&'v [ReferenceV<'v, 'h>]>>,
+pub struct StructInstanceV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub struct_h: StructDefinitionH<'s, 'h>,
+  pub members: Cell<Option<&'v [ReferenceV<'v, 'h, 's>]>>,
 }
 /*
 case class StructInstanceV(
@@ -370,8 +401,8 @@ case class StructInstanceV(
   vassert(members.get.size == structH.members.size)
 */
 // mig: fn tyype
-impl<'v, 'h> StructInstanceV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_struct_instance");
   }
 }
@@ -379,8 +410,8 @@ impl<'v, 'h> StructInstanceV<'v, 'h> {
   override def tyype = RRKind(structH.getRef)
 */
 // mig: fn get_reference_member
-impl<'v, 'h> StructInstanceV<'v, 'h> {
-  pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h> {
+impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
+  pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
     panic!("Unimplemented: get_reference_member");
   }
 }
@@ -392,8 +423,8 @@ impl<'v, 'h> StructInstanceV<'v, 'h> {
   }
 */
 // mig: fn set_reference_member
-impl<'v, 'h> StructInstanceV<'v, 'h> {
-  pub fn set_reference_member(&self, index: i32, reference: ReferenceV<'v, 'h>) {
+impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
+  pub fn set_reference_member(&self, index: i32, reference: ReferenceV<'v, 'h, 's>) {
     panic!("Unimplemented: set_reference_member");
   }
 }
@@ -403,7 +434,7 @@ impl<'v, 'h> StructInstanceV<'v, 'h> {
   }
 */
 // mig: fn zero
-impl<'v, 'h> StructInstanceV<'v, 'h> {
+impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn zero(&self) {
     panic!("Unimplemented: zero");
   }
@@ -419,11 +450,11 @@ impl<'v, 'h> StructInstanceV<'v, 'h> {
 */
 // mig: struct ArrayInstanceV
 /// Temporary state
-pub struct ArrayInstanceV<'v, 'h> {
-  pub type_h: CoordH<KindHT>,
-  pub element_type_h: CoordH<KindHT>,
+pub struct ArrayInstanceV<'v, 'h, 's> {
+  pub type_h: CoordH<'s, 'h>,
+  pub element_type_h: CoordH<'s, 'h>,
   pub capacity: i32,
-  pub elements: Cell<&'v [ReferenceV<'v, 'h>]>,
+  pub elements: Cell<&'v [ReferenceV<'v, 'h, 's>]>,
 }
 /*
 case class ArrayInstanceV(
@@ -434,8 +465,8 @@ case class ArrayInstanceV(
 ) extends KindV {
 */
 // mig: fn tyype
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h> {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
+  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_array_instance");
   }
 }
@@ -443,8 +474,8 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
   override def tyype = RRKind(typeH.kind)
 */
 // mig: fn get_element
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
-  pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h> {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
+  pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h, 's> {
     panic!("Unimplemented: get_element");
   }
 }
@@ -457,8 +488,8 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
   }
 */
 // mig: fn set_element
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
-  pub fn set_element(&self, index: i64, ref_: ReferenceV<'v, 'h>) {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
+  pub fn set_element(&self, index: i64, ref_: ReferenceV<'v, 'h, 's>) {
     panic!("Unimplemented: set_element");
   }
 }
@@ -471,8 +502,8 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
   }
 */
 // mig: fn initialize_element
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
-  pub fn initialize_element(&self, ref_: ReferenceV<'v, 'h>) {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
+  pub fn initialize_element(&self, ref_: ReferenceV<'v, 'h, 's>) {
     panic!("Unimplemented: initialize_element");
   }
 }
@@ -483,8 +514,8 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
   }
 */
 // mig: fn deinitialize_element
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
-  pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h> {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
+  pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h, 's> {
     panic!("Unimplemented: deinitialize_element");
   }
 }
@@ -497,7 +528,7 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
   }
 */
 // mig: fn get_size
-impl<'v, 'h> ArrayInstanceV<'v, 'h> {
+impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn get_size(&self) -> i64 {
     panic!("Unimplemented: get_size");
   }
@@ -510,8 +541,8 @@ impl<'v, 'h> ArrayInstanceV<'v, 'h> {
 */
 // mig: struct AllocationIdV
 /// Temporary state
-pub struct AllocationIdV<'v, 'h> {
-  pub tyype: RRKindV<'v, 'h>,
+pub struct AllocationIdV<'v, 'h, 's> {
+  pub tyype: RRKindV<'v, 'h, 's>,
   pub num: i32,
 }
 /*
@@ -525,9 +556,9 @@ case class AllocationId(tyype: RRKind, num: Int) {
 */
 // mig: struct ReferenceV
 /// Temporary state
-pub struct ReferenceV<'v, 'h> {
-  pub actual_kind: RRKindV<'v, 'h>,
-  pub seen_as_kind: RRKindV<'v, 'h>,
+pub struct ReferenceV<'v, 'h, 's> {
+  pub actual_kind: RRKindV<'v, 'h, 's>,
+  pub seen_as_kind: RRKindV<'v, 'h, 's>,
   pub ownership: OwnershipH,
   pub location: LocationH,
   pub num: i32,
@@ -552,8 +583,8 @@ case class ReferenceV(
 ) {
 */
 // mig: fn alloc_id
-impl<'v, 'h> ReferenceV<'v, 'h> {
-  pub fn alloc_id(&self) -> AllocationIdV<'v, 'h> {
+impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
+  pub fn alloc_id(&self) -> AllocationIdV<'v, 'h, 's> {
     panic!("Unimplemented: alloc_id");
   }
 }
@@ -565,19 +596,19 @@ impl<'v, 'h> ReferenceV<'v, 'h> {
 */
 // mig: enum IObjectReferrerV
 /// Temporary state
-pub enum IObjectReferrerV<'v, 'h> {
-  VariableToObjectReferrer(&'v VariableToObjectReferrerV<'v, 'h>),
-  MemberToObjectReferrer(&'v MemberToObjectReferrerV<'v, 'h>),
-  ElementToObjectReferrer(&'v ElementToObjectReferrerV<'v, 'h>),
-  RegisterToObjectReferrer(&'v RegisterToObjectReferrerV<'v, 'h>),
-  RegisterHoldToObjectReferrer(&'v RegisterHoldToObjectReferrerV<'v, 'h>),
-  ArgumentToObjectReferrer(&'v ArgumentToObjectReferrerV<'v, 'h>),
+pub enum IObjectReferrerV<'v, 'h, 's> {
+  VariableToObjectReferrer(&'v VariableToObjectReferrerV<'v, 'h, 's>),
+  MemberToObjectReferrer(&'v MemberToObjectReferrerV<'v, 'h, 's>),
+  ElementToObjectReferrer(&'v ElementToObjectReferrerV<'v, 'h, 's>),
+  RegisterToObjectReferrer(&'v RegisterToObjectReferrerV<'v, 'h, 's>),
+  RegisterHoldToObjectReferrer(&'v RegisterHoldToObjectReferrerV<'v, 'h, 's>),
+  ArgumentToObjectReferrer(&'v ArgumentToObjectReferrerV<'v, 'h, 's>),
 }
 /*
 sealed trait IObjectReferrer {
 */
 // mig: fn ownership
-impl<'v, 'h> IObjectReferrerV<'v, 'h> {
+impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
   pub fn ownership(&self) -> OwnershipH {
     panic!("Unimplemented: ownership");
   }
@@ -588,8 +619,8 @@ impl<'v, 'h> IObjectReferrerV<'v, 'h> {
 */
 // mig: struct VariableToObjectReferrerV
 /// Temporary state
-pub struct VariableToObjectReferrerV<'v, 'h> {
-  pub var_addr: VariableAddressV<'v, 'h>,
+pub struct VariableToObjectReferrerV<'v, 'h, 's> {
+  pub var_addr: VariableAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -603,8 +634,8 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct MemberToObjectReferrerV
 /// Temporary state
-pub struct MemberToObjectReferrerV<'v, 'h> {
-  pub member_addr: MemberAddressV<'v, 'h>,
+pub struct MemberToObjectReferrerV<'v, 'h, 's> {
+  pub member_addr: MemberAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -618,8 +649,8 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct ElementToObjectReferrerV
 /// Temporary state
-pub struct ElementToObjectReferrerV<'v, 'h> {
-  pub element_addr: ElementAddressV<'v, 'h>,
+pub struct ElementToObjectReferrerV<'v, 'h, 's> {
+  pub element_addr: ElementAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -633,8 +664,8 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RegisterToObjectReferrerV
 /// Temporary state
-pub struct RegisterToObjectReferrerV<'v, 'h> {
-  pub call_id: CallIdV<'v, 'h>,
+pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
+  pub call_id: CallIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -648,8 +679,8 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RegisterHoldToObjectReferrerV
 /// Temporary state
-pub struct RegisterHoldToObjectReferrerV<'v, 'h> {
-  pub expression_id: ExpressionIdV<'v, 'h>,
+pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
+  pub expression_id: ExpressionIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -667,8 +698,8 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct ArgumentToObjectReferrerV
 /// Temporary state
-pub struct ArgumentToObjectReferrerV<'v, 'h> {
-  pub argument_id: ArgumentIdV<'v, 'h>,
+pub struct ArgumentToObjectReferrerV<'v, 'h, 's> {
+  pub argument_id: ArgumentIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
 }
 /*
@@ -682,15 +713,17 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct VariableAddressV
 /// Temporary state
-pub struct VariableAddressV<'v, 'h> {
-  pub call_id: CallIdV<'v, 'h>,
-  pub local: Local,
+pub struct VariableAddressV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub call_id: CallIdV<'v, 'h, 's>,
+  pub local: Local<'s, 'h>,
 }
 /*
 case class VariableAddressV(callId: CallId, local: Local) {
 */
 // mig: fn to_string
-impl<'v, 'h> VariableAddressV<'v, 'h> {
+impl<'v, 'h, 's> VariableAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
     panic!("Unimplemented: to_string_variable_address");
   }
@@ -713,15 +746,15 @@ impl<'v, 'h> VariableAddressV<'v, 'h> {
 */
 // mig: struct MemberAddressV
 /// Temporary state
-pub struct MemberAddressV<'v, 'h> {
-  pub struct_id: AllocationIdV<'v, 'h>,
+pub struct MemberAddressV<'v, 'h, 's> {
+  pub struct_id: AllocationIdV<'v, 'h, 's>,
   pub field_index: i32,
 }
 /*
 case class MemberAddressV(structId: AllocationId, fieldIndex: Int) {
 */
 // mig: fn to_string
-impl<'v, 'h> MemberAddressV<'v, 'h> {
+impl<'v, 'h, 's> MemberAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
     panic!("Unimplemented: to_string_member_address");
   }
@@ -732,15 +765,15 @@ impl<'v, 'h> MemberAddressV<'v, 'h> {
 */
 // mig: struct ElementAddressV
 /// Temporary state
-pub struct ElementAddressV<'v, 'h> {
-  pub array_id: AllocationIdV<'v, 'h>,
+pub struct ElementAddressV<'v, 'h, 's> {
+  pub array_id: AllocationIdV<'v, 'h, 's>,
   pub element_index: i64,
 }
 /*
 case class ElementAddressV(arrayId: AllocationId, elementIndex: Long) {
 */
 // mig: fn to_string
-impl<'v, 'h> ElementAddressV<'v, 'h> {
+impl<'v, 'h, 's> ElementAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
     panic!("Unimplemented: to_string_element_address");
   }
@@ -753,15 +786,18 @@ impl<'v, 'h> ElementAddressV<'v, 'h> {
 */
 // mig: struct CallIdV
 /// Temporary state
-pub struct CallIdV<'v, 'h> {
+pub struct CallIdV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub call_depth: i32,
-  pub function: PrototypeH,
+  pub function: &'h PrototypeH<'s, 'h>,
+  pub _phantom: PhantomData<&'v ()>,
 }
 /*
 case class CallId(callDepth: Int, function: PrototypeH) {
 */
 // mig: fn to_string
-impl<'v, 'h> CallIdV<'v, 'h> {
+impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
     panic!("Unimplemented: to_string_call_id");
   }
@@ -780,8 +816,8 @@ impl<'v, 'h> CallIdV<'v, 'h> {
 */
 // mig: struct ArgumentIdV
 /// Temporary state
-pub struct ArgumentIdV<'v, 'h> {
-  pub call_id: CallIdV<'v, 'h>,
+pub struct ArgumentIdV<'v, 'h, 's> {
+  pub call_id: CallIdV<'v, 'h, 's>,
   pub index: i32,
 }
 /*
@@ -795,10 +831,10 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct VariableV
 /// Temporary state
-pub struct VariableV<'v, 'h> {
-  pub id: VariableAddressV<'v, 'h>,
-  pub reference: Cell<ReferenceV<'v, 'h>>,
-  pub expected_type: CoordH<KindHT>,
+pub struct VariableV<'v, 'h, 's> {
+  pub id: VariableAddressV<'v, 'h, 's>,
+  pub reference: Cell<ReferenceV<'v, 'h, 's>>,
+  pub expected_type: CoordH<'s, 'h>,
 }
 /*
 case class VariableV(
@@ -809,8 +845,8 @@ case class VariableV(
 */
 // mig: struct ExpressionIdV
 /// Temporary state
-pub struct ExpressionIdV<'v, 'h> {
-  pub call_id: CallIdV<'v, 'h>,
+pub struct ExpressionIdV<'v, 'h, 's> {
+  pub call_id: CallIdV<'v, 'h, 's>,
   pub path: &'v [i32],
 }
 /*
@@ -820,8 +856,8 @@ case class ExpressionId(
 ) {
 */
 // mig: fn add_step
-impl<'v, 'h> ExpressionIdV<'v, 'h> {
-  pub fn add_step(&self, i: i32) -> ExpressionIdV<'v, 'h> {
+impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
+  pub fn add_step(&self, i: i32) -> ExpressionIdV<'v, 'h, 's> {
     panic!("Unimplemented: add_step");
   }
 }
@@ -831,15 +867,15 @@ impl<'v, 'h> ExpressionIdV<'v, 'h> {
 */
 // mig: enum RegisterV
 /// Temporary state
-pub enum RegisterV<'v, 'h> {
-  ReferenceRegister(&'v ReferenceRegisterV<'v, 'h>),
+pub enum RegisterV<'v, 'h, 's> {
+  ReferenceRegister(&'v ReferenceRegisterV<'v, 'h, 's>),
 }
 /*
 sealed trait RegisterV {
 */
 // mig: fn expect_reference_register
-impl<'v, 'h> RegisterV<'v, 'h> {
-  pub fn expect_reference_register(&self) -> ReferenceRegisterV<'v, 'h> {
+impl<'v, 'h, 's> RegisterV<'v, 'h, 's> {
+  pub fn expect_reference_register(&self) -> ReferenceRegisterV<'v, 'h, 's> {
     panic!("Unimplemented: expect_reference_register");
   }
 }
@@ -855,8 +891,8 @@ impl<'v, 'h> RegisterV<'v, 'h> {
 */
 // mig: struct ReferenceRegisterV
 /// Temporary state
-pub struct ReferenceRegisterV<'v, 'h> {
-  pub reference: ReferenceV<'v, 'h>,
+pub struct ReferenceRegisterV<'v, 'h, 's> {
+  pub reference: ReferenceV<'v, 'h, 's>,
 }
 /*
 case class ReferenceRegisterV(reference: ReferenceV) extends RegisterV {

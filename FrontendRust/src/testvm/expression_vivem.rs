@@ -71,7 +71,7 @@ pub fn make_primitive(heap: &Heap, call_id: CallId, location: LocationH, kind: K
   }
 */
 // mig: fn take_argument
-pub fn take_argument(heap: &Heap, call_id: CallId, argument_index: i32, result_type: CoordH<KindHT>) -> ReferenceV { panic!("Unimplemented: take_argument"); }
+pub fn take_argument(heap: &Heap, call_id: CallId, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV { panic!("Unimplemented: take_argument"); }
 /*
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
@@ -1253,7 +1253,7 @@ pub fn execute_interface_function(program_h: &ProgramH, stdin: &dyn Fn() -> Stri
   }
 */
 // mig: fn discard
-pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<KindHT>, actual_reference: ReferenceV) { panic!("Unimplemented: discard"); }
+pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV) { panic!("Unimplemented: discard"); }
 /*
   def discard(
     programH: ProgramH,
@@ -1269,7 +1269,7 @@ pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin
   }
 */
 // mig: fn cleanup
-pub fn cleanup(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<KindHT>, actual_reference: ReferenceV) { panic!("Unimplemented: cleanup"); }
+pub fn cleanup(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV) { panic!("Unimplemented: cleanup"); }
 /*
   def cleanup(
     programH: ProgramH,

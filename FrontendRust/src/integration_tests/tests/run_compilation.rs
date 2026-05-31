@@ -113,34 +113,72 @@ impl RunCompilation {
   }
   */
 
-  // The following methods drive the reference backend (Vivem/Heap/ReferenceV/
-  // PrimitiveKindV), which has not yet been migrated to Rust. They are also Scala
-  // overloads (evalForKind ×3, run ×2) that cannot share Rust names, so they remain
-  // Scala-only here until the backend is migrated.
+  // The following seven methods drive the reference backend (Vivem/HeapV/ReferenceV/
+  // PrimitiveKindV). They're sliced as panic stubs because their bodies all delegate
+  // into Vivem, which is itself entirely panic-stubbed (180 fns across testvm/*.rs).
+  //
+  // Rust adaptation note: Scala has overloads `evalForKind ×3` and `run ×2` that share
+  // the same name but differ by arg shape. Rust requires distinct fn names, so each
+  // variant gets a suffix describing its arg shape, e.g. `_heap_args` / `_primitive_args`
+  // / `_primitive_args_with_stdin`. evalForStdout and evalForKindAndStdout don't overload,
+  // so they keep their Scala names verbatim (in snake_case).
+
+  // mig: fn eval_for_kind_heap_args (Scala overload `evalForKind(heap, args: Vector[ReferenceV])`)
+  pub fn eval_for_kind_heap_args<'v, 'h, 's>(&self, _heap: crate::testvm::heap::HeapV<'v, 'h, 's>, _args: Vec<crate::testvm::values::ReferenceV<'v, 'h>>) -> crate::von::ast::IVonData { panic!("Unimplemented: eval_for_kind_heap_args"); }
   /*
   def evalForKind(heap: Heap, args: Vector[ReferenceV]): IVonData = {
     Vivem.executeWithHeap(getHamuts(), heap, args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
   }
+  */
+
+  // mig: fn run_heap_args (Scala overload `run(heap, args: Vector[ReferenceV])`)
+  pub fn run_heap_args<'v, 'h, 's>(&self, _heap: crate::testvm::heap::HeapV<'v, 'h, 's>, _args: Vec<crate::testvm::values::ReferenceV<'v, 'h>>) { panic!("Unimplemented: run_heap_args"); }
+  /*
   def run(heap: Heap, args: Vector[ReferenceV]): Unit = {
     Vivem.executeWithHeap(getHamuts(), heap, args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
   }
+  */
+
+  // mig: fn run_primitive_args (Scala overload `run(args: Vector[PrimitiveKindV])`)
+  pub fn run_primitive_args<'v, 'h>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h>>) { panic!("Unimplemented: run_primitive_args"); }
+  /*
   def run(args: Vector[PrimitiveKindV]): Unit = {
     Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
   }
+  */
+
+  // mig: fn eval_for_kind_primitive_args (Scala overload `evalForKind(args: Vector[PrimitiveKindV])`)
+  pub fn eval_for_kind_primitive_args<'v, 'h>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h>>) -> crate::von::ast::IVonData { panic!("Unimplemented: eval_for_kind_primitive_args"); }
+  /*
   def evalForKind(args: Vector[PrimitiveKindV]): IVonData = {
     Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
   }
+  */
+
+  // mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload `evalForKind(args, stdin)`)
+  pub fn eval_for_kind_primitive_args_with_stdin<'v, 'h>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h>>, _stdin: Vec<String>) -> crate::von::ast::IVonData { panic!("Unimplemented: eval_for_kind_primitive_args_with_stdin"); }
+  /*
   def evalForKind(
       args: Vector[PrimitiveKindV],
       stdin: Vector[String]):
   IVonData = {
     Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.stdinFromList(stdin), Vivem.regularStdout)
   }
+  */
+
+  // mig: fn eval_for_stdout
+  pub fn eval_for_stdout<'v, 'h>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h>>) -> String { panic!("Unimplemented: eval_for_stdout"); }
+  /*
   def evalForStdout(args: Vector[PrimitiveKindV]): String = {
     val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()
     Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, stdoutFunc)
     stdoutStringBuilder.mkString
   }
+  */
+
+  // mig: fn eval_for_kind_and_stdout
+  pub fn eval_for_kind_and_stdout<'v, 'h>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h>>) -> (crate::von::ast::IVonData, String) { panic!("Unimplemented: eval_for_kind_and_stdout"); }
+  /*
   def evalForKindAndStdout(args: Vector[PrimitiveKindV]): (IVonData, String) = {
     val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()
     val kind = Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, stdoutFunc)

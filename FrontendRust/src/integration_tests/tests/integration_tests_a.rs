@@ -61,8 +61,13 @@ fn roguelike_typing_pass() { panic!("Unmigrated test: roguelike_typing_pass"); }
 */
 // mig: fn simple_program_returning_an_int
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_returning_an_int() { panic!("Unmigrated test: simple_program_returning_an_int"); }
+fn simple_program_returning_an_int() {
+    let compile = crate::integration_tests::tests::run_compilation::test("exported func main() int { return 3; }", false);
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program returning an int") {
     val compile = RunCompilation.test("exported func main() int { return 3; }", false)
