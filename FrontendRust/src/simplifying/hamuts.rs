@@ -219,10 +219,12 @@ Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.r
 // mig: fn add_opaque (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_opaque(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, opaque_h: &'h OpaqueHT<'s, 'h>) {
-        panic!("Unimplemented: add_opaque");
+        assert!(!self.struct_t_to_opaque_h.contains_key(&struct_it));
+        self.struct_t_to_opaque_h.insert(struct_it, opaque_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12): there is no HamutsBox/Hamuts split — Scala's outer `def addOpaque(...) = inner.addOpaque(...)` delegates to inner, whose body (vassert !contains + insert) IS what Rust implements directly. Same SPDMX Exception Q precedent as the temp-disables on add_struct_originating_from_typing_pass, forward_declare_struct, add_function_export, etc. in this same file. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-254-1780258356861/hook-254/add_opaque--221.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addOpaque(structIT: StructIT[cI], opaqueH: OpaqueHT): Unit = {
     inner = inner.addOpaque(structIT, opaqueH)
   }
@@ -359,11 +361,25 @@ Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.r
 
 // mig: fn add_kind_extern (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
-    pub fn add_kind_extern(&mut self, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: StrI<'s>) {
-        panic!("Unimplemented: add_kind_extern");
+    pub fn add_kind_extern(&mut self, scout_arena: &crate::scout_arena::ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
+        let package_coordinate = opaque_h.package_coord;
+        let kind_to_extern = self.package_coord_to_kind_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
+        match kind_to_extern.get(&opaque_h) {
+            None => {
+                kind_to_extern.insert(opaque_h, crate::final_ast::types::HamutsKindExtern {
+                    maybe_extern_name: scout_arena.intern_str(&exported_name),
+                    kind: crate::final_ast::types::KindHT::OpaqueHT(opaque_h),
+                    simple_id,
+                });
+            }
+            Some(_existing_full_name) => {
+                panic!("Already exported a `{}` from package `{:?}`", exported_name, package_coordinate);
+            }
+        }
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12): there is no HamutsBox/Hamuts split — Scala's outer addKindExtern delegates to inner whose body IS reproduced as the audit-trail Scala block immediately below at hamuts.rs:755-792. Same SPDMX Exception Q precedent as add_struct_originating_from_typing_pass, forward_declare_struct, add_function_export, add_opaque just above in this same file. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-261-1780258555057/hook-261/add_kind_extern--364.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addKindExtern(opaqueH: OpaqueHT, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addKindExtern(opaqueH, simpleId, exportedName)
   }

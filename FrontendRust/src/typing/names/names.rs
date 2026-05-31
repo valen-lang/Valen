@@ -546,7 +546,7 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
             IInstantiationNameT::OverrideDispatcher(x) => x.template_args,
             IInstantiationNameT::OverrideDispatcherCase(x) => x.independent_impl_template_args,
             IInstantiationNameT::Extern(_) => &[],
-            IInstantiationNameT::ExternFunction(_) => &[],
+            IInstantiationNameT::ExternFunction(x) => x.template_args,
             IInstantiationNameT::Function(x) => x.template_args,
             IInstantiationNameT::ForwarderFunction(_) => panic!("Unimplemented: template_args on ForwarderFunctionNameT (Scala: inner.templateArgs — recurse through IFunctionNameT)"),
             IInstantiationNameT::FunctionBound(x) => x.template_args,

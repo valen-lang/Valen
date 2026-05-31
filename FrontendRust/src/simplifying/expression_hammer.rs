@@ -110,7 +110,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     }
                     let last_is_never = match exprs_he.last().map(|e| e.result_type().kind) {
                         Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
-                            return (crate::simplifying::hammer::consecrash(locals, &exprs_he), Vec::new());
+                            return (crate::simplifying::hammer::consecrash(self.interner, locals, &exprs_he), Vec::new());
                         }
                         _ => {}
                     };
@@ -1008,7 +1008,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &args_ie);
         // Don't evaluate anything that can't ever be run, see BRCOBS
         if !args_he.is_empty() && matches!(args_he.last().unwrap().result_type().kind, crate::final_ast::types::KindHT::NeverHT(crate::final_ast::types::NeverHT { from_break: true })) {
-            return crate::simplifying::hammer::consecrash(locals, &args_he);
+            return crate::simplifying::hammer::consecrash(self.interner, locals, &args_he);
         }
         let param_types = self.translate_coords(hinputs, hamuts, &prototype2.param_types());
         assert!(args_he.iter().map(|e| e.result_type()).collect::<Vec<_>>() == param_types);
@@ -1070,7 +1070,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         // Don't evaluate anything that can't ever be run, see BRCOBS
         match args_he.last().map(|e| e.result_type().kind) {
             Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
-                return crate::simplifying::hammer::consecrash(locals, &args_he);
+                return crate::simplifying::hammer::consecrash(self.interner, locals, &args_he);
             }
             _ => {}
         }

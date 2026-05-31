@@ -188,7 +188,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     )
     {
         for struct_def_i in hinputs.structs.iter() {
-            if hinputs.kind_externs.contains_key(struct_def_i.instantiated_citizen) {
+            if hinputs.kind_externs.contains_key(&struct_def_i.instantiated_citizen) {
                 self.translate_opaque_i(hinputs, hamuts, struct_def_i.instantiated_citizen);
             } else {
                 self.translate_struct_i(hinputs, hamuts, struct_def_i.instantiated_citizen);
@@ -313,7 +313,29 @@ where 's: 'h, 's: 'i, 'i: 'h,
         struct_it: &'i StructIT<'s, 'i, cI>,
     ) -> &'h OpaqueHT<'s, 'h>
     {
-        panic!("Unimplemented: translate_opaque_i");
+        match hamuts.struct_t_to_opaque_h.get(&struct_it).copied() {
+            Some(opaque_h) => opaque_h,
+            None => {
+                let full_name_h = self.translate_full_name(hinputs, hamuts, &struct_it.id);
+                let temporary_struct_ref_h = self.interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: full_name_h });
+                hamuts.forward_declare_struct(struct_it, temporary_struct_ref_h);
+                let struct_def_i = hinputs.lookup_struct(&struct_it.id);
+                let _mutability_h = crate::simplifying::conversions::evaluate_mutability_templata(struct_def_i.mutability);
+                assert!(struct_def_i.members.is_empty());
+
+                let _edges_h = self.translate_edges_for_struct(hinputs, hamuts, temporary_struct_ref_h, struct_it);
+
+                let opaque_h: &'h OpaqueHT<'s, 'h> = self.interner.bump().alloc(crate::final_ast::types::OpaqueHT {
+                    package_coord: *struct_it.id.package_coord,
+                    struct_id: self.translate_full_name(hinputs, hamuts, &struct_it.id),
+                    simple_id: crate::simplifying::name_hammer::simplify_id(self.interner, self.scout_arena, &struct_it.id),
+                });
+
+                hamuts.add_opaque(struct_it, opaque_h);
+
+                opaque_h
+            }
+        }
     }
 }
 /*

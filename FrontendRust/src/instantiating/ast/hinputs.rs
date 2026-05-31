@@ -54,7 +54,7 @@ pub struct HinputsI<'s, 'i> where 's: 'i {
         ArenaIndexMap<'i, IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>>,
     pub kind_exports: &'i [KindExportI<'s, 'i>],
     pub function_exports: &'i [FunctionExportI<'s, 'i>],
-    pub kind_externs: ArenaIndexMap<'i, StructIT<'s, 'i, cI>, KindExternI<'s, 'i>>,
+    pub kind_externs: ArenaIndexMap<'i, &'i StructIT<'s, 'i, cI>, KindExternI<'s, 'i>>,
     pub function_externs: &'i [FunctionExternI<'s, 'i>],
 }
 /*

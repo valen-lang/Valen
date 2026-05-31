@@ -48,8 +48,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
             KindIT::StrIT(_) => KindHT::StrHT(crate::final_ast::types::StrHT),
             KindIT::VoidIT(_) => KindHT::VoidHT(crate::final_ast::types::VoidHT),
             KindIT::StructIT(s) => {
-                if hinputs.kind_externs.contains_key(s) {
-                    panic!("translate_kind: StructIT kindExterns translateOpaqueI branch")
+                if hinputs.kind_externs.contains_key(&s) {
+                    KindHT::OpaqueHT(self.translate_opaque_i(hinputs, hamuts, s))
                 } else {
                     KindHT::StructHT(self.translate_struct_i(hinputs, hamuts, s))
                 }
@@ -138,9 +138,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             (OwnershipI::Own, _) => LocationH::YonderH,
             (OwnershipI::ImmutableBorrow | OwnershipI::MutableBorrow, _) => LocationH::YonderH,
             (OwnershipI::Weak, _) => LocationH::YonderH,
-            (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => {
-                panic!("translate_coord: kindExterns InlineH branch")
-            }
+            (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => LocationH::InlineH,
             (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::VoidIT(_) | KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::NeverIT(_)) => LocationH::InlineH,
             (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::StrIT(_)) => LocationH::YonderH,
             (OwnershipI::ImmutableShare | OwnershipI::MutableShare, _) => LocationH::YonderH,

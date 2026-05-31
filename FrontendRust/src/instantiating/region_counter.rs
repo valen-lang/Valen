@@ -168,7 +168,7 @@ where 's: 'i {
         }
         IFunctionNameI::ExternFunction(n) => {
             let ExternFunctionNameI { template_args, parameters, .. } = *n;
-            for _template_arg in template_args { panic!("Unimplemented: count_function_name ExternFunction countTemplata") }
+            for template_arg in template_args { count_templata(counter, template_arg) }
             for param in parameters { count_coord(counter, param) }
         }
         IFunctionNameI::LambdaCallFunction(_) => panic!("Unimplemented: count_function_name LambdaCallFunction"),

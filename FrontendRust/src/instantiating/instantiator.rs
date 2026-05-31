@@ -491,8 +491,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 kind_exports: self.interner.alloc_slice_from_vec(kind_exports_c),
                 function_exports: self.interner.alloc_slice_from_vec(function_exports_c),
                 kind_externs: ArenaIndexMap::from_iter_in(
-                    monouts.kind_externs.iter().map(|_x| -> (StructIT<'s, 'i, cI>, KindExternI<'s, 'i>) {
-                        panic!("Unimplemented: translate_method kindExterns")
+                    monouts.kind_externs.iter().map(|x| -> (&'i StructIT<'s, 'i, cI>, KindExternI<'s, 'i>) {
+                        (x.r#struct, *x)
                     }),
                     self.interner.bump()),
                 function_externs: self.interner.alloc_slice_from_vec(
@@ -2443,7 +2443,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let result_ref: &'i crate::instantiating::ast::citizens::StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.structs.insert(result_ref.instantiated_citizen.id, result_ref);
         if attrs_for_extern_check.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_))) {
-            panic!("translate_collapsed_struct_definition: ExternI kindExtern branch");
+            _monouts.kind_externs.push(crate::instantiating::ast::ast::KindExternI { r#struct: result_ref.instantiated_citizen });
         }
         // Scala's `if (opts.sanityCheck) { vassert ... }` sanity checks on `result.instantiated_citizen` and
         // `result.members` for `KindPlaceholderNameT` are omitted: same parity gap as the earlier sanity-check block.
@@ -2695,7 +2695,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_citizen_attribute
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_citizen_attribute(x: &crate::typing::ast::ast::ICitizenAttributeT<'s>) -> crate::instantiating::ast::ast::ICitizenAttributeI<'s> {
-        panic!("Unimplemented: translate_citizen_attribute");
+        match x {
+            crate::typing::ast::ast::ICitizenAttributeT::Sealed => crate::instantiating::ast::ast::ICitizenAttributeI::SealedI,
+            crate::typing::ast::ast::ICitizenAttributeT::Extern(extern_t) => crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(crate::instantiating::ast::ast::ExternI { package_coord: extern_t.package_coord }),
+        }
     }
 }
 /*
@@ -2740,7 +2743,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let new_header = self.translate_function_header(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &perspective_region_t, function_t.header);
 
         if new_header.to_prototype(self.interner) != *desired_prototype_c {
-            panic!("Unimplemented: translate_collapsed_function newHeader != desiredPrototypeC");
+            self.translate_function_header(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &perspective_region_t, function_t.header);
+            panic!("vfail");
         }
 
         let (_body_subjective_it, body_ce) =
@@ -3260,8 +3264,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_it = prototype_i.return_type;
                 let result_ce = ReferenceExpressionIE::ExternFunctionCall(self.interner.bump().alloc(crate::instantiating::ast::expressions::ExternFunctionCallIE { prototype2: prototype_c, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: prototype_c.return_type }));
                 match prototype2.id.local_name {
-                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { template_args, .. }) if !template_args.is_empty() => {
-                        panic!("Unimplemented: translate_ref_expr ExternFunctionCall generic-extern branch");
+                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
+                        let num_inherited = self.hinputs.function_externs.iter().find(|fe| {
+                            fe.prototype.id.package_coord == prototype2.id.package_coord
+                                && fe.prototype.id.init_steps == prototype2.id.init_steps
+                                && match fe.prototype.id.local_name {
+                                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { human_name: hn, .. }) => hn == human_name,
+                                    _ => false,
+                                }
+                        })
+                        .and_then(|fe| fe.generic_parameter_inheritance.as_ref().map(|i| i.num_inherited_generic_parameters))
+                        .unwrap_or(0);
+                        monouts.function_externs.push(FunctionExternI {
+                            prototype: self.interner.intern_prototype_ci(PrototypeIValI { id: prototype_c.id, return_type: prototype_c.return_type }),
+                            num_inherited_generic_parameters: num_inherited,
+                        });
                     }
                     _ => {}
                 }

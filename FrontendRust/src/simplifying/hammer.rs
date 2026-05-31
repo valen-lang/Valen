@@ -525,7 +525,7 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_struct(&self, id: &IdI<'s, 'i, cI>) -> String {
-        panic!("Unimplemented: mangle_struct");
+        String::new()
     }
 }
 /*
@@ -640,8 +640,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
             hamuts.add_function_export(prototype_h, *export_id.package_coord, *exported_name);
         }
 
-        for _ in kind_externs.iter() {
-            panic!("Unimplemented: translate kindExterns");
+        for (r#struct, _kind_extern) in kind_externs.iter() {
+            let export_name = self.mangle_struct(&r#struct.id);
+            let export_simplified_id = crate::simplifying::name_hammer::simplify_id(self.interner, self.scout_arena, &r#struct.id);
+            let opaque_h = self.translate_opaque_i(hinputs, &mut hamuts, *r#struct);
+            hamuts.add_kind_extern(self.scout_arena, opaque_h, export_simplified_id, export_name);
         }
 
         for FunctionExternI { prototype, num_inherited_generic_parameters } in function_externs.iter() {
@@ -654,7 +657,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     other => panic!("translate functionExterns: unexpected local_name variant {:?}", std::mem::discriminant(&other)),
                 }
             };
-            let raw_simple_id = crate::simplifying::name_hammer::simplify_id(self.interner, &prototype.id);
+            let raw_simple_id = crate::simplifying::name_hammer::simplify_id(self.interner, self.scout_arena, &prototype.id);
             let export_simplified_id = if num_inherited == 0 {
                 raw_simple_id
             } else {
@@ -973,6 +976,7 @@ where 's: 'h,
 
 // mig: fn consecrash
 pub fn consecrash<'s, 'i, 'h>(
+    interner: &HammerInterner<'s, 'h>,
     locals: &mut Locals<'s, 'i, 'h>,
     unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
 ) -> ExpressionH<'s, 'h>
@@ -984,17 +988,20 @@ where 's: 'i, 'i: 'h,
     }
     let exprs_he = flatten_and_filter_voids(unfiltered_exprs_h);
     let (last, init) = exprs_he.split_last().expect("consecrash flat empty");
-    let mut exprs_with_stackified_init_he: Vec<ExpressionH<'s, 'h>> = Vec::new();
-    for expr in init.iter() {
-        let _local = locals;
-        panic!("consecrash: stackify init branch — needs interner threading; not exercised by current test");
-    }
+    let mut exprs_with_stackified_init_he: Vec<ExpressionH<'s, 'h>> = init.iter().map(|expr| {
+        if expr.result_type().kind == KindHT::VoidHT(VoidHT) {
+            *expr
+        } else {
+            let local = locals.add_hammer_local(expr.result_type(), Variability::Final);
+            ExpressionH::StackifyH(interner.bump().alloc(StackifyH { source_expr: *expr, local, name: None }))
+        }
+    }).collect();
     exprs_with_stackified_init_he.push(*last);
     // We'll never need to unstackify them because we're about to crash.
     match exprs_with_stackified_init_he.len() {
         0 => panic!("Cant have empty consecutive"),
         1 => exprs_with_stackified_init_he.into_iter().next().unwrap(),
-        _ => panic!("consecrash: multiple-elem ConsecutorH branch — needs interner threading; not exercised by current test"),
+        _ => ExpressionH::ConsecutorH(interner.bump().alloc(ConsecutorH { exprs: interner.bump().alloc_slice_fill_iter(exprs_with_stackified_init_he.into_iter()) })),
     }
 }
 /*
