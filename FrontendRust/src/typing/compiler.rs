@@ -1782,111 +1782,6 @@ where 's: 't,
                         };
                         let _header = self.evaluate_generic_function_from_non_call(
                             &mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
-                        let maybe_extern = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Extern(e) => Some(e), _ => None });
-                        match maybe_extern {
-                            None => {}
-                            Some(_extern_s) => {
-
-                                let extern_name = match function_a.name {
-                                    IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
-                                    other => panic!("vwat: {:?}", other),
-                                };
-                                let template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
-                                    code_loc: function_a.range.begin,
-                                    _phantom: PhantomData,
-                                });
-                                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
-                                let template_id = *self.typing_interner.intern_id(IdValT {
-                                    package_coord: package_id.package_coord,
-                                    init_steps: &template_id_steps,
-                                    local_name: INameT::ExternTemplate(template_name),
-                                });
-                                let region_placeholder = RegionT { region: IRegionT::Default };
-                                let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
-                                    template: template_name,
-                                    template_arg: region_placeholder,
-                                });
-                                let placeholdered_extern_id_steps: Vec<INameT<'s, 't>> = vec![];
-                                let placeholdered_extern_id = *self.typing_interner.intern_id(IdValT {
-                                    package_coord: package_id.package_coord,
-                                    init_steps: &placeholdered_extern_id_steps,
-                                    local_name: INameT::Extern(placeholdered_extern_name),
-                                });
-                                let placeholdered_extern_id_ref = self.typing_interner.alloc(placeholdered_extern_id);
-                                let extern_templatas = TemplatasStoreBuilder::new(placeholdered_extern_id_ref).build_in(self.typing_interner);
-                                let extern_env = self.typing_interner.alloc(ExternEnvironmentT {
-                                    global_env,
-                                    parent_env: package_env,
-                                    template_id,
-                                    id: placeholdered_extern_id,
-                                    templatas: extern_templatas,
-                                });
-                                let extern_env_as_iindenizen = IInDenizenEnvironmentT::Extern(extern_env);
-                                let call_ranges = self.typing_interner.alloc_slice_copy(&[function_a.range]);
-                                // We evaluate this and then don't do anything for it on purpose, we just do
-                                // this to cause the compiler to make instantiation bounds for all the types
-                                // in terms of this extern. That way, further below, when we do the
-                                // substituting templatas, the bounds are already made for these types.
-                                let extern_placeholdered_wrapper_prototype =
-                                    match self.evaluate_generic_light_function_from_call_for_prototype(
-                                        &mut coutputs,
-                                        call_ranges,
-                                        LocationInDenizen { path: &[] },
-                                        extern_env_as_iindenizen,
-                                        templata,
-                                        &[],
-                                        region_placeholder,
-                                        &[],
-                                        &[],
-                                    )? {
-                                        IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
-                                        IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from extern function"),
-                                    };
-                                // We don't actually want to call the wrapper function, we want to call the extern.
-                                // The extern's prototype is always similar to the wrapper function, so we do
-                                // a straightforward replace of the names.
-                                // We don't have to worry about placeholders, they're already phrased in terms
-                                // of the calling FunctionExternT.
-                                let extern_prototype_id = match extern_placeholdered_wrapper_prototype.id.local_name {
-                                    INameT::Function(fn_name) => {
-                                        let extern_fn_name = self.typing_interner.intern_extern_function_name(ExternFunctionNameValT {
-                                            human_name: fn_name.template.human_name,
-                                            template_args: fn_name.template_args,
-                                            parameters: fn_name.parameters,
-                                        });
-                                        *self.typing_interner.intern_id(IdValT {
-                                            package_coord: extern_placeholdered_wrapper_prototype.id.package_coord,
-                                            init_steps: extern_placeholdered_wrapper_prototype.id.init_steps,
-                                            local_name: INameT::ExternFunction(extern_fn_name),
-                                        })
-                                    }
-                                    other => panic!("vwat: {:?}", other),
-                                };
-                                let extern_prototype = self.typing_interner.alloc(PrototypeT {
-                                    id: extern_prototype_id,
-                                    return_type: extern_placeholdered_wrapper_prototype.return_type,
-                                });
-                                // Though, we do need to add some instantiation bounds for this new IdT we
-                                // just made.
-                                let wrapper_bounds = coutputs.get_instantiation_bounds(self.typing_interner, extern_placeholdered_wrapper_prototype.id)
-                                    .unwrap_or_else(|| panic!("vassertSome: no instantiation bounds for extern wrapper prototype"));
-                                coutputs.add_instantiation_bounds(
-                                    self.opts.global_options.sanity_check,
-                                    self.typing_interner,
-                                    template_id,
-                                    extern_prototype_id,
-                                    wrapper_bounds,
-                                );
-                                coutputs.add_function_extern(
-                                    function_a.range,
-                                    placeholdered_extern_id,
-                                    extern_prototype,
-                                    extern_name,
-                                    None,
-                                    self.typing_interner,
-                                );
-                            }
-                        }
                         let maybe_export = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Export(e) => Some(e), _ => None });
                         match maybe_export {
                             None => {}
@@ -3061,14 +2956,27 @@ where 's: 't,
             let all_types: Vec<CoordT<'s, 't>> = std::iter::once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
-                    let range_t = self.typing_interner.alloc_slice_copy(&[function_extern.range]);
-                    let signature_t = self.typing_interner.alloc(function_extern.prototype.to_signature());
-                    return Err(ICompileErrorT::ExternFunctionDependedOnNonExportedKind {
-                        range: range_t,
-                        paackage: *function_extern.extern_placeholdered_id.package_coord,
-                        signature: signature_t,
-                        non_exported_kind: param_type.kind,
-                    });
+                    // Method-own and container-inherited template params surface here as
+                    // placeholders at definition time (e.g. `extern func bar<C>(c C)` inside
+                    // `extern struct Foo<A>` has C and A as KindPlaceholderTs in the wrapper
+                    // prototype). Placeholders are substitution slots, not concrete types; the
+                    // actual concrete kind for each monomorphization is what matters for ABI,
+                    // and gets checked at instantiation.
+                    let kind_is_fine_in_extern_func = match param_type.kind {
+                        KindT::Struct(s) => coutputs.lookup_struct(s.id, self).attributes.iter().any(|a| matches!(a, crate::typing::ast::ast::ICitizenAttributeT::Extern(_))),
+                        KindT::KindPlaceholder(_) => true,
+                        _ => false,
+                    };
+                    if !kind_is_fine_in_extern_func {
+                        let range_t = self.typing_interner.alloc_slice_copy(&[function_extern.range]);
+                        let signature_t = self.typing_interner.alloc(function_extern.prototype.to_signature());
+                        return Err(ICompileErrorT::ExternFunctionDependedOnNonExportedKind {
+                            range: range_t,
+                            paackage: *function_extern.extern_placeholdered_id.package_coord,
+                            signature: signature_t,
+                            non_exported_kind: param_type.kind,
+                        });
+                    }
                 }
             }
         }

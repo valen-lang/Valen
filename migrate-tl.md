@@ -12,6 +12,8 @@
 
 **NCWSRX false-positives** often mean the Scala audit block sits outside the diff window; fix the slicing (move it adjacent to its Rust def) rather than temp-disable.
 
+**Debugging (eprintln/diagnostic edits) is TL's job** — Guardian (SPDMX/NCWSRX) blocks JR from adding printouts or diagnostic scaffolding to existing bodies, so when JR's cascade hits an unexplained runtime panic, TL slices the diagnostic, re-runs, and hands JR the printed values. Don't tell JR to "add an eprintln and re-run." Tools and techniques for this live in **`docs/skills/migrate-diagnoser.md`**.
+
 **Run SCPX `--check-all`** after every slice-in or audit-block edit; duplicating Scala text already in a top-of-file blob trips it.
 
 **This file is now thin.** The durable guidance that used to live here has moved into two docs; this file keeps only **current status** and **items not covered there**:

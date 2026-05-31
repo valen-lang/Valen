@@ -4,7 +4,7 @@ use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExternFunctionCallTE, ReferenceExpressionTE, ReturnTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExternFunctionCallTE, GenericParametersInheritance, ReferenceExpressionTE, ReturnTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -774,6 +774,38 @@ where 's: 't,
                 let header_sig = self.typing_interner.alloc(function2.header.to_signature());
                 coutputs.declare_function_return_type(header_sig, function2.header.return_type);
                 coutputs.add_function(header_sig, function2);
+                // Register the extern with coutputs so it survives to HinputsT.functionExterns and reaches
+                // the Backend's pragma generation. The placeholderedExternId mirrors what Compiler.scala
+                // used to construct: a top-level IdT with an ExternNameT carrying a fresh ExternTemplateNameT
+                // keyed on the function's range. Fires for both top-level externs and externs declared
+                // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
+                let extern_template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
+                    code_loc: range.begin,
+                    _phantom: std::marker::PhantomData,
+                });
+                let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
+                    template: extern_template_name,
+                    template_arg: RegionT { region: IRegionT::Default },
+                });
+                let placeholdered_extern_id = *self.typing_interner.intern_id(IdValT {
+                    package_coord: env.id.package_coord,
+                    init_steps: &[],
+                    local_name: INameT::Extern(placeholdered_extern_name),
+                });
+                // Per @PRIIROZ, internal-method externs inherit the container's generic params at the end
+                // of their templateArgs. Hammer uses this count to reshape the wire-format SimpleId so the
+                // inherited args land on the citizen step instead of the function step (i.e.
+                // `Vec<i32>::capacity` rather than `Vec::capacity<i32>`), which is what Backend's
+                // rustifySimpleId expects per @SMLRZ.
+                let maybe_inheritance = match ICitizenTemplateNameT::try_from(extern_prototype.id.init_id(self.typing_interner).local_name) {
+                    Ok(_ctn) => {
+                        let citizen = coutputs.lookup_citizen_by_template_name(extern_prototype.id.init_id(self.typing_interner));
+                        Some(GenericParametersInheritance { num_inherited_generic_parameters: citizen.generic_param_types().len() as i32 })
+                    }
+                    Err(_) => None,
+                };
+                coutputs.add_function_extern(
+                    range, placeholdered_extern_id, extern_prototype, *human_name, maybe_inheritance, self.typing_interner);
                 function2.header
             }
             _ => {

@@ -2259,6 +2259,11 @@ fn translate_citizen_attributes(
           package_coordinate: file.package_coord,
         })
       }
+      IAttributeP::ExternAttribute(_) => {
+        ICitizenAttributeS::Extern(crate::postparsing::ast::ExternS {
+          package_coord: file.package_coord,
+        })
+      }
       IAttributeP::SealedAttribute(_) => {
         ICitizenAttributeS::Sealed(SealedS)
       }
