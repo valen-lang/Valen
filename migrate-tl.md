@@ -14,6 +14,8 @@
 
 **Debugging is TL's job — never delegate it to JR.** Guardian (SPDMX/NCWSRX/OALZDX) blocks JR from adding eprintlns or diagnostic scaffolding, and a temp-disable is not a workaround because temp-disables persist — we have no mechanism to remove them. TL slices the diagnostic, runs the test, hands JR the printed values, and reverts the diagnostic before JR is unblocked. Don't write "add an eprintln and re-run" into `for-jr.md`. Tools and techniques in **`docs/skills/migrate-diagnoser.md`**.
 
+**Logic bugs are deferred, not blocking.** When JR's active test panics with something *other* than "unimplemented"/"implement"/"not yet migrated" (i.e. a real logic bug, not a still-stubbed body), they mark it `- [~]` in their worktree's `migration-drive-todo.md` with a one-line note (Rust file:line and the panic message), append the same to `for-tl.md` so TL knows, then pick the next `- [ ]` test and continue driving. TL queues these `[~]`s for later — don't try to fix them inline during the parallel sprint. This overrides the older "never defer a test" rule **for logic bugs only** — JR still doesn't defer for missing scaffolding or other Guardian-blocks, which still escalate-and-wait.
+
 **Run SCPX `--check-all`** after every slice-in or audit-block edit; duplicating Scala text already in a top-of-file blob trips it.
 
 **This file is now thin.** The durable guidance that used to live here has moved into two docs; this file keeps only **current status** and **items not covered there**:
