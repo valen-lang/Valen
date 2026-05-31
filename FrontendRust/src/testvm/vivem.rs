@@ -1,3 +1,13 @@
+use std::io::Write;
+use std::marker::PhantomData;
+use crate::interner::StrI;
+use crate::final_ast::ast::ProgramH;
+use crate::testvm::values::{CallIdV, PrimitiveKindV, ReferenceV};
+use crate::testvm::heap::HeapV;
+use crate::von::ast::IVonData;
+
+type PrintStream = std::io::Stdout;
+
 /*
 package dev.vale.testvm
 
@@ -55,7 +65,7 @@ override def equals(obj: Any): Boolean = vcurious();
 object Vivem {
 */
 // mig: fn execute_with_primitive_args
-pub fn execute_with_primitive_args(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: execute_with_primitive_args")
 }
 /*
@@ -74,7 +84,7 @@ pub fn execute_with_primitive_args(program_h: &'h ProgramH<'s, 'h>, external_arg
   }
 */
 // mig: fn execute_with_heap
-pub fn execute_with_heap(program_h: &'h ProgramH<'s, 'h>, input_heap: &Heap<'v, 's, 'h>, input_argument_references: &'v [ReferenceV<'s, 'h>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, input_heap: &HeapV<'v, 's, 'h>, input_argument_references: &'v [ReferenceV<'s, 'h>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: execute_with_heap")
 }
 /*
@@ -91,7 +101,7 @@ pub fn execute_with_heap(program_h: &'h ProgramH<'s, 'h>, input_heap: &Heap<'v, 
   }
 */
 // mig: fn empty_stdin
-pub fn empty_stdin() -> StrI<'s> {
+pub fn empty_stdin<'v, 'h, 's>() -> StrI<'s> {
     panic!("Unimplemented: empty_stdin")
 }
 /*
@@ -100,7 +110,7 @@ pub fn empty_stdin() -> StrI<'s> {
   }
 */
 // mig: fn null_stdout
-pub fn null_stdout(str: StrI<'s>) {
+pub fn null_stdout<'v, 'h, 's>(str: StrI<'s>) {
     panic!("Unimplemented: null_stdout")
 }
 /*
@@ -108,7 +118,7 @@ pub fn null_stdout(str: StrI<'s>) {
   }
 */
 // mig: fn regular_stdout
-pub fn regular_stdout(str: StrI<'s>) {
+pub fn regular_stdout<'v, 'h, 's>(str: StrI<'s>) {
     panic!("Unimplemented: regular_stdout")
 }
 /*
@@ -117,7 +127,7 @@ pub fn regular_stdout(str: StrI<'s>) {
   }
 */
 // mig: fn stdin_from_list
-pub fn stdin_from_list(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -> StrI<'s>> {
+pub fn stdin_from_list<'v, 'h, 's>(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -> StrI<'s>> {
     panic!("Unimplemented: stdin_from_list")
 }
 /*
@@ -133,7 +143,7 @@ pub fn stdin_from_list(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -> StrI<'s>> 
   }
 */
 // mig: fn stdout_collector
-pub fn stdout_collector() -> (String, Box<dyn Fn(StrI<'s>)>) {
+pub fn stdout_collector<'v, 'h, 's>() -> (String, Box<dyn Fn(StrI<'s>)>) {
     panic!("Unimplemented: stdout_collector")
 }
 /*
@@ -144,7 +154,7 @@ pub fn stdout_collector() -> (String, Box<dyn Fn(StrI<'s>)>) {
   }
 */
 // mig: fn inner_execute
-pub fn inner_execute(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'s, 'h>], heap: &Heap<'v, 's, 'h>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'s, 'h>], heap: &HeapV<'v, 's, 'h>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: inner_execute")
 }
 /*

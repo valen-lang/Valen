@@ -5,9 +5,12 @@ use crate::interner::StrI;
 use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, StructHT};
 use crate::final_ast::ast::ProgramH;
 use crate::testvm::values::{
-    AllocationIdV, AllocationV, CallIdV, IObjectReferrerV,
-    KindV, PrimitiveKindV, ReferenceV, VariableAddressV,
+    AllocationIdV, AllocationV, ArrayInstanceV, CallIdV, ElementAddressV, ExpressionIdV,
+    IObjectReferrerV, KindV, MemberAddressV, PrimitiveKindV, ReferenceV, RegisterV,
+    StructInstanceV, VariableAddressV, VariableV,
 };
+use crate::testvm::call::CallV;
+use crate::final_ast::types::OpaqueHT;
 use crate::von::ast::IVonData;
 
 /*
@@ -22,12 +25,12 @@ import dev.vale.von.{IVonData, VonArray, VonBool, VonFloat, VonInt, VonMember, V
 
 import scala.collection.mutable
 */
-// mig: struct AdapterForExternsV
+// mig: struct AdapterForExternsV<'v, 'h, 's>
 /// Temporary state
 pub struct AdapterForExternsV<'v, 'h, 's> {
     pub program_h: &'h ProgramH<'s, 'h>,
     pub heap: HeapV<'v, 'h, 's>,
-    pub call_id: CallId,
+    pub call_id: CallIdV<'v, 'h, 's>,
     pub stdin: &'v dyn Fn() -> StrI<'s>,
     pub stdout: &'v dyn Fn(StrI<'s>),
 }
@@ -42,7 +45,7 @@ class AdapterForExterns(
 */
 // mig: fn dereference
 impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
-    pub fn dereference(&self, reference: ReferenceV) -> KindV {
+    pub fn dereference(&self, reference: ReferenceV<'v, 'h, 's>) -> KindV<'v, 'h, 's> {
         panic!("Unimplemented: dereference");
     }
 }
@@ -53,7 +56,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
-    pub fn new_opaque(&self, opaque_ht: CoordH<OpaqueHT>) -> ReferenceV {
+    pub fn new_opaque(&self, opaque_ht: CoordH<OpaqueHT<'s, 'h>>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_opaque");
     }
 }
@@ -65,7 +68,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
 */
 // mig: fn add_allocation_for_return
 impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
-    pub fn add_allocation_for_return(&self, ownership: OwnershipH, location: LocationH, kind: KindV) -> ReferenceV {
+    pub fn add_allocation_for_return(&self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: add_allocation_for_return");
     }
 }
@@ -78,7 +81,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 */
 // mig: fn make_void
-impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
+impl AdapterForExternsV {
     pub fn make_void(&self) -> ReferenceV {
         panic!("Unimplemented: make_void");
     }
@@ -89,12 +92,12 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 }
 */
-// mig: struct AllocationMapV
+// mig: struct AllocationMapV<'v, 'h, 's>
 /// Temporary state
 pub struct AllocationMapV<'v, 'h, 's> {
-    pub objects_by_id: Cell<HashMap<AllocationId, AllocationV<'v, 'h, 's>>>,
+    pub objects_by_id: Cell<HashMap<AllocationIdV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>>,
     pub next_id: Cell<i32>,
-    pub void_ref: ReferenceV,
+    pub void_ref: ReferenceV<'v, 'h, 's>,
 }
 /*
 class AllocationMap(vivemDout: PrintStream) {
@@ -105,7 +108,7 @@ class AllocationMap(vivemDout: PrintStream) {
 */
 // mig: fn new_id
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn new_id(&self) -> AllocationId {
+    pub fn new_id(&self) -> AllocationIdV<'v, 'h, 's> {
         panic!("Unimplemented: new_id");
     }
 }
@@ -140,7 +143,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn get
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn get(&self, alloc_id: AllocationId) -> AllocationV {
+    pub fn get(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> AllocationV<'v, 'h, 's> {
         panic!("Unimplemented: get");
     }
 }
@@ -153,7 +156,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn remove
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn remove(&self, alloc_id: AllocationId) {
+    pub fn remove(&self, alloc_id: AllocationIdV<'v, 'h, 's>) {
         panic!("Unimplemented: remove");
     }
 }
@@ -166,7 +169,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn contains
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn contains(&self, alloc_id: AllocationId) -> bool {
+    pub fn contains(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains");
     }
 }
@@ -183,7 +186,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn add(&self, ownership: OwnershipH, location: LocationH, kind: KindV) -> ReferenceV {
+    pub fn add(&self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: add");
     }
 }
@@ -210,7 +213,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
   }
 */
 // mig: fn print_all
-impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
+impl AllocationMapV {
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
     }
@@ -244,12 +247,12 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
   }
 }
 */
-// mig: struct HeapV
+// mig: struct HeapV<'v, 'h, 's>
 /// Temporary state
 pub struct HeapV<'v, 'h, 's> {
     pub objects_by_id: AllocationMapV<'v, 'h, 's>,
-    pub call_id_stack: Cell<Vec<CallId>>,
-    pub calls_by_id: Cell<HashMap<CallId, CallV<'v, 'h, 's>>>,
+    pub call_id_stack: Cell<Vec<CallIdV<'v, 'h, 's>>>,
+    pub calls_by_id: Cell<HashMap<CallIdV<'v, 'h, 's>, CallV<'v, 'h, 's>>>,
 }
 /*
 // Just keeps track of all active objects
@@ -266,7 +269,7 @@ class Heap(in_vivemDout: PrintStream) {
 */
 // mig: fn add_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_local(&self, var_addr: VariableAddressV, reference: ReferenceV, expected_type: CoordH<'s, 'h>) {
+    pub fn add_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         panic!("Unimplemented: add_local");
     }
 }
@@ -280,7 +283,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference(&self, var_addr: VariableAddressV, expected_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn get_reference(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference");
     }
 }
@@ -291,7 +294,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn remove_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn remove_local(&self, var_addr: VariableAddressV, expected_type: CoordH<'s, 'h>) {
+    pub fn remove_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         panic!("Unimplemented: remove_local");
     }
 }
@@ -307,7 +310,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_local(&self, var_addr: VariableAddressV, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn get_reference_from_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference_from_local");
     }
 }
@@ -327,7 +330,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_local(&self, var_addr: VariableAddressV) -> VariableV {
+    pub fn get_local(&self, var_addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
         panic!("Unimplemented: get_local");
     }
 }
@@ -338,7 +341,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_variable
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_variable(&self, var_address: VariableAddressV, reference: ReferenceV, expected_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn mutate_variable(&self, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: mutate_variable");
     }
 }
@@ -357,7 +360,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_array(&self, element_address: ElementAddressV, reference: ReferenceV, expected_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn mutate_array(&self, element_address: ElementAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: mutate_array");
     }
 }
@@ -378,7 +381,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_struct(&self, member_address: MemberAddressV, reference: ReferenceV, expected_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn mutate_struct(&self, member_address: MemberAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: mutate_struct");
     }
 }
@@ -403,7 +406,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_struct(&self, address: MemberAddressV, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn get_reference_from_struct(&self, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference_from_struct");
     }
 }
@@ -425,7 +428,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_array(&self, address: ElementAddressV, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn get_reference_from_array(&self, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference_from_array");
     }
 }
@@ -447,7 +450,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn contains_live_object
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn contains_live_object(&self, reference: ReferenceV) -> bool {
+    pub fn contains_live_object(&self, reference: ReferenceV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains_live_object");
     }
 }
@@ -458,7 +461,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn contains_live_object
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn contains_live_object_alloc_id(&self, alloc_id: AllocationId) -> bool {
+    pub fn contains_live_object_alloc_id(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains_live_object");
     }
 }
@@ -476,7 +479,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn contains_live_or_undead_object
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn contains_live_or_undead_object(&self, alloc_id: AllocationId) -> bool {
+    pub fn contains_live_or_undead_object(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains_live_or_undead_object");
     }
 }
@@ -488,7 +491,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn dereference
-impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
+impl HeapV {
     pub fn dereference_heap(&self, reference: ReferenceV, allow_undead: bool) -> KindV {
         panic!("Unimplemented: dereference");
     }
@@ -504,8 +507,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn is_same_instance
-impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn is_same_instance(&self, call_id: CallId, left: ReferenceV, right: ReferenceV) -> ReferenceV {
+impl HeapV {
+    pub fn is_same_instance(&self, call_id: CallIdV, left: ReferenceV, right: ReferenceV) -> ReferenceV {
         panic!("Unimplemented: is_same_instance");
     }
 }
@@ -518,7 +521,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn increment_reference_hold_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn increment_reference_hold_count(&self, expression_id: ExpressionId, reference: ReferenceV) {
+    pub fn increment_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: increment_reference_hold_count");
     }
 }
@@ -529,7 +532,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn decrement_reference_hold_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn decrement_reference_hold_count(&self, expression_id: ExpressionId, reference: ReferenceV) {
+    pub fn decrement_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: decrement_reference_hold_count");
     }
 }
@@ -540,7 +543,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn increment_reference_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn increment_reference_ref_count(&self, referrer: IObjectReferrer, reference: ReferenceV) {
+    pub fn increment_reference_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: increment_reference_ref_count");
     }
 }
@@ -552,7 +555,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn decrement_reference_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn decrement_reference_ref_count(&self, referrer: IObjectReferrer, reference: ReferenceV) {
+    pub fn decrement_reference_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: decrement_reference_ref_count");
     }
 }
@@ -564,7 +567,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure_array(&self, reference: ReferenceV) -> &'v [ReferenceV] {
+    pub fn destructure_array(&self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
         panic!("Unimplemented: destructure_array");
     }
 }
@@ -585,7 +588,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure(&self, reference: ReferenceV) -> &'v [ReferenceV] {
+    pub fn destructure(&self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
         panic!("Unimplemented: destructure");
     }
 }
@@ -610,7 +613,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn zero
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn zero(&self, reference: ReferenceV) {
+    pub fn zero(&self, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: zero");
     }
 }
@@ -632,7 +635,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn deallocate_if_no_weak_refs
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn deallocate_if_no_weak_refs(&self, reference: ReferenceV) {
+    pub fn deallocate_if_no_weak_refs(&self, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: deallocate_if_no_weak_refs");
     }
 }
@@ -652,7 +655,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn increment_object_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn increment_object_ref_count(&self, pointing_from: IObjectReferrer, alloc_id: AllocationId, allow_undead: bool) {
+    pub fn increment_object_ref_count(&self, pointing_from: IObjectReferrerV<'v, 'h, 's>, alloc_id: AllocationIdV<'v, 'h, 's>, allow_undead: bool) {
         panic!("Unimplemented: increment_object_ref_count");
     }
 }
@@ -674,7 +677,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn decrement_object_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn decrement_object_ref_count(&self, pointed_from: IObjectReferrer, alloc_id: AllocationId, allow_undead: bool) -> i32 {
+    pub fn decrement_object_ref_count(&self, pointed_from: IObjectReferrerV<'v, 'h, 's>, alloc_id: AllocationIdV<'v, 'h, 's>, allow_undead: bool) -> i32 {
         panic!("Unimplemented: decrement_object_ref_count");
     }
 }
@@ -701,7 +704,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_ref_count(&self, reference: ReferenceV) -> i32 {
+    pub fn get_ref_count(&self, reference: ReferenceV<'v, 'h, 's>) -> i32 {
         panic!("Unimplemented: get_ref_count");
     }
 }
@@ -722,7 +725,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_total_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_total_ref_count(&self, reference: ReferenceV) -> i32 {
+    pub fn get_total_ref_count(&self, reference: ReferenceV<'v, 'h, 's>) -> i32 {
         panic!("Unimplemented: get_total_ref_count");
     }
 }
@@ -739,7 +742,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn ensure_ref_count(&self, reference: ReferenceV, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
+    pub fn ensure_ref_count(&self, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
         panic!("Unimplemented: ensure_ref_count");
     }
 }
@@ -752,7 +755,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_heap(&self, ownership: OwnershipH, location: LocationH, kind: KindV) -> ReferenceV {
+    pub fn add_heap(&self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: add");
     }
 }
@@ -763,7 +766,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn transmute
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn transmute(&self, reference: ReferenceV, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn transmute(&self, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: transmute");
     }
 }
@@ -797,7 +800,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn cast
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn cast(&self, call_id: CallId, reference: ReferenceV, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn cast(&self, call_id: CallIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: cast");
     }
 }
@@ -855,7 +858,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn count_unreachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn count_unreachable_allocations(&self, roots: &'v [ReferenceV]) -> usize {
+    pub fn count_unreachable_allocations(&self, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
         panic!("Unimplemented: count_unreachable_allocations");
     }
 }
@@ -868,7 +871,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn find_reachable_allocations(&self, input_reachables: &'v [ReferenceV]) -> HashMap<ReferenceV, AllocationV> {
+    pub fn find_reachable_allocations(&self, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, AllocationV<'v, 'h, 's>> {
         panic!("Unimplemented: find_reachable_allocations");
     }
 }
@@ -885,7 +888,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn inner_find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn inner_find_reachable_allocations(&self, destination_map: &mut HashMap<ReferenceV, AllocationV>, input_reachable: ReferenceV) {
+    pub fn inner_find_reachable_allocations(&self, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: inner_find_reachable_allocations");
     }
 }
@@ -931,7 +934,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_current_call
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_current_call(&self, expected_call_id: CallId) -> CallV {
+    pub fn get_current_call(&self, expected_call_id: CallIdV<'v, 'h, 's>) -> CallV<'v, 'h, 's> {
         panic!("Unimplemented: get_current_call");
     }
 }
@@ -943,7 +946,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn take_argument
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn take_argument(&self, call_id: CallId, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV {
+    pub fn take_argument(&self, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: take_argument");
     }
 }
@@ -959,7 +962,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn allocate_transient
-impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
+impl HeapV {
     pub fn allocate_transient(&self, ownership: OwnershipH, location: LocationH, kind: KindV) -> ReferenceV {
         panic!("Unimplemented: allocate_transient");
     }
@@ -975,7 +978,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn print_kind
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn print_kind(&self, kind: KindV) {
+    pub fn print_kind(&self, kind: KindV<'v, 'h, 's>) {
         panic!("Unimplemented: print_kind");
     }
 }
@@ -997,7 +1000,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn initialize_array_element
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn initialize_array_element(&self, array_reference: ReferenceV, ret: ReferenceV) {
+    pub fn initialize_array_element(&self, array_reference: ReferenceV<'v, 'h, 's>, ret: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: initialize_array_element");
     }
 }
@@ -1018,7 +1021,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_struct(&self, struct_def_h: StructDefinitionH, struct_ref_h: CoordH<StructHT>, member_references: &'v [ReferenceV]) -> ReferenceV {
+    pub fn new_struct(&self, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<StructHT<'s, 'h>>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_struct");
     }
 }
@@ -1044,7 +1047,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_opaque_heap(&self, opaque_coord_ht: CoordH<OpaqueHT>) -> ReferenceV {
+    pub fn new_opaque_heap(&self, opaque_coord_ht: CoordH<OpaqueHT<'s, 'h>>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_opaque");
     }
 }
@@ -1060,7 +1063,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn deinitialize_array_element
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn deinitialize_array_element(&self, array_reference: ReferenceV) -> ReferenceV {
+    pub fn deinitialize_array_element(&self, array_reference: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: deinitialize_array_element");
     }
 }
@@ -1087,7 +1090,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_uninitialized_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_uninitialized_array(&self, array_definition_th: RuntimeSizedArrayDefinitionHT, array_ref_type: CoordH<RuntimeSizedArrayHT>, capacity: i32) -> (ReferenceV, ArrayInstanceV) {
+    pub fn add_uninitialized_array(&self, array_definition_th: RuntimeSizedArrayDefinitionHT, array_ref_type: CoordH<RuntimeSizedArrayHT>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
         panic!("Unimplemented: add_uninitialized_array");
     }
 }
@@ -1104,7 +1107,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_array(&self, array_definition_th: StaticSizedArrayDefinitionHT, array_ref_type: CoordH<StaticSizedArrayHT>, member_refs: &'v [ReferenceV]) -> (ReferenceV, ArrayInstanceV) {
+    pub fn add_array(&self, array_definition_th: StaticSizedArrayDefinitionHT, array_ref_type: CoordH<StaticSizedArrayHT>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
         panic!("Unimplemented: add_array");
     }
 }
@@ -1126,7 +1129,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_reference
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_reference(&self, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV) {
+    pub fn check_reference(&self, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: check_reference");
     }
 }
@@ -1161,7 +1164,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_reference_register
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV) -> ReferenceRegisterV {
+    pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> ReferenceRegisterV {
         panic!("Unimplemented: check_reference_register");
     }
 }
@@ -1175,7 +1178,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_kind
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_kind(&self, expected_type: KindHT, actual_kind: KindV) {
+    pub fn check_kind(&self, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
         panic!("Unimplemented: check_kind");
     }
 }
@@ -1226,7 +1229,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_struct_id
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_struct_id(&self, expected_struct_type: StructHT, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV) -> AllocationId {
+    pub fn check_struct_id(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> AllocationIdV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_id");
     }
 }
@@ -1244,7 +1247,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_struct_coord
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_struct_coord(&self, expected_struct_type: StructHT, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV) -> StructInstanceV {
+    pub fn check_struct_coord(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> StructInstanceV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_coord");
     }
 }
@@ -1262,7 +1265,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_struct_coord
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_struct_coord_ref(&self, expected_struct_type: StructHT, reference: ReferenceV) -> StructInstanceV {
+    pub fn check_struct_coord_ref(&self, expected_struct_type: StructHT<'s, 'h>, reference: ReferenceV<'v, 'h, 's>) -> StructInstanceV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_coord");
     }
 }
@@ -1279,7 +1282,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn push_new_stack_frame
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn push_new_stack_frame(&self, function_h: PrototypeH, args: &'v [ReferenceV]) -> CallId {
+    pub fn push_new_stack_frame(&self, function_h: PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> CallIdV<'v, 'h, 's> {
         panic!("Unimplemented: push_new_stack_frame");
     }
 }
@@ -1299,7 +1302,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn pop_stack_frame
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn pop_stack_frame(&self, expected_call_id: CallId) {
+    pub fn pop_stack_frame(&self, expected_call_id: CallIdV<'v, 'h, 's>) {
         panic!("Unimplemented: pop_stack_frame");
     }
 }
@@ -1316,7 +1319,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn to_von
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn to_von(&self, reference: ReferenceV) -> IVonData {
+    pub fn to_von(&self, reference: ReferenceV<'v, 'h, 's>) -> IVonData {
         panic!("Unimplemented: to_von");
     }
 }
@@ -1344,7 +1347,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn get_var_address
-pub fn get_var_address(call_id: CallId, local: Local) -> VariableAddressV {
+pub fn get_var_address<'v, 'h, 's>(call_id: CallIdV<'v, 'h, 's>, local: Local<'s, 'h>) -> VariableAddressV<'v, 'h, 's> {
     panic!("Unimplemented: get_var_address");
 }
 /*

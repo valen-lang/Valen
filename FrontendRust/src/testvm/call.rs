@@ -1,3 +1,12 @@
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use crate::final_ast::types::{KindHT, CoordH};
+use crate::testvm::values::{
+    AllocationIdV, CallIdV, ExpressionIdV, IObjectReferrerV,
+    ReferenceV, RegisterV, VariableAddressV, VariableV,
+};
+
 /*
 package dev.vale.testvm
 
@@ -9,13 +18,13 @@ import dev.vale.vfail
 import scala.collection.mutable
 
 */
-// mig: struct CallV
+// mig: struct CallV<'v, 'h, 's>
 /// Temporary state
-pub struct CallV<'v> {
-  pub call_id: CallIdV,
-  pub in_args: &'v [ReferenceV<'v>],
-  pub args: Cell<HashMap<i32, Option<ReferenceV<'v>>>>,
-  pub locals: Cell<HashMap<VariableAddressV, VariableV<'v>>>,
+pub struct CallV<'v, 'h, 's> {
+  pub call_id: CallIdV<'v, 'h, 's>,
+  pub in_args: &'v [ReferenceV<'v, 'h, 's>],
+  pub args: Cell<HashMap<i32, Option<ReferenceV<'v, 'h, 's>>>>,
+  pub locals: Cell<HashMap<VariableAddressV<'v, 'h, 's>, VariableV<'v, 'h, 's>>>,
 }
 /*
 class Call(callId: CallId, in_args: Vector[ReferenceV]) {
@@ -25,8 +34,8 @@ class Call(callId: CallId, in_args: Vector[ReferenceV]) {
 
 */
 // mig: fn add_local
-impl<'v> CallV<'v> {
-  pub fn add_local(&self, var_addr: VariableAddressV, reference: ReferenceV, tyype: CoordH) {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
+  pub fn add_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, tyype: CoordH<'s, 'h>) {
     panic!("Unimplemented: add_local");
   }
 }
@@ -40,8 +49,8 @@ impl<'v> CallV<'v> {
 
 */
 // mig: fn remove_local
-impl<'v> CallV<'v> {
-  pub fn remove_local(&self, var_addr: VariableAddressV) {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
+  pub fn remove_local(&self, var_addr: VariableAddressV<'v, 'h, 's>) {
     panic!("Unimplemented: remove_local");
   }
 }
@@ -54,8 +63,8 @@ impl<'v> CallV<'v> {
 
 */
 // mig: fn get_local
-impl<'v> CallV<'v> {
-  pub fn get_local(&self, addr: VariableAddressV) -> VariableV {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
+  pub fn get_local(&self, addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
     panic!("Unimplemented: get_local");
   }
 }
@@ -66,8 +75,8 @@ impl<'v> CallV<'v> {
 
 */
 // mig: fn mutate_local
-impl<'v> CallV<'v> {
-  pub fn mutate_local(&self, var_addr: VariableAddressV, reference: ReferenceV, expected_type: CoordH) {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
+  pub fn mutate_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
     panic!("Unimplemented: mutate_local");
   }
 }
@@ -78,8 +87,8 @@ impl<'v> CallV<'v> {
 
 */
 // mig: fn take_argument
-impl<'v> CallV<'v> {
-  pub fn take_argument(&self, index: i32) -> ReferenceV {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
+  pub fn take_argument(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
     panic!("Unimplemented: take_argument");
   }
 }
@@ -99,7 +108,7 @@ impl<'v> CallV<'v> {
 
 */
 // mig: fn prepare_to_die
-impl<'v> CallV<'v> {
+impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn prepare_to_die(&self) {
     panic!("Unimplemented: prepare_to_die");
   }

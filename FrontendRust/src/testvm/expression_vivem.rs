@@ -1,3 +1,15 @@
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use crate::interner::StrI;
+use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH};
+use crate::final_ast::ast::{ProgramH, PrototypeH};
+use crate::testvm::values::{
+    AllocationIdV, AllocationV, CallIdV, ExpressionIdV, IObjectReferrerV,
+    KindV, PrimitiveKindV, ReferenceV, RegisterV, VariableAddressV, VariableV,
+};
+use crate::testvm::heap::HeapV;
+
 /*
 package dev.vale.testvm
 
@@ -12,10 +24,10 @@ object ExpressionVivem {
 // mig: enum INodeExecuteResultV
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum INodeExecuteResultV<'v> {
-  Continue(&'v NodeContinueV<'v>),
-  Return(&'v NodeReturnV<'v>),
-  Break(&'v NodeBreakV<'v>),
+pub enum INodeExecuteResultV<'v, 'h, 's> {
+  Continue(&'v NodeContinueV<'v, 'h, 's>),
+  Return(&'v NodeReturnV<'v, 'h, 's>),
+  Break(&'v NodeBreakV<'v, 'h, 's>),
 }
 /*
   // The contained reference has a ResultToObjectReferrer pointing at it.
@@ -24,11 +36,11 @@ pub enum INodeExecuteResultV<'v> {
   // going to 0.
   sealed trait INodeExecuteResult
 */
-// mig: struct NodeContinueV
+// mig: struct NodeContinueV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct NodeContinueV<'v> {
-  pub result_ref: ReferenceV<'v>,
+pub struct NodeContinueV<'v, 'h, 's> {
+  pub result_ref: ReferenceV<'v, 'h, 's>,
 }
 /*
   case class NodeContinue(resultRef: ReferenceV) extends INodeExecuteResult {
@@ -36,11 +48,11 @@ pub struct NodeContinueV<'v> {
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
-// mig: struct NodeReturnV
+// mig: struct NodeReturnV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct NodeReturnV<'v> {
-  pub return_ref: ReferenceV<'v>,
+pub struct NodeReturnV<'v, 'h, 's> {
+  pub return_ref: ReferenceV<'v, 'h, 's>,
 }
 /*
   case class NodeReturn(returnRef: ReferenceV) extends INodeExecuteResult {
@@ -48,10 +60,10 @@ pub struct NodeReturnV<'v> {
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
-// mig: struct NodeBreakV
+// mig: struct NodeBreakV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct NodeBreakV<'v> {
+pub struct NodeBreakV<'v, 'h, 's> {
   pub _phantom: std::marker::PhantomData<&'v ()>,
 }
 /*
@@ -61,7 +73,7 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: fn make_primitive
-pub fn make_primitive(heap: &Heap, call_id: CallId, location: LocationH, kind: KindV) -> ReferenceV { panic!("Unimplemented: make_primitive"); }
+pub fn make_primitive<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: make_primitive"); }
 /*
   def makePrimitive(heap: Heap, callId: CallId, location: LocationH, kind: KindV) = {
     vassert(kind != VoidV)
@@ -71,7 +83,7 @@ pub fn make_primitive(heap: &Heap, call_id: CallId, location: LocationH, kind: K
   }
 */
 // mig: fn take_argument
-pub fn take_argument(heap: &Heap, call_id: CallId, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV { panic!("Unimplemented: take_argument"); }
+pub fn take_argument<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: take_argument"); }
 /*
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
@@ -80,7 +92,7 @@ pub fn take_argument(heap: &Heap, call_id: CallId, argument_index: i32, result_t
   }
 */
 // mig: fn possess_callee_return
-pub fn possess_callee_return(heap: &Heap, call_id: CallId, callee_call_id: CallId, result: &NodeReturnV) -> ReferenceV { panic!("Unimplemented: possess_callee_return"); }
+pub fn possess_callee_return<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: possess_callee_return"); }
 /*
   def possessCalleeReturn(heap: Heap, callId: CallId, calleeCallId: CallId, result: NodeReturn) = {
     heap.decrementReferenceRefCount(RegisterToObjectReferrer(calleeCallId, result.returnRef.ownership), result.returnRef)
@@ -89,7 +101,7 @@ pub fn possess_callee_return(heap: &Heap, call_id: CallId, callee_call_id: CallI
   }
 */
 // mig: fn upcast
-pub fn upcast(source_reference: ReferenceV, target_interface_ref: InterfaceHT) -> ReferenceV { panic!("Unimplemented: upcast"); }
+pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_interface_ref: InterfaceHT<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: upcast"); }
 /*
   def upcast(sourceReference: ReferenceV, targetInterfaceRef: InterfaceHT): ReferenceV = {
     ReferenceV(
@@ -101,7 +113,7 @@ pub fn upcast(source_reference: ReferenceV, target_interface_ref: InterfaceHT) -
   }
 */
 // mig: fn execute_node
-pub fn execute_node(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, node: &ExpressionH<KindHT>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node"); }
+pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<KindHT<'s, 'h>>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node"); }
 /*
   def executeNode(
     programH: ProgramH,
@@ -118,7 +130,7 @@ pub fn execute_node(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &d
   }
 */
 // mig: fn execute_node_inner
-pub fn execute_node_inner(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, node: &ExpressionH<KindHT>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node_inner"); }
+pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<KindHT<'s, 'h>>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node_inner"); }
 /*
   def executeNodeInner(
                    programH: ProgramH,
@@ -1090,7 +1102,7 @@ pub fn execute_node_inner(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdo
   }
 */
 // mig: fn consume_elements
-pub fn consume_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, call_id: CallId, array_reference: ReferenceV, consumer_reference: ReferenceV, consumer_prototype: PrototypeH, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV)) { panic!("Unimplemented: consume_elements"); }
+pub fn consume_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: consume_elements"); }
 /*
   private def consumeElements(
     programH: ProgramH,
@@ -1143,7 +1155,7 @@ pub fn consume_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout
   }
 */
 // mig: fn generate_elements
-pub fn generate_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, expression_id: ExpressionId, call_id: CallId, generator_reference: ReferenceV, generator_prototype: PrototypeH, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV)) { panic!("Unimplemented: generate_elements"); }
+pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: generate_elements"); }
 /*
   private def generateElements(
     programH: ProgramH,
@@ -1191,7 +1203,7 @@ pub fn generate_elements(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdou
   }
 */
 // mig: fn execute_interface_function
-pub fn execute_interface_function(program_h: &ProgramH, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &Heap, undeviewed_arg_references: &[ReferenceV], virtual_param_index: i32, interface_ref_h: InterfaceHT, index_in_edge: i32, function_type: PrototypeH) -> (FunctionH, (CallId, INodeExecuteResultV)) { panic!("Unimplemented: execute_interface_function"); }
+pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV)) { panic!("Unimplemented: execute_interface_function"); }
 /*
   private def executeInterfaceFunction(
       programH: ProgramH,
@@ -1253,7 +1265,7 @@ pub fn execute_interface_function(program_h: &ProgramH, stdin: &dyn Fn() -> Stri
   }
 */
 // mig: fn discard
-pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV) { panic!("Unimplemented: discard"); }
+pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &HeapV<'v, 'h, 's>, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) { panic!("Unimplemented: discard"); }
 /*
   def discard(
     programH: ProgramH,
@@ -1269,7 +1281,7 @@ pub fn discard(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin
   }
 */
 // mig: fn cleanup
-pub fn cleanup(program_h: &ProgramH, heap: &Heap, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallId, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV) { panic!("Unimplemented: cleanup"); }
+pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &HeapV<'v, 'h, 's>, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) { panic!("Unimplemented: cleanup"); }
 /*
   def cleanup(
     programH: ProgramH,
