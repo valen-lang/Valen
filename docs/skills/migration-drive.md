@@ -7,7 +7,7 @@ description: Iteratively replace panics in a Scala-to-Rust migration with minima
 
 **This skill is pass-agnostic.** It drives the panic-replacement migration loop for *any* pass (typing, instantiating, simplifying, …). Many examples in the Notes below are typing-pass-flavored — treat them as illustrations of pass-agnostic principles, not typing-only rules.
 
-**Required: a `migration-drive-todo.md` at the worktree root.** It lists the targets to drive (tests or definitions) as a checklist — `- [ ]` not-yet-done, `- [x]` done, `- [~]` blocked-by-logic-bug (see step 5). The loop below marks items in it and picks the next `- [ ]`. If `migration-drive-todo.md` doesn't exist, stop and ask the architect to create it (or to name the targets to drive) before starting. (In parallel-worktree mode, each worktree has its own `migration-drive-todo.md` covering one bucket of work.)
+**Required: a `migration-drive-todo.md` at the repo root.** It lists the targets to drive (tests or definitions) as a checklist — `- [ ]` not-yet-done, `- [x]` done, `- [~]` blocked-by-logic-bug (see step 5). The loop below marks items in it and picks the next `- [ ]`. If `migration-drive-todo.md` doesn't exist, stop and ask the architect to create it (or to name the targets to drive) before starting.
 
 Here's what I want you to do:
 
