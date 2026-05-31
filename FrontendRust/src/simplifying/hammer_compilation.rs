@@ -1,14 +1,15 @@
 // From Frontend/SimplifyingPass/src/dev/vale/simplifying/HammerCompilation.scala
 // Coordinates the Hammer (simplifying) pass
 
+use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
-use crate::simplifying::hammer_interner::HammerInterner;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use crate::scout_arena::ScoutArena;
 use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::simplifying::hammer::Hammer;
 use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
-use bumpalo::Bump;
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -59,22 +60,22 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 
 // mig: struct HammerCompilation
-pub struct HammerCompilation<'s, 'h, 'ctx, 't, 'p>
-where 's: 'h,
+pub struct HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
 {
   pub interner: &'ctx HammerInterner<'s, 'h>,
   pub keywords: &'ctx Keywords<'s>,
-  pub packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+  pub scout_arena: &'ctx ScoutArena<'s>,
+  pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
   pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   pub options: HammerCompilationOptions,
-  pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'p>,
-  pub hamuts_cache: Option<crate::final_ast::ast::ProgramH<'s, 'h>>,
+  pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
+  pub hamuts_cache: Option<&'h crate::final_ast::ast::ProgramH<'s, 'h>>,
   // Scala has `var vonHammerCache: Option[VonHammer]`. Dropped: per
   // typing-pass precedent the VonHammer compiler class was collapsed
   // onto `Hammer` (no separate VonHammer state), so there is nothing
   // to cache.
 }
-// mig: impl HammerCompilation
 /*
 class HammerCompilation(
   val interner: Interner,
@@ -82,21 +83,27 @@ class HammerCompilation(
   packagesToBuild: Vector[PackageCoordinate],
   packageToContentsResolver: IPackageResolver[Map[String, String]],
   options: HammerCompilationOptions = HammerCompilationOptions()) {
-*/
 
+  var instantiatedCompilation =
+    new InstantiatedCompilation(
+      interner,
+      keywords,
+      packagesToBuild,
+      packageToContentsResolver,
+      InstantiatorCompilationOptions(
+        options.globalOptions,
+        options.debugOut))
+  var hamutsCache: Option[ProgramH] = None
+  var vonHammerCache: Option[VonHammer] = None
+*/
+// mig: impl HammerCompilation
 // mig: fn new
-// (Slice pipeline emitted no `new` stub — TL-added per NNDX escalation, mirroring
-// InstantiatedCompilation::new's hoisted-arena signature plus a hammer Bump-backed
-// HammerInterner. The Scala constructor body is the class param block below.)
-impl<'s, 'h, 'ctx, 't, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'p>
-where
-    's: 'h,
-    's: 't,
-    'p: 'ctx,
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
   pub fn new(
-    interner: &'ctx HammerInterner<'s, 'h>,
     scout_arena: &'ctx ScoutArena<'s>,
+    interner: &'ctx HammerInterner<'s, 'h>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
@@ -104,25 +111,26 @@ where
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: HammerCompilationOptions,
     typing_bump: &'t Bump,
+    instantiating_bump: &'i Bump,
   ) -> Self {
-    let instantiator_options = InstantiatorCompilationOptions {
-      debug_out: options.debug_out.clone(),
-    };
     let instantiated_compilation =
-        InstantiatedCompilation::new(
-          scout_arena,
-          keywords,
-          parser_keywords,
-          parse_arena,
-          packages_to_build.clone(),
-          package_to_contents_resolver,
-          options.global_options.clone(),
-          instantiator_options,
-          typing_bump,
-        );
+      InstantiatedCompilation::new(
+        scout_arena,
+        keywords,
+        parser_keywords,
+        parse_arena,
+        packages_to_build.clone(),
+        package_to_contents_resolver,
+        options.global_options.clone(),
+        InstantiatorCompilationOptions {
+          debug_out: options.debug_out.clone(),
+        },
+        typing_bump,
+        instantiating_bump);
     HammerCompilation {
       interner,
       keywords,
+      scout_arena,
       packages_to_build,
       package_to_contents_resolver,
       options,
@@ -130,20 +138,10 @@ where
       hamuts_cache: None,
     }
   }
-  /*
-    var instantiatedCompilation =
-      new InstantiatedCompilation(
-        interner,
-        keywords,
-        packagesToBuild,
-        packageToContentsResolver,
-        InstantiatorCompilationOptions(
-          options.globalOptions,
-          options.debugOut))
-    var hamutsCache: Option[ProgramH] = None
-    var vonHammerCache: Option[VonHammer] = None
-  */
 }
+/*
+Guardian: temp-disable: SPDMX — The HammerCompilation struct (hammer_compilation.rs:67-71) explicitly documents dropping vonHammerCache per typing-pass precedent (VonHammer collapsed onto Hammer, nothing to cache); the field does not exist in the Rust struct by design, so the struct literal correctly omits it. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-643-1779915911666/hook-643/new--82.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
+*/
 // mig: fn get_von_hammer
 pub fn get_von_hammer() -> () {
   panic!("Unimplemented: get_von_hammer");
@@ -217,10 +215,25 @@ pub fn expect_compiler_outputs() -> () {
 */
 
 // mig: fn get_hamuts
-pub fn get_hamuts() -> () {
-  panic!("Unimplemented: get_hamuts");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_hamuts(&mut self) -> &'h crate::final_ast::ast::ProgramH<'s, 'h> {
+    match self.hamuts_cache {
+      Some(hamuts) => hamuts,
+      None => {
+        self.instantiated_compilation.get_monouts();
+        let hinputs = self.instantiated_compilation.cached_monouts();
+        let hammer = Hammer { interner: self.interner, keywords: self.keywords, scout_arena: self.scout_arena, instantiating_interner: &self.instantiated_compilation.instantiating_interner };
+        let hamuts = hammer.translate(hinputs);
+        self.hamuts_cache = Some(hamuts);
+        hamuts
+      }
+    }
+  }
 }
 /*
+Guardian: temp-disable: SPDMX — The Scala `vonHammerCache = Some(hammer.vonHammer)` line is intentionally dropped because the VonHammer compiler class was collapsed onto Hammer (no separate VonHammer state), so the field does not exist in the Rust HammerCompilation struct by design — this is the same in-file precedent established by the temp-disable on `new` (hammer_compilation.rs:118) which drops the corresponding `var vonHammerCache` field. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-699-1779918117497/hook-699/get_hamuts--215.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getHamuts(): ProgramH = {
     hamutsCache match {
       case Some(hamuts) => hamuts
