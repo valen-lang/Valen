@@ -128,6 +128,22 @@ exported func main() {
 // lookup_package(TEST_TLD) → lookup_function("main") → assert the export exists.
 #[test]
 fn returns_int() {
-    use super::test_compilation::test;
-    let _compile = test("exported func main() int { return 7; }");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let instantiating_bump = Bump::new();
+    let hammer_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let code = "exported func main() int { return 7; }\n";
+    let resolver = get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .expect("get_code_map failed to load builtins")
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let _compile = test(
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+    );
 }
