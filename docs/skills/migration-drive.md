@@ -66,6 +66,8 @@ Notes:
 
 * **When the architect says just "z," check for `for-jr.md` at the repo root; if it exists, consume it via `cat for-jr.md && rm for-jr.md && echo done` (the Guardian-allowlisted shape — see above), apply the TL's instructions, and continue driving.**
 
+* **Don't debug bugs yourself — escalate to TL; Guardian blocks novel debug statements, temp-disable isn't a workaround, and we can't remove temp-disables.**
+
 * **temp-disable:** Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.
 
 * **Scaffolding gap escalation:** If you need to call a method that doesn't exist yet on a Rust enum, but the Scala trait *does* have the corresponding `def` (e.g. `parentEnv.globalEnv` where `def globalEnv` exists on the Scala trait but no `fn global_env()` exists on the Rust enum) — this is a scaffolding gap from the slice pipeline. **Do NOT add the method yourself** (Guardian NNDX will rightly block you) and **do NOT temp-disable NNDX**. Instead, STOP and escalate: report what method is missing, which Scala trait defines it, and which Rust enum needs it. The TL will add it.
