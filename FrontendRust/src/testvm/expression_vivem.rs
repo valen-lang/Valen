@@ -2,8 +2,9 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use crate::interner::StrI;
-use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH};
-use crate::final_ast::ast::{ProgramH, PrototypeH};
+use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, InterfaceHT};
+use crate::final_ast::ast::{ProgramH, PrototypeH, FunctionH};
+use crate::final_ast::instructions::ExpressionH;
 use crate::testvm::values::{
     AllocationIdV, AllocationV, CallIdV, ExpressionIdV, IObjectReferrerV,
     KindV, PrimitiveKindV, ReferenceV, RegisterV, VariableAddressV, VariableV,

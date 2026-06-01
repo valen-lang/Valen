@@ -2,8 +2,9 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use crate::interner::StrI;
-use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, StructHT};
-use crate::final_ast::ast::ProgramH;
+use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, StructHT, StaticSizedArrayHT, RuntimeSizedArrayHT, StaticSizedArrayDefinitionHT, RuntimeSizedArrayDefinitionHT};
+use crate::final_ast::ast::{ProgramH, PrototypeH, StructDefinitionH};
+use crate::final_ast::instructions::Local;
 use crate::testvm::values::{
     AllocationIdV, AllocationV, ArrayInstanceV, CallIdV, ElementAddressV, ExpressionIdV,
     IObjectReferrerV, KindV, MemberAddressV, PrimitiveKindV, ReferenceV, RegisterV,
@@ -56,7 +57,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
-    pub fn new_opaque(&self, opaque_ht: CoordH<OpaqueHT<'s, 'h>>) -> ReferenceV<'v, 'h, 's> {
+    pub fn new_opaque(&self, opaque_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_opaque");
     }
 }
@@ -81,7 +82,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 */
 // mig: fn make_void
-impl AdapterForExternsV {
+impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
     pub fn make_void(&self) -> ReferenceV {
         panic!("Unimplemented: make_void");
     }
@@ -213,7 +214,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
   }
 */
 // mig: fn print_all
-impl AllocationMapV {
+impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
     }
@@ -491,7 +492,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn dereference
-impl HeapV {
+impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn dereference_heap(&self, reference: ReferenceV, allow_undead: bool) -> KindV {
         panic!("Unimplemented: dereference");
     }
@@ -507,7 +508,7 @@ impl HeapV {
   }
 */
 // mig: fn is_same_instance
-impl HeapV {
+impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn is_same_instance(&self, call_id: CallIdV, left: ReferenceV, right: ReferenceV) -> ReferenceV {
         panic!("Unimplemented: is_same_instance");
     }
@@ -962,7 +963,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
   }
 */
 // mig: fn allocate_transient
-impl HeapV {
+impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn allocate_transient(&self, ownership: OwnershipH, location: LocationH, kind: KindV) -> ReferenceV {
         panic!("Unimplemented: allocate_transient");
     }
@@ -1021,7 +1022,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_struct(&self, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<StructHT<'s, 'h>>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
+    pub fn new_struct(&self, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_struct");
     }
 }
@@ -1047,7 +1048,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_opaque_heap(&self, opaque_coord_ht: CoordH<OpaqueHT<'s, 'h>>) -> ReferenceV<'v, 'h, 's> {
+    pub fn new_opaque_heap(&self, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_opaque");
     }
 }

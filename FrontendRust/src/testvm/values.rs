@@ -19,10 +19,11 @@ import dev.vale.vimpl
 */
 // mig: struct RRReferenceV
 /// Temporary state
-pub struct RRReferenceV
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct RRReferenceV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
-  pub hamut: CoordH,
+  pub hamut: CoordH<'s, 'h>,
   pub _phantom: std::marker::PhantomData<&'v ()>,
 }
 /*
@@ -36,6 +37,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RRKindV<'v, 'h, 's>
 /// Temporary state
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct RRKindV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -271,7 +273,7 @@ case object VoidV extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl VoidV {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype<'v, 'h, 's>(&self) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
     panic!("Unimplemented: tyype_void");
   }
 }
@@ -556,6 +558,7 @@ case class AllocationId(tyype: RRKind, num: Int) {
 */
 // mig: struct ReferenceV<'v, 'h, 's>
 /// Temporary state
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct ReferenceV<'v, 'h, 's> {
   pub actual_kind: RRKindV<'v, 'h, 's>,
   pub seen_as_kind: RRKindV<'v, 'h, 's>,
@@ -906,8 +909,11 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct VivemPanicV
 /// Temporary state
-pub struct VivemPanicV {
+pub struct VivemPanicV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
   pub message: StrI<'s>,
+  pub _phantom: PhantomData<(&'v (), &'h ())>,
 }
 /*
 case class VivemPanic(message: String) extends Exception
