@@ -3254,7 +3254,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::ConstantStr(_) => panic!("Unimplemented: translate_ref_expr ConstantStr"),
             ReferenceExpressionTE::ConstantFloat(_) => panic!("Unimplemented: translate_ref_expr ConstantFloat"),
-            ReferenceExpressionTE::ArgLookup(_) => panic!("Unimplemented: translate_ref_expr ArgLookup"),
+            ReferenceExpressionTE::ArgLookup(e) => {
+                let crate::typing::ast::expressions::ArgLookupTE { param_index, coord: reference } = **e;
+                let type_s = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &reference).coord;
+                let result_ce = ReferenceExpressionIE::ArgLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::ArgLookupIE {
+                    param_index,
+                    coord: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s),
+                }));
+                (type_s, result_ce)
+            }
             ReferenceExpressionTE::ArrayLength(_) => panic!("Unimplemented: translate_ref_expr ArrayLength"),
             ReferenceExpressionTE::InterfaceFunctionCall(_) => panic!("Unimplemented: translate_ref_expr InterfaceFunctionCall"),
             ReferenceExpressionTE::ExternFunctionCall(efc) => {
@@ -5201,8 +5209,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_parameter
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_parameter(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _param_t: &ParameterT<'s, 't>) -> ParameterI<'s, 'i> {
-        panic!("Unimplemented: translate_parameter");
+    pub fn translate_parameter(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, perspective_region_t: &RegionT, param_t: &ParameterT<'s, 't>) -> ParameterI<'s, 'i> {
+        let ParameterT { name, virtuality, pre_checked, tyype } = param_t;
+        let type_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype).coord;
+        let name_s = Self::translate_var_name(self.interner, name);
+        ParameterI {
+            name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &name_s),
+            virtuality: virtuality.map(|v| match v { AbstractT => AbstractI }),
+            pre_checked: *pre_checked,
+            tyype: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_it),
+        }
     }
 }
 /*

@@ -69,7 +69,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::ConstantBool(_) => panic!("RE::result: ConstantBool"),
             ReferenceExpressionIE::ConstantStr(_) => panic!("RE::result: ConstantStr"),
             ReferenceExpressionIE::ConstantFloat(_) => panic!("RE::result: ConstantFloat"),
-            ReferenceExpressionIE::ArgLookup(_) => panic!("RE::result: ArgLookup"),
+            ReferenceExpressionIE::ArgLookup(x) => x.coord,
             ReferenceExpressionIE::ArrayLength(_) => panic!("RE::result: ArrayLength"),
             ReferenceExpressionIE::InterfaceFunctionCall(_) => panic!("RE::result: InterfaceFunctionCall"),
             ReferenceExpressionIE::ExternFunctionCall(e) => e.result,

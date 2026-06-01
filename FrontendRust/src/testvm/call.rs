@@ -102,7 +102,14 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 // mig: fn take_argument
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
-    panic!("Unimplemented: take_argument");
+    assert!((index as usize) < self.args.len());
+    match self.args.get(&index).copied().flatten() {
+      Some(r#ref) => {
+        self.args.insert(index, None);
+        r#ref
+      }
+      None => panic!("Already took from argument {}", index),
+    }
   }
 }
 /*

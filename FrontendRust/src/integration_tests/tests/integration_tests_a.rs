@@ -242,8 +242,29 @@ fn simple_program_with_weak() { panic!("Unmigrated test: simple_program_with_wea
 */
 // mig: fn hardcoding_negative_numbers
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn hardcoding_negative_numbers() { panic!("Unmigrated test: hardcoding_negative_numbers"); }
+fn hardcoding_negative_numbers() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_bump, &instantiating_bump,
+        "exported func main() int { return -3; }", true,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: -3 }) => {}
+        other => panic!("expected VonInt(-3), got {:?}", other),
+    }
+}
 /*
   test("Hardcoding negative numbers") {
     val compile = RunCompilation.test("exported func main() int { return -3; }")
@@ -252,8 +273,33 @@ fn hardcoding_negative_numbers() { panic!("Unmigrated test: hardcoding_negative_
 */
 // mig: fn taking_an_argument_and_returning_it
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn taking_an_argument_and_returning_it() { panic!("Unmigrated test: taking_an_argument_and_returning_it"); }
+fn taking_an_argument_and_returning_it() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_bump, &instantiating_bump,
+        "exported func main(a int) int { return a; }", true,
+    );
+    match compile.eval_for_kind_primitive_args(vec![
+        crate::testvm::values::PrimitiveKindV::Int(crate::testvm::values::IntV {
+            value: 5, bits: 32, _phantom: std::marker::PhantomData,
+        }),
+    ]) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
+}
 /*
   test("Taking an argument and returning it") {
     val compile = RunCompilation.test("exported func main(a int) int { return a; }")

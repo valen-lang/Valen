@@ -70,11 +70,12 @@ object Vivem {
 // mig: fn execute_with_primitive_args
 pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     let mut heap = HeapV::new(vivem_dout, vivem_bump);
-    let arg_references: Vec<ReferenceV<'v, 'h, 's>> =
-        external_argument_kinds.iter().map(|_arg_kind| {
-            panic!("execute_with_primitive_args: PrimitiveKindV → KindV conversion + heap.add (pilot path is empty args; arm not exercised)")
-        }).collect();
-    inner_execute(program_h, &arg_references, &mut heap, stdin, stdout)
+    let arg_references: &'v [ReferenceV<'v, 'h, 's>] =
+        vivem_bump.alloc_slice_fill_iter(
+            external_argument_kinds.iter().map(|arg_kind| {
+                heap.add(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::from(*arg_kind))
+            }));
+    inner_execute(program_h, arg_references, &mut heap, stdin, stdout)
 }
 /*
   def executeWithPrimitiveArgs(

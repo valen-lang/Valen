@@ -96,7 +96,13 @@ pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV
   }
 */
 // mig: fn take_argument
-pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: take_argument"); }
+pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    let r#ref = heap.take_argument(call_id, argument_index, result_type);
+    heap.increment_reference_ref_count(
+        IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: result_type.ownership }),
+        r#ref);
+    r#ref
+}
 /*
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
@@ -236,7 +242,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             {
                 use std::io::Write;
                 let handle = &mut *heap.vivem_dout;
-                write!(handle, " ^v{}/{}", var_address.call_id.call_depth, var_address.local.id.number).unwrap();
+                write!(handle, " ^{}", var_address).unwrap();
             }
             heap.remove_local(var_address, local.type_h);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
@@ -280,6 +286,43 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
                 }
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: last_inner_expr_result_ref.expect("ConsecutorH: empty innerExprs") })
+        }
+        ExpressionH::ArgumentH(a) => {
+            let crate::final_ast::instructions::ArgumentH { result_type, argument_index } = **a;
+            let r#ref = take_argument(heap, call_id, argument_index, result_type);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
+        ExpressionH::DiscardH(d) => {
+            let source_expr = d.source_expression;
+            match source_expr.result_type().ownership {
+                OwnershipH::MutableShareH => {}
+                OwnershipH::ImmutableShareH => {}
+                OwnershipH::ImmutableBorrowH => {}
+                OwnershipH::MutableBorrowH => {}
+                OwnershipH::WeakH => {}
+                OwnershipH::OwnH => panic!("MatchError: OwnH"),
+            }
+            let source_ref = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            // Lots of instructions do this, not just Discard, see DINSIE.
+            discard(program_h, heap, stdout, stdin, call_id, source_expr.result_type(), source_ref);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
+        ExpressionH::LocalLoadH(ll_ref) => {
+            let ll = **ll_ref;
+            let crate::final_ast::instructions::LocalLoadH { local, target_ownership, local_name: _name } = ll;
+            assert!(target_ownership != OwnershipH::OwnH); // should have been Unstackified instead
+            let var_address = crate::testvm::heap::get_var_address(expression_id.call_id, local);
+            let reference = heap.get_reference_from_local(var_address, local.type_h, ExpressionH::LocalLoadH(ll_ref).result_type());
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: reference.ownership }), reference);
+            {
+                use std::io::Write;
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " *{}", var_address).unwrap();
+            }
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
         }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }

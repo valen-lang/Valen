@@ -33,9 +33,16 @@ pub fn execute_function<'h, 's, 'v>(
         let prefix = "  ".repeat(call_id.call_depth as usize);
         write!(handle, "{}Entering function {}", prefix, call_id).unwrap();
     }
+    // Increment all the args to show that they have arguments referring to them.
+    // These will be decremented at some point in the callee function.
     for arg_index in 0..args.len() {
-        let _arg_index_i32 = arg_index as i32;
-        panic!("execute_function: arg-loop body — pilot main() has no params; arm not exercised")
+        let arg_index_i32 = arg_index as i32;
+        heap.increment_reference_ref_count(
+            crate::testvm::values::IObjectReferrerV::ArgumentToObjectReferrer(crate::testvm::values::ArgumentToObjectReferrerV {
+                argument_id: crate::testvm::values::ArgumentIdV { call_id, index: arg_index_i32 },
+                ownership: args[arg_index].ownership,
+            }),
+            args[arg_index]);
     }
     {
         use std::io::Write;

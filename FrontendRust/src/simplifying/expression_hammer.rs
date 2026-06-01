@@ -159,7 +159,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::StaticArrayFromValues(a) => panic!("translate_expression: StaticArrayFromValues branch"),
                 RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
                 RE::AsSubtype(a) => panic!("translate_expression: AsSubtype branch"),
-                RE::ArgLookup(a) => panic!("translate_expression: ArgLookup branch"),
+                RE::ArgLookup(a) => {
+                    let crate::instantiating::ast::expressions::ArgLookupIE { param_index, coord: type2 } = *a;
+                    let type_h = self.translate_coord(hinputs, hamuts, type2);
+                    assert!(current_function_header.param_types()[param_index as usize] == type2);
+                    assert!(self.translate_coord(hinputs, hamuts, current_function_header.param_types()[param_index as usize]) == type_h);
+                    let arg_node = ExpressionH::ArgumentH(self.interner.alloc(crate::final_ast::instructions::ArgumentH { result_type: type_h, argument_index: param_index }));
+                    (arg_node, Vec::new())
+                }
                 RE::ExternFunctionCall(efc) => {
                     let access = self.translate_extern_function_call(hinputs, hamuts, current_function_header, locals, &efc.prototype2, efc.args);
                     (access, Vec::new())

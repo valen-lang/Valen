@@ -634,9 +634,9 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
   }
 */
 // mig: fn param_types
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
-    pub fn param_types(&self) -> Vec<()> {
-        panic!("Unimplemented: param_types")
+impl<'s, 'i> FunctionHeaderI<'s, 'i> where 's: 'i {
+    pub fn param_types(&self) -> Vec<CoordI<'s, 'i, cI>> {
+        IFunctionNameI::try_from(self.id.local_name).unwrap().parameters().to_vec()
     }
 }
 /*

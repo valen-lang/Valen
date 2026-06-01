@@ -300,6 +300,7 @@ impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
 */
 // mig: enum PrimitiveKindV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone)]
 pub enum PrimitiveKindV<'v, 'h, 's> {
   Void(VoidV),
   Int(IntV<'v, 'h, 's>),
@@ -311,6 +312,22 @@ pub enum PrimitiveKindV<'v, 'h, 's> {
 /*
 sealed trait PrimitiveKindV extends KindV
 */
+// Scala uses subtype polymorphism (`PrimitiveKindV extends KindV`); per SSTREX
+// the Rust port uses flat sister enums, so the subset→superset conversion is
+// expressed as an explicit `From` impl.
+impl<'v, 'h, 's> From<PrimitiveKindV<'v, 'h, 's>> for KindV<'v, 'h, 's> {
+  fn from(p: PrimitiveKindV<'v, 'h, 's>) -> Self {
+    match p {
+      PrimitiveKindV::Void(v) => KindV::Void(v),
+      PrimitiveKindV::Int(v) => KindV::Int(v),
+      PrimitiveKindV::Bool(v) => KindV::Bool(v),
+      PrimitiveKindV::Float(v) => KindV::Float(v),
+      PrimitiveKindV::Str(v) => KindV::Str(v),
+      PrimitiveKindV::Opaque(v) => KindV::Opaque(v),
+    }
+  }
+}
+/* Guardian: disable-all */
 // mig: VoidV
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidV;
@@ -818,15 +835,17 @@ where 's: 'h, 'h: 'v,
 /*
 case class VariableAddressV(callId: CallId, local: Local) {
 */
-// mig: fn to_string
-impl<'v, 'h, 's> VariableAddressV<'v, 'h, 's> {
-  pub fn to_string(&self) -> StrI<'s> {
-    panic!("Unimplemented: to_string_variable_address");
-  }
-}
+// mig: fn to_string (realized-by-impl Display)
+// (Realized by `impl Display for VariableAddressV<'v, 'h, 's>` below.)
 /*
   override def toString: String = "*v:" + callId + "#v" + local.id.number
 */
+impl<'v, 'h, 's> std::fmt::Display for VariableAddressV<'v, 'h, 's> where 's: 'h, 'h: 'v {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "*v:{}#v{}", self.call_id, self.local.id.number)
+  }
+}
+/* Guardian: disable-all */
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for VariableAddressV<'v, 'h, 's>` below.)
 /*

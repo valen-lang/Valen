@@ -1314,7 +1314,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ConstantBoolH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) },
             ExpressionH::ConstantStrH(_) => panic!("Unimplemented: result_type for ConstantStrH"),
             ExpressionH::ConstantF64H(_) => panic!("Unimplemented: result_type for ConstantF64H"),
-            ExpressionH::ArgumentH(_) => panic!("Unimplemented: result_type for ArgumentH"),
+            ExpressionH::ArgumentH(a) => a.result_type,
             ExpressionH::StackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::RestackifyH(_) => panic!("Unimplemented: result_type for RestackifyH"),
             ExpressionH::UnstackifyH(u) => u.local.type_h,
