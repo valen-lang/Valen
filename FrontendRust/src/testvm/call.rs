@@ -103,12 +103,13 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
     assert!((index as usize) < self.args.len());
-    match self.args.get(&index).copied().flatten() {
-      Some(r#ref) => {
+    match self.args.get(&index).copied() {
+      Some(Some(r#ref)) => {
         self.args.insert(index, None);
         r#ref
       }
-      None => panic!("Already took from argument {}", index),
+      Some(None) => panic!("Already took from argument {}", index),
+      None => panic!("take_argument: missing argument key {} (assert should have caught this)", index),
     }
   }
 }

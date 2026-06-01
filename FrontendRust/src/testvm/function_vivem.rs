@@ -42,7 +42,8 @@ pub fn execute_function<'h, 's, 'v>(
                 argument_id: crate::testvm::values::ArgumentIdV { call_id, index: arg_index_i32 },
                 ownership: args[arg_index].ownership,
             }),
-            args[arg_index]);
+            args[arg_index],
+        );
     }
     {
         use std::io::Write;

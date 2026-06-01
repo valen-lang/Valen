@@ -960,7 +960,13 @@ where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_expression(&self, node: ExpressionH<'s, 'h>) -> IVonData {
         match node {
-            ExpressionH::ConstantVoidH(_) => panic!("vonify_expression: ConstantVoidH"),
+            ExpressionH::ConstantVoidH(_) => {
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ConstantVoid".to_string(),
+                    id: None,
+                    members: vec![],
+                })
+            }
             ExpressionH::ConstantBoolH(_) => panic!("vonify_expression: ConstantBoolH"),
             ExpressionH::ConstantIntH(c) => {
                 let crate::final_ast::instructions::ConstantIntH { value, bits } = *c;
@@ -1061,7 +1067,23 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("vonify_expression: RuntimeSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("vonify_expression: RuntimeSizedArrayLoadH"),
             ExpressionH::StaticSizedArrayLoadH(_) => panic!("vonify_expression: StaticSizedArrayLoadH"),
-            ExpressionH::CallH(_) => panic!("vonify_expression: CallH"),
+            ExpressionH::CallH(c) => {
+                let crate::final_ast::instructions::CallH { function: function_expr, args_expressions: args_exprs } = *c;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Call".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "function".to_string(),
+                            value: self.vonify_prototype(function_expr),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "argExprs".to_string(),
+                            value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: args_exprs.iter().map(|e| self.vonify_expression(*e)).collect() }),
+                        },
+                    ],
+                })
+            }
             ExpressionH::ExternCallH(_) => panic!("vonify_expression: ExternCallH"),
             ExpressionH::InterfaceCallH(_) => panic!("vonify_expression: InterfaceCallH"),
             ExpressionH::IfH(_) => panic!("vonify_expression: IfH"),
@@ -1135,13 +1157,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ExpressionH::AsSubtypeH(_) => panic!("vonify_expression: AsSubtypeH"),
             ExpressionH::LockWeakH(_) => panic!("vonify_expression: LockWeakH"),
             ExpressionH::DiscardH(d) => {
-                let crate::final_ast::instructions::DiscardH { source_expression } = *d;
+                let crate::final_ast::instructions::DiscardH { source_expression: source_expr } = *d;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
                     tyype: "Discard".to_string(),
                     id: None,
                     members: vec![
-                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expression) },
-                        crate::von::ast::VonMember { field_name: "sourceResultType".to_string(), value: self.vonify_coord(source_expression.result_type()) },
+                        crate::von::ast::VonMember {
+                            field_name: "sourceExpr".to_string(),
+                            value: self.vonify_expression(source_expr),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "sourceResultType".to_string(),
+                            value: self.vonify_coord(source_expr.result_type()),
+                        },
                     ],
                 })
             }

@@ -1170,7 +1170,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         let reference = self.get_current_call(call_id, |c| c.take_argument(argument_index));
         self.check_reference(expected_type, reference);
         self.decrement_reference_ref_count(
-            IObjectReferrerV::ArgumentToObjectReferrer(crate::testvm::values::ArgumentToObjectReferrerV {
+            crate::testvm::values::IObjectReferrerV::ArgumentToObjectReferrer(crate::testvm::values::ArgumentToObjectReferrerV {
                 argument_id: crate::testvm::values::ArgumentIdV { call_id, index: argument_index },
                 ownership: expected_type.ownership,
             }),

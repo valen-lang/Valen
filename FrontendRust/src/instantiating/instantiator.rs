@@ -863,8 +863,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         assert!(instantiation_bound_args.rune_to_impl_bound_arg.len() == instantiation_bound_params.rune_to_bound_impl.len());
         DenizenBoundToDenizenCallerBoundArgI {
             func_id_to_bound_arg_prototype:
-                instantiation_bound_args.rune_to_function_bound_arg.iter().map(|(_callee_rune, _supplied_function_i)| -> (IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>) {
-                    panic!("Unimplemented: assemble_instantiation_bound_param_to_arg runeToFunctionBoundArg")
+                instantiation_bound_args.rune_to_function_bound_arg.iter().map(|(callee_rune, supplied_function_i)| -> (IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>) {
+                    (instantiation_bound_params.rune_to_bound_prototype.get(callee_rune).expect("vassertSome: rune_to_bound_prototype").id, *supplied_function_i)
                 }).chain(
                     instantiation_bound_args.caller_rune_to_callee_rune_to_reachable_func.iter().flat_map(|(_caller_rune, _callee_rune_to_reachable_func)| -> Vec<(IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>)> {
                         panic!("Unimplemented: assemble_instantiation_bound_param_to_arg callerRuneToCalleeRuneToReachableFunc")
@@ -2050,7 +2050,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             });
 
         match desired_prototype_t.id {
-            IdT { local_name: INameT::FunctionBound(_), .. } => panic!("Unimplemented: translate_prototype FunctionBound"),
+            IdT { local_name: INameT::FunctionBound(_), .. } => {
+                let func_bound_name = desired_prototype_t.id;
+                let prototype_s = *denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype");
+                let prototype_c = region_collapser_individual::collapse_prototype(self.interner, prototype_s);
+                (*prototype_s, prototype_c)
+            }
             IdT { local_name: INameT::ExternFunction(_), .. } => {
                 if self.opts.sanity_check {
                     // Scala's `vassert(Collector.all(desiredPrototypeS, {case KindPlaceholderTemplateNameT => }).isEmpty)`
@@ -2278,8 +2283,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         // For any that are placeholders themselves, let's translate those into actual prototypes.
         let rune_to_supplied_prototype_for_call: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>> =
             ArenaIndexMap::from_iter_in(
-                rune_to_supplied_bound_prototype_for_call_unsubstituted.iter().map(|(_rune, _supplied_prototype_unsubstituted)| {
-                    panic!("Unimplemented: translate_bound_args_for_callee rune_to_supplied_prototype_for_call")
+                rune_to_supplied_bound_prototype_for_call_unsubstituted.iter().map(|(rune, supplied_prototype_unsubstituted)| {
+                    let prototype_s: &'i PrototypeI<'s, 'i, sI> = match supplied_prototype_unsubstituted.id {
+                        IdT { local_name: INameT::FunctionBound(_), .. } => {
+                            let func_bound_name = supplied_prototype_unsubstituted.id;
+                            *_denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype")
+                        }
+                        _ => {
+                            let (prototype_i, _prototype_c) =
+                                self.translate_prototype(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, supplied_prototype_unsubstituted);
+                            self.interner.alloc(prototype_i)
+                        }
+                    };
+                    (*rune, prototype_s)
                 }),
                 self.interner.bump());
         // And now we have a map from the callee's rune to the *instantiated* callee's prototypes.
@@ -3254,13 +3270,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::ConstantStr(_) => panic!("Unimplemented: translate_ref_expr ConstantStr"),
             ReferenceExpressionTE::ConstantFloat(_) => panic!("Unimplemented: translate_ref_expr ConstantFloat"),
-            ReferenceExpressionTE::ArgLookup(e) => {
-                let crate::typing::ast::expressions::ArgLookupTE { param_index, coord: reference } = **e;
-                let type_s = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &reference).coord;
-                let result_ce = ReferenceExpressionIE::ArgLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::ArgLookupIE {
-                    param_index,
-                    coord: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s),
-                }));
+            ReferenceExpressionTE::ArgLookup(al) => {
+                let crate::typing::ast::expressions::ArgLookupTE { param_index, coord: reference } = **al;
+                let type_s =
+                    self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &reference)
+                        .coord;
+                let result_ce = ReferenceExpressionIE::ArgLookup(self.interner.alloc(crate::instantiating::ast::expressions::ArgLookupIE { param_index, coord: region_collapser_individual::collapse_coord(self.interner, &type_s) }));
                 (type_s, result_ce)
             }
             ReferenceExpressionTE::ArrayLength(_) => panic!("Unimplemented: translate_ref_expr ArrayLength"),
@@ -5211,13 +5226,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_parameter(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, perspective_region_t: &RegionT, param_t: &ParameterT<'s, 't>) -> ParameterI<'s, 'i> {
         let ParameterT { name, virtuality, pre_checked, tyype } = param_t;
-        let type_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype).coord;
+        let type_it =
+            self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, tyype)
+                .coord;
         let name_s = Self::translate_var_name(self.interner, name);
         ParameterI {
-            name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &name_s),
+            name: region_collapser_individual::collapse_var_name(self.interner, &name_s),
             virtuality: virtuality.map(|v| match v { AbstractT => AbstractI }),
             pre_checked: *pre_checked,
-            tyype: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_it),
+            tyype: region_collapser_individual::collapse_coord(self.interner, &type_it),
         }
     }
 }
@@ -5375,7 +5392,18 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         parameters: self.interner.alloc_slice_from_vec(parameters.iter().map(|param| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, param).coord).collect::<Vec<_>>()),
                     }))
             }
-            IFunctionNameT::FunctionBound(_) => panic!("Unimplemented: translate_function_name FunctionBound"),
+            IFunctionNameT::FunctionBound(fbn) => {
+                let crate::typing::names::names::FunctionBoundNameT { template, template_args, parameters: params, .. } = *fbn;
+                let crate::typing::names::names::FunctionBoundTemplateNameT { human_name, .. } = *template;
+                IFunctionNameI::FunctionBound(
+                    self.interner.intern_function_bound_name_si(FunctionBoundNameI {
+                        template: FunctionBoundTemplateNameI { _marker: std::marker::PhantomData, human_name },
+                        template_args: self.interner.alloc_slice_from_vec(
+                            template_args.iter().map(|template_arg| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, template_arg)).collect::<Vec<_>>()),
+                        parameters: self.interner.alloc_slice_from_vec(
+                            params.iter().map(|param| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, param).coord).collect::<Vec<_>>()),
+                    }))
+            }
             IFunctionNameT::AnonymousSubstructConstructor(_) => panic!("Unimplemented: translate_function_name AnonymousSubstructConstructor"),
             IFunctionNameT::LambdaCallFunction(_) => panic!("Unimplemented: translate_function_name LambdaCallFunction"),
             IFunctionNameT::OverrideDispatcher(_) => panic!("Unimplemented: translate_function_name OverrideDispatcher"),
@@ -5674,8 +5702,28 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // suffixed `_substituting` to disambiguate (Rust lacks overloading). Slice pipeline
 // emitted no stub for this overload (TL-added per NNDX escalation).
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_name_substituting(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_name_substituting");
+    pub fn translate_name_substituting(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, name: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
+        match *name {
+            n if IVarNameT::try_from(n).is_ok() => panic!("Unimplemented: translate_name_substituting IVarNameT"),
+            INameT::KindPlaceholderTemplate(_) => panic!("translate_name_substituting: KindPlaceholderTemplate vwat"),
+            INameT::KindPlaceholder(_) => panic!("translate_name_substituting: KindPlaceholder vwat"),
+            INameT::Struct(_) => panic!("Unimplemented: translate_name_substituting Struct"),
+            INameT::ForwarderFunctionTemplate(_) => panic!("Unimplemented: translate_name_substituting ForwarderFunctionTemplate"),
+            INameT::AnonymousSubstructConstructorTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructConstructorTemplate"),
+            INameT::FunctionTemplate(ftn) => {
+                let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = *ftn;
+                INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
+            }
+            INameT::StructTemplate(_) => panic!("Unimplemented: translate_name_substituting StructTemplate"),
+            INameT::LambdaCitizenTemplate(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizenTemplate"),
+            INameT::AnonymousSubstructTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructTemplate"),
+            INameT::LambdaCitizen(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizen"),
+            INameT::InterfaceTemplate(_) => panic!("Unimplemented: translate_name_substituting InterfaceTemplate"),
+            INameT::Function(_) | INameT::ForwarderFunction(_) | INameT::ExternFunction(_) | INameT::FunctionBound(_) | INameT::LambdaCallFunction(_) | INameT::AnonymousSubstructConstructor(_) | INameT::PredictedFunction(_) => {
+                panic!("Unimplemented: translate_name_substituting IFunctionNameT")
+            }
+            _ => panic!("Unimplemented: translate_name_substituting other"),
+        }
     }
 }
 /*

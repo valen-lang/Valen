@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::io::Write;
 use std::marker::PhantomData;
 use crate::interner::StrI;
 use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, InterfaceHT};
@@ -111,7 +112,17 @@ pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<
   }
 */
 // mig: fn possess_callee_return
-pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: possess_callee_return"); }
+pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+    heap.decrement_reference_ref_count(
+        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id: callee_call_id, ownership: result.return_ref.ownership }),
+        result.return_ref,
+    );
+    heap.increment_reference_ref_count(
+        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: result.return_ref.ownership }),
+        result.return_ref,
+    );
+    result.return_ref
+}
 /*
   def possessCalleeReturn(heap: Heap, callId: CallId, calleeCallId: CallId, result: NodeReturn) = {
     heap.decrementReferenceRefCount(RegisterToObjectReferrer(calleeCallId, result.returnRef.ownership), result.returnRef)
@@ -186,13 +197,11 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -
         ExpressionH::PreCheckBorrowH(_) => "PreCheckBorrowH",
     };
     {
-        use std::io::Write;
         let handle = &mut *heap.vivem_dout;
         write!(handle, "<{}> ", node_name).unwrap();
     }
     let result = execute_node_inner(program_h, stdin, stdout, heap, expression_id, node);
     {
-        use std::io::Write;
         let handle = &mut *heap.vivem_dout;
         writeln!(handle, "</{}>", node_name).unwrap();
     }
@@ -240,7 +249,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
                 reference,
             );
             {
-                use std::io::Write;
                 let handle = &mut *heap.vivem_dout;
                 write!(handle, " ^{}", var_address).unwrap();
             }
@@ -256,7 +264,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             let var_addr = crate::testvm::heap::get_var_address(expression_id.call_id, local);
             heap.add_local(var_addr, reference, source_expr.result_type());
             {
-                use std::io::Write;
                 let handle = &mut *heap.vivem_dout;
                 write!(handle, " v{}/{}<-o{}", var_addr.call_id.call_depth, var_addr.local.id.number, reference.num).unwrap();
             }
@@ -280,7 +287,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
                     }
                 }
                 {
-                    use std::io::Write;
                     let handle = &mut *heap.vivem_dout;
                     writeln!(handle).unwrap();
                 }
@@ -318,11 +324,50 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             let reference = heap.get_reference_from_local(var_address, local.type_h, ExpressionH::LocalLoadH(ll_ref).result_type());
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: reference.ownership }), reference);
             {
-                use std::io::Write;
                 let handle = &mut *heap.vivem_dout;
                 write!(handle, " *{}", var_address).unwrap();
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
+        }
+        ExpressionH::ConstantVoidH(_) => {
+            let r#ref = heap.void();
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
+        ExpressionH::CallH(c) => {
+            let crate::final_ast::instructions::CallH { function: prototype_h, args_expressions: args_exprs } = **c;
+            let arg_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
+                args_exprs.iter().enumerate().map(|(i, arg_expr)| {
+                    match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                        INodeExecuteResultV::Break(_) | INodeExecuteResultV::Return(_) => panic!("execute_node_inner: CallH arg produced Break/Return — vwat (BRCOBS)"),
+                        INodeExecuteResultV::Continue(c) => c.result_ref,
+                    }
+                }).collect();
+
+            let function_h = program_h.lookup_function(prototype_h);
+            {
+                let handle = &mut *heap.vivem_dout;
+                writeln!(handle).unwrap();
+                let prefix = "  ".repeat(expression_id.call_id.call_depth as usize);
+                writeln!(handle, "{}Making new stack frame (call)", prefix).unwrap();
+            }
+
+            for r in arg_refs.iter() {
+                heap.decrement_reference_ref_count(
+                    IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    *r,
+                );
+            }
+
+            let arg_refs_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
+            let (callee_call_id, retuurn) =
+                crate::testvm::function_vivem::execute_function(program_h, stdin, stdout, heap, arg_refs_slice, function_h);
+            {
+                let handle = &mut *heap.vivem_dout;
+                let prefix = "  ".repeat(expression_id.call_id.call_depth as usize);
+                write!(handle, "{}Getting return reference", prefix).unwrap();
+            }
+            let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
         }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }

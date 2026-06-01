@@ -245,24 +245,67 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   def lookupPackage(packageCoordinate: PackageCoordinate): PackageH = {
     vassertSome(packages.get(packageCoordinate))
   }
+*/
+// mig: fn lookup_function
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_function(&self, prototype: &'h PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
+    let paackage = self.lookup_package(prototype.id.package_coordinate);
+    let result = paackage.functions.iter().find(|f| f.prototype.id == prototype.id).expect("vassertSome: lookup_function");
+    assert!(prototype == result.prototype);
+    result
+  }
+}
+/*
   def lookupFunction(prototype: PrototypeH): FunctionH = {
     val paackage = lookupPackage(prototype.id.packageCoordinate)
     val result = vassertSome(paackage.functions.find(_.id == prototype.id))
     vassert(prototype == result.prototype)
     result
   }
+*/
+// mig: fn lookup_struct
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_struct(&self, struct_ref_h: crate::final_ast::types::StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
+    panic!("Unimplemented: lookup_struct");
+  }
+}
+/*
   def lookupStruct(structRefH: StructHT): StructDefinitionH = {
     val paackage = lookupPackage(structRefH.id.packageCoordinate)
     vassertSome(paackage.structs.find(_.getRef == structRefH))
   }
+*/
+// mig: fn lookup_interface
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_interface(&self, interface_ref_h: crate::final_ast::types::InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
+    panic!("Unimplemented: lookup_interface");
+  }
+}
+/*
   def lookupInterface(interfaceRefH: InterfaceHT): InterfaceDefinitionH = {
     val paackage = lookupPackage(interfaceRefH.id.packageCoordinate)
     vassertSome(paackage.interfaces.find(_.getRef == interfaceRefH))
   }
+*/
+// mig: fn lookup_static_sized_array
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_static_sized_array(&self, ssa_th: crate::final_ast::types::StaticSizedArrayHT<'s, 'h>) -> &'h crate::final_ast::types::StaticSizedArrayDefinitionHT<'s, 'h> {
+    panic!("Unimplemented: lookup_static_sized_array");
+  }
+}
+/*
   def lookupStaticSizedArray(ssaTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
     val paackage = lookupPackage(ssaTH.id.packageCoordinate)
     vassertSome(paackage.staticSizedArrays.find(_.name == ssaTH.id))
   }
+*/
+// mig: fn lookup_runtime_sized_array
+impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
+  pub fn lookup_runtime_sized_array(&self, rsa_th: crate::final_ast::types::RuntimeSizedArrayHT<'s, 'h>) -> &'h crate::final_ast::types::RuntimeSizedArrayDefinitionHT<'s, 'h> {
+    panic!("Unimplemented: lookup_runtime_sized_array");
+  }
+}
+/*
   def lookupRuntimeSizedArray(rsaTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
     val paackage = lookupPackage(rsaTH.name.packageCoordinate)
     vassertSome(paackage.runtimeSizedArrays.find(_.name == rsaTH.name))
