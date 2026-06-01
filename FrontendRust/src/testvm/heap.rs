@@ -19,7 +19,7 @@ use crate::testvm::vivem::PrintStream;
 package dev.vale.testvm
 
 import dev.vale.finalast._
-import dev.vale.{vassert, vassertSome, vfail, vimpl, von}
+import dev.vale.{IntCounter, vassert, vassertSome, vfail, vimpl, von}
 
 import java.io.PrintStream
 import dev.vale.finalast._
@@ -94,8 +94,47 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 }
 */
-// Per Scala AllocationMap `private val STARTING_ID = 501`.
+// Per Scala `object AllocationMap.STARTING_ID`. The matching `addImpl` body in
+// Rust is the free fn `allocation_map_add_impl` further down — its Scala
+// counterpart sits in the audit block below at canonical source order; SCPX
+// matches Scala's `object AllocationMap` placement before `class AllocationMap`.
 const STARTING_ID: i32 = 501;
+/*
+object AllocationMap {
+  val STARTING_ID = 501
+
+  // Factored body of `add` that takes the underlying state by reference (via
+  // IntCounter for nextId) so it can run both during the class-body
+  // initialization of `val void` (before `this` is fully constructed) and as
+  // the method body of `def add`. Mirrors Rust's `allocation_map_add_impl`
+  // which takes `&mut HashMap` and `&mut i32`.
+  def addImpl(
+      objectsById: mutable.HashMap[AllocationId, Allocation],
+      nextId: IntCounter,
+      ownership: OwnershipH,
+      location: LocationH,
+      kind: KindV): ReferenceV = {
+    val id = nextId.increment()
+    if (kind == VoidV) {
+      // Make sure it only happens once
+      vassert(id == STARTING_ID)
+    }
+    val reference =
+      ReferenceV(
+        // These two are the same because when we allocate something,
+        // we see it for what it truly is.
+        //                                          ~ Wisdom ~
+        actualKind = kind.tyype,
+        seenAsKind = kind.tyype,
+        ownership,
+        location,
+        id)
+    val allocation = new Allocation(reference, kind)
+    objectsById.put(reference.allocId, allocation)
+    reference
+  }
+}
+*/
 
 // mig: struct AllocationMapV<'v, 'h, 's>
 /// Temporary state
@@ -107,9 +146,8 @@ pub struct AllocationMapV<'v, 'h, 's> {
 /*
 class AllocationMap(vivemDout: PrintStream) {
   private val objectsById = mutable.HashMap[AllocationId, Allocation]()
-  private val STARTING_ID = 501
-  private var nextId = STARTING_ID;
-  val void: ReferenceV = add(MutableShareH, InlineH, VoidV)
+  private val nextId = new IntCounter(AllocationMap.STARTING_ID)
+  val void: ReferenceV = AllocationMap.addImpl(objectsById, nextId, MutableShareH, InlineH, VoidV)
 */
 // mig: fn new
 // Mirrors the AllocationMap(vivemDout: PrintStream) constructor in the Scala
@@ -124,19 +162,8 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     }
 }
 /* Guardian: disable-all */
-// mig: fn new_id
-impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn new_id(&self) -> AllocationIdV<'v, 'h, 's> {
-        panic!("Unimplemented: new_id");
-    }
-}
-/*
-  private def newId() = {
-    val id = nextId;
-    nextId = nextId + 1
-    id
-  }
-*/
+// (`def newId` removed in the refactor that introduced `IntCounter` —
+// nextId.increment() is now called inline inside addImpl.)
 // mig: fn is_empty
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     pub fn is_empty(&self) -> bool {
@@ -208,15 +235,10 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         allocation_map_add_impl(&mut self.objects_by_id, &mut self.next_id, ownership, location, kind)
     }
 }
-// Rust-only factored body of `AllocationMap.add` (see Scala block below).
-// Takes references to the underlying Cells instead of `&self`, so it can run
-// against the partial state inside `AllocationMapV::new`'s constructor (where
-// Scala does `val void = add(MutableShareH, InlineH, VoidV)` against a not-yet-
-// fully-constructed `class AllocationMap`). The `add` method is now a thin
-// wrapper delegating here; this fn carries the logic. No novel logic — same
-// allocation steps as Scala's `add` body, just factored to take the state
-// references rather than `&self`. Exception-B class (Rust ownership forces the
-// factor; no Scala counterpart for the helper itself).
+// 1:1 with Scala `object AllocationMap.addImpl` (audit block at canonical source
+// position higher in this file, before the `class AllocationMap` block). The
+// `&mut HashMap` + `&mut i32` params mirror Scala's HashMap + IntCounter
+// wrapper that gives pass-by-reference Int semantics.
 fn allocation_map_add_impl<'v, 'h, 's>(
     objects_by_id: &mut HashMap<AllocationIdV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>,
     next_id: &mut i32,
@@ -240,28 +262,9 @@ fn allocation_map_add_impl<'v, 'h, 's>(
     objects_by_id.insert(reference.alloc_id(), allocation);
     reference
 }
-/* Guardian: disable-all */
 /*
-  def add(ownership: OwnershipH, location: LocationH, kind: KindV) = {
-    val id = newId()
-    if (kind == VoidV) {
-      // Make sure it only happens once
-      vassert(id == STARTING_ID)
-    }
-    val reference =
-      ReferenceV(
-        // These two are the same because when we allocate something,
-        // we see it for what it truly is.
-        //                                          ~ Wisdom ~
-        actualKind = kind.tyype,
-        seenAsKind = kind.tyype,
-        ownership,
-        location,
-        id)
-    val allocation = new Allocation(reference, kind)
-    objectsById.put(reference.allocId, allocation)
-    reference
-  }
+  def add(ownership: OwnershipH, location: LocationH, kind: KindV): ReferenceV =
+    AllocationMap.addImpl(objectsById, nextId, ownership, location, kind)
 */
 // mig: fn print_all
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
