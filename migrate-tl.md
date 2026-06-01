@@ -55,7 +55,9 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Pilot landed: `simple_program_returning_an_int` green; 770/770 tests passing.** Active frontier: the four-way parallel migration (SI/CL/GE/MI buckets, see `master-todo.md`).
 
-**Parallel sprint structure:** `Vale` (SI bucket), `Vale2` (CL), `Vale3` (GE), `Vale4` (MI). Each worktree has its own JR. Foundation work first, then checkpoint-merge into `experimental`.
+**Parallel sprint structure:** `Vale` → `experimental-1` (SI), `Vale2` → `experimental-2` (CL), `Vale3` → `experimental-3` (GE), `Vale4` → `experimental-4` (MI). Each worktree has its own JR. `experimental` is the shared integration ref, **checked out in no worktree** — never `git checkout experimental` from any worktree.
+
+**Per-TL CI loop (after every green test, from your own worktree):** `git rebase experimental` → re-verify green → `git fetch . experimental-N:experimental` to fast-forward `experimental` to your tip. Check the exit code; non-ff rejection means another TL beat you — re-rebase and retry. Concurrency-safe via git's ref locking. No remote pushes during the sprint; all worktrees share `/Volumes/V/Vale/.git` so branches are visible by name from anywhere.
 
 **Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver.
 
