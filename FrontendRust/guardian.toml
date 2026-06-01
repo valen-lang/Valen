@@ -22,6 +22,8 @@ exclude_shields = [
     "NeverSummarizeAwayErrorContent-NSAECX.md",
     "NoDroppedLocalVariablesOrCaptures-NDLVOCX.md",
     "PreferResultOverPanicForRecoverableCases-PROPRCX.md",
+
+    "OutputAndLoggingZenDiscipline-OALZDX.md",
 ]
 
 [slice_mode]
@@ -78,7 +80,6 @@ include_shields = [
     { name = "KeepInlineComparisonsInline-KICIX.md" },
     { name = "NeverHaveConditionalsInTests-NHCITX.md" },
     { name = "NeverDowncastTraits-NEDCX.md" },
-    { name = "OutputAndLoggingZenDiscipline-OALZDX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
 

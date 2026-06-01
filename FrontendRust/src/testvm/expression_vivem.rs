@@ -26,9 +26,9 @@ object ExpressionVivem {
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum INodeExecuteResultV<'v, 'h, 's> {
-  Continue(&'v NodeContinueV<'v, 'h, 's>),
-  Return(&'v NodeReturnV<'v, 'h, 's>),
-  Break(&'v NodeBreakV<'v, 'h, 's>),
+  Continue(NodeContinueV<'v, 'h, 's>),
+  Return(NodeReturnV<'v, 'h, 's>),
+  Break(NodeBreakV<'v, 'h, 's>),
 }
 /*
   // The contained reference has a ResultToObjectReferrer pointing at it.
@@ -39,7 +39,7 @@ pub enum INodeExecuteResultV<'v, 'h, 's> {
 */
 // mig: struct NodeContinueV<'v, 'h, 's>
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeContinueV<'v, 'h, 's> {
   pub result_ref: ReferenceV<'v, 'h, 's>,
 }
@@ -51,7 +51,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct NodeReturnV<'v, 'h, 's>
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeReturnV<'v, 'h, 's> {
   pub return_ref: ReferenceV<'v, 'h, 's>,
 }
@@ -63,7 +63,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct NodeBreakV<'v, 'h, 's>
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeBreakV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -76,7 +76,17 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: fn make_primitive
-pub fn make_primitive<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: make_primitive"); }
+pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+    assert!(!matches!(kind, KindV::Void(_)));
+    let r#ref = heap.allocate_transient(OwnershipH::MutableShareH, location, kind);
+    heap.increment_reference_ref_count(
+        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(
+            crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: OwnershipH::MutableShareH }
+        ),
+        r#ref,
+    );
+    r#ref
+}
 /*
   def makePrimitive(heap: Heap, callId: CallId, location: LocationH, kind: KindV) = {
     vassert(kind != VoidV)
@@ -86,7 +96,7 @@ pub fn make_primitive<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v,
   }
 */
 // mig: fn take_argument
-pub fn take_argument<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: take_argument"); }
+pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: take_argument"); }
 /*
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
@@ -95,7 +105,7 @@ pub fn take_argument<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 
   }
 */
 // mig: fn possess_callee_return
-pub fn possess_callee_return<'v, 'h, 's>(heap: &HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: possess_callee_return"); }
+pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: possess_callee_return"); }
 /*
   def possessCalleeReturn(heap: Heap, callId: CallId, calleeCallId: CallId, result: NodeReturn) = {
     heap.decrementReferenceRefCount(RegisterToObjectReferrer(calleeCallId, result.returnRef.ownership), result.returnRef)
@@ -116,7 +126,72 @@ pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_inter
   }
 */
 // mig: fn execute_node
-pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> { panic!("Unimplemented: execute_node"); }
+pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+    let node_name = match node {
+        ExpressionH::ConstantVoidH(_) => "ConstantVoidH",
+        ExpressionH::ConstantIntH(_) => "ConstantIntH",
+        ExpressionH::ConstantBoolH(_) => "ConstantBoolH",
+        ExpressionH::ConstantStrH(_) => "ConstantStrH",
+        ExpressionH::ConstantF64H(_) => "ConstantF64H",
+        ExpressionH::ArgumentH(_) => "ArgumentH",
+        ExpressionH::StackifyH(_) => "StackifyH",
+        ExpressionH::RestackifyH(_) => "RestackifyH",
+        ExpressionH::UnstackifyH(_) => "UnstackifyH",
+        ExpressionH::DestroyH(_) => "DestroyH",
+        ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => "DestroyStaticSizedArrayIntoLocalsH",
+        ExpressionH::StructToInterfaceUpcastH(_) => "StructToInterfaceUpcastH",
+        ExpressionH::InterfaceToInterfaceUpcastH(_) => "InterfaceToInterfaceUpcastH",
+        ExpressionH::LocalStoreH(_) => "LocalStoreH",
+        ExpressionH::LocalLoadH(_) => "LocalLoadH",
+        ExpressionH::MemberStoreH(_) => "MemberStoreH",
+        ExpressionH::MemberLoadH(_) => "MemberLoadH",
+        ExpressionH::NewArrayFromValuesH(_) => "NewArrayFromValuesH",
+        ExpressionH::StaticSizedArrayStoreH(_) => "StaticSizedArrayStoreH",
+        ExpressionH::RuntimeSizedArrayStoreH(_) => "RuntimeSizedArrayStoreH",
+        ExpressionH::RuntimeSizedArrayLoadH(_) => "RuntimeSizedArrayLoadH",
+        ExpressionH::StaticSizedArrayLoadH(_) => "StaticSizedArrayLoadH",
+        ExpressionH::CallH(_) => "CallH",
+        ExpressionH::ExternCallH(_) => "ExternCallH",
+        ExpressionH::InterfaceCallH(_) => "InterfaceCallH",
+        ExpressionH::IfH(_) => "IfH",
+        ExpressionH::WhileH(_) => "WhileH",
+        ExpressionH::ConsecutorH(_) => "ConsecutorH",
+        ExpressionH::BlockH(_) => "BlockH",
+        ExpressionH::MutabilifyH(_) => "MutabilifyH",
+        ExpressionH::ImmutabilifyH(_) => "ImmutabilifyH",
+        ExpressionH::ReturnH(_) => "ReturnH",
+        ExpressionH::NewImmRuntimeSizedArrayH(_) => "NewImmRuntimeSizedArrayH",
+        ExpressionH::NewMutRuntimeSizedArrayH(_) => "NewMutRuntimeSizedArrayH",
+        ExpressionH::PushRuntimeSizedArrayH(_) => "PushRuntimeSizedArrayH",
+        ExpressionH::PopRuntimeSizedArrayH(_) => "PopRuntimeSizedArrayH",
+        ExpressionH::StaticArrayFromCallableH(_) => "StaticArrayFromCallableH",
+        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => "DestroyStaticSizedArrayIntoFunctionH",
+        ExpressionH::DestroyImmRuntimeSizedArrayH(_) => "DestroyImmRuntimeSizedArrayH",
+        ExpressionH::DestroyMutRuntimeSizedArrayH(_) => "DestroyMutRuntimeSizedArrayH",
+        ExpressionH::BreakH(_) => "BreakH",
+        ExpressionH::NewStructH(_) => "NewStructH",
+        ExpressionH::ArrayLengthH(_) => "ArrayLengthH",
+        ExpressionH::ArrayCapacityH(_) => "ArrayCapacityH",
+        ExpressionH::BorrowToWeakH(_) => "BorrowToWeakH",
+        ExpressionH::IsSameInstanceH(_) => "IsSameInstanceH",
+        ExpressionH::AsSubtypeH(_) => "AsSubtypeH",
+        ExpressionH::LockWeakH(_) => "LockWeakH",
+        ExpressionH::DiscardH(_) => "DiscardH",
+        ExpressionH::PreCheckBorrowH(_) => "PreCheckBorrowH",
+    };
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        write!(handle, "<{}> ", node_name).unwrap();
+    }
+    let result = execute_node_inner(program_h, stdin, stdout, heap, expression_id, node);
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        writeln!(handle, "</{}>", node_name).unwrap();
+    }
+    result
+}
 /*
   def executeNode(
     programH: ProgramH,
@@ -133,7 +208,82 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -
   }
 */
 // mig: fn execute_node_inner
-pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> { panic!("Unimplemented: execute_node_inner"); }
+pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+    let call_id = expression_id.call_id;
+    match node {
+        ExpressionH::ConstantIntH(c) => {
+            let crate::final_ast::instructions::ConstantIntH { value, bits } = **c;
+            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Int(crate::testvm::values::IntV { value, bits, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
+        ExpressionH::ReturnH(r) => {
+            let source_expr = r.source_expression;
+            let source_ref = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                ret @ INodeExecuteResultV::Return(_) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: ReturnH source produced Break — vwat"),
+            };
+            INodeExecuteResultV::Return(NodeReturnV { return_ref: source_ref })
+        }
+        ExpressionH::UnstackifyH(u) => {
+            let crate::final_ast::instructions::UnstackifyH { local } = **u;
+            let var_address = crate::testvm::heap::get_var_address(expression_id.call_id, local);
+            let reference = heap.get_reference_from_local(var_address, local.type_h, local.type_h);
+            heap.increment_reference_ref_count(
+                IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
+                reference,
+            );
+            {
+                use std::io::Write;
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " ^v{}/{}", var_address.call_id.call_depth, var_address.local.id.number).unwrap();
+            }
+            heap.remove_local(var_address, local.type_h);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
+        }
+        ExpressionH::StackifyH(s) => {
+            let crate::final_ast::instructions::StackifyH { source_expr, local, name: _ } = **s;
+            let reference = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let var_addr = crate::testvm::heap::get_var_address(expression_id.call_id, local);
+            heap.add_local(var_addr, reference, source_expr.result_type());
+            {
+                use std::io::Write;
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " v{}/{}<-o{}", var_addr.call_id.call_depth, var_addr.local.id.number, reference.num).unwrap();
+            }
+            discard(program_h, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
+        ExpressionH::BlockH(b) => {
+            let source_expr = b.inner;
+            execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr)
+        }
+        ExpressionH::ConsecutorH(c) => {
+            let crate::final_ast::instructions::ConsecutorH { exprs: inner_exprs } = **c;
+            let mut last_inner_expr_result_ref: Option<crate::testvm::values::ReferenceV<'v, 'h, 's>> = None;
+            for (i, inner_expr) in inner_exprs.iter().enumerate() {
+                match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), inner_expr) {
+                    ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                    INodeExecuteResultV::Continue(cc) => {
+                        if i == inner_exprs.len() - 1 {
+                            last_inner_expr_result_ref = Some(cc.result_ref);
+                        }
+                    }
+                }
+                {
+                    use std::io::Write;
+                    let handle = &mut *heap.vivem_dout;
+                    writeln!(handle).unwrap();
+                }
+            }
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: last_inner_expr_result_ref.expect("ConsecutorH: empty innerExprs") })
+        }
+        other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
+    }
+}
 /*
   def executeNodeInner(
                    programH: ProgramH,
@@ -1105,7 +1255,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
   }
 */
 // mig: fn consume_elements
-pub fn consume_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: consume_elements"); }
+pub fn consume_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: consume_elements"); }
 /*
   private def consumeElements(
     programH: ProgramH,
@@ -1158,7 +1308,7 @@ pub fn consume_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn
   }
 */
 // mig: fn generate_elements
-pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: generate_elements"); }
+pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: generate_elements"); }
 /*
   private def generateElements(
     programH: ProgramH,
@@ -1206,7 +1356,7 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn F
   }
 */
 // mig: fn execute_interface_function
-pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)) { panic!("Unimplemented: execute_interface_function"); }
+pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)) { panic!("Unimplemented: execute_interface_function"); }
 /*
   private def executeInterfaceFunction(
       programH: ProgramH,
@@ -1268,7 +1418,15 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdi
   }
 */
 // mig: fn discard
-pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &HeapV<'v, 'h, 's>, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) { panic!("Unimplemented: discard"); }
+pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+    heap.decrement_reference_ref_count(
+        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(
+            crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: actual_reference.ownership }
+        ),
+        actual_reference,
+    );
+    cleanup(program_h, heap, stdout, stdin, call_id, expected_reference, actual_reference);
+}
 /*
   def discard(
     programH: ProgramH,
@@ -1284,7 +1442,28 @@ pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &HeapV<'v, 'h, 's
   }
 */
 // mig: fn cleanup
-pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &HeapV<'v, 'h, 's>, stdout: &dyn Fn(String), stdin: &dyn Fn() -> String, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) { panic!("Unimplemented: cleanup"); }
+pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+    if heap.get_total_ref_count(actual_reference) == 0 {
+        match expected_reference.ownership {
+            OwnershipH::OwnH => {}
+            OwnershipH::WeakH => panic!("cleanup: Weak — pilot doesn't exercise"),
+            OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => {}
+            OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
+                match expected_reference.kind {
+                    KindHT::VoidHT(_) | KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::StrHT(_) | KindHT::FloatHT(_) | KindHT::OpaqueHT(_) => {
+                        heap.zero(actual_reference);
+                        heap.deallocate_if_no_weak_refs(actual_reference);
+                    }
+                    KindHT::StructHT(_) => panic!("cleanup: StructHT — pilot doesn't exercise"),
+                    KindHT::InterfaceHT(_) => panic!("cleanup: InterfaceHT — pilot doesn't exercise"),
+                    KindHT::RuntimeSizedArrayHT(_) => panic!("cleanup: RuntimeSizedArrayHT — pilot doesn't exercise"),
+                    KindHT::StaticSizedArrayHT(_) => panic!("cleanup: StaticSizedArrayHT — pilot doesn't exercise"),
+                    KindHT::NeverHT(_) => panic!("cleanup: NeverHT — pilot doesn't exercise"),
+                }
+            }
+        }
+    }
+}
 /*
   def cleanup(
     programH: ProgramH,

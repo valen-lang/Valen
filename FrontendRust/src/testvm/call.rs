@@ -23,8 +23,8 @@ import scala.collection.mutable
 pub struct CallV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
   pub in_args: &'v [ReferenceV<'v, 'h, 's>],
-  pub args: Cell<HashMap<i32, Option<ReferenceV<'v, 'h, 's>>>>,
-  pub locals: Cell<HashMap<VariableAddressV<'v, 'h, 's>, VariableV<'v, 'h, 's>>>,
+  pub args: HashMap<i32, Option<ReferenceV<'v, 'h, 's>>>,
+  pub locals: HashMap<VariableAddressV<'v, 'h, 's>, VariableV<'v, 'h, 's>>,
 }
 /*
 class Call(callId: CallId, in_args: Vector[ReferenceV]) {
@@ -35,8 +35,16 @@ class Call(callId: CallId, in_args: Vector[ReferenceV]) {
 */
 // mig: fn add_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn add_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, tyype: CoordH<'s, 'h>) {
-    panic!("Unimplemented: add_local");
+  pub fn add_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, tyype: CoordH<'s, 'h>) {
+    assert_eq!(var_addr.call_id, self.call_id);
+    let locals = &mut self.locals;
+    assert!(!locals.contains_key(&var_addr));
+    assert!(!locals.iter().any(|(addr, _)| addr.local.id.number == var_addr.local.id.number));
+    locals.insert(var_addr, crate::testvm::values::VariableV {
+      id: var_addr,
+      reference: std::cell::Cell::new(reference),
+      expected_type: tyype,
+    });
   }
 }
 /*
@@ -50,8 +58,11 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 */
 // mig: fn remove_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn remove_local(&self, var_addr: VariableAddressV<'v, 'h, 's>) {
-    panic!("Unimplemented: remove_local");
+  pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>) {
+    assert_eq!(var_addr.call_id, self.call_id);
+    let locals = &mut self.locals;
+    assert!(locals.contains_key(&var_addr));
+    locals.remove(&var_addr);
   }
 }
 /*
@@ -65,7 +76,9 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 // mig: fn get_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn get_local(&self, addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
-    panic!("Unimplemented: get_local");
+    let locals = &self.locals;
+    let result = locals.get(&addr).expect("get_local: not found").clone();
+    result
   }
 }
 /*
@@ -76,7 +89,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 */
 // mig: fn mutate_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn mutate_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
+  pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
     panic!("Unimplemented: mutate_local");
   }
 }
@@ -88,7 +101,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 */
 // mig: fn take_argument
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn take_argument(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
+  pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
     panic!("Unimplemented: take_argument");
   }
 }
@@ -109,8 +122,14 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 */
 // mig: fn prepare_to_die
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn prepare_to_die(&self) {
-    panic!("Unimplemented: prepare_to_die");
+  pub fn prepare_to_die(&mut self) {
+    let locals = &self.locals;
+    assert!(locals.is_empty());
+    let args = &self.args;
+    let undead_args: Vec<_> = args.iter().filter_map(|(i, v)| v.map(|val| (*i, val))).collect();
+    if !undead_args.is_empty() {
+        panic!("Undead arguments:\n{:?}", undead_args);
+    }
   }
 }
 /*

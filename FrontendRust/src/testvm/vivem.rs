@@ -6,7 +6,7 @@ use crate::testvm::values::{CallIdV, PrimitiveKindV, ReferenceV};
 use crate::testvm::heap::HeapV;
 use crate::von::ast::IVonData;
 
-type PrintStream = std::io::Stdout;
+pub type PrintStream = dyn std::io::Write;
 
 /*
 package dev.vale.testvm
@@ -68,8 +68,13 @@ override def equals(obj: Any): Boolean = vcurious();
 object Vivem {
 */
 // mig: fn execute_with_primitive_args
-pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
-    panic!("Unimplemented: execute_with_primitive_args")
+pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+    let mut heap = HeapV::new(vivem_dout, vivem_bump);
+    let arg_references: Vec<ReferenceV<'v, 'h, 's>> =
+        external_argument_kinds.iter().map(|_arg_kind| {
+            panic!("execute_with_primitive_args: PrimitiveKindV → KindV conversion + heap.add (pilot path is empty args; arm not exercised)")
+        }).collect();
+    inner_execute(program_h, &arg_references, &mut heap, stdin, stdout)
 }
 /*
   def executeWithPrimitiveArgs(
@@ -87,7 +92,7 @@ pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, 
   }
 */
 // mig: fn execute_with_heap
-pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, input_heap: &HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, input_heap: &mut HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: execute_with_heap")
 }
 /*
@@ -157,8 +162,53 @@ pub fn stdout_collector<'v, 'h, 's>() -> (String, Box<dyn Fn(StrI<'s>)>) {
   }
 */
 // mig: fn inner_execute
-pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &HeapV<'v, 'h, 's>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
-    panic!("Unimplemented: inner_execute")
+pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+    let mains: Vec<&'h crate::final_ast::ast::FunctionH<'s, 'h>> =
+        program_h.packages.package_coord_to_contents.iter().flat_map(|(_package_coord, paackage)| {
+            paackage.export_name_to_function.iter()
+                .find(|(name, _prototype)| name.0 == "main")
+                .map(|(_name, prototype)| {
+                    paackage.functions.iter().find(|f| f.prototype == *prototype)
+                        .expect("main prototype not found in functions")
+                })
+                .into_iter()
+                .collect::<Vec<_>>()
+        }).collect();
+    let main = match mains.as_slice() {
+        [] => panic!("No main func!"),
+        [m] => *m,
+        _ => panic!("inner_execute: multiple mains"),
+    };
+    let _call_id = CallIdV { call_depth: 0, function: main.prototype, _phantom: std::marker::PhantomData };
+
+    {
+        use std::io::Write;
+        write!(heap.vivem_dout, "Making stack frame").unwrap();
+        writeln!(heap.vivem_dout).unwrap();
+    }
+
+    let (callee_call_id, retuurn) =
+        crate::testvm::function_vivem::execute_function(program_h, stdin, stdout, heap, argument_references, main);
+    let return_ref = retuurn.return_ref;
+
+    {
+        use std::io::Write;
+        write!(heap.vivem_dout, "Ending program").unwrap();
+    }
+
+    let von = heap.to_von(return_ref);
+    crate::testvm::expression_vivem::discard(program_h, heap, stdout, stdin, callee_call_id, main.prototype.return_type, return_ref);
+    {
+        use std::io::Write;
+        writeln!(heap.vivem_dout).unwrap();
+    }
+    println!("Checking for leaks");
+    heap.check_for_leaks();
+    {
+        use std::io::Write;
+        writeln!(heap.vivem_dout).unwrap();
+    }
+    von
 }
 /*
   def innerExecute(

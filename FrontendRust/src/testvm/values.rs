@@ -37,7 +37,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RRKindV<'v, 'h, 's>
 /// Temporary state
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct RRKindV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -58,7 +58,7 @@ override def hashCode(): Int = hash; }
 pub struct AllocationV<'v, 'h, 's> {
   pub reference: ReferenceV<'v, 'h, 's>,
   pub kind: KindV<'v, 'h, 's>,
-  pub referrers: Cell<HashMap<IObjectReferrerV<'v, 'h, 's>, i32>>,
+  pub referrers: HashMap<IObjectReferrerV<'v, 'h, 's>, i32>,
 }
 /*
 class Allocation(
@@ -78,8 +78,23 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn increment_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn increment_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>) {
-    panic!("Unimplemented: increment_ref_count");
+  pub fn increment_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
+    if matches!(self.kind, KindV::Void(_)) {
+      return;
+    }
+    let referrers = &mut self.referrers;
+    match referrer {
+      IObjectReferrerV::RegisterToObjectReferrer(_) => {
+        // We can have multiple of these, thats fine
+      }
+      _ => {
+        if referrers.contains_key(&referrer) {
+          panic!("nooo");
+        }
+      }
+    }
+    let current = *referrers.get(&referrer).unwrap_or(&0);
+    referrers.insert(referrer, current + 1);
   }
 }
 /*
@@ -103,8 +118,20 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn decrement_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn decrement_ref_count(&self, referrer: IObjectReferrerV<'v, 'h, 's>) {
-    panic!("Unimplemented: decrement_ref_count");
+  pub fn decrement_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
+    if matches!(self.kind, KindV::Void(_)) {
+      return;
+    }
+    let referrers = &mut self.referrers;
+    if !referrers.contains_key(&referrer) {
+      panic!("nooooo");
+    }
+    let new_count = *referrers.get(&referrer).unwrap() - 1;
+    referrers.insert(referrer, new_count);
+    if new_count == 0 {
+      referrers.remove(&referrer);
+      assert!(!referrers.contains_key(&referrer));
+    }
   }
 }
 /*
@@ -172,7 +199,7 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn print_refs
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn print_refs(&self) {
+  pub fn print_refs(&self, _vivem_dout: &mut crate::testvm::vivem::PrintStream) {
     panic!("Unimplemented: print_refs");
   }
 }
@@ -186,7 +213,15 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 // mig: fn get_total_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn get_total_ref_count(&self, maybe_ownership_filter: Option<OwnershipH>) -> i32 {
-    panic!("Unimplemented: get_total_ref_count");
+    if matches!(self.kind, KindV::Void(_)) {
+      return 1;
+    }
+    let referrers = &self.referrers;
+    let result = match maybe_ownership_filter {
+      None => referrers.len() as i32,
+      Some(ownership_filter) => referrers.keys().filter(|k| k.ownership() == ownership_filter).count() as i32,
+    };
+    result
   }
 }
 /*
@@ -230,13 +265,14 @@ object Allocation {
 */
 // mig: enum KindV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone)]
 pub enum KindV<'v, 'h, 's> {
-  Void(&'v VoidV),
-  Int(&'v IntV<'v, 'h, 's>),
-  Bool(&'v BoolV<'v, 'h, 's>),
-  Float(&'v FloatV<'v, 'h, 's>),
-  Str(&'v StrV<'v, 'h, 's>),
-  Opaque(&'v OpaqueV<'v, 'h, 's>),
+  Void(VoidV),
+  Int(IntV<'v, 'h, 's>),
+  Bool(BoolV<'v, 'h, 's>),
+  Float(FloatV<'v, 'h, 's>),
+  Str(StrV<'v, 'h, 's>),
+  Opaque(OpaqueV<'v, 'h, 's>),
   StructInstance(&'v StructInstanceV<'v, 'h, 's>),
   ArrayInstance(&'v ArrayInstanceV<'v, 'h, 's>),
 }
@@ -244,9 +280,18 @@ pub enum KindV<'v, 'h, 's> {
 sealed trait KindV {
 */
 // mig: fn tyype
-impl<'v, 'h, 's> KindV<'v, 'h, 's> {
+impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype");
+    match self {
+      KindV::Void(v) => v.tyype(),
+      KindV::Int(v) => v.tyype(),
+      KindV::Bool(v) => v.tyype(),
+      KindV::Float(v) => v.tyype(),
+      KindV::Str(v) => v.tyype(),
+      KindV::Opaque(v) => v.tyype(),
+      KindV::StructInstance(v) => v.tyype(),
+      KindV::ArrayInstance(v) => v.tyype(),
+    }
   }
 }
 /*
@@ -256,17 +301,18 @@ impl<'v, 'h, 's> KindV<'v, 'h, 's> {
 // mig: enum PrimitiveKindV<'v, 'h, 's>
 /// Temporary state
 pub enum PrimitiveKindV<'v, 'h, 's> {
-  Void(&'v VoidV),
-  Int(&'v IntV<'v, 'h, 's>),
-  Bool(&'v BoolV<'v, 'h, 's>),
-  Float(&'v FloatV<'v, 'h, 's>),
-  Str(&'v StrV<'v, 'h, 's>),
-  Opaque(&'v OpaqueV<'v, 'h, 's>),
+  Void(VoidV),
+  Int(IntV<'v, 'h, 's>),
+  Bool(BoolV<'v, 'h, 's>),
+  Float(FloatV<'v, 'h, 's>),
+  Str(StrV<'v, 'h, 's>),
+  Opaque(OpaqueV<'v, 'h, 's>),
 }
 /*
 sealed trait PrimitiveKindV extends KindV
 */
 // mig: VoidV
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidV;
 /*
 case object VoidV extends PrimitiveKindV {
@@ -274,7 +320,7 @@ case object VoidV extends PrimitiveKindV {
 // mig: fn tyype
 impl VoidV {
   pub fn tyype<'v, 'h, 's>(&self) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
-    panic!("Unimplemented: tyype_void");
+    RRKindV { hamut: KindHT::VoidHT(crate::final_ast::types::VoidHT), _phantom: PhantomData }
   }
 }
 /*
@@ -283,6 +329,7 @@ impl VoidV {
 */
 // mig: struct IntV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -296,7 +343,7 @@ case class IntV(value: Long, bits: Int) extends PrimitiveKindV {
 // mig: fn tyype
 impl<'v, 'h, 's> IntV<'v, 'h, 's> {
   pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_int");
+    RRKindV { hamut: KindHT::IntHT(crate::final_ast::types::IntHT { bits: self.bits }), _phantom: PhantomData }
   }
 }
 /*
@@ -305,6 +352,7 @@ impl<'v, 'h, 's> IntV<'v, 'h, 's> {
 */
 // mig: struct BoolV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -326,6 +374,7 @@ impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
 */
 // mig: struct FloatV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct FloatV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -347,6 +396,7 @@ impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
 */
 // mig: struct StrV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -368,6 +418,7 @@ impl<'v, 'h, 's> StrV<'v, 'h, 's> {
 */
 // mig: struct OpaqueV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OpaqueV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -543,6 +594,7 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
 */
 // mig: struct AllocationIdV<'v, 'h, 's>
 /// Temporary state
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AllocationIdV<'v, 'h, 's> {
   pub tyype: RRKindV<'v, 'h, 's>,
   pub num: i32,
@@ -558,7 +610,7 @@ case class AllocationId(tyype: RRKind, num: Int) {
 */
 // mig: struct ReferenceV<'v, 'h, 's>
 /// Temporary state
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ReferenceV<'v, 'h, 's> {
   pub actual_kind: RRKindV<'v, 'h, 's>,
   pub seen_as_kind: RRKindV<'v, 'h, 's>,
@@ -588,7 +640,33 @@ case class ReferenceV(
 // mig: fn alloc_id
 impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn alloc_id(&self) -> AllocationIdV<'v, 'h, 's> {
-    panic!("Unimplemented: alloc_id");
+    AllocationIdV { tyype: RRKindV { hamut: self.actual_kind.hamut, _phantom: PhantomData }, num: self.num }
+  }
+}
+// mig: fn actual_coord (val actualCoord — Scala synthesized field)
+impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
+  pub fn actual_coord(&self) -> RRReferenceV<'v, 'h, 's> {
+    RRReferenceV {
+      hamut: crate::final_ast::types::CoordH {
+        ownership: self.ownership,
+        location: self.location,
+        kind: self.actual_kind.hamut,
+      },
+      _phantom: PhantomData,
+    }
+  }
+}
+// mig: fn seen_as_coord (val seenAsCoord — Scala synthesized field)
+impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
+  pub fn seen_as_coord(&self) -> RRReferenceV<'v, 'h, 's> {
+    RRReferenceV {
+      hamut: crate::final_ast::types::CoordH {
+        ownership: self.ownership,
+        location: self.location,
+        kind: self.seen_as_kind.hamut,
+      },
+      _phantom: PhantomData,
+    }
   }
 }
 /*
@@ -599,13 +677,14 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
 */
 // mig: enum IObjectReferrerV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum IObjectReferrerV<'v, 'h, 's> {
-  VariableToObjectReferrer(&'v VariableToObjectReferrerV<'v, 'h, 's>),
-  MemberToObjectReferrer(&'v MemberToObjectReferrerV<'v, 'h, 's>),
-  ElementToObjectReferrer(&'v ElementToObjectReferrerV<'v, 'h, 's>),
-  RegisterToObjectReferrer(&'v RegisterToObjectReferrerV<'v, 'h, 's>),
-  RegisterHoldToObjectReferrer(&'v RegisterHoldToObjectReferrerV<'v, 'h, 's>),
-  ArgumentToObjectReferrer(&'v ArgumentToObjectReferrerV<'v, 'h, 's>),
+  VariableToObjectReferrer(VariableToObjectReferrerV<'v, 'h, 's>),
+  MemberToObjectReferrer(MemberToObjectReferrerV<'v, 'h, 's>),
+  ElementToObjectReferrer(ElementToObjectReferrerV<'v, 'h, 's>),
+  RegisterToObjectReferrer(RegisterToObjectReferrerV<'v, 'h, 's>),
+  RegisterHoldToObjectReferrer(RegisterHoldToObjectReferrerV<'v, 'h, 's>),
+  ArgumentToObjectReferrer(ArgumentToObjectReferrerV<'v, 'h, 's>),
 }
 /*
 sealed trait IObjectReferrer {
@@ -613,7 +692,14 @@ sealed trait IObjectReferrer {
 // mig: fn ownership
 impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
   pub fn ownership(&self) -> OwnershipH {
-    panic!("Unimplemented: ownership");
+    match self {
+      IObjectReferrerV::VariableToObjectReferrer(r) => r.ownership,
+      IObjectReferrerV::MemberToObjectReferrer(r) => r.ownership,
+      IObjectReferrerV::ElementToObjectReferrer(r) => r.ownership,
+      IObjectReferrerV::RegisterToObjectReferrer(r) => r.ownership,
+      IObjectReferrerV::RegisterHoldToObjectReferrer(r) => r.ownership,
+      IObjectReferrerV::ArgumentToObjectReferrer(r) => r.ownership,
+    }
   }
 }
 /*
@@ -622,6 +708,7 @@ impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
 */
 // mig: struct VariableToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct VariableToObjectReferrerV<'v, 'h, 's> {
   pub var_addr: VariableAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -637,6 +724,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct MemberToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MemberToObjectReferrerV<'v, 'h, 's> {
   pub member_addr: MemberAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -652,6 +740,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct ElementToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ElementToObjectReferrerV<'v, 'h, 's> {
   pub element_addr: ElementAddressV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -667,6 +756,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RegisterToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -682,6 +772,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct RegisterHoldToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
   pub expression_id: ExpressionIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -701,6 +792,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct ArgumentToObjectReferrerV
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArgumentToObjectReferrerV<'v, 'h, 's> {
   pub argument_id: ArgumentIdV<'v, 'h, 's>,
   pub ownership: OwnershipH,
@@ -716,6 +808,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct VariableAddressV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct VariableAddressV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -749,6 +842,7 @@ impl<'v, 'h, 's> VariableAddressV<'v, 'h, 's> {
 */
 // mig: struct MemberAddressV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MemberAddressV<'v, 'h, 's> {
   pub struct_id: AllocationIdV<'v, 'h, 's>,
   pub field_index: i32,
@@ -768,6 +862,7 @@ impl<'v, 'h, 's> MemberAddressV<'v, 'h, 's> {
 */
 // mig: struct ElementAddressV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ElementAddressV<'v, 'h, 's> {
   pub array_id: AllocationIdV<'v, 'h, 's>,
   pub element_index: i64,
@@ -789,6 +884,7 @@ impl<'v, 'h, 's> ElementAddressV<'v, 'h, 's> {
 */
 // mig: struct CallIdV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CallIdV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -808,6 +904,16 @@ impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
 /*
   override def toString: String = "ƒ" + callDepth + "/" + (function.id.shortenedName)
 */
+// Rust adaptation: Scala's `case class CallId` gets `toString` autoboxed into
+// string-concat via `+`. The Rust port realizes that as `impl Display`, mirroring
+// the Scala `toString` body line-for-line. The `to_string(&self) -> StrI<'s>`
+// method above stays panic-stubbed until a caller needs the interned form.
+impl<'v, 'h, 's> std::fmt::Display for CallIdV<'v, 'h, 's> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "ƒ{}/{}", self.call_depth, self.function.id.shortened_name.0)
+  }
+}
+/* Guardian: disable-all */
 // mig: fn hash_code (realized-by-impl Hash)
 // (Realized by `impl Hash for CallIdV<'v, 'h, 's>` below.)
 /*
@@ -819,6 +925,7 @@ impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
 */
 // mig: struct ArgumentIdV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArgumentIdV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
   pub index: i32,
@@ -834,6 +941,7 @@ override def hashCode(): Int = hash;  }
 */
 // mig: struct VariableV<'v, 'h, 's>
 /// Temporary state
+#[derive(Clone)]
 pub struct VariableV<'v, 'h, 's> {
   pub id: VariableAddressV<'v, 'h, 's>,
   pub reference: Cell<ReferenceV<'v, 'h, 's>>,
@@ -848,6 +956,7 @@ case class VariableV(
 */
 // mig: struct ExpressionIdV<'v, 'h, 's>
 /// Temporary state
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ExpressionIdV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
   pub path: &'v [i32],
@@ -860,8 +969,12 @@ case class ExpressionId(
 */
 // mig: fn add_step
 impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
-  pub fn add_step(&self, i: i32) -> ExpressionIdV<'v, 'h, 's> {
-    panic!("Unimplemented: add_step");
+  pub fn add_step(&self, bump: &'v bumpalo::Bump, i: i32) -> ExpressionIdV<'v, 'h, 's> {
+    let old_len = self.path.len();
+    let new_path: &'v mut [i32] = bump.alloc_slice_fill_with(old_len + 1, |idx| {
+        if idx < old_len { self.path[idx] } else { i }
+    });
+    ExpressionIdV { call_id: self.call_id, path: new_path }
   }
 }
 /*

@@ -59,16 +59,14 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 
-// mig: impl Default for HammerCompilationOptions
-// Rust-only: lets per-pass test-compilation wrappers construct via
-// `..Default::default()` so the Rust-only `debug_out` field doesn't appear at
-// the call site as novel logic, matching Scala's `HammerCompilationOptions()`
-// default-arg shape 1:1. Default `debug_out` is a no-op (test-default); prod
-// callers supply an explicit closure.
-impl Default for HammerCompilationOptions {
-  fn default() -> Self {
+// mig: fn new
+// Mirrors Scala's `object HammerCompilationOptions { def apply() }` zero-arg
+// constructor (the case-class default-arg apply pattern). Defaults match
+// Scala: `debugOut = (x => println("##: " + x))`, `globalOptions = GlobalOptions()`.
+impl HammerCompilationOptions {
+  pub fn new() -> Self {
     HammerCompilationOptions {
-      debug_out: Arc::new(|_x: &str| {}),
+      debug_out: Arc::new(|x: &str| println!("##: {}", x)),
       global_options: GlobalOptions {
         sanity_check: false,
         use_overload_index: false,

@@ -1406,7 +1406,7 @@ pub struct AddressExpressionH<'s, 'h> where 's: 'h {
 
 // mig: case class Local
 /// Temporary state
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Local<'s, 'h> where 's: 'h {
     pub id: VariableIdH<'s, 'h>,
     pub variability: Variability,

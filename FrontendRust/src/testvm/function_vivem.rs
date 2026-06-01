@@ -20,13 +20,48 @@ object FunctionVivem {
 // mig: fn execute_function
 pub fn execute_function<'h, 's, 'v>(
     program_h: &ProgramH<'s, 'h>,
-    stdin: Box<dyn Fn() -> StrI<'s>>,
-    stdout: Box<dyn Fn(StrI<'s>)>,
-    heap: &HeapV<'v, 'h, 's>,
+    stdin: &dyn Fn() -> StrI<'s>,
+    stdout: &dyn Fn(StrI<'s>),
+    heap: &mut HeapV<'v, 'h, 's>,
     args: &'v [ReferenceV<'v, 'h, 's>],
-    function_h: &FunctionH<'s, 'h>,
+    function_h: &'h FunctionH<'s, 'h>,
 ) -> (CallIdV<'v, 'h, 's>, NodeReturnV<'v, 'h, 's>) {
-    panic!("Unimplemented: execute_function");
+    let call_id = heap.push_new_stack_frame(function_h.prototype, args);
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        let prefix = "  ".repeat(call_id.call_depth as usize);
+        write!(handle, "{}Entering function {}", prefix, call_id).unwrap();
+    }
+    for arg_index in 0..args.len() {
+        let _arg_index_i32 = arg_index as i32;
+        panic!("execute_function: arg-loop body — pilot main() has no params; arm not exercised")
+    }
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        writeln!(handle).unwrap();
+    }
+    let root_expression_id = crate::testvm::values::ExpressionIdV { call_id, path: &[] };
+    let return_ref = match crate::testvm::expression_vivem::execute_node(program_h, stdin, stdout, heap, root_expression_id, &function_h.body) {
+        crate::testvm::expression_vivem::INodeExecuteResultV::Return(r) => NodeReturnV { return_ref: r.return_ref },
+        crate::testvm::expression_vivem::INodeExecuteResultV::Break(_) => panic!("execute_function: NodeBreak vwat"),
+        crate::testvm::expression_vivem::INodeExecuteResultV::Continue(c) => NodeReturnV { return_ref: c.result_ref },
+    };
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        writeln!(handle).unwrap();
+        let prefix = "  ".repeat(call_id.call_depth as usize);
+        write!(handle, "{}Returning", prefix).unwrap();
+    }
+    heap.pop_stack_frame(call_id);
+    {
+        use std::io::Write;
+        let handle = &mut *heap.vivem_dout;
+        writeln!(handle).unwrap();
+    }
+    (call_id, return_ref)
 }
 /*
   def executeFunction(

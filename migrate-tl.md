@@ -8,6 +8,8 @@
 
 **No simplifications.** 1:1 Scala parity outranks tidiness and blast radius; never omit dead bindings, inline helpers, skip checks, or substitute idioms without the architect's explicit go-ahead.
 
+**Edit-surface aversion is not a reason to simplify.** When the lower-ripple option is less Scala-faithful, surface the tradeoff to the architect — don't pick quietly.
+
 **Shield exceptions vs temp-disables.** Shield exceptions encode expected, mechanical divergences that recur uniformly; temp-disables flag surprising ones that warrant architect review per site.
 
 **NCWSRX false-positives** often mean the Scala audit block sits outside the diff window; fix the slicing (move it adjacent to its Rust def) rather than temp-disable.
@@ -21,6 +23,8 @@
 **Run SCPX `--check-all`** after every slice-in or audit-block edit; duplicating Scala text already in a top-of-file blob trips it.
 
 **TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).
+
+**TestVM value-type embed-by-value:** small Copy-able value-types in testvm (`VoidV`, `IntV`, `BoolV`, `FloatV`, `StrV`, `OpaqueV`, `NodeContinueV`, `NodeReturnV`, `NodeBreakV`) embed by value in containing enums; only genuinely allocated payloads (`StructInstanceV`, `ArrayInstanceV`) stay `&'v`. Value-types that flow into HashMap keys (referrers, address-types) also derive `Hash, Eq, PartialEq` — apply the cascade through Variable/Member/Element/Argument/ExpressionId address structs as needed.
 
 **This file is now thin.** The durable guidance that used to live here has moved into two docs; this file keeps only **current status** and **items not covered there**:
 
@@ -83,3 +87,37 @@ Rough order: harness + wiring unblock → migration-drive fills bodies → VON p
 ## Background: The Sylvan Transplant
 
 `instantiating/`, `simplifying/`, and `final_ast/` were **transplanted from a sibling repo, Sylvan** (`/Volumes/V/Sylvan`), which had migrated them against an *older* `Frontend/` than Vale's. Only those dirs were scope-transplanted (+ the `paste` crate + the `pass_manager`↔`HammerCompilation` seam stubbed with `PhantomData`) — **not** a full git merge (Sylvan slice-piped the whole frontend; a merge would have regressed Vale's hand-migrated typing/postparsing back to stubs). The transplant was then drift-reconciled up to **Vale's `Frontend/`, which is canonical and ahead**. Reconcile toward Vale's `Frontend/`, never toward Sylvan. (This is also why some stale artifacts carry Sylvan-isms — e.g. the old `RUST_MIN_STACK` Sylvan path.)
+
+---
+
+## Architect Philosophy (TL's read)
+
+These are the principles I've inferred from working with the architect across many sessions. They're descriptive, not prescriptive — the architect's actual call always overrides; this section captures the patterns so a TL can predict the answer or recognize when they're about to violate one.
+
+- **1:1 Scala parity is the absolute top priority, full stop.** Whenever there's a tension between "Scala-faithful" and "smaller diff" / "cleaner Rust" / "less ripple" / "easier ergonomics" — Scala parity wins by default. The architect will redirect when an exception is genuinely warranted; until then, assume parity beats every other consideration.
+
+- **Watch for ripple-aversion bias.** The instinct to minimize edit surface ("don't add `Box<dyn Write>` ripple", "don't cascade `&mut self`", "don't refactor 9 callers for a sig change") is a real bias TLs are prone to, and it pulls against Scala parity. The architect notices when TLs pick the lower-ripple option without surfacing the tradeoff. When parity and ripple disagree, **surface the choice to the architect**; don't pick quietly.
+
+- **Scala-absent Rust constructs are a code smell.** `impl Default`, custom traits, helper free fns, `Cell`/`RefCell`, `Box<dyn Trait>`, `'static` lifetimes — every one of these should justify its existence against "what does Scala do?" If Scala uses references (`val` holding a ref), Rust borrows (`&'v T`). If Scala has `object X { def apply() }`, Rust has `impl X { fn new() }` — not `impl Default`. Interior mutability is suspect; prefer `&mut self`.
+
+- **Idiomatic Rust > ceremonial Rust.** Plain `HashMap` + `&mut self` is preferred over `Cell<HashMap>` + take/set ceremony. Compile-time borrow checking is preferred over runtime checking. The architect has consistently called out interior mutability as a slicer bias toward "preserve `&self`" that doesn't match how good Rust gets written.
+
+- **Embed-by-value for small Copy types.** Value types should embed by value in containing enums, not be wrapped in `&'v`. The "minimize edit surface" temptation to leave some variants `&'v` because the active test doesn't exercise them is a real anti-pattern. Only genuinely heap-allocated payloads stay `&'v`; everything Copy-able embeds.
+
+- **Match Scala's polymorphism semantics.** If Scala uses an abstract class (`PrintStream`, `IPackageResolver`), the Rust port should preserve polymorphism (`dyn Write`, `dyn IPackageResolver`). Pinning to a concrete implementation (`std::io::Stdout`) is a simplification that loses Scala's actual semantic.
+
+- **Look at the canonical Scala directly.** Don't infer from existing audit-trail comments, prior session decisions, or "what JR said the Scala does." Read the actual `Frontend/.../Foo.scala` — the architect has caught me multiple times making decisions from outdated framing or paraphrases.
+
+- **SCPX position-correctness drives Rust layout.** Rust definitions follow the canonical Scala block position, not the other way around. When a slicer mis-positioned a def, the fix is to move the Rust to where the Scala block lives, not move the Scala block to where the Rust ended up.
+
+- **Push back when something looks off.** Questions like "why is there a Cell here?" or "does Scala have a `default()`?" or "why are we disabling all of Guardian on this?" are the architect's way of surfacing design issues the TL has rationalized over. When asked, give the honest answer — including "I picked the smaller diff to minimize ripple" if that's the truth. Then accept the redirect.
+
+- **Codify recurring patterns into shield exceptions, not per-site temp-disables.** "Things should be SPDMX exceptions when they are expected. Things should be temp-disables when they are surprising and warrant my review." If a temp-disable rationale starts citing other in-tree precedents as justification, that's the signal to convert to an exception — or surface for architect review.
+
+- **Never modify a shield without explicit architect approval.** Even when a temp-disable → exception conversion is clearly warranted, the shield edit itself needs the architect's go-ahead per request. Surface the proposed exception text and wait for the green light; don't pre-emptively edit `Luz/shields/*.md`.
+
+- **Don't avoid hard work for the migration's sake.** When given a choice between G1 (easy, partial fix) and G2 (harder, more Scala-correct), the architect consistently picks G2. The migration is a finite effort; cutting corners during it leaves debt that's harder to clean up later than doing it right the first time.
+
+- **Catch tendencies and codify them.** When the architect surfaces a TL bias (ripple-aversion, no-simplifications, position-correctness, etc.), they often want a new ≤25-word rule added to this file so future TLs (or future sessions of the same TL) don't repeat it. Watch for moments where the conversation surfaces a principle worth recording.
+
+- **Brevity in rule additions, longer is fine when asked.** Default to ≤25-word rules; ask before adding anything longer. The exception is sections like this one (Background, Roadmap, Where We Are) that the architect explicitly approves as longer.
