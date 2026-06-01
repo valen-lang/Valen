@@ -4,6 +4,8 @@
 
 **Re-read this file every time you compact** — the prior conversation drops on compaction but this file doesn't.
 
+**TL: read the `guardian-tl` skill and everything it references before starting work** — it covers roles, escalation, the verb protocol, shield mechanics, and ordination.
+
 **Brevity rule:** any addition to this file must be one sentence, max 25 words, unless the architect explicitly asks for more.
 
 **No simplifications.** 1:1 Scala parity outranks tidiness and blast radius; never omit dead bindings, inline helpers, skip checks, or substitute idioms without the architect's explicit go-ahead.
@@ -26,6 +28,14 @@
 
 **TestVM value-type embed-by-value:** small Copy-able value-types in testvm (`VoidV`, `IntV`, `BoolV`, `FloatV`, `StrV`, `OpaqueV`, `NodeContinueV`, `NodeReturnV`, `NodeBreakV`) embed by value in containing enums; only genuinely allocated payloads (`StructInstanceV`, `ArrayInstanceV`) stay `&'v`. Value-types that flow into HashMap keys (referrers, address-types) also derive `Hash, Eq, PartialEq` — apply the cascade through Variable/Member/Element/Argument/ExpressionId address structs as needed.
 
+**TestVM mutation:** plain `HashMap`/`Vec` + `&mut self` for mutators; no `Cell`/`RefCell` interior mutability. Compile-time borrow checking only.
+
+**TestVM writer threading:** `vivem_dout: &'v mut dyn std::io::Write` on `HeapV` (single owner); pass via `&mut heap.vivem_dout` to helpers. No `Box<dyn Write>` wrapper unless caller needs to own.
+
+**Scala mutable-int pattern:** when Rust uses `&mut i32` to mutate via reference, Scala mirrors with `IntCounter` wrapper class (`Frontend/Utils/Utils.scala`). Same idiom, both languages.
+
+**OALZDX (output discipline) is globally disabled** in `guardian.toml` for this migration. Don't write OALZDX rationales into new code; future migrations may re-enable it.
+
 **This file is now thin.** The durable guidance that used to live here has moved into two docs; this file keeps only **current status** and **items not covered there**:
 
 - **Typing-pass change guidance** (the Scala-parity principle, arena/lifetime model, recurring traps, easy-to-get-wrong design decisions, Good Partial Implementing, audit-trail discipline, slicing-in new definitions, slice-pipeline cleanup, Scala-parity tests) → **`docs/architecture/typing-pass-ai-guide.md`**.
@@ -43,7 +53,9 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Instantiating + simplifying — capstone landed.** `local_ids_unique` green; 6 hammer integration tests landed (`simple_main` → `tests_stripping_things_after_panic` + `two_templated_structs_make_it_into_hamuts`); X-bucket `top_level_extern_functions_wire_format_simple_id_has_flat_shape` green; peak 769/769.
 
-**Active frontier: the `simple_program_returning_an_int` pilot.** Drives the full pipeline (pass_manager + HammerCompilation seam + TestVM foundations) end-to-end before the parallel SI/CL/GE/MI buckets launch. **TestVM scaffold pass in flight** — discovered scaffold-broken (not just body-empty); foundation pass took 615 → 21 errors via TL Python+Edit sweep; JR finishing the tail per the locked convention above.
+**Pilot landed: `simple_program_returning_an_int` green; 770/770 tests passing.** Active frontier: the four-way parallel migration (SI/CL/GE/MI buckets, see `master-todo.md`).
+
+**Parallel sprint structure:** `Vale` (SI bucket), `Vale2` (CL), `Vale3` (GE), `Vale4` (MI). Each worktree has its own JR. Foundation work first, then checkpoint-merge into `experimental`.
 
 **Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver.
 
