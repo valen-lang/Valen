@@ -38,6 +38,13 @@ pub const MODULE_TO_FILENAME: &[(&str, &str)] = &[
     ("weak", "weak.vale"),
 ];
 
+// Rust-only infrastructure: Cargo has no JAR-resources concept, so the filesystem
+// path lives as a module-private constant. Lets the public Builtins API match Scala
+// 1:1 (`get_code_map(parse_arena, keywords)`) without threading a path arg through
+// every caller. Long-term replacement is `include_dir!` (compile-time embed) per
+// the `get_embedded_modulized_code_map` precedent above.
+const BUILTINS_DIR: &str = "src/builtins/resources";
+
 // From Builtins.scala lines 41-70: load
 // Note: In Scala this loads from embedded resources. In Rust CLI, we load from filesystem.
 pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, String> {
@@ -56,7 +63,6 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 pub fn get_modulized_code_map<'a>(
     parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,
-    builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let mut result = FileCoordinateMap::new();
 
@@ -64,7 +70,7 @@ pub fn get_modulized_code_map<'a>(
         let module_name_stri = parse_arena.intern_str(module_name);
         let package_coord = parse_arena.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri]);
         let file_coord = parse_arena.intern_file_coordinate(package_coord, filename);
-        let code = load(builtins_dir, filename)?;
+        let code = load(BUILTINS_DIR, filename)?;
         result.put(file_coord, code);
     }
 
@@ -127,7 +133,6 @@ pub fn get_embedded_modulized_code_map<'a>(
 pub fn get_code_map<'a>(
     parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,
-    builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let builtin_namespace_coord = parse_arena.intern_package_coordinate(keywords.empty_string, &[]);
     let mut result = FileCoordinateMap::new();
@@ -140,7 +145,7 @@ pub fn get_code_map<'a>(
         result.put(modulized_file_coord, String::new());
         // Put actual code for root package
         let root_file_coord = parse_arena.intern_file_coordinate(builtin_namespace_coord, filename);
-        let code = load(builtins_dir, filename)?;
+        let code = load(BUILTINS_DIR, filename)?;
         result.put(root_file_coord, code);
     }
 

@@ -64,8 +64,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
 // mig: struct NodeBreakV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct NodeBreakV<'v, 'h, 's> {
-  pub _phantom: std::marker::PhantomData<&'v ()>,
+pub struct NodeBreakV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+  pub _phantom: std::marker::PhantomData<(&'v (), &'h (), &'s ())>,
 }
 /*
   case class NodeBreak() extends INodeExecuteResult {
@@ -114,7 +116,7 @@ pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_inter
   }
 */
 // mig: fn execute_node
-pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<KindHT<'s, 'h>>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node"); }
+pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> { panic!("Unimplemented: execute_node"); }
 /*
   def executeNode(
     programH: ProgramH,
@@ -131,7 +133,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -
   }
 */
 // mig: fn execute_node_inner
-pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<KindHT<'s, 'h>>) -> INodeExecuteResultV { panic!("Unimplemented: execute_node_inner"); }
+pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> { panic!("Unimplemented: execute_node_inner"); }
 /*
   def executeNodeInner(
                    programH: ProgramH,
@@ -1204,7 +1206,7 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn F
   }
 */
 // mig: fn execute_interface_function
-pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV)) { panic!("Unimplemented: execute_interface_function"); }
+pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)) { panic!("Unimplemented: execute_interface_function"); }
 /*
   private def executeInterfaceFunction(
       programH: ProgramH,

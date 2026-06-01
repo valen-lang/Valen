@@ -66,7 +66,7 @@ exported func main() {
   f = 11;
 }
 ";
-    let resolver = get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -74,7 +74,7 @@ exported func main() {
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
-    let paackage = hamuts.lookup_package(PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let paackage = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = paackage.lookup_function("main");
 
     assert!(paackage.export_name_to_function.iter().any(|(_, proto)| *proto == main.prototype));
@@ -128,6 +128,7 @@ exported func main() {
 // lookup_package(TEST_TLD) → lookup_function("main") → assert the export exists.
 #[test]
 fn returns_int() {
+    /* Guardian: disable-all */
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -139,7 +140,7 @@ fn returns_int() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let code = "exported func main() int { return 7; }\n";
-    let resolver = get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());

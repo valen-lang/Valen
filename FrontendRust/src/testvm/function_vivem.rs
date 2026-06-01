@@ -1,5 +1,5 @@
 use crate::interner::StrI;
-use crate::final_ast::ast::{ProgramH, PrototypeH};
+use crate::final_ast::ast::{FunctionH, ProgramH, PrototypeH};
 use crate::final_ast::types::KindHT;
 use crate::testvm::values::{CallIdV, ReferenceV};
 use crate::testvm::heap::{AdapterForExternsV, HeapV};
@@ -25,7 +25,7 @@ pub fn execute_function<'h, 's, 'v>(
     heap: &HeapV<'v, 'h, 's>,
     args: &'v [ReferenceV<'v, 'h, 's>],
     function_h: &FunctionH<'s, 'h>,
-) -> (CallIdV<'v, 'h, 's>, NodeReturn<'v, 'h, 's>) {
+) -> (CallIdV<'v, 'h, 's>, NodeReturnV<'v, 'h, 's>) {
     panic!("Unimplemented: execute_function");
 }
 /*
@@ -73,7 +73,7 @@ pub fn execute_function<'h, 's, 'v>(
 pub fn get_extern_function<'h, 's, 'v>(
     program_h: &ProgramH<'s, 'h>,
     ref_: &PrototypeH<'s, 'h>,
-) -> Box<dyn Fn(&AdapterForExterns, &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's>> {
+) -> Box<dyn Fn(&AdapterForExternsV<'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's>> {
     panic!("Unimplemented: get_extern_function");
 }
 /*

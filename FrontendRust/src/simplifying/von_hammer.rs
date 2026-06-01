@@ -37,7 +37,35 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_program(&self, program: &ProgramH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_program");
+        let ProgramH { packages } = program;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Program".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "packages".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: packages.package_coord_to_contents.iter().map(|(package_coord, paackage)| {
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "Entry".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember {
+                                        field_name: "packageCoordinate".to_string(),
+                                        value: crate::von::ast::IVonData::Object(crate::simplifying::name_hammer::translate_package_coordinate(*package_coord)),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "package".to_string(),
+                                        value: self.vonify_package(**package_coord, paackage),
+                                    },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+            ],
+        })
     }
 }
 /*
@@ -115,7 +143,153 @@ where 's: 'h, 's: 'i, 'i: 'h,
         package_coord: PackageCoordinate<'s>,
         paackage: &PackageH<'s, 'h>,
     ) -> IVonData {
-        panic!("Unimplemented: vonify_package");
+        let PackageH {
+            interfaces, structs, functions, static_sized_arrays, runtime_sized_arrays,
+            export_name_to_function, export_name_to_kind, prototype_to_extern, kind_to_extern,
+        } = paackage;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Package".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "packageCoordinate".to_string(),
+                    value: crate::von::ast::IVonData::Object(crate::simplifying::name_hammer::translate_package_coordinate(&package_coord)),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "interfaces".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: interfaces.iter().map(|i| self.vonify_interface_def(i)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "structs".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: structs.iter().map(|s| self.vonify_struct(s)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "functions".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: functions.iter().map(|f| self.vonify_function(f)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "staticSizedArrays".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: static_sized_arrays.iter().map(|a| self.vonify_static_sized_array_definition(a)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "runtimeSizedArrays".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: runtime_sized_arrays.iter().map(|a| self.vonify_runtime_sized_array_definition(a)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "exportNameToFunction".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: export_name_to_function.iter().map(|(export_name, prototype)| {
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "Entry".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember {
+                                        field_name: "exportName".to_string(),
+                                        value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: export_name.0.to_string() }),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "prototype".to_string(),
+                                        value: self.vonify_prototype(prototype),
+                                    },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "exportNameToKind".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: export_name_to_kind.iter().map(|(export_name, kind)| {
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "Entry".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember {
+                                        field_name: "exportName".to_string(),
+                                        value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: export_name.0.to_string() }),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "kind".to_string(),
+                                        value: self.vonify_kind(*kind),
+                                    },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "prototypeToExtern".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: prototype_to_extern.iter().map(|(_, extern_)| {
+                            let crate::final_ast::types::HamutsFunctionExtern { maybe_extern_name, prototype, simple_id } = extern_;
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "ExternFunction".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember {
+                                        field_name: "mangledName".to_string(),
+                                        value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: maybe_extern_name.0.to_string() }),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "id".to_string(),
+                                        value: self.vonify_simple_id(*simple_id),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "prototype".to_string(),
+                                        value: self.vonify_prototype(prototype),
+                                    },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "kindToExtern".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: kind_to_extern.iter().map(|(_, extern_)| {
+                            let crate::final_ast::types::HamutsKindExtern { maybe_extern_name, kind, simple_id } = extern_;
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "ExternKind".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember {
+                                        field_name: "mangledName".to_string(),
+                                        value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: maybe_extern_name.0.to_string() }),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "id".to_string(),
+                                        value: self.vonify_simple_id(*simple_id),
+                                    },
+                                    crate::von::ast::VonMember {
+                                        field_name: "kind".to_string(),
+                                        value: self.vonify_kind(*kind),
+                                    },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+            ],
+        })
     }
 }
 /*
@@ -371,7 +545,10 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_location(&self, location: LocationH) -> IVonData {
-        panic!("Unimplemented: vonify_location");
+        match location {
+            LocationH::InlineH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Inline".to_string(), id: None, members: vec![] }),
+            LocationH::YonderH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Yonder".to_string(), id: None, members: vec![] }),
+        }
     }
 }
 /*
@@ -388,7 +565,10 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_variability(&self, variability: Variability) -> IVonData {
-        panic!("Unimplemented: vonify_variability");
+        match variability {
+            Variability::Varying => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Varying".to_string(), id: None, members: vec![] }),
+            Variability::Final => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Final".to_string(), id: None, members: vec![] }),
+        }
     }
 }
 /*
@@ -405,7 +585,28 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_prototype(&self, prototype: &PrototypeH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_prototype");
+        let PrototypeH { id: full_name, params, return_type, _must_intern: _ } = prototype;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Prototype".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "name".to_string(),
+                    value: self.vonify_name(full_name),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "params".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: params.iter().map(|c| self.vonify_coord(*c)).collect(),
+                    }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "return".to_string(),
+                    value: self.vonify_coord(*return_type),
+                },
+            ],
+        })
     }
 }
 /*
@@ -427,7 +628,25 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_coord(&self, coord: CoordH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_coord");
+        let CoordH { ownership, location, kind } = coord;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Ref".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "ownership".to_string(),
+                    value: self.vonify_ownership(ownership),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "location".to_string(),
+                    value: self.vonify_location(location),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "kind".to_string(),
+                    value: self.vonify_kind(kind),
+                },
+            ],
+        })
     }
 }
 /*
@@ -482,7 +701,14 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_ownership(&self, ownership: OwnershipH) -> IVonData {
-        panic!("Unimplemented: vonify_ownership");
+        match ownership {
+            OwnershipH::OwnH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Own".to_string(), id: None, members: vec![] }),
+            OwnershipH::ImmutableBorrowH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "ImmutableBorrow".to_string(), id: None, members: vec![] }),
+            OwnershipH::MutableBorrowH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "MutableBorrow".to_string(), id: None, members: vec![] }),
+            OwnershipH::ImmutableShareH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "ImmutableShare".to_string(), id: None, members: vec![] }),
+            OwnershipH::MutableShareH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "MutableShare".to_string(), id: None, members: vec![] }),
+            OwnershipH::WeakH => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Weak".to_string(), id: None, members: vec![] }),
+        }
     }
 }
 /*
@@ -578,7 +804,59 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_kind(&self, kind: KindHT<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_kind");
+        match kind {
+            KindHT::NeverHT(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Never".to_string(), id: None, members: vec![] }),
+            KindHT::IntHT(crate::final_ast::types::IntHT { bits }) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "Int".to_string(),
+                id: None,
+                members: vec![
+                    crate::von::ast::VonMember {
+                        field_name: "bits".to_string(),
+                        value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: bits as i64 }),
+                    },
+                ],
+            }),
+            KindHT::BoolHT(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Bool".to_string(), id: None, members: vec![] }),
+            KindHT::StrHT(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Str".to_string(), id: None, members: vec![] }),
+            KindHT::VoidHT(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Void".to_string(), id: None, members: vec![] }),
+            KindHT::FloatHT(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "Float".to_string(), id: None, members: vec![] }),
+            KindHT::InterfaceHT(ir) => self.vonify_interface(ir),
+            KindHT::StructHT(sr) => self.vonify_struct_h(sr),
+            KindHT::RuntimeSizedArrayHT(rsa) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "RuntimeSizedArray".to_string(),
+                id: None,
+                members: vec![
+                    crate::von::ast::VonMember {
+                        field_name: "name".to_string(),
+                        value: self.vonify_name(rsa.name),
+                    },
+                ],
+            }),
+            KindHT::StaticSizedArrayHT(crate::final_ast::types::StaticSizedArrayHT { id: name, _must_intern: _ }) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "StaticSizedArray".to_string(),
+                id: None,
+                members: vec![
+                    crate::von::ast::VonMember {
+                        field_name: "name".to_string(),
+                        value: self.vonify_name(name),
+                    },
+                ],
+            }),
+            KindHT::OpaqueHT(opaque) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "Opaque".to_string(),
+                id: None,
+                members: vec![
+                    crate::von::ast::VonMember {
+                        field_name: "structId".to_string(),
+                        value: self.vonify_name(opaque.struct_id),
+                    },
+                    crate::von::ast::VonMember {
+                        field_name: "structSimpleId".to_string(),
+                        value: self.vonify_simple_id(opaque.simple_id),
+                    },
+                ],
+            }),
+        }
     }
 }
 /*
@@ -623,7 +901,21 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_function(&self, function_h: &FunctionH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_function");
+        let FunctionH { prototype, is_abstract: _, is_extern: _, attributes: _, body } = function_h;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Function".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "prototype".to_string(),
+                    value: self.vonify_prototype(prototype),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "block".to_string(),
+                    value: self.vonify_expression(*body),
+                },
+            ],
+        })
     }
 }
 /*
@@ -645,7 +937,157 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_expression(&self, node: ExpressionH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_expression");
+        match node {
+            ExpressionH::ConstantVoidH(_) => panic!("vonify_expression: ConstantVoidH"),
+            ExpressionH::ConstantBoolH(_) => panic!("vonify_expression: ConstantBoolH"),
+            ExpressionH::ConstantIntH(c) => {
+                let crate::final_ast::instructions::ConstantIntH { value, bits } = *c;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ConstantInt".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "value".to_string(),
+                            value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: value.to_string() }),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "bits".to_string(),
+                            value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: bits as i64 }),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::ConstantStrH(_) => panic!("vonify_expression: ConstantStrH"),
+            ExpressionH::ConstantF64H(_) => panic!("vonify_expression: ConstantF64H"),
+            ExpressionH::ArgumentH(_) => panic!("vonify_expression: ArgumentH"),
+            ExpressionH::StackifyH(s) => {
+                let crate::final_ast::instructions::StackifyH { source_expr, local, name } = *s;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Stackify".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "sourceExpr".to_string(),
+                            value: self.vonify_expression(source_expr),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "local".to_string(),
+                            value: self.vonify_local(local),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "knownLive".to_string(),
+                            value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "optName".to_string(),
+                            value: self.vonify_optional(name, |n| self.vonify_name(n)),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::RestackifyH(_) => panic!("vonify_expression: RestackifyH"),
+            ExpressionH::UnstackifyH(u) => {
+                let crate::final_ast::instructions::UnstackifyH { local } = *u;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Unstackify".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "local".to_string(),
+                            value: self.vonify_local(local),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::DestroyH(_) => panic!("vonify_expression: DestroyH"),
+            ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => panic!("vonify_expression: DestroyStaticSizedArrayIntoLocalsH"),
+            ExpressionH::StructToInterfaceUpcastH(_) => panic!("vonify_expression: StructToInterfaceUpcastH"),
+            ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("vonify_expression: InterfaceToInterfaceUpcastH"),
+            ExpressionH::LocalStoreH(_) => panic!("vonify_expression: LocalStoreH"),
+            ExpressionH::LocalLoadH(_) => panic!("vonify_expression: LocalLoadH"),
+            ExpressionH::MemberStoreH(_) => panic!("vonify_expression: MemberStoreH"),
+            ExpressionH::MemberLoadH(_) => panic!("vonify_expression: MemberLoadH"),
+            ExpressionH::NewArrayFromValuesH(_) => panic!("vonify_expression: NewArrayFromValuesH"),
+            ExpressionH::StaticSizedArrayStoreH(_) => panic!("vonify_expression: StaticSizedArrayStoreH"),
+            ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("vonify_expression: RuntimeSizedArrayStoreH"),
+            ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("vonify_expression: RuntimeSizedArrayLoadH"),
+            ExpressionH::StaticSizedArrayLoadH(_) => panic!("vonify_expression: StaticSizedArrayLoadH"),
+            ExpressionH::CallH(_) => panic!("vonify_expression: CallH"),
+            ExpressionH::ExternCallH(_) => panic!("vonify_expression: ExternCallH"),
+            ExpressionH::InterfaceCallH(_) => panic!("vonify_expression: InterfaceCallH"),
+            ExpressionH::IfH(_) => panic!("vonify_expression: IfH"),
+            ExpressionH::WhileH(_) => panic!("vonify_expression: WhileH"),
+            ExpressionH::ConsecutorH(c) => {
+                let crate::final_ast::instructions::ConsecutorH { exprs: nodes } = *c;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Consecutor".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "exprs".to_string(),
+                            value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                                id: None,
+                                members: nodes.iter().map(|node| self.vonify_expression(*node)).collect(),
+                            }),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::BlockH(b) => {
+                let crate::final_ast::instructions::BlockH { inner } = *b;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Block".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "innerExpr".to_string(),
+                            value: self.vonify_expression(inner),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "innerType".to_string(),
+                            value: self.vonify_coord(inner.result_type()),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::MutabilifyH(_) => panic!("vonify_expression: MutabilifyH"),
+            ExpressionH::ImmutabilifyH(_) => panic!("vonify_expression: ImmutabilifyH"),
+            ExpressionH::ReturnH(r) => {
+                let crate::final_ast::instructions::ReturnH { source_expression } = *r;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Return".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "sourceExpr".to_string(),
+                            value: self.vonify_expression(source_expression),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "sourceType".to_string(),
+                            value: self.vonify_coord(source_expression.result_type()),
+                        },
+                    ],
+                })
+            }
+            ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("vonify_expression: NewImmRuntimeSizedArrayH"),
+            ExpressionH::NewMutRuntimeSizedArrayH(_) => panic!("vonify_expression: NewMutRuntimeSizedArrayH"),
+            ExpressionH::PushRuntimeSizedArrayH(_) => panic!("vonify_expression: PushRuntimeSizedArrayH"),
+            ExpressionH::PopRuntimeSizedArrayH(_) => panic!("vonify_expression: PopRuntimeSizedArrayH"),
+            ExpressionH::StaticArrayFromCallableH(_) => panic!("vonify_expression: StaticArrayFromCallableH"),
+            ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => panic!("vonify_expression: DestroyStaticSizedArrayIntoFunctionH"),
+            ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyImmRuntimeSizedArrayH"),
+            ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyMutRuntimeSizedArrayH"),
+            ExpressionH::BreakH(_) => panic!("vonify_expression: BreakH"),
+            ExpressionH::NewStructH(_) => panic!("vonify_expression: NewStructH"),
+            ExpressionH::ArrayLengthH(_) => panic!("vonify_expression: ArrayLengthH"),
+            ExpressionH::ArrayCapacityH(_) => panic!("vonify_expression: ArrayCapacityH"),
+            ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
+            ExpressionH::IsSameInstanceH(_) => panic!("vonify_expression: IsSameInstanceH"),
+            ExpressionH::AsSubtypeH(_) => panic!("vonify_expression: AsSubtypeH"),
+            ExpressionH::LockWeakH(_) => panic!("vonify_expression: LockWeakH"),
+            ExpressionH::DiscardH(_) => panic!("vonify_expression: DiscardH"),
+            ExpressionH::PreCheckBorrowH(_) => panic!("vonify_expression: PreCheckBorrowH"),
+        }
     }
 }
 /*
@@ -1211,7 +1653,25 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_local(&self, local: Local<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_local");
+        let Local { id, variability, type_h: tyype } = local;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Local".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "id".to_string(),
+                    value: self.vonify_variable_id(id),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "variability".to_string(),
+                    value: self.vonify_variability(variability),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "type".to_string(),
+                    value: self.vonify_coord(tyype),
+                },
+            ],
+        })
     }
 }
 /*
@@ -1233,7 +1693,25 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_variable_id(&self, id: VariableIdH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_variable_id");
+        let VariableIdH { number, height: _, name: maybe_name } = id;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "VariableId".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "number".to_string(),
+                    value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: number as i64 }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "height".to_string(),
+                    value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: number as i64 }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "optName".to_string(),
+                    value: self.vonify_optional(maybe_name, |x| self.vonify_name(x)),
+                },
+            ],
+        })
     }
 }
 /*
@@ -1257,7 +1735,19 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_optional<I>(&self, opt: Option<I>, func: impl Fn(I) -> IVonData) -> IVonData {
-        panic!("Unimplemented: vonify_optional");
+        match opt {
+            None => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "None".to_string(), id: None, members: vec![] }),
+            Some(value) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "Some".to_string(),
+                id: None,
+                members: vec![
+                    crate::von::ast::VonMember {
+                        field_name: "value".to_string(),
+                        value: func(value),
+                    },
+                ],
+            }),
+        }
     }
 }
 /*
@@ -1350,7 +1840,25 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_name(&self, h: &IdH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_name");
+        let IdH { local_name, package_coordinate, shortened_name, fully_qualified_name: _, _must_intern: _, _phantom_h: _ } = h;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Name".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember {
+                    field_name: "localName".to_string(),
+                    value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: local_name.0.to_string() }),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "packageCoordinate".to_string(),
+                    value: crate::von::ast::IVonData::Object(crate::simplifying::name_hammer::translate_package_coordinate(package_coordinate)),
+                },
+                crate::von::ast::VonMember {
+                    field_name: "shortenedName".to_string(),
+                    value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: shortened_name.0.to_string() }),
+                },
+            ],
+        })
     }
 }
 /*

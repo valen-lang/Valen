@@ -497,6 +497,7 @@ fn test_infer_pack_from_empty_result() {
 // NOVEL CODE
 #[test]
 fn type_simple_impl() {
+    /* Guardian: disable-all */
     let scout_bump = Bump::new();
     let parser_arena = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);

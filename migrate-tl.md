@@ -12,11 +12,15 @@
 
 **NCWSRX false-positives** often mean the Scala audit block sits outside the diff window; fix the slicing (move it adjacent to its Rust def) rather than temp-disable.
 
+**Guardian directives must sit inside the def's contextified diff window** (between `fn name() {` and `}`, or at the impl-block head for methods) — placement above `#[test]`/`#[attr]` or far from the change is invisible to the shield.
+
 **Debugging is TL's job — never delegate it to JR.** Guardian (SPDMX/NCWSRX/OALZDX) blocks JR from adding eprintlns or diagnostic scaffolding, and a temp-disable is not a workaround because temp-disables persist — we have no mechanism to remove them. TL slices the diagnostic, runs the test, hands JR the printed values, and reverts the diagnostic before JR is unblocked. Don't write "add an eprintln and re-run" into `for-jr.md`. Tools and techniques in **`docs/skills/migrate-diagnoser.md`**.
 
 **Logic bugs are deferred, not blocking.** When JR's active test panics with something *other* than "unimplemented"/"implement"/"not yet migrated" (i.e. a real logic bug, not a still-stubbed body), they mark it `- [~]` in their worktree's `migration-drive-todo.md` with a one-line note (Rust file:line and the panic message), append the same to `for-tl.md` so TL knows, then pick the next `- [ ]` test and continue driving. TL queues these `[~]`s for later — don't try to fix them inline during the parallel sprint. This overrides the older "never defer a test" rule **for logic bugs only** — JR still doesn't defer for missing scaffolding or other Guardian-blocks, which still escalate-and-wait.
 
 **Run SCPX `--check-all`** after every slice-in or audit-block edit; duplicating Scala text already in a top-of-file blob trips it.
+
+**TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).
 
 **This file is now thin.** The durable guidance that used to live here has moved into two docs; this file keeps only **current status** and **items not covered there**:
 
@@ -31,9 +35,13 @@ If a code comment or skill cites a former TL.md section by name (e.g. "Good Part
 
 Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IRegionNameT` is the lone remaining `_Phantom`). Build is green (`cargo check --lib`; 2 pre-existing `expression_compiler.rs` warnings), SCPX 0.
 
-**Typing pass — core test suite migrated.** Every test tracked in the now-retired `docs/historical/typing-test-todo.md` passes (compiler_tests / solver / virtual / mutate / etc.). The only remaining typing-test tail is the 40 `after_regions_*` tests (~14 are deliberate Scala-side deferrals) — see the residuals doc.
+**Typing pass — core test suite migrated.** Every test tracked in the now-retired `docs/historical/typing-test-todo.md` passes. The only remaining typing-test tail is the 40 `after_regions_*` tests (~14 are deliberate Scala-side deferrals) — see the residuals doc.
 
-**Active frontier: the instantiating pass.** Driven test-first through the capstone Hammer test `simplifying::test::hammer_test::local_ids_unique`, which exercises the instantiator end-to-end. Currently working through the **region collapser/counter subsystem** (`region_collapser_individual` / `region_collapser_consistent` / `region_counter` — ~90 sliced panic-stubs); JR drives it end-to-end per the standing ruling (escalate only a specific fn whose lifetimes fail the one-shot). The closure/return conventions for the `collapse_*` family were settled in rounds 16–17.
+**Instantiating + simplifying — capstone landed.** `local_ids_unique` green; 6 hammer integration tests landed (`simple_main` → `tests_stripping_things_after_panic` + `two_templated_structs_make_it_into_hamuts`); X-bucket `top_level_extern_functions_wire_format_simple_id_has_flat_shape` green; peak 769/769.
+
+**Active frontier: the `simple_program_returning_an_int` pilot.** Drives the full pipeline (pass_manager + HammerCompilation seam + TestVM foundations) end-to-end before the parallel SI/CL/GE/MI buckets launch. **TestVM scaffold pass in flight** — discovered scaffold-broken (not just body-empty); foundation pass took 615 → 21 errors via TL Python+Edit sweep; JR finishing the tail per the locked convention above.
+
+**Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver.
 
 Body migration stays test-driven: the active test drives which panic stubs get implemented (see "How To Continue").
 

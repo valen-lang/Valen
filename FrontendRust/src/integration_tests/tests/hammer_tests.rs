@@ -36,7 +36,7 @@ pub fn simple_main() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let code = "exported func main() int { return 3; }";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
@@ -44,7 +44,7 @@ pub fn simple_main() {
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
-    let test_package = hamuts.lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let test_package = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     assert_eq!(test_package.get_all_user_functions().len(), 1);
     assert_eq!(test_package.get_all_user_functions()[0].prototype.id.fully_qualified_name.0, "main");
 }
@@ -103,14 +103,14 @@ exported func main() {
   z MyOption<int> = x;
 }
 ";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     assert!(package_h.interfaces.iter().any(|i| i.id.fully_qualified_name.0 == "MyOption<i32>"));
     let my_some = package_h.structs.iter().find(|s| s.id.fully_qualified_name.0 == "MySome<i32>").expect("MySome<i32> missing");
     assert_eq!(my_some.members.len(), 1);
@@ -193,14 +193,14 @@ exported func main() int {
   return a;
 }
 ";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
     match main.body {
         crate::final_ast::instructions::ExpressionH::BlockH(b) => match b.inner {
@@ -257,14 +257,14 @@ exported func main() int {
   return 3 + __vbi_panic();
 }
 ";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
     let int_expr = match main.body {
         crate::final_ast::instructions::ExpressionH::BlockH(b) => match b.inner {
@@ -337,14 +337,14 @@ pub fn tests_export_function() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let code = "exported func moo() int { return 42; }";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_function("moo");
     let exported_moo = *package_h.export_name_to_function.get(&scout_arena.intern_str("moo")).expect("moo export missing");
     assert_eq!(exported_moo, moo.prototype);
@@ -377,14 +377,14 @@ pub fn tests_export_struct() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let code = "exported struct Moo { }";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_struct("Moo");
     let moo_ref = crate::final_ast::types::KindHT::StructHT(hammer_interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: moo.id }));
     let exported_moo = *package_h.export_name_to_kind.get(&scout_arena.intern_str("Moo")).expect("Moo export missing");
@@ -418,14 +418,14 @@ pub fn tests_export_interface() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let code = "exported interface Moo { }";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
-    let package_h = compile.get_hamuts().lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_interface("Moo");
     let moo_ref = crate::final_ast::types::KindHT::InterfaceHT(hammer_interner.intern_interface_ht(crate::final_ast::types::InterfaceHTValH { id: moo.id }));
     let exported_moo = *package_h.export_name_to_kind.get(&scout_arena.intern_str("Moo")).expect("Moo export missing");
@@ -469,7 +469,7 @@ pub fn tests_exports_from_two_modules_different_names() {
         parse_arena.intern_file_coordinate(module_b, "StructB.vale"),
         "exported struct StructB { a int; }".to_string(),
     );
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(map)
         .or(crate::tests::tests::get_package_to_resource_resolver());
@@ -605,7 +605,7 @@ exported func main() int {
   return 42;
 }
 ";
-    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
@@ -613,7 +613,7 @@ exported func main() int {
         &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
-    let package_h = hamuts.lookup_package(crate::utils::code_hierarchy::PackageCoordinate::test_tld(&scout_arena, &keywords));
+    let package_h = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let outer_new = package_h.prototype_to_extern.iter().map(|(_, e)| e).find(|e| e.simple_id.steps.last().expect("empty steps").name.0 == "VecOuterNew").expect("VecOuterNew not found");
     // VecOuterNew<int>: leaf step keeps own template arg, no reshape (no parent citizen).
     let leaf = outer_new.simple_id.steps.last().expect("empty steps");

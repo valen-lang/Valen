@@ -157,12 +157,14 @@ case class PackageCoordinate(module: StrI, packages: Vector[StrI]) extends IInte
 object PackageCoordinate {// extends Ordering[PackageCoordinate] {
 */
 // mig: fn test_tld
-  pub fn test_tld(
-    scout_arena: &ScoutArena<'a>,
-    _keywords: &Keywords<'a>,
-  ) -> PackageCoordinate<'a> {
-    Some(*scout_arena.intern_package_coordinate(scout_arena.intern_str(TEST_MODULE), &[]))
-      .expect("unreachable")
+  pub fn test_tld<'ctx>(
+    parse_arena: &'ctx ParseArena<'a>,
+    _keywords: &'ctx Keywords<'a>,
+  ) -> &'a PackageCoordinate<'a>
+  where
+    'a: 'ctx,
+  {
+    parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[])
   }
 /*
   def TEST_TLD(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(interner.intern(StrI("test")), Vector.empty))

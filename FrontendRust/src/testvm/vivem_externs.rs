@@ -1,5 +1,6 @@
 use crate::testvm::values::ReferenceV;
 use crate::testvm::heap::AdapterForExternsV;
+use crate::final_ast::ast::PrototypeH;
 
 /*
 package dev.vale.testvm
@@ -609,7 +610,7 @@ pub fn cast_i64_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn new_vec
-pub fn new_vec<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
+pub fn new_vec<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
 /*
   def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)
@@ -621,7 +622,7 @@ pub fn new_vec<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &
   }
 */
 // mig: fn new_vec_with_capacity
-pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
+pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
 /*
   def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -638,7 +639,7 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>
   }
 */
 // mig: fn vec_capacity
-pub fn vec_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
+pub fn vec_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
 /*
   def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)

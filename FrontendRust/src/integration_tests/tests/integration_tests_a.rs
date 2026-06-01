@@ -62,7 +62,23 @@ fn roguelike_typing_pass() { panic!("Unmigrated test: roguelike_typing_pass"); }
 // mig: fn simple_program_returning_an_int
 #[test]
 fn simple_program_returning_an_int() {
-    let compile = crate::integration_tests::tests::run_compilation::test("exported func main() int { return 3; }", false);
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_bump, &instantiating_bump,
+        "exported func main() int { return 3; }", false,
+    );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),

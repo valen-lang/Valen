@@ -136,7 +136,25 @@ pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
 
 // mig: fn translate_package_coordinate (object NameHammer free function)
 pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObject {
-    panic!("Unimplemented: translate_package_coordinate");
+    let PackageCoordinate { module, packages: paackage } = coord;
+    let non_empty_module_name = if module.0 == "" { "__vale".to_string() } else { module.0.to_string() };
+    crate::von::ast::VonObject {
+        tyype: "PackageCoordinate".to_string(),
+        id: None,
+        members: vec![
+            crate::von::ast::VonMember {
+                field_name: "project".to_string(),
+                value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: non_empty_module_name }),
+            },
+            crate::von::ast::VonMember {
+                field_name: "packageSteps".to_string(),
+                value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                    id: None,
+                    members: paackage.iter().map(|s| crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: s.0.to_string() })).collect(),
+                }),
+            },
+        ],
+    }
 }
 /*
   def translatePackageCoordinate(coord: PackageCoordinate): VonObject = {

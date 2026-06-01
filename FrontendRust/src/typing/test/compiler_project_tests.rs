@@ -274,6 +274,7 @@ fn struct_has_correct_name() {
 // or target-side RSA/SSA both return false.
 #[test]
 fn typing_pass_array_type_convertible() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -293,7 +294,7 @@ fn typing_pass_array_type_convertible() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -326,6 +327,7 @@ fn typing_pass_array_type_convertible() {
 // ArgLookup(1)))) for the `===` builtin.
 #[test]
 fn typing_pass_uses_same_instance() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -344,7 +346,7 @@ fn typing_pass_uses_same_instance() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -374,6 +376,7 @@ fn typing_pass_uses_same_instance() {
 
 #[test]
 fn typing_pass_ssa_destructure() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -391,7 +394,7 @@ fn typing_pass_ssa_destructure() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -424,6 +427,7 @@ fn typing_pass_ssa_destructure() {
 // enclosing function scope.
 #[test]
 fn typing_pass_closure_var_mutate() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -441,7 +445,7 @@ fn typing_pass_closure_var_mutate() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -474,6 +478,7 @@ fn typing_pass_closure_var_mutate() {
 // at ExpressionCompiler.scala:869-876 (case TupleSE) + SequenceCompiler.scala.
 #[test]
 fn typing_pass_tuple_literal() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -491,7 +496,7 @@ fn typing_pass_tuple_literal() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -523,6 +528,7 @@ fn typing_pass_tuple_literal() {
 // ExpressionCompiler.scala:1387-1429 (case DestructSE).
 #[test]
 fn typing_pass_destruct_struct() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -540,7 +546,7 @@ fn typing_pass_destruct_struct() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
@@ -574,6 +580,7 @@ fn typing_pass_destruct_struct() {
 // compiler_test_compilation.
 #[test]
 fn typing_pass_on_roguelike() {
+    /* Guardian: disable-all */
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -597,7 +604,7 @@ fn typing_pass_on_roguelike() {
             &parse_arena,
             HashMap::from([("0.vale".to_string(), source)]),
         )
-        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+        .or(get_code_map(&parse_arena, &parser_keywords)
             .expect("get_code_map failed to load builtins"))
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {

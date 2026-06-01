@@ -7,7 +7,7 @@ use crate::final_ast::ast::{ProgramH, PrototypeH, StructDefinitionH};
 use crate::final_ast::instructions::Local;
 use crate::testvm::values::{
     AllocationIdV, AllocationV, ArrayInstanceV, CallIdV, ElementAddressV, ExpressionIdV,
-    IObjectReferrerV, KindV, MemberAddressV, PrimitiveKindV, ReferenceV, RegisterV,
+    IObjectReferrerV, KindV, MemberAddressV, PrimitiveKindV, ReferenceRegisterV, ReferenceV, RegisterV,
     StructInstanceV, VariableAddressV, VariableV,
 };
 use crate::testvm::call::CallV;
@@ -1091,7 +1091,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_uninitialized_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_uninitialized_array(&self, array_definition_th: RuntimeSizedArrayDefinitionHT, array_ref_type: CoordH<RuntimeSizedArrayHT>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
+    pub fn add_uninitialized_array(&self, array_definition_th: RuntimeSizedArrayDefinitionHT, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
         panic!("Unimplemented: add_uninitialized_array");
     }
 }
@@ -1108,7 +1108,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_array(&self, array_definition_th: StaticSizedArrayDefinitionHT, array_ref_type: CoordH<StaticSizedArrayHT>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
+    pub fn add_array(&self, array_definition_th: StaticSizedArrayDefinitionHT, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
         panic!("Unimplemented: add_array");
     }
 }
@@ -1165,7 +1165,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_reference_register
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> ReferenceRegisterV {
+    pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> ReferenceRegisterV<'v, 'h, 's> {
         panic!("Unimplemented: check_reference_register");
     }
 }

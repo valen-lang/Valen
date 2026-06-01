@@ -43,8 +43,11 @@ override def equals(obj: Any): Boolean = vcurious();
 // mig: struct ConstraintViolatedExceptionV
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
-pub struct ConstraintViolatedExceptionV {
+pub struct ConstraintViolatedExceptionV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
     pub msg: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<(&'v (), &'h ())>,
 }
 /*
 case class ConstraintViolatedException(msg: String) extends Throwable {
@@ -84,7 +87,7 @@ pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, 
   }
 */
 // mig: fn execute_with_heap
-pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, input_heap: &HeapV<'v, 's, 'h>, input_argument_references: &'v [ReferenceV<'s, 'h>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, input_heap: &HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: execute_with_heap")
 }
 /*
@@ -154,7 +157,7 @@ pub fn stdout_collector<'v, 'h, 's>() -> (String, Box<dyn Fn(StrI<'s>)>) {
   }
 */
 // mig: fn inner_execute
-pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'s, 'h>], heap: &HeapV<'v, 's, 'h>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
+pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &HeapV<'v, 'h, 's>, vivem_dout: &PrintStream, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>)) -> IVonData {
     panic!("Unimplemented: inner_execute")
 }
 /*
