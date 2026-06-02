@@ -12,7 +12,7 @@ object RegionCollapserConsistent {
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::ast::{PrototypeI, PrototypeIValI};
 use crate::instantiating::ast::names::{IdI, INameI, IFunctionNameI, FunctionNameIX, FunctionTemplateNameI};
-use crate::instantiating::ast::types::{sI, nI, CoordI, IntIT, KindIT, VoidIT};
+use crate::instantiating::ast::types::{sI, nI, BoolIT, CoordI, IntIT, KindIT, VoidIT};
 use crate::instantiating::ast::templata::ITemplataI;
 use std::collections::HashMap;
 
@@ -295,7 +295,7 @@ where 's: 'i {
         KindIT::NeverIT(n) => KindIT::NeverIT(crate::instantiating::ast::types::NeverIT { from_break: n.from_break, _marker: std::marker::PhantomData }),
         KindIT::VoidIT(_) => KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }),
         KindIT::IntIT(x) => KindIT::IntIT(IntIT { bits: x.bits, _marker: std::marker::PhantomData }),
-        KindIT::BoolIT(_) => panic!("Unimplemented: collapse_kind BoolIT"),
+        KindIT::BoolIT(_) => KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }),
         KindIT::FloatIT(_) => panic!("Unimplemented: collapse_kind FloatIT"),
         KindIT::StrIT(_) => panic!("Unimplemented: collapse_kind StrIT"),
         KindIT::StructIT(s) => KindIT::StructIT(interner.intern_struct_it_ni(crate::instantiating::ast::types::StructITValI { id: collapse_struct_id(interner, map, &s.id) })),

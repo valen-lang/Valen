@@ -972,7 +972,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
                     tyype: "ConstantBool".to_string(),
                     id: None,
-                    members: vec![crate::von::ast::VonMember { field_name: "value".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value }) }],
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "value".to_string(),
+                            value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value }),
+                        },
+                    ],
                 })
             }
             ExpressionH::ConstantIntH(c) => {

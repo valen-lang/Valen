@@ -46,7 +46,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::BorrowToWeak(_) => panic!("RE::result: BorrowToWeak"),
             ReferenceExpressionIE::LetNormal(x) => x.result,
             ReferenceExpressionIE::Restackify(_) => panic!("RE::result: Restackify"),
-            ReferenceExpressionIE::Unlet(_) => panic!("RE::result: Unlet"),
+            ReferenceExpressionIE::Unlet(x) => x.result,
             ReferenceExpressionIE::Discard(_) => panic!("RE::result: Discard"),
             ReferenceExpressionIE::Defer(_) => panic!("RE::result: Defer"),
             ReferenceExpressionIE::If(x) => x.result,

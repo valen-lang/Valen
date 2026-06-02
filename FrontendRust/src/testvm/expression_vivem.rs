@@ -342,6 +342,11 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             let r#ref = heap.void();
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
+        ExpressionH::ConstantBoolH(c) => {
+            let crate::final_ast::instructions::ConstantBoolH { value } = **c;
+            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
         ExpressionH::CallH(c) => {
             let crate::final_ast::instructions::CallH { function: prototype_h, args_expressions: args_exprs } = **c;
             let arg_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
