@@ -123,6 +123,43 @@ case class CoordH[+T <: KindHT](
 }
 */
 
+// mig: fn expect_static_sized_array_coord
+impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
+    pub fn expect_static_sized_array_coord(&self) -> Self {
+        match self.kind {
+            KindHT::StaticSizedArrayHT(_) => *self,
+            _ => panic!("expect_static_sized_array_coord: not a static sized array"),
+        }
+    }
+}
+// mig: fn expect_runtime_sized_array_coord
+impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
+    pub fn expect_runtime_sized_array_coord(&self) -> Self {
+        match self.kind {
+            KindHT::RuntimeSizedArrayHT(_) => *self,
+            _ => panic!("expect_runtime_sized_array_coord: not a runtime sized array"),
+        }
+    }
+}
+// mig: fn expect_struct_coord
+impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
+    pub fn expect_struct_coord(&self) -> Self {
+        match self.kind {
+            KindHT::StructHT(_) => *self,
+            _ => panic!("expect_struct_coord: not a struct"),
+        }
+    }
+}
+// mig: fn expect_interface_coord
+impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
+    pub fn expect_interface_coord(&self) -> Self {
+        match self.kind {
+            KindHT::InterfaceHT(_) => *self,
+            _ => panic!("expect_interface_coord: not an interface"),
+        }
+    }
+}
+
 // mig: sealed trait KindHT
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

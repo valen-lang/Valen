@@ -3612,10 +3612,7 @@ class Instantiator(
         LambdaCallFunctionNameI(
           LambdaCallFunctionTemplateNameI(
             codeLocation,
-            // We dont translate these, as these are what uniquely identify generics, and we need that
-            // information later to map this back to its originating generic.
-            // See DMPOGN for a more detailed explanation. This oddity is really tricky.
-            paramTypesForGeneric),
+            paramTypesForGeneric.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord)),
           templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)),
           paramTypes.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
       }

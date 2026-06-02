@@ -749,13 +749,15 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
         let allocation = self.dereference(reference, false);
         match allocation {
-            KindV::StructInstance(si) => {
-                let member_refs = si.members.get().expect("destructure: StructInstance members None");
+            KindV::StructInstance(s) => {
+                let member_refs = s.members.get().expect("destructure: members None");
                 for (index, member_ref) in member_refs.iter().enumerate() {
                     self.decrement_reference_ref_count(
-                        crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 }, ownership: member_ref.ownership }),
-                        *member_ref,
-                    );
+                        crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV {
+                            member_addr: crate::testvm::values::MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
+                            ownership: member_ref.ownership,
+                        }),
+                        *member_ref);
                 }
                 self.zero(reference);
                 self.deallocate_if_no_weak_refs(reference);
@@ -1314,19 +1316,24 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn new_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn new_struct(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
-        let instance_ref: &'v StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(StructInstanceV { struct_h: struct_def_h, members: std::cell::Cell::new(Some(member_references)) });
-        let reference = self.add(interner, struct_ref_h.ownership, struct_ref_h.location, KindV::StructInstance(instance_ref));
+        let instance: &'v crate::testvm::values::StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(crate::testvm::values::StructInstanceV {
+            struct_h: struct_def_h,
+            members: std::cell::Cell::new(Some(member_references)),
+        });
+        let reference = self.add(interner, struct_ref_h.ownership, struct_ref_h.location, crate::testvm::values::KindV::StructInstance(instance));
         for (index, member_reference) in member_references.iter().enumerate() {
             self.increment_reference_ref_count(
-                IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 }, ownership: member_reference.ownership }),
-                *member_reference,
-            );
+                crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV {
+                    member_addr: crate::testvm::values::MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
+                    ownership: member_reference.ownership,
+                }),
+                *member_reference);
         }
         {
             use std::io::Write;
             write!(self.vivem_dout, " o{}=", reference.num).unwrap();
         }
-        self.print_kind(KindV::StructInstance(instance_ref));
+        self.print_kind(KindV::StructInstance(instance));
         reference
     }
 }

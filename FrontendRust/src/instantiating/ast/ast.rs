@@ -311,7 +311,7 @@ impl<'i> LocationInFunctionEnvironmentI<'i> {
 // mig: fn to_string
 impl<'i> LocationInFunctionEnvironmentI<'i> {
     pub fn to_string(&self) -> String {
-        panic!("Unimplemented: to_string")
+        self.path.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(".")
     }
 }
 /*

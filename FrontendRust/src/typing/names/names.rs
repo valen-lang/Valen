@@ -137,11 +137,17 @@ impl<'s, 't> IdT<'s, 't> {
         }
       }
     */
-    pub fn init_non_package_id(&self) -> Option<IdT<'s, 't>> {
+    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern.
+    pub fn init_non_package_id(&self, interner: &TypingInterner<'s, 't>) -> Option<IdT<'s, 't>> {
         if self.init_steps.is_empty() {
             None
         } else {
-            panic!("Unimplemented IdT init-non-package ID non-empty");
+            let (last, init) = self.init_steps.split_last().unwrap();
+            Some(*interner.intern_id(IdValT {
+                package_coord: self.package_coord,
+                init_steps: init,
+                local_name: *last,
+            }))
         }
     }
     /*

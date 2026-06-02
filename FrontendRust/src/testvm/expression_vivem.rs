@@ -318,6 +318,62 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: last_inner_expr_result_ref.expect("ConsecutorH: empty innerExprs") })
         }
+        ExpressionH::CallH(c) => {
+            let crate::final_ast::instructions::CallH { function: prototype_h, args_expressions: args_exprs } = **c;
+            let mut arg_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = Vec::new();
+            for (i, arg_expr) in args_exprs.iter().enumerate() {
+                let r = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    ret @ (INodeExecuteResultV::Break(_) | INodeExecuteResultV::Return(_)) => return ret,
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                };
+                arg_refs.push(r);
+            }
+            let function_h = program_h.lookup_function(prototype_h);
+            {
+                use std::io::Write;
+                let handle = &mut *heap.vivem_dout;
+                writeln!(handle).unwrap();
+                writeln!(handle, "{}Making new stack frame (call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+            }
+            for r in arg_refs.iter() {
+                heap.decrement_reference_ref_count(
+                    crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    *r);
+            }
+            let arg_refs_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
+            let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, stdin, stdout, heap, arg_refs_slice, function_h);
+            {
+                use std::io::Write;
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+            }
+            let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
+        }
+        ExpressionH::NewStructH(n) => {
+            let crate::final_ast::instructions::NewStructH { source_expressions: args_exprs, target_member_names: _, result_type: struct_ref_h } = **n;
+            let struct_def_h = program_h.lookup_struct(interner, match struct_ref_h.kind { crate::final_ast::types::KindHT::StructHT(s) => s, _ => panic!("NewStructH: result_type.kind not StructHT") });
+            let mut member_references: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = Vec::new();
+            for (i, arg_expr) in args_exprs.iter().enumerate() {
+                let r = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                };
+                member_references.push(r);
+            }
+            for r in member_references.iter() {
+                heap.decrement_reference_ref_count(
+                    crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    *r);
+            }
+            assert!(member_references.len() == struct_def_h.members.len());
+            let member_references_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&member_references);
+            let reference = heap.new_struct(interner, *struct_def_h, struct_ref_h, member_references_slice);
+            heap.increment_reference_ref_count(
+                crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
+                reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
+        }
         ExpressionH::ArgumentH(a) => {
             let crate::final_ast::instructions::ArgumentH { result_type, argument_index } = **a;
             let r#ref = take_argument(heap, interner, call_id, argument_index, result_type);

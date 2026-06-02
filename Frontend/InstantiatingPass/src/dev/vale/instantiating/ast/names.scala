@@ -380,7 +380,7 @@ case class FunctionTemplateNameI[+R <: IRegionsModeI](
 // Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS,
-  paramTypes: Vector[CoordT]
+  paramTypes: Vector[CoordI[R]]
 ) extends INameI[R] with IFunctionTemplateNameI[R] {
 //  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
 //    // Post instantiator, the params will be real, but our template paramTypes will still be placeholders

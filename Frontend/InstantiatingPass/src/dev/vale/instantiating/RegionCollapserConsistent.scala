@@ -59,7 +59,7 @@ object RegionCollapserConsistent {
         ExternFunctionNameI[nI](humanName, templateArgsC, paramsC)
       }
       case LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
-        val templateC = LambdaCallFunctionTemplateNameI[nI](codeLocation, paramsTT)
+        val templateC = LambdaCallFunctionTemplateNameI[nI](codeLocation, paramsTT.map(collapseCoord(map, _)))
         val templateArgsC = templateArgs.map(collapseTemplata(map, _))
         val paramsC =
           parameters.map(param => {

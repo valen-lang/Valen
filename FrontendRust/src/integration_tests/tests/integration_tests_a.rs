@@ -389,8 +389,29 @@ fn tests_inline_adding_more() { panic!("Unmigrated test: tests_inline_adding_mor
 */
 // mig: fn simple_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_lambda() { panic!("Unmigrated test: simple_lambda"); }
+fn simple_lambda() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_bump, &instantiating_bump,
+        "exported func main() int { return {7}(); }", false,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
+}
 /*
   test("Simple lambda") {
     val compile = RunCompilation.test("exported func main() int { return {7}(); }")

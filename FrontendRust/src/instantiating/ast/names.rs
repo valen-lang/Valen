@@ -81,8 +81,15 @@ impl<'s, 'i, R> IdI<'s, 'i, R> {
 */
 // mig: fn init_non_package_id
 // (was cfg-gated)
-impl<'s, 'i, R> IdI<'s, 'i, R> {
-    pub fn init_non_package_id(&self) -> Option<IdI<'s, 'i, R>> { panic!("Unimplemented: init_non_package_id"); }
+impl<'s, 'i, R: Copy> IdI<'s, 'i, R> {
+    pub fn init_non_package_id(&self) -> Option<IdI<'s, 'i, R>> {
+        if self.init_steps.is_empty() {
+            None
+        } else {
+            let (last, init) = self.init_steps.split_last().unwrap();
+            Some(IdI { package_coord: self.package_coord, init_steps: init, local_name: *last })
+        }
+    }
 }
 /*
   def initNonPackageId(): Option[IdI[R, INameI[R]]] = {
@@ -2023,16 +2030,16 @@ case class FunctionTemplateNameI[+R <: IRegionsModeI](
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct LambdaCallFunctionTemplateNameI<'s, 'i, R> {
-    pub _marker: std::marker::PhantomData<(&'i (), R)>,
+    pub _marker: std::marker::PhantomData<R>,
     pub code_location: CodeLocationS<'s>,
-    pub param_types: (), // was &'t [CoordT<'s, 't>] — needs proper 't lifetime, see below
+    pub param_types: &'i[CoordI<'s, 'i, R>],
 }
 
 /*
 // Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
   codeLocation: CodeLocationS,
-  paramTypes: Vector[CoordT]
+  paramTypes: Vector[CoordI[R]]
 ) extends INameI[R] with IFunctionTemplateNameI[R] {
 //  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
 //    // Post instantiator, the params will be real, but our template paramTypes will still be placeholders

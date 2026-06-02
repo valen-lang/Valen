@@ -97,7 +97,15 @@ where 's: 'i {
             let template_args_c = interner.alloc_slice_from_vec(template_args.iter().map(|template_arg| collapse_templata(interner, &map, template_arg)).collect::<Vec<_>>());
             IFunctionNameI::ExternFunction(interner.intern_extern_function_name_ci(ExternFunctionNameI { human_name, template_args: template_args_c, parameters: params_c }))
         }
-        IFunctionNameI::LambdaCallFunction(_) => panic!("Unimplemented: collapse_function_name LambdaCallFunction"),
+        IFunctionNameI::LambdaCallFunction(n) => {
+            let map = region_counter::count_function_name_map(name);
+            let crate::instantiating::ast::names::LambdaCallFunctionNameI { template: crate::instantiating::ast::names::LambdaCallFunctionTemplateNameI { code_location, param_types: params_tt, .. }, template_args, parameters } = *n;
+            let params_tt_c = interner.alloc_slice_from_vec(params_tt.iter().map(|p| collapse_coord(interner, p)).collect::<Vec<_>>());
+            let template_c = *interner.intern_lambda_call_function_template_name_ci(crate::instantiating::ast::names::LambdaCallFunctionTemplateNameI { _marker: std::marker::PhantomData, code_location, param_types: params_tt_c });
+            let template_args_c = interner.alloc_slice_from_vec(template_args.iter().map(|t| collapse_templata(interner, &map, t)).collect::<Vec<_>>());
+            let params_c = interner.alloc_slice_from_vec(parameters.iter().map(|p| collapse_coord(interner, p)).collect::<Vec<_>>());
+            crate::instantiating::ast::names::IFunctionNameI::LambdaCallFunction(interner.intern_lambda_call_function_name_ci(crate::instantiating::ast::names::LambdaCallFunctionNameI { template: template_c, template_args: template_args_c, parameters: params_c }))
+        }
         IFunctionNameI::AnonymousSubstructConstructor(_) => panic!("Unimplemented: collapse_function_name AnonymousSubstructConstructor"),
         IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: collapse_function_name ForwarderFunction"),
         _ => panic!("Unimplemented: collapse_function_name other"),
@@ -129,7 +137,7 @@ where 's: 'i {
       }
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
         val map = RegionCounter.countFunctionName(n)
-        val templateC = LambdaCallFunctionTemplateNameI[cI](codeLocation, paramsTT)
+        val templateC = LambdaCallFunctionTemplateNameI[cI](codeLocation, paramsTT.map(collapseCoord(_)))
         val templateArgsC = templateArgs.map(collapseTemplata(map, _))
         val paramsC =
           parameters.map(param => {
@@ -197,11 +205,16 @@ pub fn collapse_citizen_template_name() {
 pub fn collapse_var_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, name: &IVarNameI<'s, 'i, sI>) -> IVarNameI<'s, 'i, cI>
 where 's: 'i {
     match name {
-        IVarNameI::TypingPassBlockResultVar(_) => panic!("Unimplemented: collapse_var_name TypingPassBlockResultVar"),
+        IVarNameI::TypingPassBlockResultVar(crate::instantiating::ast::names::TypingPassBlockResultVarNameI { life, .. }) => {
+            IVarNameI::TypingPassBlockResultVar(interner.intern_typing_pass_block_result_var_name_ci(crate::instantiating::ast::names::TypingPassBlockResultVarNameI {
+                _marker: std::marker::PhantomData,
+                life: *life,
+            }))
+        }
         IVarNameI::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_ci(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
         IVarNameI::TypingPassTemporaryVar(_) => panic!("Unimplemented: collapse_var_name TypingPassTemporaryVar"),
         IVarNameI::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_ci(crate::instantiating::ast::names::TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
-        IVarNameI::ClosureParam(_) => panic!("Unimplemented: collapse_var_name ClosureParam"),
+        IVarNameI::ClosureParam(crate::instantiating::ast::names::ClosureParamNameI { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_ci(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
         IVarNameI::MagicParam(_) => panic!("Unimplemented: collapse_var_name MagicParam"),
         IVarNameI::Iterable(_) => panic!("Unimplemented: collapse_var_name Iterable"),
         IVarNameI::ConstructingMember(_) => panic!("Unimplemented: collapse_var_name ConstructingMember"),
@@ -246,7 +259,18 @@ pub fn collapse_function_template_name() {
 // mig: fn collapse_name
 pub fn collapse_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, name: &INameI<'s, 'i, sI>) -> INameI<'s, 'i, cI>
 where 's: 'i {
-    panic!("Unimplemented: collapse_name")
+    match name {
+        INameI::OverrideDispatcher(_) | INameI::ExternFunction(_) | INameI::FunctionNameIX(_)
+        | INameI::ForwarderFunction(_) | INameI::FunctionBound(_) | INameI::LambdaCallFunction(_)
+        | INameI::AnonymousSubstructConstructor(_) => {
+            let n: crate::instantiating::ast::names::IFunctionNameI<'s, 'i, sI> = (*name).try_into().unwrap();
+            collapse_function_name(interner, &n).into()
+        }
+        INameI::LambdaCitizenTemplate(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { code_location, .. }) => {
+            INameI::LambdaCitizenTemplate(interner.intern_lambda_citizen_template_name_ci(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
+        }
+        other => panic!("Unimplemented: collapse_name {:?}", std::mem::discriminant(other)),
+    }
 }
 /*
   def collapseName(
@@ -447,13 +471,8 @@ pub fn collapse_interface_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, i
 // mig: fn collapse_struct_id
 pub fn collapse_struct_id<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, struct_id: &IdI<'s, 'i, sI>) -> IdI<'s, 'i, cI> where 's: 'i {
     collapse_id(interner, struct_id, |x| {
-        match x {
-            INameI::StructName(s) => INameI::StructName(match collapse_struct_name(interner, &IStructNameI::Struct(s)) {
-                IStructNameI::Struct(r) => r,
-                _ => panic!("collapse_struct_id: collapse_struct_name returned non-Struct"),
-            }),
-            _ => panic!("collapse_struct_id: non-StructName local name"),
-        }
+        let narrowed: IStructNameI<'s, 'i, sI> = (*x).try_into().unwrap();
+        collapse_struct_name(interner, &narrowed).into()
     })
 }
 /*
@@ -477,7 +496,11 @@ pub fn collapse_struct_name<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, st
                 template_args: interner.bump().alloc_slice_fill_iter(template_args_c.into_iter()),
             }))
         }
-        IStructNameI::LambdaCitizen(_) => panic!("collapse_struct_name: LambdaCitizen branch"),
+        IStructNameI::LambdaCitizen(crate::instantiating::ast::names::LambdaCitizenNameI { template: crate::instantiating::ast::names::LambdaCitizenTemplateNameI { code_location, _marker: _ } }) => {
+            IStructNameI::LambdaCitizen(interner.intern_lambda_citizen_name_ci(crate::instantiating::ast::names::LambdaCitizenNameI {
+                template: *interner.intern_lambda_citizen_template_name_ci(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }),
+            }))
+        }
         IStructNameI::AnonymousSubstruct(_) => panic!("collapse_struct_name: AnonymousSubstruct branch"),
     }
 }

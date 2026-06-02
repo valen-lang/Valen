@@ -171,7 +171,11 @@ where 's: 'i {
             for template_arg in template_args { count_templata(counter, template_arg) }
             for param in parameters { count_coord(counter, param) }
         }
-        IFunctionNameI::LambdaCallFunction(_) => panic!("Unimplemented: count_function_name LambdaCallFunction"),
+        IFunctionNameI::LambdaCallFunction(n) => {
+            let crate::instantiating::ast::names::LambdaCallFunctionNameI { template_args, parameters, .. } = *n;
+            for template_arg in template_args { count_templata(counter, template_arg) }
+            for param in parameters { count_coord(counter, param) }
+        }
         IFunctionNameI::AnonymousSubstructConstructor(_) => panic!("Unimplemented: count_function_name AnonymousSubstructConstructor"),
         IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: count_function_name ForwarderFunction"),
         _ => panic!("Unimplemented: count_function_name other"),
@@ -277,13 +281,30 @@ pub fn count_var_name() {
 pub fn count_name<'s, 'i>(counter: &mut CounterI, name: &INameI<'s, 'i, sI>)
 where 's: 'i {
     match name {
+        INameI::OverrideDispatcher(_) | INameI::ExternFunction(_) | INameI::FunctionNameIX(_)
+        | INameI::ForwarderFunction(_) | INameI::FunctionBound(_) | INameI::LambdaCallFunction(_)
+        | INameI::AnonymousSubstructConstructor(_) => {
+            let f: IFunctionNameI<'s, 'i, sI> = (*name).try_into().unwrap();
+            count_function_name(counter, &f);
+        }
         INameI::Export(export_name) => {
             counter.count(export_name.region);
         }
         INameI::Extern(extern_name) => {
             counter.count(extern_name.region);
         }
-        _ => panic!("Unimplemented: count_name"),
+        INameI::StructName(_) | INameI::InterfaceName(_) | INameI::LambdaCitizen(_) | INameI::AnonymousSubstruct(_) => {
+            let c: crate::instantiating::ast::names::ICitizenNameI<'s, 'i, sI> = (*name).try_into().unwrap();
+            count_citizen_name(counter, &c);
+        }
+        INameI::StructTemplate(_) => {}
+        INameI::LambdaCitizenTemplate(_) => {}
+        INameI::InterfaceTemplate(_) => {}
+        INameI::AnonymousSubstructTemplate(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI { interface, .. }) => {
+            count_name(counter, &INameI::from(*interface));
+        }
+        INameI::FunctionTemplate(_) => {}
+        other => panic!("Unimplemented: count_name {:?}", std::mem::discriminant(other)),
     }
 }
 /*

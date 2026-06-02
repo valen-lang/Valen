@@ -1396,7 +1396,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself =
             match _maybe_denizen_bound_to_denizen_caller_supplied_thing {
-                Some(_) => panic!("Unimplemented: translate_function maybeDenizen Some"),
+                Some(x) => x.clone(),
                 None => Self::assemble_instantiation_bound_param_to_arg(&func_t.instantiation_bound_params, _supplied_bound_args),
             };
         let _args_m: Vec<_> = IFunctionNameI::try_from(desired_prototype_s.id.local_name).unwrap().parameters().iter().map(|c| c.kind).collect();
@@ -1581,10 +1581,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn assemble_placeholder_map
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn assemble_placeholder_map(&self, id_t: &IdT<'s, 't>, id_s: &IdI<'s, 'i, sI>) -> IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> {
-        let mut result: IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = match id_t.init_non_package_id() {
+        let mut result: IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = match id_t.init_non_package_id(self.typing_interner) {
             None => IndexMap::new(),
-            Some(_init_non_package_id_t) => {
-                panic!("Unimplemented: assemble_placeholder_map recursion")
+            Some(init_non_package_id_t) => {
+                self.assemble_placeholder_map(&init_non_package_id_t, &id_s.init_non_package_id().unwrap())
             }
         };
         match IInstantiationNameT::try_from(id_t.local_name) {
@@ -2075,7 +2075,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         // - We're in a lambda and we want to call an even deeper lambda.
                         // - (This is the weird one) we want to call a *sibling* lambda.
                         // In all cases, make sure the denizen roots of everyone agree.
-                        panic!("Unimplemented: translate_prototype last LambdaCallFunction")
+                        let denizen_root_super_template = crate::typing::compiler::Compiler::get_root_super_template(self.typing_interner, *denizen_name);
+                        let desired_prototype_root_super_template = crate::typing::compiler::Compiler::get_root_super_template(self.typing_interner, desired_prototype_t.id);
+                        assert!(denizen_root_super_template == desired_prototype_root_super_template);
                     }
                     _ => {}
                 }
@@ -2095,7 +2097,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     if Compiler::get_super_template(self.typing_interner, desired_prototype_t.id).steps()
                         .starts_with(&Compiler::get_super_template(self.typing_interner, *denizen_name).steps()) {
                         // We need to supply our bounds to our lambdas, see LCCPGB and LCNBAFA.
-                        panic!("Unimplemented: translate_prototype enqueue then Some")
+                        Some(denizen_bound_to_denizen_caller_supplied_thing.clone())
                     } else {
                         if self.opts.sanity_check {
                             let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, desired_prototype_t.id);
@@ -4476,7 +4478,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IdI {
                 package_coord: module,
                 init_steps: self.interner.alloc_slice_from_vec(
-                    steps.iter().map(|step| self.translate_name_substituting(denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, step)).collect::<Vec<_>>()),
+                    steps.iter().map(|step| self.translate_name_substituting(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, step)).collect::<Vec<_>>()),
                 local_name: INameI::from(self.translate_function_name(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &IFunctionNameT::try_from(last).unwrap())),
             };
         full_name
@@ -4523,11 +4525,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _struct_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
         let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = _struct_id_t;
-        let last_t_struct = match last_t {
-            INameT::Struct(s) => IStructNameT::Struct(*s),
-            _ => panic!("translate_struct_id: local_name not Struct"),
-        };
-        let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|_n| panic!("translate_struct_id: non-empty init_steps not yet ported")).collect();
+        let last_t_struct: IStructNameT<'s, 't> = (*last_t).try_into().unwrap();
+        let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|n| self.translate_name_substituting(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, n)).collect();
         let struct_name_si = self.translate_struct_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &last_t_struct);
         let full_name_s = IdI {
             package_coord: module,
@@ -5359,8 +5358,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match name {
             IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_si(TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
             IVarNameT::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_si(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
-            IVarNameT::ClosureParam(_) => panic!("Unimplemented: translate_var_name ClosureParam"),
-            IVarNameT::TypingPassBlockResultVar(_) => panic!("Unimplemented: translate_var_name TypingPassBlockResultVar"),
+            IVarNameT::ClosureParam(crate::typing::names::names::ClosureParamNameT { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_si(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
+            IVarNameT::TypingPassBlockResultVar(crate::typing::names::names::TypingPassBlockResultVarNameT { life: crate::typing::ast::ast::LocationInFunctionEnvironmentT { path, .. } }) => {
+                IVarNameI::TypingPassBlockResultVar(interner.intern_typing_pass_block_result_var_name_si(crate::instantiating::ast::names::TypingPassBlockResultVarNameI {
+                    _marker: std::marker::PhantomData,
+                    life: crate::instantiating::ast::ast::LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+                }))
+            }
             IVarNameT::TypingPassTemporaryVar(_) => panic!("Unimplemented: translate_var_name TypingPassTemporaryVar"),
             IVarNameT::ConstructingMember(_) => panic!("Unimplemented: translate_var_name ConstructingMember"),
             IVarNameT::Iterable(_) => panic!("Unimplemented: translate_var_name Iterable"),
@@ -5446,7 +5450,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }))
             }
             IFunctionNameT::AnonymousSubstructConstructor(_) => panic!("Unimplemented: translate_function_name AnonymousSubstructConstructor"),
-            IFunctionNameT::LambdaCallFunction(_) => panic!("Unimplemented: translate_function_name LambdaCallFunction"),
+            IFunctionNameT::LambdaCallFunction(n) => {
+                let LambdaCallFunctionNameT { template: LambdaCallFunctionTemplateNameT { code_location, param_types: param_types_for_generic, .. }, template_args, parameters: param_types, .. } = *n;
+                IFunctionNameI::LambdaCallFunction(
+                    self.interner.intern_lambda_call_function_name_si(LambdaCallFunctionNameI {
+                        template: *self.interner.intern_lambda_call_function_template_name_si(LambdaCallFunctionTemplateNameI {
+                            _marker: std::marker::PhantomData,
+                            code_location: *code_location,
+                            param_types: self.interner.alloc_slice_from_vec(param_types_for_generic.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
+                        }),
+                        template_args: self.interner.alloc_slice_from_vec(template_args.iter().map(|t| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, t)).collect::<Vec<_>>()),
+                        parameters: self.interner.alloc_slice_from_vec(param_types.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
+                    }))
+            }
             IFunctionNameT::OverrideDispatcher(_) => panic!("Unimplemented: translate_function_name OverrideDispatcher"),
             _other => panic!("Unimplemented: translate_function_name other"),
         }
@@ -5506,10 +5522,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         LambdaCallFunctionNameI(
           LambdaCallFunctionTemplateNameI(
             codeLocation,
-            // We dont translate these, as these are what uniquely identify generics, and we need that
-            // information later to map this back to its originating generic.
-            // See DMPOGN for a more detailed explanation. This oddity is really tricky.
-            paramTypesForGeneric),
+            paramTypesForGeneric.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord)),
           templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)),
           paramTypes.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
       }
@@ -5646,7 +5659,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }))
             }
             IStructNameT::AnonymousSubstruct(_) => panic!("translate_struct_name: AnonymousSubstruct branch"),
-            IStructNameT::LambdaCitizen(_) => panic!("translate_struct_name: LambdaCitizen branch"),
+            IStructNameT::LambdaCitizen(LambdaCitizenNameT { template: LambdaCitizenTemplateNameT { code_location, .. } }) => {
+                IStructNameI::LambdaCitizen(self.interner.intern_lambda_citizen_name_si(crate::instantiating::ast::names::LambdaCitizenNameI {
+                    template: *self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }),
+                }))
+            }
             other => panic!("translate_struct_name: unimplemented variant {:?}", std::mem::discriminant(other)),
         }
     }
@@ -5743,7 +5760,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // suffixed `_substituting` to disambiguate (Rust lacks overloading). Slice pipeline
 // emitted no stub for this overload (TL-added per NNDX escalation).
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_name_substituting(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, name: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
+    pub fn translate_name_substituting(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, name: &INameT<'s, 't>) -> INameI<'s, 'i, sI> {
         match *name {
             n if IVarNameT::try_from(n).is_ok() => panic!("Unimplemented: translate_name_substituting IVarNameT"),
             INameT::KindPlaceholderTemplate(_) => panic!("translate_name_substituting: KindPlaceholderTemplate vwat"),
@@ -5756,12 +5773,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
             }
             INameT::StructTemplate(_) => panic!("Unimplemented: translate_name_substituting StructTemplate"),
-            INameT::LambdaCitizenTemplate(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizenTemplate"),
+            INameT::LambdaCitizenTemplate(LambdaCitizenTemplateNameT { code_location, .. }) => {
+                INameI::LambdaCitizenTemplate(self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
+            }
             INameT::AnonymousSubstructTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructTemplate"),
             INameT::LambdaCitizen(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizen"),
             INameT::InterfaceTemplate(_) => panic!("Unimplemented: translate_name_substituting InterfaceTemplate"),
             INameT::Function(_) | INameT::ForwarderFunction(_) | INameT::ExternFunction(_) | INameT::FunctionBound(_) | INameT::LambdaCallFunction(_) | INameT::AnonymousSubstructConstructor(_) | INameT::PredictedFunction(_) => {
-                panic!("Unimplemented: translate_name_substituting IFunctionNameT")
+                let f: IFunctionNameT<'s, 't> = (*name).try_into().unwrap();
+                INameI::from(self.translate_function_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &f))
             }
             _ => panic!("Unimplemented: translate_name_substituting other"),
         }

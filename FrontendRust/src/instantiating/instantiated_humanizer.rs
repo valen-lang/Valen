@@ -208,9 +208,18 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
         INameI::InterfaceTemplate(t) => t.human_namee.0.to_string(),
         INameI::PackageTopLevel(_) => panic!("humanize_name: PackageTopLevel branch"),
         INameI::CodeVar(c) => c.name.0.to_string(),
-        INameI::TypingPassBlockResultVar(b) => panic!("humanize_name: TypingPassBlockResultVar branch"),
+        INameI::TypingPassBlockResultVar(b) => format!("b:{}", b.life.to_string()),
         INameI::TypingPassFunctionResultVar(_) => "(result)".to_string(),
         INameI::TypingPassTemporaryVar(t) => panic!("humanize_name: TypingPassTemporaryVar branch"),
+        INameI::LambdaCitizen(c) => humanize_name(code_map, INameI::LambdaCitizenTemplate(&c.template), None) + "<>",
+        INameI::LambdaCitizenTemplate(t) => "λC:".to_string() + &code_map(t.code_location),
+        INameI::LambdaCallFunctionTemplate(t) => "λF:".to_string() + &code_map(t.code_location),
+        INameI::ClosureParam(c) => "λP:".to_string() + &code_map(c.code_location),
+        INameI::LambdaCallFunction(n) => {
+            humanize_name(code_map, INameI::LambdaCallFunctionTemplate(&n.template), None)
+                + &humanize_generic_args(code_map, n.template_args, None)
+                + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
+        }
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }
 }

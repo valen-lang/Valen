@@ -60,7 +60,7 @@ object RegionCollapserIndividual {
       }
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
         val map = RegionCounter.countFunctionName(n)
-        val templateC = LambdaCallFunctionTemplateNameI[cI](codeLocation, paramsTT)
+        val templateC = LambdaCallFunctionTemplateNameI[cI](codeLocation, paramsTT.map(collapseCoord(_)))
         val templateArgsC = templateArgs.map(collapseTemplata(map, _))
         val paramsC =
           parameters.map(param => {
