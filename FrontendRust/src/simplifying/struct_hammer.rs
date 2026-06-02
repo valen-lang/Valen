@@ -634,11 +634,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
     pub fn lookup_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
-        hamuts: &Hamuts<'s, 'i, 'h>,
-        struct_tt: &'i StructIT<'s, 'i, cI>,
+        _hamuts: &Hamuts<'s, 'i, 'h>,
+        struct_tt: StructIT<'s, 'i, cI>,
     ) -> &'i StructDefinitionI<'s, 'i, cI>
     {
-        panic!("Unimplemented: lookup_struct");
+        hinputs.lookup_struct(&struct_tt.id)
     }
 }
 /*

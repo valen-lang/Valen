@@ -51,7 +51,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Defer(_) => panic!("RE::result: Defer"),
             ReferenceExpressionIE::If(x) => x.result,
             ReferenceExpressionIE::While(_) => panic!("RE::result: While"),
-            ReferenceExpressionIE::Mutate(_) => panic!("RE::result: Mutate"),
+            ReferenceExpressionIE::Mutate(m) => m.result,
             ReferenceExpressionIE::Return(_) => panic!("RE::result: Return"),
             ReferenceExpressionIE::Break(_) => panic!("RE::result: Break"),
             ReferenceExpressionIE::Block(x) => x.result,

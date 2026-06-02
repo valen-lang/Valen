@@ -216,8 +216,10 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn get
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn get(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> AllocationV<'v, 'h, 's> {
-        panic!("Unimplemented: get");
+    pub fn get(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, alloc_id: AllocationIdV<'v, 'h, 's>) -> &AllocationV<'v, 'h, 's> {
+        let allocation = self.objects_by_id.get(&alloc_id).expect("get: not found");
+        assert!(allocation.kind.tyype(interner) == alloc_id.tyype);
+        allocation
     }
 }
 /*
@@ -366,8 +368,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 
 // mig: fn add_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
-        self.check_reference(expected_type, reference);
+    pub fn add_local(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
+        self.check_reference(interner, expected_type, reference);
         self.get_current_call(var_addr.call_id, |call| {
             call.add_local(var_addr, reference, expected_type);
         });
@@ -398,10 +400,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn remove_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
+    pub fn remove_local(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         let variable = self.get_local(var_addr);
         let actual_reference = variable.reference;
-        self.check_reference(expected_type, actual_reference);
+        self.check_reference(interner, expected_type, actual_reference);
         self.decrement_reference_ref_count(
             IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
             actual_reference,
@@ -423,13 +425,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_local(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn get_reference_from_local(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.get_local(var_addr);
         if variable.expected_type != expected_type {
             panic!("blort");
         }
         let variable_reference = variable.reference;
-        self.check_reference(expected_type, variable_reference);
+        self.check_reference(interner, expected_type, variable_reference);
         self.transmute(variable_reference, expected_type, target_type)
     }
 }
@@ -462,10 +464,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_variable
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_variable(&mut self, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn mutate_variable(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
-        self.check_reference(expected_type, reference);
-        self.check_reference(variable.expected_type, reference);
+        self.check_reference(interner, expected_type, reference);
+        self.check_reference(interner, variable.expected_type, reference);
         let old_reference = variable.reference;
         self.decrement_reference_ref_count(
             IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
@@ -969,8 +971,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn ensure_ref_count(&self, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
-        panic!("Unimplemented: ensure_ref_count");
+    pub fn ensure_ref_count(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
+        assert!(self.contains_live_object_alloc_id(reference.alloc_id()));
+        let allocation = self.objects_by_id.get(interner, reference.alloc_id());
+        allocation.ensure_ref_count(ownership_filter, expected_num);
     }
 }
 /*
@@ -1197,9 +1201,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn take_argument
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn take_argument(&mut self, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn take_argument(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let reference = self.get_current_call(call_id, |c| c.take_argument(argument_index));
-        self.check_reference(expected_type, reference);
+        self.check_reference(interner, expected_type, reference);
         self.decrement_reference_ref_count(
             crate::testvm::values::IObjectReferrerV::ArgumentToObjectReferrer(crate::testvm::values::ArgumentToObjectReferrerV {
                 argument_id: crate::testvm::values::ArgumentIdV { call_id, index: argument_index },
@@ -1424,7 +1428,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_reference
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_reference(&self, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+    pub fn check_reference(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
         if actual_reference.ownership == OwnershipH::WeakH {
             assert!(self.contains_live_or_undead_object(actual_reference.alloc_id()));
         } else {
@@ -1448,7 +1452,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
         }
         let actual_kind = self.dereference(actual_reference, actual_reference.ownership == OwnershipH::WeakH);
-        self.check_kind(expected_type.kind, actual_kind);
+        self.check_kind(interner, expected_type.kind, actual_kind);
     }
 }
 /*
@@ -1495,7 +1499,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_kind
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_kind(&self, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
+    pub fn check_kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
         match (actual_kind, expected_type) {
             (KindV::Int(actual), KindHT::IntHT(expected)) => {
                 if actual.bits != expected.bits {
@@ -1507,7 +1511,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             (KindV::Bool(_), KindHT::BoolHT(_)) => {}
             (KindV::Str(_), KindHT::StrHT(_)) => {}
             (KindV::Float(_), KindHT::FloatHT(_)) => {}
-            (KindV::StructInstance(_), KindHT::StructHT(_)) => panic!("check_kind: Struct — pilot doesn't exercise"),
+            (KindV::StructInstance(struct_def_h), KindHT::StructHT(struct_ref_h)) => {
+                if struct_def_h.struct_h.get_ref(interner) != struct_ref_h {
+                    panic!("Expected {:?} but was {:?}", struct_ref_h, struct_def_h.struct_h);
+                }
+            }
             (KindV::ArrayInstance(_), KindHT::RuntimeSizedArrayHT(_)) => panic!("check_kind: RuntimeSizedArray — pilot doesn't exercise"),
             (KindV::ArrayInstance(_), KindHT::StaticSizedArrayHT(_)) => panic!("check_kind: StaticSizedArray — pilot doesn't exercise"),
             other => panic!("check_kind: mismatch {:?}", std::mem::discriminant(&other.1)),

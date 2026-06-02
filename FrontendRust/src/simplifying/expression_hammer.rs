@@ -73,7 +73,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 }
                 RE::Restackify(let2) => panic!("translate_expression: Restackify branch"),
                 RE::LetAndLend(let2) => panic!("translate_expression: LetAndLend branch"),
-                RE::Destroy(des2) => panic!("translate_expression: Destroy branch"),
+                RE::Destroy(des2) => {
+                    let access = self.translate_destroy(hinputs, hamuts, current_function_header, locals, des2);
+                    (access, Vec::new())
+                }
                 RE::DestroyStaticSizedArrayIntoLocals(des2) => panic!("translate_expression: DestroyStaticSizedArrayIntoLocals branch"),
                 RE::Unlet(unlet2) => {
                     let value_access = self.translate_unlet(hinputs, hamuts, current_function_header, locals, unlet2);

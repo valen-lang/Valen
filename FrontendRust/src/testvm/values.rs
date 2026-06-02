@@ -171,7 +171,22 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn ensure_ref_count(&self, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
-    panic!("Unimplemented: ensure_ref_count");
+    if matches!(self.kind, KindV::Void(_)) {
+      // Void has no RC
+      return;
+    }
+    let referrers: Vec<(&IObjectReferrerV<'v, 'h, 's>, &i32)> = match maybe_ownership_filter {
+      None => self.referrers.iter().collect(),
+      Some(ownership_filter) => self.referrers.iter().filter(|(key, _)| ownership_filter.contains(&key.ownership())).collect(),
+    };
+    let matching_referrers: Vec<i32> = referrers.iter().map(|(_, v)| **v).collect();
+    if matching_referrers.len() as i32 != expected_num {
+      panic!("Expected {} of {}but was {}:\n{:?}",
+        expected_num,
+        maybe_ownership_filter.map(|of| format!("{:?} ", of)).unwrap_or_default(),
+        matching_referrers.len(),
+        matching_referrers);
+    }
   }
 }
 /*

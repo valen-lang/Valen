@@ -3400,7 +3400,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_ce = ReferenceExpressionIE::SoftLoad(self.interner.bump().alloc(crate::instantiating::ast::expressions::SoftLoadIE { expr: inner_ce, target_ownership, result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it) }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::Destroy(_) => panic!("Unimplemented: translate_ref_expr Destroy"),
+            ReferenceExpressionTE::Destroy(d) => {
+                let crate::typing::ast::expressions::DestroyTE { expr: expr_t, struct_tt, destination_reference_variables } = **d;
+                let (_source_it, source_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr_t);
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
+                let struct_it = self.translate_struct_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_tt.id, &bound_args);
+                let dest_ref_vars: Vec<crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> =
+                    destination_reference_variables.iter().map(|dest_ref_var_t| {
+                        self.translate_reference_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
+                    }).collect();
+                let result_ce = ReferenceExpressionIE::Destroy(self.interner.bump().alloc(crate::instantiating::ast::expressions::DestroyIE {
+                    expr: source_ce,
+                    struct_tt: *self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, &struct_it) }),
+                    destination_reference_variables: self.interner.bump().alloc_slice_copy(&dest_ref_vars),
+                }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray"),
             ReferenceExpressionTE::NewImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewImmRuntimeSizedArray"),
         }

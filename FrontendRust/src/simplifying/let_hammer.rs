@@ -690,7 +690,38 @@ where 's: 'h, 's: 'i, 'i: 'h,
         des2: &DestroyIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_destroy");
+        let crate::instantiating::ast::expressions::DestroyIE { expr: source_expr2, struct_tt: struct_ti, destination_reference_variables: destination_reference_local_variables } = *des2;
+        let (source_expr_he, source_expr_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(source_expr2));
+        let struct_def_t = self.lookup_struct(hinputs, hamuts, struct_ti);
+        // We put Vector.empty here to make sure that we've consumed all the destination
+        // reference local variables.
+        let mut remaining_destination_reference_local_variables: Vec<&crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> = destination_reference_local_variables.iter().collect();
+        let mut local_types: Vec<crate::final_ast::types::CoordH<'s, 'h>> = Vec::new();
+        let mut local_indices: Vec<crate::final_ast::instructions::Local<'s, 'h>> = Vec::new();
+        for _member2 in struct_def_t.members.iter() {
+            panic!("translate_destroy: struct member iteration (current test has zero members)");
+        }
+        assert!(remaining_destination_reference_local_variables.is_empty());
+        let _ = &mut remaining_destination_reference_local_variables;
+        let destructure_h =
+            crate::final_ast::instructions::ExpressionH::DestroyH(self.interner.alloc(crate::final_ast::instructions::DestroyH {
+                struct_expression: source_expr_he.expect_struct_access(),
+                local_types: self.interner.bump().alloc_slice_copy(&local_types),
+                local_indices: self.interner.bump().alloc_slice_copy(&local_indices),
+            }));
+        let unboxings_h: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> =
+            struct_def_t.members.iter().zip(local_types.iter().zip(local_indices.iter())).flat_map(|(_member, (_local_type, _local))| {
+                panic!("translate_destroy: unboxings (current test has zero members)");
+                #[allow(unreachable_code)]
+                std::iter::empty::<crate::final_ast::instructions::ExpressionH<'s, 'h>>()
+            }).collect();
+        let mut destructure_and_unboxings: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> = vec![destructure_h];
+        destructure_and_unboxings.extend(unboxings_h);
+        let destructure_and_unboxings_h = crate::final_ast::instructions::ExpressionH::ConsecutorH(self.interner.alloc(crate::final_ast::instructions::ConsecutorH {
+            exprs: self.interner.bump().alloc_slice_copy(&destructure_and_unboxings),
+        }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, destructure_and_unboxings_h, source_expr_deferreds)
     }
 }
 /*

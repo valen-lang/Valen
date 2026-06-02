@@ -1078,7 +1078,20 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::DestroyH(_) => panic!("vonify_expression: DestroyH"),
+            ExpressionH::DestroyH(d) => {
+                let crate::final_ast::instructions::DestroyH { struct_expression: struct_expr, local_types, local_indices: locals } = *d;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Destroy".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "structExpr".to_string(), value: self.vonify_expression(struct_expr) },
+                        crate::von::ast::VonMember { field_name: "structType".to_string(), value: self.vonify_coord(struct_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "localTypes".to_string(), value: crate::von::ast::IVonData::array(local_types.iter().map(|lt| self.vonify_coord(*lt)).collect()) },
+                        crate::von::ast::VonMember { field_name: "localIndices".to_string(), value: crate::von::ast::IVonData::array(locals.iter().map(|l| self.vonify_local(*l)).collect()) },
+                        crate::von::ast::VonMember { field_name: "localsKnownLives".to_string(), value: crate::von::ast::IVonData::array(locals.iter().map(|_| crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false })).collect()) },
+                    ],
+                })
+            }
             ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => panic!("vonify_expression: DestroyStaticSizedArrayIntoLocalsH"),
             ExpressionH::StructToInterfaceUpcastH(_) => panic!("vonify_expression: StructToInterfaceUpcastH"),
             ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("vonify_expression: InterfaceToInterfaceUpcastH"),
