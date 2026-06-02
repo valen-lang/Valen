@@ -203,7 +203,15 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
   */
 
   // mig: fn run_primitive_args (Scala overload `run(args: Vector[PrimitiveKindV])`)
-  pub fn run_primitive_args<'v>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) { panic!("Unimplemented: run_primitive_args"); }
+  pub fn run_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) {
+      let interner = self.hammer_compilation.interner;
+      let hamuts = self.get_hamuts();
+      let mut vivem_dout = std::io::stdout();
+      let vivem_bump = bumpalo::Bump::new();
+      crate::testvm::vivem::execute_with_primitive_args(
+          hamuts, interner, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
+      );
+  }
   /*
   def run(args: Vector[PrimitiveKindV]): Unit = {
     Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
@@ -212,11 +220,12 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 
   // mig: fn eval_for_kind_primitive_args (Scala overload `evalForKind(args: Vector[PrimitiveKindV])`)
   pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> crate::von::ast::IVonData {
+      let interner = self.hammer_compilation.interner;
       let hamuts = self.get_hamuts();
       let mut vivem_dout = std::io::stdout();
       let vivem_bump = bumpalo::Bump::new();
       crate::testvm::vivem::execute_with_primitive_args(
-          hamuts, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
+          hamuts, interner, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
       )
   }
   /*

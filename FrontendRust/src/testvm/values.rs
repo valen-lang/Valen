@@ -281,16 +281,16 @@ sealed trait KindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     match self {
-      KindV::Void(v) => v.tyype(),
-      KindV::Int(v) => v.tyype(),
-      KindV::Bool(v) => v.tyype(),
-      KindV::Float(v) => v.tyype(),
-      KindV::Str(v) => v.tyype(),
-      KindV::Opaque(v) => v.tyype(),
-      KindV::StructInstance(v) => v.tyype(),
-      KindV::ArrayInstance(v) => v.tyype(),
+      KindV::Void(v) => v.tyype(interner),
+      KindV::Int(v) => v.tyype(interner),
+      KindV::Bool(v) => v.tyype(interner),
+      KindV::Float(v) => v.tyype(interner),
+      KindV::Str(v) => v.tyype(interner),
+      KindV::Opaque(v) => v.tyype(interner),
+      KindV::StructInstance(v) => v.tyype(interner),
+      KindV::ArrayInstance(v) => v.tyype(interner),
     }
   }
 }
@@ -336,7 +336,7 @@ case object VoidV extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl VoidV {
-  pub fn tyype<'v, 'h, 's>(&self) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+  pub fn tyype<'v, 'h, 's>(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
     RRKindV { hamut: KindHT::VoidHT(crate::final_ast::types::VoidHT), _phantom: PhantomData }
   }
 }
@@ -359,7 +359,7 @@ case class IntV(value: Long, bits: Int) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> IntV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::IntHT(crate::final_ast::types::IntHT { bits: self.bits }), _phantom: PhantomData }
   }
 }
@@ -381,7 +381,7 @@ case class BoolV(value: Boolean) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::BoolHT(crate::final_ast::types::BoolHT), _phantom: PhantomData }
   }
 }
@@ -403,7 +403,7 @@ case class FloatV(value: Double) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_float");
   }
 }
@@ -425,7 +425,7 @@ case class StrV(value: String) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> StrV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_str");
   }
 }
@@ -447,7 +447,7 @@ case class OpaqueV(opaqueHT: OpaqueHT) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_opaque");
   }
 }
@@ -472,8 +472,8 @@ case class StructInstanceV(
 */
 // mig: fn tyype
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_struct_instance");
+  pub fn tyype(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::StructHT(self.struct_h.get_ref(interner)), _phantom: PhantomData }
   }
 }
 /*
@@ -506,7 +506,7 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
 // mig: fn zero
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn zero(&self) {
-    panic!("Unimplemented: zero");
+    self.members.set(None);
   }
 }
 /*
@@ -536,7 +536,7 @@ case class ArrayInstanceV(
 */
 // mig: fn tyype
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
-  pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     panic!("Unimplemented: tyype_array_instance");
   }
 }

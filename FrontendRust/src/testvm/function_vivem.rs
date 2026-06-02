@@ -20,6 +20,7 @@ object FunctionVivem {
 // mig: fn execute_function
 pub fn execute_function<'h, 's, 'v>(
     program_h: &ProgramH<'s, 'h>,
+    interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
     stdin: &dyn Fn() -> StrI<'s>,
     stdout: &dyn Fn(StrI<'s>),
     heap: &mut HeapV<'v, 'h, 's>,
@@ -51,7 +52,7 @@ pub fn execute_function<'h, 's, 'v>(
         writeln!(handle).unwrap();
     }
     let root_expression_id = crate::testvm::values::ExpressionIdV { call_id, path: &[] };
-    let return_ref = match crate::testvm::expression_vivem::execute_node(program_h, stdin, stdout, heap, root_expression_id, &function_h.body) {
+    let return_ref = match crate::testvm::expression_vivem::execute_node(program_h, interner, stdin, stdout, heap, root_expression_id, &function_h.body) {
         crate::testvm::expression_vivem::INodeExecuteResultV::Return(r) => NodeReturnV { return_ref: r.return_ref },
         crate::testvm::expression_vivem::INodeExecuteResultV::Break(_) => panic!("execute_function: NodeBreak vwat"),
         crate::testvm::expression_vivem::INodeExecuteResultV::Continue(c) => NodeReturnV { return_ref: c.result_ref },

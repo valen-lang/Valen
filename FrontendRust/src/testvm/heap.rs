@@ -135,6 +135,34 @@ object AllocationMap {
   }
 }
 */
+// mig: fn allocation_map_add_impl
+// 1:1 with Scala `object AllocationMap.addImpl` above. `&mut HashMap` + `&mut i32`
+// mirror Scala's HashMap + IntCounter wrapper. `interner` is Exception-B (Rust's
+// sealed StructHT requires explicit interner where Scala used GC + structural eq).
+fn allocation_map_add_impl<'v, 'h, 's>(
+    objects_by_id: &mut HashMap<AllocationIdV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>,
+    next_id: &mut i32,
+    interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    ownership: OwnershipH,
+    location: LocationH,
+    kind: KindV<'v, 'h, 's>,
+) -> ReferenceV<'v, 'h, 's> {
+    let id = *next_id;
+    *next_id = id + 1;
+    if let KindV::Void(_) = kind {
+        assert_eq!(id, STARTING_ID);
+    }
+    let reference = ReferenceV {
+        actual_kind: kind.tyype(interner),
+        seen_as_kind: kind.tyype(interner),
+        ownership,
+        location,
+        num: id,
+    };
+    let allocation = AllocationV { reference, kind, referrers: HashMap::new() };
+    objects_by_id.insert(reference.alloc_id(), allocation);
+    reference
+}
 
 // mig: struct AllocationMapV<'v, 'h, 's>
 /// Temporary state
@@ -154,10 +182,10 @@ class AllocationMap(vivemDout: PrintStream) {
 // audit block above: initializes objectsById/STARTING_ID/nextId, then
 // `val void = add(MutableShareH, InlineH, VoidV)`.
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn new() -> AllocationMapV<'v, 'h, 's> {
+    pub fn new(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> AllocationMapV<'v, 'h, 's> {
         let mut objects_by_id = HashMap::new();
         let mut next_id = STARTING_ID;
-        let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Void(VoidV));
+        let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Void(VoidV));
         AllocationMapV { objects_by_id, next_id, void_ref }
     }
 }
@@ -231,36 +259,9 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn add(&mut self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        allocation_map_add_impl(&mut self.objects_by_id, &mut self.next_id, ownership, location, kind)
+    pub fn add(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        allocation_map_add_impl(&mut self.objects_by_id, &mut self.next_id, interner, ownership, location, kind)
     }
-}
-// 1:1 with Scala `object AllocationMap.addImpl` (audit block at canonical source
-// position higher in this file, before the `class AllocationMap` block). The
-// `&mut HashMap` + `&mut i32` params mirror Scala's HashMap + IntCounter
-// wrapper that gives pass-by-reference Int semantics.
-fn allocation_map_add_impl<'v, 'h, 's>(
-    objects_by_id: &mut HashMap<AllocationIdV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>,
-    next_id: &mut i32,
-    ownership: OwnershipH,
-    location: LocationH,
-    kind: KindV<'v, 'h, 's>,
-) -> ReferenceV<'v, 'h, 's> {
-    let id = *next_id;
-    *next_id = id + 1;
-    if let KindV::Void(_) = kind {
-        assert_eq!(id, STARTING_ID);
-    }
-    let reference = ReferenceV {
-        actual_kind: kind.tyype(),
-        seen_as_kind: kind.tyype(),
-        ownership,
-        location,
-        num: id,
-    };
-    let allocation = AllocationV { reference, kind, referrers: HashMap::new() };
-    objects_by_id.insert(reference.alloc_id(), allocation);
-    reference
 }
 /*
   def add(ownership: OwnershipH, location: LocationH, kind: KindV): ReferenceV =
@@ -345,9 +346,9 @@ class Heap(in_vivemDout: PrintStream) {
 // block above: stores vivemDout, builds objectsById = new AllocationMap(vivemDout),
 // initializes callIdStack/callsById, sets void = objectsById.void.
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new(vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump) -> HeapV<'v, 'h, 's> {
+    pub fn new(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump) -> HeapV<'v, 'h, 's> {
         HeapV {
-            objects_by_id: AllocationMapV::new(),
+            objects_by_id: AllocationMapV::new(interner),
             call_id_stack: Vec::new(),
             calls_by_id: HashMap::new(),
             vivem_dout,
@@ -586,7 +587,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         let result = match m.get(&alloc_id) {
             None => false,
             Some(alloc) => match alloc.kind {
-                KindV::StructInstance(_) => panic!("contains_live_object: StructInstance — pilot doesn't exercise"),
+                KindV::StructInstance(si) => match si.members.get() {
+                    None => false,
+                    Some(_) => true,
+                },
                 _ => true,
             },
         };
@@ -723,11 +727,27 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure(&self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
-        panic!("Unimplemented: destructure");
+    pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
+        let allocation = self.dereference(reference, false);
+        match allocation {
+            KindV::StructInstance(si) => {
+                let member_refs = si.members.get().expect("destructure: StructInstance members None");
+                for (index, member_ref) in member_refs.iter().enumerate() {
+                    self.decrement_reference_ref_count(
+                        crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 }, ownership: member_ref.ownership }),
+                        *member_ref,
+                    );
+                }
+                self.zero(reference);
+                self.deallocate_if_no_weak_refs(reference);
+                member_refs
+            }
+            _ => panic!("destructure: not a StructInstance"),
+        }
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Calling self.dereference(reference, false) explicitly passes the allowUndead default value because Rust has no default-argument support. Same in-tree precedent: to_von (heap.rs:1662) and check_reference (heap.rs:1429) already use this exact pattern with explicit false / explicit allow_undead arg. Exception B equivalent for default-argument adaptation. — FrontendRust/guardian-logs/request-241-1780412647292/hook-241/destructure--730.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def destructure(reference: ReferenceV): Vector[ReferenceV] = {
     val allocation = dereference(reference)
     allocation match {
@@ -755,7 +775,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         assert_eq!(allocation.get_total_ref_count(Some(OwnershipH::ImmutableBorrowH)), 0);
         assert_eq!(allocation.get_total_ref_count(Some(OwnershipH::MutableBorrowH)), 0);
         match allocation.kind {
-            KindV::StructInstance(_) => panic!("zero: StructInstance — pilot doesn't exercise"),
+            KindV::StructInstance(si) => si.zero(),
             _ => {}
         }
         {
@@ -951,8 +971,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add(&mut self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        self.objects_by_id.add(ownership, location, kind)
+    pub fn add(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        self.objects_by_id.add(interner, ownership, location, kind)
     }
 }
 /*
@@ -1192,8 +1212,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn allocate_transient
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn allocate_transient(&mut self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        let r#ref = self.add(ownership, location, kind);
+    pub fn allocate_transient(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        let r#ref = self.add(interner, ownership, location, kind);
         {
             use std::io::Write;
             let handle = &mut *self.vivem_dout;
@@ -1224,7 +1244,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             KindV::Bool(b) => write!(handle, "{}", b.value).unwrap(),
             KindV::Str(s) => write!(handle, "{}", s.value.0).unwrap(),
             KindV::Float(f) => write!(handle, "{}", f.value).unwrap(),
-            KindV::StructInstance(_) => panic!("print_kind: StructInstance — pilot doesn't exercise"),
+            KindV::StructInstance(si) => {
+                let members = si.members.get().expect("print_kind: StructInstance members None");
+                let members_str = members.iter().map(|r| format!("o{}", r.alloc_id().num)).collect::<Vec<_>>().join(", ");
+                write!(handle, "{}{{{}}}", si.struct_h.id.fully_qualified_name.0, members_str).unwrap()
+            }
             KindV::ArrayInstance(_) => panic!("print_kind: ArrayInstance — pilot doesn't exercise"),
         }
     }
@@ -1268,8 +1292,21 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_struct(&self, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: new_struct");
+    pub fn new_struct(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
+        let instance_ref: &'v StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(StructInstanceV { struct_h: struct_def_h, members: std::cell::Cell::new(Some(member_references)) });
+        let reference = self.add(interner, struct_ref_h.ownership, struct_ref_h.location, KindV::StructInstance(instance_ref));
+        for (index, member_reference) in member_references.iter().enumerate() {
+            self.increment_reference_ref_count(
+                IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 }, ownership: member_reference.ownership }),
+                *member_reference,
+            );
+        }
+        {
+            use std::io::Write;
+            write!(self.vivem_dout, " o{}=", reference.num).unwrap();
+        }
+        self.print_kind(KindV::StructInstance(instance_ref));
+        reference
     }
 }
 /*

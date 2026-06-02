@@ -3325,7 +3325,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (return_coord_it, result_ce)
             }
             ReferenceExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
-            ReferenceExpressionTE::Construct(_) => panic!("Unimplemented: translate_ref_expr Construct"),
+            ReferenceExpressionTE::Construct(c) => {
+                let crate::typing::ast::expressions::ConstructTE { struct_tt, result_reference, args } = **c;
+                let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference).coord;
+                let args_ce: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
+                    self.translate_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1
+                }).collect();
+                let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
+                let struct_it = self.translate_struct(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, struct_tt, &bound_args);
+                let result_ce = ReferenceExpressionIE::Construct(self.interner.bump().alloc(crate::instantiating::ast::expressions::ConstructIE {
+                    struct_tt: *self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, &struct_it.id) }),
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                    args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::NewMutRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewMutRuntimeSizedArray"),
             ReferenceExpressionTE::StaticArrayFromCallable(_) => panic!("Unimplemented: translate_ref_expr StaticArrayFromCallable"),
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(_) => panic!("Unimplemented: translate_ref_expr DestroyStaticSizedArrayIntoFunction"),

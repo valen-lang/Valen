@@ -172,7 +172,30 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (access, Vec::new())
                 }
                 RE::Reinterpret(a) => panic!("translate_expression: Reinterpret branch"),
-                RE::Construct(a) => panic!("translate_expression: Construct branch"),
+                RE::Construct(a) => {
+                    let (members_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, a.args);
+                    // Don't evaluate anything that can't ever be run, see BRCOBS
+                    match members_he.last().map(|e| e.result_type().kind) {
+                        Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                            panic!("Unimplemented: Construct Never branch (Hammer.consecrash)");
+                        }
+                        _ => {}
+                    }
+                    let result_type_h = self.translate_coord(hinputs, hamuts, a.result);
+                    let struct_def_h = *hamuts.struct_t_to_struct_def_h().get(&a.struct_tt).unwrap();
+                    assert_eq!(members_he.len(), struct_def_h.members.len());
+                    for (member_he, member_h) in members_he.iter().zip(struct_def_h.members.iter()) {
+                        assert_eq!(member_he.result_type(), member_h.tyype);
+                    }
+                    let member_names: Vec<&'h crate::final_ast::ast::IdH<'s, 'h>> = struct_def_h.members.iter().map(|m| m.name).collect();
+                    let new_struct_node = ExpressionH::NewStructH(self.interner.alloc(crate::final_ast::instructions::NewStructH {
+                        source_expressions: self.interner.bump().alloc_slice_fill_iter(members_he.into_iter()),
+                        target_member_names: self.interner.bump().alloc_slice_fill_iter(member_names.into_iter()),
+                        result_type: { assert!(matches!(result_type_h.kind, crate::final_ast::types::KindHT::StructHT(_))); result_type_h },
+                    }));
+                    let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
+                    (new_struct_and_deferreds_expr_h, Vec::new())
+                }
                 RE::NewMutRuntimeSizedArray(a) => panic!("translate_expression: NewMutRuntimeSizedArray branch"),
                 RE::StaticArrayFromCallable(a) => panic!("translate_expression: StaticArrayFromCallable branch"),
                 RE::DestroyStaticSizedArrayIntoFunction(a) => panic!("translate_expression: DestroyStaticSizedArrayIntoFunction branch"),

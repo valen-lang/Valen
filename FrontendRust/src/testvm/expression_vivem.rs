@@ -77,9 +77,9 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: fn make_primitive
-pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     assert!(!matches!(kind, KindV::Void(_)));
-    let r#ref = heap.allocate_transient(OwnershipH::MutableShareH, location, kind);
+    let r#ref = heap.allocate_transient(interner, OwnershipH::MutableShareH, location, kind);
     heap.increment_reference_ref_count(
         crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(
             crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: OwnershipH::MutableShareH }
@@ -114,11 +114,11 @@ pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<
 // mig: fn possess_callee_return
 pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     heap.decrement_reference_ref_count(
-        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id: callee_call_id, ownership: result.return_ref.ownership }),
+        IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id: callee_call_id, ownership: result.return_ref.ownership }),
         result.return_ref,
     );
     heap.increment_reference_ref_count(
-        crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: result.return_ref.ownership }),
+        IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: result.return_ref.ownership }),
         result.return_ref,
     );
     result.return_ref
@@ -143,7 +143,7 @@ pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_inter
   }
 */
 // mig: fn execute_node
-pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let node_name = match node {
         ExpressionH::ConstantVoidH(_) => "ConstantVoidH",
         ExpressionH::ConstantIntH(_) => "ConstantIntH",
@@ -200,7 +200,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -
         let handle = &mut *heap.vivem_dout;
         write!(handle, "<{}> ", node_name).unwrap();
     }
-    let result = execute_node_inner(program_h, stdin, stdout, heap, expression_id, node);
+    let result = execute_node_inner(program_h, interner, stdin, stdout, heap, expression_id, node);
     {
         let handle = &mut *heap.vivem_dout;
         writeln!(handle, "</{}>", node_name).unwrap();
@@ -223,17 +223,42 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -
   }
 */
 // mig: fn execute_node_inner
-pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let call_id = expression_id.call_id;
     match node {
+        ExpressionH::NewStructH(n) => {
+            let crate::final_ast::instructions::NewStructH { source_expressions: args_exprs, target_member_names: _, result_type: struct_ref_h } = **n;
+            let struct_kind_h = match struct_ref_h.kind {
+                crate::final_ast::types::KindHT::StructHT(s) => s,
+                _ => panic!("NewStructH: result_type not StructHT"),
+            };
+            let struct_def_h = program_h.lookup_struct(interner, struct_kind_h);
+            let member_references_vec: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = args_exprs.iter().enumerate().map(|(_i, _arg_expr)| {
+                panic!("NewStructH member_references map body — empty struct test path doesn't exercise")
+            }).collect();
+            for r in &member_references_vec {
+                heap.decrement_reference_ref_count(
+                    IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    *r,
+                );
+            }
+            assert_eq!(member_references_vec.len(), struct_def_h.members.len());
+            let member_references: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&member_references_vec);
+            let reference = heap.new_struct(interner, *struct_def_h, struct_ref_h, member_references);
+            heap.increment_reference_ref_count(
+                IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
+                reference,
+            );
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
+        }
         ExpressionH::ConstantIntH(c) => {
             let crate::final_ast::instructions::ConstantIntH { value, bits } = **c;
-            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Int(crate::testvm::values::IntV { value, bits, _phantom: std::marker::PhantomData }));
+            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(crate::testvm::values::IntV { value, bits, _phantom: std::marker::PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::ReturnH(r) => {
             let source_expr = r.source_expression;
-            let source_ref = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+            let source_ref = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
                 ret @ INodeExecuteResultV::Return(_) => return ret,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
                 INodeExecuteResultV::Break(_) => panic!("execute_node_inner: ReturnH source produced Break — vwat"),
@@ -257,7 +282,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
         }
         ExpressionH::StackifyH(s) => {
             let crate::final_ast::instructions::StackifyH { source_expr, local, name: _ } = **s;
-            let reference = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+            let reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
                 ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
@@ -267,18 +292,18 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
                 let handle = &mut *heap.vivem_dout;
                 write!(handle, " v{}/{}<-o{}", var_addr.call_id.call_depth, var_addr.local.id.number, reference.num).unwrap();
             }
-            discard(program_h, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
         }
         ExpressionH::BlockH(b) => {
             let source_expr = b.inner;
-            execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr)
+            execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr)
         }
         ExpressionH::ConsecutorH(c) => {
             let crate::final_ast::instructions::ConsecutorH { exprs: inner_exprs } = **c;
             let mut last_inner_expr_result_ref: Option<crate::testvm::values::ReferenceV<'v, 'h, 's>> = None;
             for (i, inner_expr) in inner_exprs.iter().enumerate() {
-                match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), inner_expr) {
+                match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), inner_expr) {
                     ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
                     INodeExecuteResultV::Continue(cc) => {
                         if i == inner_exprs.len() - 1 {
@@ -304,7 +329,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
         }
         ExpressionH::ConstantBoolH(c) => {
             let crate::final_ast::instructions::ConstantBoolH { value } = **c;
-            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
+            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::DiscardH(d) => {
@@ -317,12 +342,12 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
                 OwnershipH::WeakH => {}
                 OwnershipH::OwnH => panic!("MatchError: OwnH"),
             }
-            let source_ref = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+            let source_ref = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
             // Lots of instructions do this, not just Discard, see DINSIE.
-            discard(program_h, heap, stdout, stdin, call_id, source_expr.result_type(), source_ref);
+            discard(program_h, interner, heap, stdout, stdin, call_id, source_expr.result_type(), source_ref);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
         }
         ExpressionH::LocalLoadH(ll_ref) => {
@@ -338,20 +363,11 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
         }
-        ExpressionH::ConstantVoidH(_) => {
-            let r#ref = heap.void();
-            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
-        }
-        ExpressionH::ConstantBoolH(c) => {
-            let crate::final_ast::instructions::ConstantBoolH { value } = **c;
-            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
-            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
-        }
         ExpressionH::CallH(c) => {
             let crate::final_ast::instructions::CallH { function: prototype_h, args_expressions: args_exprs } = **c;
             let arg_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
                 args_exprs.iter().enumerate().map(|(i, arg_expr)| {
-                    match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
                         INodeExecuteResultV::Break(_) | INodeExecuteResultV::Return(_) => panic!("execute_node_inner: CallH arg produced Break/Return — vwat (BRCOBS)"),
                         INodeExecuteResultV::Continue(c) => c.result_ref,
                     }
@@ -374,7 +390,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
 
             let arg_refs_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
             let (callee_call_id, retuurn) =
-                crate::testvm::function_vivem::execute_function(program_h, stdin, stdout, heap, arg_refs_slice, function_h);
+                crate::testvm::function_vivem::execute_function(program_h, interner, stdin, stdout, heap, arg_refs_slice, function_h);
             {
                 let handle = &mut *heap.vivem_dout;
                 let prefix = "  ".repeat(expression_id.call_id.call_depth as usize);
@@ -1520,14 +1536,14 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdi
   }
 */
 // mig: fn discard
-pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
     heap.decrement_reference_ref_count(
         crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(
             crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: actual_reference.ownership }
         ),
         actual_reference,
     );
-    cleanup(program_h, heap, stdout, stdin, call_id, expected_reference, actual_reference);
+    cleanup(program_h, interner, heap, stdout, stdin, call_id, expected_reference, actual_reference);
 }
 /*
   def discard(
@@ -1544,7 +1560,7 @@ pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h
   }
 */
 // mig: fn cleanup
-pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
     if heap.get_total_ref_count(actual_reference) == 0 {
         match expected_reference.ownership {
             OwnershipH::OwnH => {}
@@ -1556,7 +1572,15 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, heap: &mut HeapV<'v, 'h
                         heap.zero(actual_reference);
                         heap.deallocate_if_no_weak_refs(actual_reference);
                     }
-                    KindHT::StructHT(_) => panic!("cleanup: StructHT — pilot doesn't exercise"),
+                    KindHT::StructHT(sr) => {
+                        let struct_def = program_h.lookup_struct(interner, sr);
+                        let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
+                        let member_refs = heap.destructure(actual_reference);
+                        assert_eq!(member_expected_types.len(), member_refs.len());
+                        for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
+                            cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref);
+                        }
+                    }
                     KindHT::InterfaceHT(_) => panic!("cleanup: InterfaceHT — pilot doesn't exercise"),
                     KindHT::RuntimeSizedArrayHT(_) => panic!("cleanup: RuntimeSizedArrayHT — pilot doesn't exercise"),
                     KindHT::StaticSizedArrayHT(_) => panic!("cleanup: StaticSizedArrayHT — pilot doesn't exercise"),

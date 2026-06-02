@@ -1366,7 +1366,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
             ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyMutRuntimeSizedArrayH"),
             ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
-            ExpressionH::NewStructH(_) => panic!("Unimplemented: result_type for NewStructH"),
+            ExpressionH::NewStructH(n) => n.result_type,
             ExpressionH::ArrayLengthH(_) => panic!("Unimplemented: result_type for ArrayLengthH"),
             ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),

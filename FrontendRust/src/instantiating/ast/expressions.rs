@@ -75,7 +75,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::ExternFunctionCall(e) => e.result,
             ReferenceExpressionIE::FunctionCall(c) => c.result,
             ReferenceExpressionIE::Reinterpret(_) => panic!("RE::result: Reinterpret"),
-            ReferenceExpressionIE::Construct(_) => panic!("RE::result: Construct"),
+            ReferenceExpressionIE::Construct(c) => c.result,
             ReferenceExpressionIE::NewMutRuntimeSizedArray(_) => panic!("RE::result: NewMutRuntimeSizedArray"),
             ReferenceExpressionIE::StaticArrayFromCallable(_) => panic!("RE::result: StaticArrayFromCallable"),
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(_) => panic!("RE::result: DestroyStaticSizedArrayIntoFunction"),

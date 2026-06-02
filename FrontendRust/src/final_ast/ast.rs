@@ -248,12 +248,12 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_function
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_function(&self, prototype: &'h PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
-    let paackage = self.lookup_package(prototype.id.package_coordinate);
-    let result = paackage.functions.iter().find(|f| f.prototype.id == prototype.id).expect("vassertSome: lookup_function");
-    assert!(prototype == result.prototype);
-    result
-  }
+    pub fn lookup_function(&self, prototype: &PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
+        let paackage = self.lookup_package(prototype.id.package_coordinate);
+        let result = paackage.functions.iter().find(|f| f.prototype.id == prototype.id).expect("lookup_function: missing");
+        assert!(prototype == result.prototype);
+        result
+    }
 }
 /*
   def lookupFunction(prototype: PrototypeH): FunctionH = {
@@ -265,9 +265,10 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_struct
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_struct(&self, struct_ref_h: crate::final_ast::types::StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
-    panic!("Unimplemented: lookup_struct");
-  }
+    pub fn lookup_struct(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
+        let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
+        paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
+    }
 }
 /*
   def lookupStruct(structRefH: StructHT): StructDefinitionH = {
@@ -277,9 +278,10 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_interface
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_interface(&self, interface_ref_h: crate::final_ast::types::InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
-    panic!("Unimplemented: lookup_interface");
-  }
+    pub fn lookup_interface(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
+        let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
+        paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
+    }
 }
 /*
   def lookupInterface(interfaceRefH: InterfaceHT): InterfaceDefinitionH = {
@@ -289,9 +291,9 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_static_sized_array
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_static_sized_array(&self, ssa_th: crate::final_ast::types::StaticSizedArrayHT<'s, 'h>) -> &'h crate::final_ast::types::StaticSizedArrayDefinitionHT<'s, 'h> {
-    panic!("Unimplemented: lookup_static_sized_array");
-  }
+    pub fn lookup_static_sized_array(&self, _ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
+        panic!("Unimplemented: ProgramH::lookup_static_sized_array")
+    }
 }
 /*
   def lookupStaticSizedArray(ssaTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
@@ -301,9 +303,9 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_runtime_sized_array
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_runtime_sized_array(&self, rsa_th: crate::final_ast::types::RuntimeSizedArrayHT<'s, 'h>) -> &'h crate::final_ast::types::RuntimeSizedArrayDefinitionHT<'s, 'h> {
-    panic!("Unimplemented: lookup_runtime_sized_array");
-  }
+    pub fn lookup_runtime_sized_array(&self, _rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
+        panic!("Unimplemented: ProgramH::lookup_runtime_sized_array")
+    }
 }
 /*
   def lookupRuntimeSizedArray(rsaTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
