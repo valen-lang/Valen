@@ -24,6 +24,8 @@
 
 **Run SCPX `--check-all`** after every slice-in or audit-block edit; duplicating Scala text already in a top-of-file blob trips it.
 
+**Resolve rebase conflicts in-place — never `git checkout --ours/--theirs` on a whole file.** Three-way merge already applied every non-conflicting hunk; `--ours`/`--theirs` throws those away. Edit only the `<<<<<<< ======= >>>>>>>` blocks.
+
 **TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).
 
 **TestVM value-type embed-by-value:** small Copy-able value-types in testvm (`VoidV`, `IntV`, `BoolV`, `FloatV`, `StrV`, `OpaqueV`, `NodeContinueV`, `NodeReturnV`, `NodeBreakV`) embed by value in containing enums; only genuinely allocated payloads (`StructInstanceV`, `ArrayInstanceV`) stay `&'v`. Value-types that flow into HashMap keys (referrers, address-types) also derive `Hash, Eq, PartialEq` — apply the cascade through Variable/Member/Element/Argument/ExpressionId address structs as needed.
