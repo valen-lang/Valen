@@ -1082,7 +1082,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => panic!("vonify_expression: DestroyStaticSizedArrayIntoLocalsH"),
             ExpressionH::StructToInterfaceUpcastH(_) => panic!("vonify_expression: StructToInterfaceUpcastH"),
             ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("vonify_expression: InterfaceToInterfaceUpcastH"),
-            ExpressionH::LocalStoreH(_) => panic!("vonify_expression: LocalStoreH"),
+            ExpressionH::LocalStoreH(s) => {
+                let crate::final_ast::instructions::LocalStoreH { local, source_expression: source_expr, local_name } = *s;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "LocalStore".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "local".to_string(), value: self.vonify_local(local) },
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "localName".to_string(), value: self.vonify_name(local_name) },
+                        crate::von::ast::VonMember { field_name: "knownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                    ],
+                })
+            }
             ExpressionH::LocalLoadH(l) => {
                 let crate::final_ast::instructions::LocalLoadH { local, target_ownership, local_name } = *l;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

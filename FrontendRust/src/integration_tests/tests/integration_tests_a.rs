@@ -516,8 +516,26 @@ fn test_multiple_invocations_of_generic() {
 */
 // mig: fn test_mutating_a_local_var
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn test_mutating_a_local_var() { panic!("Unmigrated test: test_mutating_a_local_var"); }
+fn test_mutating_a_local_var() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &typing_bump, &instantiating_bump,
+        "exported func main() {a = 3; set a = 4; }", true,
+    );
+    compile.run_primitive_args(Vec::new());
+}
 /*
   test("Test mutating a local var") {
     val compile = RunCompilation.test("exported func main() {a = 3; set a = 4; }")

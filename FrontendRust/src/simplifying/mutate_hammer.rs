@@ -40,7 +40,33 @@ where 's: 'h, 's: 'i, 'i: 'h,
         mutate2: &MutateIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_mutate");
+        let MutateIE { destination_expr: destination_expr2, source_expr: source_expr2, result: _ } = *mutate2;
+        let (source_expr_result_line, source_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(source_expr2));
+        let _source_result_pointer_type_h =
+            self.translate_coord(hinputs, hamuts, source_expr2.result());
+        let (old_value_access, destination_deferreds) = match destination_expr2 {
+            crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(crate::instantiating::ast::expressions::LocalLookupIE { local_variable: crate::instantiating::ast::ast::ILocalVariableI::ReferenceLocalVariableI(crate::instantiating::ast::ast::ReferenceLocalVariableI { name: var_id, variability: _, collapsed_coord: _ }), .. }) => {
+                self.translate_mundane_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, var_id)
+            }
+            crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(crate::instantiating::ast::expressions::LocalLookupIE { local_variable: crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(crate::instantiating::ast::ast::AddressibleLocalVariableI { name: var_id, variability, collapsed_coord: reference }), .. }) => {
+                self.translate_addressible_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, _source_result_pointer_type_h, var_id, *variability, *reference)
+            }
+            crate::instantiating::ast::expressions::AddressExpressionIE::ReferenceMemberLookup(crate::instantiating::ast::expressions::ReferenceMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
+                self.translate_mundane_member_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *struct_expr2, member_name)
+            }
+            crate::instantiating::ast::expressions::AddressExpressionIE::AddressMemberLookup(crate::instantiating::ast::expressions::AddressMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
+                self.translate_addressible_member_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *struct_expr2, member_name)
+            }
+            crate::instantiating::ast::expressions::AddressExpressionIE::StaticSizedArrayLookup(crate::instantiating::ast::expressions::StaticSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
+                self.translate_mundane_static_sized_array_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *array_expr2, *index_expr2)
+            }
+            crate::instantiating::ast::expressions::AddressExpressionIE::RuntimeSizedArrayLookup(crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
+                self.translate_mundane_runtime_sized_array_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *array_expr2, *index_expr2)
+            }
+        };
+        let combined_deferreds: Vec<_> = source_deferreds.into_iter().chain(destination_deferreds.into_iter()).collect();
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, old_value_access, combined_deferreds)
     }
 }
 /*
@@ -391,7 +417,16 @@ where 's: 'h, 's: 'i, 'i: 'h,
         var_id: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_local_mutate");
+        let local = locals.get_by_var_name(var_id).expect("local not found");
+        assert!(!locals.unstackified_vars.contains(&local.id));
+        let new_local_name = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*var_id));
+        let new_store_node =
+            ExpressionH::LocalStoreH(self.interner.alloc(crate::final_ast::instructions::LocalStoreH {
+                local,
+                source_expression: source_expr_result_line,
+                local_name: self.translate_full_name(hinputs, hamuts, &new_local_name),
+            }));
+        (new_store_node, Vec::new())
     }
 }
 /*

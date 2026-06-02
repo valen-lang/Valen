@@ -462,8 +462,19 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_variable
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_variable(&self, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: mutate_variable");
+    pub fn mutate_variable(&mut self, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
+        self.check_reference(expected_type, reference);
+        self.check_reference(variable.expected_type, reference);
+        let old_reference = variable.reference.get();
+        self.decrement_reference_ref_count(
+            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            old_reference);
+        self.increment_reference_ref_count(
+            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            reference);
+        self.get_current_call(var_address.call_id, |c| c.mutate_local(var_address, reference, expected_type));
+        old_reference
     }
 }
 /*

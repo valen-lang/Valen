@@ -79,7 +79,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let value_access = self.translate_unlet(hinputs, hamuts, current_function_header, locals, unlet2);
                     (value_access, Vec::new())
                 }
-                RE::Mutate(mutate2) => panic!("translate_expression: Mutate branch"),
+                RE::Mutate(mutate2) => {
+                    let access = self.translate_mutate(hinputs, hamuts, current_function_header, locals, mutate2);
+                    (access, Vec::new())
+                }
                 RE::Mutabilify(b) => panic!("translate_expression: Mutabilify branch"),
                 RE::Immutabilify(b) => panic!("translate_expression: Immutabilify branch"),
                 RE::Block(b) => {

@@ -1325,7 +1325,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 CoordH { ownership: src.ownership, location: src.location, kind: crate::final_ast::types::KindHT::InterfaceHT(u.target_interface) }
             }
             ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH"),
-            ExpressionH::LocalStoreH(_) => panic!("Unimplemented: result_type for LocalStoreH"),
+            ExpressionH::LocalStoreH(s) => s.local.type_h,
             ExpressionH::LocalLoadH(l) => {
                 let location = match (l.target_ownership, l.local.type_h.location) {
                     (OwnershipH::ImmutableBorrowH, _) | (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,

@@ -210,6 +210,25 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
 object FileCoordinateMap {
 */
 }
+// Realizes Scala's case-class auto-toString for PackageCoordinate:
+//   PackageCoordinate(<module>,Vector(<pkg1>, <pkg2>, ...))
+// Per Scala convention: no space between case-class fields, comma+space between Vector elements.
+// NOTE: Rust StrI's Display canon (interner.rs:40) prints the bare string, while Scala StrI's
+// own case-class toString wraps as `StrI(<value>)`. This divergence is inherited from the
+// existing canon and not propagated here.
+impl<'a> std::fmt::Display for PackageCoordinate<'a> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "PackageCoordinate({},Vector(", self.module)?;
+    let mut first = true;
+    for pkg in self.packages.as_slice() {
+      if !first { write!(f, ", ")?; }
+      write!(f, "{}", pkg)?;
+      first = false;
+    }
+    write!(f, "))")
+  }
+}
+/* Guardian: disable-all */
 // mig: const TEST_MODULE
 const TEST_MODULE: &str = "test";
 /*

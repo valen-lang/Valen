@@ -588,6 +588,16 @@ pub struct IdH<'s, 'h> where 's: 'h {
     pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
     pub _phantom_h: PhantomData<&'h ()>,
 }
+// Realizes Scala's case-class auto-toString for IdH:
+//   IdH(<local_name>,<package_coordinate>,<shortened_name>,<fully_qualified_name>)
+// Per Scala convention: no space between case-class fields. StrI fields print as bare strings
+// per Rust StrI's existing Display canon (interner.rs:40); Scala would wrap each as StrI(<v>).
+impl<'s, 'h> std::fmt::Display for IdH<'s, 'h> where 's: 'h {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
+    }
+}
+/* Guardian: disable-all */
 /*
 // A unique name for something in the program.
 case class IdH(

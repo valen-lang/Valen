@@ -89,8 +89,8 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 */
 // mig: fn mutate_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
-  pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
-    panic!("Unimplemented: mutate_local");
+  pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, _expected_type: CoordH<'s, 'h>) {
+    self.locals.get(&var_addr).expect("mutate_local: not found").reference.set(reference);
   }
 }
 /*

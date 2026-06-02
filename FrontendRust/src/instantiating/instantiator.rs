@@ -3206,7 +3206,18 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::Mutate(_) => panic!("Unimplemented: translate_ref_expr Mutate"),
+            ReferenceExpressionTE::Mutate(m) => {
+                let crate::typing::ast::expressions::MutateTE { destination_expr: destination_tt, source_expr } = **m;
+                let (destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
+                let (_source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
+                let result_it = destination_it;
+                let result_ce = ReferenceExpressionIE::Mutate(self.interner.bump().alloc(crate::instantiating::ast::expressions::MutateIE {
+                    destination_expr: destination_ce,
+                    source_expr: source_ce,
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::Restackify(_) => panic!("Unimplemented: translate_ref_expr Restackify"),
             ReferenceExpressionTE::Transmigrate(_) => panic!("Unimplemented: translate_ref_expr Transmigrate"),
             ReferenceExpressionTE::Return(r) => {
