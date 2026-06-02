@@ -382,7 +382,7 @@ case class BoolV(value: Boolean) extends PrimitiveKindV {
 // mig: fn tyype
 impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
   pub fn tyype(&self) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_bool");
+    RRKindV { hamut: KindHT::BoolHT(crate::final_ast::types::BoolHT), _phantom: PhantomData }
   }
 }
 /*

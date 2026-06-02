@@ -298,6 +298,15 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn 
             let r#ref = take_argument(heap, call_id, argument_index, result_type);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
+        ExpressionH::ConstantVoidH(_) => {
+            let r#ref = heap.void();
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
+        ExpressionH::ConstantBoolH(c) => {
+            let crate::final_ast::instructions::ConstantBoolH { value } = **c;
+            let r#ref = make_primitive(heap, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
         ExpressionH::DiscardH(d) => {
             let source_expr = d.source_expression;
             match source_expr.result_type().ownership {
