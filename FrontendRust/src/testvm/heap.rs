@@ -27,11 +27,14 @@ import dev.vale.von.{IVonData, VonArray, VonBool, VonFloat, VonInt, VonMember, V
 
 import scala.collection.mutable
 */
-// mig: struct AdapterForExternsV<'v, 'h, 's>
+// mig: struct AdapterForExternsV<'a, 'v, 'h, 's>
 /// Temporary state
-pub struct AdapterForExternsV<'v, 'h, 's> {
+pub struct AdapterForExternsV<'a, 'v, 'h, 's>
+where 's: 'h, 'h: 'v, 'v: 'a,
+{
     pub program_h: &'h ProgramH<'s, 'h>,
-    pub heap: HeapV<'v, 'h, 's>,
+    pub interner: &'a crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    pub heap: &'a mut HeapV<'v, 'h, 's>,
     pub call_id: CallIdV<'v, 'h, 's>,
     pub stdin: &'v dyn Fn() -> StrI<'s>,
     pub stdout: &'v dyn Fn(StrI<'s>),
@@ -46,9 +49,9 @@ class AdapterForExterns(
 ) {
 */
 // mig: fn dereference
-impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
+impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
     pub fn dereference(&self, reference: ReferenceV<'v, 'h, 's>) -> KindV<'v, 'h, 's> {
-        panic!("Unimplemented: dereference");
+        self.heap.dereference(reference, false)
     }
 }
 /*
@@ -57,7 +60,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 */
 // mig: fn new_opaque
-impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
+impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
     pub fn new_opaque(&self, opaque_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: new_opaque");
     }
@@ -69,9 +72,12 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 */
 // mig: fn add_allocation_for_return
-impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
-    pub fn add_allocation_for_return(&self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: add_allocation_for_return");
+impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
+    pub fn add_allocation_for_return(&mut self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        let r#ref = self.heap.add(self.interner, ownership, location, kind);
+//    heap.incrementReferenceRefCount(ResultToObjectReferrer(callId), ref) // incrementing because putting it in a return
+//    ReturnV(callId, ref)
+        r#ref
     }
 }
 /*
@@ -83,7 +89,7 @@ impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
   }
 */
 // mig: fn make_void
-impl<'v, 'h, 's> AdapterForExternsV<'v, 'h, 's> {
+impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
     pub fn make_void(&self) -> ReferenceV {
         panic!("Unimplemented: make_void");
     }

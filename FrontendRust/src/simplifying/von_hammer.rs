@@ -1144,7 +1144,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::ExternCallH(_) => panic!("vonify_expression: ExternCallH"),
+            ExpressionH::ExternCallH(e) => {
+                let crate::final_ast::instructions::ExternCallH { function: function_expr, args_expressions: args_exprs } = *e;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ExternCall".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "function".to_string(), value: self.vonify_prototype(function_expr) },
+                        crate::von::ast::VonMember { field_name: "argExprs".to_string(), value: crate::von::ast::IVonData::array(args_exprs.iter().map(|a| self.vonify_expression(*a)).collect()) },
+                        crate::von::ast::VonMember { field_name: "argTypes".to_string(), value: crate::von::ast::IVonData::array(args_exprs.iter().map(|a| self.vonify_coord(a.result_type())).collect()) },
+                    ],
+                })
+            }
             ExpressionH::InterfaceCallH(_) => panic!("vonify_expression: InterfaceCallH"),
             ExpressionH::IfH(_) => panic!("vonify_expression: IfH"),
             ExpressionH::WhileH(_) => panic!("vonify_expression: WhileH"),

@@ -14,7 +14,7 @@ import dev.vale.vfail
 object VivemExterns {
 */
 // mig: fn panic
-pub fn panic<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: panic"); }
+pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: panic"); }
 /*
   def panic(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)
@@ -22,7 +22,7 @@ pub fn panic<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Ref
   }
 */
 // mig: fn add_float_float
-pub fn add_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_float_float"); }
+pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_float_float"); }
 /*
   def addFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -36,7 +36,7 @@ pub fn add_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args
   }
 */
 // mig: fn multiply_float_float
-pub fn multiply_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_float_float"); }
+pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_float_float"); }
 /*
   def multiplyFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -50,7 +50,7 @@ pub fn multiply_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>,
   }
 */
 // mig: fn divide_float_float
-pub fn divide_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_float_float"); }
+pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_float_float"); }
 /*
   def divideFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -64,7 +64,7 @@ pub fn divide_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, a
   }
 */
 // mig: fn subtract_float_float
-pub fn subtract_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_float_float"); }
+pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_float_float"); }
 /*
   def subtractFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -78,7 +78,7 @@ pub fn subtract_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>,
   }
 */
 // mig: fn add_str_str
-pub fn add_str_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_str_str"); }
+pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_str_str"); }
 /*
   def addStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 6)
@@ -92,7 +92,7 @@ pub fn add_str_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'
   }
 */
 // mig: fn getch
-pub fn getch<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: getch"); }
+pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: getch"); }
 /*
   def getch(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.isEmpty)
@@ -102,7 +102,7 @@ pub fn getch<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Ref
   }
 */
 // mig: fn less_than_float
-pub fn less_than_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_float"); }
+pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_float"); }
 /*
   def lessThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -116,7 +116,7 @@ pub fn less_than_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args
   }
 */
 // mig: fn greater_than_float
-pub fn greater_than_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_float"); }
+pub fn greater_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_float"); }
 /*
   def greaterThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -130,7 +130,7 @@ pub fn greater_than_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, a
   }
 */
 // mig: fn eq_float_float
-pub fn eq_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_float_float"); }
+pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_float_float"); }
 /*
   def eqFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -144,7 +144,7 @@ pub fn eq_float_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn eq_str_str
-pub fn eq_str_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_str_str"); }
+pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_str_str"); }
 /*
   def eqStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 6)
@@ -159,7 +159,7 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v
   }
 */
 // mig: fn eq_bool_bool
-pub fn eq_bool_bool<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_bool_bool"); }
+pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_bool_bool"); }
 /*
   def eqBoolBool(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -173,7 +173,7 @@ pub fn eq_bool_bool<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn and
-pub fn and<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: and"); }
+pub fn and<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: and"); }
 /*
   def and(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -187,7 +187,7 @@ pub fn and<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Refer
   }
 */
 // mig: fn or
-pub fn or<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: or"); }
+pub fn or<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: or"); }
 /*
   def or(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -201,7 +201,7 @@ pub fn or<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Refere
   }
 */
 // mig: fn not
-pub fn not<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: not"); }
+pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: not"); }
 /*
   def not(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -210,7 +210,7 @@ pub fn not<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Refer
   }
 */
 // mig: fn sqrt
-pub fn sqrt<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: sqrt"); }
+pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: sqrt"); }
 /*
   def sqrt(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -219,7 +219,7 @@ pub fn sqrt<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Refe
   }
 */
 // mig: fn str_length
-pub fn str_length<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: str_length"); }
+pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: str_length"); }
 /*
   def strLength(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -228,7 +228,7 @@ pub fn str_length<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v
   }
 */
 // mig: fn cast_float_str
-pub fn cast_float_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_str"); }
+pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_str"); }
 /*
   def castFloatStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -237,7 +237,7 @@ pub fn cast_float_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn negate_float
-pub fn negate_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: negate_float"); }
+pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: negate_float"); }
 /*
   def negateFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -246,7 +246,7 @@ pub fn negate_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn print
-pub fn print<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: print"); }
+pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: print"); }
 /*
   def print(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 3)
@@ -258,7 +258,17 @@ pub fn print<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Ref
   }
 */
 // mig: fn add_i32
-pub fn add_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i32"); }
+pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32 + b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("add_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def addI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -272,7 +282,7 @@ pub fn add_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [R
   }
 */
 // mig: fn multiply_i32
-pub fn multiply_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i32"); }
+pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i32"); }
 /*
   def multiplyI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -286,7 +296,7 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn divide_i32
-pub fn divide_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i32"); }
+pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i32"); }
 /*
   def divideI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -300,7 +310,7 @@ pub fn divide_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v
   }
 */
 // mig: fn mod_i32
-pub fn mod_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i32"); }
+pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i32"); }
 /*
   def modI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -318,7 +328,7 @@ pub fn mod_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [R
   }
 */
 // mig: fn subtract_i32
-pub fn subtract_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i32"); }
+pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i32"); }
 /*
   def subtractI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -332,7 +342,7 @@ pub fn subtract_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn less_than_i32
-pub fn less_than_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i32"); }
+pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i32"); }
 /*
   def lessThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -346,7 +356,7 @@ pub fn less_than_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: 
   }
 */
 // mig: fn less_than_or_eq_i32
-pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i32"); }
+pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i32"); }
 /*
   def lessThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -360,7 +370,7 @@ pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, 
   }
 */
 // mig: fn greater_than_i32
-pub fn greater_than_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i32"); }
+pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i32"); }
 /*
   def greaterThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -374,7 +384,7 @@ pub fn greater_than_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, arg
   }
 */
 // mig: fn greater_than_or_eq_i32
-pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i32"); }
+pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i32"); }
 /*
   def greaterThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -388,7 +398,7 @@ pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's
   }
 */
 // mig: fn eq_i32
-pub fn eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i32"); }
+pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i32"); }
 /*
   def eqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -402,7 +412,7 @@ pub fn eq_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Re
   }
 */
 // mig: fn cast_i32_str
-pub fn cast_i32_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_str"); }
+pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_str"); }
 /*
   def castI32Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -411,7 +421,7 @@ pub fn cast_i32_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn cast_float_i32
-pub fn cast_float_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i32"); }
+pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i32"); }
 /*
   def castFloatI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -420,7 +430,7 @@ pub fn cast_float_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn cast_i32_float
-pub fn cast_i32_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_float"); }
+pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_float"); }
 /*
   def castI32Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -429,7 +439,7 @@ pub fn cast_i32_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn add_i64
-pub fn add_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
+pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
 /*
   def addI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -443,7 +453,7 @@ pub fn add_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [R
   }
 */
 // mig: fn multiply_i64
-pub fn multiply_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i64"); }
+pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i64"); }
 /*
   def multiplyI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -457,7 +467,7 @@ pub fn multiply_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn divide_i64
-pub fn divide_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i64"); }
+pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i64"); }
 /*
   def divideI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -471,7 +481,7 @@ pub fn divide_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v
   }
 */
 // mig: fn truncate_i64_to_i32
-pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: truncate_i64_to_i32"); }
+pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: truncate_i64_to_i32"); }
 /*
   def truncateI64ToI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -481,7 +491,7 @@ pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, 
   }
 */
 // mig: fn mod_i64
-pub fn mod_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
+pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
 /*
   def modI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -499,7 +509,7 @@ pub fn mod_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [R
   }
 */
 // mig: fn subtract_i64
-pub fn subtract_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i64"); }
+pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i64"); }
 /*
   def subtractI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -513,7 +523,7 @@ pub fn subtract_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn less_than_i64
-pub fn less_than_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i64"); }
+pub fn less_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i64"); }
 /*
   def lessThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -527,7 +537,7 @@ pub fn less_than_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: 
   }
 */
 // mig: fn less_than_or_eq_i64
-pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i64"); }
+pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i64"); }
 /*
   def lessThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -541,7 +551,7 @@ pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, 
   }
 */
 // mig: fn greater_than_i64
-pub fn greater_than_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i64"); }
+pub fn greater_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i64"); }
 /*
   def greaterThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -555,7 +565,7 @@ pub fn greater_than_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, arg
   }
 */
 // mig: fn greater_than_or_eq_i64
-pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i64"); }
+pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i64"); }
 /*
   def greaterThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -569,7 +579,7 @@ pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's
   }
 */
 // mig: fn eq_i64
-pub fn eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i64"); }
+pub fn eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i64"); }
 /*
   def eqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -583,7 +593,7 @@ pub fn eq_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [Re
   }
 */
 // mig: fn cast_i64_str
-pub fn cast_i64_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_str"); }
+pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_str"); }
 /*
   def castI64Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -592,7 +602,7 @@ pub fn cast_i64_str<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &
   }
 */
 // mig: fn cast_float_i64
-pub fn cast_float_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i64"); }
+pub fn cast_float_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i64"); }
 /*
   def castFloatI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -601,7 +611,7 @@ pub fn cast_float_i64<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn cast_i64_float
-pub fn cast_i64_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_float"); }
+pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_float"); }
 /*
   def castI64Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -610,7 +620,7 @@ pub fn cast_i64_float<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, args:
   }
 */
 // mig: fn new_vec
-pub fn new_vec<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
+pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
 /*
   def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)
@@ -622,7 +632,7 @@ pub fn new_vec<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &
   }
 */
 // mig: fn new_vec_with_capacity
-pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
+pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
 /*
   def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -639,7 +649,7 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>
   }
 */
 // mig: fn vec_capacity
-pub fn vec_capacity<'v, 'h, 's>(memory: &AdapterForExternsV<'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
+pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
 /*
   def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)

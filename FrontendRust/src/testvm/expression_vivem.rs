@@ -143,7 +143,7 @@ pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_inter
   }
 */
 // mig: fn execute_node
-pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let node_name = match node {
         ExpressionH::ConstantVoidH(_) => "ConstantVoidH",
         ExpressionH::ConstantIntH(_) => "ConstantIntH",
@@ -223,7 +223,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::
   }
 */
 // mig: fn execute_node_inner
-pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &dyn Fn() -> StrI<'s>, stdout: &dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
+pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let call_id = expression_id.call_id;
     match node {
         ExpressionH::NewStructH(n) => {
@@ -440,6 +440,37 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &c
                 }
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
+        ExpressionH::ExternCallH(e) => {
+            let crate::final_ast::instructions::ExternCallH { function: prototype_h, args_expressions: args_exprs } = **e;
+            let extern_function = crate::testvm::function_vivem::get_extern_function(program_h, prototype_h);
+            let arg_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
+                args_exprs.iter().enumerate().map(|(i, arg_expr)| {
+                    match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                        INodeExecuteResultV::Break(_) | INodeExecuteResultV::Return(_) => panic!("execute_node_inner: ExternCallH arg produced Break/Return — vwat (BRCOBS)"),
+                        INodeExecuteResultV::Continue(c) => c.result_ref,
+                    }
+                }).collect();
+            let arg_refs_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
+            let result_ref = {
+                let mut adapter = crate::testvm::heap::AdapterForExternsV {
+                    program_h,
+                    interner,
+                    heap: &mut *heap,
+                    call_id: crate::testvm::values::CallIdV { call_depth: expression_id.call_id.call_depth + 1, function: prototype_h, _phantom: std::marker::PhantomData },
+                    stdin,
+                    stdout,
+                };
+                extern_function(&mut adapter, arg_refs_slice)
+            };
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: result_ref.ownership }), result_ref);
+            // Special case for externs; externs arent allowed to change ref counts at all.
+            // So, we just drop these normally.
+            for (r, arg_expr) in arg_refs.iter().zip(args_exprs.iter()) {
+                let expected_type = arg_expr.result_type();
+                discard(program_h, interner, heap, stdout, stdin, call_id, expected_type, *r);
+            }
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref })
         }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
@@ -1578,7 +1609,7 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdi
   }
 */
 // mig: fn discard
-pub fn discard<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+pub fn discard<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &'v dyn Fn(StrI<'s>), stdin: &'v dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
     heap.decrement_reference_ref_count(
         crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(
             crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: actual_reference.ownership }

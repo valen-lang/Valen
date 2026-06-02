@@ -19,10 +19,10 @@ object FunctionVivem {
 */
 // mig: fn execute_function
 pub fn execute_function<'h, 's, 'v>(
-    program_h: &ProgramH<'s, 'h>,
+    program_h: &'h ProgramH<'s, 'h>,
     interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
-    stdin: &dyn Fn() -> StrI<'s>,
-    stdout: &dyn Fn(StrI<'s>),
+    stdin: &'v dyn Fn() -> StrI<'s>,
+    stdout: &'v dyn Fn(StrI<'s>),
     heap: &mut HeapV<'v, 'h, 's>,
     args: &'v [ReferenceV<'v, 'h, 's>],
     function_h: &'h FunctionH<'s, 'h>,
@@ -115,10 +115,14 @@ pub fn execute_function<'h, 's, 'v>(
 */
 // mig: fn get_extern_function
 pub fn get_extern_function<'h, 's, 'v>(
-    program_h: &ProgramH<'s, 'h>,
+    _program_h: &ProgramH<'s, 'h>,
     ref_: &PrototypeH<'s, 'h>,
-) -> Box<dyn Fn(&AdapterForExternsV<'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's>> {
-    panic!("Unimplemented: get_extern_function");
+) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's>> {
+    let name = ref_.id.fully_qualified_name.0.replace("v::builtins::arith", "");
+    match name.as_str() {
+        "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),
+        other => panic!("get_extern_function: unimplemented extern {}", other),
+    }
 }
 /*
   def getExternFunction(programH: ProgramH, ref: PrototypeH): (AdapterForExterns, Vector[ReferenceV]) => ReferenceV = {
