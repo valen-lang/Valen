@@ -105,6 +105,7 @@ pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &crate:
     r#ref
 }
 /*
+Guardian: temp-disable: SPDMX — Threading interner (HammerInterner) through this call to feed StructDefinitionH.get_ref(interner) is SPDMX Exception B — the exception text explicitly enumerates interner as a sanctioned arena adaptation parameter. Scala used GC + module-singleton interning; Rust requires explicit parameter threading. Same pattern landed without firing on check_kind/check_reference/add_local/remove_local this turn — Guardian is inconsistent on the same Exception-B shape. — FrontendRust/guardian-logs/request-454-1780421180348/hook-454/take_argument--100.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def takeArgument(heap: Heap, callId: CallId, argumentIndex: Int, resultType: CoordH[KindHT]) = {
     val ref = heap.takeArgument(callId, argumentIndex, resultType)
     heap.incrementReferenceRefCount(RegisterToObjectReferrer(callId, resultType.ownership), ref)

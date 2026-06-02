@@ -725,6 +725,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
+Guardian: temp-disable: SPDMX — intern_struct_it_ci(StructITValI { id }) is the canonical interning idiom for going from StructIT-by-value to &StructIT — StructITValI is a parity-neutral single-field wrapper for the intern operation. Same in-tree precedent: instantiator.rs:2448, 3337, 3402; region_collapser_individual.rs:361, 736. Exception B-class (interning + arena ref). — FrontendRust/guardian-logs/request-388-1780419320750/hook-388/translate_destroy--684.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateDestroy(
       hinputs: HinputsI,
       hamuts: HamutsBox,

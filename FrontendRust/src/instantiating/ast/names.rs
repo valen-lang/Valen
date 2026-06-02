@@ -684,6 +684,18 @@ impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for ISubKindTemplateNameI
         }
     }
 }
+// Rust-only narrowing INameI -> IStructTemplateNameI (mirrors T-side). No Scala counterpart.
+impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IStructTemplateNameI<'s, 'i, R> where 's: 'i {
+    type Error = ();
+    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+        match name {
+            INameI::StructTemplate(x) => Ok(IStructTemplateNameI::StructTemplate(x)),
+            INameI::AnonymousSubstructTemplate(x) => Ok(IStructTemplateNameI::AnonymousSubstructTemplate(x)),
+            INameI::LambdaCitizenTemplate(x) => Ok(IStructTemplateNameI::LambdaCitizenTemplate(x)),
+            _ => Err(()),
+        }
+    }
+}
 // mig: impl IStructTemplateNameI
 /*
 sealed trait IStructTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateNameI[R] {

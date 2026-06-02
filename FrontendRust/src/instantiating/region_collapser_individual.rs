@@ -269,6 +269,10 @@ where 's: 'i {
         INameI::LambdaCitizenTemplate(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { code_location, .. }) => {
             INameI::LambdaCitizenTemplate(interner.intern_lambda_citizen_template_name_ci(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
         }
+        INameI::StructTemplate(stn) => {
+            let crate::instantiating::ast::names::StructTemplateNameI { human_name, .. } = **stn;
+            INameI::StructTemplate(interner.intern_struct_template_name_ci(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name }))
+        }
         other => panic!("Unimplemented: collapse_name {:?}", std::mem::discriminant(other)),
     }
 }

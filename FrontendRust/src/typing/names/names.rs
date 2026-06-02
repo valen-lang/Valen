@@ -137,7 +137,6 @@ impl<'s, 't> IdT<'s, 't> {
         }
       }
     */
-    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern.
     pub fn init_non_package_id(&self, interner: &TypingInterner<'s, 't>) -> Option<IdT<'s, 't>> {
         if self.init_steps.is_empty() {
             None

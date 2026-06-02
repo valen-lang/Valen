@@ -5772,7 +5772,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = *ftn;
                 INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
             }
-            INameT::StructTemplate(_) => panic!("Unimplemented: translate_name_substituting StructTemplate"),
+            INameT::StructTemplate(stn) => {
+                let crate::typing::names::names::StructTemplateNameT { human_name, .. } = *stn;
+                INameI::StructTemplate(self.interner.intern_struct_template_name_si(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name }))
+            }
             INameT::LambdaCitizenTemplate(LambdaCitizenTemplateNameT { code_location, .. }) => {
                 INameI::LambdaCitizenTemplate(self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
             }

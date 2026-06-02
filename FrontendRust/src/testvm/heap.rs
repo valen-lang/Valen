@@ -442,6 +442,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Threading interner (HammerInterner) through this call to feed StructDefinitionH.get_ref(interner) is SPDMX Exception B — the exception text explicitly enumerates interner as a sanctioned arena adaptation parameter. Scala used GC + module-singleton interning; Rust requires explicit parameter threading. Same pattern landed without firing on check_kind/check_reference/add_local/remove_local this turn — Guardian is inconsistent on the same Exception-B shape. — FrontendRust/guardian-logs/request-436-1780420663942/hook-436/get_reference_from_local--426.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getReferenceFromLocal(
       varAddr: VariableAddressV,
       expectedType: CoordH[KindHT],

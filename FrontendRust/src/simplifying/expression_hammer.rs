@@ -74,8 +74,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::Restackify(let2) => panic!("translate_expression: Restackify branch"),
                 RE::LetAndLend(let2) => panic!("translate_expression: LetAndLend branch"),
                 RE::Destroy(des2) => {
-                    let access = self.translate_destroy(hinputs, hamuts, current_function_header, locals, des2);
-                    (access, Vec::new())
+                    let destroy_h = self.translate_destroy(hinputs, hamuts, current_function_header, locals, des2);
+                    // Compiler destructures put things in local variables (even though hammer itself
+                    // uses registers internally to make that happen).
+                    // Since all the members landed in locals, we still need something to ret, so we
+                    // return a void.
+                    (destroy_h, Vec::new())
                 }
                 RE::DestroyStaticSizedArrayIntoLocals(des2) => panic!("translate_expression: DestroyStaticSizedArrayIntoLocals branch"),
                 RE::Unlet(unlet2) => {
