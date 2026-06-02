@@ -42,7 +42,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
     assert!(!locals.iter().any(|(addr, _)| addr.local.id.number == var_addr.local.id.number));
     locals.insert(var_addr, crate::testvm::values::VariableV {
       id: var_addr,
-      reference: std::cell::Cell::new(reference),
+      reference,
       expected_type: tyype,
     });
   }
@@ -90,7 +90,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 // mig: fn mutate_local
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, _expected_type: CoordH<'s, 'h>) {
-    self.locals.get(&var_addr).expect("mutate_local: not found").reference.set(reference);
+    self.locals.get_mut(&var_addr).expect("mutate_local: not found").reference = reference;
   }
 }
 /*

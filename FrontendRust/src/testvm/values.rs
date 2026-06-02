@@ -963,7 +963,7 @@ override def hashCode(): Int = hash;  }
 #[derive(Clone)]
 pub struct VariableV<'v, 'h, 's> {
   pub id: VariableAddressV<'v, 'h, 's>,
-  pub reference: Cell<ReferenceV<'v, 'h, 's>>,
+  pub reference: ReferenceV<'v, 'h, 's>,
   pub expected_type: CoordH<'s, 'h>,
 }
 /*

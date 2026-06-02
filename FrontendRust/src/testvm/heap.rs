@@ -400,7 +400,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         let variable = self.get_local(var_addr);
-        let actual_reference = variable.reference.get();
+        let actual_reference = variable.reference;
         self.check_reference(expected_type, actual_reference);
         self.decrement_reference_ref_count(
             IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
@@ -428,7 +428,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         if variable.expected_type != expected_type {
             panic!("blort");
         }
-        let variable_reference = variable.reference.get();
+        let variable_reference = variable.reference;
         self.check_reference(expected_type, variable_reference);
         self.transmute(variable_reference, expected_type, target_type)
     }
@@ -466,7 +466,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
         self.check_reference(expected_type, reference);
         self.check_reference(variable.expected_type, reference);
-        let old_reference = variable.reference.get();
+        let old_reference = variable.reference;
         self.decrement_reference_ref_count(
             IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
             old_reference);
