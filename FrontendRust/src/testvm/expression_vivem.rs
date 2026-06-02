@@ -401,7 +401,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &c
         }
         ExpressionH::LocalStoreH(s) => {
             let crate::final_ast::instructions::LocalStoreH { local: local_index, source_expression: source_expr, local_name: name } = **s;
-            let reference = match execute_node(program_h, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+            let reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
@@ -413,7 +413,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &c
                 write!(handle, "<-{}", reference.num).unwrap();
             }
             let old_ref = heap.mutate_variable(var_address, reference, source_expr.result_type());
-            discard(program_h, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: old_ref.ownership }), old_ref);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_ref })
         }
