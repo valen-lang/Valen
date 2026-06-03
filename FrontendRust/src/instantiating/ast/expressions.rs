@@ -9,6 +9,7 @@ use crate::utils::range::RangeS;
 use crate::instantiating::ast::types::{
     CoordI, OwnershipI, MutabilityI, VariabilityI,
     InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
+    KindIT, BoolIT,
 };
 use crate::instantiating::ast::names::{IdI, IVarNameI};
 use crate::instantiating::ast::ast::{
@@ -48,7 +49,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Restackify(_) => panic!("RE::result: Restackify"),
             ReferenceExpressionIE::Unlet(x) => x.result,
             ReferenceExpressionIE::Discard(_) => panic!("RE::result: Discard"),
-            ReferenceExpressionIE::Defer(_) => panic!("RE::result: Defer"),
+            ReferenceExpressionIE::Defer(x) => x.result,
             ReferenceExpressionIE::If(x) => x.result,
             ReferenceExpressionIE::While(_) => panic!("RE::result: While"),
             ReferenceExpressionIE::Mutate(m) => m.result,
@@ -66,7 +67,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::AsSubtype(_) => panic!("RE::result: AsSubtype"),
             ReferenceExpressionIE::VoidLiteral(v) => v.result(),
             ReferenceExpressionIE::ConstantInt(x) => x.result(),
-            ReferenceExpressionIE::ConstantBool(_) => panic!("RE::result: ConstantBool"),
+            ReferenceExpressionIE::ConstantBool(x) => x.result(),
             ReferenceExpressionIE::ConstantStr(x) => x.result(),
             ReferenceExpressionIE::ConstantFloat(x) => x.result(),
             ReferenceExpressionIE::ArgLookup(x) => x.coord,
@@ -1107,7 +1108,9 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }) }
+	}
 }
 /*
   override def result = CoordI[cI](MutableShareI, BoolIT())

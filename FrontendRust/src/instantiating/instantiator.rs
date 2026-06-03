@@ -3170,7 +3170,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_ref_expr(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, perspective_region_t: &RegionT, expr: &ReferenceExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, ReferenceExpressionIE<'s, 'i, cI>) {
         let _denizen_template_name = Compiler::get_template(self.typing_interner, *denizen_name);
         match expr {
-            ReferenceExpressionTE::LetAndLend(_) => panic!("Unimplemented: translate_ref_expr LetAndLend"),
+            ReferenceExpressionTE::LetAndLend(lal) => {
+                let crate::typing::ast::expressions::LetAndLendTE { variable, expr: source_expr_t, target_ownership: outer_ownership_t } = **lal;
+                let (source_subjective_it, source_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr_t);
+                let result_ownership_c =
+                    Self::translate_ownership(
+                        substitutions,
+                        perspective_region_t,
+                        &Self::compose_ownerships_second(&outer_ownership_t, &source_subjective_it.ownership),
+                        &source_expr_t.result().coord.region);
+                let result_it = CoordI { ownership: result_ownership_c, kind: source_subjective_it.kind };
+                let (_local_it, local_i) =
+                    self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &variable);
+                let result_ce = ReferenceExpressionIE::LetAndLend(self.interner.bump().alloc(LetAndLendIE {
+                    variable: local_i,
+                    expr: source_ce,
+                    target_ownership: result_ownership_c,
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::LockWeak(_) => panic!("Unimplemented: translate_ref_expr LockWeak"),
             ReferenceExpressionTE::BorrowToWeak(_) => panic!("Unimplemented: translate_ref_expr BorrowToWeak"),
             ReferenceExpressionTE::LetNormal(l) => {
@@ -3204,7 +3224,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_ce = ReferenceExpressionIE::Discard(self.interner.alloc(DiscardIE { expr: inner_ce }));
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
-            ReferenceExpressionTE::Defer(_) => panic!("Unimplemented: translate_ref_expr Defer"),
+            ReferenceExpressionTE::Defer(d) => {
+                let crate::typing::ast::expressions::DeferTE { inner_expr, deferred_expr } = **d;
+                let (inner_it, inner_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
+                let (_deferred_it, deferred_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &deferred_expr);
+                let result_it = inner_it;
+                let result_ce = ReferenceExpressionIE::Defer(self.interner.bump().alloc(DeferIE {
+                    inner_expr: inner_ce,
+                    deferred_expr: deferred_ce,
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::If(if_te) => {
                 let (_condition_it, condition_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &if_te.condition);
@@ -4370,8 +4403,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_ownership
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_ownership(_substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _ownership_t: &OwnershipT, _region_t: &RegionT) -> OwnershipI {
-        panic!("Unimplemented: translate_ownership");
+    pub fn translate_ownership(_substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, ownership_t: &OwnershipT, _region_t: &RegionT) -> OwnershipI {
+        match ownership_t {
+            OwnershipT::Own => OwnershipI::Own,
+            OwnershipT::Borrow => OwnershipI::MutableBorrow,
+            OwnershipT::Share => OwnershipI::MutableShare,
+            OwnershipT::Weak => panic!("translate_ownership: WeakT vimpl"),
+        }
     }
 }
 /*
@@ -4504,8 +4542,22 @@ Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough/breakpo
 */
 // mig: fn compose_ownerships
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn compose_ownerships_second(_outer_ownership: &OwnershipT, _inner_ownership: &OwnershipI) -> OwnershipT {
-        panic!("Unimplemented: compose_ownerships_second");
+    pub fn compose_ownerships_second(outer_ownership: &OwnershipT, inner_ownership: &OwnershipI) -> OwnershipT {
+        match (outer_ownership, inner_ownership) {
+            (OwnershipT::Own, OwnershipI::Own) => OwnershipT::Own,
+            (OwnershipT::Own, OwnershipI::MutableBorrow) => OwnershipT::Borrow,
+            (OwnershipT::Borrow, OwnershipI::Own) => OwnershipT::Borrow,
+            (OwnershipT::Borrow, OwnershipI::MutableBorrow) => OwnershipT::Borrow,
+            (OwnershipT::Borrow, OwnershipI::Weak) => OwnershipT::Weak,
+            (OwnershipT::Borrow, OwnershipI::MutableShare) => OwnershipT::Share,
+            (OwnershipT::Weak, OwnershipI::Own) => OwnershipT::Weak,
+            (OwnershipT::Weak, OwnershipI::MutableBorrow) => OwnershipT::Weak,
+            (OwnershipT::Weak, OwnershipI::Weak) => OwnershipT::Weak,
+            (OwnershipT::Weak, OwnershipI::MutableShare) => OwnershipT::Share,
+            (OwnershipT::Share, OwnershipI::MutableShare) => OwnershipT::Share,
+            (OwnershipT::Own, OwnershipI::MutableShare) => OwnershipT::Share,
+            other => panic!("compose_ownerships_second: vwat {:?}", other),
+        }
     }
 }
 /*
@@ -5464,8 +5516,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     life: crate::instantiating::ast::ast::LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
-            IVarNameT::TypingPassTemporaryVar(_) => panic!("Unimplemented: translate_var_name TypingPassTemporaryVar"),
-            IVarNameT::ConstructingMember(_) => panic!("Unimplemented: translate_var_name ConstructingMember"),
+            IVarNameT::TypingPassTemporaryVar(crate::typing::names::names::TypingPassTemporaryVarNameT { life: crate::typing::ast::ast::LocationInFunctionEnvironmentT { path, .. } }) => {
+                IVarNameI::TypingPassTemporaryVar(interner.intern_typing_pass_temporary_var_name_si(crate::instantiating::ast::names::TypingPassTemporaryVarNameI {
+                    _marker: std::marker::PhantomData,
+                    life: crate::instantiating::ast::ast::LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+                }))
+            }
+            IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(interner.intern_constructing_member_name_si(crate::instantiating::ast::names::ConstructingMemberNameI { _marker: std::marker::PhantomData, name: x.name })),
             IVarNameT::Iterable(_) => panic!("Unimplemented: translate_var_name Iterable"),
             IVarNameT::Iterator(_) => panic!("Unimplemented: translate_var_name Iterator"),
             IVarNameT::IterationOption(_) => panic!("Unimplemented: translate_var_name IterationOption"),

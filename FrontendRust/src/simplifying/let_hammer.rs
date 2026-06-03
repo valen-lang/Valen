@@ -180,7 +180,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let_ie: &LetAndLendIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_let_and_point");
+        let LetAndLendIE { variable: local_variable, expr: source_expr2, target_ownership: _target_ownership, result: _ } = *let_ie;
+        let (source_expr_he, deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(source_expr2));
+        let source_result_pointer_type_h = self.translate_coord(hinputs, hamuts, source_expr2.result());
+        let borrow_access = match local_variable {
+            crate::instantiating::ast::ast::ILocalVariableI::ReferenceLocalVariableI(r) => {
+                self.translate_mundane_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &r.name, r.variability)
+            }
+            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(_) => panic!("translate_let_and_point: AddressibleLocalVariableI arm"),
+        };
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, borrow_access, deferreds)
     }
 }
 /*
@@ -487,7 +497,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
         variability: VariabilityI,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_mundane_let_and_point");
+        let stackify_h = self.translate_mundane_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, var_id, variability);
+        let (borrow_access, borrow_deferreds) =
+            self.translate_mundane_local_load(hinputs, hamuts, current_function_header, locals, var_id, source_expr2.result(), let_ie.result.ownership);
+        assert!(borrow_deferreds.is_empty());
+        let _ = borrow_deferreds;
+        ExpressionH::ConsecutorH(self.interner.alloc(crate::final_ast::instructions::ConsecutorH {
+            exprs: self.interner.bump().alloc_slice_copy(&[ExpressionH::StackifyH(stackify_h), borrow_access]),
+        }))
     }
 }
 /*

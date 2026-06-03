@@ -74,7 +74,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (let_h, Vec::new())
                 }
                 RE::Restackify(let2) => panic!("translate_expression: Restackify branch"),
-                RE::LetAndLend(let2) => panic!("translate_expression: LetAndLend branch"),
+                RE::LetAndLend(let2) => {
+                    let borrow_access = self.translate_let_and_point(hinputs, hamuts, current_function_header, locals, let2);
+                    (borrow_access, Vec::new())
+                }
                 RE::Destroy(des2) => {
                     let destroy_h = self.translate_destroy(hinputs, hamuts, current_function_header, locals, des2);
                     // Compiler destructures put things in local variables (even though hammer itself
@@ -134,7 +137,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::ArraySize(a) => panic!("translate_expression: ArraySize branch"),
                 RE::LockWeak(a) => panic!("translate_expression: LockWeak branch"),
                 RE::BorrowToWeak(a) => panic!("translate_expression: BorrowToWeak branch"),
-                RE::Defer(a) => panic!("translate_expression: Defer branch"),
+                RE::Defer(d2) => {
+                    let crate::instantiating::ast::expressions::DeferIE { inner_expr, deferred_expr, result: _ } = *d2;
+                    let (inner_expr_he, inner_deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
+                    let mut new_deferreds: Vec<ExpressionIE<'s, 'i, cI>> = vec![ExpressionIE::Reference(deferred_expr)];
+                    new_deferreds.extend(inner_deferreds);
+                    (inner_expr_he, new_deferreds)
+                }
                 RE::If(if2) => {
                     let maybe_access = self.translate_if(hinputs, hamuts, current_function_header, locals, if2);
                     (maybe_access, Vec::new())
@@ -886,7 +896,45 @@ where 's: 'h, 's: 'i, 'i: 'h,
         if deferreds.is_empty() {
             return original_expr;
         }
-        panic!("Unimplemented: translate_deferreds non-empty branch");
+        let (deferred_exprs, deferred_deferreds) =
+            self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &deferreds);
+        match deferred_exprs.last().map(|e| e.result_type().kind) {
+            Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                return crate::simplifying::hammer::consecrash(self.interner, locals, &deferred_exprs);
+            }
+            _ => {}
+        }
+        if deferred_exprs.iter().map(|e| e.result_type().kind).any(|k| !matches!(k, crate::final_ast::types::KindHT::VoidHT(_))) {
+            panic!("translate_deferreds: vcurious — deferred had non-void result");
+        }
+        if locals.locals.len() != locals.locals.len() {
+            // There shouldnt have been any locals introduced
+            panic!("wat");
+        }
+        assert!(deferred_deferreds.is_empty());
+        assert!(!deferred_exprs.is_empty());
+        let new_exprs: Vec<ExpressionH<'s, 'h>> =
+            if matches!(original_expr.result_type().kind, crate::final_ast::types::KindHT::VoidHT(_)) {
+                let void = ExpressionH::ConstantVoidH(self.interner.alloc(crate::final_ast::instructions::ConstantVoidH));
+                let mut v = vec![original_expr];
+                v.extend(deferred_exprs.iter().copied());
+                v.push(void);
+                v
+            } else {
+                let temporary_result_local = locals.add_hammer_local(original_expr.result_type(), crate::final_ast::types::Variability::Final);
+                let stackify = ExpressionH::StackifyH(self.interner.alloc(crate::final_ast::instructions::StackifyH { source_expr: original_expr, local: temporary_result_local, name: None }));
+                let unstackify = ExpressionH::UnstackifyH(self.interner.alloc(crate::final_ast::instructions::UnstackifyH { local: temporary_result_local }));
+                locals.mark_unstackified(temporary_result_local.id);
+                let mut v = vec![stackify];
+                v.extend(deferred_exprs.iter().copied());
+                v.push(unstackify);
+                v
+            };
+        let result = ExpressionH::ConsecutorH(self.interner.alloc(crate::final_ast::instructions::ConsecutorH {
+            exprs: self.interner.bump().alloc_slice_copy(&new_exprs),
+        }));
+        assert!(original_expr.result_type() == result.result_type());
+        result
     }
 }
 /*

@@ -216,11 +216,12 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
         INameI::CodeVar(c) => c.name.0.to_string(),
         INameI::TypingPassBlockResultVar(b) => format!("b:{}", b.life.to_string()),
         INameI::TypingPassFunctionResultVar(_) => "(result)".to_string(),
-        INameI::TypingPassTemporaryVar(t) => panic!("humanize_name: TypingPassTemporaryVar branch"),
+        INameI::TypingPassTemporaryVar(t) => format!("t:{}", t.life.to_string()),
         INameI::LambdaCitizen(c) => humanize_name(code_map, INameI::LambdaCitizenTemplate(&c.template), None) + "<>",
         INameI::LambdaCitizenTemplate(t) => "λC:".to_string() + &code_map(t.code_location),
         INameI::LambdaCallFunctionTemplate(t) => "λF:".to_string() + &code_map(t.code_location),
         INameI::ClosureParam(c) => "λP:".to_string() + &code_map(c.code_location),
+        INameI::ConstructingMember(c) => format!("cm:{}", c.name.0),
         INameI::MagicParam(m) => "mp:".to_string() + &code_map(m.code_location_2),
         INameI::LambdaCallFunction(n) => {
             humanize_name(code_map, INameI::LambdaCallFunctionTemplate(&n.template), None)

@@ -212,12 +212,19 @@ where 's: 'i {
             }))
         }
         IVarNameI::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_ci(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
-        IVarNameI::TypingPassTemporaryVar(_) => panic!("Unimplemented: collapse_var_name TypingPassTemporaryVar"),
+        IVarNameI::TypingPassTemporaryVar(crate::instantiating::ast::names::TypingPassTemporaryVarNameI { life, .. }) => {
+            IVarNameI::TypingPassTemporaryVar(interner.intern_typing_pass_temporary_var_name_ci(crate::instantiating::ast::names::TypingPassTemporaryVarNameI {
+                _marker: std::marker::PhantomData,
+                life: *life,
+            }))
+        }
         IVarNameI::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_ci(crate::instantiating::ast::names::TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
         IVarNameI::ClosureParam(crate::instantiating::ast::names::ClosureParamNameI { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_ci(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
         IVarNameI::MagicParam(crate::instantiating::ast::names::MagicParamNameI { code_location_2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_ci(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location_2 })),
         IVarNameI::Iterable(_) => panic!("Unimplemented: collapse_var_name Iterable"),
-        IVarNameI::ConstructingMember(_) => panic!("Unimplemented: collapse_var_name ConstructingMember"),
+        IVarNameI::ConstructingMember(crate::instantiating::ast::names::ConstructingMemberNameI { name, .. }) => {
+            IVarNameI::ConstructingMember(interner.intern_constructing_member_name_ci(crate::instantiating::ast::names::ConstructingMemberNameI { _marker: std::marker::PhantomData, name: *name }))
+        }
         IVarNameI::Iterator(_) => panic!("Unimplemented: collapse_var_name Iterator"),
         IVarNameI::IterationOption(_) => panic!("Unimplemented: collapse_var_name IterationOption"),
         IVarNameI::Self_(_) => panic!("Unimplemented: collapse_var_name SelfName"),

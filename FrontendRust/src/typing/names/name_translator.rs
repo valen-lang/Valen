@@ -410,6 +410,10 @@ where 's: 't,
                 IVarNameT::Self_(self.typing_interner.intern_self_name(
                     SelfNameT { _phantom: std::marker::PhantomData }))
             }
+            IVarNameS::ConstructingMemberName(n) => {
+                IVarNameT::ConstructingMember(self.typing_interner.intern_constructing_member_name(
+                    ConstructingMemberNameT { name: n, _phantom: std::marker::PhantomData }))
+            }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", std::mem::discriminant(&name));
             }
