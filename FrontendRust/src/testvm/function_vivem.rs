@@ -141,6 +141,7 @@ pub fn get_extern_function<'h, 's, 'v>(
         "addStr" => Box::new(crate::testvm::vivem_externs::add_str_str),
         "streq" => Box::new(crate::testvm::vivem_externs::eq_str_str),
         "castI32Str" => Box::new(crate::testvm::vivem_externs::cast_i32_str),
+        "castI64Str" => Box::new(crate::testvm::vivem_externs::cast_i64_str),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }
