@@ -50,6 +50,10 @@ TOOL_SCHEMA = {
             "shield_file": {
                 "type": "string",
                 "description": "Path to the shield .md file from the denial message (the Shield: path)"
+            },
+            "target_line": {
+                "type": "integer",
+                "description": "1-based line number to disambiguate when multiple definitions share the same name in the file. Required when Guardian responds with 'Multiple definitions named ... Provide target_line to disambiguate'. The line number is encoded in the verdict filename as 'name--LINE.INDEX.ShieldName.verdict.md' (e.g. result--43.0.ScalaParityDuringMigration-SPDMX... → target_line=43)."
             }
         },
         "required": ["file_path", "verdict_file", "reason", "shield_file"]
@@ -103,12 +107,15 @@ def handle_tools_call(msg):
         return
 
     args = params.get("arguments", {})
-    payload = json.dumps({
+    payload_dict = {
         "file_path": args.get("file_path", ""),
         "verdict_file": args.get("verdict_file", ""),
         "reason": args.get("reason", ""),
         "shield_file": args.get("shield_file", ""),
-    }).encode("utf-8")
+    }
+    if "target_line" in args:
+        payload_dict["target_line"] = args["target_line"]
+    payload = json.dumps(payload_dict).encode("utf-8")
 
     try:
         req = urllib.request.Request(
