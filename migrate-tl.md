@@ -18,6 +18,8 @@
 
 **Per-test Scala-arg discipline:** check the Scala for each test before defaulting to in-tree precedent — Scala explicit args, default args, and "previous Rust test did X" can disagree, and Scala parity wins.
 
+**`@TFITCX` classification is not the spec; Scala equality is.** If a `/// Arena-allocated`-tagged type is compared with case-class `==` in Scala, reclass to `/// Value-type` and derive — don't fight the convention with workarounds.
+
 **Shield exceptions vs temp-disables.** Shield exceptions encode expected, mechanical divergences that recur uniformly; temp-disables flag surprising ones that warrant architect review per site.
 
 **NCWSRX false-positives** often mean the Scala audit block sits outside the diff window; fix the slicing (move it adjacent to its Rust def) rather than temp-disable.

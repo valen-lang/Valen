@@ -160,7 +160,8 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 }
 */
 }
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IStructMemberT<'s, 't> {
     Normal(NormalStructMemberT<'s, 't>),
     Variadic(VariadicStructMemberT<'s, 't>),
@@ -180,7 +181,8 @@ impl<'s, 't> IStructMemberT<'s, 't> where 's: 't {
     }
     */
 }
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub variability: VariabilityT,
@@ -196,7 +198,8 @@ case class NormalStructMemberT(
   vpass()
 }
 */
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VariadicStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub tyype: PlaceholderTemplataT<'s, 't>,
@@ -209,7 +212,8 @@ case class VariadicStructMemberT(
   vpass()
 }
 */
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IMemberTypeT<'s, 't> {
     Address(AddressMemberTypeT<'s, 't>),
     Reference(ReferenceMemberTypeT<'s, 't>),
@@ -257,14 +261,16 @@ impl<'s, 't> IMemberTypeT<'s, 't> where 's: 't {
     }
     */
 }
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
 }
 /*
 case class AddressMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
-/// Arena-allocated (see @TFITCX)
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
 }

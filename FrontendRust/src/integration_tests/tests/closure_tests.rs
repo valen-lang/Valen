@@ -214,9 +214,154 @@ fn test_closure_s_local_variables() {
 */
 // mig: fn test_returning_a_nonmutable_closured_variable_from_the_closure
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
-    panic!("Unmigrated test: test_returning_a_nonmutable_closured_variable_from_the_closure");
+fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int { x = 4; return {x}(); }", true,
+    );
+    {
+        let interner = compile.interner;
+        let coutputs = compile.expect_compiler_outputs();
+
+        // The struct should have an int x in it which is a reference type.
+        // It's a reference because we know for sure that it's moved from our child,
+        // which means we don't need to check afterwards, which means it doesn't need
+        // to be boxed/addressible.
+        let closured_vars_struct_tt =
+            coutputs.lookup_lambda_in("main").header.params.first().unwrap().tyype.kind.expect_struct();
+        let closured_vars_struct_def =
+            coutputs.structs.iter().find(|struct_def| {
+                *crate::typing::compiler::Compiler::get_template(interner, struct_def.instantiated_citizen.id) ==
+                    *crate::typing::compiler::Compiler::get_template(interner, closured_vars_struct_tt.id)
+            }).expect("closured_vars_struct_def not found");
+
+        let expected_members = vec![
+            crate::typing::ast::citizens::IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
+                name: crate::typing::names::names::IVarNameT::CodeVar(interner.intern_code_var_name(crate::typing::names::names::CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: std::marker::PhantomData })),
+                variability: crate::typing::types::types::VariabilityT::Final,
+                tyype: crate::typing::ast::citizens::IMemberTypeT::Reference(crate::typing::ast::citizens::ReferenceMemberTypeT {
+                    reference: crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Share,
+                        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+                    },
+                }),
+            }),
+        ];
+        assert_eq!(closured_vars_struct_def.members, expected_members.as_slice());
+
+        let lambda = coutputs.lookup_lambda_in("main");
+        // Make sure we're doing a referencememberlookup, since it's a reference member
+        // in the closure struct.
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
+            crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(crate::typing::ast::expressions::ReferenceMemberLookupTE {
+                member_name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }),
+                ..
+            }) => Some(())
+        );
+
+        // Make sure there's a function that takes in the closured vars struct, and returns an int
+        let function_calls = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(coutputs.lookup_function_by_str("main")),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE {
+                callable: p @ crate::typing::ast::ast::PrototypeT { id: crate::typing::names::names::IdT { local_name: crate::typing::names::names::INameT::LambdaCallFunction(_), .. }, .. },
+                ..
+            }) => Some(*p)
+        );
+        assert_eq!(function_calls.len(), 1);
+        let prototype: crate::typing::ast::ast::PrototypeT<'_, '_> = function_calls[0];
+        let lambda_call_name: &crate::typing::names::names::LambdaCallFunctionNameT = match prototype.id.local_name {
+            crate::typing::names::names::INameT::LambdaCallFunction(n) => n,
+            _ => panic!("expected LambdaCallFunction local_name"),
+        };
+        let params = lambda_call_name.parameters;
+        let return_type = prototype.return_type;
+        match params.first().unwrap() {
+            crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT {
+                    id: crate::typing::names::names::IdT {
+                        init_steps: &[crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
+                            template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("main"), .. },
+                            template_args: &[],
+                            parameters: &[],
+                            ..
+                        })],
+                        local_name: crate::typing::names::names::INameT::LambdaCitizen(_),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            } => {}
+            other => panic!("expected lambda struct param, got {:?}", other),
+        }
+        assert_eq!(return_type, crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+        });
+
+        // Make sure we make it with a function pointer and a constructed vars struct
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::Construct(crate::typing::ast::expressions::ConstructTE {
+                struct_tt: crate::typing::types::types::StructTT {
+                    id: crate::typing::names::names::IdT {
+                        init_steps: &[crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
+                            template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("main"), .. },
+                            template_args: &[],
+                            parameters: &[],
+                            ..
+                        })],
+                        local_name: crate::typing::names::names::INameT::LambdaCitizen(_),
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }) => Some(())
+        );
+
+        // Make sure we call the function somewhere
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
+            crate::typing::test::traverse::NodeRefT::LocalLookup(crate::typing::ast::expressions::LocalLookupTE {
+                local_variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::ClosureParam(_),
+                    variability: crate::typing::types::types::VariabilityT::Final,
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
+    }
+
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Test returning a nonmutable closured variable from the closure") {
