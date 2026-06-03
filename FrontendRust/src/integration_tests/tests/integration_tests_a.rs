@@ -39,8 +39,31 @@ class IntegrationTestsA extends FunSuite with Matchers {
 */
 // mig: fn roguelike_typing_pass
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn roguelike_typing_pass() { panic!("Unmigrated test: roguelike_typing_pass"); }
+fn roguelike_typing_pass() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/roguelike.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.get_compiler_outputs() {
+        Ok(_) => {}
+        Err(e) => { println!("DIAG-RAW-ERR: {:?}", e); panic!("compile failed"); }
+    }
+}
 /*
   test("Roguelike typing pass") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"), true)

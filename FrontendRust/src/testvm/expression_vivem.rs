@@ -714,6 +714,23 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, consumer_me.result_type(), consumer_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
         }
+        ExpressionH::BreakH(_) => {
+            return INodeExecuteResultV::Break(NodeBreakV { _phantom: std::marker::PhantomData });
+        }
+        ExpressionH::WhileH(w) => {
+            let crate::final_ast::instructions::WhileH { body_block } = **w;
+            let mut continuing = true;
+            while continuing {
+                match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &body_block) {
+                    ret @ INodeExecuteResultV::Return(_) => return ret,
+                    INodeExecuteResultV::Break(_) => continuing = false,
+                    INodeExecuteResultV::Continue(c) => {
+                        discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, body_block.result_type(), c.result_ref);
+                    }
+                }
+            }
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

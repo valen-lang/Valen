@@ -1292,7 +1292,16 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::WhileH(_) => panic!("vonify_expression: WhileH"),
+            ExpressionH::WhileH(w) => {
+                let crate::final_ast::instructions::WhileH { body_block } = *w;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "While".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "bodyBlock".to_string(), value: self.vonify_expression(body_block) },
+                    ],
+                })
+            }
             ExpressionH::ConsecutorH(c) => {
                 let crate::final_ast::instructions::ConsecutorH { exprs: nodes } = *c;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
@@ -1370,7 +1379,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyImmRuntimeSizedArrayH"),
             ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyMutRuntimeSizedArrayH"),
-            ExpressionH::BreakH(_) => panic!("vonify_expression: BreakH"),
+            ExpressionH::BreakH(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                tyype: "Break".to_string(),
+                id: None,
+                members: vec![],
+            }),
             ExpressionH::NewStructH(n) => {
                 let crate::final_ast::instructions::NewStructH { source_expressions, target_member_names, result_type } = *n;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
