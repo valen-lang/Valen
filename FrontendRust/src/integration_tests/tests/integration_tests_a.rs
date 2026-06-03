@@ -897,9 +897,32 @@ fn equals_equals_equals_false() { panic!("Unmigrated test: equals_equals_equals_
   }
 */
 // mig: fn lambda_can_call_sibling_lambda
+// See LCCSL
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn lambda_can_call_sibling_lambda() { panic!("Unmigrated test: lambda_can_call_sibling_lambda"); }
+fn lambda_can_call_sibling_lambda() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  continueF = (x) => { x };\n  barkF = (x) => { continueF(x) };\n  return barkF(42);\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
+}
 /*
   // See LCCSL
   test("Lambda can call sibling lambda") {
