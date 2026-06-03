@@ -151,7 +151,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn expect_compiler_outputs
-  pub fn expect_compiler_outputs(&self) { panic!("Unimplemented: expect_compiler_outputs"); }
+  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+    self.hammer_compilation.expect_compiler_outputs()
+  }
   /*
   def expectCompilerOutputs(): HinputsT = fullCompilation.expectCompilerOutputs()
   */

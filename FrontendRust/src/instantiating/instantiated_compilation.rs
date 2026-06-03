@@ -242,8 +242,8 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn expect_compiler_outputs(&mut self) -> () {
-    panic!("InstantiatedCompilation.expect_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 42")
+  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+    self.typing_pass_compilation.expect_compiler_outputs()
   }
 }
 /*

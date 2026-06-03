@@ -239,8 +239,12 @@ pub fn get_monouts() -> () {
 */
 
 // mig: fn expect_compiler_outputs
-pub fn expect_compiler_outputs() -> () {
-  panic!("Unimplemented: expect_compiler_outputs");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+    self.instantiated_compilation.expect_compiler_outputs()
+  }
 }
 /*
   def expectCompilerOutputs(): HinputsT = instantiatedCompilation.expectCompilerOutputs()
