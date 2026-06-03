@@ -1357,7 +1357,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::PushRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for PushRuntimeSizedArrayH"),
             ExpressionH::PopRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for PopRuntimeSizedArrayH"),
             ExpressionH::StaticArrayFromCallableH(_) => panic!("Unimplemented: result_type for StaticArrayFromCallableH"),
-            ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => panic!("Unimplemented: result_type for DestroyStaticSizedArrayIntoFunctionH"),
+            ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
             ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyMutRuntimeSizedArrayH"),
             ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
