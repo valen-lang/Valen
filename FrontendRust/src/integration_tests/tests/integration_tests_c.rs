@@ -479,9 +479,29 @@ fn call_borrow_parameter_with_shared_reference() {
 */
 // mig: fn supplying_bounded_struct_to_struct_accepting
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn supplying_bounded_struct_to_struct_accepting() {
-    panic!("Unmigrated test: supplying_bounded_struct_to_struct_accepting");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Bork<T> where func drop(T)void { a T; }\n\nstruct Spork<T> where func drop(T)void { a T; }\n\nexported func main() int {\n  return Spork<Bork<int>>(Bork(7)).a.a;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 /*
   test("Supplying bounded struct to struct accepting") {
