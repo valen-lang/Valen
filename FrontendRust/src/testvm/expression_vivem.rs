@@ -567,6 +567,28 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             };
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: block_result })
         }
+        ExpressionH::MemberStoreH(ms) => {
+            let crate::final_ast::instructions::MemberStoreH { result_type: _result_type, struct_expression: struct_expr, member_index, source_expression: source_expr, member_name } = **ms;
+            let struct_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &struct_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let source_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let address = crate::testvm::values::MemberAddressV { struct_id: struct_reference.alloc_id(), field_index: member_index };
+            {
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " {}(\"{}\")", address.to_string(), member_name).unwrap();
+                write!(handle, "<-{}", source_reference.num).unwrap();
+            }
+            let old_member_reference = heap.mutate_struct(address, source_reference, source_expr.result_type());
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: old_member_reference.ownership }), old_member_reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, struct_expr.result_type(), struct_reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, source_expr.result_type(), source_reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_member_reference })
+        }
         ExpressionH::MemberLoadH(ml) => {
             let crate::final_ast::instructions::MemberLoadH { struct_expression: struct_expr, member_index, expected_member_type, result_type, member_name: _ } = **ml;
             let struct_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &struct_expr) {

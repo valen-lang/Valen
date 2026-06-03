@@ -497,7 +497,9 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
 // mig: fn get_reference_member
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
-    panic!("Unimplemented: get_reference_member");
+    let members = self.members.get().expect("StructInstance has no members");
+    let (_tyype, r#ref) = (self.struct_h.members[index as usize].tyype, members[index as usize]);
+    r#ref
   }
 }
 /*
@@ -509,8 +511,10 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
 */
 // mig: fn set_reference_member
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
-  pub fn set_reference_member(&self, index: i32, reference: ReferenceV<'v, 'h, 's>) {
-    panic!("Unimplemented: set_reference_member");
+  pub fn set_reference_member(&self, vivem_bump: &'v bumpalo::Bump, index: i32, reference: ReferenceV<'v, 'h, 's>) {
+    let mut new_members: Vec<ReferenceV<'v, 'h, 's>> = self.members.get().expect("StructInstance has no members").to_vec();
+    new_members[index as usize] = reference;
+    self.members.set(Some(vivem_bump.alloc_slice_copy(&new_members)));
   }
 }
 /*

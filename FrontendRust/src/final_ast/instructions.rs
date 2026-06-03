@@ -1335,7 +1335,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 };
                 CoordH { ownership: l.target_ownership, location, kind: l.local.type_h.kind }
             }
-            ExpressionH::MemberStoreH(_) => panic!("Unimplemented: result_type for MemberStoreH"),
+            ExpressionH::MemberStoreH(m) => m.result_type,
             ExpressionH::MemberLoadH(m) => m.result_type,
             ExpressionH::NewArrayFromValuesH(_) => panic!("Unimplemented: result_type for NewArrayFromValuesH"),
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("Unimplemented: result_type for StaticSizedArrayStoreH"),

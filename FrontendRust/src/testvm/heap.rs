@@ -522,8 +522,22 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_struct(&self, member_address: MemberAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: mutate_struct");
+    pub fn mutate_struct(&mut self, member_address: MemberAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let MemberAddressV { struct_id: object_id, field_index } = member_address;
+        let allocation = self.objects_by_id.objects_by_id.get(&object_id).expect("get: not found");
+        match allocation.kind {
+            KindV::StructInstance(si) => {
+                let members = si.members.get().expect("StructInstance has no members");
+                let old_member_reference = members[field_index as usize];
+                self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), old_member_reference);
+                assert!(si.struct_h.members[field_index as usize].tyype == expected_type);
+                si.get_reference_member(field_index);
+                si.set_reference_member(self.vivem_bump, field_index, reference);
+                self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), reference);
+                old_member_reference
+            }
+            _ => panic!("mutate_struct: not a StructInstance"),
+        }
     }
 }
 /*

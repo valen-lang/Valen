@@ -306,7 +306,23 @@ where 's: 'h, 's: 'i, 'i: 'h,
         member_name: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_member_mutate");
+        let (destination_result_line, destination_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
+        let struct_it = match struct_expr2.result().kind {
+            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            _ => panic!("translate_mundane_member_mutate: struct_expr2.result.kind not StructIT"),
+        };
+        let struct_def_i = hinputs.lookup_struct(&struct_it.id);
+        let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("memberIndex >= 0") as i32;
+        let struct_def_h = *hamuts.struct_t_to_struct_def_h().get(struct_it).expect("structDefH not in map");
+        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(crate::final_ast::instructions::MemberStoreH {
+            result_type: struct_def_h.members[member_index as usize].tyype,
+            struct_expression: destination_result_line.expect_struct_access(),
+            member_index,
+            source_expression: source_expr_result_line,
+            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*member_name).into())),
+        }));
+        (store_node, destination_deferreds)
     }
 }
 /*

@@ -1142,7 +1142,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::MemberStoreH(_) => panic!("vonify_expression: MemberStoreH"),
+            ExpressionH::MemberStoreH(ms) => {
+                let crate::final_ast::instructions::MemberStoreH { result_type, struct_expression: struct_expr, member_index, source_expression: source_expr, member_name } = *ms;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "MemberStore".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "structExpr".to_string(), value: self.vonify_expression(struct_expr) },
+                        crate::von::ast::VonMember { field_name: "structType".to_string(), value: self.vonify_coord(struct_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "structKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "memberIndex".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: member_index as i64 }) },
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "memberName".to_string(), value: self.vonify_name(member_name) },
+                    ],
+                })
+            }
             ExpressionH::MemberLoadH(ml) => {
                 let crate::final_ast::instructions::MemberLoadH { struct_expression: struct_expr, member_index, expected_member_type, result_type, member_name } = *ml;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
