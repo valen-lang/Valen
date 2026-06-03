@@ -129,6 +129,7 @@ pub fn get_extern_function<'h, 's, 'v>(
         "__vbi_multiplyI64" => Box::new(crate::testvm::vivem_externs::multiply_i64),
         "__vbi_divideI64" => Box::new(crate::testvm::vivem_externs::divide_i64),
         "__vbi_subtractI64" => Box::new(crate::testvm::vivem_externs::subtract_i64),
+        "TruncateI64ToI32" => Box::new(crate::testvm::vivem_externs::truncate_i64_to_i32),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

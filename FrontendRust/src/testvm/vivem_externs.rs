@@ -552,7 +552,15 @@ pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn truncate_i64_to_i32
-pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: truncate_i64_to_i32"); }
+pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 64, .. }) => value,
+        _ => panic!("truncate_i64_to_i32: non-IntV(_, 64) arg"),
+    };
+    let result = value & 0xFFFFFFFFi64;
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: result, bits: 32, _phantom: std::marker::PhantomData }))
+}
 /*
   def truncateI64ToI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
