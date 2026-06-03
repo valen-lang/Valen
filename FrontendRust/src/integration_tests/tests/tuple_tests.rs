@@ -14,9 +14,29 @@ class TupleTests extends FunSuite with Matchers {
 */
 // mig: fn returning_tuple_from_function_and_dotting_it
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn returning_tuple_from_function_and_dotting_it() {
-    panic!("Unmigrated test: returning_tuple_from_function_and_dotting_it");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc makeTup() (int, int) { return (2, 3); }\nexported func main() int {\n  return makeTup().1;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("Expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("Returning tuple from function and dotting it") {
@@ -36,9 +56,29 @@ fn returning_tuple_from_function_and_dotting_it() {
 */
 // mig: fn tuple_with_two_things
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tuple_with_two_things() {
-    panic!("Unmigrated test: tuple_with_two_things");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nexported func main() bool {\n  return (9, true).1;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
+        other => panic!("Expected VonBool(true), got {:?}", other),
+    }
 }
 /*
   test("Tuple with two things") {
@@ -56,9 +96,29 @@ fn tuple_with_two_things() {
 */
 // mig: fn tuple_type
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tuple_type() {
-    panic!("Unmigrated test: tuple_type");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc moo(a (int, int)) int { return a.1; }\n\nexported func main() int {\n  return moo((3, 4));\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("Expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Tuple type") {

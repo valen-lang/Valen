@@ -332,8 +332,8 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_signature(&self, signature: SignatureT<'s, 't>) -> Option<&'t FunctionDefinitionT<'s, 't>> {
-        panic!("Unimplemented: lookup_function_by_signature");
+    pub fn lookup_function_by_signature(&self, signature2: SignatureT<'s, 't>) -> Option<&'t FunctionDefinitionT<'s, 't>> {
+        self.functions.iter().copied().find(|f| f.header.to_signature() == signature2)
     }
     /*
       def lookupFunction(signature2: SignatureT): Option[FunctionDefinitionT] = {

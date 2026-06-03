@@ -34,6 +34,8 @@
 
 **Resolve rebase conflicts in-place — never `git checkout --ours/--theirs` on a whole file.** Three-way merge already applied every non-conflicting hunk; `--ours`/`--theirs` throws those away. Edit only the `<<<<<<< ======= >>>>>>>` blocks.
 
+**Pre-commit submodule-pin sanity check.** Each Vale-N worktree has its own `Guardian/` and `Luz/` sub-clone; another TL's pin advance is invisible until you fetch. Before any commit that touches submodule pins (defensively, before every commit): `git -C Luz fetch --all && git -C Guardian fetch --all`, then `git diff --submodule HEAD` — if it shows a backward diff or `(commits not present)`, your pin is stale and the commit would regress experimental. Observed live: Vale2 `0984c155a` regressed Luz 2 commits; Vale3 `ee57fc12d` regressed Guardian 2 commits (self-corrected in `8de534e50`).
+
 **Include submodule pin bumps in commits — don't exclude them.** Especially Guardian's nested submodules (ContextifiedDiff, Rabble, etc.) and their inner Luz pins; commit from leaves up so each level's index is consistent.
 
 **During every sync, check if `migrate-tl.md` changed** (`git diff experimental..experimental-N -- migrate-tl.md` and `git diff HEAD -- migrate-tl.md`). The architect adds rules here mid-session; auto-merge may pull them in silently. Read every change — they're load-bearing for TL behavior and don't surface elsewhere.
