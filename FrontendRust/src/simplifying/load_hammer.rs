@@ -765,10 +765,44 @@ where 's: 'h, 's: 'i, 'i: 'h,
         lookup2: &AddressMemberLookupIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_member_address");
+        let struct_expr2 = lookup2.struct_expr;
+        let member_name = lookup2.member_name;
+        let (struct_result_line, struct_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
+        let struct_it = match struct_expr2.result().kind {
+            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            _ => panic!("translate_member_address: non-struct kind"),
+        };
+        let struct_def_i = self.lookup_struct(hinputs, hamuts, *struct_it);
+        let member_index = struct_def_i.members.iter().position(|m| m.name == member_name).expect("member not found") as i32;
+        assert!(member_index >= 0);
+        let member2 = &struct_def_i.members[member_index as usize];
+        let variability = member2.variability;
+        assert!(variability == crate::instantiating::ast::types::VariabilityI::Varying, "Expected varying for member {:?}", member_name);
+        let boxed_type2 = member2.tyype.expect_address_member().reference;
+        let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
+        let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
+        let expected_struct_box_member_type = crate::final_ast::types::CoordH {
+            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            location: crate::final_ast::types::LocationH::YonderH,
+            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        };
+        let load_result_type = crate::final_ast::types::CoordH {
+            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            location: crate::final_ast::types::LocationH::YonderH,
+            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        };
+        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+            struct_expression: struct_result_line.expect_struct_access(),
+            member_index,
+            expected_member_type: expected_struct_box_member_type,
+            result_type: load_result_type,
+            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(member_name))),
+        }));
+        (load_box_node, struct_deferreds)
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Rust adaptation: Scala has subtyping ReferenceExpressionIE extends ExpressionI so `expressionHammer.translate(structExpr2)` auto-upcasts. Rust split the sealed trait into two separate enums (ReferenceExpressionIE / AddressExpressionIE) with `translate_expression` taking the union enum ExpressionIE; the `ExpressionIE::Reference(...)` wrap is the SPDMX Exception C adaptation. Same in-file precedent: translate_addressible_member_load (line ~338) and translate_mundane_member_load (line ~415) in this same file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-206-1780518777471/hook-206/translate_member_address--759.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // In this, we're basically taking an addressible lookup, in other words,
   // a reference to a box.
   def translateMemberAddress(
