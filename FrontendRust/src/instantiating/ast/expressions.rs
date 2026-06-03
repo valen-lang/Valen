@@ -61,7 +61,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::PreCheckBorrow(_) => panic!("RE::result: PreCheckBorrow"),
             ReferenceExpressionIE::Consecutor(x) => x.result,
             ReferenceExpressionIE::Tuple(x) => x.result,
-            ReferenceExpressionIE::StaticArrayFromValues(_) => panic!("RE::result: StaticArrayFromValues"),
+            ReferenceExpressionIE::StaticArrayFromValues(s) => s.result_reference,
             ReferenceExpressionIE::ArraySize(_) => panic!("RE::result: ArraySize"),
             ReferenceExpressionIE::IsSameInstance(_) => panic!("RE::result: IsSameInstance"),
             ReferenceExpressionIE::AsSubtype(_) => panic!("RE::result: AsSubtype"),
@@ -79,7 +79,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Construct(c) => c.result,
             ReferenceExpressionIE::NewMutRuntimeSizedArray(_) => panic!("RE::result: NewMutRuntimeSizedArray"),
             ReferenceExpressionIE::StaticArrayFromCallable(_) => panic!("RE::result: StaticArrayFromCallable"),
-            ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(_) => panic!("RE::result: DestroyStaticSizedArrayIntoFunction"),
+            ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
             ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => panic!("RE::result: DestroyMutRuntimeSizedArray"),
             ReferenceExpressionIE::RuntimeSizedArrayCapacity(_) => panic!("RE::result: RuntimeSizedArrayCapacity"),
@@ -1742,7 +1742,9 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i, R> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())

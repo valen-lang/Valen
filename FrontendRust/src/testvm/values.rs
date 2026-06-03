@@ -918,8 +918,8 @@ case class ElementAddressV(arrayId: AllocationId, elementIndex: Long) {
 */
 // mig: fn to_string
 impl<'v, 'h, 's> ElementAddressV<'v, 'h, 's> {
-  pub fn to_string(&self) -> StrI<'s> {
-    panic!("Unimplemented: to_string_element_address");
+  pub fn to_string(&self) -> String {
+    format!("*o:{}.{}", self.array_id.num, self.element_index)
   }
 }
 /*

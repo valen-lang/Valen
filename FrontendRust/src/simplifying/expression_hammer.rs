@@ -267,7 +267,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 }
                 RE::NewMutRuntimeSizedArray(a) => panic!("translate_expression: NewMutRuntimeSizedArray branch"),
                 RE::StaticArrayFromCallable(a) => panic!("translate_expression: StaticArrayFromCallable branch"),
-                RE::DestroyStaticSizedArrayIntoFunction(a) => panic!("translate_expression: DestroyStaticSizedArrayIntoFunction branch"),
+                RE::DestroyStaticSizedArrayIntoFunction(das2) => {
+                    let das_h = self.translate_destroy_static_sized_array(hinputs, hamuts, current_function_header, locals, das2);
+                    (das_h, Vec::new())
+                }
                 RE::DestroyMutRuntimeSizedArray(a) => panic!("translate_expression: DestroyMutRuntimeSizedArray branch"),
                 RE::PushRuntimeSizedArray(a) => panic!("translate_expression: PushRuntimeSizedArray branch"),
                 RE::PopRuntimeSizedArray(a) => panic!("translate_expression: PopRuntimeSizedArray branch"),
@@ -1453,10 +1456,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        das2: &DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, cI>,
+        das2: &'i DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_destroy_static_sized_array");
+        let DestroyStaticSizedArrayIntoFunctionIE { array_expr: array_expr_2, array_type: static_sized_array_type, consumer: consumer_expr_2, consumer_method: _consumer_method_2 } = *das2;
+        let array_type_h = self.translate_static_sized_array(hinputs, hamuts, static_sized_array_type);
+        let array_ref_type_h = self.translate_coord(hinputs, hamuts, ExpressionIE::Reference(array_expr_2).result());
+        assert!(array_ref_type_h.expect_static_sized_array_coord().kind == crate::final_ast::types::KindHT::StaticSizedArrayHT(array_type_h));
+        let (array_expr_result_he, array_expr_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr_2));
+        let (consumer_callable_result_he, consumer_callable_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(consumer_expr_2));
+        let static_sized_array_def = hamuts.get_static_sized_array(array_type_h);
+        let consumer_method = self.translate_prototype(hinputs, hamuts, &das2.consumer_method);
+        let destroy_static_sized_array_call_node = ExpressionH::DestroyStaticSizedArrayIntoFunctionH(self.interner.alloc(crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH {
+            array_expression: array_expr_result_he.expect_static_sized_array_access(),
+            consumer_expression: consumer_callable_result_he,
+            consumer_method,
+            array_element_type: static_sized_array_def.element_type,
+            array_size: static_sized_array_def.size,
+        }));
+        let mut combined_deferreds = consumer_callable_deferreds;
+        combined_deferreds.extend(array_expr_deferreds);
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, destroy_static_sized_array_call_node, combined_deferreds)
     }
 }
 /*

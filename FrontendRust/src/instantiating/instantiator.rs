@@ -3490,7 +3490,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::NewMutRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewMutRuntimeSizedArray"),
             ReferenceExpressionTE::StaticArrayFromCallable(_) => panic!("Unimplemented: translate_ref_expr StaticArrayFromCallable"),
-            ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(_) => panic!("Unimplemented: translate_ref_expr DestroyStaticSizedArrayIntoFunction"),
+            ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(d) => {
+                let crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE { array_expr: array_expr_t, array_type: array_type_t, consumer: consumer_t, consumer_method: consumer_method_t } = **d;
+                let (_array_it, array_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr_t);
+                let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type_t);
+                let (_consumer_it, consumer_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &consumer_t);
+                let (_consumer_prototype_i, consumer_prototype_c) =
+                    self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, consumer_method_t);
+                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(self.interner.alloc(crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoFunctionIE {
+                    array_expr: array_ce,
+                    array_type: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
+                    consumer: consumer_ce,
+                    consumer_method: consumer_prototype_c,
+                }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(_) => panic!("Unimplemented: translate_ref_expr DestroyStaticSizedArrayIntoLocals"),
             ReferenceExpressionTE::DestroyMutRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyMutRuntimeSizedArray"),
             ReferenceExpressionTE::RuntimeSizedArrayCapacity(_) => panic!("Unimplemented: translate_ref_expr RuntimeSizedArrayCapacity"),

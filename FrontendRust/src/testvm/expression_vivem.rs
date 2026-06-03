@@ -662,6 +662,30 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
         }
+        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(d) => {
+            let crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH { array_expression: array_expr, consumer_expression: consumer_me, consumer_method, array_element_type: _, array_size: _ } = **d;
+            let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let consumer_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &consumer_me) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            heap.check_reference(interner, consumer_me.result_type(), consumer_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.ensure_ref_count(interner, array_reference, None, 0);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            let ssa_def_m = program_h.lookup_static_sized_array(array_expr.result_type().kind.expect_static_sized_array_ht());
+            consume_elements(program_h, interner, scout_arena, stdin, stdout, heap, expression_id, call_id, array_reference, consumer_reference, *consumer_method, ssa_def_m.size, &mut |_, _| {});
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.zero(array_reference);
+            heap.deallocate_if_no_weak_refs(array_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, consumer_me.result_type(), consumer_reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }
@@ -1637,8 +1661,29 @@ Guardian: temp-disable: SPDMX — Scala HeapV.dereference has default param allo
   }
 */
 // mig: fn consume_elements
-pub fn consume_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: consume_elements"); }
+pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) {
+    let consumer_function = program_h.lookup_function(&consumer_prototype);
+    for i in (0..size).rev() {
+        writeln!(heap.vivem_dout).unwrap();
+        let prefix = "  ".repeat(call_id.call_depth as usize);
+        writeln!(heap.vivem_dout, "{}Making new stack frame (consumer)", prefix).unwrap();
+        writeln!(heap.vivem_dout).unwrap();
+        let element_addr = crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: i };
+        write!(heap.vivem_dout, " *{}", element_addr.to_string()).unwrap();
+        let element_reference = heap.deinitialize_array_element(array_reference);
+        writeln!(heap.vivem_dout).unwrap();
+        writeln!(heap.vivem_dout, "{}Making new stack frame (icall)", prefix).unwrap();
+        let args_vec: Vec<ReferenceV<'v, 'h, 's>> = vec![consumer_reference, element_reference];
+        let args_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&args_vec);
+        let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, consumer_function);
+        write!(heap.vivem_dout, "{}Getting return reference", prefix).unwrap();
+        let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: return_ref.ownership }), return_ref);
+        receiver(i, return_ref);
+    }
+}
 /*
+Guardian: temp-disable: SPDMX — Per SPDMX Exception B / architect 2026-06-03 ruling, threading scout_arena/interner through vivem entry chain is required because execute_function takes them. Same shape as execute_node/execute_node_inner/inner_execute precedent. — FrontendRust/guardian-logs/request-127-1780519533282/hook-127/consume_elements--1664.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def consumeElements(
     programH: ProgramH,
     stdin: () => String,
