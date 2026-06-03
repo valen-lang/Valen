@@ -142,6 +142,7 @@ pub fn get_extern_function<'h, 's, 'v>(
         "streq" => Box::new(crate::testvm::vivem_externs::eq_str_str),
         "castI32Str" => Box::new(crate::testvm::vivem_externs::cast_i32_str),
         "castI64Str" => Box::new(crate::testvm::vivem_externs::cast_i64_str),
+        "__vbi_lessThanI32" => Box::new(crate::testvm::vivem_externs::less_than_i32),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

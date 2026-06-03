@@ -148,9 +148,53 @@ fn simple_false_branch_returning_an_int() {
 */
 // mig: fn ladder
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn ladder() {
-    panic!("Unmigrated test: ladder");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  return if (false) { 3 } else if (true) { 5 } else { 7 };\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let ifs: Vec<&crate::typing::ast::expressions::IfTE> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::If(if2) => Some(if2)
+        );
+        for iff in &ifs {
+            assert_eq!(iff.result().coord, crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+                kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+            });
+        }
+        assert_eq!(ifs.len(), 2);
+        let user_funcs = coutputs.get_all_user_functions();
+        for func in &user_funcs {
+            match func.header.return_type {
+                crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }), .. } => {}
+                crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Bool(_), .. } => {}
+                other => panic!("vwat: {:?}", other),
+            }
+        }
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
 }
 /*
   test("Ladder") {
@@ -242,9 +286,29 @@ fn if_with_complex_condition() {
 */
 // mig: fn if_with_condition_declaration
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn if_with_condition_declaration() {
-    panic!("Unmigrated test: if_with_condition_declaration");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  return if x = 42; x < 50 { x }\n    else { 73 };\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("If with condition declaration") {
