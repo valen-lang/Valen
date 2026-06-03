@@ -672,10 +672,30 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        des2: &DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
+        des2: &'i crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_destructure_static_sized_array");
+        let crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoLocalsIE { expr: source_expr2, static_sized_array: arr_seq_i, destination_reference_variables: destination_reference_local_variables } = *des2;
+        let (source_expr_he, source_expr_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(source_expr2));
+        assert!(destination_reference_local_variables.len() as i64 == arr_seq_i.size());
+        let (local_types, local_indices): (Vec<crate::final_ast::types::CoordH<'s, 'h>>, Vec<crate::final_ast::instructions::Local<'s, 'h>>) = destination_reference_local_variables.iter().map(|destination_reference_local_variable| {
+            let member_ref_type_h = self.translate_coord(hinputs, hamuts, arr_seq_i.element_type().coord);
+            let var_id_full = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(destination_reference_local_variable.name));
+            let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
+            let local_index = locals.add_typing_pass_local(
+                &destination_reference_local_variable.name,
+                var_id_name_h,
+                crate::simplifying::conversions::evaluate_variability(destination_reference_local_variable.variability),
+                member_ref_type_h);
+            (member_ref_type_h, local_index)
+        }).unzip();
+        let stack_node = ExpressionH::DestroyStaticSizedArrayIntoLocalsH(self.interner.alloc(crate::final_ast::instructions::DestroyStaticSizedArrayIntoLocalsH {
+            struct_expression: source_expr_he.expect_static_sized_array_access(),
+            local_types: self.interner.alloc_slice_from_vec(local_types),
+            local_indices: self.interner.alloc_slice_from_vec(local_indices),
+        }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stack_node, source_expr_deferreds)
     }
 }
 /*

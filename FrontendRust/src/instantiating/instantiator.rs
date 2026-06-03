@@ -3507,7 +3507,29 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
-            ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(_) => panic!("Unimplemented: translate_ref_expr DestroyStaticSizedArrayIntoLocals"),
+            ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(d) => {
+                let crate::typing::ast::expressions::DestroyStaticSizedArrayIntoLocalsTE { expr: expr_t, static_sized_array: ssa_tt, destination_reference_variables } = **d;
+                let (source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr_t);
+                let (ssa_it, size) = match source_it.kind {
+                    KindIT::StaticSizedArrayIT(s) => {
+                        match s.name.local_name {
+                            INameI::StaticSizedArray(n) => (*s, n.size),
+                            _ => panic!("DestroyStaticSizedArrayIntoLocals: local_name not StaticSizedArrayNameI"),
+                        }
+                    }
+                    _ => panic!("DestroyStaticSizedArrayIntoLocals: source_it.kind not StaticSizedArrayIT"),
+                };
+                assert!(size == destination_reference_variables.len() as i64);
+                let dest_vars_vec: Vec<crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> = destination_reference_variables.iter().map(|dest_ref_var_t| {
+                    self.translate_reference_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
+                }).collect();
+                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(self.interner.alloc(crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoLocalsIE {
+                    expr: source_ce,
+                    static_sized_array: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
+                    destination_reference_variables: self.interner.alloc_slice_from_vec(dest_vars_vec),
+                }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::DestroyMutRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyMutRuntimeSizedArray"),
             ReferenceExpressionTE::RuntimeSizedArrayCapacity(_) => panic!("Unimplemented: translate_ref_expr RuntimeSizedArrayCapacity"),
             ReferenceExpressionTE::PushRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr PushRuntimeSizedArray"),

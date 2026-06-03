@@ -428,6 +428,32 @@ pub struct StaticSizedArrayITValI<'s, 'i, R> where 's: 'i {
   pub name: IdI<'s, 'i, R>,
 }
 // mig: impl StaticSizedArrayIT
+impl<'s, 'i, R: Copy> StaticSizedArrayIT<'s, 'i, R> where 's: 'i {
+  pub fn mutability(self) -> MutabilityI {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.arr.mutability,
+      _ => panic!("StaticSizedArrayIT::mutability: name.local_name is not StaticSizedArrayNameI"),
+    }
+  }
+  pub fn element_type(self) -> crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, R> {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.arr.element_type,
+      _ => panic!("StaticSizedArrayIT::element_type: name.local_name is not StaticSizedArrayNameI"),
+    }
+  }
+  pub fn size(self) -> i64 {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.size,
+      _ => panic!("StaticSizedArrayIT::size: name.local_name is not StaticSizedArrayNameI"),
+    }
+  }
+  pub fn variability(self) -> VariabilityI {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.variability,
+      _ => panic!("StaticSizedArrayIT::variability: name.local_name is not StaticSizedArrayNameI"),
+    }
+  }
+}
 /*
 case class StaticSizedArrayIT[+R <: IRegionsModeI](
   name: IdI[R, StaticSizedArrayNameI[R]]
@@ -468,6 +494,20 @@ pub struct RuntimeSizedArrayITValI<'s, 'i, R> where 's: 'i {
   pub name: IdI<'s, 'i, R>,
 }
 // mig: impl RuntimeSizedArrayIT
+impl<'s, 'i, R: Copy> RuntimeSizedArrayIT<'s, 'i, R> where 's: 'i {
+  pub fn mutability(self) -> MutabilityI {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::RuntimeSizedArray(n) => n.arr.mutability,
+      _ => panic!("RuntimeSizedArrayIT::mutability: name.local_name is not RuntimeSizedArrayNameI"),
+    }
+  }
+  pub fn element_type(self) -> crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, R> {
+    match self.name.local_name {
+      crate::instantiating::ast::names::INameI::RuntimeSizedArray(n) => n.arr.element_type,
+      _ => panic!("RuntimeSizedArrayIT::element_type: name.local_name is not RuntimeSizedArrayNameI"),
+    }
+  }
+}
 /*
 case class RuntimeSizedArrayIT[+R <: IRegionsModeI](
   name: IdI[R, RuntimeSizedArrayNameI[R]]

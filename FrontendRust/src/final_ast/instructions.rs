@@ -1314,7 +1314,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::RestackifyH(_) => panic!("Unimplemented: result_type for RestackifyH"),
             ExpressionH::UnstackifyH(u) => u.local.type_h,
             ExpressionH::DestroyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-            ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => panic!("Unimplemented: result_type for DestroyStaticSizedArrayIntoLocalsH"),
+            ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::StructToInterfaceUpcastH(u) => {
                 let src = u.source_expression.result_type();
                 CoordH { ownership: src.ownership, location: src.location, kind: crate::final_ast::types::KindHT::InterfaceHT(u.target_interface) }

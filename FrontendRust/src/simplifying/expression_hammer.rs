@@ -86,7 +86,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     // return a void.
                     (destroy_h, Vec::new())
                 }
-                RE::DestroyStaticSizedArrayIntoLocals(des2) => panic!("translate_expression: DestroyStaticSizedArrayIntoLocals branch"),
+                RE::DestroyStaticSizedArrayIntoLocals(des2) => {
+                    let destructure_h = self.translate_destructure_static_sized_array(hinputs, hamuts, current_function_header, locals, des2);
+                    (destructure_h, Vec::new())
+                }
                 RE::Unlet(unlet2) => {
                     let value_access = self.translate_unlet(hinputs, hamuts, current_function_header, locals, unlet2);
                     (value_access, Vec::new())

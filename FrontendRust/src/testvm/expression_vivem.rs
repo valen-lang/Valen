@@ -662,6 +662,34 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
         }
+        ExpressionH::DestroyStaticSizedArrayIntoLocalsH(d) => {
+            let crate::final_ast::instructions::DestroyStaticSizedArrayIntoLocalsH { struct_expression: arr_expr, local_types, local_indices: locals } = **d;
+            let arr_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &arr_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: arr_reference.ownership }), arr_reference);
+            if arr_expr.result_type().ownership == crate::final_ast::types::OwnershipH::OwnH {
+                heap.ensure_ref_count(interner, arr_reference, None, 0);
+            } else {
+                // Not doing
+                //   heap.ensureTotalRefCount(arrReference, 0)
+                // for share because we might be taking in a shared reference and not be destroying it.
+            }
+            let old_member_references = heap.destructure_array(arr_reference);
+            if arr_reference.ownership == crate::final_ast::types::OwnershipH::OwnH {
+                heap.zero(arr_reference);
+                heap.deallocate_if_no_weak_refs(arr_reference);
+            }
+            assert!(old_member_references.len() == locals.len());
+            for ((member_ref, local_type), local_index) in old_member_references.iter().zip(local_types.iter()).zip(locals.iter()) {
+                let var_addr = crate::testvm::heap::get_var_address(expression_id.call_id, *local_index);
+                heap.add_local(interner, var_addr, *member_ref, *local_type);
+                write!(heap.vivem_dout, " v{}<-o{}", var_addr, member_ref.num).unwrap();
+            }
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
         ExpressionH::DestroyStaticSizedArrayIntoFunctionH(d) => {
             let crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH { array_expression: array_expr, consumer_expression: consumer_me, consumer_method, array_element_type: _, array_size: _ } = **d;
             let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
