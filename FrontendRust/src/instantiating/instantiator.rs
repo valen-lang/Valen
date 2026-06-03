@@ -3333,7 +3333,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::Tuple(_) => panic!("Unimplemented: translate_ref_expr Tuple"),
+            ReferenceExpressionTE::Tuple(t) => {
+                let crate::typing::ast::expressions::TupleTE { elements, result_reference } = **t;
+                let elements_ce: Vec<_> = elements.iter().map(|element_te| {
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, element_te).1
+                }).collect();
+                let result_it =
+                    self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference)
+                        .coord;
+                (result_it, ReferenceExpressionIE::Tuple(self.interner.bump().alloc(TupleIE {
+                    elements: self.interner.alloc_slice_from_vec(elements_ce),
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                })))
+            }
             ReferenceExpressionTE::StaticArrayFromValues(s) => {
                 let crate::typing::ast::expressions::StaticArrayFromValuesTE { elements, result_reference, array_type } = **s;
                 let result_it =

@@ -177,7 +177,35 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let inner_with_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, inner_expr_h, inner_deferreds);
                     (inner_with_deferreds_expr_h, Vec::new())
                 }
-                RE::Tuple(a) => panic!("translate_expression: Tuple branch"),
+                RE::Tuple(t) => {
+                    let crate::instantiating::ast::expressions::TupleIE { elements: exprs, result: result_type } = *t;
+                    let exprs_ie: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = exprs.iter().map(|e| crate::instantiating::ast::expressions::ExpressionIE::Reference(*e)).collect();
+                    let (results_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &exprs_ie);
+                    match results_he.last().map(|e| e.result_type().kind) {
+                        Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                            return (crate::simplifying::hammer::consecrash(self.interner, locals, &results_he), Vec::new());
+                        }
+                        _ => {}
+                    }
+                    let result_struct_i = match result_type.kind {
+                        crate::instantiating::ast::types::KindIT::StructIT(s) => s,
+                        _ => panic!("Tuple: result_type.kind not StructIT"),
+                    };
+                    assert!(result_struct_i.id.package_coord.module.0 != "rust");
+                    let underlying_struct_ref_h = self.translate_struct_i(hinputs, hamuts, result_struct_i);
+                    let result_reference = self.translate_coord(hinputs, hamuts, result_type);
+                    assert!(result_reference.kind == crate::final_ast::types::KindHT::StructHT(underlying_struct_ref_h));
+                    let struct_def_h = *hamuts.struct_t_to_struct_def_h().get(result_struct_i).expect("structDefH not in map");
+                    assert!(results_he.len() == struct_def_h.members.len());
+                    let target_member_names: Vec<&'h crate::final_ast::ast::IdH<'s, 'h>> = struct_def_h.members.iter().map(|m| m.name).collect();
+                    let new_struct_node = ExpressionH::NewStructH(self.interner.alloc(crate::final_ast::instructions::NewStructH {
+                        source_expressions: self.interner.bump().alloc_slice_copy(&results_he),
+                        target_member_names: self.interner.bump().alloc_slice_copy(&target_member_names),
+                        result_type: result_reference.expect_struct_coord(),
+                    }));
+                    let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
+                    (new_struct_and_deferreds_expr_h, Vec::new())
+                }
                 RE::StaticArrayFromValues(a) => {
                     let crate::instantiating::ast::expressions::StaticArrayFromValuesIE { elements: exprs, result_reference: array_reference_2, array_type: array_type_2 } = *a;
                     let exprs_ie: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = exprs.iter().map(|e| crate::instantiating::ast::expressions::ExpressionIE::Reference(*e)).collect();

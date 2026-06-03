@@ -60,7 +60,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Immutabilify(_) => panic!("RE::result: Immutabilify"),
             ReferenceExpressionIE::PreCheckBorrow(_) => panic!("RE::result: PreCheckBorrow"),
             ReferenceExpressionIE::Consecutor(x) => x.result,
-            ReferenceExpressionIE::Tuple(_) => panic!("RE::result: Tuple"),
+            ReferenceExpressionIE::Tuple(x) => x.result,
             ReferenceExpressionIE::StaticArrayFromValues(_) => panic!("RE::result: StaticArrayFromValues"),
             ReferenceExpressionIE::ArraySize(_) => panic!("RE::result: ArraySize"),
             ReferenceExpressionIE::IsSameInstance(_) => panic!("RE::result: IsSameInstance"),
