@@ -568,7 +568,15 @@ pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args:
   }
 */
 // mig: fn cast_i32_str
-pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_str"); }
+pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
+        _ => panic!("cast_i32_str: non-IntV(_, 32) arg"),
+    };
+    let interned = memory.scout_arena.intern_str(&value.to_string());
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+}
 /*
   def castI32Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)

@@ -14,8 +14,38 @@ class StringTests extends FunSuite with Matchers {
 */
 // mig: fn simple_string
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_string() { panic!("Unmigrated test: simple_string"); }
+fn simple_string() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() str {\n  return \"sprogwoggle\";\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprogwoggle"), .. }) => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprogwoggle" => {}
+        other => panic!("expected VonStr(\"sprogwoggle\"), got {:?}", other),
+    }
+}
 /*
   test("Simple string") {
     val compile = RunCompilation.test(
@@ -82,8 +112,38 @@ fn empty_string() {
 */
 // mig: fn string_with_escapes
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn string_with_escapes() { panic!("Unmigrated test: string_with_escapes"); }
+fn string_with_escapes() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() str {\n  return \"sprog\\nwoggle\";\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprog\nwoggle"), .. }) => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprog\nwoggle" => {}
+        other => panic!("expected VonStr(\"sprog\\nwoggle\"), got {:?}", other),
+    }
+}
 /*
   test("String with escapes") {
     val compile = RunCompilation.test(
@@ -101,8 +161,48 @@ fn string_with_escapes() { panic!("Unmigrated test: string_with_escapes"); }
 */
 // mig: fn string_with_hex_escape
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn string_with_hex_escape() { panic!("Unmigrated test: string_with_hex_escape"); }
+fn string_with_hex_escape() {
+    let code = "exported func main() str { return \"sprog\\u001bwoggle\"; }";
+    // This assert makes sure the above is making the input we actually intend.
+    // Real source files from disk are going to have a backslash character and then a u,
+    // they won't have the 0x1b byte.
+    assert!(code.contains("\\u001b"));
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        code,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI(x), .. }) => {
+                assert_eq!(*x, "sprog\u{001b}woggle");
+                Some(())
+            }
+        );
+    }
+    let result = match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) => value,
+        other => panic!("expected VonStr, got {:?}", other),
+    };
+    assert_eq!(result.len(), 12);
+    assert_eq!(result, "sprog\u{001b}woggle");
+}
 /*
   test("String with hex escape") {
     val code = "exported func main() str { return \"sprog\\u001bwoggle\"; }"
@@ -128,8 +228,31 @@ fn string_with_hex_escape() { panic!("Unmigrated test: string_with_hex_escape");
 */
 // mig: fn int_to_string
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn int_to_string() { panic!("Unmigrated test: int_to_string"); }
+fn int_to_string() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/strings/inttostr.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
+}
 /*
   test("int to string") {
     val compile = RunCompilation.test( Tests.loadExpected("programs/strings/inttostr.vale"))
