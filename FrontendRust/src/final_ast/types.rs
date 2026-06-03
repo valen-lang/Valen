@@ -168,6 +168,24 @@ impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
         }
     }
 }
+
+impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
+    pub fn expect_static_sized_array_ht(&self) -> &'h StaticSizedArrayHT<'s, 'h> {
+        match *self {
+            KindHT::StaticSizedArrayHT(s) => s,
+            _ => panic!("expect_static_sized_array_ht: not a static sized array"),
+        }
+    }
+}
+
+impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
+    pub fn expect_runtime_sized_array_ht(&self) -> &'h RuntimeSizedArrayHT<'s, 'h> {
+        match *self {
+            KindHT::RuntimeSizedArrayHT(s) => s,
+            _ => panic!("expect_runtime_sized_array_ht: not a runtime sized array"),
+        }
+    }
+}
 // mig: sealed trait KindHT
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -397,6 +415,12 @@ pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub variability: Variability,
     pub element_type: CoordH<'s, 'h>,
 }
+// mig: fn kind (on StaticSizedArrayDefinitionHT — see Scala `def kind = StaticSizedArrayHT(name)` in audit block below)
+impl<'s, 'h> StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub fn kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h StaticSizedArrayHT<'s, 'h> {
+        interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: self.name })
+    }
+}
 /*
 // An array whose size is known at compile time, and therefore doesn't need to
 // carry around its size at runtime.
@@ -448,6 +472,12 @@ pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub name: &'h IdH<'s, 'h>,
     pub mutability: Mutability,
     pub element_type: CoordH<'s, 'h>,
+}
+// mig: fn kind (on RuntimeSizedArrayDefinitionHT — see Scala `def kind = RuntimeSizedArrayHT(name)` in audit block below)
+impl<'s, 'h> RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
+    pub fn kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h RuntimeSizedArrayHT<'s, 'h> {
+        interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: self.name })
+    }
 }
 /*
 case class RuntimeSizedArrayDefinitionHT(

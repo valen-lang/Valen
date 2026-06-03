@@ -423,7 +423,20 @@ where 's: 'i {
         KindIT::StrIT(_) => {}
         KindIT::StructIT(s) => count_struct_id(counter, &s.id),
         KindIT::InterfaceIT(i) => count_interface_id(counter, &i.id),
-        KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: count_kind StaticSizedArray"),
+        KindIT::StaticSizedArrayIT(ssa) => {
+            let ssa_id = ssa.name;
+            count_id(counter, &ssa_id, |counter, local_name| {
+                match local_name {
+                    INameI::StaticSizedArray(n) => {
+                        let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
+                        let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                        count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                        counter.count(self_region);
+                    }
+                    _ => panic!("count_kind StaticSizedArray: non-StaticSizedArrayName local name"),
+                }
+            });
+        }
         KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: count_kind RuntimeSizedArray"),
     }
 }
@@ -484,8 +497,19 @@ pub fn count_runtime_sized_array() {
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array() {
-    panic!("Unimplemented: count_static_sized_array");
+pub fn count_static_sized_array<'s, 'i>(counter: &mut CounterI, ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) {
+    let ssa_id = ssa.name;
+    count_id(counter, &ssa_id, |counter, local_name| {
+        match local_name {
+            INameI::StaticSizedArray(n) => {
+                let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
+                let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                counter.count(self_region);
+            }
+            _ => panic!("count_static_sized_array: non-StaticSizedArrayName local name"),
+        }
+    });
 }
 /*
   def countStaticSizedArray(
@@ -796,8 +820,10 @@ pub fn count_var_name_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array_map() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_static_sized_array");
+pub fn count_static_sized_array_map<'s, 'i>(ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) -> std::collections::HashMap<i32, i32> {
+    let mut counter = CounterI::new();
+    count_static_sized_array(&mut counter, ssa);
+    counter.assemble_map()
 }
 /*
   def countStaticSizedArray(

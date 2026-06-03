@@ -60,7 +60,10 @@ pub fn evaluate_mutability_templata(mutability: MutabilityI) -> Mutability {
 */
 // mig: fn evaluate_variability_templata
 pub fn evaluate_variability_templata(mutability: VariabilityI) -> Variability {
-    panic!("Unimplemented: evaluate_variability_templata");
+    match mutability {
+        VariabilityI::Varying => Variability::Varying,
+        VariabilityI::Final => Variability::Final,
+    }
 }
 /*
   def evaluateVariabilityTemplata(mutability: VariabilityI): Variability = {

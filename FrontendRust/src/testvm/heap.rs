@@ -594,8 +594,16 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_array(&self, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: get_reference_from_array");
+    pub fn get_reference_from_array(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let ElementAddressV { array_id: object_id, element_index } = address;
+        match self.objects_by_id.objects_by_id.get(&object_id).expect("get_reference_from_array: not found").kind {
+            KindV::ArrayInstance(ai) => {
+                let r#ref = ai.get_element(element_index);
+                self.check_reference(interner, expected_type, r#ref);
+                self.transmute(r#ref, expected_type, target_type)
+            }
+            _ => panic!("get_reference_from_array: not an array instance"),
+        }
     }
 }
 /*
@@ -751,11 +759,20 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure_array(&self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
-        panic!("Unimplemented: destructure_array");
+    pub fn destructure_array(&mut self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
+        let allocation = self.dereference(reference, false);
+        match allocation {
+            KindV::ArrayInstance(ai) => {
+                let elements_len = ai.elements.get().len();
+                let element_refs_vec: Vec<ReferenceV<'v, 'h, 's>> = (0..elements_len).rev().map(|_index| self.deinitialize_array_element(reference)).collect::<Vec<_>>().into_iter().rev().collect();
+                self.vivem_bump.alloc_slice_copy(&element_refs_vec)
+            }
+            _ => panic!("destructure_array: not an array instance"),
+        }
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per in-file precedent SPDMX temp-disable at heap.rs:769 (destructure): Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. — FrontendRust/guardian-logs/request-407-1780508030747/hook-407/destructure_array--747.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def destructureArray(reference: ReferenceV): Vector[ReferenceV] = {
     val allocation = dereference(reference)
     allocation match {
@@ -1298,7 +1315,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                 let members_str = members.iter().map(|r| format!("o{}", r.alloc_id().num)).collect::<Vec<_>>().join(", ");
                 write!(handle, "{}{{{}}}", si.struct_h.id.fully_qualified_name.0, members_str).unwrap()
             }
-            KindV::ArrayInstance(_) => panic!("print_kind: ArrayInstance — pilot doesn't exercise"),
+            KindV::ArrayInstance(ai) => {
+                let elements = ai.elements.get();
+                let elements_str = elements.iter().map(|r| format!("o{}", r.alloc_id().num)).collect::<Vec<_>>().join(", ");
+                write!(handle, "array:{}:{:?}{{{}}}", ai.capacity, ai.element_type_h, elements_str).unwrap()
+            }
         }
     }
 }
@@ -1401,11 +1422,23 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn deinitialize_array_element
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn deinitialize_array_element(&self, array_reference: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: deinitialize_array_element");
+    pub fn deinitialize_array_element(&mut self, array_reference: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        let array_instance = match self.dereference(array_reference, false) {
+            KindV::ArrayInstance(ai) => ai,
+            _ => panic!("deinitialize_array_element: not an array instance"),
+        };
+        let element_reference = array_instance.deinitialize_element();
+        self.decrement_reference_ref_count(
+            crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
+                element_addr: crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: array_instance.get_size() },
+                ownership: element_reference.ownership,
+            }),
+            element_reference);
+        element_reference
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per in-file precedent SPDMX temp-disable at heap.rs:769 (destructure) and new sibling at heap.rs:747 (destructure_array): Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. — FrontendRust/guardian-logs/request-413-1780508192574/hook-413/deinitialize_array_element--1410.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def deinitializeArrayElement(arrayReference: ReferenceV) = {
     val arrayInstance @ ArrayInstanceV(_, _, _, _) = dereference(arrayReference)
     val elementReference = arrayInstance.deinitializeElement()
@@ -1445,8 +1478,18 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_array(&self, array_definition_th: StaticSizedArrayDefinitionHT, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
-        panic!("Unimplemented: add_array");
+    pub fn add_array(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
+        let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity: member_refs.len() as i32, elements: Cell::new(member_refs) });
+        let reference = self.add(interner, array_ref_type.ownership, array_ref_type.location, KindV::ArrayInstance(instance));
+        for (index, member_ref) in member_refs.iter().enumerate() {
+            self.increment_reference_ref_count(
+                crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
+                    element_addr: crate::testvm::values::ElementAddressV { array_id: reference.alloc_id(), element_index: index as i64 },
+                    ownership: member_ref.ownership,
+                }),
+                *member_ref);
+        }
+        (reference, instance)
     }
 }
 /*
@@ -1556,7 +1599,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                 }
             }
             (KindV::ArrayInstance(_), KindHT::RuntimeSizedArrayHT(_)) => panic!("check_kind: RuntimeSizedArray — pilot doesn't exercise"),
-            (KindV::ArrayInstance(_), KindHT::StaticSizedArrayHT(_)) => panic!("check_kind: StaticSizedArray — pilot doesn't exercise"),
+            (KindV::ArrayInstance(type_h_array), array_h @ KindHT::StaticSizedArrayHT(_)) => {
+                if type_h_array.type_h.kind != array_h {
+                    panic!("Expected {:?} but was {:?}", array_h, type_h_array.type_h);
+                }
+            }
             other => panic!("check_kind: mismatch {:?}", std::mem::discriminant(&other.1)),
         }
     }

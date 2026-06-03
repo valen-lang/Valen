@@ -1277,14 +1277,20 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 // mig: fn expect_static_sized_array_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_static_sized_array_access(&self) -> Self {
-        panic!("Unimplemented: expect_static_sized_array_access");
+        match self.result_type().kind {
+            crate::final_ast::types::KindHT::StaticSizedArrayHT(_) => *self,
+            _ => panic!("expect_static_sized_array_access: not a static sized array"),
+        }
     }
 }
 /* Guardian: disable-all */
 // mig: fn expect_int_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_int_access(&self) -> Self {
-        panic!("Unimplemented: expect_int_access");
+        match self.result_type().kind {
+            crate::final_ast::types::KindHT::IntHT(_) => *self,
+            _ => panic!("expect_int_access: not an int"),
+        }
     }
 }
 /* Guardian: disable-all */
@@ -1337,11 +1343,11 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             }
             ExpressionH::MemberStoreH(m) => m.result_type,
             ExpressionH::MemberLoadH(m) => m.result_type,
-            ExpressionH::NewArrayFromValuesH(_) => panic!("Unimplemented: result_type for NewArrayFromValuesH"),
+            ExpressionH::NewArrayFromValuesH(n) => n.result_type,
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("Unimplemented: result_type for StaticSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayLoadH"),
-            ExpressionH::StaticSizedArrayLoadH(_) => panic!("Unimplemented: result_type for StaticSizedArrayLoadH"),
+            ExpressionH::StaticSizedArrayLoadH(s) => s.result_type,
             ExpressionH::CallH(c) => c.function.return_type,
             ExpressionH::ExternCallH(c) => c.function.return_type,
             ExpressionH::InterfaceCallH(_) => panic!("Unimplemented: result_type for InterfaceCallH"),

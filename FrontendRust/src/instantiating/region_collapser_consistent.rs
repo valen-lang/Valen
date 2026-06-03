@@ -328,7 +328,7 @@ where 's: 'i {
         KindIT::StrIT(_) => KindIT::StrIT(StrIT { _marker: std::marker::PhantomData }),
         KindIT::StructIT(s) => KindIT::StructIT(interner.intern_struct_it_ni(crate::instantiating::ast::types::StructITValI { id: collapse_struct_id(interner, map, &s.id) })),
         KindIT::InterfaceIT(i) => KindIT::InterfaceIT(interner.intern_interface_it_ni(crate::instantiating::ast::types::InterfaceITValI { id: collapse_interface_id(interner, map, &i.id) })),
-        KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: collapse_kind StaticSizedArray"),
+        KindIT::StaticSizedArrayIT(ssa) => KindIT::StaticSizedArrayIT(interner.alloc(collapse_static_sized_array(interner, map, ssa))),
         KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: collapse_kind RuntimeSizedArray"),
     }
 }
@@ -376,7 +376,30 @@ pub fn collapse_runtime_sized_array() { panic!("Unimplemented: collapse_runtime_
 
 */
 // mig: fn collapse_static_sized_array
-pub fn collapse_static_sized_array() { panic!("Unimplemented: collapse_static_sized_array"); }
+pub fn collapse_static_sized_array<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, map: &HashMap<i32, i32>, ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, sI>) -> crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, nI>
+where 's: 'i {
+    let ssa_id = ssa.name;
+    let collapsed_id = collapse_id(interner, map, &ssa_id, |local_name| {
+        match local_name {
+            INameI::StaticSizedArray(n) => {
+                let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size, variability, arr } = **n;
+                let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region } = arr;
+                INameI::StaticSizedArray(interner.alloc(crate::instantiating::ast::names::StaticSizedArrayNameI {
+                    template: crate::instantiating::ast::names::StaticSizedArrayTemplateNameI(std::marker::PhantomData),
+                    size,
+                    variability,
+                    arr: crate::instantiating::ast::names::RawArrayNameI {
+                        mutability,
+                        element_type: crate::instantiating::ast::templata::expect_coord_templata(collapse_templata(interner, map, &ITemplataI::Coord(element_type))),
+                        self_region: collapse_region_templata(map, self_region),
+                    },
+                }))
+            }
+            _ => panic!("collapse_static_sized_array: non-StaticSizedArrayName local name"),
+        }
+    });
+    *interner.intern_static_sized_array_it_ni(crate::instantiating::ast::types::StaticSizedArrayITValI { name: collapsed_id })
+}
 /*
   def collapseStaticSizedArray(
     map: Map[Int, Int],

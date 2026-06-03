@@ -35,7 +35,12 @@ pub fn expect_coord<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> ITemplataI<'s
   }
 */
 // mig: fn expect_coord_templata
-pub fn expect_coord_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> CoordTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_coord_templata"); }
+pub fn expect_coord_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> CoordTemplataI<'s, 'i, R> {
+    match templata {
+        ITemplataI::Coord(t) => t,
+        _ => panic!("expect_coord_templata: not a CoordTemplataI"),
+    }
+}
 /*
   def expectCoordTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): CoordTemplataI[R] = {
     templata match {
@@ -75,7 +80,12 @@ pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) ->
   }
 */
 // mig: fn expect_variability_templata
-pub fn expect_variability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> VariabilityTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_variability_templata"); }
+pub fn expect_variability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> VariabilityTemplataI<'s, 'i, R> {
+    match templata {
+        ITemplataI::Variability(t) => t,
+        _ => panic!("expect_variability_templata: not a VariabilityTemplataI"),
+    }
+}
 /*
   def expectVariabilityTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): VariabilityTemplataI[R] = {
     templata match {

@@ -835,10 +835,23 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         ssa_def: &StaticSizedArrayDefinitionHT<'s, 'h>,
     ) -> IVonData {
-        panic!("Unimplemented: vonify_static_sized_array_definition");
+        let StaticSizedArrayDefinitionHT { name, size, mutability, variability, element_type } = *ssa_def;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "StaticSizedArrayDefinition".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "name".to_string(), value: self.vonify_name(name) },
+                crate::von::ast::VonMember { field_name: "kind".to_string(), value: self.vonify_kind(crate::final_ast::types::KindHT::StaticSizedArrayHT(ssa_def.kind(self.interner))) },
+                crate::von::ast::VonMember { field_name: "size".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: size }) },
+                crate::von::ast::VonMember { field_name: "mutability".to_string(), value: self.vonify_mutability(mutability) },
+                crate::von::ast::VonMember { field_name: "variability".to_string(), value: self.vonify_variability(variability) },
+                crate::von::ast::VonMember { field_name: "elementType".to_string(), value: self.vonify_coord(element_type) },
+            ],
+        })
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per TL 2026-06-03 ruling: KindHT::StaticSizedArrayHT wrapper at the call site is the Rust analog of Scala's implicit subtype relationship — kind() returns the narrow StaticSizedArrayHT, vonify_kind needs the wider KindHT. Same shape as Scala vonifyKind(ssaDef.kind) modulo Rust's lack of subtype lifting. — FrontendRust/guardian-logs/request-342-1780506767392/hook-342/vonify_static_sized_array_definition--834.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def vonifyStaticSizedArrayDefinition(ssaDef: StaticSizedArrayDefinitionHT): IVonData = {
     val StaticSizedArrayDefinitionHT(name, size, mutability, variability, elementType) = ssaDef
     VonObject(
@@ -1176,11 +1189,40 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::NewArrayFromValuesH(_) => panic!("vonify_expression: NewArrayFromValuesH"),
+            ExpressionH::NewArrayFromValuesH(n) => {
+                let crate::final_ast::instructions::NewArrayFromValuesH { result_type, source_expressions: source_exprs } = *n;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "NewArrayFromValues".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExprs".to_string(), value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: source_exprs.iter().map(|e| self.vonify_expression(*e)).collect() }) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "resultKind".to_string(), value: self.vonify_kind(result_type.kind) },
+                    ],
+                })
+            }
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("vonify_expression: StaticSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("vonify_expression: RuntimeSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("vonify_expression: RuntimeSizedArrayLoadH"),
-            ExpressionH::StaticSizedArrayLoadH(_) => panic!("vonify_expression: StaticSizedArrayLoadH"),
+            ExpressionH::StaticSizedArrayLoadH(ssal) => {
+                let crate::final_ast::instructions::StaticSizedArrayLoadH { array_expression: array_expr, index_expression: index_expr, target_ownership, expected_element_type, array_size, result_type } = *ssal;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "StaticSizedArrayLoad".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "arrayExpr".to_string(), value: self.vonify_expression(array_expr) },
+                        crate::von::ast::VonMember { field_name: "arrayType".to_string(), value: self.vonify_coord(array_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "arrayKind".to_string(), value: self.vonify_kind(array_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "arrayKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "indexExpr".to_string(), value: self.vonify_expression(index_expr) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(ssal.result_type) },
+                        crate::von::ast::VonMember { field_name: "targetOwnership".to_string(), value: self.vonify_ownership(target_ownership) },
+                        crate::von::ast::VonMember { field_name: "expectedElementType".to_string(), value: self.vonify_coord(expected_element_type) },
+                        crate::von::ast::VonMember { field_name: "arraySize".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: array_size }) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                    ],
+                })
+            }
             ExpressionH::CallH(c) => {
                 let crate::final_ast::instructions::CallH { function: function_expr, args_expressions: args_exprs } = *c;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

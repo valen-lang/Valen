@@ -382,7 +382,7 @@ where 's: 'i {
         KindIT::StrIT(_) => KindIT::StrIT(StrIT { _marker: std::marker::PhantomData }),
         KindIT::StructIT(s) => KindIT::StructIT(interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: collapse_struct_id(interner, &s.id) })),
         KindIT::InterfaceIT(i) => KindIT::InterfaceIT(interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: collapse_interface_id(interner, &i.id) })),
-        KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: collapse_kind StaticSizedArray"),
+        KindIT::StaticSizedArrayIT(ssa) => KindIT::StaticSizedArrayIT(interner.alloc(collapse_static_sized_array(interner, ssa))),
         KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: collapse_kind RuntimeSizedArray"),
     }
 }
@@ -428,10 +428,33 @@ pub fn collapse_runtime_sized_array() {
   }
 */
 // mig: fn collapse_static_sized_array
-pub fn collapse_static_sized_array() {
-    panic!("Unimplemented: collapse_static_sized_array")
+pub fn collapse_static_sized_array<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, sI>) -> crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, cI>
+where 's: 'i {
+    let ssa_id = ssa.name;
+    let map = crate::instantiating::region_counter::count_static_sized_array_map(ssa);
+    let collapsed_id = collapse_id(interner, &ssa_id, |local_name| {
+        match local_name {
+            INameI::StaticSizedArray(n) => {
+                let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size, variability, arr } = **n;
+                let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region } = arr;
+                INameI::StaticSizedArray(interner.alloc(crate::instantiating::ast::names::StaticSizedArrayNameI {
+                    template: crate::instantiating::ast::names::StaticSizedArrayTemplateNameI(std::marker::PhantomData),
+                    size,
+                    variability,
+                    arr: crate::instantiating::ast::names::RawArrayNameI {
+                        mutability,
+                        element_type: crate::instantiating::ast::templata::expect_coord_templata(collapse_templata(interner, &map, &ITemplataI::Coord(element_type))),
+                        self_region: collapse_region_templata(&map, self_region),
+                    },
+                }))
+            }
+            _ => panic!("collapse_static_sized_array: non-StaticSizedArrayName local name"),
+        }
+    });
+    *interner.intern_static_sized_array_it_ci(crate::instantiating::ast::types::StaticSizedArrayITValI { name: collapsed_id })
 }
 /*
+Guardian: temp-disable: SPDMX — Per SPDMX Exception S, _map suffix disambiguates from the unit-returning count_static_sized_array(counter, ssa) at line 487 — same pattern as count_struct_id/count_struct_id_map sibling pair. Both Rust fns mirror the same-named Scala method (Scala has overloading by counter-presence). — FrontendRust/guardian-logs/request-179-1780503381221/hook-179/collapse_static_sized_array--431.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def collapseStaticSizedArray(
     ssa: StaticSizedArrayIT[sI]):
   StaticSizedArrayIT[cI] = {

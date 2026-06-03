@@ -2977,7 +2977,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_subjective_it.coord, result_ce)
             }
-            AddressExpressionTE::StaticSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr StaticSizedArrayLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(s) => {
+                let crate::typing::ast::expressions::StaticSizedArrayLookupTE { range, array_expr: array_expr_t, array_type: _, index_expr: index_expr_t, element_type: element_type_t, variability } = **s;
+                let (_array_subjective_it, array_ce) =
+                    self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &array_expr_t);
+                let element_type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &element_type_t).coord;
+                let (_index_it, index_ce) =
+                    self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &index_expr_t);
+                let result_coord = CoordI { ownership: element_type_s.ownership, kind: element_type_s.kind };
+                let result_ce = AddressExpressionIE::StaticSizedArrayLookup(self.interner.alloc(crate::instantiating::ast::expressions::StaticSizedArrayLookupIE {
+                    range,
+                    array_expr: array_ce,
+                    index_expr: index_ce,
+                    element_type: region_collapser_individual::collapse_coord(self.interner, &result_coord),
+                    variability: Self::translate_variability(&variability),
+                }));
+                (result_coord, result_ce)
+            }
             AddressExpressionTE::AddressMemberLookup(_) => panic!("Unimplemented: translate_addr_expr AddressMemberLookup"),
             AddressExpressionTE::RuntimeSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr RuntimeSizedArrayLookup"),
         }
@@ -3285,7 +3301,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::Tuple(_) => panic!("Unimplemented: translate_ref_expr Tuple"),
-            ReferenceExpressionTE::StaticArrayFromValues(_) => panic!("Unimplemented: translate_ref_expr StaticArrayFromValues"),
+            ReferenceExpressionTE::StaticArrayFromValues(s) => {
+                let crate::typing::ast::expressions::StaticArrayFromValuesTE { elements, result_reference, array_type } = **s;
+                let result_it =
+                    self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference)
+                        .coord;
+                let elements_ce: Vec<_> = elements.iter().map(|element_te| {
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, element_te).1
+                }).collect();
+                let ssa_tt = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_type);
+                let result_ce = ReferenceExpressionIE::StaticArrayFromValues(self.interner.alloc(crate::instantiating::ast::expressions::StaticArrayFromValuesIE {
+                    elements: self.interner.alloc_slice_from_vec(elements_ce),
+                    result_reference: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                    array_type: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_tt),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::ArraySize(_) => panic!("Unimplemented: translate_ref_expr ArraySize"),
             ReferenceExpressionTE::IsSameInstance(_) => panic!("Unimplemented: translate_ref_expr IsSameInstance"),
             ReferenceExpressionTE::AsSubtype(_) => panic!("Unimplemented: translate_ref_expr AsSubtype"),
@@ -4940,7 +4971,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             KindIT::StructIT(s) => *_monouts.struct_to_mutability.get(&s.id).expect("get_mutability: struct not found"),
             KindIT::InterfaceIT(i) => *_monouts.interface_to_mutability.get(&i.id).expect("get_mutability: interface not found"),
             KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: get_mutability RuntimeSizedArray"),
-            KindIT::StaticSizedArrayIT(_) => panic!("Unimplemented: get_mutability StaticSizedArray"),
+            KindIT::StaticSizedArrayIT(ssa) => {
+                match ssa.name.local_name {
+                    INameI::StaticSizedArray(n) => n.arr.mutability,
+                    _ => panic!("get_mutability StaticSizedArray: local_name not StaticSizedArrayNameI"),
+                }
+            }
         }
     }
 }
@@ -5116,8 +5152,38 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_static_sized_array
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_static_sized_array(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _ssa_tt: &StaticSizedArrayTT<'s, 't>) -> StaticSizedArrayIT<'s, 'i, sI> {
-        panic!("Unimplemented: translate_static_sized_array");
+    pub fn translate_static_sized_array(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, perspective_region_t: &RegionT, ssa_tt: &StaticSizedArrayTT<'s, 't>) -> StaticSizedArrayIT<'s, 'i, sI> {
+        let StaticSizedArrayTT { name: id_t, .. } = ssa_tt;
+        let IdT { package_coord, init_steps, local_name, .. } = *id_t;
+        let ssa_name_t = match local_name {
+            INameT::StaticSizedArray(n) => *n,
+            _ => panic!("translate_static_sized_array: local_name not StaticSizedArrayNameT"),
+        };
+        let crate::typing::names::names::StaticSizedArrayNameT { template: _, size: size_t, variability: variability_t, arr } = ssa_name_t;
+        let crate::typing::names::names::RawArrayNameT { mutability: mutability_t, element_type: element_type_t, self_region: _ } = *arr;
+        let new_perspective_region_t = RegionT { region: crate::typing::types::types::IRegionT::Default };
+        let _ssa_region = RegionT { region: crate::typing::types::types::IRegionT::Default };
+        let int_templata = crate::instantiating::ast::templata::expect_integer_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &size_t)).value;
+        let variability_templata = crate::instantiating::ast::templata::expect_variability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &variability_t)).variability;
+        let mutability_templata = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &mutability_t)).mutability;
+        let element_type = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &element_type_t);
+        let translated_init_steps: Vec<INameI<'s, 'i, sI>> = init_steps.iter().map(|n| Self::translate_name(n)).collect();
+        let local_name_i = INameI::StaticSizedArray(self.interner.alloc(crate::instantiating::ast::names::StaticSizedArrayNameI {
+            template: crate::instantiating::ast::names::StaticSizedArrayTemplateNameI(std::marker::PhantomData),
+            size: int_templata,
+            variability: variability_templata,
+            arr: crate::instantiating::ast::names::RawArrayNameI {
+                mutability: mutability_templata,
+                element_type,
+                self_region: crate::instantiating::ast::templata::RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+            },
+        }));
+        let id_i = IdI {
+            package_coord,
+            init_steps: self.interner.alloc_slice_from_vec(translated_init_steps),
+            local_name: local_name_i,
+        };
+        *self.interner.intern_static_sized_array_it_si(crate::instantiating::ast::types::StaticSizedArrayITValI { name: id_i })
     }
 }
 /*
@@ -5240,7 +5306,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let interface_it = self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, s, &bound_args);
                 KindIT::InterfaceIT(self.interner.alloc(interface_it))
             }
-            KindT::StaticSizedArray(_a) => panic!("Unimplemented: translate_kind StaticSizedArray"),
+            KindT::StaticSizedArray(a) => KindIT::StaticSizedArrayIT(self.interner.alloc(self.translate_static_sized_array(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, a))),
             KindT::RuntimeSizedArray(_a) => panic!("Unimplemented: translate_kind RuntimeSizedArray"),
             _other => panic!("Unimplemented: translate_kind other"),
         }
@@ -5330,13 +5396,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_templata(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, templata_t: &ITemplataT<'s, 't>) -> ITemplataI<'s, 'i, sI> {
         let result = match templata_t {
-            ITemplataT::Placeholder(_) => panic!("Unimplemented: translate_templata Placeholder"),
+            ITemplataT::Placeholder(p) => {
+                let crate::typing::templata::templata::PlaceholderTemplataT { id: n, tyype: _ } = **p;
+                *_substitutions.get(&n).expect("translate_templata Placeholder: substitution missing")
+            }
             ITemplataT::Integer(value) => ITemplataI::Integer(IntegerTemplataI { value: *value, _marker: std::marker::PhantomData }),
             ITemplataT::Boolean(_) => panic!("Unimplemented: translate_templata Boolean"),
             ITemplataT::String(_) => panic!("Unimplemented: translate_templata String"),
             ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
             ITemplataT::Mutability(m) => ITemplataI::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability: Self::translate_mutability(&m.mutability), _marker: std::marker::PhantomData }),
-            ITemplataT::Variability(_) => panic!("Unimplemented: translate_templata Variability"),
+            ITemplataT::Variability(v) => ITemplataI::Variability(crate::instantiating::ast::templata::VariabilityTemplataI { variability: Self::translate_variability(&v.variability), _marker: std::marker::PhantomData }),
             ITemplataT::Kind(_) => panic!("Unimplemented: translate_templata Kind"),
             _ => panic!("Unimplemented: translate_templata other"),
         };

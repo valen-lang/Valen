@@ -607,6 +607,55 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, struct_expr.result_type(), struct_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: member_reference })
         }
+        ExpressionH::NewArrayFromValuesH(n) => {
+            let crate::final_ast::instructions::NewArrayFromValuesH { result_type: array_ref_type, source_expressions: element_exprs } = **n;
+            let element_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
+                element_exprs.iter().enumerate().map(|(i, arg_expr)| {
+                    match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                        INodeExecuteResultV::Return(_) => panic!("execute_node_inner: NewArrayFromValuesH element produced Return — vimpl"),
+                        INodeExecuteResultV::Break(_) => panic!("execute_node_inner: NewArrayFromValuesH element produced Break — vimpl"),
+                        INodeExecuteResultV::Continue(c) => c.result_ref,
+                    }
+                }).collect();
+            for r in element_refs.iter() {
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }), *r);
+            }
+            let ssa_def = program_h.lookup_static_sized_array(array_ref_type.kind.expect_static_sized_array_ht());
+            let element_refs_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&element_refs);
+            let (array_reference, array_instance) = heap.add_array(interner, *ssa_def, array_ref_type, element_refs_slice);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
+            heap.print_kind(crate::testvm::values::KindV::ArrayInstance(array_instance));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
+        }
+        ExpressionH::StaticSizedArrayLoadH(ssal) => {
+            let crate::final_ast::instructions::StaticSizedArrayLoadH { array_expression: array_expr, index_expression: index_expr, target_ownership, expected_element_type, array_size: _, result_type } = **ssal;
+            let array_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let index_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &index_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let index = match heap.dereference(index_reference, false) {
+                crate::testvm::values::KindV::Int(int_v) if int_v.bits == 32 => int_v.value as i32,
+                _ => panic!("execute_node_inner: StaticSizedArrayLoadH index not IntV(_, 32)"),
+            };
+            let address = crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: index as i64 };
+            write!(heap.vivem_dout, " **o:{}.{}", address.array_id.num, address.element_index).unwrap();
+            let source = heap.get_reference_from_array(interner, address, expected_element_type, result_type);
+            if target_ownership == crate::final_ast::types::OwnershipH::OwnH {
+                panic!("impl me?");
+            } else {
+            }
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: source.ownership }), source);
+            discard(program_h, interner, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }
@@ -1792,7 +1841,15 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simpl
                     }
                     KindHT::InterfaceHT(_) => panic!("cleanup: InterfaceHT — pilot doesn't exercise"),
                     KindHT::RuntimeSizedArrayHT(_) => panic!("cleanup: RuntimeSizedArrayHT — pilot doesn't exercise"),
-                    KindHT::StaticSizedArrayHT(_) => panic!("cleanup: StaticSizedArrayHT — pilot doesn't exercise"),
+                    KindHT::StaticSizedArrayHT(ssa_ht) => {
+                        let element_refs = heap.destructure_array(actual_reference);
+                        let element_type = program_h.lookup_static_sized_array(ssa_ht).element_type;
+                        for element_ref in element_refs.iter() {
+                            cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref);
+                        }
+                        heap.zero(actual_reference);
+                        heap.deallocate_if_no_weak_refs(actual_reference);
+                    }
                     KindHT::NeverHT(_) => panic!("cleanup: NeverHT — pilot doesn't exercise"),
                 }
             }

@@ -269,7 +269,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_static_sized_array (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_static_sized_array(&mut self, ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>, static_sized_array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>) {
-        panic!("Unimplemented: add_static_sized_array");
+        self.static_sized_arrays.insert(ssa_it, static_sized_array_definition_th);
     }
 }
 /*
@@ -412,10 +412,11 @@ Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.r
 // mig: fn get_static_sized_array (HamutsBox accessor)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn get_static_sized_array(&self, static_sized_array_th: &'h StaticSizedArrayHT<'s, 'h>) -> StaticSizedArrayDefinitionHT<'s, 'h> {
-        panic!("Unimplemented: get_static_sized_array");
+        *self.static_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, static_sized_array_th.id as *const _)).expect("get_static_sized_array: not found").1
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per migration-policy note: HamutsBox+Hamuts collapsed onto Hamuts in Rust, eliminating Scala's `inner` indirection. The Scala delegates to inner.getStaticSizedArray; the Rust body IS what inner was doing — direct map scan by HT.id pointer-equality. Sibling precedent: add_static_sized_array body is `self.static_sized_arrays.insert(...)` (already accepted Guardian, line 272). — FrontendRust/guardian-logs/request-316-1780506382771/hook-316/get_static_sized_array--414.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getStaticSizedArray(staticSizedArrayTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
     inner.getStaticSizedArray(staticSizedArrayTH)
   }

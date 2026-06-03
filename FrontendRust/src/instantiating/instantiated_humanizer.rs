@@ -23,9 +23,15 @@ pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
         ITemplataI::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
         ITemplataI::InterfaceDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
-        ITemplataI::Variability(v) => panic!("humanize_templata: Variability branch"),
+        ITemplataI::Variability(v) => match v.variability {
+            crate::instantiating::ast::types::VariabilityI::Final => "final".to_string(),
+            crate::instantiating::ast::types::VariabilityI::Varying => "vary".to_string(),
+        },
         ITemplataI::Integer(i) => i.value.to_string(),
-        ITemplataI::Mutability(m) => panic!("humanize_templata: Mutability branch"),
+        ITemplataI::Mutability(m) => match m.mutability {
+            crate::instantiating::ast::types::MutabilityI::Mutable => "mut".to_string(),
+            crate::instantiating::ast::types::MutabilityI::Immutable => "imm".to_string(),
+        },
         ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
         ITemplataI::Region(r) => r.pure_height.to_string(),
@@ -134,7 +140,7 @@ pub fn humanize_kind<'s, 'i, R: Copy + PartialEq>(
         KindIT::InterfaceIT(i) => humanize_id(code_map, &i.id, None),
         KindIT::StructIT(s) => humanize_id(code_map, &s.id, None),
         KindIT::RuntimeSizedArrayIT(_) => panic!("humanize_kind: RuntimeSizedArrayIT branch"),
-        KindIT::StaticSizedArrayIT(_) => panic!("humanize_kind: StaticSizedArrayIT branch"),
+        KindIT::StaticSizedArrayIT(ssa) => humanize_id(code_map, &ssa.name, None),
     }
 }
 /*
@@ -220,6 +226,16 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
             humanize_name(code_map, INameI::LambdaCallFunctionTemplate(&n.template), None)
                 + &humanize_generic_args(code_map, n.template_args, None)
                 + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
+        }
+        INameI::StaticSizedArray(n) => {
+            let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
+            let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            "[]<".to_string()
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Integer(crate::instantiating::ast::templata::IntegerTemplataI { value: size, _marker: std::marker::PhantomData })) + ","
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability, _marker: std::marker::PhantomData })) + ","
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Variability(crate::instantiating::ast::templata::VariabilityTemplataI { variability, _marker: std::marker::PhantomData })) + ","
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
         }
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }

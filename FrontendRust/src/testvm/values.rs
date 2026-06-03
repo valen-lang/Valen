@@ -556,7 +556,7 @@ case class ArrayInstanceV(
 // mig: fn tyype
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_array_instance");
+    RRKindV { hamut: self.type_h.kind, _phantom: PhantomData }
   }
 }
 /*
@@ -565,7 +565,11 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
 // mig: fn get_element
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h, 's> {
-    panic!("Unimplemented: get_element");
+    let elements = self.elements.get();
+    if index < 0 || index as usize >= elements.len() {
+      panic!("PanicException");
+    }
+    elements[index as usize]
   }
 }
 /*
@@ -605,7 +609,11 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
 // mig: fn deinitialize_element
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h, 's> {
-    panic!("Unimplemented: deinitialize_element");
+    let elements = self.elements.get();
+    assert!(!elements.is_empty());
+    let r#ref = elements[elements.len() - 1];
+    self.elements.set(&elements[0..elements.len() - 1]);
+    r#ref
   }
 }
 /*
@@ -619,7 +627,7 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
 // mig: fn get_size
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn get_size(&self) -> i64 {
-    panic!("Unimplemented: get_size");
+    self.elements.get().len() as i64
   }
 }
 /*

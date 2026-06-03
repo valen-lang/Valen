@@ -291,8 +291,9 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_static_sized_array
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-    pub fn lookup_static_sized_array(&self, _ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
-        panic!("Unimplemented: ProgramH::lookup_static_sized_array")
+    pub fn lookup_static_sized_array(&self, ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
+        let paackage = self.lookup_package(ssa_th.id.package_coordinate);
+        paackage.static_sized_arrays.iter().find(|s| s.name == ssa_th.id).expect("vassertSome: lookup_static_sized_array")
     }
 }
 /*

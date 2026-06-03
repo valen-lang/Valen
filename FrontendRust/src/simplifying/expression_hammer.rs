@@ -168,7 +168,26 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (inner_with_deferreds_expr_h, Vec::new())
                 }
                 RE::Tuple(a) => panic!("translate_expression: Tuple branch"),
-                RE::StaticArrayFromValues(a) => panic!("translate_expression: StaticArrayFromValues branch"),
+                RE::StaticArrayFromValues(a) => {
+                    let crate::instantiating::ast::expressions::StaticArrayFromValuesIE { elements: exprs, result_reference: array_reference_2, array_type: array_type_2 } = *a;
+                    let exprs_ie: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = exprs.iter().map(|e| crate::instantiating::ast::expressions::ExpressionIE::Reference(*e)).collect();
+                    let (results_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &exprs_ie);
+                    match results_he.last().map(|e| e.result_type().kind) {
+                        Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
+                            return (panic!("Unimplemented: StaticArrayFromValues Never branch (Hammer.consecrash)"), Vec::new());
+                        }
+                        _ => {}
+                    }
+                    let underlying_array_h = self.translate_static_sized_array(hinputs, hamuts, array_type_2);
+                    let array_reference_h = self.translate_coord(hinputs, hamuts, array_reference_2);
+                    assert!(array_reference_h.kind == crate::final_ast::types::KindHT::StaticSizedArrayHT(underlying_array_h));
+                    let new_struct_node = ExpressionH::NewArrayFromValuesH(self.interner.alloc(crate::final_ast::instructions::NewArrayFromValuesH {
+                        result_type: array_reference_h.expect_static_sized_array_coord(),
+                        source_expressions: self.interner.alloc_slice_from_vec(results_he),
+                    }));
+                    let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
+                    (new_struct_and_deferreds_expr_h, Vec::new())
+                }
                 RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
                 RE::AsSubtype(a) => panic!("translate_expression: AsSubtype branch"),
                 RE::ArgLookup(a) => {
