@@ -611,9 +611,55 @@ fn read_from_inside_a_closure_inside_a_closure() {
 */
 // mig: fn mutable_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 pub fn mutable_lambda() {
-    panic!("Unmigrated test: mutable_lambda");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/lambdas/lambdamut.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let closure_structs: Vec<_> = coutputs.structs.iter().filter(|s| matches!(
+            s.instantiated_citizen.id.local_name,
+            crate::typing::names::names::INameT::LambdaCitizen(crate::typing::names::names::LambdaCitizenNameT {
+                template: crate::typing::names::names::LambdaCitizenTemplateNameT {
+                    code_location: crate::utils::range::CodeLocationS {
+                        file: crate::utils::code_hierarchy::FileCoordinate {
+                            package_coord: crate::utils::code_hierarchy::PackageCoordinate {
+                                module: crate::interner::StrI("test"),
+                                packages,
+                            },
+                            ..
+                        },
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }) if packages.is_empty()
+        )).collect();
+        assert_eq!(closure_structs.len(), 1);
+        let closure_struct = closure_structs[0];
+        assert!(matches!(closure_struct.mutability, crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable })));
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Mutable lambda") {
