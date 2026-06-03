@@ -479,9 +479,29 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
 */
 // mig: fn read_from_inside_a_closure_inside_a_closure
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn read_from_inside_a_closure_inside_a_closure() {
-    panic!("Unmigrated test: read_from_inside_a_closure_inside_a_closure");
+fn read_from_inside_a_closure_inside_a_closure() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n", true,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Read from inside a closure inside a closure") {
