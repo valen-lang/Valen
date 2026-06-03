@@ -234,8 +234,16 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 _ => panic!("NewStructH: result_type not StructHT"),
             };
             let struct_def_h = program_h.lookup_struct(interner, struct_kind_h);
-            let member_references_vec: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = args_exprs.iter().enumerate().map(|(_i, _arg_expr)| {
-                panic!("NewStructH member_references map body — empty struct test path doesn't exercise")
+            let member_references_vec: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = args_exprs.iter().enumerate().map(|(i, arg_expr)| {
+                match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    INodeExecuteResultV::Return(_) => {
+                        // do we have to, like, discard the previously made arguments?
+                        // what happens with those?
+                        panic!("NewStructH arg produced Return — vimpl; return r");
+                    }
+                    INodeExecuteResultV::Break(_) => panic!("NewStructH arg produced Break — vwat"),
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                }
             }).collect();
             for r in &member_references_vec {
                 heap.decrement_reference_ref_count(

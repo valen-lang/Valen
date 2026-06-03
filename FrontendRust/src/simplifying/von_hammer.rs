@@ -774,7 +774,17 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_struct_member(&self, struct_member_h: &StructMemberH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_struct_member");
+        let StructMemberH { name, variability, tyype } = *struct_member_h;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "StructMember".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "fullName".to_string(), value: self.vonify_name(name) },
+                crate::von::ast::VonMember { field_name: "name".to_string(), value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: name.local_name.0.to_string() }) },
+                crate::von::ast::VonMember { field_name: "variability".to_string(), value: self.vonify_variability(variability) },
+                crate::von::ast::VonMember { field_name: "type".to_string(), value: self.vonify_coord(tyype) },
+            ],
+        })
     }
 }
 /*
