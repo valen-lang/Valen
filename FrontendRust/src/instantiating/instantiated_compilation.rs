@@ -201,8 +201,8 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn get_scoutput(&mut self) -> Result<(), String> {
-    panic!("InstantiatedCompilation.get_scoutput not yet implemented - see InstantiatedCompilation.scala line 39")
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+    self.typing_pass_compilation.get_scoutput()
   }
 }
 /*

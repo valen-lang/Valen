@@ -1881,8 +1881,8 @@ pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedPa
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getVpstMap()
 */
 // mig: fn get_scoutput
-fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
-  Ok(self.scout_compilation.get_scoutput()?.clone())
+pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
+  self.scout_compilation.get_scoutput()
 }
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = scoutCompilation.getScoutput()

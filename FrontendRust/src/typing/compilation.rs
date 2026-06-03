@@ -139,8 +139,8 @@ pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedPa
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = higherTypingCompilation.getVpstMap()
 */
-pub fn get_scoutput(&mut self) -> Result<(), String> {
-  panic!("TypingPassCompilation.get_scoutput not yet implemented - see Compilation.scala line 36")
+pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+  self.higher_typing_compilation.get_scoutput()
 }
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = higherTypingCompilation.getScoutput()

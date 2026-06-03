@@ -175,7 +175,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn get_scoutput
-  pub fn get_scoutput(&self) { panic!("Unimplemented: get_scoutput"); }
+  pub fn get_scoutput(&mut self) -> Result<&crate::utils::code_hierarchy::FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+      self.hammer_compilation.get_scoutput()
+  }
   /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = fullCompilation.getScoutput()
   */

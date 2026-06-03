@@ -208,8 +208,12 @@ pub fn get_vpst_map() -> Result<(), String> {
 */
 
 // mig: fn get_scoutput
-pub fn get_scoutput() -> Result<(), String> {
-  panic!("Unimplemented: get_scoutput");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_scoutput(&mut self) -> Result<&crate::utils::code_hierarchy::FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+    self.instantiated_compilation.get_scoutput()
+  }
 }
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = instantiatedCompilation.getScoutput()
