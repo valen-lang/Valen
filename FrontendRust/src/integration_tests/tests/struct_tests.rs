@@ -82,8 +82,27 @@ fn make_imm_struct_with_one_member() {
 */
 // mig: fn make_nested_imm_struct
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn make_nested_imm_struct() { panic!("Unmigrated test: make_nested_imm_struct"); }
+fn make_nested_imm_struct() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "struct Weapon imm { ammo int; }\nstruct Marine imm { hp int; weapon Weapon; }\nexported func main() {\n  Marine(5, Weapon(7));\n}\n",
+    );
+    compile.run_primitive_args(Vec::new());
+}
 /*
   test("Make nested imm struct") {
     val compile = RunCompilation.test(
