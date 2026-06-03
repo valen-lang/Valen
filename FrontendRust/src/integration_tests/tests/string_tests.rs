@@ -398,8 +398,30 @@ fn string_interpolate() {
 */
 // mig: fn slice_a_slice
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn slice_a_slice() { panic!("Unmigrated test: slice_a_slice"); }
+fn slice_a_slice() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import panicutils.*;\nimport printutils.*;\n\nstruct StrSlice imm {\n  string str;\n  begin int;\n  end int;\n}\nfunc newStrSlice(string str, begin int, end int) StrSlice {\n  vassert(begin >= 0, \"slice begin was negative!\");\n  vassert(end >= 0, \"slice end was negative!\");\n  vassert(begin <= string.len(), \"slice begin was more than length!\");\n  vassert(end <= string.len(), \"slice end was more than length!\");\n  vassert(end >= begin, \"slice end was before begin!\");\n  return StrSlice(string, begin, end);\n}\n\nfunc slice(s str) StrSlice {\n  return newStrSlice(s, 0, s.len());\n}\n\nfunc slice(s str, begin int) StrSlice { return s.slice().slice(begin); }\nfunc slice(s StrSlice, begin int) StrSlice {\n  newBegin = s.begin + begin;\n  vassert(newBegin <= s.string.len(), \"slice begin is more than string length!\");\n  return newStrSlice(s.string, newBegin, s.end);\n}\n\nfunc len(s StrSlice) int {\n  return s.end - s.begin;\n}\n\nfunc slice(s str, begin int, end int) StrSlice {\n  return newStrSlice(s, begin, end);\n}\n\nfunc slice(s StrSlice, begin int, end int) StrSlice {\n  newGlyphBeginOffset = s.begin + begin;\n  newGlyphEndOffset = s.begin + end;\n  return newStrSlice(s.string, newGlyphBeginOffset, newGlyphEndOffset);\n}\n\nexported func main() int {\n  return \"hello\".slice().slice(1, 4).len();\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Slice a slice") {
     val compile = RunCompilation.test(

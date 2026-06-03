@@ -234,7 +234,17 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn eq_bool_bool
-pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_bool_bool"); }
+pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value, .. }), crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: b_value, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value == b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("eq_bool_bool: non-BoolV args"),
+    }
+}
 /*
   def eqBoolBool(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -519,7 +529,17 @@ pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>
   }
 */
 // mig: fn less_than_or_eq_i32
-pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i32"); }
+pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value <= b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("less_than_or_eq_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def lessThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -547,7 +567,17 @@ pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 
   }
 */
 // mig: fn greater_than_or_eq_i32
-pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i32"); }
+pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value >= b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("greater_than_or_eq_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def greaterThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)

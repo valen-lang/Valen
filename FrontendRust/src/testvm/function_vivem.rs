@@ -145,6 +145,9 @@ pub fn get_extern_function<'h, 's, 'v>(
         "__vbi_lessThanI32" => Box::new(crate::testvm::vivem_externs::less_than_i32),
         "castI32Float" => Box::new(crate::testvm::vivem_externs::cast_i32_float),
         "sqrt" => Box::new(crate::testvm::vivem_externs::sqrt),
+        "__vbi_greaterThanOrEqI32" => Box::new(crate::testvm::vivem_externs::greater_than_or_eq_i32),
+        "__vbi_lessThanOrEqI32" => Box::new(crate::testvm::vivem_externs::less_than_or_eq_i32),
+        "__vbi_eqBoolBool" => Box::new(crate::testvm::vivem_externs::eq_bool_bool),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }
