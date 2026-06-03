@@ -211,11 +211,12 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   // mig: fn run_primitive_args (Scala overload `run(args: Vector[PrimitiveKindV])`)
   pub fn run_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) {
       let interner = self.hammer_compilation.interner;
+      let scout_arena = self.hammer_compilation.scout_arena;
       let hamuts = self.get_hamuts();
       let mut vivem_dout = std::io::stdout();
       let vivem_bump = bumpalo::Bump::new();
       crate::testvm::vivem::execute_with_primitive_args(
-          hamuts, interner, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
+          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
       );
   }
   /*
@@ -227,11 +228,12 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   // mig: fn eval_for_kind_primitive_args (Scala overload `evalForKind(args: Vector[PrimitiveKindV])`)
   pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> crate::von::ast::IVonData {
       let interner = self.hammer_compilation.interner;
+      let scout_arena = self.hammer_compilation.scout_arena;
       let hamuts = self.get_hamuts();
       let mut vivem_dout = std::io::stdout();
       let vivem_bump = bumpalo::Bump::new();
       crate::testvm::vivem::execute_with_primitive_args(
-          hamuts, interner, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
+          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
       )
   }
   /*
@@ -252,7 +254,19 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_stdout
-  pub fn eval_for_stdout<'v>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> String { panic!("Unimplemented: eval_for_stdout"); }
+  pub fn eval_for_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> String {
+      let (stdoutput_string_builder, stdout_func) = crate::testvm::vivem::stdout_collector::<'s>();
+      let interner = self.hammer_compilation.interner;
+      let scout_arena = self.hammer_compilation.scout_arena;
+      let hamuts = self.get_hamuts();
+      let mut vivem_dout = std::io::stdout();
+      let vivem_bump = bumpalo::Bump::new();
+      crate::testvm::vivem::execute_with_primitive_args(
+          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &*stdout_func,
+      );
+      let result = stdoutput_string_builder.borrow().clone();
+      result
+  }
   /*
   def evalForStdout(args: Vector[PrimitiveKindV]): String = {
     val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()

@@ -20,8 +20,7 @@ object FunctionVivem {
 // mig: fn execute_function
 pub fn execute_function<'h, 's, 'v>(
     program_h: &'h ProgramH<'s, 'h>,
-    interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
-    stdin: &'v dyn Fn() -> StrI<'s>,
+    interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>,
     stdout: &'v dyn Fn(StrI<'s>),
     heap: &mut HeapV<'v, 'h, 's>,
     args: &'v [ReferenceV<'v, 'h, 's>],
@@ -52,7 +51,7 @@ pub fn execute_function<'h, 's, 'v>(
         writeln!(handle).unwrap();
     }
     let root_expression_id = crate::testvm::values::ExpressionIdV { call_id, path: &[] };
-    let return_ref = match crate::testvm::expression_vivem::execute_node(program_h, interner, stdin, stdout, heap, root_expression_id, &function_h.body) {
+    let return_ref = match crate::testvm::expression_vivem::execute_node(program_h, interner, scout_arena, stdin, stdout, heap, root_expression_id, &function_h.body) {
         crate::testvm::expression_vivem::INodeExecuteResultV::Return(r) => NodeReturnV { return_ref: r.return_ref },
         crate::testvm::expression_vivem::INodeExecuteResultV::Break(_) => panic!("execute_function: NodeBreak vwat"),
         crate::testvm::expression_vivem::INodeExecuteResultV::Continue(c) => NodeReturnV { return_ref: c.result_ref },
@@ -136,6 +135,9 @@ pub fn get_extern_function<'h, 's, 'v>(
         "__vbi_negateFloat" => Box::new(crate::testvm::vivem_externs::negate_float),
         "castFloatI32" => Box::new(crate::testvm::vivem_externs::cast_float_i32),
         "__vbi_eqFloatFloat" => Box::new(crate::testvm::vivem_externs::eq_float_float),
+        "castFloatStr" => Box::new(crate::testvm::vivem_externs::cast_float_str),
+        "printstr" => Box::new(crate::testvm::vivem_externs::print),
+        "__vbi_strLength" => Box::new(crate::testvm::vivem_externs::str_length),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

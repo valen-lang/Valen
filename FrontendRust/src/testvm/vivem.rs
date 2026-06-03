@@ -68,14 +68,14 @@ override def equals(obj: Any): Boolean = vcurious();
 object Vivem {
 */
 // mig: fn execute_with_primitive_args
-pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
     let mut heap = HeapV::new(interner, vivem_dout, vivem_bump);
     let arg_references: &'v [ReferenceV<'v, 'h, 's>] =
         vivem_bump.alloc_slice_fill_iter(
             external_argument_kinds.iter().map(|arg_kind| {
                 heap.add(interner, crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::from(*arg_kind))
             }));
-    inner_execute(program_h, interner, arg_references, &mut heap, stdin, stdout)
+    inner_execute(program_h, interner, scout_arena, arg_references, &mut heap, stdin, stdout)
 }
 /*
   def executeWithPrimitiveArgs(
@@ -152,8 +152,14 @@ pub fn stdin_from_list<'v, 'h, 's>(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -
   }
 */
 // mig: fn stdout_collector
-pub fn stdout_collector<'v, 'h, 's>() -> (String, Box<dyn Fn(StrI<'s>)>) {
-    panic!("Unimplemented: stdout_collector")
+pub fn stdout_collector<'s>() -> (std::rc::Rc<std::cell::RefCell<String>>, Box<dyn Fn(StrI<'s>)>) {
+    let stdoutput = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+    let stdoutput_clone = stdoutput.clone();
+    let func: Box<dyn Fn(StrI<'s>)> = Box::new(move |s: StrI<'s>| {
+        print!("{}", s.0);
+        stdoutput_clone.borrow_mut().push_str(s.0);
+    });
+    (stdoutput, func)
 }
 /*
   def stdoutCollector(): (StringBuilder, String => Unit) = {
@@ -163,7 +169,7 @@ pub fn stdout_collector<'v, 'h, 's>() -> (String, Box<dyn Fn(StrI<'s>)>) {
   }
 */
 // mig: fn inner_execute
-pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
+pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
     let mains: Vec<&'h crate::final_ast::ast::FunctionH<'s, 'h>> =
         program_h.packages.package_coord_to_contents.iter().flat_map(|(_package_coord, paackage)| {
             paackage.export_name_to_function.iter()
@@ -189,7 +195,7 @@ pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &cra
     }
 
     let (callee_call_id, retuurn) =
-        crate::testvm::function_vivem::execute_function(program_h, interner, stdin, stdout, heap, argument_references, main);
+        crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, argument_references, main);
     let return_ref = retuurn.return_ref;
 
     {
@@ -198,7 +204,7 @@ pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &cra
     }
 
     let von = heap.to_von(return_ref);
-    crate::testvm::expression_vivem::discard(program_h, interner, heap, stdout, stdin, callee_call_id, main.prototype.return_type, return_ref);
+    crate::testvm::expression_vivem::discard(program_h, interner, scout_arena, heap, stdout, stdin, callee_call_id, main.prototype.return_type, return_ref);
     {
         use std::io::Write;
         writeln!(heap.vivem_dout).unwrap();

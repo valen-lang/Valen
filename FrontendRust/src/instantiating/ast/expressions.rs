@@ -68,7 +68,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::ConstantInt(x) => x.result(),
             ReferenceExpressionIE::ConstantBool(_) => panic!("RE::result: ConstantBool"),
             ReferenceExpressionIE::ConstantStr(_) => panic!("RE::result: ConstantStr"),
-            ReferenceExpressionIE::ConstantFloat(_) => panic!("RE::result: ConstantFloat"),
+            ReferenceExpressionIE::ConstantFloat(x) => x.result(),
             ReferenceExpressionIE::ArgLookup(x) => x.coord,
             ReferenceExpressionIE::ArrayLength(_) => panic!("RE::result: ArrayLength"),
             ReferenceExpressionIE::InterfaceFunctionCall(_) => panic!("RE::result: InterfaceFunctionCall"),
@@ -1165,7 +1165,9 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i, R> ConstantFloatIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::FloatIT(crate::instantiating::ast::types::FloatIT { _marker: std::marker::PhantomData }) }
+	}
 }
 /*
   override def result = CoordI[cI](MutableShareI, FloatIT())

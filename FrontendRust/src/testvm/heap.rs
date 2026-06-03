@@ -34,6 +34,7 @@ where 's: 'h, 'h: 'v, 'v: 'a,
 {
     pub program_h: &'h ProgramH<'s, 'h>,
     pub interner: &'a crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    pub scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
     pub heap: &'a mut HeapV<'v, 'h, 's>,
     pub call_id: CallIdV<'v, 'h, 's>,
     pub stdin: &'v dyn Fn() -> StrI<'s>,
@@ -90,8 +91,8 @@ impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v
 */
 // mig: fn make_void
 impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
-    pub fn make_void(&self) -> ReferenceV {
-        panic!("Unimplemented: make_void");
+    pub fn make_void(&self) -> ReferenceV<'v, 'h, 's> {
+        self.heap.void()
     }
 }
 /*

@@ -269,7 +269,14 @@ pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &
   }
 */
 // mig: fn str_length
-pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: str_length"); }
+pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value,
+        _ => panic!("str_length: non-StrV arg"),
+    };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value.0.len() as i64, bits: 32, _phantom: std::marker::PhantomData }))
+}
 /*
   def strLength(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -278,7 +285,15 @@ pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn cast_float_str
-pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_str"); }
+pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
+        _ => panic!("cast_float_str: non-FloatV arg"),
+    };
+    let interned = memory.scout_arena.intern_str(&value.to_string());
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+}
 /*
   def castFloatStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -303,7 +318,25 @@ pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn print
-pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: print"); }
+pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 3);
+    let a_str = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value,
+        _ => panic!("print: arg 0 not StrV"),
+    };
+    let a_begin = match memory.dereference(args[1]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
+        _ => panic!("print: arg 1 not IntV(_, 32)"),
+    };
+    let a_length = match memory.dereference(args[2]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
+        _ => panic!("print: arg 2 not IntV(_, 32)"),
+    };
+    let substring = &a_str.0[a_begin as usize .. (a_begin as i32 + a_length as i32) as usize];
+    let substring_interned = memory.scout_arena.intern_str(substring);
+    (memory.stdout)(substring_interned);
+    memory.make_void()
+}
 /*
   def print(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 3)

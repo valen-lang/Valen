@@ -441,7 +441,7 @@ case class StrV(value: String) extends PrimitiveKindV {
 // mig: fn tyype
 impl<'v, 'h, 's> StrV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_str");
+    RRKindV { hamut: KindHT::StrHT(crate::final_ast::types::StrHT), _phantom: PhantomData }
   }
 }
 /*
