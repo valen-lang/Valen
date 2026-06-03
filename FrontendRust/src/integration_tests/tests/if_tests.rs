@@ -19,11 +19,95 @@ class IfTests extends FunSuite with Matchers {
 */
 // mig: fn simple_true_branch_returning_an_int
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn simple_true_branch_returning_an_int() {
-    panic!("Unmigrated test: simple_true_branch_returning_an_int");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  return if (true) { 3 } else { 5 };\n}\n",
+    );
+    {
+        let test_str = scout_arena.intern_str("test");
+        let package_coord = scout_arena.intern_package_coordinate(test_str, &[]);
+        let file_coord = scout_arena.intern_file_coordinate(package_coord, "0.vale");
+        let scoutput = compile.get_scoutput().expect("get_scoutput failed");
+        let program_s = scoutput.file_coord_to_contents.get(file_coord).expect("file_coord not in scoutput");
+        let main = program_s.lookup_function("main");
+        let ret = match main.body {
+            crate::postparsing::ast::IBodyS::CodeBody(crate::postparsing::ast::CodeBodyS {
+                body: crate::postparsing::expressions::BodySE { block: crate::postparsing::expressions::BlockSE { expr, .. }, .. },
+            }) => {
+                let mut returns: Vec<&crate::postparsing::expressions::ReturnSE> = Vec::new();
+                let mut stack: Vec<&crate::postparsing::expressions::IExpressionSE> = vec![*expr];
+                while let Some(e) = stack.pop() {
+                    match e {
+                        crate::postparsing::expressions::IExpressionSE::Return(r) => returns.push(r),
+                        crate::postparsing::expressions::IExpressionSE::Consecutor(c) => {
+                            for child in c.exprs.iter() { stack.push(child); }
+                        }
+                        _ => {}
+                    }
+                }
+                assert_eq!(returns.len(), 1);
+                returns[0]
+            }
+            _ => panic!("expected CodeBody"),
+        };
+        let iff = {
+            let mut found: Option<&crate::postparsing::expressions::IfSE> = None;
+            let mut stack: Vec<&crate::postparsing::expressions::IExpressionSE> = vec![ret.inner];
+            while let Some(e) = stack.pop() {
+                match e {
+                    crate::postparsing::expressions::IExpressionSE::If(i) => { assert!(found.is_none()); found = Some(i); }
+                    crate::postparsing::expressions::IExpressionSE::Block(b) => stack.push(b.expr),
+                    crate::postparsing::expressions::IExpressionSE::Consecutor(c) => {
+                        for child in c.exprs.iter() { stack.push(child); }
+                    }
+                    _ => {}
+                }
+            }
+            found.expect("expected If somewhere in ret.inner")
+        };
+        match iff.condition {
+            crate::postparsing::expressions::IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE { value: true, .. }) => {}
+            _ => panic!("expected condition ConstantBool(_, true)"),
+        }
+        match iff.then_body.expr {
+            crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 3, .. }) => {}
+            _ => panic!("expected thenBody ConstantInt(_, 3, _)"),
+        }
+        match iff.else_body.expr {
+            crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 5, .. }) => {}
+            _ => panic!("expected elseBody ConstantInt(_, 5, _)"),
+        }
+    }
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::If(_) => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
+Guardian: temp-disable: SPDMX — No collect_only_snode macro exists in this codebase (only collect_only_tnode for typing AST + collect_only_hnode for final AST). The postparsing AST has no traverse-macro yet, so inline destructure is the established Rust adaptation. In-file precedent: empty_block / simple_block_with_a_variable in block_tests.rs both walk CodeBody->BodySE->BlockSE->ConsecutorSE inline. — FrontendRust/guardian-logs/request-546-1780524601782/hook-546/IfTests--16.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Simple true branch returning an int") {
     val compile = RunCompilation.test(
       """
@@ -54,9 +138,29 @@ fn simple_true_branch_returning_an_int() {
 */
 // mig: fn simple_false_branch_returning_an_int
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn simple_false_branch_returning_an_int() {
-    panic!("Unmigrated test: simple_false_branch_returning_an_int");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  return if (false) { 3 } else { 5 };\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
 }
 /*
   test("Simple false branch returning an int") {
