@@ -22,9 +22,53 @@ class ClosureTests extends FunSuite with Matchers {
 */
 // mig: fn addressibility
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 pub fn addressibility() {
-    panic!("Unmigrated test: addressibility");
+    let scout_bump = bumpalo::Bump::new();
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let calc = |self_borrowed, self_moved, self_mutated, child_borrowed, child_moved, child_mutated| {
+        let local_s = crate::postparsing::expressions::LocalS {
+            var_name: crate::postparsing::names::IVarNameS::CodeVarName(scout_arena.intern_str("x")),
+            self_borrowed,
+            self_moved,
+            self_mutated,
+            child_borrowed,
+            child_moved,
+            child_mutated,
+        };
+        let local_a: &crate::postparsing::expressions::LocalS = scout_arena.alloc(local_s);
+        let addressible_if_mutable = crate::typing::compiler::Compiler::determine_if_local_is_addressible(
+            crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }),
+            local_a);
+        let addressible_if_immutable = crate::typing::compiler::Compiler::determine_if_local_is_addressible(
+            crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }),
+            local_a);
+        (addressible_if_mutable, addressible_if_immutable)
+    };
+    use crate::postparsing::expressions::IVariableUseCertainty::{NotUsed, Used};
+    // If we don't do anything with the variable, it can be just a reference.
+    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed), (false, false));
+    // If we or our children only ever read, it can be just a reference.
+    assert_eq!(calc(Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed), (false, false));
+    assert_eq!(calc(NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed), (false, false));
+    // If only we mutate it, it can be just a reference.
+    assert_eq!(calc(NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed), (false, false));
+    // Even if we're certain it's moved, it must be addressible.
+    // Imagine:
+    // exported func main() int {
+    //   m = Marine();
+    //   if (something) {
+    //     something.consume(m);
+    //   } else {
+    //     otherthing.consume(m);
+    //   }
+    // }
+    // (or, we can change it so we move it into the closure struct, but that
+    // seems weird, i like thinking that closures only ever have borrows or
+    // addressibles)
+    // However, this doesnt apply to immutable, since move = copy.
+    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed), (true, false));
+    // If we're certain children mutate it, it also has to be addressible.
+    assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used), (true, true));
 }
 /*
   test("Addressibility") {

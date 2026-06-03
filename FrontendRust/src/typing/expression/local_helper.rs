@@ -212,7 +212,7 @@ where 's: 't,
         let variability = self.determine_local_variability(local_variable_a);
 
         let mutable = self.get_mutability(coutputs, reference_type2.kind);
-        let addressible = self.determine_if_local_is_addressible(mutable, local_variable_a);
+        let addressible = Compiler::determine_if_local_is_addressible(mutable, local_variable_a);
 
         let local_var = if addressible {
             ILocalVariableT::Addressible(AddressibleLocalVariableT {
@@ -565,7 +565,6 @@ where 's: 't,
 {
     // See ClosureTests for requirements here
     pub fn determine_if_local_is_addressible(
-        &self,
         mutability: ITemplataT<'s, 't>,
         local_a: &'s LocalS<'s>,
     ) -> bool {
