@@ -1929,7 +1929,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         let result_ref: &'i crate::instantiating::ast::citizens::ReferenceMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result_ref);
                         (type_s.coord, crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(result_ref))
                     }
-                    crate::typing::ast::citizens::IMemberTypeT::Address(_) => panic!("Unimplemented: translate_struct_member Address"),
+                    crate::typing::ast::citizens::IMemberTypeT::Address(a) => {
+                        let type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &a.reference);
+                        let result = crate::instantiating::ast::citizens::AddressMemberTypeI {
+                            reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s.coord),
+                            _marker: std::marker::PhantomData,
+                        };
+                        let result: &'i crate::instantiating::ast::citizens::AddressMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result);
+                        (type_s.coord, crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(result))
+                    }
                 };
                 let name_s = Self::translate_var_name(self.interner, name);
                 let member_c = StructMemberI {
@@ -2846,7 +2854,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ILocalVariableT::Addressible(a) => {
                 let (coord, local) =
-                    self.translate_addressible_local_variable(denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, a);
+                    self.translate_addressible_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, a);
                 (coord, ILocalVariableI::AddressibleLocalVariableI(self.interner.alloc(local)))
             }
         }
@@ -2917,8 +2925,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_addressible_local_variable
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_addressible_local_variable(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _variable: &AddressibleLocalVariableT<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressibleLocalVariableI<'s, 'i>) {
-        panic!("Unimplemented: translate_addressible_local_variable");
+    pub fn translate_addressible_local_variable(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _variable: &AddressibleLocalVariableT<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressibleLocalVariableI<'s, 'i>) {
+        let AddressibleLocalVariableT { name: id, variability, coord } = _variable;
+        let coord_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &RegionT { region: IRegionT::Default }, coord);
+        let var_s = Self::translate_var_name(self.interner, id);
+        let local_c = AddressibleLocalVariableI {
+            name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &var_s),
+            variability: Self::translate_variability(variability),
+            collapsed_coord: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &coord_s.coord),
+        };
+        (coord_s.coord, local_c)
     }
 }
 /*
@@ -2994,7 +3010,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_coord, result_ce)
             }
-            AddressExpressionTE::AddressMemberLookup(_) => panic!("Unimplemented: translate_addr_expr AddressMemberLookup"),
+            AddressExpressionTE::AddressMemberLookup(a) => {
+                let crate::typing::ast::expressions::AddressMemberLookupTE { range: _range, struct_expr, member_name, result_type2, variability } = **a;
+                let (_struct_it, struct_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &struct_expr);
+                let var_name_s = Self::translate_var_name(self.interner, &member_name);
+                let result_it = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &result_type2);
+                let variability_c = Self::translate_variability(&variability);
+                let result_ce = AddressExpressionIE::AddressMemberLookup(self.interner.alloc(crate::instantiating::ast::expressions::AddressMemberLookupIE {
+                    struct_expr: struct_ce,
+                    member_name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &var_name_s),
+                    member_reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it.coord),
+                    variability: variability_c,
+                }));
+                (result_it.coord, result_ce)
+            }
             AddressExpressionTE::RuntimeSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr RuntimeSizedArrayLookup"),
         }
     }

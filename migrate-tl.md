@@ -34,6 +34,8 @@
 
 **Resolve rebase conflicts in-place — never `git checkout --ours/--theirs` on a whole file.** Three-way merge already applied every non-conflicting hunk; `--ours`/`--theirs` throws those away. Edit only the `<<<<<<< ======= >>>>>>>` blocks.
 
+**Include submodule pin bumps in commits — don't exclude them.** Especially Guardian's nested submodules (ContextifiedDiff, Rabble, etc.) and their inner Luz pins; commit from leaves up so each level's index is consistent.
+
 **During every sync, check if `migrate-tl.md` changed** (`git diff experimental..experimental-N -- migrate-tl.md` and `git diff HEAD -- migrate-tl.md`). The architect adds rules here mid-session; auto-merge may pull them in silently. Read every change — they're load-bearing for TL behavior and don't surface elsewhere.
 
 **TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).

@@ -222,7 +222,45 @@ where 's: 'h, 's: 'i, 'i: 'h,
         member_name: &'i IVarNameI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_addressible_member_mutate");
+        let (destination_result_line, destination_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
+        let struct_it = match struct_expr2.result().kind {
+            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            _ => panic!("translate_addressible_member_mutate: non-struct kind"),
+        };
+        let struct_def_i = hinputs.lookup_struct(&struct_it.id);
+        let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("member not found") as i32;
+        assert!(member_index >= 0);
+        let member2 = &struct_def_i.members[member_index as usize];
+        let variability = member2.variability;
+        let boxed_type2 = member2.tyype.expect_address_member().reference;
+        let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
+        let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
+        let expected_struct_box_member_type = crate::final_ast::types::CoordH {
+            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            location: crate::final_ast::types::LocationH::YonderH,
+            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        };
+        let name_h = self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*member_name)));
+        let load_result_type = crate::final_ast::types::CoordH {
+            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            location: crate::final_ast::types::LocationH::YonderH,
+            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        };
+        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+            struct_expression: destination_result_line.expect_struct_access(),
+            member_index,
+            expected_member_type: expected_struct_box_member_type,
+            result_type: load_result_type,
+            member_name: name_h,
+        }));
+        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(crate::final_ast::instructions::MemberStoreH {
+            result_type: boxed_type_h,
+            struct_expression: load_box_node.expect_struct_access(),
+            member_index: crate::simplifying::let_hammer::BOX_MEMBER_INDEX,
+            source_expression: source_expr_result_line,
+            member_name: self.add_step(hamuts, box_struct_ref_h.id, self.keywords.box_member_name),
+        }));
+        (store_node, destination_deferreds)
     }
 }
 /*

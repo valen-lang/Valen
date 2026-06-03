@@ -414,7 +414,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
             crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(r) => {
                 (member2.variability, self.translate_coord(hinputs, hamuts, r.reference))
             }
-            crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => panic!("Unimplemented: translate_member AddressMemberTypeI"),
+            crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(a) => {
+                let reference_h = self.translate_coord(hinputs, hamuts, a.reference);
+                let box_struct_ref_h = self.make_box(hinputs, hamuts, member2.variability, a.reference, reference_h);
+                (member2.variability, crate::final_ast::types::CoordH {
+                    ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+                    location: crate::final_ast::types::LocationH::YonderH,
+                    kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+                })
+            }
         };
         let added_name = crate::instantiating::ast::names::add_step(struct_name, member2.name.into());
         StructMemberH {
@@ -464,12 +472,53 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        conceptual_variability: VariabilityI,
+        _conceptual_variability: VariabilityI,
         type2: CoordI<'s, 'i, cI>,
         type_h: CoordH<'s, 'h>,
     ) -> &'h StructHT<'s, 'h>
     {
-        panic!("Unimplemented: make_box");
+        let template_args = self.instantiating_interner.bump().alloc_slice_copy(&[
+            crate::instantiating::ast::templata::ITemplataI::Coord(crate::instantiating::ast::templata::CoordTemplataI {
+                region: crate::instantiating::ast::templata::RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                coord: type2,
+            }),
+        ]);
+        let struct_name = crate::instantiating::ast::names::StructNameI {
+            template: crate::instantiating::ast::names::IStructTemplateNameI::StructTemplate(self.instantiating_interner.intern_struct_template_name_ci(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name: self.keywords.box_human_name })),
+            template_args,
+        };
+        let box_full_name2 = crate::instantiating::ast::names::IdI {
+            package_coord: self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]),
+            init_steps: &[],
+            local_name: crate::instantiating::ast::names::INameI::StructName(self.instantiating_interner.intern_struct_name_ci(struct_name)),
+        };
+        let box_full_name_h = self.translate_full_name(hinputs, hamuts, &box_full_name2);
+        match hamuts.struct_defs().iter().find(|s| s.id == box_full_name_h) {
+            Some(struct_def_h) => struct_def_h.get_ref(self.interner),
+            None => {
+                let temporary_struct_ref_h = self.interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: box_full_name_h });
+                // We don't actually care about the given variability, because even if it's final, we still need
+                // the box to contain a varying reference, see VCBAAF.
+                let actual_variability = crate::instantiating::ast::types::VariabilityI::Varying;
+                let member_h = crate::final_ast::ast::StructMemberH {
+                    name: self.add_step(hamuts, temporary_struct_ref_h.id, self.keywords.box_member_name),
+                    variability: crate::simplifying::conversions::evaluate_variability(actual_variability),
+                    tyype: type_h,
+                };
+                let members_slice: &'h [crate::final_ast::ast::StructMemberH<'s, 'h>] = self.interner.bump().alloc_slice_copy(&[member_h]);
+                let struct_def_h = crate::final_ast::ast::StructDefinitionH {
+                    id: box_full_name_h,
+                    weakable: false,
+                    extern_: false,
+                    mutability: crate::final_ast::types::Mutability::Mutable,
+                    edges: &[],
+                    members: members_slice,
+                };
+                hamuts.add_struct_originating_from_hammer(struct_def_h);
+                assert!(*struct_def_h.get_ref(self.interner) == *temporary_struct_ref_h);
+                struct_def_h.get_ref(self.interner)
+            }
+        }
     }
 }
 /*

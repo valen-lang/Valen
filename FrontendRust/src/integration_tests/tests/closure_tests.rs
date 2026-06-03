@@ -425,9 +425,82 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
 */
 // mig: fn mutates_from_inside_a_closure
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn mutates_from_inside_a_closure() {
-    panic!("Unmigrated test: mutates_from_inside_a_closure");
+fn mutates_from_inside_a_closure() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  x = 4;\n  { set x = x + 1; }();\n  return x;\n}\n",
+    );
+    {
+        let interner = compile.interner;
+        let coutputs = compile.expect_compiler_outputs();
+
+        // The struct should have an int x in it.
+        let closure = coutputs.lookup_lambda_in("main");
+        let closure_struct = closure.header.params.first().unwrap().tyype.kind.expect_struct();
+        let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
+        let expected_members = vec![
+            crate::typing::ast::citizens::IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
+                name: crate::typing::names::names::IVarNameT::CodeVar(interner.intern_code_var_name(crate::typing::names::names::CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: std::marker::PhantomData })),
+                variability: crate::typing::types::types::VariabilityT::Varying,
+                tyype: crate::typing::ast::citizens::IMemberTypeT::Address(crate::typing::ast::citizens::AddressMemberTypeT {
+                    reference: crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Share,
+                        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+                    },
+                }),
+            }),
+        ];
+        assert_eq!(closure_struct_def.members, expected_members.as_slice());
+
+        let lambda = coutputs.lookup_lambda_in("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
+            crate::typing::test::traverse::NodeRefT::Mutate(crate::typing::ast::expressions::MutateTE {
+                destination_expr: crate::typing::ast::expressions::AddressExpressionTE::AddressMemberLookup(crate::typing::ast::expressions::AddressMemberLookupTE {
+                    member_name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }),
+                    result_type2: crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Share,
+                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
+
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+                variable: crate::typing::env::function_environment_t::ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
+                    variability: crate::typing::types::types::VariabilityT::Varying,
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
+    }
+
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
 }
 /*
   test("Mutates from inside a closure") {

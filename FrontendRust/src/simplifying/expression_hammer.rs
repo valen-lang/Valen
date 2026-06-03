@@ -299,7 +299,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 RE::DestroyImmRuntimeSizedArray(a) => panic!("translate_expression: DestroyImmRuntimeSizedArray branch"),
                 RE::NewImmRuntimeSizedArray(a) => panic!("translate_expression: NewImmRuntimeSizedArray branch"),
             },
-            ExpressionIE::Address(_) => panic!("translate_expression: Address branch"),
+            ExpressionIE::Address(a) => match a {
+                crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(lookup2) => {
+                    match lookup2.local_variable {
+                        crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(_) => {
+                            let load_box_access = self.translate_local_address(hinputs, hamuts, current_function_header, locals, lookup2);
+                            (load_box_access, Vec::new())
+                        }
+                        _ => panic!("translate_expression: LocalLookup non-addressible"),
+                    }
+                }
+                crate::instantiating::ast::expressions::AddressExpressionIE::AddressMemberLookup(lookup2) => {
+                    let (load_box_access, deferreds) = self.translate_member_address(hinputs, hamuts, current_function_header, locals, lookup2);
+                    (load_box_access, deferreds)
+                }
+                _ => panic!("translate_expression: Address other branch"),
+            },
         }
     }
 }

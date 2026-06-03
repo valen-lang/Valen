@@ -192,8 +192,8 @@ impl<'s, 't> HinputsT<'s, 't> {
       override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct(&self, struct_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_struct");
+    pub fn lookup_struct(&self, struct_id: IdT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
+        *self.structs.iter().find(|s| s.instantiated_citizen.id == struct_id).expect("lookup_struct: missing")
     }
     /*
       def lookupStruct(structId: IdT[IStructNameT]): StructDefinitionT = {

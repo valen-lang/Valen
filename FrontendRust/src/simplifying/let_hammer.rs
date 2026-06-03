@@ -188,7 +188,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
             crate::instantiating::ast::ast::ILocalVariableI::ReferenceLocalVariableI(r) => {
                 self.translate_mundane_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &r.name, r.variability)
             }
-            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(_) => panic!("translate_let_and_point: AddressibleLocalVariableI arm"),
+            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(alv) => {
+                self.translate_addressible_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &alv.name, alv.variability, alv.collapsed_coord)
+            }
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, borrow_access, deferreds)
     }
@@ -242,7 +244,28 @@ where 's: 'h, 's: 'i, 'i: 'h,
         reference: CoordI<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_addressible_let");
+        let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, reference, source_result_pointer_type_h);
+        let expected_local_box_type = crate::final_ast::types::CoordH {
+            ownership: crate::final_ast::types::OwnershipH::OwnH,
+            location: crate::final_ast::types::LocationH::YonderH,
+            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        };
+        let var_id_full = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*var_id));
+        let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
+        let local = locals.add_typing_pass_local(var_id, var_id_name_h, crate::simplifying::conversions::evaluate_variability(variability), expected_local_box_type);
+        let member_names: Vec<&'h crate::final_ast::ast::IdH<'s, 'h>> = hamuts.struct_defs().iter().find(|s| std::ptr::eq(s.get_ref(self.interner), box_struct_ref_h)).unwrap().members.iter().map(|m| m.name).collect();
+        let source_expressions = self.interner.bump().alloc_slice_copy(&[source_expr_he]);
+        let target_member_names = self.interner.bump().alloc_slice_copy(&member_names);
+        let new_struct_node = crate::final_ast::instructions::ExpressionH::NewStructH(self.interner.alloc(crate::final_ast::instructions::NewStructH {
+            source_expressions,
+            target_member_names,
+            result_type: expected_local_box_type,
+        }));
+        crate::final_ast::instructions::ExpressionH::StackifyH(self.interner.alloc(crate::final_ast::instructions::StackifyH {
+            source_expr: new_struct_node,
+            local,
+            name: Some(self.translate_full_name(hinputs, hamuts, &var_id_full)),
+        }))
     }
 }
 /*
@@ -571,8 +594,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 locals.mark_unstackified_by_var_name(&rlv.name);
                 unstackify_node
             }
-            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(_) => {
-                panic!("translate_unlet: AddressibleLocalVariableI branch")
+            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(alv) => {
+                let inner_type2 = alv.collapsed_coord;
+                let inner_type_h = self.translate_coord(hinputs, hamuts, inner_type2);
+                let _struct_ref_h = self.make_box(hinputs, hamuts, alv.variability, inner_type2, inner_type_h);
+                let unstackify_box_node = ExpressionH::UnstackifyH(self.interner.alloc(crate::final_ast::instructions::UnstackifyH { local }));
+                locals.mark_unstackified_by_var_name(&alv.name);
+                let inner_local = locals.add_hammer_local(inner_type_h, crate::simplifying::conversions::evaluate_variability(alv.variability));
+                let des_h = ExpressionH::DestroyH(self.interner.alloc(crate::final_ast::instructions::DestroyH {
+                    struct_expression: unstackify_box_node.expect_struct_access(),
+                    local_types: self.interner.bump().alloc_slice_copy(&[inner_type_h]),
+                    local_indices: self.interner.bump().alloc_slice_copy(&[inner_local]),
+                }));
+                locals.mark_unstackified(inner_local.id);
+                let unstackify_contents_node = ExpressionH::UnstackifyH(self.interner.alloc(crate::final_ast::instructions::UnstackifyH { local: inner_local }));
+                let exprs = self.interner.bump().alloc_slice_copy(&[des_h, unstackify_contents_node]);
+                ExpressionH::ConsecutorH(self.interner.alloc(crate::final_ast::instructions::ConsecutorH { exprs }))
             }
         }
     }
@@ -731,8 +768,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     local_types.push(member_ref_type_h);
                     local_indices.push(local_index);
                 }
-                crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => {
-                    panic!("translate_destroy: AddressMemberTypeI arm not yet migrated");
+                crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(member_ref_type2_addr) => {
+                    let member_ref_type_h = self.translate_coord(hinputs, hamuts, member_ref_type2_addr.reference);
+                    let box_struct_ref_h = self.make_box(hinputs, hamuts, member2.variability, member_ref_type2_addr.reference, member_ref_type_h);
+                    let local_box_type = crate::final_ast::types::CoordH {
+                        ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+                        location: crate::final_ast::types::LocationH::YonderH,
+                        kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+                    };
+                    let local_index = locals.add_hammer_local(local_box_type, crate::final_ast::types::Variability::Final);
+                    local_types.push(local_box_type);
+                    local_indices.push(local_index);
                 }
             }
         }
@@ -745,10 +791,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 local_indices: self.interner.bump().alloc_slice_copy(&local_indices),
             }));
         let unboxings_h: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> =
-            struct_def_t.members.iter().zip(local_types.iter().zip(local_indices.iter())).flat_map(|(member, (_local_type, _local))| {
+            struct_def_t.members.iter().zip(local_types.iter().zip(local_indices.iter())).flat_map(|(member, (_local_type, local))| {
                 match member.tyype {
                     crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(_) => Vec::<crate::final_ast::instructions::ExpressionH<'s, 'h>>::new(),
-                    crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => panic!("translate_destroy: AddressMemberTypeI unboxing arm not yet migrated"),
+                    crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => {
+                        let unstackify_node = crate::final_ast::instructions::ExpressionH::UnstackifyH(self.interner.alloc(crate::final_ast::instructions::UnstackifyH { local: *local }));
+                        locals.mark_unstackified(local.id);
+                        let discard_node = crate::final_ast::instructions::ExpressionH::DiscardH(self.interner.alloc(crate::final_ast::instructions::DiscardH { source_expression: unstackify_node }));
+                        vec![discard_node]
+                    }
                 }
             }).collect();
         let mut destructure_and_unboxings: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> = vec![destructure_h];

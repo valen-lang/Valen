@@ -76,12 +76,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn add_step(
         &self,
-        hamuts: &Hamuts<'s, 'i, 'h>,
+        _hamuts: &Hamuts<'s, 'i, 'h>,
         full_name: &IdH<'s, 'h>,
         s: StrI<'s>,
     ) -> &'h IdH<'s, 'h>
     {
-        panic!("Unimplemented: add_step");
+        let crate::final_ast::ast::IdH { package_coordinate, shortened_name, fully_qualified_name, .. } = *full_name;
+        let new_shortened = format!("{}.{}", shortened_name.0, s.0);
+        let new_fqn = format!("{}.{}", fully_qualified_name.0, s.0);
+        self.interner.intern_id_h(crate::final_ast::ast::IdHValH {
+            local_name: s,
+            package_coordinate,
+            shortened_name: self.scout_arena.intern_str(&new_shortened),
+            fully_qualified_name: self.scout_arena.intern_str(&new_fqn),
+            _phantom_h: std::marker::PhantomData,
+        })
     }
 }
 /*

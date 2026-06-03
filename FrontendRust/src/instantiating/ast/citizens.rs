@@ -156,9 +156,11 @@ impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
 // mig: fn expect_address_member
 /* Guardian: disable-all */
 impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
-    pub fn expect_address_member(&self) -> () {
-        match self {
-            _ => panic!("Unimplemented: IMemberTypeI::expect_address_member dispatch"),
+    pub fn expect_address_member(&self) -> &'i AddressMemberTypeI<'s, 'i, R> {
+        match *self {
+            // BUG: Scala message says "Expected reference member, was address member!" but function is expectAddressMember; preserving Scala wording.
+            IMemberTypeI::ReferenceMemberTypeI(_) => panic!("Expected reference member, was address member!"),
+            IMemberTypeI::AddressMemberTypeI(a) => a,
         }
     }
 }

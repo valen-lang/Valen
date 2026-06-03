@@ -773,14 +773,27 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
 */
 // mig: fn collapsed_coord
 impl<'s, 'i> ILocalVariableI<'s, 'i> {
-    pub fn collapsed_coord(&self) -> () {
-        panic!("Unimplemented: collapsed_coord")
+    pub fn collapsed_coord(&self) -> CoordI<'s, 'i, cI> {
+        match self {
+            ILocalVariableI::AddressibleLocalVariableI(alv) => alv.collapsed_coord,
+            ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.collapsed_coord,
+        }
     }
 }
 /*
   def collapsedCoord: CoordI[cI]
 }
 */
+// mig: fn variability (inherited from IVariableI, no direct ILocalVariableI Scala decl)
+impl<'s, 'i> ILocalVariableI<'s, 'i> {
+    pub fn variability(&self) -> VariabilityI {
+        match self {
+            ILocalVariableI::AddressibleLocalVariableI(alv) => alv.variability,
+            ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.variability,
+        }
+    }
+}
+/* */
 // mig: struct AddressibleLocalVariableI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

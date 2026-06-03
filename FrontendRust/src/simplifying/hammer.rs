@@ -225,10 +225,17 @@ where 's: 'i, 'i: 'h,
         tyype: CoordH<'s, 'h>,
         variability: Variability,
     ) -> Local<'s, 'h> {
-        panic!("Unimplemented: add_hammer_local");
+        let new_local_height = self.locals.len() as i32;
+        let new_local_id_number = self.next_local_id_number;
+        let new_local_id = VariableIdH { number: new_local_id_number, height: new_local_height, name: None };
+        let new_local = Local { id: new_local_id, variability, type_h: tyype };
+        self.locals.insert(new_local_id, new_local);
+        self.next_local_id_number = new_local_id_number + 1;
+        new_local
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented collapsed-Locals architecture (this file lines ~5-12, mirrors hamuts.rs collapse): Scala outer `def addHammerLocal = inner.addHammerLocal(...)` delegates to the inner Locals, whose body (compute new_local_height, new_local_id_number, build VariableIdH+Local, insert) IS what Rust implements directly. SPDMX Exception Q (god-struct merging) precedent: existing temp-disable on `next_local_id_number` at line 140 and the same-shape inlined body in `add_compiler_local` line 306 in this file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-118-1780517043724/hook-118/add_hammer_local--223.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):

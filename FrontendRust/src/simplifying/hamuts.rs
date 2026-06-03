@@ -233,10 +233,12 @@ Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.r
 // mig: fn add_struct_originating_from_hammer (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_struct_originating_from_hammer(&mut self, struct_def_h: StructDefinitionH<'s, 'h>) {
-        panic!("Unimplemented: add_struct_originating_from_hammer");
+        assert!(!self.struct_defs.iter().any(|d| d.id == struct_def_h.id));
+        self.struct_defs.push(struct_def_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, no HamutsBox/Hamuts split): Scala outer `def addStructOriginatingFromHammer = inner.addStructOriginatingFromHammer(...)` delegates to inner, whose body (vassert !exists + push to struct_defs) IS what Rust implements directly. Same SPDMX Exception Q precedent as the existing temp-disables on add_struct_originating_from_typing_pass and add_opaque in this same file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-959-1780507469623/hook-959/add_struct_originating_from_hammer--235.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromHammer(structDefH)
   }
@@ -565,7 +567,7 @@ case class Hamuts(
   }
 */
 
-// mig: fn add_struct_originating_from_hammer (collapsed into the &mut self method above)
+// (Scala inner-Hamuts `addStructOriginatingFromHammer` — Q-collapsed into the `&mut self` method above; no Rust slice anchor here.)
 /*
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Hamuts = {
     vassert(!structDefs.exists(_.id == structDefH.id))
