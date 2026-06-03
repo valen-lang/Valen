@@ -866,8 +866,17 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 instantiation_bound_args.rune_to_function_bound_arg.iter().map(|(callee_rune, supplied_function_i)| -> (IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>) {
                     (instantiation_bound_params.rune_to_bound_prototype.get(callee_rune).expect("vassertSome: rune_to_bound_prototype").id, *supplied_function_i)
                 }).chain(
-                    instantiation_bound_args.caller_rune_to_callee_rune_to_reachable_func.iter().flat_map(|(_caller_rune, _callee_rune_to_reachable_func)| -> Vec<(IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>)> {
-                        panic!("Unimplemented: assemble_instantiation_bound_param_to_arg callerRuneToCalleeRuneToReachableFunc")
+                    instantiation_bound_args.caller_rune_to_callee_rune_to_reachable_func.iter().flat_map(|(caller_rune, callee_rune_to_reachable_func)| -> Vec<(IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>)> {
+                        if !callee_rune_to_reachable_func.is_empty() {
+                            let m = instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.get(caller_rune).expect("vassertSome: rune_to_citizen_rune_to_reachable_prototype");
+                            assert!(m.citizen_rune_to_reachable_prototype.len() == callee_rune_to_reachable_func.len());
+                            callee_rune_to_reachable_func.iter().map(|(callee_rune, reachable_func_i)| {
+                                let reachable_func_t = m.citizen_rune_to_reachable_prototype.get(callee_rune).expect("vassertSome: citizen_rune_to_reachable_prototype");
+                                (reachable_func_t.id, *reachable_func_i)
+                            }).collect()
+                        } else {
+                            Vec::new()
+                        }
                     })
                 ).collect(),
             bound_param_impl_id_to_bound_arg_impl_id:
@@ -2315,8 +2324,25 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         // For any that are placeholders themselves, let's translate those into actual prototypes.
         let rune_to_supplied_reachable_prototype_for_call: ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>> =
             ArenaIndexMap::from_iter_in(
-                caller_rune_to_callee_rune_to_supplied_reachable_prototype_for_call_unsubstituted.iter().map(|(_caller_rune, _callee_rune_to_supplied_reachable_prototype_for_call_unsubstituted)| {
-                    panic!("Unimplemented: translate_bound_args_for_callee rune_to_supplied_reachable_prototype_for_call")
+                caller_rune_to_callee_rune_to_supplied_reachable_prototype_for_call_unsubstituted.iter().map(|(caller_rune, callee_rune_to_supplied_reachable_prototype_for_call_unsubstituted)| {
+                    let inner: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>> =
+                        ArenaIndexMap::from_iter_in(
+                            callee_rune_to_supplied_reachable_prototype_for_call_unsubstituted.citizen_rune_to_reachable_prototype.iter().map(|(callee_rune, supplied_reachable_prototype_for_call_unsubstituted)| {
+                                let prototype_i: &'i PrototypeI<'s, 'i, sI> = match supplied_reachable_prototype_for_call_unsubstituted.id {
+                                    IdT { local_name: INameT::FunctionBound(_), .. } => {
+                                        let func_bound_name = supplied_reachable_prototype_for_call_unsubstituted.id;
+                                        *_denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype")
+                                    }
+                                    _ => {
+                                        let (prototype_i, _prototype_c) =
+                                            self.translate_prototype(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, supplied_reachable_prototype_for_call_unsubstituted);
+                                        self.interner.alloc(prototype_i)
+                                    }
+                                };
+                                (*callee_rune, prototype_i)
+                            }),
+                            self.interner.bump());
+                    (*caller_rune, inner)
                 }),
                 self.interner.bump());
         // And now we have a map from the callee's rune to the *instantiated* callee's prototypes.
