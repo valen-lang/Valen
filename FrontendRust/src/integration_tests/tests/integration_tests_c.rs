@@ -30,10 +30,11 @@ fn tests_floats() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "struct Moo imm {\n  x float;\n}\nexported func main() int {\n  return 7;\n}\n",
         true,
     );
@@ -230,10 +231,11 @@ fn truncate_i64_to_i32() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int {\n  return TruncateI64ToI32(4300000000i64);\n}\n",
         true,
     );
