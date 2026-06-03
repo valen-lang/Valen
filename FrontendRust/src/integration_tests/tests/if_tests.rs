@@ -45,53 +45,26 @@ fn simple_true_branch_returning_an_int() {
         let scoutput = compile.get_scoutput().expect("get_scoutput failed");
         let program_s = scoutput.file_coord_to_contents.get(file_coord).expect("file_coord not in scoutput");
         let main = program_s.lookup_function("main");
-        let ret = match main.body {
-            crate::postparsing::ast::IBodyS::CodeBody(crate::postparsing::ast::CodeBodyS {
-                body: crate::postparsing::expressions::BodySE { block: crate::postparsing::expressions::BlockSE { expr, .. }, .. },
-            }) => {
-                let mut returns: Vec<&crate::postparsing::expressions::ReturnSE> = Vec::new();
-                let mut stack: Vec<&crate::postparsing::expressions::IExpressionSE> = vec![*expr];
-                while let Some(e) = stack.pop() {
-                    match e {
-                        crate::postparsing::expressions::IExpressionSE::Return(r) => returns.push(r),
-                        crate::postparsing::expressions::IExpressionSE::Consecutor(c) => {
-                            for child in c.exprs.iter() { stack.push(child); }
-                        }
-                        _ => {}
-                    }
-                }
-                assert_eq!(returns.len(), 1);
-                returns[0]
-            }
-            _ => panic!("expected CodeBody"),
-        };
-        let iff = {
-            let mut found: Option<&crate::postparsing::expressions::IfSE> = None;
-            let mut stack: Vec<&crate::postparsing::expressions::IExpressionSE> = vec![ret.inner];
-            while let Some(e) = stack.pop() {
-                match e {
-                    crate::postparsing::expressions::IExpressionSE::If(i) => { assert!(found.is_none()); found = Some(i); }
-                    crate::postparsing::expressions::IExpressionSE::Block(b) => stack.push(b.expr),
-                    crate::postparsing::expressions::IExpressionSE::Consecutor(c) => {
-                        for child in c.exprs.iter() { stack.push(child); }
-                    }
-                    _ => {}
-                }
-            }
-            found.expect("expected If somewhere in ret.inner")
-        };
-        match iff.condition {
-            crate::postparsing::expressions::IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE { value: true, .. }) => {}
-            _ => panic!("expected condition ConstantBool(_, true)"),
-        }
-        match iff.then_body.expr {
-            crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 3, .. }) => {}
-            _ => panic!("expected thenBody ConstantInt(_, 3, _)"),
-        }
-        match iff.else_body.expr {
-            crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 5, .. }) => {}
-            _ => panic!("expected elseBody ConstantInt(_, 5, _)"),
-        }
+        let ret: &crate::postparsing::expressions::ReturnSE = crate::collect_only_snode!(
+            crate::postparsing::test::traverse::NodeRefS::Function(main),
+            crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::Return(r)) => Some(r)
+        );
+        let iff: &crate::postparsing::expressions::IfSE = crate::collect_only_snode!(
+            crate::postparsing::test::traverse::NodeRefS::Expression(ret.inner),
+            crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::If(i)) => Some(i)
+        );
+        crate::collect_only_snode!(
+            crate::postparsing::test::traverse::NodeRefS::Expression(iff.condition),
+            crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE { value: true, .. })) => Some(())
+        );
+        crate::collect_only_snode!(
+            crate::postparsing::test::traverse::NodeRefS::Expression(iff.then_body.expr),
+            crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 3, .. })) => Some(())
+        );
+        crate::collect_only_snode!(
+            crate::postparsing::test::traverse::NodeRefS::Expression(iff.else_body.expr),
+            crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 5, .. })) => Some(())
+        );
     }
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -107,7 +80,6 @@ fn simple_true_branch_returning_an_int() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — No collect_only_snode macro exists in this codebase (only collect_only_tnode for typing AST + collect_only_hnode for final AST). The postparsing AST has no traverse-macro yet, so inline destructure is the established Rust adaptation. In-file precedent: empty_block / simple_block_with_a_variable in block_tests.rs both walk CodeBody->BodySE->BlockSE->ConsecutorSE inline. — FrontendRust/guardian-logs/request-546-1780524601782/hook-546/IfTests--16.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Simple true branch returning an int") {
     val compile = RunCompilation.test(
       """
