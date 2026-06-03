@@ -1031,7 +1031,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::ConstantStrH(_) => panic!("vonify_expression: ConstantStrH"),
-            ExpressionH::ConstantF64H(_) => panic!("vonify_expression: ConstantF64H"),
+            ExpressionH::ConstantF64H(c) => {
+                let crate::final_ast::instructions::ConstantF64H { value } = *c;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ConstantF64".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "value".to_string(),
+                            value: crate::von::ast::IVonData::Float(crate::von::ast::VonFloat { value }),
+                        },
+                    ],
+                })
+            }
             ExpressionH::ArgumentH(a) => {
                 let crate::final_ast::instructions::ArgumentH { result_type, argument_index } = *a;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

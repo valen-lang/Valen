@@ -3291,7 +3291,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::ConstantStr(_) => panic!("Unimplemented: translate_ref_expr ConstantStr"),
-            ReferenceExpressionTE::ConstantFloat(_) => panic!("Unimplemented: translate_ref_expr ConstantFloat"),
+            ReferenceExpressionTE::ConstantFloat(c) => {
+                let result_ce = ReferenceExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { _marker: std::marker::PhantomData, value: c.value }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::ArgLookup(al) => {
                 let crate::typing::ast::expressions::ArgLookupTE { param_index, coord: reference } = **al;
                 let type_s =

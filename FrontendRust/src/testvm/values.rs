@@ -419,7 +419,7 @@ case class FloatV(value: Double) extends PrimitiveKindV {
 // mig: fn tyype
 impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_float");
+    RRKindV { hamut: KindHT::FloatHT(crate::final_ast::types::FloatHT), _phantom: PhantomData }
   }
 }
 /*

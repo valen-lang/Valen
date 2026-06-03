@@ -121,6 +121,7 @@ pub fn get_extern_function<'h, 's, 'v>(
     let name = ref_.id.fully_qualified_name.0.replace("v::builtins::arith", "");
     match name.as_str() {
         "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),
+        "__vbi_addFloatFloat" => Box::new(crate::testvm::vivem_externs::add_float_float),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

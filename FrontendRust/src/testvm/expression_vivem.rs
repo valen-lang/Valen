@@ -397,6 +397,11 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Bool(crate::testvm::values::BoolV { value, _phantom: std::marker::PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
+        ExpressionH::ConstantF64H(c) => {
+            let crate::final_ast::instructions::ConstantF64H { value } = **c;
+            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Float(crate::testvm::values::FloatV { value, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
         ExpressionH::DiscardH(d) => {
             let source_expr = d.source_expression;
             match source_expr.result_type().ownership {

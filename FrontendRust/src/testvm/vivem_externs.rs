@@ -22,7 +22,17 @@ pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
   }
 */
 // mig: fn add_float_float
-pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_float_float"); }
+pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value + b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("add_float_float: non-FloatV args"),
+    }
+}
 /*
   def addFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)

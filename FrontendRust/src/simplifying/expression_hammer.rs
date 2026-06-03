@@ -63,7 +63,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (construct_h, Vec::new())
                 }
                 RE::ConstantStr(c) => panic!("translate_expression: ConstantStr branch"),
-                RE::ConstantFloat(c) => panic!("translate_expression: ConstantFloat branch"),
+                RE::ConstantFloat(c) => {
+                    (ExpressionH::ConstantF64H(self.interner.alloc(crate::final_ast::instructions::ConstantF64H { value: c.value })), Vec::new())
+                }
                 RE::ConstantBool(c) => {
                     (ExpressionH::ConstantBoolH(self.interner.alloc(crate::final_ast::instructions::ConstantBoolH { value: c.value })), Vec::new())
                 }
