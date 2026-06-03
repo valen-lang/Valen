@@ -28,26 +28,66 @@ pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
     parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
     instantiating_bump: &'i bumpalo::Bump,
     code: &str,
-    include_all_builtins: bool,
 ) -> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-    let first_packages: Vec<&'p crate::utils::code_hierarchy::PackageCoordinate<'p>> =
-        if include_all_builtins {
-            vec![crate::utils::code_hierarchy::PackageCoordinate::builtin(parse_arena, parser_keywords)]
-        } else {
-            vec![]
-        };
     let packages_to_build: Vec<&'p crate::utils::code_hierarchy::PackageCoordinate<'p>> =
-        first_packages.into_iter()
-            .chain([crate::utils::code_hierarchy::PackageCoordinate::test_tld(parse_arena, parser_keywords)])
-            .collect();
+        vec![
+            crate::utils::code_hierarchy::PackageCoordinate::builtin(parse_arena, parser_keywords),
+            crate::utils::code_hierarchy::PackageCoordinate::test_tld(parse_arena, parser_keywords),
+        ];
     let base_code_map =
-        if include_all_builtins {
-            crate::builtins::builtins::get_code_map(parse_arena, parser_keywords)
-        } else {
-            crate::builtins::builtins::get_modulized_code_map(parse_arena, parser_keywords)
-        }.expect("Builtins code map failed to load");
+        crate::builtins::builtins::get_code_map(parse_arena, parser_keywords)
+            .expect("Builtins code map failed to load");
+    let resolver_concrete = base_code_map
+        .or(crate::utils::code_hierarchy::test_from_vec(parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let resolver: &'ctx dyn crate::utils::code_hierarchy::IPackageResolver<'p, std::collections::HashMap<String, String>> =
+        compilation_bump.alloc(resolver_concrete);
+    let options = crate::simplifying::hammer_compilation::HammerCompilationOptions {
+        global_options: crate::compile_options::GlobalOptions {
+            sanity_check: true,
+            use_overload_index: true,
+            use_optimized_solver: true,
+            verbose_errors: true,
+            debug_output: true,
+        },
+        ..crate::simplifying::hammer_compilation::HammerCompilationOptions::new()
+    };
+    RunCompilation {
+        interner: typing_interner,
+        hammer_compilation: crate::simplifying::hammer_compilation::HammerCompilation::new(
+            scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
+            packages_to_build, resolver, options, instantiating_bump,
+        ),
+    }
+}
+
+// mig: fn test_no_builtins
+// (Rust-side split of Scala's `test(code, includeAllBuiltins=true)` — the `false` flavor;
+//  Scala has one fn with default-true param + internal `if (includeAllBuiltins) ... else ...`,
+//  Rust splits per-EANODVX-no-defaults + strict-parity-at-call-sites so each call site
+//  reads identically to its Scala counterpart without a bare boolean argument.)
+pub fn test_no_builtins<'s, 'h, 'ctx, 't, 'i, 'p>(
+    compilation_bump: &'ctx bumpalo::Bump,
+    interner: &'ctx crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
+    scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
+    keywords: &'ctx crate::keywords::Keywords<'s>,
+    parser_keywords: &'ctx crate::keywords::Keywords<'p>,
+    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    instantiating_bump: &'i bumpalo::Bump,
+    code: &str,
+) -> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+    let packages_to_build: Vec<&'p crate::utils::code_hierarchy::PackageCoordinate<'p>> =
+        vec![
+            crate::utils::code_hierarchy::PackageCoordinate::test_tld(parse_arena, parser_keywords),
+        ];
+    let base_code_map =
+        crate::builtins::builtins::get_modulized_code_map(parse_arena, parser_keywords)
+            .expect("Builtins code map failed to load");
     let resolver_concrete = base_code_map
         .or(crate::utils::code_hierarchy::test_from_vec(parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());

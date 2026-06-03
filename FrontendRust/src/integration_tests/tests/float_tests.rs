@@ -72,7 +72,7 @@ fn float_arithmetic() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        &source, true,
+        &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}

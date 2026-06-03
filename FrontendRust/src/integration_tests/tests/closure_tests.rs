@@ -130,7 +130,7 @@ fn test_closure_s_local_variables() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { x = 4; return {x}(); }", true,
+        "exported func main() int { x = 4; return {x}(); }",
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_lambda_in("main");

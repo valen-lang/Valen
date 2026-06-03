@@ -36,7 +36,6 @@ fn tests_floats() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "struct Moo imm {\n  x float;\n}\nexported func main() int {\n  return 7;\n}\n",
-        true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
@@ -237,7 +236,6 @@ fn truncate_i64_to_i32() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "exported func main() int {\n  return TruncateI64ToI32(4300000000i64);\n}\n",
-        true,
     );
     let _coutputs = compile.expect_compiler_outputs();
     match compile.eval_for_kind_primitive_args(Vec::new()) {

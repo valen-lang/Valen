@@ -51,12 +51,12 @@ class IfTests extends FunSuite with Matchers {
   }
 
   test("Ladder") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |exported func main() int {
         |  return if (false) { 3 } else if (true) { 5 } else { 7 };
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })
@@ -75,7 +75,7 @@ class IfTests extends FunSuite with Matchers {
   }
 
   test("Moving from inside if") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |struct Marine { x int; }
         |exported func main() int {
@@ -88,7 +88,7 @@ class IfTests extends FunSuite with Matchers {
         |      y
         |    };
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     val coutputs = compile.expectCompilerOutputs()
     val ifs = Collector.all(coutputs.lookupFunction("main"), { case if2 @ IfTE(_, _, _) => if2 })

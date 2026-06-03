@@ -33,7 +33,7 @@ import scala.collection.immutable.List
 
 class IntegrationTestsA extends FunSuite with Matchers {
   test("Roguelike typing pass") {
-    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"), true)
+    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"))
     compile.getCompilerOutputs() match {
       case Ok(_) =>
       case Err(e) => { println("DIAG-RAW-ERR: " + e); throw new RuntimeException("compile failed") }
@@ -50,68 +50,68 @@ class IntegrationTestsA extends FunSuite with Matchers {
   //  }
 
   test("Simple program returning an int") {
-    val compile = RunCompilation.test("exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 
   test("Simple program with drop") {
-    val compile = RunCompilation.test("import v.builtins.drop.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.drop.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with arith") {
-    val compile = RunCompilation.test("import v.builtins.arith.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.arith.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with logic") {
-    val compile = RunCompilation.test("import v.builtins.logic.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.logic.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with migrate") {
-    val compile = RunCompilation.test("import v.builtins.migrate.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.migrate.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with str") {
-    val compile = RunCompilation.test("import v.builtins.str.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.str.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with arrays") {
-    val compile = RunCompilation.test("import v.builtins.arrays.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.arrays.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with mainargs") {
-    val compile = RunCompilation.test("import v.builtins.mainargs.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.mainargs.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with as") {
-    val compile = RunCompilation.test("import v.builtins.as.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.as.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with print") {
-    val compile = RunCompilation.test("import v.builtins.print.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.print.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with tup") {
-    val compile = RunCompilation.test("import v.builtins.tup2.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.tup2.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with panic") {
-    val compile = RunCompilation.test("import v.builtins.panic.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.panic.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with opt") {
-    val compile = RunCompilation.test("import v.builtins.opt.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.opt.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with result") {
-    val compile = RunCompilation.test("import v.builtins.result.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.result.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with sameinstance") {
-    val compile = RunCompilation.test("import v.builtins.sameinstance.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.sameinstance.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
   test("Simple program with weak") {
-    val compile = RunCompilation.test("import v.builtins.weak.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.weak.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 
@@ -184,7 +184,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
   }
 
   test("Test generic") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |func drop(x int) { }
         |func bork<T>(a T) void where func drop(T)void {
@@ -193,7 +193,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
         |exported func main() {
         |  bork(3);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     compile.evalForKind(Vector())
   }
 
@@ -318,19 +318,18 @@ class IntegrationTestsA extends FunSuite with Matchers {
   }
 
   test("Simple extern function") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern func __vbi_addI32(left int, right int) int;
         |exported func main() int { return __vbi_addI32(27, 15); }
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
   }
 
   test("Extern function returning extern struct") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm;
         |extern func VecOuterNew<T>() Vec<T>;
@@ -338,8 +337,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
         |  v = VecOuterNew<int>();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -347,7 +345,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
 
 
   test("Extern rust Vec") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func new() Vec<T>;
@@ -356,15 +354,14 @@ class IntegrationTestsA extends FunSuite with Matchers {
         |  v = Vec<int>.new();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
   }
 
   test("Extern rust Vec capacity") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func with_capacity(c i64) Vec<T>;
@@ -374,8 +371,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
         |  v = Vec<int>.with_capacity(42i64);
         |  return Vec<int>.capacity(v);
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -388,7 +384,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
     // at callsites. Vivem matches on the humanized fullyQualifiedName (not the wire-format
     // SimpleId), so the wire-format reshape is exercised separately in HammerTests; this
     // test catches regressions in the call-path plumbing that downstream needs.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func with_capacity(c i64) Vec<T>;
@@ -398,8 +394,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
         |  v = Vec<int>.with_capacity(42i64);
         |  return v.capacity();
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }

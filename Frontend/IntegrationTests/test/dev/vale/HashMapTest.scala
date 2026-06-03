@@ -10,7 +10,7 @@ class HashMapTest extends FunSuite with Matchers {
   test("Monomorphize problem") {
     // See NBIFP, the instantiator has to grab bounds from its params too
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |struct IntHasher { }
         |func __call(this &IntHasher, x int) int { return x; }
@@ -30,7 +30,7 @@ class HashMapTest extends FunSuite with Matchers {
         |  destruct m;
         |  return 9;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
@@ -44,7 +44,7 @@ class HashMapTest extends FunSuite with Matchers {
     //   .drop<>(@add:204<int, int, ^IntHasher>(&HashMap<int, int, ^IntHasher>).lam:281)
     // and when instantiating that, `drop` needs to know bounds from `add` to understand that
     // `&HashMap<int, int, ^IntHasher>` parameter.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.arrays.*;
         |
@@ -67,7 +67,7 @@ class HashMapTest extends FunSuite with Matchers {
         |  [h] = m;
         |  return 7;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
@@ -212,7 +212,7 @@ class HashMapTest extends FunSuite with Matchers {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
         """
           |import v.builtins.arith.*;
           |
@@ -248,7 +248,7 @@ class HashMapTest extends FunSuite with Matchers {
           |  [] = arr;
           |  return 1337;
           |}
-        """.stripMargin, false)
+        """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
@@ -257,7 +257,7 @@ class HashMapTest extends FunSuite with Matchers {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.arith.*;
         |
@@ -291,7 +291,7 @@ class HashMapTest extends FunSuite with Matchers {
         |  [] = arr;
         |  return 1337;
         |}
-        """.stripMargin, false)
+        """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }

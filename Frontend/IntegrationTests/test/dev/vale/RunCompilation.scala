@@ -13,24 +13,29 @@ import dev.vale.typing.{HinputsT, ICompileErrorT}
 import dev.vale.von.IVonData
 
 object RunCompilation {
-  def test(code: String, includeAllBuiltins: Boolean = true): RunCompilation = {
+  def test(code: String): RunCompilation = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
     new RunCompilation(
       interner,
       keywords,
-      (if (includeAllBuiltins) {
-        Vector(PackageCoordinate.BUILTIN(interner, keywords))
-      } else {
-        Vector()
-      }) ++
-          Vector(
-            PackageCoordinate.TEST_TLD(interner, keywords)),
-      (if (includeAllBuiltins) {
-        Builtins.getCodeMap(interner, keywords)
-      } else {
-        Builtins.getModulizedCodeMap(interner, keywords)
-      })
+      Vector(
+        PackageCoordinate.BUILTIN(interner, keywords),
+        PackageCoordinate.TEST_TLD(interner, keywords)),
+      Builtins.getCodeMap(interner, keywords)
+          .or(FileCoordinateMap.test(interner, Vector(code)))
+          .or(Tests.getPackageToResourceResolver),
+      FullCompilationOptions(GlobalOptions(true, true, true, true, true)))
+  }
+  def testNoBuiltins(code: String): RunCompilation = {
+    val interner = new Interner()
+    val keywords = new Keywords(interner)
+    new RunCompilation(
+      interner,
+      keywords,
+      Vector(
+        PackageCoordinate.TEST_TLD(interner, keywords)),
+      Builtins.getModulizedCodeMap(interner, keywords)
           .or(FileCoordinateMap.test(interner, Vector(code)))
           .or(Tests.getPackageToResourceResolver),
       FullCompilationOptions(GlobalOptions(true, true, true, true, true)))

@@ -23,11 +23,11 @@ fn make_empty_imm_struct() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine imm {}\nexported func main() {\n  Marine();\n}\n", false,
+        "struct Marine imm {}\nexported func main() {\n  Marine();\n}\n",
     );
     compile.run_primitive_args(Vec::new());
 }
@@ -59,11 +59,11 @@ fn make_imm_struct_with_one_member() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine imm { hp int; }\nexported func main() {\n  Marine(7);\n}\n", false,
+        "struct Marine imm { hp int; }\nexported func main() {\n  Marine(7);\n}\n",
     );
     compile.run_primitive_args(Vec::new());
 }
@@ -113,11 +113,11 @@ fn make_empty_mut_struct() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine {}\nexported func main() {\n  Marine();\n}\n", false,
+        "struct Marine {}\nexported func main() {\n  Marine();\n}\n",
     );
     compile.run_primitive_args(Vec::new());
 }
@@ -160,11 +160,11 @@ fn make_struct() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine { hp int; }\nexported func main() {\n  Marine(9);\n}\n", false,
+        "struct Marine { hp int; }\nexported func main() {\n  Marine(9);\n}\n",
     );
     compile.run_primitive_args(Vec::new());
 }
@@ -197,11 +197,11 @@ fn make_struct_and_get_member() {
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let source = crate::tests::tests::load_expected("programs/structs/getMember.vale");
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        source.as_str(), false,
+        source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
@@ -230,11 +230,11 @@ fn mutate_struct() {
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let source = crate::tests::tests::load_expected("programs/structs/mutate.vale");
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        source.as_str(), false,
+        source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}

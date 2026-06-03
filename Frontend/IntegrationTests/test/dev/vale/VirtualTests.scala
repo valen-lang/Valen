@@ -15,14 +15,14 @@ import org.scalatest._
 class VirtualTests extends FunSuite with Matchers {
 
     test("Simple program containing a virtual function") {
-      val compile = RunCompilation.test(
+      val compile = RunCompilation.testNoBuiltins(
         """
           |sealed interface I  {}
           |func doThing(virtual i I) int { return 4; }
           |func main(i I) int {
           |  return doThing(i);
           |}
-        """.stripMargin, false)
+        """.stripMargin)
       val coutputs = compile.expectCompilerOutputs()
       val interner = compile.interner
       val keywords = compile.keywords
@@ -56,14 +56,14 @@ class VirtualTests extends FunSuite with Matchers {
     }
 
   test("Can call virtual function") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |sealed interface I  {}
         |func doThing(virtual i I) int { return 4; }
         |func main(i I) int {
         |  return doThing(i);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
     val interner = compile.interner
     val keywords = compile.keywords
@@ -99,20 +99,20 @@ class VirtualTests extends FunSuite with Matchers {
   }
 
   test("Owning interface") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.opt.*;
         |exported func main() int {
         |  x Opt<int> = Some(7);
         |  return 7;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
 
   test("Simple override with param and bound") {
     // This is the Serenity case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -129,13 +129,13 @@ class VirtualTests extends FunSuite with Matchers {
         |  ship ISpaceship<int, bool, str> = Serenity<int, bool, str>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 
   test("Struct with different ordered runes") {
     // This is the Firefly case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -152,13 +152,13 @@ class VirtualTests extends FunSuite with Matchers {
         |  ship ISpaceship<int, bool, str> = Firefly<str, bool, int>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 
   test("Struct with less generic params than interface") {
     // This is the Raza case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -174,13 +174,13 @@ class VirtualTests extends FunSuite with Matchers {
         |  ship ISpaceship<int, bool, str> = Raza<bool, str>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 
   test("Struct with more generic params than interface") {
     // This is the Milano case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -196,13 +196,13 @@ class VirtualTests extends FunSuite with Matchers {
         |  ship ISpaceship<int, bool, str> = Milano<int, bool, str, float>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 
   test("Struct repeating generic params for interface") {
     // This is the Enterprise case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -218,7 +218,7 @@ class VirtualTests extends FunSuite with Matchers {
         |  ship ISpaceship<int, int, int> = Enterprise<int>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 
@@ -229,7 +229,7 @@ class VirtualTests extends FunSuite with Matchers {
   }
 
   test("Can call interface env's function from outside") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |sealed interface I {
         |  func doThing(virtual i I) int;
@@ -237,7 +237,7 @@ class VirtualTests extends FunSuite with Matchers {
         |func main(i I) int {
         |  return doThing(i);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
     val interner = compile.interner
 
@@ -352,7 +352,7 @@ class VirtualTests extends FunSuite with Matchers {
   }
 
   test("Open interface constructor") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |interface Bipedal {
         |  func hop(virtual s &Bipedal) int;
@@ -369,7 +369,7 @@ class VirtualTests extends FunSuite with Matchers {
         |
         |  return hopscotch(&x);
         |}
-        """.stripMargin, false)
+        """.stripMargin)
     val coutputs = compile.getHamuts()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }

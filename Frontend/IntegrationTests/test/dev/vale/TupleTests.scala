@@ -8,7 +8,7 @@ import org.scalatest._
 
 class TupleTests extends FunSuite with Matchers {
   test("Returning tuple from function and dotting it") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -17,13 +17,13 @@ class TupleTests extends FunSuite with Matchers {
         |exported func main() int {
         |  return makeTup().1;
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 
   test("Tuple with two things") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -31,12 +31,12 @@ class TupleTests extends FunSuite with Matchers {
         |exported func main() bool {
         |  return (9, true).1;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonBool(true) => }
   }
 
   test("Tuple type") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -46,7 +46,7 @@ class TupleTests extends FunSuite with Matchers {
         |exported func main() int {
         |  return moo((3, 4));
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
 

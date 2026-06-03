@@ -74,11 +74,11 @@ fn simple_program_returning_an_int() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return 3; }", false,
+        "exported func main() int { return 3; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
@@ -260,7 +260,7 @@ fn hardcoding_negative_numbers() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return -3; }", true,
+        "exported func main() int { return -3; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: -3 }) => {}
@@ -292,7 +292,7 @@ fn taking_an_argument_and_returning_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main(a int) int { return a; }", true,
+        "exported func main(a int) int { return a; }",
     );
     match compile.eval_for_kind_primitive_args(vec![
         crate::testvm::values::PrimitiveKindV::Int(crate::testvm::values::IntV {
@@ -328,7 +328,7 @@ fn tests_adding_two_numbers() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return +(2, 3); }", true,
+        "exported func main() int { return +(2, 3); }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
@@ -360,7 +360,7 @@ fn tests_adding_two_floats() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() float { return +(2.5, 3.5); }", true,
+        "exported func main() float { return +(2.5, 3.5); }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Float(crate::von::ast::VonFloat { value }) if value == 6.0 => {}
@@ -392,7 +392,7 @@ fn tests_inline_adding() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return 2 + 3; }", true,
+        "exported func main() int { return 2 + 3; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
@@ -444,7 +444,7 @@ fn tests_inline_adding_more() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return 2 + 3 + 4 + 5 + 6; }", true,
+        "exported func main() int { return 2 + 3 + 4 + 5 + 6; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 20 }) => {}
@@ -476,7 +476,7 @@ fn simple_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return {7}(); }", true,
+        "exported func main() int { return {7}(); }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
@@ -508,7 +508,7 @@ fn lambda_with_one_magic_arg() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return {_}(3); }", true,
+        "exported func main() int { return {_}(3); }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
@@ -541,7 +541,7 @@ fn lambda_with_a_type_specified_param() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return (a int) => { return +(a,a); }(3); }", true,
+        "exported func main() int { return (a int) => { return +(a,a); }(3); }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
@@ -585,7 +585,7 @@ fn test_block() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {true; 200; return 300;}", true,
+        "exported func main() int {true; 200; return 300;}",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 300 }) => {}
@@ -613,12 +613,11 @@ fn test_generic() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nfunc drop(x int) { }\nfunc bork<T>(a T) void where func drop(T)void {\n  // implicitly calls drop\n}\nexported func main() {\n  bork(3);\n}\n",
-        false,
     );
     let _ = compile.eval_for_kind_primitive_args(Vec::new());
 }
@@ -657,7 +656,6 @@ fn test_multiple_invocations_of_generic() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nfunc bork<T>(a T, b T) T where func drop(T)void { return a; }\nexported func main() int {true bork false; 2 bork 2; return 3 bork 3;}\n",
-        true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
@@ -693,7 +691,7 @@ fn test_mutating_a_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() {a = 3; set a = 4; }", true,
+        "exported func main() {a = 3; set a = 4; }",
     );
     compile.run_primitive_args(Vec::new());
 }
@@ -722,7 +720,7 @@ fn test_returning_a_local_mutable_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {a = 3; set a = 4; return a;}", true,
+        "exported func main() int {a = 3; set a = 4; return a;}",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
@@ -824,7 +822,7 @@ fn add_two_i64() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        &source, true,
+        &source,
     );
     let _coutputs = compile.get_compiler_outputs();
     let _hamuts = compile.get_hamuts();
@@ -916,7 +914,7 @@ fn set_swapping_locals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        &code, true,
+        &code,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
