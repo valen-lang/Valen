@@ -1143,7 +1143,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::MemberStoreH(_) => panic!("vonify_expression: MemberStoreH"),
-            ExpressionH::MemberLoadH(_) => panic!("vonify_expression: MemberLoadH"),
+            ExpressionH::MemberLoadH(ml) => {
+                let crate::final_ast::instructions::MemberLoadH { struct_expression: struct_expr, member_index, expected_member_type, result_type, member_name } = *ml;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "MemberLoad".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "structExpr".to_string(), value: self.vonify_expression(struct_expr) },
+                        crate::von::ast::VonMember { field_name: "structId".to_string(), value: self.vonify_struct_h(struct_expr.result_type().kind.expect_struct_h()) },
+                        crate::von::ast::VonMember { field_name: "structType".to_string(), value: self.vonify_coord(struct_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "structKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "memberIndex".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: member_index as i64 }) },
+                        crate::von::ast::VonMember { field_name: "targetOwnership".to_string(), value: self.vonify_ownership(result_type.ownership) },
+                        crate::von::ast::VonMember { field_name: "expectedMemberType".to_string(), value: self.vonify_coord(expected_member_type) },
+                        crate::von::ast::VonMember { field_name: "expectedResultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "memberName".to_string(), value: self.vonify_name(member_name) },
+                    ],
+                })
+            }
             ExpressionH::NewArrayFromValuesH(_) => panic!("vonify_expression: NewArrayFromValuesH"),
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("vonify_expression: StaticSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("vonify_expression: RuntimeSizedArrayStoreH"),
@@ -1296,6 +1313,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Rust narrowing recovery. Scala's MemberLoadH.structExpression has type ExpressionH[StructHT] which statically narrows the kind, so vonifyStructH(structExpr.resultType.kind) typechecks. Rust's ExpressionH erases that, so the match-at-call-site recovers the narrowing. Identical pattern at von_hammer.rs:879 inside vonify_kind. — FrontendRust/guardian-logs/request-669-1780499551710/hook-669/vonify_expression--994.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def vonifyExpression(node: ExpressionH[KindHT]): IVonData = {
     node match {
       case ConstantVoidH() => {

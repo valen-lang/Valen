@@ -54,7 +54,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 self.translate_mundane_local_load(hinputs, hamuts, current_function_header, locals, &r.name, r.collapsed_coord, combined_target_ownership)
             }
             AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::AddressibleLocalVariableI(_), .. }) => panic!("translate_load: Addressible branch"),
-            AddressExpressionIE::ReferenceMemberLookup(_) => panic!("translate_load: ReferenceMemberLookup branch"),
+            AddressExpressionIE::ReferenceMemberLookup(rml) => {
+                self.translate_mundane_member_load(hinputs, hamuts, current_function_header, locals, rml.struct_expr, &rml.member_name, target_ownership, rml.member_reference)
+            }
             AddressExpressionIE::AddressMemberLookup(_) => panic!("translate_load: AddressMemberLookup branch"),
             AddressExpressionIE::RuntimeSizedArrayLookup(_) => panic!("translate_load: RuntimeSizedArrayLookup branch"),
             AddressExpressionIE::StaticSizedArrayLookup(_) => panic!("translate_load: StaticSizedArrayLookup branch"),
@@ -414,7 +416,25 @@ where 's: 'h, 's: 'i, 'i: 'h,
         expected_member_coord: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_member_load");
+        let (struct_result_line, struct_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
+        let expected_member_type_h = self.translate_coord(hinputs, hamuts, expected_member_coord);
+        let struct_it = match struct_expr2.result().kind {
+            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            _ => panic!("translate_mundane_member_load: struct_expr2.result.kind not StructIT"),
+        };
+        let struct_def_i = self.lookup_struct(hinputs, hamuts, *struct_it);
+        let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("memberIndex >= 0") as i32;
+        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let load_result_type = crate::final_ast::types::CoordH { ownership: target_ownership, location: expected_member_type_h.location, kind: expected_member_type_h.kind };
+        let loaded_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+            struct_expression: struct_result_line.expect_struct_access(),
+            member_index,
+            expected_member_type: expected_member_type_h,
+            result_type: load_result_type,
+            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*member_name).into())),
+        }));
+        (loaded_node, struct_deferreds)
     }
 }
 /*

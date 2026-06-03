@@ -567,6 +567,23 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             };
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: block_result })
         }
+        ExpressionH::MemberLoadH(ml) => {
+            let crate::final_ast::instructions::MemberLoadH { struct_expression: struct_expr, member_index, expected_member_type, result_type, member_name: _ } = **ml;
+            let struct_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &struct_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let address = crate::testvm::values::MemberAddressV { struct_id: struct_reference.alloc_id(), field_index: member_index };
+            {
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " *{}", address.to_string()).unwrap();
+            }
+            let member_reference = heap.get_reference_from_struct(interner, address, expected_member_type, result_type);
+            assert!(result_type.ownership != crate::final_ast::types::OwnershipH::OwnH);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: member_reference.ownership }), member_reference);
+            discard(program_h, interner, heap, stdout, stdin, call_id, struct_expr.result_type(), struct_reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: member_reference })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

@@ -547,8 +547,18 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_struct(&self, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: get_reference_from_struct");
+    pub fn get_reference_from_struct(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let MemberAddressV { struct_id: object_id, field_index } = address;
+        let allocation = self.objects_by_id.objects_by_id.get(&object_id).expect("get: not found");
+        match allocation.kind {
+            KindV::StructInstance(si) => {
+                let members = si.members.get().expect("StructInstance has no members");
+                let actual_reference = members[field_index as usize];
+                self.check_reference(interner, expected_type, actual_reference);
+                self.transmute(actual_reference, expected_type, target_type)
+            }
+            _ => panic!("get_reference_from_struct: not a StructInstance"),
+        }
     }
 }
 /*

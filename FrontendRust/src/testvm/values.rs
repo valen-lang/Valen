@@ -886,8 +886,8 @@ case class MemberAddressV(structId: AllocationId, fieldIndex: Int) {
 */
 // mig: fn to_string
 impl<'v, 'h, 's> MemberAddressV<'v, 'h, 's> {
-  pub fn to_string(&self) -> StrI<'s> {
-    panic!("Unimplemented: to_string_member_address");
+  pub fn to_string(&self) -> String {
+    format!("*o:{}.{}", self.struct_id.num, self.field_index)
   }
 }
 /*

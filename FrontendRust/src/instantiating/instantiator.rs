@@ -2961,7 +2961,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_subjective_it, result_ce)
             }
-            AddressExpressionTE::ReferenceMemberLookup(_) => panic!("Unimplemented: translate_addr_expr ReferenceMemberLookup"),
+            AddressExpressionTE::ReferenceMemberLookup(rml) => {
+                let crate::typing::ast::expressions::ReferenceMemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, member_reference: member_coord_t, variability } = **rml;
+                let (_struct_subjective_it, struct_ce) =
+                    self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &struct_expr_t);
+                let member_name = Self::translate_var_name(self.interner, &member_name_t);
+                let member_coord_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &member_coord_t);
+                let result_subjective_it = member_coord_s;
+                let result_ce = AddressExpressionIE::ReferenceMemberLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::ReferenceMemberLookupIE {
+                    range,
+                    struct_expr: struct_ce,
+                    member_name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &member_name),
+                    member_reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_subjective_it.coord),
+                    variability: Self::translate_variability(&variability),
+                }));
+                (result_subjective_it.coord, result_ce)
+            }
             AddressExpressionTE::StaticSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr StaticSizedArrayLookup"),
             AddressExpressionTE::AddressMemberLookup(_) => panic!("Unimplemented: translate_addr_expr AddressMemberLookup"),
             AddressExpressionTE::RuntimeSizedArrayLookup(_) => panic!("Unimplemented: translate_addr_expr RuntimeSizedArrayLookup"),

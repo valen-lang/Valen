@@ -160,6 +160,14 @@ impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
     }
 }
 
+impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
+    pub fn expect_struct_h(&self) -> &'h StructHT<'s, 'h> {
+        match *self {
+            KindHT::StructHT(s) => s,
+            _ => panic!("expect_struct_h: not a struct"),
+        }
+    }
+}
 // mig: sealed trait KindHT
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
