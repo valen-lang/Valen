@@ -127,7 +127,8 @@ fn test_simple_generic_function() {
     let code = "\nfunc bork<T>(a T) T { return a; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     assert_eq!(coutputs.get_all_user_functions().len(), 1);
@@ -157,7 +158,8 @@ fn test_lacking_drop_function() {
     let code = "\nfunc bork<T>(a T) { }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CouldntFindFunctionToCallT { fff: FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop") }), .. }, .. } => {}
         _ => panic!("expected CouldntFindFunctionToCallT with FindFunctionFailure(CodeNameS(\"drop\"))"),
@@ -188,7 +190,8 @@ fn test_having_drop_function_concept_function() {
     let code = "\nfunc bork<T>(a T) where func drop(T)void { }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let bork = coutputs.lookup_function_by_str("bork");
 
@@ -293,7 +296,8 @@ fn test_calling_a_generic_function_with_a_concept_function() {
     let code = "\nfunc moo(x int) { }\n\nfunc bork<T>(a T) T where func moo(T)void { a }\n\nexported func main() {\n  bork(3);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
@@ -362,7 +366,8 @@ fn test_rune_type_in_generic_param() {
     let code = "\nfunc bork<I Int>() int { I }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("bork");
     let template_args = IFunctionNameT::try_from(main.header.id.local_name).unwrap().template_args();
@@ -402,7 +407,8 @@ fn test_single_parameter_function() {
     let code = "\nstruct Functor1<F Prot = func(P1)R> imm\nwhere P1 Ref, R Ref { }\n\nfunc __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R\nwhere P1 Ref, R Ref {\n  F(param1)\n}\n\nexported func main() int {\n  Functor1({_})(4)\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let _compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let _compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
 }
 /*
   test("Test single parameter function") {
@@ -437,7 +443,8 @@ fn test_calling_a_generic_function_with_a_drop_concept_function() {
     let code = "\nfunc bork<T>(a T) where func drop(T)void {\n}\n\nstruct Mork {}\n\nexported func main() {\n  bork(Mork());\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let bork = coutputs.lookup_function_by_str("main");
     let prototype = match bork.body {
@@ -799,7 +806,8 @@ fn simple_int_rule() {
     let code = "\n\nexported func main() int where N Int = 3 {\n  return N;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
@@ -835,7 +843,8 @@ fn equals_transitive() {
     let code = "\n\nexported func main() int where N Int = 3, M Int = N {\n  return M;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
@@ -871,7 +880,8 @@ fn one_of() {
     let code = "\n\nexported func main() int where N Int = any(2, 3, 4), N = 3 {\n  return N;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let _ci: &ConstantIntTE = crate::collect_only_tnode!(
@@ -907,7 +917,8 @@ fn components() {
     let code = "\nexported struct MyStruct { }\nexported func main() X\nwhere\n  MyStruct = Ref[O Ownership, K Kind],\n  X Ref = Ref[borrow, K]\n{\n  return &MyStruct();\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     match coutputs.lookup_function_by_str("main").header.return_type {
         CoordT { ownership: OwnershipT::Borrow, kind: KindT::Struct(_), .. } => {}
@@ -991,7 +1002,8 @@ fn prototype_rule_call_via_rune() {
     let code = "\n\nfunc moo(i int, b bool) str { return \"hello\"; }\nexported func main() str\nwhere mooFunc Prot = func moo(int, bool)str\n{\n  return (mooFunc)(5, true);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
@@ -1033,7 +1045,8 @@ fn prototype_rule_call_directly() {
     let code = "\n\nfunc moo(i int, b bool) str { return \"hello\"; }\nexported func main() str\nwhere func moo(int, bool)str\n{\n  return moo(5, true);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
@@ -1075,7 +1088,8 @@ fn send_struct_to_struct() {
     let code = "\n\nstruct MyStruct {}\nfunc moo(m MyStruct) { }\nexported func main() {\n  moo(MyStruct())\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -1107,7 +1121,8 @@ fn send_struct_to_interface() {
     let code = "\n\nstruct MyStruct {}\ninterface MyInterface {}\nimpl MyInterface for MyStruct;\nfunc moo(m MyInterface) { }\nexported func main() {\n  moo(MyStruct())\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -1140,7 +1155,8 @@ fn assume_most_specific_generic_param() {
     let code = "\n\nstruct MyStruct {}\ninterface MyInterface {}\nimpl MyInterface for MyStruct;\nfunc moo<T>(m T) where func drop(T)void { }\nexported func main() {\n  moo(MyStruct())\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
     let call: &FunctionCallTE = crate::collect_only_tnode!(
@@ -1192,7 +1208,8 @@ fn assume_most_specific_common_ancestor() {
     let code = "\ninterface IShip {}\nstruct Firefly {}\nimpl IShip for Firefly;\nstruct Serenity {}\nimpl IShip for Serenity;\nfunc moo<T>(a T, b T) where func drop(T)void { }\nexported func main() {\n  moo(Firefly(), Serenity())\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let _moo = coutputs.lookup_function_by_str("moo");
     let main = coutputs.lookup_function_by_str("main");
@@ -1265,7 +1282,8 @@ fn descendant_satisfying_call() {
     let code = "\ninterface IShip<T> where T Ref {}\nstruct Firefly<T> where T Ref {}\nimpl<T> IShip<T> for Firefly<T>;\nfunc moo<T>(a IShip<T>) { }\nexported func main() {\n  moo(Firefly<int>())\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
     match moo.header.params[0].tyype {
@@ -1358,7 +1376,8 @@ fn reports_incomplete_solve() {
     let code = "\n\nexported func main() int where N Int {\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::TypingPassSolverError { failed_solve, .. } => {
             assert!(failed_solve.unsolved_rules.is_empty(), "expected empty unsolved_rules");
@@ -1406,7 +1425,8 @@ fn stamps_an_interface_template_via_a_function_return() {
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -1447,7 +1467,8 @@ fn pointer_becomes_share_if_kind_is_immutable() {
     let code = "\n\n\nstruct SomeStruct imm { i int; }\n\nfunc bork(x &SomeStruct) int {\n  return x.i;\n}\n\nexported func main() int {\n  return bork(SomeStruct(7));\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     assert_eq!(coutputs.lookup_function_by_str("bork").header.params[0].tyype.ownership, OwnershipT::Share);
 }
@@ -1486,7 +1507,8 @@ fn detects_conflict_between_types() {
     let code = "\n\nstruct ShipA {}\nstruct ShipB {}\nexported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), .. }), .. }, .. } => {}
@@ -1539,7 +1561,8 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
     let code = "\n\n#!DeriveStructDrop\nstruct SomeStruct<T>\n{ x T; }\n\nfunc bork<X Kind, Z>() Z\nwhere X Kind = SomeStruct<int>, X = SomeStruct<Z> {\n  return 9;\n}\n\nexported func main() int {\n  return bork();\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let bork = coutputs.lookup_function_by_str("bork");
     let template_args = match bork.header.id.local_name {
@@ -1588,7 +1611,8 @@ fn can_destructure_and_assemble_static_sized_array() {
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     let swap = coutputs.lookup_function_by_str("swap");
@@ -1690,7 +1714,8 @@ fn test_equivalent_identifying_runes_in_functions() {
     let code = "\nfunc bork<T, Y>(a T) Y where T = Y { return a; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -1724,7 +1749,8 @@ fn iragp_test_equivalent_identifying_runes_in_struct() {
     let code = "\n#!DeriveStructDrop\nstruct Bork<T, Y> where T = Y { t T; y Y; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*

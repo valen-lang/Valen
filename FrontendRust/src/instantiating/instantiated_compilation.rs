@@ -71,7 +71,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 pub struct InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where 's: 't, 's: 'i,
 {
-  typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 't, 'p>,
+  pub typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 't, 'p>,
   // Retained from `new` to feed `Instantiator::translate` in `get_monouts`
   // (Scala's `val keywords` + `options` class fields).
   keywords: &'ctx Keywords<'s>,
@@ -100,7 +100,9 @@ where
     'p: 'ctx,
 {
   // From InstantiatedCompilation.scala lines 19-34
+  // Rust adaptation (SPDMX Exception B): `typing_interner` borrowed from test wrapper, threaded down to TypingPassCompilation (mirrors Scala `val interner` flowing from RunCompilation through the pipeline).
   pub fn new(
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
@@ -109,7 +111,6 @@ where
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: crate::compile_options::GlobalOptions,
     options: InstantiatorCompilationOptions,
-    typing_bump: &'t Bump,
     instantiating_bump: &'i Bump,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
@@ -117,6 +118,7 @@ where
     };
 
     let typing_pass_compilation = TypingPassCompilation::new(
+      typing_interner,
       scout_arena,
       keywords,
       parser_keywords,
@@ -125,7 +127,6 @@ where
       package_to_contents_resolver,
       global_options.clone(),
       typing_options,
-      typing_bump,
     );
 
     let instantiating_interner = InstantiatingInterner::new(instantiating_bump);

@@ -28,6 +28,7 @@ use crate::typing::names::names::LambdaCallFunctionTemplateNameValT;
 use crate::typing::names::names::LambdaCallFunctionNameValT;
 use crate::typing::names::names::StructTemplateNameT;
 use crate::interner::StrI;
+use crate::typing::typing_interner::TypingInterner;
 /*
 package dev.vale.typing
 
@@ -60,8 +61,9 @@ fn function_has_correct_name() {
             HashMap::from([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let id = {
         let typing_interner = &compile.typing_interner;
@@ -123,8 +125,9 @@ fn lambda_has_correct_name() {
             HashMap::from([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let lambda_func_id = {
         let typing_interner = &compile.typing_interner;
@@ -231,8 +234,9 @@ fn struct_has_correct_name() {
             HashMap::from([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let struct_ = coutputs.lookup_struct_by_str("MyStruct");
@@ -307,7 +311,9 @@ fn typing_pass_array_type_convertible() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -316,7 +322,6 @@ fn typing_pass_array_type_convertible() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     compile.expect_compiler_outputs();
 }
@@ -359,7 +364,9 @@ fn typing_pass_uses_same_instance() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -368,7 +375,6 @@ fn typing_pass_uses_same_instance() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     // Just exercise the path; success means generate_function_body_same_instance ran.
     compile.expect_compiler_outputs();
@@ -407,7 +413,9 @@ fn typing_pass_ssa_destructure() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -416,7 +424,6 @@ fn typing_pass_ssa_destructure() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     compile.expect_compiler_outputs();
 }
@@ -458,7 +465,9 @@ fn typing_pass_closure_var_mutate() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -467,7 +476,6 @@ fn typing_pass_closure_var_mutate() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     compile.expect_compiler_outputs();
 }
@@ -509,7 +517,9 @@ fn typing_pass_tuple_literal() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -518,7 +528,6 @@ fn typing_pass_tuple_literal() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     compile.expect_compiler_outputs();
 }
@@ -559,7 +568,9 @@ fn typing_pass_destruct_struct() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|_x: &str| {}),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -568,7 +579,6 @@ fn typing_pass_destruct_struct() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     compile.expect_compiler_outputs();
 }
@@ -617,7 +627,9 @@ fn typing_pass_on_roguelike() {
     let instantiator_options = InstantiatorCompilationOptions {
         debug_out: Arc::new(|x: &str| println!("{}", x)),
     };
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = TypingPassCompilation::new(
+        &typing_interner,
         &scout_arena,
         &keywords,
         &parser_keywords,
@@ -626,7 +638,6 @@ fn typing_pass_on_roguelike() {
         &resolver,
         global_options,
         instantiator_options,
-        &typing_bump,
     );
     let result = compile.get_compiler_outputs();
     match result {

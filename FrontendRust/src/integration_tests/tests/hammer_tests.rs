@@ -35,13 +35,14 @@ pub fn simple_main() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 3; }";
     let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let test_package = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -88,6 +89,7 @@ pub fn two_templated_structs_make_it_into_hamuts() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "
 func __pretend<T>() T { __vbi_panic() }
 
@@ -108,7 +110,7 @@ exported func main() {
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     assert!(package_h.interfaces.iter().any(|i| i.id.fully_qualified_name.0 == "MyOption<i32>"));
@@ -186,6 +188,7 @@ pub fn tests_stripping_things_after_panic() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "
 exported func main() int {
   __vbi_panic();
@@ -198,7 +201,7 @@ exported func main() int {
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
@@ -250,6 +253,7 @@ pub fn panic_in_expr() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "
 import intrange.*;
 
@@ -262,7 +266,7 @@ exported func main() int {
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let main = package_h.lookup_function("main");
@@ -336,13 +340,14 @@ pub fn tests_export_function() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "exported func moo() int { return 42; }";
     let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_function("moo");
@@ -376,13 +381,14 @@ pub fn tests_export_struct() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "exported struct Moo { }";
     let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_struct("Moo");
@@ -417,13 +423,14 @@ pub fn tests_export_interface() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "exported interface Moo { }";
     let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let moo = package_h.lookup_interface("Moo");
@@ -458,6 +465,7 @@ pub fn tests_exports_from_two_modules_different_names() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut map: crate::utils::code_hierarchy::FileCoordinateMap<'_, String> = crate::utils::code_hierarchy::FileCoordinateMap::new();
     let module_a = parse_arena.intern_package_coordinate(parse_arena.intern_str("moduleA"), &[]);
     let module_b = parse_arena.intern_package_coordinate(parse_arena.intern_str("moduleB"), &[]);
@@ -484,6 +492,7 @@ pub fn tests_exports_from_two_modules_different_names() {
     let mut compile = crate::simplifying::hammer_compilation::HammerCompilation::new(
         &scout_arena,
         &hammer_interner,
+        &typing_interner,
         &keywords,
         &parser_keywords,
         &parse_arena,
@@ -493,7 +502,6 @@ pub fn tests_exports_from_two_modules_different_names() {
             debug_out: std::sync::Arc::new(|_x: &str| {}),
             global_options,
         },
-        &typing_bump,
         &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
@@ -597,6 +605,7 @@ pub fn top_level_extern_functions_wire_format_simple_id_has_flat_shape() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "
 extern struct Vec<T> imm;
 extern func VecOuterNew<T>() Vec<T>;
@@ -610,7 +619,7 @@ exported func main() int {
         .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
     let mut compile = crate::simplifying::test::test_compilation::test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let package_h = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));

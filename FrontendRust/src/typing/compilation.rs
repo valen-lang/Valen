@@ -63,7 +63,7 @@ where 's: 't,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   options: TypingPassOptions<'s>,
-  pub typing_interner: TypingInterner<'s, 't>,
+  pub typing_interner: &'ctx TypingInterner<'s, 't>,
 }
 /*
 class TypingPassCompilation(
@@ -76,7 +76,9 @@ class TypingPassCompilation(
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
+  // Rust adaptation (SPDMX Exception B): `typing_interner` is borrowed from the test wrapper (mirrors Scala's `val interner: Interner` constructor field on RunCompilation). The interner used to be constructed internally from `typing_bump` here; now it lives at the test wrapper and is threaded in. `typing_bump` itself is dropped as a constructor param.
   pub fn new(
+    typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
@@ -85,7 +87,6 @@ where 's: 't,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
-    typing_bump: &'t Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options,
@@ -103,8 +104,6 @@ where 's: 't,
       package_to_contents_resolver,
       typing_options.global_options.clone(),
     );
-
-    let typing_interner = TypingInterner::new(typing_bump);
 
     TypingPassCompilation {
       higher_typing_compilation,

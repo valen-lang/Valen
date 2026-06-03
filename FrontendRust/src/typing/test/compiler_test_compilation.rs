@@ -24,12 +24,12 @@ use std::sync::Arc;
 
 // mig: fn test
 pub fn compiler_test_compilation<'s, 'ctx, 't, 'p>(
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    typing_bump: &'t Bump,
 ) -> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
@@ -46,6 +46,7 @@ where 's: 't,
         debug_out: Arc::new(|x: &str| println!("{}", x)),
     };
     TypingPassCompilation::new(
+        typing_interner,
         scout_arena,
         keywords,
         parser_keywords,
@@ -54,7 +55,6 @@ where 's: 't,
         resolver,
         global_options,
         instantiator_options,
-        typing_bump,
     )
 }
 /*

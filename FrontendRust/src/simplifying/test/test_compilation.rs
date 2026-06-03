@@ -22,12 +22,12 @@ object HammerTestCompilation {
 // mig: fn test
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
   interner: &'ctx HammerInterner<'s, 'h>,
+  typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
   resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-  typing_bump: &'t Bump,
   instantiating_bump: &'i Bump,
 ) -> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
@@ -44,6 +44,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
   HammerCompilation::new(
     scout_arena,
     interner,
+    typing_interner,
     keywords,
     parser_keywords,
     parse_arena,
@@ -53,7 +54,6 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
       debug_out: Arc::new(|_x: &str| {}),
       global_options,
     },
-    typing_bump,
     instantiating_bump)
 }
 /*

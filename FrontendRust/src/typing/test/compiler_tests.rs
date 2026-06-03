@@ -119,8 +119,9 @@ fn simple_program_returning_an_int_explicit() {
     let code = "func main() int { return 3; }";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -154,8 +155,9 @@ fn hardcoding_negative_numbers() {
     let code = "exported func main() int { return -3; }";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -193,8 +195,9 @@ fn simple_local() {
     let code = "exported func main() int {\n  a = 42;\n  return a;\n}";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -228,8 +231,9 @@ fn tests_panic_return_type() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -275,8 +279,9 @@ fn taking_an_argument_and_returning_it() {
     let code = "func main(a int) int { return a; }";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -328,8 +333,9 @@ fn tests_adding_two_numbers() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -419,8 +425,9 @@ fn simple_struct_read() {
     let code = "exported struct Moo { hp int; }\nexported func main(moo &Moo) int {\n  return moo.hp;\n}";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -459,8 +466,9 @@ exported func main() int {
 "#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -497,8 +505,9 @@ exported func main() Moo {
 "#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let _main = coutputs.lookup_function_by_str("main");
@@ -535,8 +544,9 @@ exported func main() int {
 "#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -596,8 +606,9 @@ fn custom_destructor() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -660,8 +671,9 @@ exported func main() void {
 "#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -712,8 +724,9 @@ fn recursion() {
     let code = "exported func main() int { return main(); }";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -747,8 +760,9 @@ fn test_overloads() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     assert!(matches!(coutputs.lookup_function_by_str("main").header.return_type,
@@ -779,8 +793,9 @@ fn test_readonly_ufcs() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     compile.expect_compiler_outputs();
 }
@@ -805,8 +820,9 @@ fn test_readwrite_ufcs() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     compile.expect_compiler_outputs();
 }
@@ -833,8 +849,9 @@ fn test_templates() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -876,8 +893,9 @@ fn test_taking_a_callable_param() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let do_fn = coutputs.lookup_function_by_str("do");
@@ -922,8 +940,9 @@ fn simple_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -1088,8 +1107,9 @@ fn calls_destructor_on_local_var() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -1156,8 +1176,9 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -1233,8 +1254,9 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -1329,8 +1351,9 @@ fn stamps_an_interface_template_via_a_function_return() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -1392,8 +1415,9 @@ fn reads_a_struct_member() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -1459,8 +1483,9 @@ fn automatically_drops_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -1546,8 +1571,9 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
@@ -1629,7 +1655,8 @@ fn reports_mismatched_return_type_when_expecting_void() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::BodyResultDoesntMatch { function_name, expected_return_type, result_type, .. } => {
             match function_name {
@@ -1679,8 +1706,9 @@ fn tests_exporting_function() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
@@ -1714,8 +1742,9 @@ fn tests_exporting_struct() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("Moo");
@@ -1749,8 +1778,9 @@ fn tests_exporting_interface() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_interface_by_human_name("IMoo");
@@ -1787,8 +1817,9 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
@@ -1857,8 +1888,9 @@ fn tests_calling_a_templated_struct_s_constructor() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2047,8 +2079,9 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     let code = include_str!("../../tests/programs/virtuals/upcasting.vale");
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2153,8 +2186,9 @@ fn tests_calling_a_virtual_function() {
     let code = include_str!("../../tests/programs/virtuals/calling.vale");
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2240,8 +2274,9 @@ fn tests_upcasting_has_the_right_stuff() {
     let code = include_str!("../../tests/programs/virtuals/calling.vale");
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2335,8 +2370,9 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     let code = include_str!("../../tests/programs/virtuals/callingThroughBorrow.vale");
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2398,8 +2434,9 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2447,8 +2484,9 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -2551,8 +2589,9 @@ fn tests_making_a_variable_with_a_pattern() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2594,8 +2633,9 @@ fn tests_a_linked_list() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2621,8 +2661,9 @@ fn test_borrow_ref() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2654,8 +2695,9 @@ fn tests_calling_a_function_with_an_upcast() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2722,8 +2764,9 @@ fn tests_calling_a_templated_function_with_an_upcast() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2791,8 +2834,9 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -2852,8 +2896,9 @@ fn tests_a_templated_linked_list() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2879,8 +2924,9 @@ fn tests_a_foreach_for_a_linked_list() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -2922,8 +2968,9 @@ fn test_return_from_inside_if_destroys_locals() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -3007,8 +3054,9 @@ fn recursive_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -3045,8 +3093,9 @@ fn recursive_struct_with_opt() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -3083,8 +3132,9 @@ fn templated_imm_struct() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -3126,8 +3176,9 @@ fn borrow_load_member() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     compile.expect_compiler_outputs();
 }
@@ -3178,8 +3229,9 @@ fn test_vector_of_struct_templata() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -3227,8 +3279,9 @@ fn if_branches_returns_never_and_struct() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -3266,8 +3319,9 @@ fn test_return() {
     let code = "exported func main() int {\n  return 7;\n}";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -3304,8 +3358,9 @@ fn test_return_from_inside_if() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -3373,8 +3428,9 @@ fn zero_method_anonymous_interface() {
     );
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     compile.expect_compiler_outputs();
 }
@@ -3405,7 +3461,8 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
@@ -3438,7 +3495,8 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
@@ -3473,7 +3531,8 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
@@ -3506,7 +3565,8 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
@@ -3539,7 +3599,8 @@ fn reports_when_exported_struct_depends_on_non_exported_member() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
@@ -3633,8 +3694,9 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -3711,7 +3773,8 @@ fn reports_when_mutating_after_moving() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
         _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -3759,8 +3822,9 @@ fn tests_export_struct_twice() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::TypeExportedMultipleTimes { exports, .. } => {
@@ -3807,7 +3871,8 @@ fn reports_when_reading_after_moving() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
         _other => panic!("expected CantUseUnstackifiedLocal"),
@@ -3861,7 +3926,8 @@ fn reports_when_moving_from_inside_a_while() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }), .. } => {}
         _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
@@ -3909,7 +3975,8 @@ fn cant_subscript_non_subscriptable_type() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CannotSubscriptT {
             tyype: KindT::Struct(StructTT {
@@ -4312,7 +4379,8 @@ fn report_when_multiple_types_in_array() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
             let types_set: HashSet<CoordT> = types.iter().copied().collect();
@@ -4355,7 +4423,8 @@ fn report_when_abstract_method_defined_outside_open_interface() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::AbstractMethodOutsideOpenInterface { .. } => {}
         _other => panic!("expected AbstractMethodOutsideOpenInterface"),
@@ -4392,7 +4461,8 @@ fn report_when_imm_struct_has_varying_member() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ImmStructCantHaveVaryingMember { .. } => {}
         _other => panic!("expected ImmStructCantHaveVaryingMember"),
@@ -4432,7 +4502,8 @@ fn report_imm_mut_mismatch_for_generic_type() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ImmStructCantHaveMutableMember { .. } => {}
         _other => panic!("expected ImmStructCantHaveMutableMember"),
@@ -4476,8 +4547,9 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
@@ -4539,7 +4611,8 @@ fn report_when_imm_contains_varying_member() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ImmStructCantHaveVaryingMember { struct_name: INameS::TopLevelStructDeclaration(TopLevelStructDeclarationNameS { name: StrI("Spaceship"), .. }), member_name: "name", .. } => {}
         _other => panic!("expected ImmStructCantHaveVaryingMember for Spaceship.name"),
@@ -4581,8 +4654,9 @@ fn test_imm_array() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -4629,8 +4703,9 @@ fn tests_calling_an_abstract_function() {
     let code = include_str!("../../tests/programs/genericvirtuals/callingAbstract.vale");
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -4677,8 +4752,9 @@ fn test_struct_default_generic_argument_in_type() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("MyStruct");
@@ -4790,8 +4866,9 @@ fn lock_weak_member() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -4862,8 +4939,9 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -4928,7 +5006,8 @@ fn generates_free_function_for_imm_struct() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let _coutputs = compile.expect_compiler_outputs();
 }
 /*
@@ -4969,7 +5048,8 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
@@ -5002,7 +5082,8 @@ fn reports_when_exported_rsa_depends_on_non_exported_element() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
@@ -5059,8 +5140,9 @@ exported func main() int {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -5109,8 +5191,9 @@ fn test_array_push_pop_len_capacity_drop() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
@@ -5166,8 +5249,9 @@ fn upcast_generic() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
 
@@ -5276,7 +5360,8 @@ fn downcast_function_rrbfs() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     {
@@ -5514,7 +5599,8 @@ fn downcast_with_as() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     {
@@ -5929,8 +6015,9 @@ fn closure_using_parent_function_s_bound() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     compile.expect_compiler_outputs();
 }
@@ -5971,8 +6058,9 @@ fn test_struct_default_generic_argument_in_call() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
@@ -6071,8 +6159,9 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let _coutputs = compile.expect_compiler_outputs();
 }

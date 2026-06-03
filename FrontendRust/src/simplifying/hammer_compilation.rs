@@ -121,20 +121,22 @@ class HammerCompilation(
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
+  // Rust adaptation (SPDMX Exception B): `typing_interner` borrowed from test wrapper, threaded down (mirrors Scala `val interner` flowing through the pipeline). `typing_bump` is no longer needed here because TypingInterner is constructed at the test site.
   pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
     interner: &'ctx HammerInterner<'s, 'h>,
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: HammerCompilationOptions,
-    typing_bump: &'t Bump,
     instantiating_bump: &'i Bump,
   ) -> Self {
     let instantiated_compilation =
       InstantiatedCompilation::new(
+        typing_interner,
         scout_arena,
         keywords,
         parser_keywords,
@@ -145,7 +147,6 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         InstantiatorCompilationOptions {
           debug_out: options.debug_out.clone(),
         },
-        typing_bump,
         instantiating_bump);
     HammerCompilation {
       interner,

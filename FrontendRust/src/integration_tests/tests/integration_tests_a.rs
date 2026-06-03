@@ -73,10 +73,11 @@ fn simple_program_returning_an_int() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return 3; }", false,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -254,10 +255,11 @@ fn hardcoding_negative_numbers() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return -3; }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -285,10 +287,11 @@ fn taking_an_argument_and_returning_it() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main(a int) int { return a; }", true,
     );
     match compile.eval_for_kind_primitive_args(vec![
@@ -320,10 +323,11 @@ fn tests_adding_two_numbers() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return +(2, 3); }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -351,10 +355,11 @@ fn tests_adding_two_floats() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() float { return +(2.5, 3.5); }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -382,10 +387,11 @@ fn tests_inline_adding() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return 2 + 3; }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -433,10 +439,11 @@ fn tests_inline_adding_more() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return 2 + 3 + 4 + 5 + 6; }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -464,10 +471,11 @@ fn simple_lambda() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return {7}(); }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -495,10 +503,11 @@ fn lambda_with_one_magic_arg() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return {_}(3); }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -527,10 +536,11 @@ fn lambda_with_a_type_specified_param() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int { return (a int) => { return +(a,a); }(3); }", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -570,10 +580,11 @@ fn test_block() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int {true; 200; return 300;}", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -601,10 +612,11 @@ fn test_generic() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "\nfunc drop(x int) { }\nfunc bork<T>(a T) void where func drop(T)void {\n  // implicitly calls drop\n}\nexported func main() {\n  bork(3);\n}\n",
         false,
     );
@@ -639,10 +651,11 @@ fn test_multiple_invocations_of_generic() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "\nfunc bork<T>(a T, b T) T where func drop(T)void { return a; }\nexported func main() int {true bork false; 2 bork 2; return 3 bork 3;}\n",
         true,
     );
@@ -675,10 +688,11 @@ fn test_mutating_a_local_var() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() {a = 3; set a = 4; }", true,
     );
     compile.run_primitive_args(Vec::new());
@@ -703,10 +717,11 @@ fn test_returning_a_local_mutable_var() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "exported func main() int {a = 3; set a = 4; return a;}", true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -895,10 +910,11 @@ fn set_swapping_locals() {
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
     let code = crate::tests::tests::load_expected("programs/mutswaplocals.vale");
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         &code, true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {

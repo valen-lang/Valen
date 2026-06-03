@@ -21,11 +21,11 @@ object RunCompilation {
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
     interner: &'ctx crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
     scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
     keywords: &'ctx crate::keywords::Keywords<'s>,
     parser_keywords: &'ctx crate::keywords::Keywords<'p>,
     parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
-    typing_bump: &'t bumpalo::Bump,
     instantiating_bump: &'i bumpalo::Bump,
     code: &str,
     include_all_builtins: bool,
@@ -64,9 +64,10 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         ..crate::simplifying::hammer_compilation::HammerCompilationOptions::new()
     };
     RunCompilation {
+        interner: typing_interner,
         hammer_compilation: crate::simplifying::hammer_compilation::HammerCompilation::new(
-            scout_arena, interner, keywords, parser_keywords, parse_arena,
-            packages_to_build, resolver, options, typing_bump, instantiating_bump,
+            scout_arena, interner, typing_interner, keywords, parser_keywords, parse_arena,
+            packages_to_build, resolver, options, instantiating_bump,
         ),
     }
 }
@@ -100,6 +101,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 pub struct RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
+    pub interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
     pub hammer_compilation: crate::simplifying::hammer_compilation::HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>,
 }
 /*

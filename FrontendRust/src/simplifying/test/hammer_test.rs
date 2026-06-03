@@ -51,6 +51,8 @@ fn local_ids_unique() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
+    // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "
 exported func main() {
   a = 6;
@@ -71,7 +73,7 @@ exported func main() {
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
     let hamuts = compile.get_hamuts();
     let paackage = hamuts.lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
@@ -139,12 +141,14 @@ fn returns_int() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
+    // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 7; }\n";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let _compile = test(
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
     );
 }

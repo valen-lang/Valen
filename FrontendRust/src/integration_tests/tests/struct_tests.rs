@@ -22,10 +22,11 @@ fn make_empty_imm_struct() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "struct Marine imm {}\nexported func main() {\n  Marine();\n}\n", false,
     );
     compile.run_primitive_args(Vec::new());
@@ -57,10 +58,11 @@ fn make_imm_struct_with_one_member() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "struct Marine imm { hp int; }\nexported func main() {\n  Marine(7);\n}\n", false,
     );
     compile.run_primitive_args(Vec::new());
@@ -110,10 +112,11 @@ fn make_empty_mut_struct() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "struct Marine {}\nexported func main() {\n  Marine();\n}\n", false,
     );
     compile.run_primitive_args(Vec::new());
@@ -156,10 +159,11 @@ fn make_struct() {
     let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
     let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
     let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
     let mut compile = crate::integration_tests::tests::run_compilation::test(
         &compilation_bump,
-        &hammer_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &typing_bump, &instantiating_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
         "struct Marine { hp int; }\nexported func main() {\n  Marine(9);\n}\n", false,
     );
     compile.run_primitive_args(Vec::new());

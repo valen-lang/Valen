@@ -7,6 +7,7 @@ use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INa
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+use crate::typing::typing_interner::TypingInterner;
 
 /*
 package dev.vale.typing
@@ -37,7 +38,8 @@ fn regular_interface_and_struct() {
     let code = "\nsealed interface Opt { }\n\nstruct Some { x int; }\nimpl Opt for Some;\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     let drop_func_names: Vec<_> = coutputs.functions.iter().map(|f| f.header.id).filter_map(|f| {
@@ -87,7 +89,8 @@ fn regular_open_interface_and_struct_no_anonymous_interface() {
     let code = "\n#!DeriveAnonymousSubstruct\ninterface Opt { }\n\nstruct Some { x int; }\nimpl Opt for Some;\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let drop_func_names: Vec<_> = coutputs.functions.iter().map(|f| f.header.id).filter_map(|f| {
         match f {
@@ -138,7 +141,8 @@ fn implementing_two_interfaces_causes_no_vdrop_conflict() {
     let code = "\nstruct MyStruct {}\n\ninterface IA {}\nimpl IA for MyStruct;\n\ninterface IB {}\nimpl IB for MyStruct;\n\nfunc bork(a IA) {}\nfunc zork(b IB) {}\nexported func main() {\n  bork(MyStruct());\n  zork(MyStruct());\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -177,7 +181,8 @@ fn upcast() {
     let code = "\n\ninterface IShip {}\nstruct Raza { fuel int; }\nimpl IShip for Raza;\n\nexported func main() {\n  ship IShip = Raza(42);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -209,7 +214,8 @@ fn virtual_with_body() {
     let code = "\ninterface IBork { }\nstruct Bork { }\nimpl IBork for Bork;\n\nfunc rebork(virtual result *IBork) bool { true }\nexported func main() {\n  rebork(&Bork());\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let _compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let _compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
 }
 /*
   test("Virtual with body") {
@@ -239,7 +245,8 @@ fn templated_interface_and_struct() {
     let code = "\nsealed interface Opt<T Ref>\nwhere func drop(T)void\n{ }\n\nstruct Some<T>\nwhere func drop(T)void\n{ x T; }\n\nimpl<T> Opt<T> for Some<T>\nwhere func drop(T)void;\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let drop_func_names: Vec<_> = coutputs.functions.iter().map(|f| f.header.id).filter_map(|f| {
         match f {
@@ -286,7 +293,8 @@ fn custom_drop_with_concept_function() {
     let code = "\n#!DeriveInterfaceDrop\nsealed interface Opt<T Ref> { }\n\nabstract func drop<T>(virtual opt Opt<T>)\nwhere func drop(T)void;\n\n#!DeriveStructDrop\nstruct Some<T> { x T; }\nimpl<T> Opt<T> for Some<T>;\n\nfunc drop<T>(opt Some<T>)\nwhere func drop(T)void\n{\n  [x] = opt;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -326,7 +334,8 @@ fn test_complex_interface() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -350,7 +359,8 @@ fn test_specializing_interface() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(crate::tests::tests::get_package_to_resource_resolver());
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -373,7 +383,8 @@ fn use_bound_from_struct() {
     let code = "\n#!DeriveStructDrop\nstruct BorkForwarder<Lam>\nwhere func __call(&Lam)int // 3\n{\n  lam Lam;\n}\n\n\nfunc bork<Lam>( // 1\n  self &BorkForwarder<Lam> // 2\n) int {\n  return (self.lam)();\n}\n\nexported func main() {\n  b = BorkForwarder({ 7 });\n  b.bork();\n  [_] = b;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -420,7 +431,8 @@ fn basic_interface_forwarder() {
     let code = "\n#!DeriveInterfaceDrop\nsealed interface Bork {\n  func bork(virtual self &Bork) int;\n}\n\n#!DeriveStructDrop\nstruct BorkForwarder<Lam>\nwhere func drop(Lam)void, func __call(&Lam)int {\n  lam Lam;\n}\n\nimpl<Lam> Bork for BorkForwarder<Lam>;\n\nfunc bork<Lam>(self &BorkForwarder<Lam>) int {\n  return (self.lam)();\n}\n\nexported func main() int {\n  f = BorkForwarder({ 7 });\n  z = f.bork();\n  [_] = f;\n  return z;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -467,7 +479,8 @@ fn generic_interface_forwarder() {
     let code = "\n#!DeriveInterfaceDrop\nsealed interface Bork<T Ref> {\n  func bork(virtual self &Bork<T>) int;\n}\n\n#!DeriveStructDrop\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)();\n}\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  z = f.bork();\n  [_] = f;\n  return z;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -514,7 +527,8 @@ fn generic_interface_forwarder_with_bound() {
     let code = "\n#!DeriveInterfaceDrop\nsealed interface Bork<T Ref>\nwhere func threeify(T)T {\n  func bork(virtual self &Bork<T>) int;\n}\n\n#!DeriveStructDrop\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)().threeify();\n}\n\nfunc threeify(x int) int { 3 }\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  z = f.bork();\n  [_] = f;\n  return z;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -564,7 +578,8 @@ fn basic_interface_anonymous_subclass() {
     let code = "\ninterface Bork {\n  func bork(virtual self &Bork) int;\n}\n\nexported func main() int {\n  f = Bork({ 7 });\n  return f.bork();\n}\n\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -598,7 +613,8 @@ fn integer_is_compatible_with_interface_anonymous_substruct() {
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -640,7 +656,8 @@ fn lambda_is_compatible_with_interface_anonymous_substruct() {
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -673,7 +690,8 @@ fn implementing_a_non_generic_interface_call() {
     let code = "\n#!DeriveInterfaceDrop\ninterface IObserver<T Ref> { }\n\n#!DeriveStructDrop\nstruct MyThing { }\n\nimpl<T> IObserver<T> for MyThing;\n\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -706,7 +724,8 @@ fn anonymous_substruct_8() {
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*

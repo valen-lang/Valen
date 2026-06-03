@@ -71,8 +71,9 @@ fn test_mutating_a_local_var() {
     let code = "\n\nexported func main() {a = 3; set a = 4; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -131,8 +132,9 @@ fn test_mutable_member_permission() {
     let code = "\n\nstruct Engine { fuel int; }\nstruct Spaceship { engine! Engine; }\nexported func main() {\n  ship = Spaceship(Engine(10));\n  set ship.engine = Engine(15);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -188,8 +190,9 @@ fn local_set_upcasts() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -241,8 +244,9 @@ fn expr_set_upcasts() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
-        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -296,7 +300,8 @@ fn reports_when_we_try_to_mutate_an_imm_struct() {
     let code = "\n\nstruct Vec3 imm { x float; y float; z float; }\nexported func main() int {\n  v = Vec3(3.0, 4.0, 5.0);\n  set v.x = 10.0;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
@@ -352,7 +357,8 @@ fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
     let code = "\n\nstruct Vec3 { x float; y float; z float; }\nexported func main() int {\n  v = Vec3(3.0, 4.0, 5.0);\n  set v.x = 10.0;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
@@ -409,7 +415,8 @@ fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantMutateFinalElement {
             coord: CoordT {
@@ -473,7 +480,8 @@ fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
     let code = "\n\nexported func main() {\n  a = 5;\n  set a = \"blah\";\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CouldntConvertForMutateT { expected_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }, actual_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Str(_), .. }, .. } => {}
         _ => panic!("expected CouldntConvertForMutateT"),
@@ -509,7 +517,8 @@ fn reports_when_we_try_to_override_a_non_interface() {
     let code = "\n\nimpl int for Bork;\nstruct Bork { }\nexported func main() {\n  Bork();\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
         ICompileErrorT::CantImplNonInterface { templata: ITemplataT::Kind(KindTemplataT { kind: KindT::Int(IntT { bits: 32 }) }), .. } => {}
         _ => panic!("expected CantImplNonInterface"),
@@ -547,7 +556,8 @@ fn can_mutate_an_element_in_a_runtime_sized_array() {
     let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
@@ -583,7 +593,8 @@ fn can_restackify_in_destructure_pattern() {
     let code = "\n#!DeriveStructDrop\nstruct Ship { fuel int; }\n\n/// TODO: Bring tuples back\n#!DeriveStructDrop\nstruct GetFuelResult { fuel int; ship Ship; }\n\nfunc GetFuel(ship Ship) GetFuelResult {\n  return GetFuelResult(ship.fuel, ship);\n}\n\nexported func main() int {\n  ship = Ship(42);\n  [fuel, set ship] = GetFuel(ship);\n  [f] = ship;\n  return fuel;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
-    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
 /*
