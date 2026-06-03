@@ -130,6 +130,11 @@ pub fn get_extern_function<'h, 's, 'v>(
         "__vbi_divideI64" => Box::new(crate::testvm::vivem_externs::divide_i64),
         "__vbi_subtractI64" => Box::new(crate::testvm::vivem_externs::subtract_i64),
         "TruncateI64ToI32" => Box::new(crate::testvm::vivem_externs::truncate_i64_to_i32),
+        "__vbi_subtractFloatFloat" => Box::new(crate::testvm::vivem_externs::subtract_float_float),
+        "__vbi_multiplyFloatFloat" => Box::new(crate::testvm::vivem_externs::multiply_float_float),
+        "__vbi_divideFloatFloat" => Box::new(crate::testvm::vivem_externs::divide_float_float),
+        "__vbi_negateFloat" => Box::new(crate::testvm::vivem_externs::negate_float),
+        "castFloatI32" => Box::new(crate::testvm::vivem_externs::cast_float_i32),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

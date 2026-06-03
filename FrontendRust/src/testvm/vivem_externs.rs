@@ -46,7 +46,17 @@ pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
   }
 */
 // mig: fn multiply_float_float
-pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_float_float"); }
+pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value * b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("multiply_float_float: non-FloatV args"),
+    }
+}
 /*
   def multiplyFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -60,7 +70,17 @@ pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
   }
 */
 // mig: fn divide_float_float
-pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_float_float"); }
+pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value / b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("divide_float_float: non-FloatV args"),
+    }
+}
 /*
   def divideFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -74,7 +94,17 @@ pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h
   }
 */
 // mig: fn subtract_float_float
-pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_float_float"); }
+pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value - b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("subtract_float_float: non-FloatV args"),
+    }
+}
 /*
   def subtractFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -247,7 +277,14 @@ pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn negate_float
-pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: negate_float"); }
+pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
+        _ => panic!("negate_float: non-FloatV arg"),
+    };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: -value, _phantom: std::marker::PhantomData }))
+}
 /*
   def negateFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -472,7 +509,14 @@ pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn cast_float_i32
-pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i32"); }
+pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
+        _ => panic!("cast_float_i32: non-FloatV arg"),
+    };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value as i32 as i64, bits: 32, _phantom: std::marker::PhantomData }))
+}
 /*
   def castFloatI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
