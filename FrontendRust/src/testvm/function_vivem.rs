@@ -122,6 +122,13 @@ pub fn get_extern_function<'h, 's, 'v>(
     match name.as_str() {
         "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),
         "__vbi_addFloatFloat" => Box::new(crate::testvm::vivem_externs::add_float_float),
+        "__vbi_multiplyI32" => Box::new(crate::testvm::vivem_externs::multiply_i32),
+        "__vbi_divideI32" => Box::new(crate::testvm::vivem_externs::divide_i32),
+        "__vbi_subtractI32" => Box::new(crate::testvm::vivem_externs::subtract_i32),
+        "__vbi_eqI32" => Box::new(crate::testvm::vivem_externs::eq_i32),
+        "__vbi_multiplyI64" => Box::new(crate::testvm::vivem_externs::multiply_i64),
+        "__vbi_divideI64" => Box::new(crate::testvm::vivem_externs::divide_i64),
+        "__vbi_subtractI64" => Box::new(crate::testvm::vivem_externs::subtract_i64),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

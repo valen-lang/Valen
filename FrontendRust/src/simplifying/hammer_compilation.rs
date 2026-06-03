@@ -223,8 +223,12 @@ pub fn get_astrouts() -> Result<(), String> {
 */
 
 // mig: fn get_compiler_outputs
-pub fn get_compiler_outputs() -> Result<(), String> {
-  panic!("Unimplemented: get_compiler_outputs");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    self.instantiated_compilation.get_compiler_outputs()
+  }
 }
 /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = instantiatedCompilation.getCompilerOutputs()

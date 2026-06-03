@@ -1179,7 +1179,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::InterfaceCallH(_) => panic!("vonify_expression: InterfaceCallH"),
-            ExpressionH::IfH(_) => panic!("vonify_expression: IfH"),
+            ExpressionH::IfH(i) => {
+                let crate::final_ast::instructions::IfH { condition_block, then_block, else_block, common_supertype } = *i;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "If".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "conditionBlock".to_string(), value: self.vonify_expression(condition_block) },
+                        crate::von::ast::VonMember { field_name: "thenBlock".to_string(), value: self.vonify_expression(then_block) },
+                        crate::von::ast::VonMember { field_name: "thenResultType".to_string(), value: self.vonify_coord(then_block.result_type()) },
+                        crate::von::ast::VonMember { field_name: "elseBlock".to_string(), value: self.vonify_expression(else_block) },
+                        crate::von::ast::VonMember { field_name: "elseResultType".to_string(), value: self.vonify_coord(else_block.result_type()) },
+                        crate::von::ast::VonMember { field_name: "commonSupertype".to_string(), value: self.vonify_coord(common_supertype) },
+                    ],
+                })
+            }
             ExpressionH::WhileH(_) => panic!("vonify_expression: WhileH"),
             ExpressionH::ConsecutorH(c) => {
                 let crate::final_ast::instructions::ConsecutorH { exprs: nodes } = *c;

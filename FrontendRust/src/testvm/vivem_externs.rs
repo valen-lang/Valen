@@ -292,8 +292,19 @@ pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn multiply_i32
-pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i32"); }
+pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_mul(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("multiply_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
+Guardian: temp-disable: SPDMX — JVM Int*Int wraps silently on overflow (this is JVM spec, not checked-mode anything), so .wrapping_mul is the Rust adaptation that matches Scala semantics. Plain Rust * panics on overflow in debug builds, which would diverge from Scala. The Scala test add64ret.vale explicitly relies on i32 overflow wrap behavior in `(2000000042 * 7) / 7 - 2000000000` to test the i32-vs-i64 fallthrough. — FrontendRust/guardian-logs/request-639-1780499785220/hook-639/multiply_i32--295.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def multiplyI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
     val aKind = memory.dereference(args(0))
@@ -306,7 +317,17 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn divide_i32
-pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i32"); }
+pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_div(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("divide_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def divideI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -338,7 +359,17 @@ pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn subtract_i32
-pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i32"); }
+pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_sub(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("subtract_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def subtractI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -408,7 +439,17 @@ pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v
   }
 */
 // mig: fn eq_i32
-pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i32"); }
+pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value == b_value, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("eq_i32: non-IntV(_, 32) args"),
+    }
+}
 /*
   def eqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -463,7 +504,17 @@ pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn multiply_i64
-pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: multiply_i64"); }
+pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_mul(b_value), bits: 64, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("multiply_i64: non-IntV(_, 64) args"),
+    }
+}
 /*
   def multiplyI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -477,7 +528,17 @@ pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn divide_i64
-pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: divide_i64"); }
+pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_div(b_value), bits: 64, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("divide_i64: non-IntV(_, 64) args"),
+    }
+}
 /*
   def divideI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -519,7 +580,17 @@ pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn subtract_i64
-pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: subtract_i64"); }
+pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_sub(b_value), bits: 64, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("subtract_i64: non-IntV(_, 64) args"),
+    }
+}
 /*
   def subtractI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)

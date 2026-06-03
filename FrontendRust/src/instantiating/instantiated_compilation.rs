@@ -228,8 +228,8 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
-    panic!("InstantiatedCompilation.get_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 41")
+  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    self.typing_pass_compilation.get_compiler_outputs()
   }
 }
 /*

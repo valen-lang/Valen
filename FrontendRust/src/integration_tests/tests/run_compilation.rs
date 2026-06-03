@@ -145,7 +145,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn get_compiler_outputs
-  pub fn get_compiler_outputs(&self) { panic!("Unimplemented: get_compiler_outputs"); }
+  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+      self.hammer_compilation.get_compiler_outputs()
+  }
   /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = fullCompilation.getCompilerOutputs()
   */

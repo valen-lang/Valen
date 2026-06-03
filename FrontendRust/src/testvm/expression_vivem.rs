@@ -542,10 +542,36 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref })
         }
+        ExpressionH::IfH(i) => {
+            let crate::final_ast::instructions::IfH { condition_block, then_block, else_block, common_supertype: _ } = **i;
+            let condition_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &condition_block) {
+                ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let condition_kind = heap.dereference(condition_reference, false);
+            let condition_value = match condition_kind {
+                crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value, .. }) => value,
+                _ => panic!("execute_node_inner: IfH condition not BoolV"),
+            };
+            discard(program_h, interner, heap, stdout, stdin, call_id, condition_block.result_type(), condition_reference);
+            let block_result = if condition_value == true {
+                match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &then_block) {
+                    ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                }
+            } else {
+                match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 2), &else_block) {
+                    ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                }
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: block_result })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. In-file precedent: heap.rs:54 (AdapterForExternsV::dereference) calls self.heap.dereference(reference, false) with exactly this shape. — FrontendRust/guardian-logs/request-630-1780499508349/hook-630/execute_node_inner--227.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def executeNodeInner(
                    programH: ProgramH,
                    stdin: (() => String),
