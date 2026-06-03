@@ -260,9 +260,44 @@ fn moving_from_inside_if() {
 */
 // mig: fn if_with_complex_condition
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn if_with_complex_condition() {
-    panic!("Unmigrated test: if_with_complex_condition");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "struct Marine { x int; }\nexported func main() str {\n  m = Marine(5);\n  return if (m.x == 5) { \"#\" }\n  else if (0 == 0) { \"?\" }\n  else { \".\" };\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let ifs: Vec<&crate::typing::ast::expressions::IfTE> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::If(if2) => Some(if2)
+        );
+        for iff in &ifs {
+            assert_eq!(iff.result().coord, crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+                kind: crate::typing::types::types::KindT::Str(crate::typing::types::types::StrT),
+            });
+        }
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "#" => {}
+        other => panic!("expected VonStr(\"#\"), got {:?}", other),
+    }
 }
 /*
   test("If with complex condition") {
@@ -359,9 +394,30 @@ fn ret_from_inside_if_will_destroy_locals() {
 */
 // mig: fn can_continue_if_other_branch_would_have_returned
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn can_continue_if_other_branch_would_have_returned() {
-    panic!("Unmigrated test: can_continue_if_other_branch_would_have_returned");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import printutils.*;\n\n#!DeriveStructDrop\nstruct Marine { hp int; }\nfunc drop(marine Marine) void {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() int {\n  m = Marine(5);\n  x =\n    if (false) {\n      println(\"In then!\");\n      return 7;\n    } else {\n      println(\"In else!\");\n      m.hp\n    };\n  println(\"In rest!\");\n  return x;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let _main = coutputs.lookup_function_by_str("main");
+    }
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "In else!\nIn rest!\nDestroying marine!\n");
 }
 /*
   test("Can continue if other branch would have returned") {
@@ -432,9 +488,30 @@ fn destructure_inside_if() {
 */
 // mig: fn if_nevers
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn if_nevers() {
-    panic!("Unmigrated test: if_nevers");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/if/ifnevers.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("If nevers") {
@@ -444,9 +521,29 @@ fn if_nevers() {
 */
 // mig: fn if_with_panics_and_rets
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn if_with_panics_and_rets() {
-    panic!("Unmigrated test: if_with_panics_and_rets");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  a = 7;\n  if false {\n    panic(\"lol\");\n    return 73;\n  } else {\n    return 42;\n  }\n  return 73;\n}\n\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("If with panics and rets") {
@@ -470,9 +567,33 @@ fn if_with_panics_and_rets() {
 */
 // mig: fn toast
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn toast() {
-    panic!("Unmigrated test: toast");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  a = 0;\n  if (a == 2) {\n    return 71;\n  } else if (a == 5) {\n    return 73;\n  } else {\n    return 42;\n  }\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let _main = coutputs.lookup_function_by_str("main");
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Toast") {

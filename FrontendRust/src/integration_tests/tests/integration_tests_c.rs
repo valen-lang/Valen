@@ -259,9 +259,29 @@ fn truncate_i64_to_i32() {
 */
 // mig: fn return_without_return
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn return_without_return() {
-    panic!("Unmigrated test: return_without_return");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int { 73 }\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 73 }) => {}
+        other => panic!("expected VonInt(73), got {:?}", other),
+    }
 }
 /*
   test("Return without return") {
@@ -275,9 +295,26 @@ fn return_without_return() {
 */
 // mig: fn test_export_functions
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_export_functions() {
-    panic!("Unmigrated test: test_export_functions");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func moo() int {\n  return 42;\n}\n",
+    );
+    let _hamuts = compile.get_hamuts();
 }
 /*
   test("Test export functions") {
@@ -292,9 +329,47 @@ fn test_export_functions() {
 */
 // mig: fn test_extern_functions
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_extern_functions() {
-    panic!("Unmigrated test: test_extern_functions");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/externs/extern.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let math_str = scout_arena.intern_str("math");
+        let math_package_coord = *scout_arena.intern_package_coordinate(math_str, &[]);
+        let hamuts = compile.get_hamuts();
+        let package_h = hamuts.lookup_package(math_package_coord);
+        let sqrt_str = scout_arena.intern_str("sqrt");
+        let sqrt_extern = package_h.prototype_to_extern.values().find(|fe| fe.maybe_extern_name == sqrt_str);
+        assert!(sqrt_extern.is_some());
+        match sqrt_extern.unwrap() {
+            crate::final_ast::types::HamutsFunctionExtern { maybe_extern_name, prototype, .. } if *maybe_extern_name == sqrt_str => {
+                assert_eq!(prototype.id.local_name, sqrt_str);
+            }
+            other => panic!("expected HamutsFunctionExtern(sqrt, PrototypeH(IdH(sqrt, ...), ...), _), got {:?}", other),
+        }
+        let extern_sqrt = package_h.lookup_function("sqrt(float)");
+        assert!(extern_sqrt.is_extern);
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Test extern functions") {

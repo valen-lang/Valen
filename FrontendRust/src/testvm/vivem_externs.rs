@@ -285,7 +285,14 @@ pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'
   }
 */
 // mig: fn sqrt
-pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: sqrt"); }
+pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
+        _ => panic!("sqrt: non-FloatV arg"),
+    };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value.sqrt(), _phantom: std::marker::PhantomData }))
+}
 /*
   def sqrt(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -611,7 +618,14 @@ pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn cast_i32_float
-pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i32_float"); }
+pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 1);
+    let value = match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
+        _ => panic!("cast_i32_float: non-IntV(_, 32) arg"),
+    };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value as f64, _phantom: std::marker::PhantomData }))
+}
 /*
   def castI32Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
