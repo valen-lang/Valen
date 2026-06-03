@@ -33,7 +33,6 @@ fn print_float() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "import printutils.*;\n\nexported func main() {\n  a = 42.125;\n  print(a);\n}\n",
-        true,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).trim(), "42.125");
 }
@@ -106,7 +105,7 @@ fn float_equals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        &source, true,
+        &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}

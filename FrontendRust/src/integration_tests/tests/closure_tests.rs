@@ -231,7 +231,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { x = 4; return {x}(); }", true,
+        "exported func main() int { x = 4; return {x}(); }",
     );
     {
         let interner = compile.interner;
@@ -496,7 +496,7 @@ fn read_from_inside_a_closure_inside_a_closure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n", true,
+        "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
