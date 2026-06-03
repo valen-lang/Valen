@@ -3336,7 +3336,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_ce = ReferenceExpressionIE::ConstantBool(self.interner.alloc(ConstantBoolIE { _marker: std::marker::PhantomData, value: c.value }));
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
-            ReferenceExpressionTE::ConstantStr(_) => panic!("Unimplemented: translate_ref_expr ConstantStr"),
+            ReferenceExpressionTE::ConstantStr(c) => {
+                let result_ce = ReferenceExpressionIE::ConstantStr(self.interner.alloc(ConstantStrIE { _marker: std::marker::PhantomData, value: c.value.0 }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(crate::instantiating::ast::types::StrIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::ConstantFloat(c) => {
                 let result_ce = ReferenceExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { _marker: std::marker::PhantomData, value: c.value }));
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: std::marker::PhantomData }) }, result_ce)

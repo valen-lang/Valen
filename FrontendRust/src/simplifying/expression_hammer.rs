@@ -62,7 +62,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let construct_h = ExpressionH::ConstantVoidH(self.interner.alloc(crate::final_ast::instructions::ConstantVoidH));
                     (construct_h, Vec::new())
                 }
-                RE::ConstantStr(c) => panic!("translate_expression: ConstantStr branch"),
+                RE::ConstantStr(c) => (ExpressionH::ConstantStrH(self.interner.alloc(crate::final_ast::instructions::ConstantStrH { value: self.interner.bump().alloc_str(c.value), _marker: std::marker::PhantomData })), Vec::new()),
                 RE::ConstantFloat(c) => {
                     (ExpressionH::ConstantF64H(self.interner.alloc(crate::final_ast::instructions::ConstantF64H { value: c.value })), Vec::new())
                 }

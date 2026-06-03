@@ -138,6 +138,8 @@ pub fn get_extern_function<'h, 's, 'v>(
         "castFloatStr" => Box::new(crate::testvm::vivem_externs::cast_float_str),
         "printstr" => Box::new(crate::testvm::vivem_externs::print),
         "__vbi_strLength" => Box::new(crate::testvm::vivem_externs::str_length),
+        "addStr" => Box::new(crate::testvm::vivem_externs::add_str_str),
+        "streq" => Box::new(crate::testvm::vivem_externs::eq_str_str),
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

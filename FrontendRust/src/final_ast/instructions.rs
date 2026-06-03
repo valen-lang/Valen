@@ -108,17 +108,6 @@ override def equals(obj: Any): Boolean = vcurious();
   override def resultType: CoordH[BoolHT] = CoordH(MutableShareH, InlineH, BoolHT())
 }
 
-// Produces a string.
-case class ConstantStrH(
-  // The value of the string.
-  value: String
-) extends ExpressionH[StrHT] {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-  override def resultType: CoordH[StrHT] = CoordH(MutableShareH, YonderH, StrHT())
-}
-
 // Produces a float.
 case class ConstantF64H(
   // The value of the float.
@@ -1318,7 +1307,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ConstantVoidH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::ConstantIntH(c) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: c.bits }) },
             ExpressionH::ConstantBoolH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) },
-            ExpressionH::ConstantStrH(_) => panic!("Unimplemented: result_type for ConstantStrH"),
+            ExpressionH::ConstantStrH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::YonderH, kind: KindHT::StrHT(StrHT) },
             ExpressionH::ConstantF64H(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::FloatHT(FloatHT) },
             ExpressionH::ArgumentH(a) => a.result_type,
             ExpressionH::StackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
@@ -1455,8 +1444,20 @@ pub struct ConstantBoolH {
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrH<'s, 'h> where 's: 'h {
     pub value: &'h str,
-    _marker: PhantomData<&'s ()>,
+    pub _marker: PhantomData<&'s ()>,
 }
+/*
+// Produces a string.
+case class ConstantStrH(
+  // The value of the string.
+  value: String
+) extends ExpressionH[StrHT] {
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
+  override def resultType: CoordH[StrHT] = CoordH(MutableShareH, YonderH, StrHT())
+}
+*/
 
 // mig: case class ConstantF64H
 /// Temporary state

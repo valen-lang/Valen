@@ -118,7 +118,20 @@ pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
   }
 */
 // mig: fn add_str_str
-pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_str_str"); }
+pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 6);
+    let a_str = match memory.dereference(args[0]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("add_str_str: arg 0 not StrV") };
+    let a_begin = match memory.dereference(args[1]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("add_str_str: arg 1 not IntV(_, 32)") };
+    let a_length = match memory.dereference(args[2]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("add_str_str: arg 2 not IntV(_, 32)") };
+    let b_str = match memory.dereference(args[3]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("add_str_str: arg 3 not StrV") };
+    let b_begin = match memory.dereference(args[4]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("add_str_str: arg 4 not IntV(_, 32)") };
+    let b_length = match memory.dereference(args[5]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("add_str_str: arg 5 not IntV(_, 32)") };
+    let a_slice = &a_str.0[a_begin as usize .. (a_begin as i32 + a_length as i32) as usize];
+    let b_slice = &b_str.0[b_begin as usize .. (b_begin as i32 + b_length as i32) as usize];
+    let concat = format!("{}{}", a_slice, b_slice);
+    let interned = memory.scout_arena.intern_str(&concat);
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+}
 /*
   def addStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 6)
@@ -194,7 +207,19 @@ pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn eq_str_str
-pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_str_str"); }
+pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 6);
+    let left_str = match memory.dereference(args[0]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("eq_str_str: arg 0 not StrV") };
+    let left_str_start = match memory.dereference(args[1]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 1 not IntV(_, 32)") };
+    let left_str_len = match memory.dereference(args[2]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 2 not IntV(_, 32)") };
+    let right_str = match memory.dereference(args[3]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("eq_str_str: arg 3 not StrV") };
+    let right_str_start = match memory.dereference(args[4]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 4 not IntV(_, 32)") };
+    let right_str_len = match memory.dereference(args[5]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 5 not IntV(_, 32)") };
+    // BUG: Scala uses .slice(start, len) but Scala's slice takes (from, until), so the
+    // "len" arg is being misinterpreted as an end index. Mirroring Scala parity-faithfully.
+    let result_eq = &left_str.0[left_str_start as usize .. left_str_len as usize] == &right_str.0[right_str_start as usize .. right_str_len as usize];
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: result_eq, _phantom: std::marker::PhantomData }))
+}
 /*
   def eqStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 6)

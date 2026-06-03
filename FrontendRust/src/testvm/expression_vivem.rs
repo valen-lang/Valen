@@ -402,6 +402,12 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Float(crate::testvm::values::FloatV { value, _phantom: std::marker::PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
+        ExpressionH::ConstantStrH(c) => {
+            let crate::final_ast::instructions::ConstantStrH { value, _marker: _ } = **c;
+            let interned = scout_arena.intern_str(value);
+            let r#ref = make_primitive(heap, interner, call_id, LocationH::YonderH, KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
         ExpressionH::DiscardH(d) => {
             let source_expr = d.source_expression;
             match source_expr.result_type().ownership {
