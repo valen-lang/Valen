@@ -100,7 +100,6 @@ fn test_int_generic() {
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nstruct Vec<N Int, T>\n{\n  values [#N]<imm>T;\n}\n\nexported func main() int {\n  v = Vec<3, int>(#[#](3, 4, 5));\n  return v.values.2;\n}\n",
-        true,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}

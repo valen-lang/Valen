@@ -611,7 +611,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let crate::final_ast::instructions::NewArrayFromValuesH { result_type: array_ref_type, source_expressions: element_exprs } = **n;
             let element_refs: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> =
                 element_exprs.iter().enumerate().map(|(i, arg_expr)| {
-                    match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
                         INodeExecuteResultV::Return(_) => panic!("execute_node_inner: NewArrayFromValuesH element produced Return — vimpl"),
                         INodeExecuteResultV::Break(_) => panic!("execute_node_inner: NewArrayFromValuesH element produced Break — vimpl"),
                         INodeExecuteResultV::Continue(c) => c.result_ref,
@@ -630,12 +630,12 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         }
         ExpressionH::StaticSizedArrayLoadH(ssal) => {
             let crate::final_ast::instructions::StaticSizedArrayLoadH { array_expression: array_expr, index_expression: index_expr, target_ownership, expected_element_type, array_size: _, result_type } = **ssal;
-            let array_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
+            let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
                 INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
                 INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
-            let index_reference = match execute_node(program_h, interner, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &index_expr) {
+            let index_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &index_expr) {
                 INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
                 INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
                 INodeExecuteResultV::Continue(c) => c.result_ref,
@@ -652,8 +652,8 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             } else {
             }
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: source.ownership }), source);
-            discard(program_h, interner, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference);
-            discard(program_h, interner, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
         }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
