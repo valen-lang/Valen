@@ -5379,7 +5379,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IVarNameT::Iterable(_) => panic!("Unimplemented: translate_var_name Iterable"),
             IVarNameT::Iterator(_) => panic!("Unimplemented: translate_var_name Iterator"),
             IVarNameT::IterationOption(_) => panic!("Unimplemented: translate_var_name IterationOption"),
-            IVarNameT::MagicParam(_) => panic!("Unimplemented: translate_var_name MagicParam"),
+            IVarNameT::MagicParam(crate::typing::names::names::MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_si(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location2 })),
             IVarNameT::Self_(_) => panic!("Unimplemented: translate_var_name SelfName"),
             _ => panic!("Unimplemented: translate_var_name other"),
         }

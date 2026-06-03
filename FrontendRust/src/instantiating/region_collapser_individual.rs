@@ -215,7 +215,7 @@ where 's: 'i {
         IVarNameI::TypingPassTemporaryVar(_) => panic!("Unimplemented: collapse_var_name TypingPassTemporaryVar"),
         IVarNameI::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_ci(crate::instantiating::ast::names::TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
         IVarNameI::ClosureParam(crate::instantiating::ast::names::ClosureParamNameI { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_ci(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
-        IVarNameI::MagicParam(_) => panic!("Unimplemented: collapse_var_name MagicParam"),
+        IVarNameI::MagicParam(crate::instantiating::ast::names::MagicParamNameI { code_location_2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_ci(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location_2 })),
         IVarNameI::Iterable(_) => panic!("Unimplemented: collapse_var_name Iterable"),
         IVarNameI::ConstructingMember(_) => panic!("Unimplemented: collapse_var_name ConstructingMember"),
         IVarNameI::Iterator(_) => panic!("Unimplemented: collapse_var_name Iterator"),

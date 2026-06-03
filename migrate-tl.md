@@ -16,6 +16,8 @@
 
 **Interner-threading channel:** parameters or god-structs. Runtime-state structs (`HeapV`, etc.) aren't god-structs just because they're widely-passed; don't bolt the interner onto them — thread it as a parameter.
 
+**Per-test Scala-arg discipline:** check the Scala for each test before defaulting to in-tree precedent — Scala explicit args, default args, and "previous Rust test did X" can disagree, and Scala parity wins.
+
 **Shield exceptions vs temp-disables.** Shield exceptions encode expected, mechanical divergences that recur uniformly; temp-disables flag surprising ones that warrant architect review per site.
 
 **NCWSRX false-positives** often mean the Scala audit block sits outside the diff window; fix the slicing (move it adjacent to its Rust def) rather than temp-disable.

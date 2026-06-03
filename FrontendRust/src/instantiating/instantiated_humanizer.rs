@@ -215,6 +215,7 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
         INameI::LambdaCitizenTemplate(t) => "λC:".to_string() + &code_map(t.code_location),
         INameI::LambdaCallFunctionTemplate(t) => "λF:".to_string() + &code_map(t.code_location),
         INameI::ClosureParam(c) => "λP:".to_string() + &code_map(c.code_location),
+        INameI::MagicParam(m) => "mp:".to_string() + &code_map(m.code_location_2),
         INameI::LambdaCallFunction(n) => {
             humanize_name(code_map, INameI::LambdaCallFunctionTemplate(&n.template), None)
                 + &humanize_generic_args(code_map, n.template_args, None)
