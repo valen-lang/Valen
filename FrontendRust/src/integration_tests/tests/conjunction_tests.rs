@@ -1,17 +1,41 @@
-// mig: struct ConjunctionTests
-pub struct ConjunctionTests;
 /*
 package dev.vale
 
 import dev.vale.von.VonBool
 import org.scalatest._
 
+*/
+// mig: struct ConjunctionTests
+pub struct ConjunctionTests;
+/*
 class ConjunctionTests extends FunSuite with Matchers {
 */
 // mig: fn and
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn and() { panic!("Unmigrated test: and"); }
+fn and() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() bool { return true and true; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
+        other => panic!("expected VonBool(true), got {:?}", other),
+    }
+}
 /*
   test("And") {
     val compile = RunCompilation.test("exported func main() bool { return true and true; }")
@@ -20,8 +44,30 @@ fn and() { panic!("Unmigrated test: and"); }
 */
 // mig: fn or
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn or() { panic!("Unmigrated test: or"); }
+fn or() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() bool { return true or false; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
+        other => panic!("expected VonBool(true), got {:?}", other),
+    }
+}
 /*
   test("Or") {
     val compile = RunCompilation.test("exported func main() bool { return true or false; }")

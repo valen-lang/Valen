@@ -1038,6 +1038,11 @@ fn load_expression<'p>(
       left: &*parse_arena.alloc(load_expression(parse_arena,get_object_field(jobj, "left"))),
       right: &*parse_arena.alloc(load_block(parse_arena,get_object_field(jobj, "right"))),
     }),
+    "Or" => IExpressionPE::Or(OrPE {
+      range: load_range(get_object_field(jobj, "range")),
+      left: &*parse_arena.alloc(load_expression(parse_arena,get_object_field(jobj, "left"))),
+      right: &*parse_arena.alloc(load_block(parse_arena,get_object_field(jobj, "right"))),
+    }),
     "Range" => IExpressionPE::Range(RangePE {
       range: load_range(get_object_field(jobj, "range")),
       from_expr: &*parse_arena.alloc(load_expression(parse_arena,get_object_field(jobj, "begin"))),
