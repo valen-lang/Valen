@@ -699,8 +699,25 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let mut remaining_destination_reference_local_variables: Vec<&crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> = destination_reference_local_variables.iter().collect();
         let mut local_types: Vec<crate::final_ast::types::CoordH<'s, 'h>> = Vec::new();
         let mut local_indices: Vec<crate::final_ast::instructions::Local<'s, 'h>> = Vec::new();
-        for _member2 in struct_def_t.members.iter() {
-            panic!("translate_destroy: struct member iteration (current test has zero members)");
+        for member2 in struct_def_t.members.iter() {
+            match member2.tyype {
+                crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(member_ref_type2) => {
+                    let destination_reference_local_variable = remaining_destination_reference_local_variables.remove(0);
+                    let member_ref_type_h = self.translate_coord(hinputs, hamuts, member_ref_type2.reference);
+                    let var_id_full = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(destination_reference_local_variable.name));
+                    let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
+                    let local_index = locals.add_typing_pass_local(
+                        &destination_reference_local_variable.name,
+                        var_id_name_h,
+                        crate::simplifying::conversions::evaluate_variability(destination_reference_local_variable.variability),
+                        member_ref_type_h);
+                    local_types.push(member_ref_type_h);
+                    local_indices.push(local_index);
+                }
+                crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => {
+                    panic!("translate_destroy: AddressMemberTypeI arm not yet migrated");
+                }
+            }
         }
         assert!(remaining_destination_reference_local_variables.is_empty());
         let _ = &mut remaining_destination_reference_local_variables;
@@ -711,10 +728,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 local_indices: self.interner.bump().alloc_slice_copy(&local_indices),
             }));
         let unboxings_h: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> =
-            struct_def_t.members.iter().zip(local_types.iter().zip(local_indices.iter())).flat_map(|(_member, (_local_type, _local))| {
-                panic!("translate_destroy: unboxings (current test has zero members)");
-                #[allow(unreachable_code)]
-                std::iter::empty::<crate::final_ast::instructions::ExpressionH<'s, 'h>>()
+            struct_def_t.members.iter().zip(local_types.iter().zip(local_indices.iter())).flat_map(|(member, (_local_type, _local))| {
+                match member.tyype {
+                    crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(_) => Vec::<crate::final_ast::instructions::ExpressionH<'s, 'h>>::new(),
+                    crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(_) => panic!("translate_destroy: AddressMemberTypeI unboxing arm not yet migrated"),
+                }
             }).collect();
         let mut destructure_and_unboxings: Vec<crate::final_ast::instructions::ExpressionH<'s, 'h>> = vec![destructure_h];
         destructure_and_unboxings.extend(unboxings_h);
