@@ -161,7 +161,6 @@ fn tests_a_while_loop_with_a_set_in_it() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala evalForKind has 3 overloads; `_primitive_args_with_stdin` is the documented Exception-S overload-suffix for `evalForKind(args, stdin)` (Vector[PrimitiveKindV] + Vector[String]). Documented at run_compilation.rs:287 `// mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload evalForKind(args, stdin))`. In-file precedent: `tests_a_while_loop_with_a_complex_condition` just above (immediately preceding test) uses the same name with no Guardian issue after the most recent landing. — FrontendRust/guardian-logs/request-1046-1780534728219/hook-1046/tests_a_while_loop_with_a_set_in_it--139.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Tests a while loop with a set in it") {
     val compile = RunCompilation.test(
       """

@@ -993,7 +993,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. In-file precedent: heap.rs:54 (AdapterForExternsV::dereference) calls self.heap.dereference(reference, false) with exactly this shape. — FrontendRust/guardian-logs/request-630-1780499508349/hook-630/execute_node_inner--227.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def executeNodeInner(
                    programH: ProgramH,
                    stdin: (() => String),

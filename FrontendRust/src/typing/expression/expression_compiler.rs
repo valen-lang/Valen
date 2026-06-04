@@ -3294,7 +3294,6 @@ where 's: 't,
         (own_opt_coord, *some_constructor, *none_constructor, some_impl_id, none_impl_id)
     }
 /*
-Guardian: temp-disable: SPDMX — `evaluate_generic_light_function_from_call_for_prototype` is the established Rust equivalent of Scala's `delegate.evaluateGenericFunctionFromCallForPrototype` — the `_light_` infix distinguishes light functions from closures in the Rust codebase. This exact function is already called without temp-disable in compiler.rs:1802 and overload_resolver.rs:676 as the parity equivalent of the same Scala method. — FrontendRust/guardian-logs/request-661-1778784031199/hook-661/get_option--2739.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getOption(
     coutputs: CompilerOutputs,
     nenv: FunctionEnvironmentT,

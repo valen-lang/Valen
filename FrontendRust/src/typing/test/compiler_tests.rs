@@ -4794,7 +4794,6 @@ fn test_struct_default_generic_argument_in_type() {
     }
 }
 /*
-Guardian: temp-disable: IIDX — StrI("MyHashSet") appears in a match pattern arm (destructuring), not as a value construction call. IIDX's DENY example is about constructing StrI values outside the interner; pattern matching is not construction. The TL explicitly approved this inline literal pattern approach. — FrontendRust/guardian-logs/request-1715-1778687371724/hook-1715/test_struct_default_generic_argument_in_type--3598.0.ImmediateInterningDiscipline-IIDX.ImmediateInterningDiscipline-IIDX.verdict.md
   test("Test struct default generic argument in type") {
     val compile = CompilerTestCompilation.test(
       """

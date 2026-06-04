@@ -752,7 +752,6 @@ pub fn get_imprecise_name<'s, 't>(
   }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's `AnonymousSubstructNameT(interfaceName, _)` extracts the first field (the `AnonymousSubstructTemplateNameT` template), and Rust's `INameT::AnonymousSubstructTemplate(a.template)` wraps that same value in the required enum variant because `get_imprecise_name` takes `INameT` — there is no direct pass-through possible. The parity is correct; the wrapping is a necessary Rust adaptation. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-736-1778630947070/hook-736/get_imprecise_name--686.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getImpreciseName(interner: Interner, name2: INameT): Option[IImpreciseNameS] = {
     name2 match {
       case StructTemplateNameT(humanName) => Some(interner.intern(CodeNameS(humanName)))

@@ -443,7 +443,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Threading interner (HammerInterner) through this call to feed StructDefinitionH.get_ref(interner) is SPDMX Exception B — the exception text explicitly enumerates interner as a sanctioned arena adaptation parameter. Scala used GC + module-singleton interning; Rust requires explicit parameter threading. Same pattern landed without firing on check_kind/check_reference/add_local/remove_local this turn — Guardian is inconsistent on the same Exception-B shape. — FrontendRust/guardian-logs/request-436-1780420663942/hook-436/get_reference_from_local--426.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getReferenceFromLocal(
       varAddr: VariableAddressV,
       expectedType: CoordH[KindHT],
@@ -783,7 +782,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per in-file precedent SPDMX temp-disable at heap.rs:769 (destructure): Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. — FrontendRust/guardian-logs/request-407-1780508030747/hook-407/destructure_array--747.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def destructureArray(reference: ReferenceV): Vector[ReferenceV] = {
     val allocation = dereference(reference)
     allocation match {
@@ -822,7 +820,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Calling self.dereference(reference, false) explicitly passes the allowUndead default value because Rust has no default-argument support. Same in-tree precedent: to_von (heap.rs:1662) and check_reference (heap.rs:1429) already use this exact pattern with explicit false / explicit allow_undead arg. Exception B equivalent for default-argument adaptation. — FrontendRust/guardian-logs/request-241-1780412647292/hook-241/destructure--730.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def destructure(reference: ReferenceV): Vector[ReferenceV] = {
     val allocation = dereference(reference)
     allocation match {
@@ -1460,7 +1457,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per in-file precedent SPDMX temp-disable at heap.rs:769 (destructure) and new sibling at heap.rs:747 (destructure_array): Scala HeapV.dereference has default param allowUndead=false; Rust elided the default per EANODVX, so the explicit false is the Rust adaptation. — FrontendRust/guardian-logs/request-413-1780508192574/hook-413/deinitialize_array_element--1410.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def deinitializeArrayElement(arrayReference: ReferenceV) = {
     val arrayInstance @ ArrayInstanceV(_, _, _, _) = dereference(arrayReference)
     val elementReference = arrayInstance.deinitializeElement()

@@ -421,7 +421,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented collapsed-Hamuts architecture (hamuts.rs lines 4-12, no HamutsBox/Hamuts split): Scala outer delegates to inner.getRuntimeSizedArray; the Rust body IS the inner direct map scan. Identical sibling precedent: get_static_sized_array at line 414-418 in this same file (already temp-disabled per the in-file rationale citing request-316). — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-531-1780527726012/hook-531/get_runtime_sized_array--429.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getRuntimeSizedArray(runtimeSizedArrayTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
     inner.getRuntimeSizedArray(runtimeSizedArrayTH)
   }

@@ -51,13 +51,12 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     vec![builtin, test_tld],
     resolver,
     HammerCompilationOptions {
-      debug_out: Arc::new(|_x: &str| {}),
+      debug_out: Arc::new(|x: &str| println!("{}", x)),
       global_options,
     },
     instantiating_bump)
 }
 /*
-Guardian: temp-disable: SPDMX — Spelling out Scala's default-arg HammerCompilationOptions()/GlobalOptions() as an explicit GlobalOptions struct plus a println debug_out closure is the established Rust test-compilation adaptation, identical to the committed typing precedent compiler_test_compilation.rs:38-46. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-645-1779916096351/hook-645/test--23.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def test(code: String*): HammerCompilation = {
     val interner = new Interner()
     val keywords = new Keywords(interner)

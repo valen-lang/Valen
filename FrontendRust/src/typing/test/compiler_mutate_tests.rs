@@ -444,7 +444,6 @@ fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala case class field is `coord: CoordT` (see compiler_error_reporter.rs:423 / `CantMutateFinalElement(range, coord)`). Guardian confused the test's positional destructure binding `case Err(CantMutateFinalElement(_, arrRef2))` (local var name) with the field name. The Rust field `coord` is the correct Scala-parity name; no rename happened. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-601-1778979444137/hook-601/reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array--433.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Reports when we try to mutate an element in an imm static-sized array") {
     val compile = CompilerTestCompilation.test(
       """

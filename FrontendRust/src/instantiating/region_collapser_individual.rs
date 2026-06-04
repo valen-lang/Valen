@@ -481,7 +481,6 @@ where 's: 'i {
     *interner.intern_static_sized_array_it_ci(crate::instantiating::ast::types::StaticSizedArrayITValI { name: collapsed_id })
 }
 /*
-Guardian: temp-disable: SPDMX — Per SPDMX Exception S, _map suffix disambiguates from the unit-returning count_static_sized_array(counter, ssa) at line 487 — same pattern as count_struct_id/count_struct_id_map sibling pair. Both Rust fns mirror the same-named Scala method (Scala has overloading by counter-presence). — FrontendRust/guardian-logs/request-179-1780503381221/hook-179/collapse_static_sized_array--431.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def collapseStaticSizedArray(
     ssa: StaticSizedArrayIT[sI]):
   StaticSizedArrayIT[cI] = {

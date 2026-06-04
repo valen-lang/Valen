@@ -1061,7 +1061,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Matches the find_struct precedent (already landed in this file) — Scala vassertOne ports as assert_eq!(len, 1) + indexing. Both find_struct and find_interface are the same shape; if SPDMX is satisfied for find_struct it should be for find_interface too. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2457-1780135852835/hook-2457/find_interface--1009.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def findInterface(hinputs: HinputsT, interfaceId: IdT[IInterfaceNameT]) = {
     vassertOne(
       hinputs.interfaces
@@ -1178,8 +1177,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: TUCMPX — Scala-faithful literal. Scala source has `Map())) // TODO: Catch impls up` at lines 1361-1363 — the empty map IS the literal Scala value with a TODO annotation; replacing with panic would diverge from Scala. Strict parity preserves Scala semantics. Once the upstream "catch impls up" TODO is resolved in Scala, both will update together. — FrontendRust/guardian-logs/request-1434-1780525648196/hook-1434/translate_override--1086.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
-Guardian: temp-disable: SPDMX — Rust static-narrowing recovery. Scala's dispatcherCaseIdT is statically IdT[OverrideDispatcherCaseNameT] via the OverrideT destructure, so localName.independentImplTemplateArgs is direct field access on the narrowed concrete struct. Rust's IdT erases the parameter, so we recover the narrowing with a match + catch-all panic. Exception R covers the catch-all. In-tree precedents: KindHT::expect_struct_h, CoordH::expect_struct_coord, and IInstantiationNameT::template_args at typing/names/names.rs:552. — FrontendRust/guardian-logs/request-1402-1780524645157/hook-1402/translate_override--1086.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateOverride(
     opts: GlobalOptions,
     interner: Interner,
@@ -3867,11 +3864,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: TUCMPX — The Scala source itself returns MutableBorrowI unconditionally in this arm — the if/regionIsMutable conditional is commented out in the Scala source (lines 3471-3475 of the audit-trail). This is not unimplemented code; it is faithful 1:1 transcription of the Scala body. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2707-1780143376785/hook-2707/translate_ref_expr--3065.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
   def translateRefExpr(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
-
     substitutions: Map[IdT[IPlaceholderNameT], ITemplataI[sI]],
     perspectiveRegionT: RegionT,
     expr: ReferenceExpressionTE):

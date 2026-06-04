@@ -190,12 +190,16 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Type exported multiple times:{}", parts.join(""))
     }
     ICompileErrorT::ExternFunctionDependedOnNonExportedKind { range: _, paackage, signature, non_exported_kind } => {
-      format!("Extern function {:?} depends on kind {:?} that wasn't exported from package {:?}",
-        signature, non_exported_kind, paackage)
+      format!("Extern function {} depends on kind {} that wasn't exported from package {}",
+        humanize_signature(scout_arena, typing_interner, code_map, **signature),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
+        crate::utils::source_code_utils::humanize_package(paackage))
     }
     ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { range: _, paackage, exported_kind, non_exported_kind } => {
-      format!("Exported kind {:?} depends on kind {:?} that wasn't exported from package {:?}",
-        exported_kind, non_exported_kind, paackage)
+      format!("Exported kind {} depends on kind {} that wasn't exported from package {}",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *exported_kind }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
+        crate::utils::source_code_utils::humanize_package(paackage))
     }
     ICompileErrorT::InitializedWrongNumberOfElements { range: _, expected_num_elements, num_elements_initialized } => {
       format!("Supplied {} elements, but expected {}.", num_elements_initialized, expected_num_elements)
@@ -264,7 +268,6 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
   format!("{}{}\n", prefix, error_str_body)
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's `+ signature + " depends on kind " + nonExportedKind + " ... " + paackage` invokes toString() on each value. Rust has no Display impl on SignatureT/KindT/PackageCoordinate — `{:?}` (Debug) is the nearest-equivalent for value-types with no Display, as noted in for-jr.md. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-065-1778966274458/hook-065/humanize--53.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanize(
       verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -362,7 +365,7 @@ Guardian: temp-disable: SPDMX — Scala's `+ signature + " depends on kind " + n
         }
         case CouldntNarrowDownCandidates(range, candidates) => {
           "Multiple candidates for call:" +
-            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id)).mkString("")
+            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id, None)).mkString("")
         }
         case ImmStructCantHaveVaryingMember(range, structName, memberName) => {
           "Immutable struct (\"" + printableName(codeMap, structName) + "\") cannot have varying member (\"" + memberName + "\")."
@@ -410,7 +413,7 @@ Guardian: temp-disable: SPDMX — Scala's `+ signature + " depends on kind " + n
             verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, eff)
         }
         case FunctionAlreadyExists(oldFunctionRange, newFunctionRange, signature) => {
-          "Function " + humanizeId(codeMap, signature) + " already exists! Previous declaration at:\n" +
+          "Function " + humanizeId(codeMap, signature, None) + " already exists! Previous declaration at:\n" +
             codeMap(oldFunctionRange.begin)
         }
         case AbstractMethodOutsideOpenInterface(range) => {
@@ -553,7 +556,7 @@ pub fn humanize_conclusion_resolve_error<'s, 't>(verbose: bool, code_map: &dyn F
         humanizeFindFunctionFailure(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, range, inner)
       }
       case ReturnTypeConflictInConclusionResolve(range, expectedReturnType, actualPrototype) => {
-        "Found function: " + humanizeId(codeMap, actualPrototype.id) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
+        "Found function: " + humanizeId(codeMap, actualPrototype.id, None) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
       }
       case other => vimpl(other)
     }
@@ -814,7 +817,7 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
         "Can't get components of placeholder."
       }
       case ReturnTypeConflict(_, expectedReturnType, actualPrototype) => {
-        "Found function: " + humanizeId(codeMap, actualPrototype.id) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
+        "Found function: " + humanizeId(codeMap, actualPrototype.id, None) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
       }
       case CantShareMutable(kind) => {
         "Can't share a mutable kind: " + humanizeTemplata(codeMap, KindTemplataT(kind))
@@ -848,13 +851,13 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
       }
       case LookupFailed(name) => "Couldn't find anything named: " + humanizeImpreciseName(name)
       case KindIsNotConcrete(kind) => {
-        "Expected kind to be concrete, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be concrete, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case OneOfFailed(rule) => {
         "One-of rule failed."
       }
       case KindIsNotInterface(kind) => {
-        "Expected kind to be interface, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be interface, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case CallResultIsntCallable(result) => {
         "Generic call result isn't callable: " + humanizeTemplata(codeMap, result)
@@ -878,7 +881,7 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
           }).mkString(", ")
       }
       case KindIsNotStruct(kind) => {
-        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case CouldntFindImpl(range, fail) => {
         "Couldn't find impl: " + fail
@@ -893,7 +896,7 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
           }).mkString(", ")
       }
       case CantDetermineNarrowestKind(kinds) => {
-        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _)).mkString(", ")
+        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _, None)).mkString(", ")
       }
       case FunctionDoesntHaveName(range, name) => {
         "Function doesn't have name: " + humanizeName(codeMap, name)
@@ -966,7 +969,7 @@ pub fn humanize_candidate<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner:
     candidate: ICalleeCandidate) = {
     candidate match {
       case HeaderCalleeCandidate(header) => {
-        humanizeId(codeMap, header.id)
+        humanizeId(codeMap, header.id, None)
       }
       case PrototypeTemplataCalleeCandidate(prototypeT) => {
 ////        vimpl() // Need a good test case that shows this is even possible.
@@ -1008,7 +1011,6 @@ pub fn humanize_templata<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
   }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's `humanizeKind(codeMap, kind)` uses the default `containingRegion: Option[RegionT] = None`. Rust has no default parameters, so passing `None` explicitly is the required Rust counterpart to Scala's default-argument call — it's not novel logic, it's the mandatory Rust adaptation of a Scala default param. — FrontendRust/guardian-logs/request-150-1778968631296/hook-150/humanize_templata--880.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeTemplata(
     codeMap: CodeLocationS => String,
     templata: ITemplataT[ITemplataType]):
@@ -1040,13 +1042,13 @@ Guardian: temp-disable: SPDMX — Scala's `humanizeKind(codeMap, kind)` uses the
         }
       }
       case PrototypeTemplataT(prototype) => {
-        humanizeId(codeMap, prototype.id)
+        humanizeId(codeMap, prototype.id, None)
       }
       case CoordTemplataT(coord) => {
         humanizeCoord(codeMap, coord)
       }
       case KindTemplataT(kind) => {
-        humanizeKind(codeMap, kind)
+        humanizeKind(codeMap, kind, None)
       }
       case CoordListTemplataT(coords) => {
         "(" + coords.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
@@ -1054,8 +1056,8 @@ Guardian: temp-disable: SPDMX — Scala's `humanizeKind(codeMap, kind)` uses the
       case StringTemplataT(value) => "\"" + value + "\""
       case PlaceholderTemplataT(id, tyype) => {
         tyype match {
-          case CoordTemplataType() => "$" + humanizeId(codeMap, id)
-          case _ => humanizeTemplataType(tyype) + "$" + humanizeId(codeMap, id)
+          case CoordTemplataType() => "$" + humanizeId(codeMap, id, None)
+          case _ => humanizeTemplataType(tyype) + "$" + humanizeId(codeMap, id, None)
         }
       }
       case other => vimpl(other)
@@ -1112,12 +1114,12 @@ fn humanize_kind<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingI
   private def humanizeKind(
       codeMap: CodeLocationS => String,
       kind: KindT,
-      containingRegion: Option[RegionT] = None
+      containingRegion: Option[RegionT]
   ) = {
     kind match {
       case IntT(bits) => "i" + bits
       case BoolT() => "bool"
-      case KindPlaceholderT(name) => "Kind$" + humanizeId(codeMap, name)
+      case KindPlaceholderT(name) => "Kind$" + humanizeId(codeMap, name, None)
       case StrT() => "str"
       case NeverT(_) => "never"
       case VoidT() => "void"
@@ -1161,7 +1163,7 @@ where 's: 't,
   def humanizeId[T <: INameT](
     codeMap: CodeLocationS => String,
     name: IdT[T],
-    containingRegion: Option[RegionT] = None):
+    containingRegion: Option[RegionT]):
   String = {
     (if (name.initSteps.nonEmpty) {
       name.initSteps.map(n => humanizeName(codeMap, n)).mkString(".") + "."
@@ -1247,9 +1249,9 @@ pub fn humanize_name<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &Typ
         "asc:" + humanizeName(codeMap, substruct)
       }
       case SelfNameT() => "self"
-      case OverrideDispatcherTemplateNameT(implId) => "ovdt:" + humanizeId(codeMap, implId)
+      case OverrideDispatcherTemplateNameT(implId) => "ovdt:" + humanizeId(codeMap, implId, None)
       case OverrideDispatcherNameT(OverrideDispatcherTemplateNameT(implId), templateArgs, parameters) => {
-        "ovd:" + humanizeId(codeMap, implId) +
+        "ovd:" + humanizeId(codeMap, implId, None) +
         humanizeGenericArgs(codeMap, templateArgs, None) +
             "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
       }
@@ -1382,9 +1384,8 @@ pub fn humanize_signature<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner:
   humanize_id(scout_arena, typing_interner, code_map, signature.id, None)
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's `humanizeId(codeMap, signature.id)` uses the default `containingRegion: Option[RegionT] = None`. Rust has no default parameters, so passing `None` explicitly is the required Rust counterpart to Scala's default-argument call — identical pattern already temp-disabled in `humanize_templata` in this same file. — FrontendRust/guardian-logs/request-236-1778970443346/hook-236/humanize_signature--1273.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeSignature(codeMap: CodeLocationS => String, signature: SignatureT): String = {
-    humanizeId(codeMap, signature.id)
+    humanizeId(codeMap, signature.id, None)
   }
 }
 */

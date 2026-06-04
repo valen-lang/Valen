@@ -438,7 +438,6 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — JVM Int*Int wraps silently on overflow (this is JVM spec, not checked-mode anything), so .wrapping_mul is the Rust adaptation that matches Scala semantics. Plain Rust * panics on overflow in debug builds, which would diverge from Scala. The Scala test add64ret.vale explicitly relies on i32 overflow wrap behavior in `(2000000042 * 7) / 7 - 2000000000` to test the i32-vs-i64 fallthrough. — FrontendRust/guardian-logs/request-639-1780499785220/hook-639/multiply_i32--295.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def multiplyI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
     val aKind = memory.dereference(args(0))

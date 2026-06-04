@@ -2086,8 +2086,6 @@ where 's: 't,
         Ok(hinputs)
     }
 /*
-Guardian: temp-disable: TUCMPX — None is the legitimate Scala value here, not a fabricated default. Scala's FunctionCompilerCore.makeExternFunction computes maybeInheritance via pattern-match on functionA.containingFunction: case IdT(_,_,citizenTemplateName) => Some(...), case _ => None. This Rust call site is for export functions whose containing function is never a citizen template (lambdas/top-level), so the Scala equivalent always returns None for this branch. Panic was breaking lambda tests; None matches Scala behavior. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-744-1779425878790/hook-744/evaluate--1288.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
-Guardian: temp-disable: SPDMX — This Rust call site has no Scala counterpart in Compiler.scala (Scala adds extern functions via FunctionCompilerCore.makeExternFunction, in a different file). The local audit-trail block shows phantom/stale Scala. The 5th arg matches the canonical addFunctionExtern signature in CompilerOutputs.scala which gained a genericParameterInheritance param. Caller passes panic! pending port of containingFunction-lookup logic. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-671-1779422748369/hook-671/evaluate--1288.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluate(
       codeMap: FileCoordinateMap[String],
       packageToProgramA: PackageCoordinateMap[ProgramA]):
@@ -3393,7 +3391,6 @@ where 's: 't,
         }
     }
     /*
-Guardian: temp-disable: SPDMX — The Scala uses `contentsRuntimeSizedArrayTT(mutability, _, _)` which is a Scala extractor equivalent to `rsa.name.local_name → RuntimeSizedArrayNameT { arr, .. } → arr.mutability`. The Rust data model stores mutability on `RawArrayNameT` (accessed via `name.local_name → INameT::RuntimeSizedArray → .arr.mutability`), so an extra nested match arm is structurally required for exhaustiveness. This is the Rust-idiomatic translation of the Scala extractor, not novel logic (Exception R). — FrontendRust/guardian-logs/request-413-1778705498733/hook-413/get_mutability--3129.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):
       ITemplataT[MutabilityTemplataType] = {
         concreteValue2 match {

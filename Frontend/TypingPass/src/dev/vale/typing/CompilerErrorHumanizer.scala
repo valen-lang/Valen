@@ -120,7 +120,7 @@ object CompilerErrorHumanizer {
         }
         case CouldntNarrowDownCandidates(range, candidates) => {
           "Multiple candidates for call:" +
-            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id)).mkString("")
+            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id, None)).mkString("")
         }
         case ImmStructCantHaveVaryingMember(range, structName, memberName) => {
           "Immutable struct (\"" + printableName(codeMap, structName) + "\") cannot have varying member (\"" + memberName + "\")."
@@ -168,7 +168,7 @@ object CompilerErrorHumanizer {
             verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, eff)
         }
         case FunctionAlreadyExists(oldFunctionRange, newFunctionRange, signature) => {
-          "Function " + humanizeId(codeMap, signature) + " already exists! Previous declaration at:\n" +
+          "Function " + humanizeId(codeMap, signature, None) + " already exists! Previous declaration at:\n" +
             codeMap(oldFunctionRange.begin)
         }
         case AbstractMethodOutsideOpenInterface(range) => {
@@ -292,7 +292,7 @@ object CompilerErrorHumanizer {
         humanizeFindFunctionFailure(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, range, inner)
       }
       case ReturnTypeConflictInConclusionResolve(range, expectedReturnType, actualPrototype) => {
-        "Found function: " + humanizeId(codeMap, actualPrototype.id) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
+        "Found function: " + humanizeId(codeMap, actualPrototype.id, None) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
       }
       case other => vimpl(other)
     }
@@ -455,7 +455,7 @@ object CompilerErrorHumanizer {
         "Can't get components of placeholder."
       }
       case ReturnTypeConflict(_, expectedReturnType, actualPrototype) => {
-        "Found function: " + humanizeId(codeMap, actualPrototype.id) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
+        "Found function: " + humanizeId(codeMap, actualPrototype.id, None) + " which returns " + humanizeTemplata(codeMap, CoordTemplataT(actualPrototype.returnType)) + " but expected return type of " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType))
       }
       case CantShareMutable(kind) => {
         "Can't share a mutable kind: " + humanizeTemplata(codeMap, KindTemplataT(kind))
@@ -489,13 +489,13 @@ object CompilerErrorHumanizer {
       }
       case LookupFailed(name) => "Couldn't find anything named: " + humanizeImpreciseName(name)
       case KindIsNotConcrete(kind) => {
-        "Expected kind to be concrete, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be concrete, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case OneOfFailed(rule) => {
         "One-of rule failed."
       }
       case KindIsNotInterface(kind) => {
-        "Expected kind to be interface, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be interface, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case CallResultIsntCallable(result) => {
         "Generic call result isn't callable: " + humanizeTemplata(codeMap, result)
@@ -519,7 +519,7 @@ object CompilerErrorHumanizer {
           }).mkString(", ")
       }
       case KindIsNotStruct(kind) => {
-        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind)
+        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind, None)
       }
       case CouldntFindImpl(range, fail) => {
         "Couldn't find impl: " + fail
@@ -534,7 +534,7 @@ object CompilerErrorHumanizer {
           }).mkString(", ")
       }
       case CantDetermineNarrowestKind(kinds) => {
-        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _)).mkString(", ")
+        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _, None)).mkString(", ")
       }
       case FunctionDoesntHaveName(range, name) => {
         "Function doesn't have name: " + humanizeName(codeMap, name)
@@ -585,7 +585,7 @@ object CompilerErrorHumanizer {
     candidate: ICalleeCandidate) = {
     candidate match {
       case HeaderCalleeCandidate(header) => {
-        humanizeId(codeMap, header.id)
+        humanizeId(codeMap, header.id, None)
       }
       case PrototypeTemplataCalleeCandidate(prototypeT) => {
 ////        vimpl() // Need a good test case that shows this is even possible.
@@ -633,13 +633,13 @@ object CompilerErrorHumanizer {
         }
       }
       case PrototypeTemplataT(prototype) => {
-        humanizeId(codeMap, prototype.id)
+        humanizeId(codeMap, prototype.id, None)
       }
       case CoordTemplataT(coord) => {
         humanizeCoord(codeMap, coord)
       }
       case KindTemplataT(kind) => {
-        humanizeKind(codeMap, kind)
+        humanizeKind(codeMap, kind, None)
       }
       case CoordListTemplataT(coords) => {
         "(" + coords.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
@@ -647,8 +647,8 @@ object CompilerErrorHumanizer {
       case StringTemplataT(value) => "\"" + value + "\""
       case PlaceholderTemplataT(id, tyype) => {
         tyype match {
-          case CoordTemplataType() => "$" + humanizeId(codeMap, id)
-          case _ => humanizeTemplataType(tyype) + "$" + humanizeId(codeMap, id)
+          case CoordTemplataType() => "$" + humanizeId(codeMap, id, None)
+          case _ => humanizeTemplataType(tyype) + "$" + humanizeId(codeMap, id, None)
         }
       }
       case other => vimpl(other)
@@ -675,12 +675,12 @@ object CompilerErrorHumanizer {
   private def humanizeKind(
       codeMap: CodeLocationS => String,
       kind: KindT,
-      containingRegion: Option[RegionT] = None
+      containingRegion: Option[RegionT]
   ) = {
     kind match {
       case IntT(bits) => "i" + bits
       case BoolT() => "bool"
-      case KindPlaceholderT(name) => "Kind$" + humanizeId(codeMap, name)
+      case KindPlaceholderT(name) => "Kind$" + humanizeId(codeMap, name, None)
       case StrT() => "str"
       case NeverT(_) => "never"
       case VoidT() => "void"
@@ -713,7 +713,7 @@ object CompilerErrorHumanizer {
   def humanizeId[T <: INameT](
     codeMap: CodeLocationS => String,
     name: IdT[T],
-    containingRegion: Option[RegionT] = None):
+    containingRegion: Option[RegionT]):
   String = {
     (if (name.initSteps.nonEmpty) {
       name.initSteps.map(n => humanizeName(codeMap, n)).mkString(".") + "."
@@ -738,9 +738,9 @@ object CompilerErrorHumanizer {
         "asc:" + humanizeName(codeMap, substruct)
       }
       case SelfNameT() => "self"
-      case OverrideDispatcherTemplateNameT(implId) => "ovdt:" + humanizeId(codeMap, implId)
+      case OverrideDispatcherTemplateNameT(implId) => "ovdt:" + humanizeId(codeMap, implId, None)
       case OverrideDispatcherNameT(OverrideDispatcherTemplateNameT(implId), templateArgs, parameters) => {
-        "ovd:" + humanizeId(codeMap, implId) +
+        "ovd:" + humanizeId(codeMap, implId, None) +
         humanizeGenericArgs(codeMap, templateArgs, None) +
             "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
       }
@@ -853,6 +853,6 @@ object CompilerErrorHumanizer {
   }
 
   def humanizeSignature(codeMap: CodeLocationS => String, signature: SignatureT): String = {
-    humanizeId(codeMap, signature.id)
+    humanizeId(codeMap, signature.id, None)
   }
 }

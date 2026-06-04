@@ -1327,7 +1327,6 @@ fn descendant_satisfying_call() {
     }).expect("expected FunctionCallTE moo(UpcastTE(_, IShip<int>, _))");
 }
 /*
-Guardian: temp-disable: SPDMX — Scala field IS `humanNamee` (double 'e') on `InterfaceTemplateNameT` (see Frontend/.../names.scala — Rust port at names.rs:2217). Guardian mistakenly assumed single 'e'; the change is correct parity. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1368-1779035889070/hook-1368/descendant_satisfying_call--1166.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Descendant satisfying call") {
     val compile = CompilerTestCompilation.test(
       """

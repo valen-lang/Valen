@@ -412,11 +412,8 @@ where 's: 't,
         // See FunctionCompiler doc for what outer/runes/inner envs are.
         let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
             instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.values()
-                .flat_map(|r| {
-                    panic!("implement: evaluate_templated_light_banner_from_call reachable bounds");
-                    #[allow(unreachable_code)]
-                    std::iter::empty::<PrototypeTemplataT<'s, 't>>()
-                })
+                .flat_map(|m| m.citizen_rune_to_reachable_prototype.values().copied())
+                .map(|p| PrototypeTemplataT { prototype: self.typing_interner.alloc(p) })
                 .collect();
 
         // Rust adaptation (SPDMX-B): arena-allocate so callee can borrow as &'t; Scala relies on GC.
@@ -436,9 +433,15 @@ where 's: 't,
         assert!(instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.is_empty(), "vcurious");
         assert!(instantiation_bound_params.rune_to_bound_impl.is_empty(), "vcurious");
         let instantiation_bound_args = self.typing_interner.alloc(InstantiationBoundArgumentsT {
-            rune_to_bound_prototype: ArenaIndexMap::new_in(self.typing_interner.bump()),
-            rune_to_citizen_rune_to_reachable_prototype: ArenaIndexMap::new_in(self.typing_interner.bump()),
-            rune_to_bound_impl: ArenaIndexMap::new_in(self.typing_interner.bump()),
+            rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_bound_prototype.iter().map(|(k, v)| (*k, *v))
+            ),
+            rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.iter().map(|(k, v)| (*k, *v))
+            ),
+            rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_bound_impl.iter().map(|(k, v)| (*k, *v))
+            ),
         });
         coutputs.add_instantiation_bounds(
             self.opts.global_options.sanity_check,
@@ -454,7 +457,6 @@ where 's: 't,
     }
 
 /*
-Guardian: temp-disable: SPDMX — MACTX mirror pass: adding @ECSIIOSZ comment. Surrounding instantiation_bound_args simplification predates this edit. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1382-1779476926595/hook-1382/evaluate_templated_light_banner_from_call--358.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateTemplatedLightBannerFromCall(
       // The environment the function was defined in.
       nearEnv: BuildingFunctionEnvironmentWithClosuredsT,

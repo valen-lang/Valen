@@ -495,7 +495,6 @@ impl<'s, 't> HinputsT<'s, 't> {
         }
     }
     /*
-Guardian: temp-disable: SPDMX — Scala's Vector.slice(from, until) clamps from at 0 when negative; saturating_sub(2) is the literal minimal-diff Rust translation of that clamping semantic, not novel defensive logic. SPDMX heuristic mis-reads it because Rust's slice indexing requires clamping explicitly while Scala's hides it inside .slice; resulting behavior is identical -- both fall through to _ => false for size < 2. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-406-1778975222164/hook-406/name_is_lambda_in--482.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def nameIsLambdaIn(name: IdT[IFunctionNameT], needleFunctionHumanName: String): Boolean = {
         val first = name.steps.head
         val lastTwo = name.steps.slice(name.steps.size - 2, name.steps.size)
