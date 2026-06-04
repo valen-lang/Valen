@@ -1657,7 +1657,7 @@ where 's: 't,
             //     case OneOfSR(...) =>
             IRulexSR::OneOf(r) => {
                 let result = solver_state.get_conclusion(&r.rune.rune).unwrap();
-                let templatas: Vec<ITemplataT<'s, 't>> = r.literals.iter().map(|l| literal_to_templata(*l)).collect();
+                let templatas: Vec<ITemplataT<'s, 't>> = r.literals.iter().map(|l| self.literal_to_templata(*l)).collect();
                 if templatas.contains(&result) {
                     let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
@@ -1715,7 +1715,7 @@ where 's: 't,
             }
             //     case LiteralSR(range, rune, literal) =>
             IRulexSR::Literal(r) => {
-                let templata = literal_to_templata(r.literal);
+                let templata = self.literal_to_templata(r.literal);
                 let mut conclusions = std::collections::HashMap::new();
                 conclusions.insert(r.rune.rune, templata);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
@@ -2953,18 +2953,21 @@ where 's: 't,
   }
 
 */
-fn literal_to_templata<'s, 't>(literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
-    match literal {
-        ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
-        ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
-        ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
-        ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
-        ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
-        ILiteralSL::BoolLiteral(_) => panic!("Unimplemented: literal_to_templata BoolLiteral"),
-        ILiteralSL::LocationLiteral(_) => panic!("Unimplemented: literal_to_templata LocationLiteral"),
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
+        match literal {
+            ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
+            ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
+            ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
+            ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
+            ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
+            ILiteralSL::BoolLiteral(_) => panic!("Unimplemented: literal_to_templata BoolLiteral"),
+            ILiteralSL::LocationLiteral(_) => panic!("Unimplemented: literal_to_templata LocationLiteral"),
+        }
     }
-}
-/*
+    /*
   private def literalToTemplata(literal: ILiteralSL) = {
     literal match {
       case MutabilityLiteralSL(mutability) => MutabilityTemplataT(Conversions.evaluateMutability(mutability))
@@ -2974,5 +2977,8 @@ fn literal_to_templata<'s, 't>(literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
       case IntLiteralSL(num) => IntegerTemplataT(num)
     }
   }
+    */
+}
+/*
 }
 */

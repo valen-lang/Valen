@@ -40,6 +40,10 @@
 
 **Push submodule advances to origin immediately after committing.** After any commit that advances a Luz or Guardian pin, the committing TL immediately pushes that submodule (and any nested submodules) to origin. Pins are not "shared" until pushed — otherwise other worktrees hit `(commits not present)` on their next rebase.
 
+**Use absolute paths in `for-tl.md` watchers** — relative paths resolve against the bash sandbox's cwd, which may silently differ from the worktree root and never match the file.
+
+**Don't kill `ps -ef` PIDs unless you can trace them to your own session's task IDs** — other TLs' watchers appear globally, and SIGTERMing them fires a spurious task-completion notification on the wrong TL.
+
 **During every sync, check if `migrate-tl.md` changed** (`git diff experimental..experimental-N -- migrate-tl.md` and `git diff HEAD -- migrate-tl.md`). The architect adds rules here mid-session; auto-merge may pull them in silently. Read every change — they're load-bearing for TL behavior and don't surface elsewhere.
 
 **TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).
