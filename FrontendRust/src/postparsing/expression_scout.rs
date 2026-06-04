@@ -2348,6 +2348,11 @@ fn scout_expression(
       });
       Ok((stack_frame1, IScoutResult::NormalResult(NormalResultS { expr: added_expr }), parts_self_uses, parts_child_uses))
     }
+    IExpressionPE::Break(break_pe) => {
+      let range_s = PostParser::eval_range(&file_coordinate, break_pe.range);
+      let expr = self.scout_arena.alloc(IExpressionSE::Break(crate::postparsing::expressions::BreakSE { range: range_s }));
+      Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr }), VariableUses::empty(), VariableUses::empty()))
+    }
     _ => panic!(
       "POSTPARSER_SCOUT_EXPRESSION_NOT_YET_IMPLEMENTED: {:?}",
       expression

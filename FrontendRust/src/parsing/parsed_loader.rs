@@ -1070,6 +1070,9 @@ fn load_expression<'p>(
     "Lookup" => IExpressionPE::Lookup(&*parse_arena.alloc(load_lookup(parse_arena,jobj))),
     "Consecutor" => IExpressionPE::Consecutor(load_consecutor(parse_arena,jobj)),
     "Block" => IExpressionPE::Block(load_block(parse_arena,jobj)),
+    "Break" => IExpressionPE::Break(BreakPE {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
     other => panic!("Not implemented: load_expression {}", other),
   }
 }
