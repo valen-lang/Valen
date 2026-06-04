@@ -3,7 +3,7 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::patterns::patterns::AtomSP;
-use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::rules::rules::{IRulexSR, RuneParentEnvLookupSR};
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
@@ -14,7 +14,7 @@ use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::postparsing::rules::RuneUsage;
-use crate::typing::infer_compiler::{InferEnv, InitialSend};
+use crate::typing::infer_compiler::{InferEnv, InitialKnown, InitialSend};
 use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
@@ -274,10 +274,31 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     Ok(()) => {}
                 }
                 let rules_a = rule_builder;
-                // We preprocess out the rune parent env lookups, see MKRFA. Canonical Scala
-                // pattern_compiler does a foldLeft over rulesA splitting RuneParentEnvLookupSR
-                // into initial_knowns. Rust path doesn't yet wire that preprocessing;
-                // tracked alongside the audit-trail fold.
+
+                // We preprocess out the rune parent env lookups, see MKRFA.
+                let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
+                    rules_a.iter().fold(
+                        (Vec::new(), Vec::new()),
+                        |(mut previous_conclusions, mut remaining_rules), rule| {
+                            match rule {
+                                IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
+                                    let name = self.scout_arena.intern_imprecise_name(
+                                        IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
+                                    let mut filter = std::collections::HashSet::new();
+                                    filter.insert(ILookupContext::TemplataLookupContext);
+                                    let templata = snapshot_env.lookup_nearest_with_imprecise_name(
+                                        name, filter, self.typing_interner).unwrap();
+                                    previous_conclusions.push(InitialKnown { rune: *rune, templata });
+                                    (previous_conclusions, remaining_rules)
+                                }
+                                rule => {
+                                    remaining_rules.push(*rule);
+                                    (previous_conclusions, remaining_rules)
+                                }
+                            }
+                        },
+                    );
+
                 let invocation_range: Vec<RangeS<'s>> =
                     std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 let complete_define_solve =
@@ -292,11 +313,11 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             context_region: nenv.default_region(),
                         },
                         coutputs,
-                        &rules_a,
+                        &rules_without_rune_parent_env_lookups,
                         &rune_a_to_type,
                         &invocation_range,
                         call_location,
-                        &[],
+                        &initial_knowns,
                         &[InitialSend {
                             sender_rune: RuneUsage {
                                 range: pattern.range,
@@ -346,7 +367,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             })
     }
 /*
-Guardian: temp-disable: SPDMX — MACTX mirror pass: adding the @MKRFA comment to document that this Rust path doesn't yet wire the RuneParentEnvLookupSR preprocessing fold. Surrounding empty initial_knowns + unfiltered rules_a simplification predates this edit; the comment is the audit-trail mirror, not a behavioral change. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1379-1779476780255/hook-1379/infer_and_translate_pattern--228.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // Note: This will unlet/drop the input expression. Be warned.
   def inferAndTranslatePattern(
     coutputs: CompilerOutputs,

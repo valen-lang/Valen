@@ -1052,7 +1052,6 @@ pub(crate) fn scout_generic_parameter(
 */
 }
 /*
-Guardian: temp-disable: SPDMX — Cross-section sandwich: I'm adding GenericParameterDefaultS.runeToType field per Scala, but the Rust struct construction and the audit-trail mirror are ~117 lines apart in the same function. Can't update both in one Edit. Temp-disable lets me sandwich correctly across two edits. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-697-1779423496008/hook-697/scout_generic_parameter--741.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 }
 */
 pub struct PostParser<'s, 'p, 'ctx> {
@@ -2081,7 +2080,6 @@ fn predict_mutability(
     ))
   }
 /*
-Guardian: temp-disable: SPDMX — Cross-section sandwich: adding StructS.internalMethods field per Scala. The Rust StructS::new call and the audit-trail StructS scala block are ~165 lines apart in the same function; can't update both in one Edit. Caller passes empty slice since StructMethod branch panics until methods get scouted. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-719-1779424083290/hook-719/scout_struct--1736.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 Guardian: disable: TUCMPX
   private def scoutStruct(file: FileCoordinate, head: StructP): StructS = {
     val StructP(rangeP, NameP(structNameRange, structHumanName), attributesP, mutabilityPT, maybeGenericParametersP, maybeTemplateRulesP, maybeDefaultRegionRuneP, bodyRangeP, StructMembersP(_, members)) = head

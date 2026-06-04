@@ -1739,21 +1739,11 @@ where 's: 't,
             }
             //     case RuneParentEnvLookupSR(...) =>
             IRulexSR::RuneParentEnvLookup(r) => {
-                // Canonical Scala vwats here per @MKRFA — the rule should never reach the solver
-                // because callers preprocess it out via the OverloadResolver.scala:311-325 fold.
-                // The Rust pipeline doesn't yet wire MKRFA preprocessing into its expression-level
-                // solver call sites (array_compiler.rs, pattern_compiler.rs), so the rule still
-                // reaches the solver and we no-op the step instead of panicking. Tracked alongside
-                // the audit-trail vwat: real Rust parity requires landing MKRFA preprocessing first.
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], std::collections::HashMap::new(), vec![], std::collections::HashSet::new()) {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
-                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        let error = self.typing_interner.alloc(e);
-                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
-                    }
-                }
+                // This rule should never reach the solver — callers are required to preprocess
+                // it out (look up the rune in callingEnv, emit an InitialKnown, strip the rule).
+                // Canonical preprocessing fold: OverloadResolver.scala:311-325. See MKRFA /
+                // docs/refactor-thoughts/mkrfa-protocol-leak.md for the full contract.
+                panic!("vwat: RuneParentEnvLookupSR should have been MKRFA-preprocessed before reaching the solver: {:?}", r.rune)
             }
             //     case AugmentSR(...) =>
             IRulexSR::Augment(augment) => {
@@ -1881,7 +1871,6 @@ where 's: 't,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Canonical Scala vwats here because MKRFA preprocessing strips RuneParentEnvLookupSR before reaching the solver. Rust pipeline doesn't yet wire that preprocessing; vwat would fire on tests. Keeping the commit_step noop temporarily — chicken-egg with the MKRFA preprocessing impl backlog (array_compiler.rs / pattern_compiler.rs). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1397-1779477403034/hook-1397/solve_rule--1285.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def solveRule(
     delegate: IInfererDelegate,
     state: CompilerOutputs,

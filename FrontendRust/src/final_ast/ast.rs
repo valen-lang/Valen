@@ -649,9 +649,6 @@ pub struct IdHValH<'s, 'h> where 's: 'h {
     pub fully_qualified_name: StrI<'s>,
     pub _phantom_h: PhantomData<&'h ()>,
 }
-/*
-Guardian: temp-disable: NCWSRX — False positive: `_phantom_h` is a Rust mechanical PhantomData required so the `'h` lifetime parameter isn't vacuous (no other field uses `'h`); Scala's `IdH` has no `'h` and no phantom — this is the documented Rust-only adaptation. Adding `pub` is needed so `hammer_interner` (the only legitimate constructor per the `MustIntern` seal) can fill the field at intern time. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1455-1780105540747/hook-1455/IdHValH--503.0.NoChangesWithoutScalaReference-NCWSRX.NoChangesWithoutScalaReference-NCWSRX.verdict.md
-*/
 
 // --- Auxiliary types referenced by hammer files ---
 

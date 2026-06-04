@@ -846,7 +846,6 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   struct_a
 }
 /*
-Guardian: temp-disable: SPDMX — Multi-step landing: first add destructure to read internal_methods_s, then build methods_env + translate_function loop + pass to StructA::new in subsequent edits. Each step alone fails SPDMX because the final integration is split across multiple Edits in the same fn. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-729-1779424337649/hook-729/translate_struct--706.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateStruct(
     astrouts: Astrouts,
     env: EnvironmentA,

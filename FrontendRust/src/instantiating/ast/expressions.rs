@@ -95,9 +95,6 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Multi-variant dispatcher; the Scala overrides live on the per-variant case classes (Expressions.scala: PushRuntimeSizedArrayIE :750-756 `override def result = CoordI(MutableShareI, VoidIT())`; DestroyMutRuntimeSizedArrayIE :737-740 same; PopRuntimeSizedArrayIE has its own `result` field). Guardian's diff window only sees the abstract trait method `def result: CoordI[cI]`, not the per-variant overrides which were sliced onto the case-class bodies. Same precedent as the StackifyH / ConstantIntH dispatcher temp-disables at final_ast/instructions.rs:1255-1380. TL-attribution exception: NAGDX blocks JR's hand-write and JR's MCP session can't see the new `target_line` param without a process kill+respawn; ordained TL writes the directive as a one-time tooling-blocked workaround. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-552-1780528341799/hook-552/result--43.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
-*/
-/*
   def result: CoordI[cI]
 }
 */

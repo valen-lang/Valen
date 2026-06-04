@@ -120,7 +120,6 @@ where 's: 't,
         Ok((header, body))
     }
 /*
-Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune; Rust call and audit-trail need twin update. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-796-1779427516899/hook-796/generate_function_body_abstract_body--44.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

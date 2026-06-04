@@ -131,30 +131,49 @@ where 's: 't,
         // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
         // site, copy this again (or, preferably, land the shared helper refactor queued in
         // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
-        // (MKRFA preprocessing not yet wired into this Rust path; tracked alongside the audit-trail fold.)
-
-        let initial_knowns: &[InitialKnown<'s, 't>] = &[];
-        let initial_sends = &[];
+        let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
+            rules_a.iter().fold(
+                (Vec::new(), Vec::new()),
+                |(mut previous_conclusions, mut remaining_rules), rule| {
+                    match rule {
+                        IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
+                            let name = self.scout_arena.intern_imprecise_name(
+                                IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
+                            let mut filter = std::collections::HashSet::new();
+                            filter.insert(ILookupContext::TemplataLookupContext);
+                            let templata = calling_env.lookup_nearest_with_imprecise_name(
+                                name, filter, self.typing_interner).unwrap();
+                            previous_conclusions.push(InitialKnown { rune: *rune, templata });
+                            (previous_conclusions, remaining_rules)
+                        }
+                        rule => {
+                            remaining_rules.push(*rule);
+                            (previous_conclusions, remaining_rules)
+                        }
+                    }
+                },
+            );
 
         let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
-        let envs = InferEnv {
-            original_calling_env: calling_env,
-            parent_ranges: parent_ranges_t,
-            call_location,
-            self_env: IEnvironmentT::from(calling_env),
-            context_region: region,
-        };
-        let mut solver_state = self.make_solver_state(
-            envs, coutputs, &rules_a, &rune_a_to_type, parent_ranges, initial_knowns, initial_sends);
-        match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
-            Err(_f) => panic!("implement: evaluate_static_sized_array_from_callable — TypingPassSolverError"),
-            Ok(true) => {}
-            Ok(false) => {}
-        }
         let CompleteResolveSolve { conclusions: templatas, .. } =
-            self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_a, &[], &mut solver_state)
-            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_static_sized_array_from_callable"))
+            self.solve_for_resolving(
+                InferEnv {
+                    original_calling_env: calling_env,
+                    parent_ranges: parent_ranges_t,
+                    call_location,
+                    self_env: IEnvironmentT::from(calling_env),
+                    context_region: region,
+                },
+                coutputs,
+                &rules_without_rune_parent_env_lookups,
+                &rune_a_to_type,
+                parent_ranges,
+                call_location,
+                &[],
+                &initial_knowns,
+                &[],
+            )
+            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in evaluate_static_sized_array_from_callable"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — TypingPassResolvingError"));
 
         let size = expect_integer(templatas.get(&size_rune_a).copied().expect("vassertSome: sizeRuneA not in templatas"));
@@ -180,8 +199,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — MACTX mirror pass: same MKRFA comment + empty initial_knowns issue as the sibling _from_values fn. Adding the audit-trail mirror; surrounding simplification predates the edit. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1373-1779476516288/hook-1373/evaluate_static_sized_array_from_callable--79.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
-Guardian: temp-disable: SPDMX — Both deviations are direct mirrors of the in-file twin evaluate_static_sized_array_from_values (array_compiler.rs:381-498): pre-populating initially_known_runes for size/mutability/variability (lines 403-409) and the make_solver_state/incrementally_solve/check_resolving_conclusions_and_resolve triple (lines 460-471) are the established Rust adaptation of solveForResolving in this file. Same author, same shape; this is the precedent. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-680-1778981807111/hook-680/evaluate_static_sized_array_from_callable--71.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateStaticSizedArrayFromCallable(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -336,8 +353,33 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
-        let initial_knowns: &[InitialKnown<'s, 't>] = &[];
-        let initial_sends = &[];
+        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+        // site, copy this again (or, preferably, land the shared helper refactor queued in
+        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
+            rules_a.iter().fold(
+                (Vec::new(), Vec::new()),
+                |(mut previous_conclusions, mut remaining_rules), rule| {
+                    match rule {
+                        IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
+                            let name = self.scout_arena.intern_imprecise_name(
+                                IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
+                            let mut filter = std::collections::HashSet::new();
+                            filter.insert(ILookupContext::TemplataLookupContext);
+                            let templata = IInDenizenEnvironmentT::Node(calling_env).lookup_nearest_with_imprecise_name(
+                                name, filter, self.typing_interner).unwrap();
+                            previous_conclusions.push(InitialKnown { rune: *rune, templata });
+                            (previous_conclusions, remaining_rules)
+                        }
+                        rule => {
+                            remaining_rules.push(*rule);
+                            (previous_conclusions, remaining_rules)
+                        }
+                    }
+                },
+            );
+
         let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
         let envs = InferEnv {
             original_calling_env: IInDenizenEnvironmentT::Node(calling_env),
@@ -347,7 +389,7 @@ where 's: 't,
             context_region: region,
         };
         let mut solver_state = self.make_solver_state(
-            envs, coutputs, &rules_a, &rune_a_to_type, parent_ranges, initial_knowns, initial_sends);
+            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
             Err(_f) => panic!("implement: evaluate_runtime_sized_array_from_callable — TypingPassSolverError"),
             Ok(true) => {}
@@ -355,7 +397,7 @@ where 's: 't,
         }
         let CompleteResolveSolve { conclusions: templatas, .. } =
             self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_a, &[], &mut solver_state)
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups, &[], &mut solver_state)
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_runtime_sized_array_from_callable"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — TypingPassResolvingError"));
         let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
@@ -451,7 +493,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — @MKRFA — the RuneParentEnvLookupSR preprocessing fold is not yet wired into this Rust path. Same simplification + initial_knowns=[] pattern as the existing in-file precedent in evaluate_static_sized_array_from_values (line ~611), which has the same MKRFA mirror comment and TL-landed temp-disable. Tracked alongside the audit-trail fold in docs/refactor-thoughts/mkrfa-protocol-leak.md. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-401-1780523742658/hook-401/evaluate_runtime_sized_array_from_callable--294.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateRuntimeSizedArrayFromCallable(
     coutputs: CompilerOutputs,
     callingEnv: NodeEnvironmentT,
@@ -719,10 +760,28 @@ where 's: 't,
         // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
         // site, copy this again (or, preferably, land the shared helper refactor queued in
         // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
-        // (MKRFA preprocessing not yet wired into this Rust path; tracked alongside the audit-trail fold.)
-
-        let initial_knowns: &[InitialKnown<'s, 't>] = &[];
-        let initial_sends = &[];
+        let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
+            rules_a.iter().fold(
+                (Vec::new(), Vec::new()),
+                |(mut previous_conclusions, mut remaining_rules), rule| {
+                    match rule {
+                        IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
+                            let name = self.scout_arena.intern_imprecise_name(
+                                IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
+                            let mut filter = std::collections::HashSet::new();
+                            filter.insert(ILookupContext::TemplataLookupContext);
+                            let templata = calling_env.lookup_nearest_with_imprecise_name(
+                                name, filter, self.typing_interner).unwrap();
+                            previous_conclusions.push(InitialKnown { rune: *rune, templata });
+                            (previous_conclusions, remaining_rules)
+                        }
+                        rule => {
+                            remaining_rules.push(*rule);
+                            (previous_conclusions, remaining_rules)
+                        }
+                    }
+                },
+            );
 
         let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
         let envs = InferEnv {
@@ -733,7 +792,7 @@ where 's: 't,
             context_region: region,
         };
         let mut solver_state = self.make_solver_state(
-            envs, coutputs, &rules_a, &rune_a_to_type, parent_ranges, initial_knowns, initial_sends);
+            envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
             Err(_f) => panic!("implement: evaluate_static_sized_array_from_values — TypingPassSolverError"),
             Ok(true) => {}
@@ -741,7 +800,7 @@ where 's: 't,
         }
         let CompleteResolveSolve { conclusions: templatas, .. } =
             self.check_resolving_conclusions_and_resolve(
-                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_a, &[], &mut solver_state)
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups, &[], &mut solver_state)
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_static_sized_array_from_values"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_values — TypingPassResolvingError"));
 
@@ -772,7 +831,6 @@ where 's: 't,
         })
     }
 /*
-Guardian: temp-disable: SPDMX — MACTX mirror pass: adding the @MKRFA comment near rules_a/initial_knowns documents that this Rust path doesn't yet wire the RuneParentEnvLookupSR preprocessing fold present in canonical Scala. The surrounding empty-initial_knowns simplification predates this edit; the comment is the audit-trail mirror, not a behavioral change. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1373-1779476516288/hook-1373/evaluate_static_sized_array_from_values--510.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateStaticSizedArrayFromValues(
       coutputs: CompilerOutputs,
       callingEnv: IInDenizenEnvironmentT,

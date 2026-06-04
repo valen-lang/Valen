@@ -137,7 +137,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune param; the Rust call and the local audit-trail findFunction call need updating together, and the audit-trail also needs the older explicitTemplateArgRunesS → positionalExplicitTemplateArgRunesS rename. Doing call edit first, audit-trail follow-up. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-785-1779427206683/hook-785/evaluate_call--50.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def evaluateCall(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -358,7 +357,6 @@ where 's: 't,
         })))
     }
 /*
-Guardian: temp-disable: SPDMX — Cross-section sandwich: find_function gained receivingRuneToExplicitTemplateArgRune param; same fn has Rust call + local audit-trail call needing twin updates. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-789-1779427320299/hook-789/evaluate_custom_call--238.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def evaluateCustomCall(
     nenv: NodeEnvironmentBox,
     coutputs: CompilerOutputs,

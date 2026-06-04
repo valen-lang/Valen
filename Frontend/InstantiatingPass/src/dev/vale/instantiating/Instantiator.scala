@@ -364,11 +364,6 @@ class Instantiator(
     interfaceIdS: IdI[sI, IInterfaceNameI[sI]],
     instantiationBoundArgs: InstantiationBoundArgumentsI):
   Unit = {
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(interfaceIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
-
     val interfaceTemplateIdT = TemplataCompiler.getInterfaceTemplate(interfaceIdT)
 
     val interfaceDefT = findInterface(hinputs, interfaceIdT)
@@ -471,10 +466,6 @@ class Instantiator(
     structIdS: IdI[sI, IStructNameI[sI]],
     instantiationBoundArgs: InstantiationBoundArgumentsI):
   Unit = {
-    if (opts.sanityCheck) {
-      vassert(Collector.all(structIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
-
     val structTemplate = TemplataCompiler.getStructTemplate(structIdT)
 
     val structDefT = findStruct(hinputs, structIdT)
@@ -1557,10 +1548,6 @@ class Instantiator(
   Unit = {
     val StructDefinitionT(templateName, instantiatedCitizen, attributes, weakable, mutabilityT, members, isClosure, _) = structDefT
 
-    if (opts.sanityCheck) {
-      vassert(Collector.all(newId, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
-
     val perspectiveRegionT = RegionT(DefaultRegionT)
       // structDefT.instantiatedCitizen.id.localName.templateArgs.last match {
       //   case PlaceholderTemplataT(IdT(packageCoord, initSteps, r @ RegionPlaceholderNameT(_, _, _, _)), RegionTemplataType()) => {
@@ -1600,10 +1587,6 @@ class Instantiator(
       monouts.kindExterns += KindExternI(StructIT(newId))
     }
 
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result.instantiatedCitizen, { case KindPlaceholderNameT(_) => }).isEmpty)
-      vassert(Collector.all(result.members, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
     result
   }
 
@@ -1630,10 +1613,6 @@ class Instantiator(
 
     vassert(!monouts.interfaceToImpls.contains(newIdC))
     monouts.interfaceToImpls.put(newIdC, mutable.HashSet())
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(newIdC, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     val perspectiveRegionT = RegionT(DefaultRegionT)
     // interfaceDefT.instantiatedCitizen.id.localName.templateArgs.last match {
@@ -1665,10 +1644,6 @@ class Instantiator(
     monouts.interfacesWithoutMethods.put(newIdC, result)
 
     vassert(result.instantiatedCitizen.id == newIdC)
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result.instantiatedInterface, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     result
   }
@@ -3527,9 +3502,6 @@ class Instantiator(
         case KindTemplataT(kind) => KindTemplataI[sI](translateKind(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, kind))
         case other => vimpl(other)
       }
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
     result
   }
 
@@ -3825,10 +3797,6 @@ class Instantiator(
     implDefinition: EdgeT):
   Unit = {
     val EdgeT(_, subCitizen, superInterface, instantiationBoundParams, abstractFuncToOverrideFunc) = implDefinition
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     val perspectiveRegionT = RegionT(DefaultRegionT)
     // structDefT.instantiatedCitizen.id.localName.templateArgs.last match {

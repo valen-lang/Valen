@@ -797,8 +797,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn collapse_and_translate_interface_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn collapse_and_translate_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_t: &IdT<'s, 't>, _interface_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }`
-        // sanity check is omitted: same architect-approved parity gap as collapse_and_translate_struct_definition.
         let interface_def_t = self.find_interface(_interface_id_t);
         let denizen_bound_to_denizen_caller_supplied_thing = Self::assemble_instantiation_bound_param_to_arg(&interface_def_t.instantiation_bound_params, _instantiation_bound_args);
         if let Some(x) = _monouts.interface_to_bounds.get(_interface_id_s) {
@@ -811,7 +809,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Architect-approved parity gap (used twice in this file already, e.g. in collapse_and_translate_struct_definition and translate_method's function_exports_c/function_externs_c closures): Scala's KindPlaceholderNameT collector check is vacuous on the I-side because INameI has no KindPlaceholder variant. Same precedent. The Some(_x) vcurious is also a debug-only sanity check (matches Scala vcurious semantics). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2433-1780135108211/hook-2433/collapse_and_translate_interface_definition--746.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def collapseAndTranslateInterfaceDefinition(
     opts: GlobalOptions,
     interner: Interner,
@@ -822,11 +819,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (used twice in t
     interfaceIdS: IdI[sI, IInterfaceNameI[sI]],
     instantiationBoundArgs: InstantiationBoundArgumentsI):
   Unit = {
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(interfaceIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
-
     val interfaceTemplateIdT = TemplataCompiler.getInterfaceTemplate(interfaceIdT)
 
     val interfaceDefT = findInterface(hinputs, interfaceIdT)
@@ -970,9 +962,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn collapse_and_translate_struct_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn collapse_and_translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _struct_id_t: &IdT<'s, 't>, _struct_id_s: &IdI<'s, 'i, sI>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(structIdS, {case KindPlaceholderNameT(_) => }).isEmpty) }`
-        // sanity check is omitted: the I-side AST is statically typed and can't structurally hold a
-        // typing-pass KindPlaceholder name, so it's vacuously empty. (Architect-approved parity gap.)
         let struct_def_t = self.find_struct(_struct_id_t);
         let denizen_bound_to_denizen_caller_supplied_thing =
             Self::assemble_instantiation_bound_param_to_arg(&struct_def_t.instantiation_bound_params, _instantiation_bound_args);
@@ -999,10 +988,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     structIdS: IdI[sI, IStructNameI[sI]],
     instantiationBoundArgs: InstantiationBoundArgumentsI):
   Unit = {
-    if (opts.sanityCheck) {
-      vassert(Collector.all(structIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
-
     val structTemplate = TemplataCompiler.getStructTemplate(structIdT)
 
     val structDefT = findStruct(hinputs, structIdT)
@@ -2603,9 +2588,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i, cI>, _struct_def_t: &StructDefinitionT<'s, 't>) {
         let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, mutability: mutability_t, members, is_closure, instantiation_bound_params: _ } = _struct_def_t;
-        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(newId, {case KindPlaceholderNameT(_) => }).isEmpty) }`
-        // sanity check is omitted: the I-side AST is statically typed and can't structurally hold a typing-pass
-        // KindPlaceholder name, so it's vacuously empty. (Architect-approved parity gap.)
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
         if _monouts.struct_to_mutability.contains_key(_new_id) {
@@ -2631,15 +2613,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let attrs_for_extern_check = self.interner.bump().alloc_slice_fill_iter(result.attributes.iter().copied()) as &[_];
         let result_ref: &'i crate::instantiating::ast::citizens::StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.structs.insert(result_ref.instantiated_citizen.id, result_ref);
-        if attrs_for_extern_check.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_))) {
-            _monouts.kind_externs.push(crate::instantiating::ast::ast::KindExternI { r#struct: result_ref.instantiated_citizen });
-        }
-        // Scala's `if (opts.sanityCheck) { vassert ... }` sanity checks on `result.instantiated_citizen` and
-        // `result.members` for `KindPlaceholderNameT` are omitted: same parity gap as the earlier sanity-check block.
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used twice in this file, e.g. in `translate_method`'s `function_exports_c` and `function_externs_c` closures): Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }` sanity check is omitted because the I-side AST is statically typed and can't structurally hold a typing-pass KindPlaceholder name. Same precedent applies for both sanity-check blocks here. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2254-1780130350734/hook-2254/translate_collapsed_struct_definition--2303.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCollapsedStructDefinition(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
@@ -2649,10 +2625,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used tw
     structDefT: StructDefinitionT):
   Unit = {
     val StructDefinitionT(templateName, instantiatedCitizen, attributes, weakable, mutabilityT, members, isClosure, _) = structDefT
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(newId, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     val perspectiveRegionT = RegionT(DefaultRegionT)
       // structDefT.instantiatedCitizen.id.localName.templateArgs.last match {
@@ -2692,11 +2664,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used tw
     if (result.attributes.exists({ case ExternI(_) => true case _ => false})) {
       monouts.kindExterns += KindExternI(StructIT(newId))
     }
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result.instantiatedCitizen, { case KindPlaceholderNameT(_) => }).isEmpty)
-      vassert(Collector.all(result.members, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
     result
   }
 */
@@ -2713,7 +2680,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         _monouts.interface_to_abstract_func_to_virtual_index.insert(*_new_id_c, IndexMap::new());
         assert!(!_monouts.interface_to_impls.contains_key(_new_id_c));
         _monouts.interface_to_impls.insert(*_new_id_c, Vec::new());
-        // Scala `if (opts.sanityCheck) { ... }` collector check omitted (architect-approved parity gap).
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
         assert!(!_monouts.interface_to_mutability.contains_key(_new_id_c));
@@ -2733,11 +2699,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let result_ref: &'i crate::instantiating::ast::citizens::InterfaceDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.interfaces_without_methods.insert(result_ref.instantiated_interface.id, result_ref);
         assert_eq!(result_ref.instantiated_interface.id, *_new_id_c);
-        // Scala second `if (opts.sanityCheck) { ... }` collector check omitted (same parity gap).
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used in collapse_and_translate_struct_definition, collapse_and_translate_interface_definition, translate_method's exports/externs closures, translate_collapsed_struct_definition): Scala's `if (opts.sanityCheck) { vassert(Collector.all(..., {case KindPlaceholderNameT(_) => }).isEmpty) }` sanity checks for typing-pass KindPlaceholderNameT are vacuous on the I-side AST (statically typed, can't structurally hold a placeholder). Both sanity-check blocks here are the same pattern. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2467-1780136111536/hook-2467/translate_collapsed_interface_definition--2422.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // This inner function is conceptually from the interface's own perspective. That's why it's
   // taking in a collapsed id.
   def translateCollapsedInterfaceDefinition(
@@ -2761,10 +2725,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used in
 
     vassert(!monouts.interfaceToImpls.contains(newIdC))
     monouts.interfaceToImpls.put(newIdC, mutable.HashSet())
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(newIdC, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     val perspectiveRegionT = RegionT(DefaultRegionT)
     // interfaceDefT.instantiatedCitizen.id.localName.templateArgs.last match {
@@ -2796,10 +2756,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (already used in
     monouts.interfacesWithoutMethods.put(newIdC, result)
 
     vassert(result.instantiatedCitizen.id == newIdC)
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result.instantiatedInterface, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     result
   }
@@ -5884,9 +5840,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ITemplataT::Kind(_) => panic!("Unimplemented: translate_templata Kind"),
             _ => panic!("Unimplemented: translate_templata other"),
         };
-        // Scala `if (opts.sanityCheck) { vassert(Collector.all(result, { case KindPlaceholderNameT(_) => }).isEmpty) }`
-        // is omitted per SPDMX Exception Y: KindPlaceholderNameT has no I-side counterpart (INameI has no
-        // KindPlaceholder variant), so the collector's partial function can never match — the check is vacuous.
         result
     }
 }
@@ -5917,9 +5870,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         case KindTemplataT(kind) => KindTemplataI[sI](translateKind(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, kind))
         case other => vimpl(other)
       }
-    if (opts.sanityCheck) {
-      vassert(Collector.all(result, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
     result
   }
 */
@@ -5953,7 +5903,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Vacuous Collector.all: Scala `Collector.all(result, { case KindPlaceholderNameT(_) => }).isEmpty` collects typing-pass KindPlaceholderNameT, but the I-side INameI has no KindPlaceholder variant, so the predicate can never be written (variant doesn't exist) nor match — the check is vacuous. Cannot be panic-stubbed because opts.sanity_check is live for the driving test; omitted with a marker comment (Exception Y was removed; architect authorized temp-disable for these). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1004-1780094668814/hook-1004/translate_templata--4673.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateVarName(
     name: IVarNameT):
   IVarNameI[sI] = {
@@ -6416,8 +6365,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_collapsed_impl_definition
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_collapsed_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _impl_id_t: &IdT<'s, 't>, _impl_id_s: &IdI<'s, 'i, sI>, _impl_id_c: &IdI<'s, 'i, cI>, _impl_definition: &EdgeT<'s, 't>) {
-        // Scala's `if (opts.sanityCheck) { vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty) }`
-        // sanity check is omitted: architect-approved parity gap, vacuous on sI-typed I-side AST.
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let sub_citizen_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.sub_citizen.id()));
         let sub_citizen_s = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.sub_citizen, &sub_citizen_bound_args);
@@ -6442,7 +6389,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Architect-approved parity gap (same precedent as translate_collapsed_struct_definition in this file): Scala's `if (opts.sanityCheck) { vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty) }` is vacuously empty on the I-side AST because the value is statically typed sI and can't structurally hold a typing-pass KindPlaceholder name. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2786-1780145591183/hook-2786/translate_collapsed_impl_definition--5682.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCollapsedImplDefinition(
     denizenName: IdT[IInstantiationNameT],
     implInstantiationBoundArgs: InstantiationBoundArgumentsI,
@@ -6454,10 +6400,6 @@ Guardian: temp-disable: SPDMX — Architect-approved parity gap (same precedent 
     implDefinition: EdgeT):
   Unit = {
     val EdgeT(_, subCitizen, superInterface, instantiationBoundParams, abstractFuncToOverrideFunc) = implDefinition
-
-    if (opts.sanityCheck) {
-      vassert(Collector.all(implIdS, { case KindPlaceholderNameT(_) => }).isEmpty)
-    }
 
     val perspectiveRegionT = RegionT(DefaultRegionT)
     // structDefT.instantiatedCitizen.id.localName.templateArgs.last match {

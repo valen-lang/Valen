@@ -1387,9 +1387,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
-/*
-Guardian: temp-disable: SPDMX — The Scala body for the StackifyH arm is `override def resultType: CoordH[VoidHT] = CoordH(MutableShareH, InlineH, VoidHT())` (per the StackifyH case class body in the Scala audit-trail block earlier in this file, around line ~85 area). My fill `CoordH { ownership: MutableShareH, location: InlineH, kind: KindHT::VoidHT(VoidHT) }` is a 1:1 port of that override. Guardian's diff window only saw the abstract trait method, not the per-variant override; the impl is a multi-variant dispatcher with the variant bodies sliced separately on the case classes (same precedent as the ConstantIntH fill at line 1258). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1810-1780115126046/hook-1810/result_type--1255.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
-*/
 
 // mig: trait IExpressionH
 /// Polyvalue
