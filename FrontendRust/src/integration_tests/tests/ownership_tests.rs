@@ -23,9 +23,56 @@ class OwnershipTests extends FunSuite with Matchers {
 */
 // mig: fn borrowing_a_temporary_mutable_makes_a_local_var
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn borrowing_a_temporary_mutable_makes_a_local_var() {
-    panic!("Unmigrated test: borrowing_a_temporary_mutable_makes_a_local_var");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Muta { hp int; }\nexported func main() int {\n  return (&Muta(9)).hp;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::LetAndLend(let_te) if matches!(
+                let_te.variable,
+                crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::TypingPassTemporaryVar(_),
+                    variability: crate::typing::types::types::VariabilityT::Final,
+                    ..
+                })
+            ) => {
+                match let_te.expr.result().coord {
+                    crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Own,
+                        kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT { id, .. }),
+                        ..
+                    } if crate::typing::templata::templata_utils::unapply_simple_name(&id) == Some("Muta".to_string()) => {}
+                    other => panic!("unexpected coord: {:?}", other),
+                }
+                assert_eq!(let_te.target_ownership, crate::typing::types::types::OwnershipT::Borrow);
+                assert_eq!(let_te.result().coord.ownership, crate::typing::types::types::OwnershipT::Borrow);
+                Some(())
+            }
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("Expected VonInt(9), got {:?}", other),
+    }
 }
 
 /*
@@ -54,9 +101,32 @@ fn borrowing_a_temporary_mutable_makes_a_local_var() {
 */
 // mig: fn owning_ref_method_call
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn owning_ref_method_call() {
-    panic!("Unmigrated test: owning_ref_method_call");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Muta { hp int; }\nfunc take(m Muta) int {\n  return m.hp;\n}\nexported func main() int {\n  m = Muta(9);\n  return (m).hp;\n}\n",
+    );
+    {
+        let _main = compile.expect_compiler_outputs().lookup_function_by_str("main");
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("Expected VonInt(9), got {:?}", other),
+    }
 }
 
 /*
@@ -79,9 +149,41 @@ fn owning_ref_method_call() {
 */
 // mig: fn derive_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn derive_drop() {
-    panic!("Unmigrated test: derive_drop");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\nstruct Muta { }\n\nexported func main() {\n  Muta();\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+        let matches = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+        assert_eq!(matches.len(), 2);
+    }
+    compile.eval_for_kind_primitive_args(Vec::new());
 }
 
 /*

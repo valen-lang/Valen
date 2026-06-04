@@ -61,24 +61,24 @@ where 's: 't,
 
 object functionNameT {
 */
-pub fn unapply_function_name_def(function2: &FunctionDefinitionT) -> Option<String> {
-  panic!("Unimplemented: unapply_function_name_def");
+pub fn unapply_function_name_def<'s, 't>(function2: &FunctionDefinitionT<'s, 't>) -> Option<String> {
+  unapply_function_name_header(&function2.header)
 }
 /*
   def unapply(function2: FunctionDefinitionT): Option[String] = {
     unapply(function2.header)
   }
 */
-pub fn unapply_function_name_header(header: &FunctionHeaderT) -> Option<String> {
-  panic!("Unimplemented: unapply_function_name_header");
+pub fn unapply_function_name_header<'s, 't>(header: &FunctionHeaderT<'s, 't>) -> Option<String> {
+  unapply_simple_name(&header.id)
 }
 /*
   def unapply(header: FunctionHeaderT): Option[String] = {
     simpleNameT.unapply(header.id)
   }
 */
-pub fn unapply_function_name_prototype(prototype: &PrototypeT) -> Option<String> {
-  panic!("Unimplemented: unapply_function_name_prototype");
+pub fn unapply_function_name_prototype<'s, 't>(prototype: &PrototypeT<'s, 't>) -> Option<String> {
+  unapply_simple_name(&prototype.id)
 }
 /*
   def unapply(prototype: PrototypeT[IFunctionNameT]): Option[String] = {
