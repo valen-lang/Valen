@@ -5279,10 +5279,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         }
                         _ => {
                             let mutability = Self::get_mutability(monouts, &region_collapser_individual::collapse_kind(self.interner, &kind));
-                            match (match (*outer_ownership, mutability) {
+                            match match (*outer_ownership, mutability) {
                                 (_, MutabilityI::Immutable) => OwnershipT::Share,
                                 (other, MutabilityI::Mutable) => other,
-                            }) { // Now  if it's a borrow, figure out whether it's mutable or immutable
+                            } { // Now  if it's a borrow, figure out whether it's mutable or immutable
                                 OwnershipT::Borrow => {
                                     // if (regionIsMutable(substitutions, perspectiveRegionT, expectRegionPlaceholder(outerRegion))) {
                                     OwnershipI::MutableBorrow
@@ -6292,6 +6292,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
+            #[allow(unreachable_patterns)] // mirrors Scala's `case other => vimpl(other)` catch-all; unreachable until more IInterfaceNameT variants migrate
             other => panic!("translate_interface_name: unimplemented variant {:?}", std::mem::discriminant(other)),
         }
     }

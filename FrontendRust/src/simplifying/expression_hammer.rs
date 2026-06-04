@@ -227,7 +227,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let (results_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &exprs_ie);
                     match results_he.last().map(|e| e.result_type().kind) {
                         Some(crate::final_ast::types::KindHT::NeverHT(_)) => {
-                            return (panic!("Unimplemented: StaticArrayFromValues Never branch (Hammer.consecrash)"), Vec::new());
+                            panic!("Unimplemented: StaticArrayFromValues Never branch (Hammer.consecrash)");
                         }
                         _ => {}
                     }

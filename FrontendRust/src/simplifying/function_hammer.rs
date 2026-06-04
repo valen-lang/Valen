@@ -179,6 +179,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             IFunctionAttributeI::UserFunctionI => IFunctionAttributeH::UserFunctionH,
             IFunctionAttributeI::PureI => IFunctionAttributeH::PureH,
             IFunctionAttributeI::ExternI(_) => panic!("translate_function_attributes: ExternI vwat (should have been filtered)"),
+            #[allow(unreachable_patterns)] // mirrors Scala's `case x => vimpl(x.toString)` catch-all
             other => panic!("translate_function_attributes: unimplemented {:?}", other),
         }).collect()
     }

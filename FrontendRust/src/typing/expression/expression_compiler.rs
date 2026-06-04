@@ -542,6 +542,7 @@ where 's: 't,
                 }))))
             }
             None => Ok(None),
+            #[allow(unreachable_patterns)] // mirrors Scala's `case _ => vwat()` catch-all
             _ => panic!("evaluate_addressible_lookup: unexpected variable type"),
         }
     }
@@ -1993,6 +1994,7 @@ where 's: 't,
                     }
                     _ => panic!("implement: evaluate_expression OverloadSet — unexpected"),
                 };
+                #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
                 Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
             }
             IExpressionSE::TemplataLoad(_) => {
