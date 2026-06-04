@@ -3880,7 +3880,33 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray"),
-            ReferenceExpressionTE::NewImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr NewImmRuntimeSizedArray"),
+            ReferenceExpressionTE::NewImmRuntimeSizedArray(nrsa_t) => {
+                let crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE { array_type, region: _, size_expr, generator, generator_method } = **nrsa_t;
+                let rsa_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
+                let (_size_it, size_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &size_expr);
+                let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
+                let (_generator_prototype_i, generator_prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
+                let array_mutability = match rsa_it.name.local_name {
+                    INameI::RuntimeSizedArray(n) => n.arr.mutability,
+                    _ => panic!("translate_ref_expr NewImmRuntimeSizedArray: local_name not RuntimeSizedArrayNameI"),
+                };
+                let result_ownership = match array_mutability {
+                    crate::instantiating::ast::types::MutabilityI::Mutable => crate::instantiating::ast::types::OwnershipI::Own,
+                    crate::instantiating::ast::types::MutabilityI::Immutable => crate::instantiating::ast::types::OwnershipI::MutableShare,
+                };
+                let result_it = CoordI {
+                    ownership: result_ownership,
+                    kind: crate::instantiating::ast::types::KindIT::RuntimeSizedArrayIT(self.interner.alloc(rsa_it)),
+                };
+                let result_ce = ReferenceExpressionIE::NewImmRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::NewImmRuntimeSizedArrayIE {
+                    array_type: crate::instantiating::region_collapser_individual::collapse_runtime_sized_array(self.interner, &rsa_it),
+                    size_expr: size_ce,
+                    generator: generator_ce,
+                    generator_method: generator_prototype_c,
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
         }
     }
 }

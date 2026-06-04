@@ -364,7 +364,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (loaded_access_h, deferreds)
                 }
                 RE::DestroyImmRuntimeSizedArray(a) => panic!("translate_expression: DestroyImmRuntimeSizedArray branch"),
-                RE::NewImmRuntimeSizedArray(a) => panic!("translate_expression: NewImmRuntimeSizedArray branch"),
+                RE::NewImmRuntimeSizedArray(nirsa_ie) => {
+                    let access = self.translate_new_imm_runtime_sized_array(hinputs, hamuts, current_function_header, locals, nirsa_ie);
+                    (access, Vec::new())
+                }
             },
             ExpressionIE::Address(a) => match a {
                 crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(lookup2) => {
@@ -1418,10 +1421,32 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        construct_array2: &NewImmRuntimeSizedArrayIE<'s, 'i, cI>,
+        construct_array2: &'i NewImmRuntimeSizedArrayIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_new_imm_runtime_sized_array");
+        let NewImmRuntimeSizedArrayIE { array_type: array_type2, size_expr: size_expr2, generator: generator_expr2, generator_method, result: _ } = construct_array2;
+        let (size_register_id, size_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(*size_expr2));
+        let (generator_register_id, generator_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(*generator_expr2));
+        let array_ref_type_h =
+            self.translate_coord(hinputs, hamuts, construct_array2.result);
+        let array_type_h =
+            self.translate_runtime_sized_array(hinputs, hamuts, array_type2);
+        assert!(array_ref_type_h.expect_runtime_sized_array_coord().kind == crate::final_ast::types::KindHT::RuntimeSizedArrayHT(array_type_h));
+        let element_type = hamuts.get_runtime_sized_array(array_type_h).element_type;
+        let generator_method_h =
+            self.translate_prototype(hinputs, hamuts, generator_method);
+        let construct_array_call_node = ExpressionH::NewImmRuntimeSizedArrayH(self.interner.alloc(crate::final_ast::instructions::NewImmRuntimeSizedArrayH {
+            size_expression: size_register_id.expect_int_access(),
+            generator_expression: generator_register_id,
+            generator_method: generator_method_h,
+            element_type,
+            result_type: array_ref_type_h.expect_runtime_sized_array_coord(),
+        }));
+        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = generator_deferreds;
+        deferreds.extend(size_deferreds);
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, deferreds)
     }
 }
 /*

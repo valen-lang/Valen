@@ -929,6 +929,35 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             heap.print_kind(crate::testvm::values::KindV::ArrayInstance(&array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
         }
+        ExpressionH::NewImmRuntimeSizedArrayH(cac) => {
+            let crate::final_ast::instructions::NewImmRuntimeSizedArrayH { size_expression: size_expr, generator_expression: generator_expr, generator_method: generator_prototype, element_type: _, result_type: array_ref_type } = **cac;
+            let size_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &size_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let size_kind = heap.dereference(size_reference, false);
+            let size = match size_kind {
+                crate::testvm::values::KindV::Int(int_v) if int_v.bits == 32 => int_v.value,
+                _ => panic!("execute_node_inner: NewImmRuntimeSizedArrayH size not IntV(_, 32)"),
+            };
+            let rsa_def = program_h.lookup_runtime_sized_array(array_ref_type.kind.expect_runtime_sized_array_ht());
+            let (array_reference, array_instance) = heap.add_uninitialized_array(interner, *rsa_def, array_ref_type, size as i32);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            let generator_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &generator_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: NewImmRuntimeSizedArrayH generator produced Break — vwat"),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            generate_elements(program_h, interner, scout_arena, stdin, stdout, heap, expression_id, call_id, generator_reference, *generator_prototype, size, &mut |_i, element_ref, heap| {
+                heap.initialize_array_element(array_reference, element_ref);
+            });
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, generator_expr.result_type(), generator_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, size_expr.result_type(), size_reference);
+            write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
+            heap.print_kind(crate::testvm::values::KindV::ArrayInstance(&array_instance));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
+        }
         ExpressionH::RuntimeSizedArrayStoreH(rsas) => {
             let crate::final_ast::instructions::RuntimeSizedArrayStoreH { array_expression: array_expr, index_expression: index_expr, source_expression: source_expr, result_type: _ } = **rsas;
             let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
@@ -2008,7 +2037,41 @@ pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &
   }
 */
 // mig: fn generate_elements
-pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) { panic!("Unimplemented: generate_elements"); }
+pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>, &mut HeapV<'v, 'h, 's>)) {
+    // Rust borrow-checker adaptation: Scala's GC lets the callback freely capture `heap`
+    // while `generateElements` also holds it. Rust requires that `heap` flow through the
+    // callback as a parameter on each call. Architect-approved (δ) at change_mutability.
+    let generator_function = program_h.lookup_function(&generator_prototype);
+    for i in 0..size {
+        {
+            use std::io::Write;
+            let handle = &mut *heap.vivem_dout;
+            writeln!(handle).unwrap();
+            let prefix = "  ".repeat(call_id.call_depth as usize);
+            writeln!(handle, "{}Making new stack frame (generator)", prefix).unwrap();
+        }
+        let index_reference = heap.allocate_transient(interner, crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: i, bits: 32, _phantom: std::marker::PhantomData }));
+        {
+            use std::io::Write;
+            let handle = &mut *heap.vivem_dout;
+            writeln!(handle).unwrap();
+            writeln!(handle).unwrap();
+            let prefix = "  ".repeat(call_id.call_depth as usize);
+            writeln!(handle, "{}Making new stack frame (icall)", prefix).unwrap();
+        }
+        let args = heap.vivem_bump.alloc_slice_copy(&[generator_reference, index_reference]);
+        let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args, generator_function);
+        {
+            use std::io::Write;
+            let handle = &mut *heap.vivem_dout;
+            let prefix = "  ".repeat(call_id.call_depth as usize);
+            write!(handle, "{}Getting return reference", prefix).unwrap();
+        }
+        let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: return_ref.ownership }), return_ref);
+        receiver(i, return_ref, heap);
+    }
+}
 /*
   private def generateElements(
     programH: ProgramH,
@@ -2209,7 +2272,15 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simpl
                             cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref);
                         }
                     }
-                    KindHT::RuntimeSizedArrayHT(_) => panic!("cleanup: RuntimeSizedArrayHT — pilot doesn't exercise"),
+                    KindHT::RuntimeSizedArrayHT(rsa_ht) => {
+                        let element_refs = heap.destructure_array(actual_reference);
+                        let element_type = program_h.lookup_runtime_sized_array(rsa_ht).element_type;
+                        for element_ref in element_refs.iter() {
+                            cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref);
+                        }
+                        heap.zero(actual_reference);
+                        heap.deallocate_if_no_weak_refs(actual_reference);
+                    }
                     KindHT::StaticSizedArrayHT(ssa_ht) => {
                         let element_refs = heap.destructure_array(actual_reference);
                         let element_type = program_h.lookup_static_sized_array(ssa_ht).element_type;

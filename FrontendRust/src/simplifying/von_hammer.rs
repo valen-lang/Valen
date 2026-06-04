@@ -1483,7 +1483,25 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("vonify_expression: NewImmRuntimeSizedArrayH"),
+            ExpressionH::NewImmRuntimeSizedArrayH(n) => {
+                let crate::final_ast::instructions::NewImmRuntimeSizedArrayH { size_expression: size_expr, generator_expression: generator_expr, generator_method, element_type: _, result_type } = *n;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "NewImmRuntimeSizedArray".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sizeExpr".to_string(), value: self.vonify_expression(size_expr) },
+                        crate::von::ast::VonMember { field_name: "sizeType".to_string(), value: self.vonify_coord(size_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sizeKind".to_string(), value: self.vonify_kind(size_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "generatorExpr".to_string(), value: self.vonify_expression(generator_expr) },
+                        crate::von::ast::VonMember { field_name: "generatorType".to_string(), value: self.vonify_coord(generator_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "generatorKind".to_string(), value: self.vonify_kind(generator_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "generatorMethod".to_string(), value: self.vonify_prototype(generator_method) },
+                        crate::von::ast::VonMember { field_name: "generatorKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "elementType".to_string(), value: self.vonify_coord(result_type) },
+                    ],
+                })
+            }
             ExpressionH::NewMutRuntimeSizedArrayH(n) => {
                 let crate::final_ast::instructions::NewMutRuntimeSizedArrayH { capacity_expression: capacity_expr, element_type, result_type } = *n;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

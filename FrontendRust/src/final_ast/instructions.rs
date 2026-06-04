@@ -1355,7 +1355,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::MutabilifyH(_) => panic!("Unimplemented: result_type for MutabilifyH"),
             ExpressionH::ImmutabilifyH(_) => panic!("Unimplemented: result_type for ImmutabilifyH"),
             ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
-            ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for NewImmRuntimeSizedArrayH"),
+            ExpressionH::NewImmRuntimeSizedArrayH(n) => n.result_type,
             ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,
             ExpressionH::PushRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,

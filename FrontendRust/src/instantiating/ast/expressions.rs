@@ -90,7 +90,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::SoftLoad(s) => s.result,
             ReferenceExpressionIE::Destroy(_) => panic!("RE::result: Destroy"),
             ReferenceExpressionIE::DestroyImmRuntimeSizedArray(_) => panic!("RE::result: DestroyImmRuntimeSizedArray"),
-            ReferenceExpressionIE::NewImmRuntimeSizedArray(_) => panic!("RE::result: NewImmRuntimeSizedArray"),
+            ReferenceExpressionIE::NewImmRuntimeSizedArray(n) => n.result,
         }
     }
 }
