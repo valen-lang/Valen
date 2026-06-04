@@ -242,7 +242,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (new_struct_and_deferreds_expr_h, Vec::new())
                 }
                 RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
-                RE::AsSubtype(a) => panic!("translate_expression: AsSubtype branch"),
+                RE::AsSubtype(a) => {
+                    let crate::instantiating::ast::expressions::AsSubtypeIE { source_expr: left_expr_i, target_type: target_subtype, result_result_type: result_opt_type, ok_constructor: some_constructor, err_constructor: none_constructor, .. } = *a;
+                    let (result_he, deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(left_expr_i));
+                    let target_subtype_h = self.translate_coord(hinputs, hamuts, target_subtype).kind;
+                    let result_opt_type_h = self.translate_coord(hinputs, hamuts, result_opt_type).expect_interface_coord();
+                    let some_constructor_h = self.translate_function_ref(hinputs, hamuts, current_function_header, self.interner.alloc(some_constructor));
+                    let none_constructor_h = self.translate_function_ref(hinputs, hamuts, current_function_header, self.interner.alloc(none_constructor));
+                    let result_node = ExpressionH::AsSubtypeH(self.interner.alloc(crate::final_ast::instructions::AsSubtypeH {
+                        source_expression: result_he,
+                        target_type: target_subtype_h,
+                        result_type: result_opt_type_h,
+                        some_constructor: some_constructor_h.prototype,
+                        none_constructor: none_constructor_h.prototype,
+                    }));
+                    (result_node, deferreds)
+                }
                 RE::ArgLookup(a) => {
                     let crate::instantiating::ast::expressions::ArgLookupIE { param_index, coord: type2 } = *a;
                     let type_h = self.translate_coord(hinputs, hamuts, type2);

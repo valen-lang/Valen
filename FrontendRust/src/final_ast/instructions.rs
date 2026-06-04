@@ -1369,7 +1369,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(_) => panic!("Unimplemented: result_type for IsSameInstanceH"),
-            ExpressionH::AsSubtypeH(_) => panic!("Unimplemented: result_type for AsSubtypeH"),
+            ExpressionH::AsSubtypeH(a) => a.result_type,
             ExpressionH::LockWeakH(_) => panic!("Unimplemented: result_type for LockWeakH"),
             ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),

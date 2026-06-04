@@ -895,8 +895,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     })
                 ).collect(),
             bound_param_impl_id_to_bound_arg_impl_id:
-                instantiation_bound_args.rune_to_impl_bound_arg.iter().map(|(_callee_rune, _supplied_impl_t)| -> (IdT<'s, 't>, IdI<'s, 'i, sI>) {
-                    panic!("Unimplemented: assemble_instantiation_bound_param_to_arg runeToImplBoundArg")
+                instantiation_bound_args.rune_to_impl_bound_arg.iter().map(|(callee_rune, supplied_impl_t)| -> (IdT<'s, 't>, IdI<'s, 'i, sI>) {
+                    (*instantiation_bound_params.rune_to_bound_impl.get(callee_rune).expect("vassertSome: rune_to_bound_impl"), *supplied_impl_t)
                 }).collect(),
         }
     }
@@ -1131,8 +1131,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let _dispatcher_template_id = Compiler::get_template(self.typing_interner, dispatcher_id_t);
         let dispatcher_template_args = crate::typing::names::names::IInstantiationNameT::try_from(dispatcher_id_t.local_name).unwrap().template_args();
         let dispatcher_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
-            dispatcher_template_args.iter().map(|_dispatcher_placeholder_templata| {
-                panic!("translate_override: dispatcher template args closure body");
+            dispatcher_template_args.iter().map(|dispatcher_placeholder_templata| {
+                let dispatcher_placeholder_id = Compiler::get_placeholder_templata_id(*dispatcher_placeholder_templata);
+                let impl_placeholder = _impl_placeholder_to_dispatcher_placeholder.iter().find(|(_, v)| v == dispatcher_placeholder_templata).expect("vassertSome implPlaceholderToDispatcherPlaceholder").0;
+                let index = match impl_placeholder.local_name {
+                    crate::typing::names::names::INameT::KindPlaceholder(kp) => kp.template.index,
+                    crate::typing::names::names::INameT::NonKindNonRegionPlaceholder(nk) => nk.index,
+                    _ => panic!("vwat translate_override dispatcher placeholder index"),
+                };
+                let impl_id_c_local = match _impl_id_c.local_name {
+                    crate::instantiating::ast::names::INameI::Impl(n) => n,
+                    _ => panic!("translate_override: _impl_id_c.local_name not Impl"),
+                };
+                let templata_c = impl_id_c_local.template_args[index as usize];
+                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
+                (dispatcher_placeholder_id, templata_s)
             }).collect();
         let case_local_name = match _dispatcher_case_id_t.local_name {
             crate::typing::names::names::INameT::OverrideDispatcherCase(n) => n,
@@ -2468,8 +2481,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         // For any that are placeholders themselves, let's translate those into actual prototypes.
         let rune_to_supplied_impl_for_call: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, sI>> =
             ArenaIndexMap::from_iter_in(
-                rune_to_supplied_impl_for_call_unsubstituted.iter().map(|(_rune, _supplied_impl_unsubstituted)| {
-                    panic!("Unimplemented: translate_bound_args_for_callee rune_to_supplied_impl_for_call")
+                rune_to_supplied_impl_for_call_unsubstituted.iter().map(|(rune, supplied_impl_unsubstituted)| {
+                    let impl_id_s = match supplied_impl_unsubstituted.local_name {
+                        crate::typing::names::names::INameT::ImplBound(_) => {
+                            *_denizen_bound_to_denizen_caller_supplied_thing.bound_param_impl_id_to_bound_arg_impl_id.get(supplied_impl_unsubstituted).expect("vassertSome bound_param_impl_id_to_bound_arg_impl_id")
+                        }
+                        _ => {
+                            self.translate_impl_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, supplied_impl_unsubstituted)
+                        }
+                    };
+                    (*rune, impl_id_s)
                 }),
                 self.interner.bump());
         // And now we have a map from the callee's rune to the *instantiated* callee's impls.
@@ -3550,7 +3571,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::ArraySize(_) => panic!("Unimplemented: translate_ref_expr ArraySize"),
             ReferenceExpressionTE::IsSameInstance(_) => panic!("Unimplemented: translate_ref_expr IsSameInstance"),
-            ReferenceExpressionTE::AsSubtype(_) => panic!("Unimplemented: translate_ref_expr AsSubtype"),
+            ReferenceExpressionTE::AsSubtype(asx) => {
+                let crate::typing::ast::expressions::AsSubtypeTE { source_expr, target_type: target_subtype, result_result_type, ok_constructor, err_constructor, impl_name: impl_id_t, ok_impl_name: ok_result_impl_id_t, err_impl_name: err_result_impl_id_t } = **asx;
+                let (_source_it, source_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
+                let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_result_type).coord;
+                let target_coord_s = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_subtype).coord;
+                let result_result_coord_s = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_result_type).coord;
+                let (_, ok_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, ok_constructor);
+                let (_, err_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, err_constructor);
+                let impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &impl_id_t);
+                let ok_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &ok_result_impl_id_t);
+                let err_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &err_result_impl_id_t);
+                let result_ce = ReferenceExpressionIE::AsSubtype(self.interner.bump().alloc(crate::instantiating::ast::expressions::AsSubtypeIE {
+                    source_expr: source_ce,
+                    target_type: region_collapser_individual::collapse_coord(self.interner, &target_coord_s),
+                    result_result_type: region_collapser_individual::collapse_coord(self.interner, &result_result_coord_s),
+                    ok_constructor: self.interner.bump().alloc(ok_c),
+                    err_constructor: self.interner.bump().alloc(err_c),
+                    impl_name: region_collapser_individual::collapse_impl_id(self.interner, &impl_id_s),
+                    ok_impl_name: region_collapser_individual::collapse_impl_id(self.interner, &ok_impl_id_s),
+                    err_impl_name: region_collapser_individual::collapse_impl_id(self.interner, &err_impl_id_s),
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::VoidLiteral(_) => {
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) },
                  ReferenceExpressionIE::VoidLiteral(self.interner.alloc(VoidLiteralIE(std::marker::PhantomData))))

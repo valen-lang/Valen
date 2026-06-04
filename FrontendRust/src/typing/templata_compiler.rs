@@ -182,7 +182,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_placeholder_templata_id(
-        &self,
         impl_placeholder: ITemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
         match impl_placeholder {

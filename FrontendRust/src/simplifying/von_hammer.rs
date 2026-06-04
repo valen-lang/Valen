@@ -1572,7 +1572,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ExpressionH::ArrayCapacityH(_) => panic!("vonify_expression: ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(_) => panic!("vonify_expression: IsSameInstanceH"),
-            ExpressionH::AsSubtypeH(_) => panic!("vonify_expression: AsSubtypeH"),
+            ExpressionH::AsSubtypeH(a) => {
+                let crate::final_ast::instructions::AsSubtypeH { source_expression: source_expr, target_type, result_type: result_result_type, some_constructor: ok_constructor, none_constructor: err_constructor } = *a;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "AsSubtype".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "targetKind".to_string(), value: self.vonify_kind(target_type) },
+                        crate::von::ast::VonMember { field_name: "okConstructor".to_string(), value: self.vonify_prototype(ok_constructor) },
+                        crate::von::ast::VonMember { field_name: "okType".to_string(), value: self.vonify_coord(ok_constructor.return_type) },
+                        crate::von::ast::VonMember { field_name: "okKind".to_string(), value: self.vonify_kind(ok_constructor.return_type.kind) },
+                        crate::von::ast::VonMember { field_name: "errConstructor".to_string(), value: self.vonify_prototype(err_constructor) },
+                        crate::von::ast::VonMember { field_name: "errType".to_string(), value: self.vonify_coord(err_constructor.return_type) },
+                        crate::von::ast::VonMember { field_name: "errKind".to_string(), value: self.vonify_kind(err_constructor.return_type.kind) },
+                        crate::von::ast::VonMember { field_name: "resultResultType".to_string(), value: self.vonify_coord(result_result_type) },
+                        crate::von::ast::VonMember { field_name: "resultResultKind".to_string(), value: self.vonify_kind(result_result_type.kind) },
+                    ],
+                })
+            }
             ExpressionH::LockWeakH(_) => panic!("vonify_expression: LockWeakH"),
             ExpressionH::DiscardH(d) => {
                 let crate::final_ast::instructions::DiscardH { source_expression: source_expr } = *d;

@@ -798,6 +798,39 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             };
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
         }
+        ExpressionH::AsSubtypeH(a) => {
+            let crate::final_ast::instructions::AsSubtypeH { source_expression: source_expr, target_type: target_kind, result_type, some_constructor: ok_constructor, none_constructor: err_constructor } = **a;
+            let source_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let (constructor, deviewed_args): (&'h crate::final_ast::ast::PrototypeH<'s, 'h>, Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>>) =
+                if source_ref.actual_kind.hamut == target_kind {
+                    let ref_aliased_as_subtype = heap.transmute(source_ref, source_expr.result_type(), ok_constructor.params[0]);
+                    (ok_constructor, vec![ref_aliased_as_subtype])
+                } else {
+                    (err_constructor, vec![source_ref])
+                };
+            {
+                let handle = &mut *heap.vivem_dout;
+                writeln!(handle).unwrap();
+                writeln!(handle, "{}Making new stack frame (lock call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+            }
+            let function = program_h.lookup_function(constructor);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: source_ref.ownership }), source_ref);
+            let args_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&deviewed_args);
+            let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function);
+            {
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+            }
+            let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+            let target_interface_ref = match result_type.kind {
+                KindHT::InterfaceHT(i) => i,
+                _ => panic!("AsSubtypeH: result_type.kind not InterfaceHT"),
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
+        }
         ExpressionH::StructToInterfaceUpcastH(siu) => {
             let crate::final_ast::instructions::StructToInterfaceUpcastH { source_expression: source_expr, target_interface: target_interface_ref } = **siu;
             let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
@@ -2011,11 +2044,13 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, i
     let function_h = program_h.lookup_function(prototype_h);
     let actual_prototype = function_h.prototype;
     let expected_prototype = function_type;
-    for (index, _arg_reference) in undeviewed_arg_references.iter().enumerate() {
+    for (index, arg_reference) in undeviewed_arg_references.iter().enumerate() {
         if index as i32 != virtual_param_index {
-            let _actual_function_param_type = actual_prototype.params[index];
-            let _expected_function_param_type = expected_prototype.params[index];
-            panic!("Exception P: per-arg-param assertion loop unmigrated (index={})", index);
+            let actual_function_param_type = actual_prototype.params[index];
+            let expected_function_param_type = expected_prototype.params[index];
+            heap.check_reference(interner, actual_function_param_type, *arg_reference);
+            heap.check_reference(interner, expected_function_param_type, *arg_reference);
+            assert!(actual_function_param_type == expected_function_param_type);
         }
     }
     let mut deviewed_arg_references: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = undeviewed_arg_references.to_vec();

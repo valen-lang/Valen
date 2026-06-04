@@ -452,9 +452,38 @@ fn imm_interface() {
 */
 // mig: fn can_call_interface_envs_function_from_outside
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn can_call_interface_envs_function_from_outside() {
-    panic!("Unmigrated test: can_call_interface_envs_function_from_outside");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nsealed interface I {\n  func doThing(virtual i I) int;\n}\nfunc main(i I) int {\n  return doThing(i);\n}\n",
+    );
+    let _interner = compile.interner;
+    let coutputs = compile.expect_compiler_outputs();
+
+    assert_eq!(coutputs.get_all_user_functions().len(), 1);
+    assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
+        crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        });
+
+    let do_thing = coutputs.lookup_function_by_str("doThing");
+    assert_eq!(do_thing.header.params[0].virtuality, Some(crate::typing::ast::ast::AbstractT));
 }
 /*
   test("Can call interface env's function from outside") {
@@ -690,9 +719,30 @@ fn open_interface_constructor_multiple_methods() {
 */
 // mig: fn successful_pointer_downcast_with_as
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn successful_pointer_downcast_with_as() {
-    panic!("Unmigrated test: successful_pointer_downcast_with_as");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/downcast/downcastPointerSuccess.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Successful pointer downcast with as") {

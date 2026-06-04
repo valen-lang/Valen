@@ -582,7 +582,7 @@ where 's: 't,
                 .map(|(templata, _)| *templata)
                 .enumerate()
                 .map(|(impl_placeholder_index, impl_placeholder)| {
-                    let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder);
+                    let impl_placeholder_id = Compiler::get_placeholder_templata_id(impl_placeholder);
                     let impl_placeholder_local_name = IPlaceholderNameT::try_from(impl_placeholder_id.local_name)
                         .unwrap_or_else(|_| panic!("vwat: expected IPlaceholderNameT for impl placeholder local_name"));
                     let impl_rune = impl_placeholder_local_name.rune();
@@ -676,7 +676,7 @@ where 's: 't,
         // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
         let existing_dispatcher_placeholder_ids: std::collections::HashSet<IdT<'s, 't>> =
             dispatcher_placeholders.iter()
-                .map(|p| self.get_placeholder_templata_id(*p))
+                .map(|p| Compiler::get_placeholder_templata_id(*p))
                 .collect();
         let fresh_dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
             origin_function_templata.function.generic_parameters.iter()
@@ -733,7 +733,7 @@ where 's: 't,
                     let case_rune = self.scout_arena.intern_rune(
                         IRuneValS::CaseRuneFromImpl(
                             CaseRuneFromImplValS { inner_rune: impl_rune }));
-                    let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder_templata);
+                    let impl_placeholder_id = Compiler::get_placeholder_templata_id(impl_placeholder_templata);
                     let case_placeholder = self.create_override_placeholder_mimicking(
                         coutputs, impl_placeholder_templata, IInDenizenEnvironmentT::from(dispatcher_inner_env), index as i32, case_rune);
                     (impl_rune, impl_placeholder_id, case_placeholder)
