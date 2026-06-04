@@ -40,6 +40,8 @@
 
 **Push submodule advances to origin immediately after committing.** After any commit that advances a Luz or Guardian pin, the committing TL immediately pushes that submodule (and any nested submodules) to origin. Pins are not "shared" until pushed — otherwise other worktrees hit `(commits not present)` on their next rebase.
 
+**Run `git submodule update --recursive` after a rebase that pulls in Luz/Guardian pin advances** — otherwise the sub-clone's working tree stays on the old SHA and `diff --submodule HEAD` reports a spurious "rewind".
+
 **Use absolute paths in `for-tl.md` watchers** — relative paths resolve against the bash sandbox's cwd, which may silently differ from the worktree root and never match the file.
 
 **Don't kill `ps -ef` PIDs unless you can trace them to your own session's task IDs** — other TLs' watchers appear globally, and SIGTERMing them fires a spurious task-completion notification on the wrong TL.
