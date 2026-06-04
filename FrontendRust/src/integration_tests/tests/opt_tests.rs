@@ -17,7 +17,7 @@ class OptTests extends FunSuite with Matchers {
 fn test_empty_and_get_for_some() { panic!("Unmigrated test: test_empty_and_get_for_some"); }
 /*
   test("Test empty and get for Some") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
         """
           |import v.builtins.opt.*;
           |
@@ -26,7 +26,7 @@ fn test_empty_and_get_for_some() { panic!("Unmigrated test: test_empty_and_get_f
           |  return if (opt.isEmpty()) { 0 }
           |    else { opt.get() };
           |}
-        """.stripMargin, false)
+        """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }

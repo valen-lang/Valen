@@ -634,7 +634,7 @@ exported func main() int {
     // numInheritedGenericParameters is 0 for a top-level extern, so Hammer should not reshape.
     // The leaf step retains whatever templateArgs the function has (empty here, since this is
     // a non-generic extern). This is a smoke test that the no-reshape path returns rawSimpleId.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm;
         |extern func VecOuterNew<T>() Vec<T>;
@@ -642,8 +642,7 @@ exported func main() int {
         |  v = VecOuterNew<int>();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     val hamuts = compile.getHamuts()
     val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
     val externs = packageH.prototypeToExtern.values.toVector
@@ -669,7 +668,7 @@ pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_i
     // Asserts both the splitAt count (1, not 0 or 2) and the splitAt direction. Uses
     // i32 + i64 (not bool/str etc.) because NameHammer.simplifyKind currently only
     // handles IntIT.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Foo<A> imm {
         |  extern func bar<C>(c C) int;
@@ -677,8 +676,7 @@ pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_i
         |exported func main() int {
         |  return Foo<int>.bar<str>("hello");
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     val hamuts = compile.getHamuts()
     val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
     val externs = packageH.prototypeToExtern.values.toVector
@@ -704,7 +702,7 @@ pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_ste
     // step onto the immediately preceding citizen step. Final shape: [..., Vec<i32>, new]
     // rather than [..., Vec, new<i32>]. This is what Backend's rustifySimpleId expects per
     // @SMLRZ, so it can emit `Vec<i32>::new` rather than `Vec::new<i32>`.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func new() Vec<T>;
@@ -713,8 +711,7 @@ pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_ste
         |  v = Vec<int>.new();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     val hamuts = compile.getHamuts()
     val packageH = hamuts.lookupPackage(PackageCoordinate.TEST_TLD(compile.interner, compile.keywords))
     val externs = packageH.prototypeToExtern.values.toVector

@@ -93,14 +93,14 @@ fn simple_program_containing_a_virtual_function() {
 }
 /*
     test("Simple program containing a virtual function") {
-      val compile = RunCompilation.test(
+      val compile = RunCompilation.testNoBuiltins(
         """
           |sealed interface I  {}
           |func doThing(virtual i I) int { return 4; }
           |func main(i I) int {
           |  return doThing(i);
           |}
-        """.stripMargin, false)
+        """.stripMargin)
       val coutputs = compile.expectCompilerOutputs()
       val interner = compile.interner
       val keywords = compile.keywords
@@ -208,14 +208,14 @@ fn can_call_virtual_function() {
 }
 /*
   test("Can call virtual function") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |sealed interface I  {}
         |func doThing(virtual i I) int { return 4; }
         |func main(i I) int {
         |  return doThing(i);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
     val interner = compile.interner
     val keywords = compile.keywords
@@ -258,14 +258,14 @@ fn owning_interface() {
 }
 /*
   test("Owning interface") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.opt.*;
         |exported func main() int {
         |  x Opt<int> = Some(7);
         |  return 7;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
 */
@@ -278,7 +278,7 @@ fn simple_override_with_param_and_bound() {
 /*
   test("Simple override with param and bound") {
     // This is the Serenity case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -295,7 +295,7 @@ fn simple_override_with_param_and_bound() {
         |  ship ISpaceship<int, bool, str> = Serenity<int, bool, str>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -308,7 +308,7 @@ fn struct_with_different_ordered_runes() {
 /*
   test("Struct with different ordered runes") {
     // This is the Firefly case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -325,7 +325,7 @@ fn struct_with_different_ordered_runes() {
         |  ship ISpaceship<int, bool, str> = Firefly<str, bool, int>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -338,7 +338,7 @@ fn struct_with_less_generic_params_than_interface() {
 /*
   test("Struct with less generic params than interface") {
     // This is the Raza case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -354,7 +354,7 @@ fn struct_with_less_generic_params_than_interface() {
         |  ship ISpaceship<int, bool, str> = Raza<bool, str>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -367,7 +367,7 @@ fn struct_with_more_generic_params_than_interface() {
 /*
   test("Struct with more generic params than interface") {
     // This is the Milano case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -383,7 +383,7 @@ fn struct_with_more_generic_params_than_interface() {
         |  ship ISpaceship<int, bool, str> = Milano<int, bool, str, float>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -396,7 +396,7 @@ fn struct_repeating_generic_params_for_interface() {
 /*
   test("Struct repeating generic params for interface") {
     // This is the Enterprise case in ROWC.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.drop.*;
         |
@@ -412,7 +412,7 @@ fn struct_repeating_generic_params_for_interface() {
         |  ship ISpaceship<int, int, int> = Enterprise<int>();
         |  ship.launch(7);
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -487,7 +487,7 @@ fn can_call_interface_envs_function_from_outside() {
 }
 /*
   test("Can call interface env's function from outside") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |sealed interface I {
         |  func doThing(virtual i I) int;
@@ -495,7 +495,7 @@ fn can_call_interface_envs_function_from_outside() {
         |func main(i I) int {
         |  return doThing(i);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
     val interner = compile.interner
 
@@ -645,7 +645,7 @@ fn open_interface_constructor() {
 }
 /*
   test("Open interface constructor") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |interface Bipedal {
         |  func hop(virtual s &Bipedal) int;
@@ -662,7 +662,7 @@ fn open_interface_constructor() {
         |
         |  return hopscotch(&x);
         |}
-        """.stripMargin, false)
+        """.stripMargin)
     val coutputs = compile.getHamuts()
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }

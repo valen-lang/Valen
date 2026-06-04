@@ -66,7 +66,7 @@ fn roguelike_typing_pass() {
 }
 /*
   test("Roguelike typing pass") {
-    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"), true)
+    val compile = RunCompilation.test(Tests.loadExpected("programs/roguelike.vale"))
     compile.getCompilerOutputs() match {
       case Ok(_) =>
       case Err(e) => { println("DIAG-RAW-ERR: " + e); throw new RuntimeException("compile failed") }
@@ -110,7 +110,7 @@ fn simple_program_returning_an_int() {
 }
 /*
   test("Simple program returning an int") {
-    val compile = RunCompilation.test("exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -120,7 +120,7 @@ fn simple_program_returning_an_int() {
 fn simple_program_with_drop() { panic!("Unmigrated test: simple_program_with_drop"); }
 /*
   test("Simple program with drop") {
-    val compile = RunCompilation.test("import v.builtins.drop.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.drop.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -152,7 +152,7 @@ fn simple_program_with_arith() {
 }
 /*
   test("Simple program with arith") {
-    val compile = RunCompilation.test("import v.builtins.arith.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.arith.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -184,7 +184,7 @@ fn simple_program_with_logic() {
 }
 /*
   test("Simple program with logic") {
-    val compile = RunCompilation.test("import v.builtins.logic.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.logic.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -194,7 +194,7 @@ fn simple_program_with_logic() {
 fn simple_program_with_migrate() { panic!("Unmigrated test: simple_program_with_migrate"); }
 /*
   test("Simple program with migrate") {
-    val compile = RunCompilation.test("import v.builtins.migrate.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.migrate.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -226,7 +226,7 @@ fn simple_program_with_str() {
 }
 /*
   test("Simple program with str") {
-    val compile = RunCompilation.test("import v.builtins.str.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.str.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -236,7 +236,7 @@ fn simple_program_with_str() {
 fn simple_program_with_arrays() { panic!("Unmigrated test: simple_program_with_arrays"); }
 /*
   test("Simple program with arrays") {
-    val compile = RunCompilation.test("import v.builtins.arrays.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.arrays.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -246,7 +246,7 @@ fn simple_program_with_arrays() { panic!("Unmigrated test: simple_program_with_a
 fn simple_program_with_mainargs() { panic!("Unmigrated test: simple_program_with_mainargs"); }
 /*
   test("Simple program with mainargs") {
-    val compile = RunCompilation.test("import v.builtins.mainargs.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.mainargs.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -256,7 +256,7 @@ fn simple_program_with_mainargs() { panic!("Unmigrated test: simple_program_with
 fn simple_program_with_as() { panic!("Unmigrated test: simple_program_with_as"); }
 /*
   test("Simple program with as") {
-    val compile = RunCompilation.test("import v.builtins.as.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.as.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -288,7 +288,7 @@ fn simple_program_with_print() {
 }
 /*
   test("Simple program with print") {
-    val compile = RunCompilation.test("import v.builtins.print.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.print.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -298,7 +298,7 @@ fn simple_program_with_print() {
 fn simple_program_with_tup() { panic!("Unmigrated test: simple_program_with_tup"); }
 /*
   test("Simple program with tup") {
-    val compile = RunCompilation.test("import v.builtins.tup2.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.tup2.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -330,7 +330,7 @@ fn simple_program_with_panic() {
 }
 /*
   test("Simple program with panic") {
-    val compile = RunCompilation.test("import v.builtins.panic.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.panic.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -340,7 +340,7 @@ fn simple_program_with_panic() {
 fn simple_program_with_opt() { panic!("Unmigrated test: simple_program_with_opt"); }
 /*
   test("Simple program with opt") {
-    val compile = RunCompilation.test("import v.builtins.opt.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.opt.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -350,7 +350,7 @@ fn simple_program_with_opt() { panic!("Unmigrated test: simple_program_with_opt"
 fn simple_program_with_result() { panic!("Unmigrated test: simple_program_with_result"); }
 /*
   test("Simple program with result") {
-    val compile = RunCompilation.test("import v.builtins.result.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.result.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -360,7 +360,7 @@ fn simple_program_with_result() { panic!("Unmigrated test: simple_program_with_r
 fn simple_program_with_sameinstance() { panic!("Unmigrated test: simple_program_with_sameinstance"); }
 /*
   test("Simple program with sameinstance") {
-    val compile = RunCompilation.test("import v.builtins.sameinstance.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.sameinstance.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -370,7 +370,7 @@ fn simple_program_with_sameinstance() { panic!("Unmigrated test: simple_program_
 fn simple_program_with_weak() { panic!("Unmigrated test: simple_program_with_weak"); }
 /*
   test("Simple program with weak") {
-    val compile = RunCompilation.test("import v.builtins.weak.*; exported func main() int { return 3; }", false)
+    val compile = RunCompilation.testNoBuiltins("import v.builtins.weak.*; exported func main() int { return 3; }")
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
 */
@@ -756,7 +756,7 @@ fn test_generic() {
 }
 /*
   test("Test generic") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |func drop(x int) { }
         |func bork<T>(a T) void where func drop(T)void {
@@ -765,7 +765,7 @@ fn test_generic() {
         |exported func main() {
         |  bork(3);
         |}
-      """.stripMargin, false)
+      """.stripMargin)
     compile.evalForKind(Vector())
   }
 */
@@ -1133,12 +1133,11 @@ fn simple_extern_function() {
 }
 /*
   test("Simple extern function") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern func __vbi_addI32(left int, right int) int;
         |exported func main() int { return __vbi_addI32(27, 15); }
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -1150,7 +1149,7 @@ fn simple_extern_function() {
 fn extern_function_returning_extern_struct() { panic!("Unmigrated test: extern_function_returning_extern_struct"); }
 /*
   test("Extern function returning extern struct") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm;
         |extern func VecOuterNew<T>() Vec<T>;
@@ -1158,8 +1157,7 @@ fn extern_function_returning_extern_struct() { panic!("Unmigrated test: extern_f
         |  v = VecOuterNew<int>();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -1173,7 +1171,7 @@ fn extern_function_returning_extern_struct() { panic!("Unmigrated test: extern_f
 fn extern_rust_vec() { panic!("Unmigrated test: extern_rust_vec"); }
 /*
   test("Extern rust Vec") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func new() Vec<T>;
@@ -1182,8 +1180,7 @@ fn extern_rust_vec() { panic!("Unmigrated test: extern_rust_vec"); }
         |  v = Vec<int>.new();
         |  return 42;
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -1195,7 +1192,7 @@ fn extern_rust_vec() { panic!("Unmigrated test: extern_rust_vec"); }
 fn extern_rust_vec_capacity() { panic!("Unmigrated test: extern_rust_vec_capacity"); }
 /*
   test("Extern rust Vec capacity") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func with_capacity(c i64) Vec<T>;
@@ -1205,8 +1202,7 @@ fn extern_rust_vec_capacity() { panic!("Unmigrated test: extern_rust_vec_capacit
         |  v = Vec<int>.with_capacity(42i64);
         |  return Vec<int>.capacity(v);
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }
@@ -1224,7 +1220,7 @@ fn extern_method_on_generic_extern_struct_returns_expected_value() { panic!("Unm
     // at callsites. Vivem matches on the humanized fullyQualifiedName (not the wire-format
     // SimpleId), so the wire-format reshape is exercised separately in HammerTests; this
     // test catches regressions in the call-path plumbing that downstream needs.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |extern struct Vec<T> imm {
         |  extern func with_capacity(c i64) Vec<T>;
@@ -1234,8 +1230,7 @@ fn extern_method_on_generic_extern_struct_returns_expected_value() { panic!("Unm
         |  v = Vec<int>.with_capacity(42i64);
         |  return v.capacity();
         |}
-        |""".stripMargin,
-      false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match {
       case VonInt(42) =>
     }

@@ -40,7 +40,7 @@ fn returning_tuple_from_function_and_dotting_it() {
 }
 /*
   test("Returning tuple from function and dotting it") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -49,7 +49,7 @@ fn returning_tuple_from_function_and_dotting_it() {
         |exported func main() int {
         |  return makeTup().1;
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(3) => }
   }
@@ -82,7 +82,7 @@ fn tuple_with_two_things() {
 }
 /*
   test("Tuple with two things") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -90,7 +90,7 @@ fn tuple_with_two_things() {
         |exported func main() bool {
         |  return (9, true).1;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonBool(true) => }
   }
 */
@@ -122,7 +122,7 @@ fn tuple_type() {
 }
 /*
   test("Tuple type") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.tup2.*;
         |import v.builtins.drop.*;
@@ -132,7 +132,7 @@ fn tuple_type() {
         |exported func main() int {
         |  return moo((3, 4));
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
 */

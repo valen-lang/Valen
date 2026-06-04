@@ -62,12 +62,24 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         ),
     }
 }
+/*
+  def test(code: String): RunCompilation = {
+    val interner = new Interner()
+    val keywords = new Keywords(interner)
+    new RunCompilation(
+      interner,
+      keywords,
+      Vector(
+        PackageCoordinate.BUILTIN(interner, keywords),
+        PackageCoordinate.TEST_TLD(interner, keywords)),
+      Builtins.getCodeMap(interner, keywords)
+          .or(FileCoordinateMap.test(interner, Vector(code)))
+          .or(Tests.getPackageToResourceResolver),
+      FullCompilationOptions(GlobalOptions(true, true, true, true, true)))
+  }
+*/
 
 // mig: fn test_no_builtins
-// (Rust-side split of Scala's `test(code, includeAllBuiltins=true)` — the `false` flavor;
-//  Scala has one fn with default-true param + internal `if (includeAllBuiltins) ... else ...`,
-//  Rust splits per-EANODVX-no-defaults + strict-parity-at-call-sites so each call site
-//  reads identically to its Scala counterpart without a bare boolean argument.)
 pub fn test_no_builtins<'s, 'h, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
     interner: &'ctx crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
@@ -112,24 +124,15 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     }
 }
 /*
-  def test(code: String, includeAllBuiltins: Boolean = true): RunCompilation = {
+  def testNoBuiltins(code: String): RunCompilation = {
     val interner = new Interner()
     val keywords = new Keywords(interner)
     new RunCompilation(
       interner,
       keywords,
-      (if (includeAllBuiltins) {
-        Vector(PackageCoordinate.BUILTIN(interner, keywords))
-      } else {
-        Vector()
-      }) ++
-          Vector(
-            PackageCoordinate.TEST_TLD(interner, keywords)),
-      (if (includeAllBuiltins) {
-        Builtins.getCodeMap(interner, keywords)
-      } else {
-        Builtins.getModulizedCodeMap(interner, keywords)
-      })
+      Vector(
+        PackageCoordinate.TEST_TLD(interner, keywords)),
+      Builtins.getModulizedCodeMap(interner, keywords)
           .or(FileCoordinateMap.test(interner, Vector(code)))
           .or(Tests.getPackageToResourceResolver),
       FullCompilationOptions(GlobalOptions(true, true, true, true, true)))

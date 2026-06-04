@@ -48,7 +48,7 @@ fn returning_static_array_from_function_and_dotting_it() {
 }
 /*
   test("Returning static array from function and dotting it") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |func makeArray() [#5]int { return [#](2, 3, 4, 5, 6); }
         |exported func main() int {
@@ -57,7 +57,7 @@ fn returning_static_array_from_function_and_dotting_it() {
         |  [_, _, _, _, _] = a;
         |  return x;
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(5) => }
   }

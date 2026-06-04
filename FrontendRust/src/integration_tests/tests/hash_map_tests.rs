@@ -22,7 +22,7 @@ fn monomorphize_problem() {
   test("Monomorphize problem") {
     // See NBIFP, the instantiator has to grab bounds from its params too
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |struct IntHasher { }
         |func __call(this &IntHasher, x int) int { return x; }
@@ -42,7 +42,7 @@ fn monomorphize_problem() {
         |  destruct m;
         |  return 9;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
@@ -62,7 +62,7 @@ fn supply_bounds_to_child_functions() {
     //   .drop<>(@add:204<int, int, ^IntHasher>(&HashMap<int, int, ^IntHasher>).lam:281)
     // and when instantiating that, `drop` needs to know bounds from `add` to understand that
     // `&HashMap<int, int, ^IntHasher>` parameter.
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.arrays.*;
         |
@@ -85,7 +85,7 @@ fn supply_bounds_to_child_functions() {
         |  [h] = m;
         |  return 7;
         |}
-        |""".stripMargin, false)
+        |""".stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(7) => }
   }
@@ -271,7 +271,7 @@ fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
         """
           |import v.builtins.arith.*;
           |
@@ -307,7 +307,7 @@ fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
           |  [] = arr;
           |  return 1337;
           |}
-        """.stripMargin, false)
+        """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }
@@ -323,7 +323,7 @@ fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() 
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
     // come from substituting existing ones.
 
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.arith.*;
         |
@@ -357,7 +357,7 @@ fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() 
         |  [] = arr;
         |  return 1337;
         |}
-        """.stripMargin, false)
+        """.stripMargin)
 
     compile.evalForKind(Vector()) match { case VonInt(1337) => }
   }

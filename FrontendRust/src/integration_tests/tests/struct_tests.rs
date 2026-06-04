@@ -465,7 +465,7 @@ fn destroy_members_at_right_times() { panic!("Unmigrated test: destroy_members_a
 fn panic_function() { panic!("Unmigrated test: panic_function"); }
 /*
   test("Panic function") {
-    val compile = RunCompilation.test(
+    val compile = RunCompilation.testNoBuiltins(
       """
         |import v.builtins.panic.*;
         |import v.builtins.drop.*;
@@ -486,7 +486,7 @@ fn panic_function() { panic!("Unmigrated test: panic_function"); }
         |  m XOpt<int> = XNone<int>();
         |  return m.get();
         |}
-      """.stripMargin, false)
+      """.stripMargin)
 
     try {
       compile.evalForKind(Vector())

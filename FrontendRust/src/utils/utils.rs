@@ -346,4 +346,17 @@ where K: Copy + Eq + std::hash::Hash, V: Copy, F: Fn(V, V) -> bool,
         .toArray // TODO: optimize
   }
 }
+
+// Mutable Int wrapper. Acts as a pass-by-reference Int: helper methods that
+// need to mutate a counter take this class instead of returning a new Int the
+// caller has to re-assign. Matches Rust's `&mut i32` semantics.
+class IntCounter(var value: Int) {
+  def get: Int = value
+  def set(newValue: Int): Unit = value = newValue
+  def increment(): Int = {
+    val old = value
+    value = old + 1
+    old
+  }
+}
 */

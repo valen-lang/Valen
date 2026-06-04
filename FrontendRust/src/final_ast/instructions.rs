@@ -108,6 +108,17 @@ override def equals(obj: Any): Boolean = vcurious();
   override def resultType: CoordH[BoolHT] = CoordH(MutableShareH, InlineH, BoolHT())
 }
 
+// Produces a string.
+case class ConstantStrH(
+  // The value of the string.
+  value: String
+) extends ExpressionH[StrHT] {
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
+  override def resultType: CoordH[StrHT] = CoordH(MutableShareH, YonderH, StrHT())
+}
+
 // Produces a float.
 case class ConstantF64H(
   // The value of the float.
@@ -1449,18 +1460,6 @@ pub struct ConstantStrH<'s, 'h> where 's: 'h {
     pub value: &'h str,
     pub _marker: PhantomData<&'s ()>,
 }
-/*
-// Produces a string.
-case class ConstantStrH(
-  // The value of the string.
-  value: String
-) extends ExpressionH[StrHT] {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-  override def resultType: CoordH[StrHT] = CoordH(MutableShareH, YonderH, StrHT())
-}
-*/
 
 // mig: case class ConstantF64H
 /// Temporary state
