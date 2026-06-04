@@ -136,11 +136,32 @@ fn tests_a_while_loop_with_a_complex_condition() {
 */
 // mig: fn tests_a_while_loop_with_a_set_in_it
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_a_while_loop_with_a_set_in_it() {
-    panic!("Unmigrated test: tests_a_while_loop_with_a_set_in_it");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key != 99 {\n    print(key);\n  }\n  return key;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 99 }) => {}
+        other => panic!("expected VonInt(99), got {:?}", other),
+    }
 }
 /*
+Guardian: temp-disable: SPDMX — Scala evalForKind has 3 overloads; `_primitive_args_with_stdin` is the documented Exception-S overload-suffix for `evalForKind(args, stdin)` (Vector[PrimitiveKindV] + Vector[String]). Documented at run_compilation.rs:287 `// mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload evalForKind(args, stdin))`. In-file precedent: `tests_a_while_loop_with_a_complex_condition` just above (immediately preceding test) uses the same name with no Guardian issue after the most recent landing. — FrontendRust/guardian-logs/request-1046-1780534728219/hook-1046/tests_a_while_loop_with_a_set_in_it--139.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Tests a while loop with a set in it") {
     val compile = RunCompilation.test(
       """
