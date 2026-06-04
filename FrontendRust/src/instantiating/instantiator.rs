@@ -63,7 +63,10 @@ case class DenizenBoundToDenizenCallerBoundArgS(
 // mig: fn plus
 impl<'s, 't, 'i> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub fn plus(&self, that: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>) -> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> {
-        panic!("Unimplemented: plus");
+        DenizenBoundToDenizenCallerBoundArgI {
+            func_id_to_bound_arg_prototype: crate::utils::utils::union_maps_expect_no_conflict(&self.func_id_to_bound_arg_prototype, &that.func_id_to_bound_arg_prototype, |x, y| x == y),
+            bound_param_impl_id_to_bound_arg_impl_id: crate::utils::utils::union_maps_expect_no_conflict(&self.bound_param_impl_id_to_bound_arg_impl_id, &that.bound_param_impl_id_to_bound_arg_impl_id, |x, y| x == y),
+        }
     }
 }
 /*
@@ -95,7 +98,7 @@ pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub interface_to_impls: IndexMap<IdI<'s, 'i, cI>, Vec<(IdT<'s, 't>, IdI<'s, 'i, cI>)>>,
     pub interface_to_abstract_func_to_virtual_index: IndexMap<IdI<'s, 'i, cI>, IndexMap<PrototypeI<'s, 'i, cI>, usize>>,
     pub impls: IndexMap<IdI<'s, 'i, cI>, (ICitizenIT<'s, 'i, cI>, IdI<'s, 'i, cI>, DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, InstantiationBoundArgumentsI<'s, 'i>)>,
-    pub abstract_func_to_bounds: IndexMap<IdI<'s, 'i, cI>, (DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, InstantiationBoundArgumentsI<'s, 'i>)>,
+    pub abstract_func_to_bounds: IndexMap<IdI<'s, 'i, cI>, (DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, &'i InstantiationBoundArgumentsI<'s, 'i>)>,
     pub interface_to_impl_to_abstract_prototype_to_override: IndexMap<IdI<'s, 'i, cI>, IndexMap<IdI<'s, 'i, cI>, IndexMap<PrototypeI<'s, 'i, cI>, PrototypeI<'s, 'i, cI>>>>,
     pub new_impls: Vec<(IdT<'s, 't>, IdI<'s, 'i, nI>, InstantiationBoundArgumentsI<'s, 'i>)>,
     pub new_abstract_funcs: Vec<(PrototypeT<'s, 't>, PrototypeI<'s, 'i, nI>, usize, IdI<'s, 'i, cI>, InstantiationBoundArgumentsI<'s, 'i>)>,
@@ -182,7 +185,11 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn add_method_to_v_table
 impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub fn add_method_to_v_table(&mut self, impl_id: IdI<'s, 'i, cI>, super_interface_id: IdI<'s, 'i, cI>, abstract_func_prototype: PrototypeI<'s, 'i, cI>, override_: PrototypeI<'s, 'i, cI>) {
-        panic!("Unimplemented: add_method_to_v_table");
+        let map = self.interface_to_impl_to_abstract_prototype_to_override
+            .entry(super_interface_id).or_insert_with(IndexMap::new)
+            .entry(impl_id).or_insert_with(IndexMap::new);
+        assert!(!map.contains_key(&abstract_func_prototype));
+        map.insert(abstract_func_prototype, override_);
     }
 }
 /*
@@ -420,7 +427,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 self.translate_impl(monouts, &impl_id_t, &impl_id_n, instantiation_bounds_for_unsubstituted_impl);
                 true
             } else if !monouts.new_abstract_funcs.is_empty() {
-                panic!("Unimplemented: translate_method while newAbstractFuncs")
+                let (abstract_func_t, abstract_func, virtual_index, interface_id, instantiation_bound_args) = monouts.new_abstract_funcs.remove(0);
+                self.translate_abstract_func(monouts, &interface_id, &abstract_func_t, &abstract_func, virtual_index, instantiation_bound_args);
+                true
             } else {
                 false
             }
@@ -464,8 +473,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         let (sub_citizen, parent_interface, _, _) = monouts.impls.get(impl_id_i).expect("vassertSome: monouts.impls");
                         assert!(parent_interface == interface);
                         let abstract_func_to_virtual_index = monouts.interface_to_abstract_func_to_virtual_index.get(interface).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
-                        let abstract_func_prototype_to_override_prototype = abstract_func_to_virtual_index.iter().map(|(_abstract_func_prototype, _virtual_index)| -> (IdI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>) {
-                            panic!("translate_method interfaceToSubCitizenToEdge: abstractFuncPrototypeToOverridePrototype branch")
+                        let abstract_func_prototype_to_override_prototype = abstract_func_to_virtual_index.iter().map(|(abstract_func_prototype, virtual_index)| -> (IdI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>) {
+                            let override_prototype = monouts.interface_to_impl_to_abstract_prototype_to_override
+                                .get(interface).expect("vassertSome interface_to_impl_to_abstract_prototype_to_override (interface)")
+                                .get(impl_id_i).expect("vassertSome interface_to_impl_to_abstract_prototype_to_override (impl)")
+                                .get(abstract_func_prototype).expect("vassertSome interface_to_impl_to_abstract_prototype_to_override (abstract_func_prototype)");
+                            assert!(IFunctionNameI::try_from(abstract_func_prototype.id.local_name).unwrap().parameters()[*virtual_index].kind !=
+                                IFunctionNameI::try_from(override_prototype.id.local_name).unwrap().parameters()[*virtual_index].kind);
+                            (abstract_func_prototype.id, self.interner.alloc(*override_prototype))
                         });
                         let edge = EdgeI {
                             edge_id: *impl_id_i,
@@ -1090,11 +1105,83 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_override
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_override(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, _impl_id_c: &IdI<'s, 'i, cI>, _abstract_func_prototype_t: &PrototypeT<'s, 't>, _abstract_func_prototype_c: &PrototypeI<'s, 'i, cI>, _abstract_func_instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        panic!("Unimplemented: translate_override");
+    pub fn translate_override(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, impl_id_t: &IdT<'s, 't>, _impl_id_c: &IdI<'s, 'i, cI>, abstract_func_prototype_t: &PrototypeT<'s, 't>, _abstract_func_prototype_c: &PrototypeI<'s, 'i, cI>, _abstract_func_instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
+        let impl_template_id = Compiler::get_impl_template(self.typing_interner, *impl_id_t);
+        let edge_t = crate::utils::vassert::vassert_one(
+            self.hinputs.interface_to_sub_citizen_to_edge.values()
+                .flat_map(|sub_to_edge| sub_to_edge.values().copied())
+                .filter(|edge| Compiler::get_impl_template(self.typing_interner, edge.edge_id) == impl_template_id));
+        let _edge_id = edge_t.edge_id;
+        let _edge_sub_citizen = edge_t.sub_citizen;
+        let _edge_super_interface = edge_t.super_interface;
+        let edge_abstract_func_to_override_func = &edge_t.abstract_func_to_override_func;
+        let abstract_func_template_name = Compiler::get_function_template(self.typing_interner, abstract_func_prototype_t.id);
+        let abstract_func_placeholdered_name_t = self.hinputs.functions.iter().copied()
+            .find(|func| Compiler::get_function_template(self.typing_interner, func.header.id) == abstract_func_template_name)
+            .expect("vassertSome abstractFuncPlaceholderedNameT")
+            .header.id;
+        let override_t = *edge_abstract_func_to_override_func.get(&abstract_func_placeholdered_name_t).expect("vassertSome OverrideT");
+        let dispatcher_id_t = override_t.dispatcher_call_id;
+        let _impl_placeholder_to_dispatcher_placeholder = override_t.impl_placeholder_to_dispatcher_placeholder;
+        let _impl_placeholder_to_case_placeholder = override_t.impl_placeholder_to_case_placeholder;
+        let _dispatcher_and_case_placeholdered_impl_reachable_prototypes = &override_t.dispatcher_and_case_placeholdered_impl_reachable_prototypes;
+        let _dispatcher_case_id_t = override_t.case_id;
+        let _override_prototype_t = override_t.override_prototype;
+        let _dispatcher_instantiation_bound_params = override_t.dispatcher_instantiation_bound_params;
+        let _dispatcher_template_id = Compiler::get_template(self.typing_interner, dispatcher_id_t);
+        let dispatcher_template_args = crate::typing::names::names::IInstantiationNameT::try_from(dispatcher_id_t.local_name).unwrap().template_args();
+        let dispatcher_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
+            dispatcher_template_args.iter().map(|_dispatcher_placeholder_templata| {
+                panic!("translate_override: dispatcher template args closure body");
+            }).collect();
+        let case_local_name = match _dispatcher_case_id_t.local_name {
+            crate::typing::names::names::INameT::OverrideDispatcherCase(n) => n,
+            _ => panic!("translate_override: dispatcher_case_id_t.local_name not OverrideDispatcherCase"),
+        };
+        let dispatcher_case_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
+            case_local_name.independent_impl_template_args.iter().enumerate().map(|(_index, _case_placeholder_templata)| {
+                panic!("translate_override: case placeholder closure body");
+            }).collect();
+        let dispatcher_placeholder_id_to_supplied_templata_map: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
+            dispatcher_placeholder_id_to_supplied_templata.iter().copied().collect();
+        let dispatcher_case_placeholder_id_to_supplied_templata_map: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
+            dispatcher_case_placeholder_id_to_supplied_templata.iter().copied().collect();
+        assert!(dispatcher_placeholder_id_to_supplied_templata_map.len() + dispatcher_case_placeholder_id_to_supplied_templata_map.len() ==
+            dispatcher_placeholder_id_to_supplied_templata_map.iter().chain(dispatcher_case_placeholder_id_to_supplied_templata_map.iter()).map(|(k, _)| *k).collect::<std::collections::HashSet<_>>().len());
+        let mut _case_substitutions: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = dispatcher_placeholder_id_to_supplied_templata_map.clone();
+        _case_substitutions.extend(dispatcher_case_placeholder_id_to_supplied_templata_map.iter().map(|(k, v)| (*k, *v)));
+
+        let impl_rune_to_impl_instantiation_bound_args = &_monouts.impls.get(_impl_id_c).expect("vassertSome monouts.impls").3;
+        let _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl: std::collections::HashMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>> =
+            _dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().flat_map(|(rune_in_impl, citizen_rune_to_bound)| {
+                citizen_rune_to_bound.iter().map(move |(rune_in_citizen, prototype_t)| {
+                    let _ = (rune_in_impl, rune_in_citizen, prototype_t, impl_rune_to_impl_instantiation_bound_args);
+                    panic!("translate_override: bound_param_prototype_t_to_bound_arg_prototype_i_from_impl closure body");
+                })
+            }).collect();
+        let dispatcher_instantiation_bound_params_to_args = Self::assemble_instantiation_bound_param_to_arg(_dispatcher_instantiation_bound_params, _abstract_func_instantiation_bound_args);
+
+        let mut bound_param_func_id_to_bound_arg_index_map: IndexMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>> = IndexMap::new();
+        for (k, v) in _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl.iter() {
+            bound_param_func_id_to_bound_arg_index_map.insert(*k, *v);
+        }
+        let extra_bounds = DenizenBoundToDenizenCallerBoundArgI {
+            func_id_to_bound_arg_prototype: bound_param_func_id_to_bound_arg_index_map,
+            bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+        };
+        let case_instantiation_bound_params_to_args = dispatcher_instantiation_bound_params_to_args.plus(&extra_bounds);
+
+        let case_substitutions_idx: IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = _case_substitutions.iter().map(|(k, v)| (*k, *v)).collect();
+        let (_override_prototype_s, override_prototype_c) =
+            self.translate_prototype(_monouts, &_dispatcher_case_id_t, &case_instantiation_bound_params_to_args, &case_substitutions_idx, &RegionT { region: IRegionT::Default }, &_override_prototype_t);
+
+        let super_interface_id = _monouts.impls.get(_impl_id_c).expect("vassertSome monouts.impls").1;
+        _monouts.add_method_to_v_table(*_impl_id_c, super_interface_id, *_abstract_func_prototype_c, override_prototype_c);
     }
 }
 /*
+Guardian: temp-disable: TUCMPX — Scala-faithful literal. Scala source has `Map())) // TODO: Catch impls up` at lines 1361-1363 — the empty map IS the literal Scala value with a TODO annotation; replacing with panic would diverge from Scala. Strict parity preserves Scala semantics. Once the upstream "catch impls up" TODO is resolved in Scala, both will update together. — FrontendRust/guardian-logs/request-1434-1780525648196/hook-1434/translate_override--1086.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
+Guardian: temp-disable: SPDMX — Rust static-narrowing recovery. Scala's dispatcherCaseIdT is statically IdT[OverrideDispatcherCaseNameT] via the OverrideT destructure, so localName.independentImplTemplateArgs is direct field access on the narrowed concrete struct. Rust's IdT erases the parameter, so we recover the narrowing with a match + catch-all panic. Exception R covers the catch-all. In-tree precedents: KindHT::expect_struct_h, CoordH::expect_struct_coord, and IInstantiationNameT::template_args at typing/names/names.rs:552. — FrontendRust/guardian-logs/request-1402-1780524645157/hook-1402/translate_override--1086.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateOverride(
     opts: GlobalOptions,
     interner: Interner,
@@ -1514,8 +1601,37 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_abstract_func
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_abstract_func(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_c: &IdI<'s, 'i, cI>, _desired_abstract_prototype_t: &PrototypeT<'s, 't>, _desired_abstract_prototype_n: &PrototypeI<'s, 'i, nI>, _virtual_index: usize, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
-        panic!("Unimplemented: translate_abstract_func");
+    pub fn translate_abstract_func(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, interface_id_c: &IdI<'s, 'i, cI>, desired_abstract_prototype_t: &PrototypeT<'s, 't>, desired_abstract_prototype_n: &PrototypeI<'s, 'i, nI>, virtual_index: usize, supplied_bound_args: InstantiationBoundArgumentsI<'s, 'i>) {
+        // sI/cI/nI are compile-time tracking only, see CCFCTS.
+        let desired_abstract_prototype_s: PrototypeI<'s, 'i, sI> = unsafe { std::mem::transmute(*desired_abstract_prototype_n) };
+        let desired_abstract_prototype_c =
+            crate::instantiating::region_collapser_individual::collapse_prototype(self.interner, &desired_abstract_prototype_s);
+
+        let desired_super_template_id = Compiler::get_super_template(self.typing_interner, desired_abstract_prototype_t.id);
+        let func_t = crate::utils::vassert::vassert_one(self.hinputs.functions.iter().copied().filter(|f| {
+            Compiler::get_super_template(self.typing_interner, f.header.id) == desired_super_template_id
+        }));
+
+        let denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself =
+            Self::assemble_instantiation_bound_param_to_arg(&func_t.instantiation_bound_params, &supplied_bound_args);
+
+        let _args_m: Vec<KindIT<'s, 'i, sI>> = IFunctionNameI::try_from(desired_abstract_prototype_s.id.local_name).unwrap().parameters().iter().map(|c| c.kind).collect();
+        let _params_t: Vec<crate::typing::types::types::KindT<'s, 't>> = func_t.header.params.iter().map(|p| p.tyype.kind).collect();
+
+        let denizen_bound_to_denizen_caller_supplied_thing = denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself;
+
+        assert!(!monouts.abstract_func_to_bounds.contains_key(&desired_abstract_prototype_c.id));
+        let supplied_bound_args_ref: &'i InstantiationBoundArgumentsI<'s, 'i> = self.interner.bump().alloc(supplied_bound_args);
+        monouts.abstract_func_to_bounds.insert(desired_abstract_prototype_c.id, (denizen_bound_to_denizen_caller_supplied_thing, supplied_bound_args_ref));
+
+        let abstract_funcs = monouts.interface_to_abstract_func_to_virtual_index.get_mut(interface_id_c).expect("vassertSome interface_to_abstract_func_to_virtual_index");
+        assert!(!abstract_funcs.contains_key(&desired_abstract_prototype_c));
+        abstract_funcs.insert(desired_abstract_prototype_c, virtual_index);
+
+        let impls = monouts.interface_to_impls.get(interface_id_c).expect("vassertSome interface_to_impls").clone();
+        for (impl_t, impl_) in impls.iter() {
+            self.translate_override(monouts, impl_t, impl_, desired_abstract_prototype_t, &desired_abstract_prototype_c, supplied_bound_args_ref);
+        }
     }
 }
 /*
@@ -3453,7 +3569,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (type_s, result_ce)
             }
             ReferenceExpressionTE::ArrayLength(_) => panic!("Unimplemented: translate_ref_expr ArrayLength"),
-            ReferenceExpressionTE::InterfaceFunctionCall(_) => panic!("Unimplemented: translate_ref_expr InterfaceFunctionCall"),
+            ReferenceExpressionTE::InterfaceFunctionCall(ifc) => {
+                let crate::typing::ast::expressions::InterfaceFunctionCallTE { super_function_prototype: super_function_prototype_t, virtual_param_index, result_reference: _result_reference, args } = **ifc;
+                let (super_function_prototype_i, super_function_prototype_c) =
+                    self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, super_function_prototype_t);
+                let result_it = super_function_prototype_i.return_type;
+                let args_ce: Vec<ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg| {
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg).1
+                }).collect();
+                let result_ce = ReferenceExpressionIE::InterfaceFunctionCall(self.interner.bump().alloc(crate::instantiating::ast::expressions::InterfaceFunctionCallIE {
+                    super_function_prototype: self.interner.bump().alloc(super_function_prototype_c),
+                    virtual_param_index,
+                    args: self.interner.alloc_slice_from_vec(args_ce),
+                    result: region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                let interface_id_c = super_function_prototype_c.param_types()[virtual_param_index as usize].kind.expect_interface().id;
+                let instantiation_bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, self.hinputs.get_instantiation_bound_args(super_function_prototype_t.id));
+                let super_function_prototype_n =
+                    crate::instantiating::region_collapser_consistent::collapse_prototype(
+                        self.interner,
+                        crate::instantiating::region_counter::count_prototype_map(&super_function_prototype_i),
+                        &super_function_prototype_i);
+                assert!(crate::instantiating::region_collapser_individual::collapse_prototype(self.interner, &super_function_prototype_n) == super_function_prototype_c);
+                monouts.new_abstract_funcs.push((*super_function_prototype_t, super_function_prototype_n, virtual_param_index as usize, interface_id_c, instantiation_bound_args));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::ExternFunctionCall(efc) => {
                 let crate::typing::ast::expressions::ExternFunctionCallTE { prototype2, args } = **efc;
                 let (prototype_i, prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);

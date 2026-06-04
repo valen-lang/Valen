@@ -1339,7 +1339,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::StaticSizedArrayLoadH(s) => s.result_type,
             ExpressionH::CallH(c) => c.function.return_type,
             ExpressionH::ExternCallH(c) => c.function.return_type,
-            ExpressionH::InterfaceCallH(_) => panic!("Unimplemented: result_type for InterfaceCallH"),
+            ExpressionH::InterfaceCallH(c) => c.function_type.return_type,
             ExpressionH::IfH(i) => i.common_supertype,
             ExpressionH::WhileH(w) => match w.body_block.result_type().kind {
                 KindHT::VoidHT(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },

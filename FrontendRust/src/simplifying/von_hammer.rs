@@ -461,7 +461,14 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_interface(&self, r#ref: &InterfaceHT<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_interface");
+        let crate::final_ast::types::InterfaceHT { id: full_name, .. } = *r#ref;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "InterfaceId".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "name".to_string(), value: self.vonify_name(full_name) },
+            ],
+        })
     }
 }
 /*
@@ -484,7 +491,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         interface_method_h: &InterfaceMethodH<'s, 'h>,
     ) -> IVonData {
-        panic!("Unimplemented: vonify_interface_method");
+        let crate::final_ast::ast::InterfaceMethodH { prototype_h: prototype, virtual_param_index } = *interface_method_h;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "InterfaceMethod".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "prototype".to_string(), value: self.vonify_prototype(prototype) },
+                crate::von::ast::VonMember { field_name: "virtualParamIndex".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: virtual_param_index as i64 }) },
+            ],
+        })
     }
 }
 /*
@@ -506,7 +521,19 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_interface_def(&self, interface: &InterfaceDefinitionH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_interface_def");
+        let crate::final_ast::ast::InterfaceDefinitionH { id: full_name, weakable, mutability, super_interfaces, methods: prototypes } = *interface;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Interface".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "name".to_string(), value: self.vonify_name(full_name) },
+                crate::von::ast::VonMember { field_name: "kind".to_string(), value: self.vonify_interface(interface.get_ref(self.interner)) },
+                crate::von::ast::VonMember { field_name: "weakable".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: weakable }) },
+                crate::von::ast::VonMember { field_name: "mutability".to_string(), value: self.vonify_mutability(mutability) },
+                crate::von::ast::VonMember { field_name: "superInterfaces".to_string(), value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: super_interfaces.iter().map(|i| self.vonify_interface(i)).collect() }) },
+                crate::von::ast::VonMember { field_name: "methods".to_string(), value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: prototypes.iter().map(|p| self.vonify_interface_method(p)).collect() }) },
+            ],
+        })
     }
 }
 /*
@@ -713,7 +740,31 @@ impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn vonify_edge(&self, edge_h: &EdgeH<'s, 'h>) -> IVonData {
-        panic!("Unimplemented: vonify_edge");
+        let crate::final_ast::ast::EdgeH { struct_, interface, struct_prototypes_by_interface_method } = *edge_h;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "Edge".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "structName".to_string(), value: self.vonify_struct_h(struct_) },
+                crate::von::ast::VonMember { field_name: "interfaceName".to_string(), value: self.vonify_interface(interface) },
+                crate::von::ast::VonMember {
+                    field_name: "methods".to_string(),
+                    value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                        id: None,
+                        members: struct_prototypes_by_interface_method.iter().map(|(interface_method, struct_prototype)| {
+                            crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                                tyype: "Entry".to_string(),
+                                id: None,
+                                members: vec![
+                                    crate::von::ast::VonMember { field_name: "method".to_string(), value: self.vonify_interface_method(interface_method) },
+                                    crate::von::ast::VonMember { field_name: "override".to_string(), value: self.vonify_prototype(struct_prototype) },
+                                ],
+                            })
+                        }).collect(),
+                    }),
+                },
+            ],
+        })
     }
 }
 /*
@@ -1152,7 +1203,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::StructToInterfaceUpcastH(_) => panic!("vonify_expression: StructToInterfaceUpcastH"),
+            ExpressionH::StructToInterfaceUpcastH(si) => {
+                let crate::final_ast::instructions::StructToInterfaceUpcastH { source_expression: source_expr, target_interface: target_interface_ref } = *si;
+                let source_struct_kind = match source_expr.result_type().kind {
+                    crate::final_ast::types::KindHT::StructHT(sr) => self.vonify_struct_h(sr),
+                    _ => panic!("vonify_expression: StructToInterfaceUpcastH source.result_type.kind not StructHT"),
+                };
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "StructToInterfaceUpcast".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceStructType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceStructKind".to_string(), value: source_struct_kind },
+                        crate::von::ast::VonMember { field_name: "targetInterfaceType".to_string(), value: self.vonify_coord(ExpressionH::StructToInterfaceUpcastH(si).result_type()) },
+                        crate::von::ast::VonMember { field_name: "targetInterfaceKind".to_string(), value: self.vonify_interface(target_interface_ref) },
+                    ],
+                })
+            }
             ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("vonify_expression: InterfaceToInterfaceUpcastH"),
             ExpressionH::LocalStoreH(s) => {
                 let crate::final_ast::instructions::LocalStoreH { local, source_expression: source_expr, local_name } = *s;
@@ -1276,7 +1344,20 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::InterfaceCallH(_) => panic!("vonify_expression: InterfaceCallH"),
+            ExpressionH::InterfaceCallH(c) => {
+                let crate::final_ast::instructions::InterfaceCallH { args_expressions: args_exprs, virtual_param_index, interface_h: interface_ref_h, index_in_edge, function_type } = *c;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "InterfaceCall".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "argExprs".to_string(), value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: args_exprs.iter().map(|e| self.vonify_expression(*e)).collect() }) },
+                        crate::von::ast::VonMember { field_name: "virtualParamIndex".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: virtual_param_index as i64 }) },
+                        crate::von::ast::VonMember { field_name: "interfaceRef".to_string(), value: self.vonify_interface(interface_ref_h) },
+                        crate::von::ast::VonMember { field_name: "indexInEdge".to_string(), value: crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: index_in_edge as i64 }) },
+                        crate::von::ast::VonMember { field_name: "functionType".to_string(), value: self.vonify_prototype(function_type) },
+                    ],
+                })
+            }
             ExpressionH::IfH(i) => {
                 let crate::final_ast::instructions::IfH { condition_block, then_block, else_block, common_supertype } = *i;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

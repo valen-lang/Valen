@@ -72,7 +72,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::ConstantFloat(x) => x.result(),
             ReferenceExpressionIE::ArgLookup(x) => x.coord,
             ReferenceExpressionIE::ArrayLength(_) => panic!("RE::result: ArrayLength"),
-            ReferenceExpressionIE::InterfaceFunctionCall(_) => panic!("RE::result: InterfaceFunctionCall"),
+            ReferenceExpressionIE::InterfaceFunctionCall(x) => x.result,
             ReferenceExpressionIE::ExternFunctionCall(e) => e.result,
             ReferenceExpressionIE::FunctionCall(c) => c.result,
             ReferenceExpressionIE::Reinterpret(_) => panic!("RE::result: Reinterpret"),
@@ -1440,7 +1440,7 @@ impl<'s, 'i, R> AddressMemberLookupIE<'s, 'i, R> {
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceFunctionCallIE<'s, 'i, R> {
-	pub super_function_prototype: PrototypeI<'s, 'i, R>,
+	pub super_function_prototype: &'i PrototypeI<'s, 'i, R>,
 	pub virtual_param_index: i32,
 	pub args: &'i[ReferenceExpressionIE<'s, 'i, R>],
 	pub result: CoordI<'s, 'i, R>,

@@ -110,7 +110,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (access, Vec::new())
                 }
                 RE::PreCheckBorrow(p) => panic!("translate_expression: PreCheckBorrow branch"),
-                RE::InterfaceFunctionCall(ic) => panic!("translate_expression: InterfaceFunctionCall branch"),
+                RE::InterfaceFunctionCall(ic) => {
+                    let crate::instantiating::ast::expressions::InterfaceFunctionCallIE { super_function_prototype, virtual_param_index, args: args_exprs2, result: result_type2 } = *ic;
+                    let args_exprs2_ie: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = args_exprs2.iter().map(|e| crate::instantiating::ast::expressions::ExpressionIE::Reference(*e)).collect();
+                    let access = self.translate_interface_function_call(hinputs, hamuts, current_function_header, locals, self.interner.alloc(super_function_prototype), virtual_param_index, result_type2, &args_exprs2_ie);
+                    (access, Vec::new())
+                }
                 RE::Consecutor(c) => {
                     let exprs_ie = c.exprs;
                     let mut exprs_he: Vec<ExpressionH<'s, 'h>> = Vec::new();
@@ -1776,7 +1781,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         args_exprs2: &[ExpressionIE<'s, 'i, cI>],
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_interface_function_call");
+        let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, args_exprs2);
+        if !args_he.is_empty() && matches!(args_he.last().unwrap().result_type().kind, crate::final_ast::types::KindHT::NeverHT(crate::final_ast::types::NeverHT { from_break: false, .. })) {
+            return crate::simplifying::hammer::consecrash(self.interner, locals, &args_he);
+        }
+        let interface_it = match super_function_prototype.param_types()[virtual_param_index as usize].kind {
+            crate::instantiating::ast::types::KindIT::InterfaceIT(ii) => ii,
+            _ => panic!("translate_interface_function_call: param.kind not InterfaceIT"),
+        };
+        let interface_ref_h = self.translate_interface(hinputs, hamuts, interface_it);
+        let edge = hinputs.interface_to_edge_blueprints.get(&interface_it.id).expect("vassertSome interface_to_edge_blueprints");
+        assert!(edge.interface == interface_it.id);
+        let index_in_edge = edge.super_family_root_headers.iter().position(|(p, _)| p.to_signature() == super_function_prototype.to_signature()).expect("indexInEdge >= 0") as i32;
+        let prototype_h = self.translate_prototype(hinputs, hamuts, super_function_prototype);
+        let call_node = ExpressionH::InterfaceCallH(self.interner.alloc(crate::final_ast::instructions::InterfaceCallH {
+            args_expressions: self.interner.bump().alloc_slice_copy(&args_he),
+            virtual_param_index,
+            interface_h: interface_ref_h,
+            index_in_edge,
+            function_type: prototype_h,
+        }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_node, args_deferreds)
     }
 }
 /*

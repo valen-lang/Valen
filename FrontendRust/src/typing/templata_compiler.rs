@@ -276,13 +276,13 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_function_template(
-        &self,
+        interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         let func_name = IFunctionNameT::try_from(id.local_name)
             .unwrap_or_else(|_| panic!("get_function_template: not a function name: {:?}", id.local_name));
         let template_local: INameT<'s, 't> = ITemplateNameT::from(func_name.template()).into();
-        *self.typing_interner.intern_id(IdValT {
+        *interner.intern_id(IdValT {
             package_coord: id.package_coord,
             init_steps: id.init_steps,
             local_name: template_local,

@@ -1,3 +1,4 @@
+/*
 package dev.vale
 
 import scala.collection.mutable
@@ -250,6 +251,29 @@ object U {
     result.toMap
   }
 
+*/
+// mig: fn union_maps_expect_no_conflict
+pub fn union_maps_expect_no_conflict<K, V, F>(
+    a: &indexmap::IndexMap<K, V>,
+    b: &indexmap::IndexMap<K, V>,
+    equator: F,
+) -> indexmap::IndexMap<K, V>
+where K: Copy + Eq + std::hash::Hash, V: Copy, F: Fn(V, V) -> bool,
+{
+    let mut result: indexmap::IndexMap<K, V> = indexmap::IndexMap::new();
+    for (k, v) in a {
+        result.insert(*k, *v);
+    }
+    for (k, v) in b {
+        match result.get(k) {
+            None => {}
+            Some(previous_value) => assert!(equator(*v, *previous_value)),
+        }
+        result.insert(*k, *v);
+    }
+    result
+}
+/*
   def unionMapsExpectNoConflict[K, V](a: Map[K, V], b: Map[K, V], equator: (V, V) => Boolean): Map[K, V] = {
     val result = mutable.HashMap[K, V]()
     U.foreachMap[K, V](a, (k, v) => {
@@ -322,3 +346,4 @@ object U {
         .toArray // TODO: optimize
   }
 }
+*/

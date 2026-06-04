@@ -132,7 +132,15 @@ pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: 
   }
 */
 // mig: fn upcast
-pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_interface_ref: InterfaceHT<'s, 'h>) -> ReferenceV<'v, 'h, 's> { panic!("Unimplemented: upcast"); }
+pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_interface_ref: &'h InterfaceHT<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    ReferenceV {
+        actual_kind: source_reference.actual_kind,
+        seen_as_kind: crate::testvm::values::RRKindV { hamut: crate::final_ast::types::KindHT::InterfaceHT(target_interface_ref), _phantom: std::marker::PhantomData },
+        ownership: source_reference.ownership,
+        location: source_reference.location,
+        num: source_reference.num,
+    }
+}
 /*
   def upcast(sourceReference: ReferenceV, targetInterfaceRef: InterfaceHT): ReferenceV = {
     ReferenceV(
@@ -730,6 +738,40 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 }
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
+        ExpressionH::InterfaceCallH(ifc) => {
+            let crate::final_ast::instructions::InterfaceCallH { args_expressions: args_exprs, virtual_param_index, interface_h: interface_ref_h, index_in_edge, function_type } = **ifc;
+            let undeviewed_arg_references: Vec<ReferenceV<'v, 'h, 's>> = args_exprs.iter().enumerate().map(|(i, arg_expr)| {
+                match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
+                    INodeExecuteResultV::Return(_) => panic!("InterfaceCallH arg produced Return — vimpl"),
+                    INodeExecuteResultV::Break(_) => panic!("InterfaceCallH arg produced Break — vwat"),
+                    INodeExecuteResultV::Continue(c) => c.result_ref,
+                }
+            }).collect();
+            {
+                let handle = &mut *heap.vivem_dout;
+                writeln!(handle).unwrap();
+                writeln!(handle, "{}Making new stack frame (icall)", "  ".repeat(call_id.call_depth as usize)).unwrap();
+            }
+            for r in &undeviewed_arg_references {
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: r.ownership }), *r);
+            }
+            let (_function_h, (callee_call_id, retuurn)) =
+                execute_interface_function(program_h, interner, scout_arena, stdin, stdout, heap, heap.vivem_bump.alloc_slice_copy(&undeviewed_arg_references), virtual_param_index, *interface_ref_h, index_in_edge, *function_type);
+            let return_ref = match retuurn {
+                INodeExecuteResultV::Return(ref r) => possess_callee_return(heap, call_id, callee_call_id, r),
+                _ => panic!("InterfaceCallH: callee did not return"),
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
+        }
+        ExpressionH::StructToInterfaceUpcastH(siu) => {
+            let crate::final_ast::instructions::StructToInterfaceUpcastH { source_expression: source_expr, target_interface: target_interface_ref } = **siu;
+            let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let target_reference = upcast(source_reference, target_interface_ref);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: target_reference })
         }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
@@ -1828,7 +1870,38 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn F
   }
 */
 // mig: fn execute_interface_function
-pub fn execute_interface_function<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, stdin: &dyn Fn() -> String, stdout: &dyn Fn(String), heap: &mut HeapV<'v, 'h, 's>, undeviewed_arg_references: &[ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)) { panic!("Unimplemented: execute_interface_function"); }
+pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, undeviewed_arg_references: &'v [ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> (FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)) {
+    let interface_reference = undeviewed_arg_references[virtual_param_index as usize];
+    let edge = match heap.dereference(interface_reference, true) {
+        KindV::StructInstance(struct_h) => struct_h.struct_h.edges.iter().find(|e| e.interface == &interface_ref_h).expect("vassertSome edge"),
+        _ => panic!("execute_interface_function: not a StructInstance"),
+    };
+    let crate::testvm::values::ReferenceV { actual_kind: actual_struct, seen_as_kind: actual_interface_kind, ownership: actual_ownership, location: actual_location, num: alloc_num } = interface_reference;
+    assert!(actual_interface_kind.hamut == crate::final_ast::types::KindHT::InterfaceHT(&interface_ref_h));
+    let struct_reference = crate::testvm::values::ReferenceV {
+        actual_kind: actual_struct,
+        seen_as_kind: actual_struct,
+        ownership: actual_ownership,
+        location: actual_location,
+        num: alloc_num,
+    };
+    let prototype_h = *edge.struct_prototypes_by_interface_method.values().nth(index_in_edge as usize).expect("vassertSome prototypeH");
+    let function_h = program_h.lookup_function(prototype_h);
+    let actual_prototype = function_h.prototype;
+    let expected_prototype = function_type;
+    for (index, _arg_reference) in undeviewed_arg_references.iter().enumerate() {
+        if index as i32 != virtual_param_index {
+            let _actual_function_param_type = actual_prototype.params[index];
+            let _expected_function_param_type = expected_prototype.params[index];
+            panic!("Exception P: per-arg-param assertion loop unmigrated (index={})", index);
+        }
+    }
+    let mut deviewed_arg_references: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>> = undeviewed_arg_references.to_vec();
+    deviewed_arg_references[virtual_param_index as usize] = struct_reference;
+    let deviewed_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&deviewed_arg_references);
+    let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, deviewed_slice, function_h);
+    (*function_h, (callee_call_id, INodeExecuteResultV::Return(retuurn)))
+}
 /*
   private def executeInterfaceFunction(
       programH: ProgramH,
@@ -1935,7 +2008,19 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simpl
                             cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref);
                         }
                     }
-                    KindHT::InterfaceHT(_) => panic!("cleanup: InterfaceHT — pilot doesn't exercise"),
+                    KindHT::InterfaceHT(_ir) => {
+                        let actual_concrete_type = match actual_reference.actual_kind.hamut {
+                            KindHT::StructHT(sr) => sr,
+                            _ => panic!("cleanup: InterfaceHT actual_kind not StructHT"),
+                        };
+                        let struct_def = program_h.lookup_struct(interner, actual_concrete_type);
+                        let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
+                        let member_refs = heap.destructure(actual_reference);
+                        assert_eq!(member_expected_types.len(), member_refs.len());
+                        for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
+                            cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref);
+                        }
+                    }
                     KindHT::RuntimeSizedArrayHT(_) => panic!("cleanup: RuntimeSizedArrayHT — pilot doesn't exercise"),
                     KindHT::StaticSizedArrayHT(ssa_ht) => {
                         let element_refs = heap.destructure_array(actual_reference);

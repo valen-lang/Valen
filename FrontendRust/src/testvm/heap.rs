@@ -1604,7 +1604,19 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                     panic!("Expected {:?} but was {:?}", array_h, type_h_array.type_h);
                 }
             }
-            other => panic!("check_kind: mismatch {:?}", std::mem::discriminant(&other.1)),
+            (KindV::StructInstance(struct_def_h), ir_h @ KindHT::InterfaceHT(_)) => {
+                let interface_h = match ir_h {
+                    KindHT::InterfaceHT(i) => i,
+                    _ => unreachable!(),
+                };
+                let struct_implements_interface = struct_def_h.struct_h.edges.iter().any(|e| e.interface == interface_h);
+                if !struct_implements_interface {
+                    panic!("Struct {:?} doesnt implement interface {:?}", struct_def_h.struct_h.get_ref(interner), interface_h);
+                }
+            }
+            (a, b) => {
+                panic!("Mismatch! {:?} is not a {:?}", a, b);
+            }
         }
     }
 }

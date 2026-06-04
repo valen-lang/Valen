@@ -280,7 +280,7 @@ object Allocation {
 */
 // mig: enum KindV<'v, 'h, 's>
 /// Temporary state
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum KindV<'v, 'h, 's> {
   Void(VoidV),
   Int(IntV<'v, 'h, 's>),
@@ -472,6 +472,7 @@ impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
 */
 // mig: struct StructInstanceV<'v, 'h, 's>
 /// Temporary state
+#[derive(Debug)]
 pub struct StructInstanceV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -539,6 +540,7 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
 */
 // mig: struct ArrayInstanceV<'v, 'h, 's>
 /// Temporary state
+#[derive(Debug)]
 pub struct ArrayInstanceV<'v, 'h, 's> {
   pub type_h: CoordH<'s, 'h>,
   pub element_type_h: CoordH<'s, 'h>,

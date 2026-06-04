@@ -135,9 +135,76 @@ fn simple_program_containing_a_virtual_function() {
 */
 // mig: fn can_call_virtual_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn can_call_virtual_function() {
-    panic!("Unmigrated test: can_call_virtual_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nsealed interface I  {}\nfunc doThing(virtual i I) int { return 4; }\nfunc main(i I) int {\n  return doThing(i);\n}\n",
+    );
+    let interner = compile.interner;
+    let coutputs = compile.expect_compiler_outputs();
+    let _keywords_ref = &keywords;
+
+    assert_eq!(coutputs.get_all_user_functions().len(), 2);
+    assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
+        crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        });
+
+    let test_tld = crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
+    let interface_template = interner.intern_interface_template_name(crate::typing::names::names::InterfaceTemplateNameT {
+        human_namee: scout_arena.intern_str("I"),
+        _phantom: std::marker::PhantomData,
+    });
+    let interface_name = interner.intern_interface_name(crate::typing::names::names::InterfaceNameValT {
+        template: interface_template,
+        template_args: &[],
+    });
+    let interface_id = interner.intern_id(crate::typing::names::names::IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Interface(interface_name),
+    });
+    let interface_tt = interner.intern_interface_tt(crate::typing::types::types::InterfaceTTValT { id: *interface_id });
+    let i_coord = crate::typing::types::types::CoordT {
+        ownership: crate::typing::types::types::OwnershipT::Own,
+        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+        kind: crate::typing::types::types::KindT::Interface(interface_tt),
+    };
+    let do_thing_template = interner.intern_function_template_name(crate::typing::names::names::FunctionTemplateNameT {
+        human_name: scout_arena.intern_str("doThing"),
+        code_location: crate::utils::range::CodeLocationS {
+            file: scout_arena.intern_file_coordinate(
+                scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]),
+                "0.vale"),
+            offset: 24,
+        },
+        _phantom: std::marker::PhantomData,
+    });
+    let do_thing_name = interner.intern_function_name(crate::typing::names::names::FunctionNameValT {
+        template: do_thing_template,
+        template_args: &[],
+        parameters: &[i_coord],
+    });
+    let do_thing_id = interner.intern_id(crate::typing::names::names::IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Function(do_thing_name),
+    });
+    let do_thing = coutputs.lookup_function_by_signature(
+        crate::typing::ast::ast::SignatureT { id: *do_thing_id }).expect("vassertSome");
+    assert_eq!(do_thing.header.params[0].virtuality, Some(crate::typing::ast::ast::AbstractT));
 }
 /*
   test("Can call virtual function") {
@@ -351,9 +418,30 @@ fn struct_repeating_generic_params_for_interface() {
 */
 // mig: fn imm_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn imm_interface() {
-    panic!("Unmigrated test: imm_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/virtuals/interfaceimm.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Imm interface") {

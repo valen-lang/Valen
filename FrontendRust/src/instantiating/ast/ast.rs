@@ -698,9 +698,9 @@ impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> where 's: 'i {
   def paramTypes: Vector[CoordI[R]] = id.localName.parameters
 */
 // mig: fn to_signature
-impl<'s, 'i, R> PrototypeI<'s, 'i, R> {
-    pub fn to_signature(&self) -> SignatureI<'_, '_, ()> {
-        panic!("Unimplemented: to_signature")
+impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> {
+    pub fn to_signature(&self) -> SignatureIValI<'s, 'i, R> {
+        SignatureIValI { id: self.id }
     }
 }
 /*

@@ -295,7 +295,12 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
 */
 // mig: fn expect_interface
 impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
-  pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i, R> { panic!("Unimplemented: expect_interface"); }
+  pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i, R> {
+    match self {
+      KindIT::InterfaceIT(c) => c,
+      _ => panic!("expect_interface: not an interface"),
+    }
+  }
 }
 /*
   def expectInterface(): InterfaceIT[R] = {

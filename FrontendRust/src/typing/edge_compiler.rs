@@ -534,7 +534,7 @@ where 's: 't,
         abstract_index: i32,
     ) -> Result<OverrideT<'s, 't>, ICompileErrorT<'s, 't>> {
 
-        let abstract_func_template_id = self.get_function_template(abstract_function_prototype.id);
+        let abstract_func_template_id = Compiler::get_function_template(self.typing_interner, abstract_function_prototype.id);
         let abstract_function_param_unsubstituted_types = abstract_function_prototype.param_types();
         assert!(abstract_index >= 0);
         let abstract_param_unsubstituted_type = abstract_function_param_unsubstituted_types[abstract_index as usize];
