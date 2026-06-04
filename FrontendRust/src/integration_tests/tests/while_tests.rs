@@ -183,9 +183,26 @@ Guardian: temp-disable: SPDMX — Scala evalForKind has 3 overloads; `_primitive
 */
 // mig: fn tests_a_while_loop_with_a_declaration_in_it
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_a_while_loop_with_a_declaration_in_it() {
-    panic!("Unmigrated test: tests_a_while_loop_with_a_declaration_in_it");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() {\n  while key = __getch(); key != 99 {\n    print(key);\n  }\n}\n",
+    );
+    compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]);
 }
 /*
   test("Tests a while loop with a declaration in it") {
