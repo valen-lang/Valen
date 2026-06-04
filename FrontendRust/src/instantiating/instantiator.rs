@@ -3765,7 +3765,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 }
 /*
 Guardian: temp-disable: TUCMPX — The Scala source itself returns MutableBorrowI unconditionally in this arm — the if/regionIsMutable conditional is commented out in the Scala source (lines 3471-3475 of the audit-trail). This is not unimplemented code; it is faithful 1:1 transcription of the Scala body. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2707-1780143376785/hook-2707/translate_ref_expr--3065.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
-Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough/breakpoint-marker per migration-policy (migrate `vregionmut(x)` → `x`), same precedent as the existing temp-disable for `compose_ownerships` and `translate_coord` in this file. The five Weak arms preserve the Scala-returned values verbatim. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2707-1780143376785/hook-2707/translate_ref_expr--3065.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateRefExpr(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,
@@ -4723,7 +4722,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough/breakpoint-marker per migration-policy (migrate `vregionmut(x)` → `x`, no-arg `vregionmut()` is a TODO/regions-marker no-op), same precedent as the existing temp-disable on translate_coord in this file at line 4581. The five arms preserve the Scala return values verbatim and the `// vregionmut()` comments preserve the audit trail. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2590-1780139831308/hook-2590/compose_ownerships--4166.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def composeOwnerships(outerOwnership: OwnershipT, innerOwnership: OwnershipI, kind: KindIT[sI]) = {
     // TODO: see if we can combine this with the other composeOwnerships function.
     kind match {
@@ -5171,7 +5169,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — vregionmut is a documented passthrough — migration-policy maps `vregionmut(x)` → `x` (TL-confirmed round 25). Scala `case WeakT => vregionmut(WeakI)` faithfully ports to `OwnershipI::Weak`; not a silent omission, not a TODO (a panic would be wrong since vregionmut just returns its arg). — /Volumes/V/Vale/FrontendRust/guardian-logs/request-706-1780023651663/hook-706/translate_coord--3881.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCoord(
     denizenName: IdT[IInstantiationNameT],
     denizenBoundToDenizenCallerSuppliedThing: DenizenBoundToDenizenCallerBoundArgS,

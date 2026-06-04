@@ -137,7 +137,6 @@ where 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct, same as HamutsBox/Hamuts collapse documented in hamuts.rs lines 4-12): Scala's outer `def get(id) = inner.get(id)` delegated to the inner Locals' two-step lookup. Rust collapsed both into a single mutable Locals. The "inner" version's body (typingPassLocals.get → locals.get) IS the collapsed implementation; see the audit-trail `def get(varId: IVarNameI[cI]): Option[Local]` Scala block at hammer.rs:411 which shows the two-step lookup. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1873-1780116603775/hook-1873/next_local_id_number--122.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def get(id: IVarNameI[cI]) = inner.get(id)
 */
 
@@ -163,7 +162,6 @@ where 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct). Scala's outer `def markUnstackified(varId2: IVarNameI[cI]): Unit = { inner = inner.markUnstackified(varId2) }` delegated to the inner Locals which does `markUnstackified(typingPassLocals(varId2))` — i.e. lookup-then-recurse. My port matches the inner collapsed version per the audit-trail `def markUnstackified(varId2: IVarNameI[cI]): Locals = { markUnstackified(typingPassLocals(varId2)) }` at hammer.rs:~225 area. SPDMX Exception Q (god-struct merging) applies — same precedent as get_by_var_name above. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1889-1780116838273/hook-1889/mark_unstackified_by_var_name--160.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markUnstackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markUnstackified(varId2)
   }
@@ -196,7 +194,6 @@ where 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (Locals collapsed LocalsBox+Locals into a single struct). Scala outer `def markUnstackified(varIdH) = inner.markUnstackified(varIdH)` delegated to inner's implementation which does (assert contains varIdH, check not already unstackified, copy with +varIdH). My port matches inner per audit-trail block `def markUnstackified(varIdH: VariableIdH): Locals = { vassert(locals.contains(varIdH)); if (unstackifiedVars.contains(varIdH)) vfail; Locals(typingPassLocals, unstackifiedVars + varIdH, locals, nextLocalIdNumber) }` later in the file. SPDMX Exception Q (god-struct merging) applies — same precedent as get_by_var_name and mark_unstackified_by_var_name above. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1895-1780116978063/hook-1895/mark_unstackified--190.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markUnstackified(varIdH: VariableIdH): Unit = {
     inner = inner.markUnstackified(varIdH)
   }
@@ -235,7 +232,6 @@ where 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented collapsed-Locals architecture (this file lines ~5-12, mirrors hamuts.rs collapse): Scala outer `def addHammerLocal = inner.addHammerLocal(...)` delegates to the inner Locals, whose body (compute new_local_height, new_local_id_number, build VariableIdH+Local, insert) IS what Rust implements directly. SPDMX Exception Q (god-struct merging) precedent: existing temp-disable on `next_local_id_number` at line 140 and the same-shape inlined body in `add_compiler_local` line 306 in this file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-118-1780517043724/hook-118/add_hammer_local--223.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addHammerLocal(
     tyype: CoordH[KindHT],
     variability: Variability):
@@ -732,7 +728,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hammer.rs lines 1-9): sub-hammers like TypeHammer are NOT held as Rust struct fields under the typing-pass `Compiler` god-struct precedent. Their methods are colocated `impl Hammer` blocks, so `typeHammer.translatePrototype(...)` correctly ports to `self.translate_prototype(...)`. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1327-1780102559874/hook-1327/translate--571.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translate(hinputs: HinputsI): ProgramH = {
     val HinputsI(
     interfaces,

@@ -210,7 +210,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Scala outer `def addStructOriginatingFromTypingPass = inner.addStructOriginatingFromTypingPass(...)` delegated to inner, whose body (assert struct_t_to_struct_h.contains, insert struct_def_h into struct_t_to_struct_def_h, push to struct_defs) IS what Rust implements. Same precedent as add_function_export, add_function_extern, forward_declare_function, add_function. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2383-1780133839838/hook-2383/add_struct_originating_from_typing_pass--206.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addStructOriginatingFromTypingPass(structIT: StructIT[cI], structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromTypingPass(structIT, structDefH)
   }
@@ -224,7 +223,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12): there is no HamutsBox/Hamuts split — Scala's outer `def addOpaque(...) = inner.addOpaque(...)` delegates to inner, whose body (vassert !contains + insert) IS what Rust implements directly. Same SPDMX Exception Q precedent as the temp-disables on add_struct_originating_from_typing_pass, forward_declare_struct, add_function_export, etc. in this same file. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-254-1780258356861/hook-254/add_opaque--221.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addOpaque(structIT: StructIT[cI], opaqueH: OpaqueHT): Unit = {
     inner = inner.addOpaque(structIT, opaqueH)
   }
@@ -238,7 +236,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, no HamutsBox/Hamuts split): Scala outer `def addStructOriginatingFromHammer = inner.addStructOriginatingFromHammer(...)` delegates to inner, whose body (vassert !exists + push to struct_defs) IS what Rust implements directly. Same SPDMX Exception Q precedent as the existing temp-disables on add_struct_originating_from_typing_pass and add_opaque in this same file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-959-1780507469623/hook-959/add_struct_originating_from_hammer--235.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromHammer(structDefH)
   }
@@ -300,7 +297,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's HamutsBox.forwardDeclareFunction delegated to inner.forwardDeclareFunction because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. Same precedent as add_function_export (line 330) and add_function_extern (line 360) which already have SPDMX temp-disables for this exact pattern. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1676-1780111880574/hook-1676/forward_declare_function--290.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def forwardDeclareFunction(functionRef2: PrototypeI[cI], functionRefH: FunctionRefH): Unit = {
     inner = inner.forwardDeclareFunction(functionRef2, functionRefH)
   }
@@ -317,7 +313,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Scala outer `def addFunction = inner.addFunction(...)` delegated to inner whose body (assert function_refs.contains, check no existing function with same hammer name, insert) IS what Rust implements. Same precedent as add_function_export, add_function_extern, forward_declare_function above. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1973-1780118809688/hook-1973/add_function--304.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunction(functionRef2: PrototypeI[cI], functionDefH: FunctionH): Unit = {
     inner = inner.addFunction(functionRef2, functionDefH)
   }
@@ -334,7 +329,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"). Same SPDMX Exception Q (god-struct merging) precedent as add_function_export, add_function_extern, add_struct_originating_from_typing_pass, forward_declare_function, etc. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2387-1780133990596/hook-2387/add_kind_export--324.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addKindExport(kind: KindHT, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addKindExport(kind, packageCoordinate, exportedName)
   }
@@ -355,7 +349,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's `HamutsBox.addFunctionExport` delegated to `inner.addFunctionExport` because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. The "inner" delegation has nowhere to go — the mutator IS the collapsed `Hamuts.addFunctionExport` (architect-blessed god-struct, same pattern as the file's other 14 HamutsBox mutators). SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1501-1780107270452/hook-1501/add_function_export--330.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunctionExport(prototype: PrototypeH, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addFunctionExport(prototype, packageCoordinate, exportedName)
   }
@@ -381,7 +374,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12): there is no HamutsBox/Hamuts split — Scala's outer addKindExtern delegates to inner whose body IS reproduced as the audit-trail Scala block immediately below at hamuts.rs:755-792. Same SPDMX Exception Q precedent as add_struct_originating_from_typing_pass, forward_declare_struct, add_function_export, add_opaque just above in this same file. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-261-1780258555057/hook-261/add_kind_extern--364.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addKindExtern(opaqueH: OpaqueHT, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addKindExtern(opaqueH, simpleId, exportedName)
   }
@@ -399,7 +391,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per documented file-top architecture (hamuts.rs lines 4-12, "There is no HamutsBox/Hamuts split"): Scala's `HamutsBox.addFunctionExtern` delegated to `inner.addFunctionExtern` because Scala had a mutable Box wrapping immutable Hamuts; Rust collapsed both into a single mutable Hamuts. Same precedent as `add_function_export` above (line 330) which already has an SPDMX temp-disable for this exact pattern. SPDMX Exception Q (god-struct merging) applies. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1539-1780108002041/hook-1539/add_function_extern--359.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def addFunctionExtern(prototype: PrototypeH, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addFunctionExtern(prototype, simpleId, exportedName)
   }
@@ -418,7 +409,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per migration-policy note: HamutsBox+Hamuts collapsed onto Hamuts in Rust, eliminating Scala's `inner` indirection. The Scala delegates to inner.getStaticSizedArray; the Rust body IS what inner was doing — direct map scan by HT.id pointer-equality. Sibling precedent: add_static_sized_array body is `self.static_sized_arrays.insert(...)` (already accepted Guardian, line 272). — FrontendRust/guardian-logs/request-316-1780506382771/hook-316/get_static_sized_array--414.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getStaticSizedArray(staticSizedArrayTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
     inner.getStaticSizedArray(staticSizedArrayTH)
   }

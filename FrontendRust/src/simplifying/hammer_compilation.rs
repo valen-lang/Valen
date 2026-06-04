@@ -161,7 +161,6 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
   }
 }
 /*
-Guardian: temp-disable: SPDMX — The HammerCompilation struct (hammer_compilation.rs:67-71) explicitly documents dropping vonHammerCache per typing-pass precedent (VonHammer collapsed onto Hammer, nothing to cache); the field does not exist in the Rust struct by design, so the struct literal correctly omits it. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-643-1779915911666/hook-643/new--82.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 */
 // mig: fn get_von_hammer
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
@@ -179,7 +178,6 @@ where 's: 'h, 's: 'i,
   }
 }
 /*
-Guardian: temp-disable: SPDMX — Direct mirror of the in-file VonHammer-collapse precedent at hammer_compilation.rs:165 (already-Guardian-approved SPDMX temp-disable on `new`) and the file-top architecture note at hammer_compilation.rs:96-99 documenting that vonHammerCache was dropped per typing-pass precedent because VonHammer was collapsed onto Hammer. With no cache field, the Rust adaptation constructs a fresh Hammer instance on-demand from the HammerCompilation fields the Scala cache would have copied from. Same recurring pattern. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-829-1780277503285/hook-829/get_von_hammer--171.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getVonHammer() = vassertSome(vonHammerCache)
 */
 
@@ -278,7 +276,6 @@ where 's: 'h, 's: 'i,
   }
 }
 /*
-Guardian: temp-disable: SPDMX — The Scala `vonHammerCache = Some(hammer.vonHammer)` line is intentionally dropped because the VonHammer compiler class was collapsed onto Hammer (no separate VonHammer state), so the field does not exist in the Rust HammerCompilation struct by design — this is the same in-file precedent established by the temp-disable on `new` (hammer_compilation.rs:118) which drops the corresponding `var vonHammerCache` field. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-699-1779918117497/hook-699/get_hamuts--215.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getHamuts(): ProgramH = {
     hamutsCache match {
       case Some(hamuts) => hamuts

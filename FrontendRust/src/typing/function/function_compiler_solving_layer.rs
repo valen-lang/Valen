@@ -844,7 +844,6 @@ where 's: 't,
         }))
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates — SPDMX Exception I. `Result<IResolveFunctionResult, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1182-1778813808483/hook-1182/evaluate_generic_function_from_call_for_prototype--701.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateGenericFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,

@@ -802,7 +802,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Rust adaptation: Scala has subtyping ReferenceExpressionIE extends ExpressionI so `expressionHammer.translate(structExpr2)` auto-upcasts. Rust split the sealed trait into two separate enums (ReferenceExpressionIE / AddressExpressionIE) with `translate_expression` taking the union enum ExpressionIE; the `ExpressionIE::Reference(...)` wrap is the SPDMX Exception C adaptation. Same in-file precedent: translate_addressible_member_load (line ~338) and translate_mundane_member_load (line ~415) in this same file. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-206-1780518777471/hook-206/translate_member_address--759.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // In this, we're basically taking an addressible lookup, in other words,
   // a reference to a box.
   def translateMemberAddress(

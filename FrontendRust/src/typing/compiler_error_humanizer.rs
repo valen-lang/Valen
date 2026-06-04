@@ -483,7 +483,6 @@ pub fn humanize_resolve_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLoc
   panic!("Unimplemented: humanize_resolve_failure");
 }
 /*
-Guardian: temp-disable: SPDMX — SPDMX Exception B: threading scout_arena and typing_interner is required by Rust arena/lifetime rules for downstream calls once this stub is filled in — the params are added now so the call graph compiles. `humanize` (already has these params) calls this function; the params must match. Same pattern as `humanize` itself in this file. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-069-1778966448948/hook-069/humanize_defining_error--442.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeResolveFailure(
     verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -523,7 +522,6 @@ pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocati
   panic!("Unimplemented: humanize_failed_solve");
 }
 /*
-Guardian: temp-disable: SPDMX — SPDMX Exception B: scout_arena and typing_interner are required by Rust arena/lifetime rules for arena-allocating CoordTemplataT/KindTemplataT/IFunctionDeclarationNameS once this stub is filled in. `humanize` calls this with these params; signatures must match for the call graph to compile. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-072-1778966568386/hook-072/humanize_resolving_error--481.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeFailedSolve(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -934,7 +932,6 @@ pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>,
   text
 }
 /*
-Guardian: temp-disable: SPDMX — SPDMX Exception B: scout_arena and typing_interner are needed to arena-allocate CoordTemplataT/KindTemplataT once this stub is filled in. `humanize` already has these params and calls this function; the signatures must match for the call graph to compile. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-076-1778966699959/hook-076/humanize_candidate_and_failed_solve--805.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def humanizeCandidateAndFailedSolve(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],

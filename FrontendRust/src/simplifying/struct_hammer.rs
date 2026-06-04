@@ -433,7 +433,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's `translateReference` is a closure parameter of StructHammer wired in Hammer.scala line 174 to `typeHammer.translateCoord(...)`. Under the SPDMX Exception Q god-struct collapse, the closure indirection vanishes and the call lands on translate_coord — exactly what Scala dispatches to. Same precedent as the existing temp-disable on `translate` in hammer.rs:725. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-2833-1780146824579/hook-2833/translate_member--382.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, member2: StructMemberI):
   (StructMemberH) = {
     val (variability, memberType) =

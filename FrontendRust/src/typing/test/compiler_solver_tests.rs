@@ -242,7 +242,6 @@ fn test_having_drop_function_concept_function() {
     );
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses the +T erasure pattern (design v3 §6.0) where `IdT.local_name: INameT` is widened and use sites narrow via `TryFrom<INameT>` — precedents at infer_compiler.rs:618, templata_compiler.rs:277/1564, overload_resolver.rs:716, ast.rs:1027. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1232-1779031866703/hook-1232/test_having_drop_function_concept_function--123.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Test having drop function concept function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -380,7 +379,6 @@ fn test_rune_type_in_generic_param() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses the +T erasure pattern (design v3 §6.0) where `IdT.local_name: INameT` is widened and use sites narrow via `TryFrom<INameT>` — precedents at infer_compiler.rs:618, templata_compiler.rs:277/1564, overload_resolver.rs:716, ast.rs:1027. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1250-1779032498314/hook-1250/test_rune_type_in_generic_param--332.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Test rune type in generic param") {
     val compile = CompilerTestCompilation.test(
       """
@@ -1237,7 +1235,6 @@ fn assume_most_specific_common_ancestor() {
     assert_eq!(upcasts.len(), 2);
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, `prototype.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses +T erasure (design v3 §6.0): `IdT.local_name: INameT` is widened, narrowed at use sites via match/TryFrom — precedent at compiler_tests.rs:1776 and earlier in this file (test_having_drop_function_concept_function:151). — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1346-1779035154606/hook-1346/assume_most_specific_common_ancestor--1086.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Assume most specific common ancestor") {
     val compile = CompilerTestCompilation.test(
       """
@@ -1573,7 +1570,6 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
     assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT::I32) } })));
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, `header.id` is statically `IdT[IFunctionNameT]` so `templateArgs` is defined on `IFunctionNameT`, not on `INameT`. Rust uses +T erasure (design v3 §6.0): `IdT.local_name: INameT` is widened, narrowed at use sites via match — precedents at compiler_tests.rs:1776 and earlier in this file (test_having_drop_function_concept_function:151). — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-056-1779049047476/hook-056/can_match_kind_templata_type_against_struct_env_entry_struct_templata--1452.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Can match KindTemplataType() against StructEnvEntry / StructTemplata") {
     val compile = CompilerTestCompilation.test(
       """
@@ -1665,7 +1661,6 @@ fn can_destructure_and_assemble_static_sized_array() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, `header.id` and `call.callable.id` are statically `IdT[IFunctionNameT]` so `templateArgs` is on `IFunctionNameT`, not `INameT`. Rust +T erasure (design v3 §6.0) widens to `INameT` and narrows at use sites via match — precedents at compiler_tests.rs:1776 and elsewhere in this file. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-063-1779049245500/hook-063/can_destructure_and_assemble_static_sized_array--1510.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Can destructure and assemble static sized array") {
     val compile = CompilerTestCompilation.test(
       """

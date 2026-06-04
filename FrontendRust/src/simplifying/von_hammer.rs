@@ -902,7 +902,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Per TL 2026-06-03 ruling: KindHT::StaticSizedArrayHT wrapper at the call site is the Rust analog of Scala's implicit subtype relationship — kind() returns the narrow StaticSizedArrayHT, vonify_kind needs the wider KindHT. Same shape as Scala vonifyKind(ssaDef.kind) modulo Rust's lack of subtype lifting. — FrontendRust/guardian-logs/request-342-1780506767392/hook-342/vonify_static_sized_array_definition--834.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def vonifyStaticSizedArrayDefinition(ssaDef: StaticSizedArrayDefinitionHT): IVonData = {
     val StaticSizedArrayDefinitionHT(name, size, mutability, variability, elementType) = ssaDef
     VonObject(
@@ -1505,7 +1504,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Rust narrowing recovery. Scala's MemberLoadH.structExpression has type ExpressionH[StructHT] which statically narrows the kind, so vonifyStructH(structExpr.resultType.kind) typechecks. Rust's ExpressionH erases that, so the match-at-call-site recovers the narrowing. Identical pattern at von_hammer.rs:879 inside vonify_kind. — FrontendRust/guardian-logs/request-669-1780499551710/hook-669/vonify_expression--994.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def vonifyExpression(node: ExpressionH[KindHT]): IVonData = {
     node match {
       case ConstantVoidH() => {

@@ -970,7 +970,6 @@ where 's: 't,
             true)
     }
     /*
-Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; `resolveFunction` does not catch it, so the exception transparently propagates — SPDMX Exception I. Nested `Result<Result<_, FindFunctionFailure>, ICompileErrorT>` is the Rust mirror of that passthrough. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1067-1778812154320/hook-1067/resolve_function--900.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
         override def resolveFunction(
           callingEnv: IInDenizenEnvironmentT,
           state: CompilerOutputs,

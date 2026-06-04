@@ -378,7 +378,6 @@ where 's: 't,
             envs, coutputs, invocation_range, call_location, rune_to_type, rules, &[], &mut solver)
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IResolvingError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IResolvingError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1198-1778814285524/hook-1198/solve_for_resolving--325.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
   //
   // ⚠ Same MKRFA caller contract as makeSolver above. Expression-level `rules` must have
@@ -818,8 +817,6 @@ where 's: 't,
         }))
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IConclusionResolveError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IConclusionResolveError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1120-1778813145341/hook-1120/check_resolving_conclusions_and_resolve--523.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
-Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IResolvingError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IResolvingError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1120-1778813145341/hook-1120/check_resolving_conclusions_and_resolve--523.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def checkResolvingConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,

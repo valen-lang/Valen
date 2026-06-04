@@ -75,7 +75,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Rust-Scala adaptation: Scala uses subtyping (`StackifyH extends ExpressionH`) so `translateMundaneLet`'s `StackifyH` return is auto-upcast to `ExpressionH` at the assignment site. Rust requires explicit enum-variant wrapping (`ExpressionH::StackifyH(...)`); the wrapper preserves Scala semantics 1:1. translate_mundane_let keeps its `&'h StackifyH` return per the sibling Guardian verdict that rejected widening its signature. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1731-1780113318898/hook-1731/translate_let--49.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateLet(
       hinputs: HinputsI,
       hamuts: HamutsBox,
@@ -831,7 +830,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — intern_struct_it_ci(StructITValI { id }) is the canonical interning idiom for going from StructIT-by-value to &StructIT — StructITValI is a parity-neutral single-field wrapper for the intern operation. Same in-tree precedent: instantiator.rs:2448, 3337, 3402; region_collapser_individual.rs:361, 736. Exception B-class (interning + arena ref). — FrontendRust/guardian-logs/request-388-1780419320750/hook-388/translate_destroy--684.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateDestroy(
       hinputs: HinputsI,
       hamuts: HamutsBox,

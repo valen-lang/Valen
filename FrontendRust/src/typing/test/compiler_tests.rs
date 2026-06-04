@@ -5874,7 +5874,6 @@ fn downcast_with_as() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — `FunctionNameT.template` is `&'t FunctionTemplateNameT` (a concrete struct, not the `IFunctionTemplateNameT` enum), so matching on `IFunctionTemplateNameT::FunctionTemplate(t)` is a type error. Accessing `.human_name` directly is the correct Rust adaptation of `FunctionTemplateNameT(StrI("as"), _)` — structurally identical, just without a redundant variant wrapper that doesn't exist in this position. — FrontendRust/guardian-logs/request-043-1778787661065/hook-043/downcast_with_as--4630.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Downcast with as") {
     val compile = CompilerTestCompilation.test(
       """
