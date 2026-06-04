@@ -1337,7 +1337,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::MemberLoadH(m) => m.result_type,
             ExpressionH::NewArrayFromValuesH(n) => n.result_type,
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("Unimplemented: result_type for StaticSizedArrayStoreH"),
-            ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayStoreH"),
+            ExpressionH::RuntimeSizedArrayStoreH(r) => r.result_type,
             ExpressionH::RuntimeSizedArrayLoadH(r) => r.result_type,
             ExpressionH::StaticSizedArrayLoadH(s) => s.result_type,
             ExpressionH::CallH(c) => c.function.return_type,

@@ -502,8 +502,19 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_array(&self, element_address: ElementAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: mutate_array");
+    pub fn mutate_array(&mut self, element_address: ElementAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let ElementAddressV { array_id: array_ref, element_index } = element_address;
+        let allocation = self.objects_by_id.objects_by_id.get(&array_ref).expect("get: not found");
+        match allocation.kind {
+            KindV::ArrayInstance(ai) => {
+                let old_reference = ai.get_element(element_index);
+                self.decrement_reference_ref_count(crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), old_reference);
+                ai.set_element(self.vivem_bump, element_index, reference);
+                self.increment_reference_ref_count(crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), reference);
+                old_reference
+            }
+            _ => panic!("mutate_array: not an ArrayInstance"),
+        }
     }
 }
 /*

@@ -126,7 +126,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
         index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_runtime_sized_array_mutate");
+        let (destination_result_line, destination_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
+        let (index_expr_result_line, index_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
+        let result_type =
+            hamuts.get_runtime_sized_array(
+                destination_result_line.expect_runtime_sized_array_access().result_type().kind.expect_runtime_sized_array_ht())
+                .element_type;
+        // We're storing into a regular reference element of an array.
+        let store_node = ExpressionH::RuntimeSizedArrayStoreH(self.interner.alloc(crate::final_ast::instructions::RuntimeSizedArrayStoreH {
+            array_expression: destination_result_line.expect_runtime_sized_array_access(),
+            index_expression: index_expr_result_line.expect_int_access(),
+            source_expression: source_expr_result_line,
+            result_type,
+        }));
+        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = destination_deferreds;
+        deferreds.extend(index_deferreds);
+        (store_node, deferreds)
     }
 }
 /*

@@ -929,6 +929,37 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             heap.print_kind(crate::testvm::values::KindV::ArrayInstance(&array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
         }
+        ExpressionH::RuntimeSizedArrayStoreH(rsas) => {
+            let crate::final_ast::instructions::RuntimeSizedArrayStoreH { array_expression: array_expr, index_expression: index_expr, source_expression: source_expr, result_type: _ } = **rsas;
+            let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let index_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &index_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let source_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 2), &source_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let element_index = match heap.dereference(index_reference, false) {
+                crate::testvm::values::KindV::Int(int_v) if int_v.bits == 32 => int_v.value as i32,
+                _ => panic!("execute_node_inner: RuntimeSizedArrayStoreH index not IntV(_, 32)"),
+            };
+            let address = crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: element_index as i64 };
+            write!(heap.vivem_dout, " *o:{}.{}", address.array_id.num, address.element_index).unwrap();
+            write!(heap.vivem_dout, "<-{}", source_reference.num).unwrap();
+            let old_member_reference = heap.mutate_array(address, source_reference, source_expr.result_type());
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: old_member_reference.ownership }), old_member_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), source_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_member_reference })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }
