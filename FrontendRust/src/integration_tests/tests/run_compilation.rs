@@ -205,7 +205,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn get_monouts
-  pub fn get_monouts(&self) { panic!("Unimplemented: get_monouts"); }
+  pub fn get_monouts(&mut self) -> &crate::instantiating::ast::hinputs::HinputsI<'s, 'i> {
+    self.hammer_compilation.get_monouts()
+  }
   /*
   def getMonouts(): HinputsI = fullCompilation.getMonouts()
   */

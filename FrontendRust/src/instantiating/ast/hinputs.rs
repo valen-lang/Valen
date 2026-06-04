@@ -84,6 +84,24 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         panic!("Unimplemented: to_string")
     }
 }
+
+// mig: fn lookup_function (humanName: String overload)
+impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
+    pub fn lookup_function_by_str(&self, human_name: &str) -> &'i crate::instantiating::ast::ast::FunctionDefinitionI<'s, 'i> {
+        let matches: Vec<&&'i crate::instantiating::ast::ast::FunctionDefinitionI<'s, 'i>> = self.functions.iter().filter(|f| {
+            match f.header.id.local_name {
+                crate::instantiating::ast::names::INameI::FunctionNameIX(n) => n.template.human_name.0 == human_name,
+                _ => false,
+            }
+        }).collect();
+        if matches.is_empty() {
+            panic!("Function \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
+    }
+}
 /*
   override def toString: String = "HinputsI#()"
 

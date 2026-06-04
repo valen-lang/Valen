@@ -238,8 +238,12 @@ where 's: 'h, 's: 'i,
 */
 
 // mig: fn get_monouts
-pub fn get_monouts() -> () {
-  panic!("Unimplemented: get_monouts");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_monouts(&mut self) -> &crate::instantiating::ast::hinputs::HinputsI<'s, 'i> {
+    self.instantiated_compilation.get_monouts()
+  }
 }
 /*
   def getMonouts(): HinputsI = instantiatedCompilation.getMonouts()

@@ -753,9 +753,89 @@ fn successful_pointer_downcast_with_as() {
 */
 // mig: fn failed_pointer_downcast_with_as
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn failed_pointer_downcast_with_as() {
-    panic!("Unmigrated test: failed_pointer_downcast_with_as");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/downcast/downcastPointerFailed.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let moo = coutputs.lookup_function_by_str("moo");
+        let (dest_var, return_type) = crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
+            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+                variable: dest_var,
+                expr: crate::typing::ast::expressions::ReferenceExpressionTE::FunctionCall(crate::typing::ast::expressions::FunctionCallTE {
+                    callable: crate::typing::ast::ast::PrototypeT {
+                        id: crate::typing::names::names::IdT {
+                            local_name: crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
+                                template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("as"), .. },
+                                ..
+                            }),
+                            ..
+                        },
+                        ..
+                    },
+                    return_type,
+                    ..
+                }),
+            }) => Some((*dest_var, *return_type))
+        );
+        assert!(dest_var.coord() == return_type);
+        let citizen_name = crate::typing::names::names::ICitizenNameT::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
+        let &[success_type, fail_type] = citizen_name.template_args() else { panic!("expected 2 template args") };
+        assert!(crate::typing::templata::templata::expect_coord_templata(success_type).coord.ownership == crate::typing::types::types::OwnershipT::Borrow);
+        assert!(crate::typing::templata::templata::expect_coord_templata(fail_type).coord.ownership == crate::typing::types::types::OwnershipT::Borrow);
+    }
+    {
+        let monouts = compile.get_monouts();
+        let moo = monouts.lookup_function_by_str("moo");
+        let (dest_var, return_type) = crate::instantiating::collector::only_in_function(moo, &|node| match node {
+            crate::instantiating::collector::NodeRefI::LetNormal(crate::instantiating::ast::expressions::LetNormalIE {
+                variable: dest_var,
+                expr: crate::instantiating::ast::expressions::ReferenceExpressionIE::FunctionCall(crate::instantiating::ast::expressions::FunctionCallIE {
+                    callable: crate::instantiating::ast::ast::PrototypeI {
+                        id: crate::instantiating::ast::names::IdI {
+                            local_name: crate::instantiating::ast::names::INameI::FunctionNameIX(crate::instantiating::ast::names::FunctionNameIX {
+                                template: crate::instantiating::ast::names::FunctionTemplateNameI { human_name: crate::interner::StrI("as"), .. },
+                                ..
+                            }),
+                            ..
+                        },
+                        return_type,
+                        ..
+                    },
+                    ..
+                }),
+                ..
+            }) => Some((*dest_var, *return_type)),
+            _ => None,
+        });
+        assert!(dest_var.collapsed_coord() == return_type);
+        let interface_id_local_name = crate::instantiating::ast::names::IInterfaceNameI::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
+        let &[success_type, fail_type] = interface_id_local_name.template_args() else { panic!("expected 2 template args") };
+        assert!(crate::instantiating::ast::templata::expect_coord_templata(success_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
+        assert!(crate::instantiating::ast::templata::expect_coord_templata(fail_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Failed pointer downcast with as") {

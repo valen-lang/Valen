@@ -18,7 +18,10 @@
 use crate::instantiating::ast::names::*;
 use crate::instantiating::ast::types::*;
 use crate::instantiating::ast::templata::*;
-use crate::instantiating::ast::ast::PrototypeI;
+use crate::instantiating::ast::ast::{FunctionDefinitionI, PrototypeI};
+use crate::instantiating::ast::expressions::{
+    FunctionCallIE, LetNormalIE, ReferenceExpressionIE,
+};
 use crate::typing::names::names::IdT;
 use indexmap::IndexMap;
 
@@ -31,6 +34,11 @@ pub enum NodeRefI<'s, 'i, R> {
     Coord(CoordI<'s, 'i, R>),
     Kind(KindIT<'s, 'i, R>),
     Templata(ITemplataI<'s, 'i, R>),
+    // Top-level / expression-hierarchy variants (only meaningful when R = cI for FunctionDefinition).
+    FunctionDefinition(&'i FunctionDefinitionI<'s, 'i>),
+    ReferenceExpression(ReferenceExpressionIE<'s, 'i, R>),
+    LetNormal(&'i LetNormalIE<'s, 'i, R>),
+    FunctionCall(&'i FunctionCallIE<'s, 'i, R>),
 }
 
 fn collect_if<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefI<'s, 'i, R>)
@@ -102,6 +110,39 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
     let mut matches = all_in_prototype(root, pred);
     assert_eq!(matches.len(), 1, "Collector::only expected exactly one match");
     matches.remove(0)
+}
+
+pub fn all_in_function<'s, 'i, T, F>(root: &'i FunctionDefinitionI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+    let mut out = Vec::new();
+    visit_function_definition(pred, &mut out, root);
+    out
+}
+
+/// Scala `Collector.only` over a function-definition root — exactly one match or panic.
+pub fn only_in_function<'s, 'i, T, F>(root: &'i FunctionDefinitionI<'s, 'i>, pred: &F) -> T
+where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+    let mut matches = all_in_function(root, pred);
+    assert_eq!(matches.len(), 1, "Collector::only expected exactly one match");
+    matches.remove(0)
+}
+
+pub fn collect_in_inode<'s, 'i, R, T, F>(node: &NodeRefI<'s, 'i, R>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+    let mut out = Vec::new();
+    match node {
+        NodeRefI::Prototype(p) => visit_prototype(pred, &mut out, p),
+        NodeRefI::Id(id) => visit_id(pred, &mut out, *id),
+        NodeRefI::Name(n) => visit_name(pred, &mut out, *n),
+        NodeRefI::Coord(c) => visit_coord(pred, &mut out, *c),
+        NodeRefI::Kind(k) => visit_kind(pred, &mut out, *k),
+        NodeRefI::Templata(t) => visit_templata(pred, &mut out, *t),
+        NodeRefI::ReferenceExpression(e) => visit_reference_expression_ie(pred, &mut out, *e),
+        NodeRefI::LetNormal(l) => visit_let_normal_ie(pred, &mut out, l),
+        NodeRefI::FunctionCall(c) => visit_function_call_ie(pred, &mut out, c),
+        NodeRefI::FunctionDefinition(_) => panic!("INSTANTIATING_TEST_COLLECT_IN_INODE: FunctionDefinition requires R=cI dispatcher (use all_in_function or NodeRefI<cI> root form)"),
+    }
+    out
 }
 
 // ── Value-AST walkers ────────────────────────────────────────────────────────────────────────────
@@ -258,4 +299,126 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
         // cI-region definition node not bridgeable into the caller's generic R — not descended here.
         _ => {}
     }
+}
+
+// ── Expression hierarchy walkers (extend as needed per the file's stated design intent) ─────────
+
+fn visit_function_definition<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, f: &'i FunctionDefinitionI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+    collect_if(pred, out, NodeRefI::FunctionDefinition(f));
+    visit_reference_expression_ie(pred, out, f.body);
+}
+
+fn visit_reference_expression_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, e: ReferenceExpressionIE<'s, 'i, R>)
+where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+    collect_if(pred, out, NodeRefI::ReferenceExpression(e));
+    match e {
+        ReferenceExpressionIE::LetNormal(l) => visit_let_normal_ie(pred, out, l),
+        ReferenceExpressionIE::FunctionCall(c) => visit_function_call_ie(pred, out, c),
+        ReferenceExpressionIE::Block(b) => visit_reference_expression_ie(pred, out, b.inner),
+        ReferenceExpressionIE::Consecutor(c) => {
+            for inner in c.exprs {
+                visit_reference_expression_ie(pred, out, *inner);
+            }
+        }
+        ReferenceExpressionIE::If(i) => {
+            visit_reference_expression_ie(pred, out, i.condition);
+            visit_reference_expression_ie(pred, out, i.then_call);
+            visit_reference_expression_ie(pred, out, i.else_call);
+        }
+        ReferenceExpressionIE::Return(r) => visit_reference_expression_ie(pred, out, r.source_expr),
+        // Other ReferenceExpressionIE variants not yet covered — add visit_* as needed.
+        _ => {}
+    }
+}
+
+fn visit_let_normal_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, l: &'i LetNormalIE<'s, 'i, R>)
+where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+    collect_if(pred, out, NodeRefI::LetNormal(l));
+    visit_reference_expression_ie(pred, out, l.expr);
+}
+
+fn visit_function_call_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, c: &'i FunctionCallIE<'s, 'i, R>)
+where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+    collect_if(pred, out, NodeRefI::FunctionCall(c));
+    visit_prototype(pred, out, &c.callable);
+    for arg in c.args {
+        visit_reference_expression_ie(pred, out, *arg);
+    }
+}
+
+// ── Macros (parametric mirror of typing/test/traverse.rs macros) ─────────────────────────────────
+
+#[macro_export]
+macro_rules! collect_in_inodes {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    let mut out = Vec::new();
+    for node in $expr {
+      out.extend($crate::instantiating::collector::collect_in_inode(
+        node,
+        &|node| match node {
+          $pattern => $body,
+          _ => None,
+        },
+      ));
+    }
+    out
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    let mut out = Vec::new();
+    for node in $expr {
+      out.extend($crate::instantiating::collector::collect_in_inode(
+        node,
+        &|node| match node {
+          $pattern if $guard => $body,
+          _ => None,
+        },
+      ));
+    }
+    out
+  }};
+}
+
+#[macro_export]
+macro_rules! collect_where_inodes {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    $crate::collect_in_inodes!($expr, $pattern => $body)
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    $crate::collect_in_inodes!($expr, $pattern if $guard => $body)
+  }};
+}
+
+#[macro_export]
+macro_rules! collect_only_inodes {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    let mut matches = $crate::collect_where_inodes!($expr, $pattern => $body);
+    assert_eq!(1, matches.len());
+    matches.remove(0)
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    let mut matches = $crate::collect_where_inodes!($expr, $pattern if $guard => $body);
+    assert_eq!(1, matches.len());
+    matches.remove(0)
+  }};
+}
+
+#[macro_export]
+macro_rules! collect_where_inode {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    $crate::collect_where_inodes!(&[$expr], $pattern => $body)
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    $crate::collect_where_inodes!(&[$expr], $pattern if $guard => $body)
+  }};
+}
+
+#[macro_export]
+macro_rules! collect_only_inode {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    $crate::collect_only_inodes!(&[$expr], $pattern => $body)
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    $crate::collect_only_inodes!(&[$expr], $pattern if $guard => $body)
+  }};
 }
