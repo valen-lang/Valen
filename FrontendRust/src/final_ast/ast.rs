@@ -304,8 +304,9 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_runtime_sized_array
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-    pub fn lookup_runtime_sized_array(&self, _rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
-        panic!("Unimplemented: ProgramH::lookup_runtime_sized_array")
+    pub fn lookup_runtime_sized_array(&self, rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
+        let paackage = self.lookup_package(rsa_th.name.package_coordinate);
+        paackage.runtime_sized_arrays.iter().find(|s| s.name == rsa_th.name).expect("vassertSome: lookup_runtime_sized_array")
     }
 }
 /*

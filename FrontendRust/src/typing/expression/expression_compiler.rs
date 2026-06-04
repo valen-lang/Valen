@@ -1772,7 +1772,35 @@ where 's: 't,
                 );
                 Ok((ExpressionTE::Reference(ReferenceExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2))), returns_from_callable))
             }
-            IExpressionSE::NewRuntimeSizedArray(_) => panic!("implement: evaluate_expression — NewRuntimeSizedArray"),
+            IExpressionSE::NewRuntimeSizedArray(nrsa) => {
+                let (size_te, returns_from_size) = self.evaluate_and_coerce_to_reference_expression(
+                    coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, nrsa.size)?;
+                let (maybe_callable_te, returns_from_callable) = match nrsa.callable {
+                    None => (None, std::collections::HashSet::new()),
+                    Some(callable_ae) => {
+                        let (callable_te, rets) = self.evaluate_and_coerce_to_reference_expression(
+                            coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), callable_ae)?;
+                        (Some(callable_te), rets)
+                    }
+                };
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(nrsa.range).chain(parent_ranges.iter().copied()).collect();
+                let expr_2 = self.evaluate_runtime_sized_array_from_callable(
+                    coutputs,
+                    nenv.snapshot(self.typing_interner),
+                    &range_with_parent,
+                    outer_call_location,
+                    region,
+                    nrsa.rules,
+                    nrsa.maybe_element_type_st.map(|r| r.rune),
+                    nrsa.mutability_st.rune,
+                    size_te,
+                    maybe_callable_te,
+                );
+                let mut returns = returns_from_size;
+                returns.extend(returns_from_callable);
+                Ok((ExpressionTE::Reference(expr_2), returns))
+            }
             IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
             IExpressionSE::RepeaterPackIterator(_) => panic!("implement: evaluate_expression — RepeaterPackIterator"),
             IExpressionSE::Block(b) => {

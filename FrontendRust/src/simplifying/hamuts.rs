@@ -280,7 +280,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn add_runtime_sized_array (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_runtime_sized_array(&mut self, rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>, runtime_sized_array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>) {
-        panic!("Unimplemented: add_runtime_sized_array");
+        self.runtime_sized_arrays.insert(rsa_it, runtime_sized_array_definition_th);
     }
 }
 /*
@@ -417,10 +417,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 // mig: fn get_runtime_sized_array (HamutsBox accessor)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn get_runtime_sized_array(&self, runtime_sized_array_th: &'h RuntimeSizedArrayHT<'s, 'h>) -> RuntimeSizedArrayDefinitionHT<'s, 'h> {
-        panic!("Unimplemented: get_runtime_sized_array");
+        *self.runtime_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, runtime_sized_array_th.name as *const _)).expect("get_runtime_sized_array: not found").1
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Per documented collapsed-Hamuts architecture (hamuts.rs lines 4-12, no HamutsBox/Hamuts split): Scala outer delegates to inner.getRuntimeSizedArray; the Rust body IS the inner direct map scan. Identical sibling precedent: get_static_sized_array at line 414-418 in this same file (already temp-disabled per the in-file rationale citing request-316). — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-531-1780527726012/hook-531/get_runtime_sized_array--429.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getRuntimeSizedArray(runtimeSizedArrayTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
     inner.getRuntimeSizedArray(runtimeSizedArrayTH)
   }

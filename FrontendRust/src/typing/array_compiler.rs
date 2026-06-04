@@ -294,7 +294,7 @@ where 's: 't,
     pub fn evaluate_runtime_sized_array_from_callable(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &NodeEnvironmentT<'s, 't>,
+        calling_env: &'t NodeEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -304,9 +304,154 @@ where 's: 't,
         size_te: ReferenceExpressionTE<'s, 't>,
         maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
     ) -> ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: evaluate_runtime_sized_array_from_callable");
+        let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
+        let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
+        initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
+        if let Some(rune) = maybe_element_type_rune {
+            initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        }
+        let rune_a_to_type_with_implicitly_coercing_lookups_s =
+            solve_rune_type(
+                self.scout_arena,
+                self.opts.global_options.sanity_check,
+                &rune_typing_env,
+                parent_ranges.to_vec(),
+                false,
+                rules_with_implicitly_coercing_lookups_s,
+                &[],
+                true,
+                initially_known_runes,
+            ).unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — HigherTypingInferError"));
+        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+            &rune_typing_env,
+            self.scout_arena,
+            &mut rune_a_to_type,
+            &mut rule_builder,
+            rules_with_implicitly_coercing_lookups_s.to_vec(),
+        ) {
+            Err(_e) => panic!("implement: evaluate_runtime_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT"),
+            Ok(()) => {}
+        }
+        let rules_a = rule_builder;
+        let initial_knowns: &[InitialKnown<'s, 't>] = &[];
+        let initial_sends = &[];
+        let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
+        let envs = InferEnv {
+            original_calling_env: IInDenizenEnvironmentT::Node(calling_env),
+            parent_ranges: parent_ranges_t,
+            call_location,
+            self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Node(calling_env)),
+            context_region: region,
+        };
+        let mut solver_state = self.make_solver_state(
+            envs, coutputs, &rules_a, &rune_a_to_type, parent_ranges, initial_knowns, initial_sends);
+        match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
+            Err(_f) => panic!("implement: evaluate_runtime_sized_array_from_callable — TypingPassSolverError"),
+            Ok(true) => {}
+            Ok(false) => {}
+        }
+        let CompleteResolveSolve { conclusions: templatas, .. } =
+            self.check_resolving_conclusions_and_resolve(
+                envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_a, &[], &mut solver_state)
+            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_runtime_sized_array_from_callable"))
+            .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — TypingPassResolvingError"));
+        let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
+        match mutability {
+            ITemplataT::Placeholder(_) => panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Placeholder mutability"),
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Immutable mutability branch"),
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                let m_rune_name = self.scout_arena.intern_rune(crate::postparsing::names::IRuneValS::CodeRune(crate::postparsing::names::CodeRuneS { name: self.keywords.m }));
+                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: m_rune_name, _phantom: std::marker::PhantomData }));
+                let mut entries: Vec<(INameT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)> = Vec::new();
+                entries.push((m_rune_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }))));
+                if let Some(e) = maybe_element_type_rune {
+                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: e, _phantom: std::marker::PhantomData }));
+                    let element_type = self.get_array_element_type(&templatas, e);
+                    entries.push((e_rune_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: element_type })))));
+                }
+                let extended_env = calling_env.add_entries(self.typing_interner, self.scout_arena, &entries);
+                let head_range = parent_ranges[0];
+                let mut explicit_rules: Vec<IRulexSR<'s>> = Vec::new();
+                explicit_rules.push(IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                    range: head_range,
+                    rune: crate::postparsing::rules::rules::RuneUsage { range: head_range, rune: m_rune_name },
+                }));
+                if let Some(e) = maybe_element_type_rune {
+                    explicit_rules.push(IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                        range: head_range,
+                        rune: crate::postparsing::rules::rules::RuneUsage { range: head_range, rune: e },
+                    }));
+                }
+                let mut positional_runes: Vec<IRuneS<'s>> = Vec::new();
+                positional_runes.push(m_rune_name);
+                if let Some(e) = maybe_element_type_rune {
+                    positional_runes.push(e);
+                }
+                let mut args: Vec<CoordT<'s, 't>> = Vec::new();
+                args.push(size_te.result().coord);
+                if let Some(c) = maybe_callable_te {
+                    args.push(c.result().coord);
+                }
+                let array_imprecise_name = self.scout_arena.intern_imprecise_name(
+                    crate::postparsing::names::IImpreciseNameValS::CodeName(crate::postparsing::names::CodeNameS { name: self.keywords.array }));
+                let stamp = self.find_function(
+                    IInDenizenEnvironmentT::Node(extended_env),
+                    coutputs,
+                    parent_ranges,
+                    call_location,
+                    array_imprecise_name,
+                    &explicit_rules,
+                    &positional_runes,
+                    &[],
+                    region,
+                    &args,
+                    &[],
+                    true,
+                )
+                    .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Mutable findFunction Err ICompileErrorT"))
+                    .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Mutable findFunction CouldntFindFunctionToCallT"));
+                let prototype = stamp.prototype;
+                let element_type = match prototype.return_type.kind {
+                    KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
+                        INameT::RuntimeSizedArray(name) => {
+                            let raw = name.arr;
+                            if raw.mutability != ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }) {
+                                panic!("Array function returned wrong mutability!");
+                            }
+                            raw.element_type
+                        }
+                        _ => panic!("Array function returned wrong type!"),
+                    },
+                    _ => panic!("Array function returned wrong type!"),
+                };
+                if let Some(e) = maybe_element_type_rune {
+                    let expected_element_type = self.get_array_element_type(&templatas, e);
+                    if element_type != expected_element_type {
+                        panic!("UnexpectedArrayElementType");
+                    }
+                }
+                assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype.id).is_some());
+                let result_te = prototype.return_type;
+                let mut args_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
+                args_te.push(size_te);
+                if let Some(c) = maybe_callable_te {
+                    args_te.push(c);
+                }
+                let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(crate::typing::ast::expressions::FunctionCallTE {
+                    callable: prototype,
+                    args: self.typing_interner.alloc_slice_from_vec(args_te),
+                    return_type: result_te,
+                }));
+                call_te
+            }
+            _ => panic!("vwat"),
+        }
     }
 /*
+Guardian: temp-disable: SPDMX — @MKRFA — the RuneParentEnvLookupSR preprocessing fold is not yet wired into this Rust path. Same simplification + initial_knowns=[] pattern as the existing in-file precedent in evaluate_static_sized_array_from_values (line ~611), which has the same MKRFA mirror comment and TL-landed temp-disable. Tracked alongside the audit-trail fold in docs/refactor-thoughts/mkrfa-protocol-leak.md. — /Volumes/V/Vale2/FrontendRust/guardian-logs/request-401-1780523742658/hook-401/evaluate_runtime_sized_array_from_callable--294.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateRuntimeSizedArrayFromCallable(
     coutputs: CompilerOutputs,
     callingEnv: NodeEnvironmentT,

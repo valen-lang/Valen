@@ -437,7 +437,20 @@ where 's: 'i {
                 }
             });
         }
-        KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: count_kind RuntimeSizedArray"),
+        KindIT::RuntimeSizedArrayIT(rsa) => {
+            let rsa_id = rsa.name;
+            count_id(counter, &rsa_id, |counter, local_name| {
+                match local_name {
+                    INameI::RuntimeSizedArray(n) => {
+                        let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = **n;
+                        let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                        count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                        counter.count(self_region);
+                    }
+                    _ => panic!("count_kind RuntimeSizedArray: non-RuntimeSizedArrayName local name"),
+                }
+            });
+        }
     }
 }
 /*
@@ -477,8 +490,19 @@ where 's: 'i {
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array() {
-    panic!("Unimplemented: count_runtime_sized_array");
+pub fn count_runtime_sized_array<'s, 'i>(counter: &mut CounterI, rsa: &crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) {
+    let rsa_id = rsa.name;
+    count_id(counter, &rsa_id, |counter, local_name| {
+        match local_name {
+            INameI::RuntimeSizedArray(n) => {
+                let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = **n;
+                let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                counter.count(self_region);
+            }
+            _ => panic!("count_runtime_sized_array: non-RuntimeSizedArrayName local name"),
+        }
+    });
 }
 /*
   def countRuntimeSizedArray(
@@ -836,8 +860,11 @@ pub fn count_static_sized_array_map<'s, 'i>(ssa: &crate::instantiating::ast::typ
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array_map() -> std::collections::HashMap<i32, i32> {
-    panic!("Unimplemented: count_runtime_sized_array");
+pub fn count_runtime_sized_array_map<'s, 'i>(rsa: &crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) -> std::collections::HashMap<i32, i32>
+where 's: 'i {
+    let mut counter = CounterI::new();
+    count_runtime_sized_array(&mut counter, rsa);
+    counter.assemble_map()
 }
 /*
   def countRuntimeSizedArray(

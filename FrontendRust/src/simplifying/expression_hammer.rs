@@ -140,7 +140,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let _ = last_is_never;
                     (crate::simplifying::hammer::consecutive(self.interner, &exprs_he), Vec::new())
                 }
-                RE::ArrayLength(a) => panic!("translate_expression: ArrayLength branch"),
+                RE::ArrayLength(a) => {
+                    let (result_he, deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(a.array_expr));
+                    let length_result_node = ExpressionH::ArrayLengthH(self.interner.alloc(crate::final_ast::instructions::ArrayLengthH { source_expression: result_he }));
+                    let array_length_and_deferreds_expr_h =
+                        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, length_result_node, deferreds);
+                    (array_length_and_deferreds_expr_h, Vec::new())
+                }
                 RE::RuntimeSizedArrayCapacity(a) => panic!("translate_expression: RuntimeSizedArrayCapacity branch"),
                 RE::ArraySize(a) => panic!("translate_expression: ArraySize branch"),
                 RE::LockWeak(a) => panic!("translate_expression: LockWeak branch"),
@@ -273,15 +280,49 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
                     (new_struct_and_deferreds_expr_h, Vec::new())
                 }
-                RE::NewMutRuntimeSizedArray(a) => panic!("translate_expression: NewMutRuntimeSizedArray branch"),
+                RE::NewMutRuntimeSizedArray(nmrsa_ie) => {
+                    let access = self.translate_new_mut_runtime_sized_array(hinputs, hamuts, current_function_header, locals, nmrsa_ie);
+                    (access, Vec::new())
+                }
                 RE::StaticArrayFromCallable(a) => panic!("translate_expression: StaticArrayFromCallable branch"),
                 RE::DestroyStaticSizedArrayIntoFunction(das2) => {
                     let das_h = self.translate_destroy_static_sized_array(hinputs, hamuts, current_function_header, locals, das2);
                     (das_h, Vec::new())
                 }
-                RE::DestroyMutRuntimeSizedArray(a) => panic!("translate_expression: DestroyMutRuntimeSizedArray branch"),
-                RE::PushRuntimeSizedArray(a) => panic!("translate_expression: PushRuntimeSizedArray branch"),
-                RE::PopRuntimeSizedArray(a) => panic!("translate_expression: PopRuntimeSizedArray branch"),
+                RE::DestroyMutRuntimeSizedArray(dmrsa) => {
+                    let (rsa_he, rsa_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(dmrsa.array_expr));
+                    let destroy_he = ExpressionH::DestroyMutRuntimeSizedArrayH(self.interner.alloc(crate::final_ast::instructions::DestroyMutRuntimeSizedArrayH {
+                        array_expression: rsa_he.expect_runtime_sized_array_access(),
+                    }));
+                    let expr = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, destroy_he, rsa_deferreds);
+                    (expr, Vec::new())
+                }
+                RE::PushRuntimeSizedArray(prsa_ie) => {
+                    let (array_he, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(prsa_ie.array_expr));
+                    let rsa_he = array_he.expect_runtime_sized_array_access();
+                    let rsa_def_h = hamuts.get_runtime_sized_array(rsa_he.result_type().kind.expect_runtime_sized_array_ht());
+                    let (newcomer_he, newcomer_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(prsa_ie.new_element_expr));
+                    assert!(newcomer_he.result_type() == rsa_def_h.element_type);
+                    let construct_array_call_node = ExpressionH::PushRuntimeSizedArrayH(self.interner.alloc(crate::final_ast::instructions::PushRuntimeSizedArrayH {
+                        array_expression: rsa_he,
+                        newcomer_expression: newcomer_he,
+                    }));
+                    let mut deferreds = array_deferreds;
+                    deferreds.extend(newcomer_deferreds);
+                    let access = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, deferreds);
+                    (access, Vec::new())
+                }
+                RE::PopRuntimeSizedArray(prsa_ie) => {
+                    let (array_he, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(prsa_ie.array_expr));
+                    let rsa_he = array_he.expect_runtime_sized_array_access();
+                    let rsa_def_h = hamuts.get_runtime_sized_array(rsa_he.result_type().kind.expect_runtime_sized_array_ht());
+                    let construct_array_call_node = ExpressionH::PopRuntimeSizedArrayH(self.interner.alloc(crate::final_ast::instructions::PopRuntimeSizedArrayH {
+                        array_expression: rsa_he,
+                        element_type: rsa_def_h.element_type,
+                    }));
+                    let access = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, array_deferreds);
+                    (access, Vec::new())
+                }
                 RE::InterfaceToInterfaceUpcast(a) => panic!("translate_expression: InterfaceToInterfaceUpcast branch"),
                 RE::Upcast(up) => {
                     let target_pointer_type2 = up.result;
@@ -1303,7 +1344,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
         construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_new_mut_runtime_sized_array");
+        let array_type2 = construct_array2.array_type;
+        let capacity_expr2 = construct_array2.capacity_expr;
+        let (capacity_register_id, capacity_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(capacity_expr2));
+        let array_ref_type_h = self.translate_coord(hinputs, hamuts, construct_array2.result);
+        let array_type_h = self.translate_runtime_sized_array(hinputs, hamuts, self.instantiating_interner.intern_runtime_sized_array_it_ci(crate::instantiating::ast::types::RuntimeSizedArrayITValI { name: array_type2.name }));
+        assert!(array_ref_type_h.expect_runtime_sized_array_coord().kind == crate::final_ast::types::KindHT::RuntimeSizedArrayHT(array_type_h));
+        let element_type = hamuts.get_runtime_sized_array(array_type_h).element_type;
+        let construct_array_call_node = ExpressionH::NewMutRuntimeSizedArrayH(self.interner.alloc(crate::final_ast::instructions::NewMutRuntimeSizedArrayH {
+            capacity_expression: capacity_register_id.expect_int_access(),
+            element_type,
+            result_type: array_ref_type_h.expect_runtime_sized_array_coord(),
+        }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, capacity_deferreds)
     }
 }
 /*

@@ -143,6 +143,7 @@ pub fn get_extern_function<'h, 's, 'v>(
         "castI32Str" => Box::new(crate::testvm::vivem_externs::cast_i32_str),
         "castI64Str" => Box::new(crate::testvm::vivem_externs::cast_i64_str),
         "__vbi_lessThanI32" => Box::new(crate::testvm::vivem_externs::less_than_i32),
+        "__vbi_greaterThanI32" => Box::new(crate::testvm::vivem_externs::greater_than_i32),
         "castI32Float" => Box::new(crate::testvm::vivem_externs::cast_i32_float),
         "sqrt" => Box::new(crate::testvm::vivem_externs::sqrt),
         "__getch" => Box::new(crate::testvm::vivem_externs::getch),

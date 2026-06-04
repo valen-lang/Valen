@@ -1259,7 +1259,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 // mig: fn expect_runtime_sized_array_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_runtime_sized_array_access(&self) -> Self {
-        panic!("Unimplemented: expect_runtime_sized_array_access");
+        match self.result_type().kind {
+            crate::final_ast::types::KindHT::RuntimeSizedArrayHT(_) => *self,
+            _ => panic!("expect_runtime_sized_array_access: not a runtime sized array"),
+        }
     }
 }
 /* Guardian: disable-all */
@@ -1335,7 +1338,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::NewArrayFromValuesH(n) => n.result_type,
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("Unimplemented: result_type for StaticSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayStoreH"),
-            ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("Unimplemented: result_type for RuntimeSizedArrayLoadH"),
+            ExpressionH::RuntimeSizedArrayLoadH(r) => r.result_type,
             ExpressionH::StaticSizedArrayLoadH(s) => s.result_type,
             ExpressionH::CallH(c) => c.function.return_type,
             ExpressionH::ExternCallH(c) => c.function.return_type,
@@ -1353,16 +1356,16 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ImmutabilifyH(_) => panic!("Unimplemented: result_type for ImmutabilifyH"),
             ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
             ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for NewImmRuntimeSizedArrayH"),
-            ExpressionH::NewMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for NewMutRuntimeSizedArrayH"),
-            ExpressionH::PushRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for PushRuntimeSizedArrayH"),
-            ExpressionH::PopRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for PopRuntimeSizedArrayH"),
+            ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,
+            ExpressionH::PushRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
+            ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,
             ExpressionH::StaticArrayFromCallableH(_) => panic!("Unimplemented: result_type for StaticArrayFromCallableH"),
             ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
-            ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyMutRuntimeSizedArrayH"),
+            ExpressionH::DestroyMutRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
             ExpressionH::NewStructH(n) => n.result_type,
-            ExpressionH::ArrayLengthH(_) => panic!("Unimplemented: result_type for ArrayLengthH"),
+            ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
             ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(_) => panic!("Unimplemented: result_type for IsSameInstanceH"),

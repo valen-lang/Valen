@@ -33,7 +33,10 @@ pub fn evaluate_code_location(loc: CodeLocationS) -> CodeLocation {
 */
 // mig: fn evaluate_mutability
 pub fn evaluate_mutability(mutability: MutabilityI) -> Mutability {
-    panic!("Unimplemented: evaluate_mutability");
+    match mutability {
+        MutabilityI::Mutable => Mutability::Mutable,
+        MutabilityI::Immutable => Mutability::Immutable,
+    }
 }
 /*
   def evaluateMutability(mutability: MutabilityI): Mutability = {

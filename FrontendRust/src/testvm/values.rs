@@ -598,8 +598,13 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
 */
 // mig: fn initialize_element
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
-  pub fn initialize_element(&self, ref_: ReferenceV<'v, 'h, 's>) {
-    panic!("Unimplemented: initialize_element");
+  pub fn initialize_element(&self, vivem_bump: &'v bumpalo::Bump, ref_: ReferenceV<'v, 'h, 's>) {
+    let elements = self.elements.get();
+    assert!(elements.len() < self.capacity as usize);
+    let mut new_vec = bumpalo::collections::Vec::with_capacity_in(elements.len() + 1, vivem_bump);
+    new_vec.extend_from_slice(elements);
+    new_vec.push(ref_);
+    self.elements.set(new_vec.into_bump_slice());
   }
 }
 /*

@@ -139,7 +139,7 @@ pub fn humanize_kind<'s, 'i, R: Copy + PartialEq>(
         KindIT::FloatIT(_) => "float".to_string(),
         KindIT::InterfaceIT(i) => humanize_id(code_map, &i.id, None),
         KindIT::StructIT(s) => humanize_id(code_map, &s.id, None),
-        KindIT::RuntimeSizedArrayIT(_) => panic!("humanize_kind: RuntimeSizedArrayIT branch"),
+        KindIT::RuntimeSizedArrayIT(rsa) => humanize_id(code_map, &rsa.name, None),
         KindIT::StaticSizedArrayIT(ssa) => humanize_id(code_map, &ssa.name, None),
     }
 }
@@ -235,6 +235,14 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Integer(crate::instantiating::ast::templata::IntegerTemplataI { value: size, _marker: std::marker::PhantomData })) + ","
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability, _marker: std::marker::PhantomData })) + ","
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Variability(crate::instantiating::ast::templata::VariabilityTemplataI { variability, _marker: std::marker::PhantomData })) + ","
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
+                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
+        }
+        INameI::RuntimeSizedArray(n) => {
+            let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = *n;
+            let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            "[]<".to_string()
+                + (match mutability { crate::instantiating::ast::types::MutabilityI::Immutable => "i", crate::instantiating::ast::types::MutabilityI::Mutable => "m" }) + ","
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
         }

@@ -390,7 +390,7 @@ where 's: 'i {
         KindIT::StructIT(s) => KindIT::StructIT(interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: collapse_struct_id(interner, &s.id) })),
         KindIT::InterfaceIT(i) => KindIT::InterfaceIT(interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: collapse_interface_id(interner, &i.id) })),
         KindIT::StaticSizedArrayIT(ssa) => KindIT::StaticSizedArrayIT(interner.alloc(collapse_static_sized_array(interner, ssa))),
-        KindIT::RuntimeSizedArrayIT(_) => panic!("Unimplemented: collapse_kind RuntimeSizedArray"),
+        KindIT::RuntimeSizedArrayIT(rsa) => KindIT::RuntimeSizedArrayIT(interner.alloc(collapse_runtime_sized_array(interner, rsa))),
     }
 }
 /*
@@ -412,8 +412,28 @@ where 's: 'i {
   }
 */
 // mig: fn collapse_runtime_sized_array
-pub fn collapse_runtime_sized_array() {
-    panic!("Unimplemented: collapse_runtime_sized_array")
+pub fn collapse_runtime_sized_array<'s, 'i>(interner: &InstantiatingInterner<'s, 'i>, rsa: &crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, sI>) -> crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, cI>
+where 's: 'i {
+    let rsa_id = rsa.name;
+    let map = crate::instantiating::region_counter::count_runtime_sized_array_map(rsa);
+    let collapsed_id = collapse_id(interner, &rsa_id, |local_name| {
+        match local_name {
+            INameI::RuntimeSizedArray(n) => {
+                let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = **n;
+                let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region } = arr;
+                INameI::RuntimeSizedArray(interner.alloc(crate::instantiating::ast::names::RuntimeSizedArrayNameI {
+                    template: crate::instantiating::ast::names::RuntimeSizedArrayTemplateNameI(std::marker::PhantomData),
+                    arr: crate::instantiating::ast::names::RawArrayNameI {
+                        mutability,
+                        element_type: crate::instantiating::ast::templata::expect_coord_templata(collapse_templata(interner, &map, &ITemplataI::Coord(element_type))),
+                        self_region: collapse_region_templata(&map, self_region),
+                    },
+                }))
+            }
+            _ => panic!("collapse_runtime_sized_array: non-RuntimeSizedArrayName local name"),
+        }
+    });
+    *interner.intern_runtime_sized_array_it_ci(crate::instantiating::ast::types::RuntimeSizedArrayITValI { name: collapsed_id })
 }
 /*
   def collapseRuntimeSizedArray(

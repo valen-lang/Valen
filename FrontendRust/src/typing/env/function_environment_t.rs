@@ -840,9 +840,20 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn add_entries(
     &self,
     interner: &TypingInterner<'s, 't>,
+    scout_arena: &crate::scout_arena::ScoutArena<'s>,
     new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
   ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: add_entries");
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: self.parent_node_env,
+      node: self.node,
+      life: self.life,
+      templatas: interner.alloc(self.templatas.add_entries(interner, scout_arena, new_entries.to_vec())),
+      declared_locals: self.declared_locals,
+      unstackified_locals: self.unstackified_locals,
+      restackified_locals: self.restackified_locals,
+      default_region: self.default_region,
+    })
   }
   /*
     def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): NodeEnvironmentT = {

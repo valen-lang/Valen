@@ -861,7 +861,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         rsa_def: &RuntimeSizedArrayDefinitionHT<'s, 'h>,
     ) -> IVonData {
-        panic!("Unimplemented: vonify_runtime_sized_array_definition");
+        let RuntimeSizedArrayDefinitionHT { name, mutability, element_type } = *rsa_def;
+        crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+            tyype: "RuntimeSizedArrayDefinition".to_string(),
+            id: None,
+            members: vec![
+                crate::von::ast::VonMember { field_name: "name".to_string(), value: self.vonify_name(name) },
+                crate::von::ast::VonMember { field_name: "kind".to_string(), value: self.vonify_kind(crate::final_ast::types::KindHT::RuntimeSizedArrayHT(rsa_def.kind(self.interner))) },
+                crate::von::ast::VonMember { field_name: "mutability".to_string(), value: self.vonify_mutability(mutability) },
+                crate::von::ast::VonMember { field_name: "elementType".to_string(), value: self.vonify_coord(element_type) },
+            ],
+        })
     }
 }
 /*
@@ -1294,7 +1304,26 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
             ExpressionH::StaticSizedArrayStoreH(_) => panic!("vonify_expression: StaticSizedArrayStoreH"),
             ExpressionH::RuntimeSizedArrayStoreH(_) => panic!("vonify_expression: RuntimeSizedArrayStoreH"),
-            ExpressionH::RuntimeSizedArrayLoadH(_) => panic!("vonify_expression: RuntimeSizedArrayLoadH"),
+            ExpressionH::RuntimeSizedArrayLoadH(rsal) => {
+                let crate::final_ast::instructions::RuntimeSizedArrayLoadH { array_expression: array_expr, index_expression: index_expr, target_ownership, expected_element_type, result_type } = *rsal;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "RuntimeSizedArrayLoad".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "arrayExpr".to_string(), value: self.vonify_expression(array_expr) },
+                        crate::von::ast::VonMember { field_name: "arrayType".to_string(), value: self.vonify_coord(array_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "arrayKind".to_string(), value: self.vonify_kind(array_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "arrayKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "indexExpr".to_string(), value: self.vonify_expression(index_expr) },
+                        crate::von::ast::VonMember { field_name: "indexType".to_string(), value: self.vonify_coord(index_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "indexKind".to_string(), value: self.vonify_kind(index_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(rsal.result_type) },
+                        crate::von::ast::VonMember { field_name: "targetOwnership".to_string(), value: self.vonify_ownership(target_ownership) },
+                        crate::von::ast::VonMember { field_name: "expectedElementType".to_string(), value: self.vonify_coord(expected_element_type) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                    ],
+                })
+            }
             ExpressionH::StaticSizedArrayLoadH(ssal) => {
                 let crate::final_ast::instructions::StaticSizedArrayLoadH { array_expression: array_expr, index_expression: index_expr, target_ownership, expected_element_type, array_size, result_type } = *ssal;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
@@ -1435,9 +1464,50 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::NewImmRuntimeSizedArrayH(_) => panic!("vonify_expression: NewImmRuntimeSizedArrayH"),
-            ExpressionH::NewMutRuntimeSizedArrayH(_) => panic!("vonify_expression: NewMutRuntimeSizedArrayH"),
-            ExpressionH::PushRuntimeSizedArrayH(_) => panic!("vonify_expression: PushRuntimeSizedArrayH"),
-            ExpressionH::PopRuntimeSizedArrayH(_) => panic!("vonify_expression: PopRuntimeSizedArrayH"),
+            ExpressionH::NewMutRuntimeSizedArrayH(n) => {
+                let crate::final_ast::instructions::NewMutRuntimeSizedArrayH { capacity_expression: capacity_expr, element_type, result_type } = *n;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "NewMutRuntimeSizedArray".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "capacityExpr".to_string(), value: self.vonify_expression(capacity_expr) },
+                        crate::von::ast::VonMember { field_name: "capacityType".to_string(), value: self.vonify_coord(capacity_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "capacityKind".to_string(), value: self.vonify_kind(capacity_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "elementType".to_string(), value: self.vonify_coord(element_type) },
+                    ],
+                })
+            }
+            ExpressionH::PushRuntimeSizedArrayH(p) => {
+                let crate::final_ast::instructions::PushRuntimeSizedArrayH { array_expression: array_expr, newcomer_expression: newcomer_expr } = *p;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "PushRuntimeSizedArray".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "arrayExpr".to_string(), value: self.vonify_expression(array_expr) },
+                        crate::von::ast::VonMember { field_name: "arrayType".to_string(), value: self.vonify_coord(array_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "arrayKind".to_string(), value: self.vonify_kind(array_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "newcomerExpr".to_string(), value: self.vonify_expression(newcomer_expr) },
+                        crate::von::ast::VonMember { field_name: "newcomerType".to_string(), value: self.vonify_coord(newcomer_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "newcomerKind".to_string(), value: self.vonify_kind(newcomer_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "consumerKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                    ],
+                })
+            }
+            ExpressionH::PopRuntimeSizedArrayH(p) => {
+                let crate::final_ast::instructions::PopRuntimeSizedArrayH { array_expression: array_expr, element_type: array_element_type } = *p;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "PopRuntimeSizedArray".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "arrayExpr".to_string(), value: self.vonify_expression(array_expr) },
+                        crate::von::ast::VonMember { field_name: "arrayType".to_string(), value: self.vonify_coord(array_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "arrayKind".to_string(), value: self.vonify_kind(array_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "arrayElementType".to_string(), value: self.vonify_coord(array_element_type) },
+                        crate::von::ast::VonMember { field_name: "consumerKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                    ],
+                })
+            }
             ExpressionH::StaticArrayFromCallableH(_) => panic!("vonify_expression: StaticArrayFromCallableH"),
             ExpressionH::DestroyStaticSizedArrayIntoFunctionH(d) => {
                 let crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH { array_expression: array_expr, consumer_expression: consumer_expr, consumer_method, array_element_type, array_size } = *d;
@@ -1458,7 +1528,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyImmRuntimeSizedArrayH"),
-            ExpressionH::DestroyMutRuntimeSizedArrayH(_) => panic!("vonify_expression: DestroyMutRuntimeSizedArrayH"),
+            ExpressionH::DestroyMutRuntimeSizedArrayH(d) => {
+                let crate::final_ast::instructions::DestroyMutRuntimeSizedArrayH { array_expression: array_expr } = *d;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "DestroyMutRuntimeSizedArray".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "arrayExpr".to_string(), value: self.vonify_expression(array_expr) },
+                        crate::von::ast::VonMember { field_name: "arrayType".to_string(), value: self.vonify_coord(array_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "arrayKind".to_string(), value: self.vonify_kind(array_expr.result_type().kind) },
+                    ],
+                })
+            }
             ExpressionH::BreakH(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
                 tyype: "Break".to_string(),
                 id: None,
@@ -1476,7 +1557,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::ArrayLengthH(_) => panic!("vonify_expression: ArrayLengthH"),
+            ExpressionH::ArrayLengthH(a) => {
+                let crate::final_ast::instructions::ArrayLengthH { source_expression: source_expr } = *a;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ArrayLength".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                    ],
+                })
+            }
             ExpressionH::ArrayCapacityH(_) => panic!("vonify_expression: ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(_) => panic!("vonify_expression: IsSameInstanceH"),

@@ -1341,8 +1341,19 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn initialize_array_element
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn initialize_array_element(&self, array_reference: ReferenceV<'v, 'h, 's>, ret: ReferenceV<'v, 'h, 's>) {
-        panic!("Unimplemented: initialize_array_element");
+    pub fn initialize_array_element(&mut self, array_reference: ReferenceV<'v, 'h, 's>, ret: ReferenceV<'v, 'h, 's>) {
+        match self.dereference(array_reference, false) {
+            KindV::ArrayInstance(a) => {
+                self.increment_reference_ref_count(
+                    crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
+                        element_addr: crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: a.get_size() },
+                        ownership: a.element_type_h.ownership,
+                    }),
+                    ret);
+                a.initialize_element(self.vivem_bump, ret);
+            }
+            _ => panic!("initialize_array_element: not an ArrayInstance"),
+        }
     }
 }
 /*
@@ -1461,8 +1472,10 @@ Guardian: temp-disable: SPDMX — Per in-file precedent SPDMX temp-disable at he
 */
 // mig: fn add_uninitialized_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_uninitialized_array(&self, array_definition_th: RuntimeSizedArrayDefinitionHT, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, ArrayInstanceV<'v, 'h, 's>) {
-        panic!("Unimplemented: add_uninitialized_array");
+    pub fn add_uninitialized_array(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
+        let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity, elements: Cell::new(&[]) });
+        let reference = self.add(interner, array_ref_type.ownership, array_ref_type.location, KindV::ArrayInstance(instance));
+        (reference, instance)
     }
 }
 /*
@@ -1598,7 +1611,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                     panic!("Expected {:?} but was {:?}", struct_ref_h, struct_def_h.struct_h);
                 }
             }
-            (KindV::ArrayInstance(_), KindHT::RuntimeSizedArrayHT(_)) => panic!("check_kind: RuntimeSizedArray — pilot doesn't exercise"),
+            (KindV::ArrayInstance(type_h_array), array_h @ KindHT::RuntimeSizedArrayHT(_)) => {
+                if type_h_array.type_h.kind != array_h {
+                    panic!("Expected {:?} but was {:?}", array_h, type_h_array.type_h);
+                }
+            }
             (KindV::ArrayInstance(type_h_array), array_h @ KindHT::StaticSizedArrayHT(_)) => {
                 if type_h_array.type_h.kind != array_h {
                     panic!("Expected {:?} but was {:?}", array_h, type_h_array.type_h);

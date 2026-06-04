@@ -8,7 +8,7 @@ use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
-  IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, OutsideLoadSE, OverloadSetSE,
+  IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, NewRuntimeSizedArraySE, OutsideLoadSE, OverloadSetSE,
   OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE, TemplataLoadSE,
   TupleSE, VoidSE,
 };
@@ -1493,7 +1493,16 @@ fn scout_expression(
               ),
             );
           }
-          panic!("POSTPARSER_SCOUT_CONSTRUCT_ARRAY_RUNTIME_NOT_YET_IMPLEMENTED");
+          let size_se = args_s[0];
+          let callable_se = args_s.get(1).copied();
+          IExpressionSE::NewRuntimeSizedArray(NewRuntimeSizedArraySE {
+            range: range_s,
+            rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+            maybe_element_type_st: maybe_type_rune_s,
+            mutability_st: mutability_rune_s,
+            size: self.scout_arena.alloc(size_se),
+            callable: callable_se,
+          })
         }
         IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: maybe_size_pt }) => {
           let maybe_size_rune_s = maybe_size_pt.as_ref().map(|size_pt| {

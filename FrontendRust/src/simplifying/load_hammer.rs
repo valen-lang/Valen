@@ -63,7 +63,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
             AddressExpressionIE::AddressMemberLookup(aml) => {
                 self.translate_addressible_member_load(hinputs, hamuts, current_function_header, locals, aml.struct_expr, &aml.member_name, target_ownership, aml.member_reference)
             }
-            AddressExpressionIE::RuntimeSizedArrayLookup(_) => panic!("translate_load: RuntimeSizedArrayLookup branch"),
+            AddressExpressionIE::RuntimeSizedArrayLookup(rsl) => {
+                let combined_target_ownership = target_ownership;
+                self.translate_mundane_runtime_sized_array_load(hinputs, hamuts, current_function_header, locals, rsl.array_expr, rsl.index_expr, combined_target_ownership, rsl.element_type)
+            }
             AddressExpressionIE::StaticSizedArrayLookup(s) => {
                 self.translate_mundane_static_sized_array_load(hinputs, hamuts, current_function_header, locals, s.array_expr, s.index_expr, target_ownership)
             }
@@ -191,7 +194,34 @@ where 's: 'h, 's: 'i, 'i: 'h,
         result_type2: CoordI<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        panic!("Unimplemented: translate_mundane_runtime_sized_array_load");
+        let _ = result_type2;
+        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let (array_result_line, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
+        let array_access = array_result_line.expect_runtime_sized_array_access();
+        let (index_expr_result_line, index_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
+        let index_access = index_expr_result_line.expect_int_access();
+        assert!(target_ownership == crate::final_ast::types::OwnershipH::MutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableShareH || target_ownership == crate::final_ast::types::OwnershipH::MutableShareH);
+        let rsa = hamuts.get_runtime_sized_array(array_access.result_type().kind.expect_runtime_sized_array_ht());
+        let expected_element_type = rsa.element_type;
+        let location = match (target_ownership, expected_element_type.location) {
+            (crate::final_ast::types::OwnershipH::ImmutableBorrowH, _) => crate::final_ast::types::LocationH::YonderH,
+            (crate::final_ast::types::OwnershipH::MutableBorrowH, _) => crate::final_ast::types::LocationH::YonderH,
+            (crate::final_ast::types::OwnershipH::OwnH, location) => location,
+            (crate::final_ast::types::OwnershipH::MutableShareH, location) => location,
+            (crate::final_ast::types::OwnershipH::ImmutableShareH, location) => location,
+            _ => panic!("translate_mundane_runtime_sized_array_load: unexpected ownership"),
+        };
+        let result_type = crate::final_ast::types::CoordH { ownership: target_ownership, location, kind: expected_element_type.kind };
+        let loaded_node_h = ExpressionH::RuntimeSizedArrayLoadH(self.interner.alloc(crate::final_ast::instructions::RuntimeSizedArrayLoadH {
+            array_expression: array_access,
+            index_expression: index_access,
+            target_ownership,
+            expected_element_type,
+            result_type,
+        }));
+        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = array_deferreds;
+        deferreds.extend(index_deferreds);
+        (loaded_node_h, deferreds)
     }
 }
 /*
