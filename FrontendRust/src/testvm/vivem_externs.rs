@@ -145,7 +145,12 @@ pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, 
   }
 */
 // mig: fn getch
-pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: getch"); }
+pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert!(args.is_empty());
+    let next = (memory.stdin)();
+    let code = if next.0.is_empty() { 0i64 } else { next.0.chars().next().unwrap() as i64 };
+    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: code, bits: 32, _phantom: std::marker::PhantomData }))
+}
 /*
   def getch(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.isEmpty)

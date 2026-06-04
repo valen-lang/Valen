@@ -128,7 +128,7 @@ pub fn null_stdout<'v, 'h, 's>(str: StrI<'s>) {
 */
 // mig: fn regular_stdout
 pub fn regular_stdout<'v, 'h, 's>(str: StrI<'s>) {
-    panic!("Unimplemented: regular_stdout")
+    print!("{}", str.0);
 }
 /*
   def regularStdout(str: String) = {
@@ -136,8 +136,16 @@ pub fn regular_stdout<'v, 'h, 's>(str: StrI<'s>) {
   }
 */
 // mig: fn stdin_from_list
-pub fn stdin_from_list<'v, 'h, 's>(stdin_list: &'v [StrI<'s>]) -> Box<dyn Fn() -> StrI<'s>> {
-    panic!("Unimplemented: stdin_from_list")
+pub fn stdin_from_list<'s>(stdin_list: &[StrI<'s>]) -> Box<dyn Fn() -> StrI<'s> + 's> {
+    let remaining_stdin = std::cell::RefCell::new(stdin_list.to_vec());
+    let stdin: Box<dyn Fn() -> StrI<'s> + 's> = Box::new(move || {
+        let mut r = remaining_stdin.borrow_mut();
+        assert!(!r.is_empty());
+        let result = r[0];
+        r.remove(0);
+        result
+    });
+    stdin
 }
 /*
   def stdinFromList(stdinList: Vector[String]) = {

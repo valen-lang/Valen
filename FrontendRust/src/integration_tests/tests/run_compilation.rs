@@ -285,7 +285,18 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload `evalForKind(args, stdin)`)
-  pub fn eval_for_kind_primitive_args_with_stdin<'v>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>, _stdin: Vec<String>) -> crate::von::ast::IVonData { panic!("Unimplemented: eval_for_kind_primitive_args_with_stdin"); }
+  pub fn eval_for_kind_primitive_args_with_stdin<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>, stdin: Vec<String>) -> crate::von::ast::IVonData {
+      let scout_arena = self.hammer_compilation.scout_arena;
+      let interned_stdin: Vec<crate::interner::StrI<'s>> = stdin.iter().map(|s| scout_arena.intern_str(s)).collect();
+      let interner = self.hammer_compilation.interner;
+      let hamuts = self.get_hamuts();
+      let mut vivem_dout = std::io::stdout();
+      let vivem_bump = bumpalo::Bump::new();
+      let stdin_fn = crate::testvm::vivem::stdin_from_list(&interned_stdin);
+      crate::testvm::vivem::execute_with_primitive_args(
+          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &*stdin_fn, &crate::testvm::vivem::regular_stdout,
+      )
+  }
   /*
   def evalForKind(
       args: Vector[PrimitiveKindV],

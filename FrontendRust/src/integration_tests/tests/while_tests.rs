@@ -93,9 +93,29 @@ fn test_a_for_ish_while_loop() {
 */
 // mig: fn tests_a_while_loop_with_a_complex_condition
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_a_while_loop_with_a_complex_condition() {
-    panic!("Unmigrated test: tests_a_while_loop_with_a_complex_condition");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import ioutils.*;\nimport printutils.*;\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key < 96 {\n    print(key);\n  }\n  return key;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 99 }) => {}
+        other => panic!("expected VonInt(99), got {:?}", other),
+    }
 }
 /*
   test("Tests a while loop with a complex condition") {
@@ -251,9 +271,29 @@ fn infinite_while_loop_conditional_break() {
 */
 // mig: fn infinite_while_loop_unconditional_break
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn infinite_while_loop_unconditional_break() {
-    panic!("Unmigrated test: infinite_while_loop_unconditional_break");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  while true {\n    break;\n  }\n  return 42;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Infinite while loop unconditional break") {
@@ -272,9 +312,29 @@ fn infinite_while_loop_unconditional_break() {
 */
 // mig: fn infinite_while_loop_conditional_break_from_both_sides
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn infinite_while_loop_conditional_break_from_both_sides() {
-    panic!("Unmigrated test: infinite_while_loop_conditional_break_from_both_sides");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  while true {\n    if true {\n      break;\n    } else {\n      break;\n    }\n  }\n  return 42;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Infinite while loop conditional break from both sides") {
@@ -297,9 +357,29 @@ fn infinite_while_loop_conditional_break_from_both_sides() {
 */
 // mig: fn infinite_while_loop_conditional_return
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn infinite_while_loop_conditional_return() {
-    panic!("Unmigrated test: infinite_while_loop_conditional_return");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    }\n    73;\n  }\n  return 74;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Infinite while loop conditional return") {
@@ -321,9 +401,29 @@ fn infinite_while_loop_conditional_return() {
 */
 // mig: fn infinite_while_loop_unconditional_return
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn infinite_while_loop_unconditional_return() {
-    panic!("Unmigrated test: infinite_while_loop_unconditional_return");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  while true {\n    return 42;\n  }\n  return 73;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Infinite while loop unconditional return") {
@@ -342,9 +442,29 @@ fn infinite_while_loop_unconditional_return() {
 */
 // mig: fn infinite_while_loop_conditional_return_from_both_sides
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn infinite_while_loop_conditional_return_from_both_sides() {
-    panic!("Unmigrated test: infinite_while_loop_conditional_return_from_both_sides");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    } else {\n      return 73;\n    }\n  }\n  return 74;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Infinite while loop conditional return from both sides") {
