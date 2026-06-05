@@ -73,7 +73,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let let_h = self.translate_let(hinputs, hamuts, current_function_header, locals, let2);
                     (let_h, Vec::new())
                 }
-                RE::Restackify(let2) => panic!("translate_expression: Restackify branch"),
+                RE::Restackify(let2) => {
+                    let let_h = self.translate_restackify(hinputs, hamuts, current_function_header, locals, let2);
+                    (let_h, Vec::new())
+                }
                 RE::LetAndLend(let2) => {
                     let borrow_access = self.translate_let_and_point(hinputs, hamuts, current_function_header, locals, let2);
                     (borrow_access, Vec::new())

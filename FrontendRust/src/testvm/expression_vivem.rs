@@ -1041,6 +1041,21 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             heap.print_kind(crate::testvm::values::KindV::ArrayInstance(array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
         }
+        ExpressionH::RestackifyH(s) => {
+            let crate::final_ast::instructions::RestackifyH { source_expr, local, name: _ } = **s;
+            let reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let var_addr = crate::testvm::heap::get_var_address(expression_id.call_id, local);
+            heap.add_local(interner, var_addr, reference, source_expr.result_type());
+            {
+                let handle = &mut *heap.vivem_dout;
+                write!(handle, " v{}/{}<-o{}", var_addr.call_id.call_depth, var_addr.local.id.number, reference.num).unwrap();
+            }
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

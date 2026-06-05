@@ -1171,7 +1171,31 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::RestackifyH(_) => panic!("vonify_expression: RestackifyH"),
+            ExpressionH::RestackifyH(s) => {
+                let crate::final_ast::instructions::RestackifyH { source_expr, local, name } = *s;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Restackify".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember {
+                            field_name: "sourceExpr".to_string(),
+                            value: self.vonify_expression(source_expr),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "local".to_string(),
+                            value: self.vonify_local(local),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "knownLive".to_string(),
+                            value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }),
+                        },
+                        crate::von::ast::VonMember {
+                            field_name: "optName".to_string(),
+                            value: self.vonify_optional(name, |n| self.vonify_name(n)),
+                        },
+                    ],
+                })
+            }
             ExpressionH::UnstackifyH(u) => {
                 let crate::final_ast::instructions::UnstackifyH { local } = *u;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

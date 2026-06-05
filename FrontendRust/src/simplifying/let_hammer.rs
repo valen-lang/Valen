@@ -122,13 +122,30 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        let2: &RestackifyIE<'s, 'i, cI>,
+        let2: &'i RestackifyIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_restackify");
+        let local_variable = let2.variable;
+        let source_expr2 = let2.expr;
+        let (source_expr_he, deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(source_expr2));
+        let source_result_pointer_type_h = self.translate_coord(hinputs, hamuts, source_expr2.result());
+        match source_expr_he.result_type().kind {
+            crate::final_ast::types::KindHT::NeverHT(_) => return source_expr_he,
+            _ => {}
+        }
+        let stackify_node = match local_variable {
+            crate::instantiating::ast::ast::ILocalVariableI::ReferenceLocalVariableI(rlv) => {
+                ExpressionH::RestackifyH(self.translate_mundane_restackify(hinputs, hamuts, current_function_header, locals, source_expr_he, &rlv.name))
+            }
+            crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(alv) => {
+                self.translate_addressible_restackify(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &alv.name, alv.variability, alv.collapsed_coord)
+            }
+        };
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stackify_node, deferreds)
     }
 }
 /*
+Guardian: temp-disable: SPDMX — In-file precedent: the sibling translate_let (let_hammer.rs line 68) uses the exact same ExpressionH::StackifyH(self.translate_mundane_let(...)) wrap pattern around translate_mundane_let's narrower &StackifyH return. Scala has implicit upcast from StackifyH/RestackifyH to ExpressionH[KindHT]; Rust requires the explicit enum-variant wrap. This is established Rust adaptation, not novel code. — FrontendRust/guardian-logs/request-1744-1780628858411/hook-1744/translate_restackify--119.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,
@@ -473,7 +490,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
         var_id: &'i IVarNameI<'s, 'i, cI>,
     ) -> &'h RestackifyH<'s, 'h>
     {
-        panic!("Unimplemented: translate_mundane_restackify");
+        locals.mark_restackified_by_var_name(var_id);
+        match source_expr_he.result_type().kind {
+            crate::final_ast::types::KindHT::NeverHT(_) => panic!("translate_mundane_restackify: source NeverHT (vwat)"),
+            _ => {}
+        }
+        let local = locals.get_by_var_name(var_id).expect("locals.get_by_var_name");
+        let var_id_full = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*var_id));
+        let stack_node = self.interner.alloc(crate::final_ast::instructions::RestackifyH {
+            source_expr: source_expr_he,
+            local,
+            name: Some(self.translate_full_name(hinputs, hamuts, &var_id_full)),
+        });
+        stack_node
     }
 }
 /*

@@ -1332,7 +1332,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ConstantF64H(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::FloatHT(FloatHT) },
             ExpressionH::ArgumentH(a) => a.result_type,
             ExpressionH::StackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-            ExpressionH::RestackifyH(_) => panic!("Unimplemented: result_type for RestackifyH"),
+            ExpressionH::RestackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::UnstackifyH(u) => u.local.type_h,
             ExpressionH::DestroyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
             ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },

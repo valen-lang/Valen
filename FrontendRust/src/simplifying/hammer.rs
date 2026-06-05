@@ -172,10 +172,12 @@ impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
-        panic!("Unimplemented: mark_restackified_by_var_name");
+        let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
+        self.mark_restackified(var_id_h);
     }
 }
 /*
+Guardian: temp-disable: SPDMX — In-file precedent: the sibling mark_unstackified_by_var_name (hammer.rs lines 159-162) uses the identical typing_pass_locals.get + delegate-to-mark_unstackified pattern. Scala has a single Locals impl-via-Box that auto-resolves IVarNameI to VariableIdH internally; Rust collapsed the Box per Exception U so the lookup is hoisted to the by-var-name caller. Established adaptation, not novel. — FrontendRust/guardian-logs/request-1757-1780629160910/hook-1757/mark_restackified_by_var_name--174.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markRestackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markRestackified(varId2)
   }
@@ -403,7 +405,12 @@ impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub fn mark_restackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
-        panic!("Unimplemented: mark_restackified");
+        // Make sure it existed and was unstackified
+        assert!(self.locals.contains_key(&var_id_h));
+        if !self.unstackified_vars.contains(&var_id_h) {
+            panic!("Already unstackified {:?}", var_id_h);
+        }
+        self.unstackified_vars.remove(&var_id_h);
     }
 }
 /*

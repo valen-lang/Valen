@@ -3459,7 +3459,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::Restackify(_) => panic!("Unimplemented: translate_ref_expr Restackify"),
+            ReferenceExpressionTE::Restackify(r) => {
+                let (_inner_it, inner_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.source_expr);
+                let (_local_it, local_i) =
+                    self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.variable);
+                // env.addTranslatedVariable(variableT.name, vimpl(translatedVariable))
+                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) };
+                let expr_ce = ReferenceExpressionIE::Restackify(self.interner.alloc(crate::instantiating::ast::expressions::RestackifyIE {
+                    variable: local_i,
+                    expr: inner_ce,
+                    result: region_collapser_individual::collapse_coord(self.interner, &subjective_result_it),
+                }));
+                (subjective_result_it, expr_ce)
+            }
             ReferenceExpressionTE::Transmigrate(_) => panic!("Unimplemented: translate_ref_expr Transmigrate"),
             ReferenceExpressionTE::Return(r) => {
                 let (_inner_it, inner_ce) =
