@@ -1075,7 +1075,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         ExpressionH::RestackifyH(s) => {
             let crate::final_ast::instructions::RestackifyH { source_expr, local, name: _ } = **s;
             let reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
-                ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_)) => return ret,
+                ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return ret,
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
             let var_addr = crate::testvm::heap::get_var_address(expression_id.call_id, local);
