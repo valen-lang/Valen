@@ -1606,7 +1606,144 @@ where 's: 't,
                 let loop_expr_2 = ReferenceExpressionTE::While(self.typing_interner.alloc(WhileTE::new(uncoerced_body_block_2)));
                 Ok((ExpressionTE::Reference(loop_expr_2), body_returns_from_exprs))
             }
-            IExpressionSE::Map(_) => panic!("implement: evaluate_expression — Map"),
+            IExpressionSE::Map(m) => {
+                // Preprocess the entire loop once, to predict what its result type
+                // will be.
+                // We can't just use this, because any returns inside won't drop
+                // the temporary list.
+                let element_ref_t = {
+                    // See BEAFB for why we make a new environment for the While
+                    let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+                    let body_se_as_expr: &'s IExpressionSE<'s> =
+                        self.scout_arena.alloc(IExpressionSE::Block(m.body));
+                    let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+                    let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+                    let (body_expressions_with_result, _) =
+                        self.evaluate_block_statements(
+                            coutputs,
+                            loop_block_fate_starting,
+                            &mut loop_block_fate,
+                            life.add(self.typing_interner, 1),
+                            parent_ranges,
+                            outer_call_location,
+                            nenv.default_region(),
+                            m.body)?;
+                    body_expressions_with_result.result().coord
+                };
+
+                // Now that we know the result type, let's make a temporary list.
+
+                let self_rune_irune = self.scout_arena.intern_rune(crate::postparsing::names::IRuneValS::SelfRune(crate::postparsing::names::SelfRuneS {}));
+                let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: self_rune_irune, _phantom: std::marker::PhantomData }));
+                let element_coord_templata: &'t CoordTemplataT<'s, 't> = self.typing_interner.alloc(CoordTemplataT { coord: element_ref_t });
+                let snap = nenv.snapshot(self.typing_interner);
+                let call_env_node = snap.add_entries(
+                    self.typing_interner,
+                    self.scout_arena,
+                    &[(self_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(element_coord_templata)))]);
+                let call_env = IInDenizenEnvironmentT::Node(call_env_node);
+                let make_list_callable = self.new_global_function_group_expression(
+                    call_env, coutputs, RegionT { region: IRegionT::Default },
+                    self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.list })));
+                let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                    &std::iter::once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                let rune_parent_env_lookup_rule = crate::postparsing::rules::rules::IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                    range: m.range,
+                    rune: crate::postparsing::rules::rules::RuneUsage { range: m.range, rune: self_rune_irune },
+                });
+                let make_list_te = self.evaluate_prefix_call(
+                    coutputs,
+                    nenv,
+                    life.add(self.typing_interner, 1),
+                    range_with_parent_t,
+                    outer_call_location,
+                    region,
+                    make_list_callable,
+                    &[rune_parent_env_lookup_rule],
+                    &[self_rune_irune],
+                    &[])?;
+
+                let list_local = self.make_temporary_local(
+                    nenv, life.add(self.typing_interner, 2), make_list_te.result().coord);
+                let let_list_te = ReferenceExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE {
+                    variable: ILocalVariableT::Reference(list_local),
+                    expr: make_list_te,
+                }));
+
+                let (loop_te, returns_from_loop) = {
+                    // See BEAFB for why we make a new environment for the While
+                    let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+                    let body_se_as_expr: &'s IExpressionSE<'s> =
+                        self.scout_arena.alloc(IExpressionSE::Block(m.body));
+                    let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+                    let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+                    let (user_body_te, body_returns_from_exprs) =
+                        self.evaluate_block_statements(
+                            coutputs,
+                            loop_block_fate_starting,
+                            &mut loop_block_fate,
+                            life.add(self.typing_interner, 1),
+                            parent_ranges,
+                            outer_call_location,
+                            nenv.default_region(),
+                            m.body)?;
+
+                    // We store the iteration result in a local because the loop body will have
+                    // breaks, and we can't have a BreakTE inside a FunctionCallTE, see BRCOBS.
+                    let iteration_result_local = self.make_temporary_local(
+                        nenv, life.add(self.typing_interner, 3), user_body_te.result().coord);
+                    let let_iteration_result_te = ReferenceExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE {
+                        variable: ILocalVariableT::Reference(iteration_result_local),
+                        expr: user_body_te,
+                    }));
+
+                    let add_callable = self.new_global_function_group_expression(
+                        call_env, coutputs, RegionT { region: IRegionT::Default },
+                        self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.add })));
+                    let local_lookup_te = AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
+                        range: m.range,
+                        local_variable: ILocalVariableT::Reference(list_local),
+                    }));
+                    let borrow_load = self.borrow_soft_load(coutputs, local_lookup_te);
+                    let unlet_iter = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &ILocalVariableT::Reference(iteration_result_local))));
+                    let add_call = self.evaluate_prefix_call(
+                        coutputs,
+                        nenv,
+                        life.add(self.typing_interner, 4),
+                        range_with_parent_t,
+                        outer_call_location,
+                        region,
+                        add_callable,
+                        &[],
+                        &[],
+                        &[borrow_load, unlet_iter])?;
+                    let body_te = BlockTE { inner: self.consecutive(&[let_iteration_result_te, add_call]) };
+
+                    let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
+                        loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                    if !body_unstackified_ancestor_locals.is_empty() {
+                        return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
+                            range: range_with_parent_t,
+                            local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                        });
+                    }
+                    if !body_restackified_ancestor_locals.is_empty() {
+                        return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
+                            range: range_with_parent_t,
+                            local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                        });
+                    }
+
+                    let while_te = ReferenceExpressionTE::While(self.typing_interner.alloc(WhileTE::new(body_te)));
+                    (while_te, body_returns_from_exprs)
+                };
+
+                let unlet_list_te = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, &ILocalVariableT::Reference(list_local))));
+
+                let combined_te = self.consecutive(&[let_list_te, loop_te, unlet_list_te]);
+
+                Ok((ExpressionTE::Reference(combined_te), returns_from_loop))
+            }
             IExpressionSE::ExprMutate(em) => {
                 let (unconverted_source_expr_2, returns_from_source) =
                     self.evaluate_and_coerce_to_reference_expression(

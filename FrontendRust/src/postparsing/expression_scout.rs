@@ -2362,6 +2362,41 @@ fn scout_expression(
       let expr = self.scout_arena.alloc(IExpressionSE::Break(crate::postparsing::expressions::BreakSE { range: range_s }));
       Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr }), VariableUses::empty(), VariableUses::empty()))
     }
+    IExpressionPE::Range(range_pe) => {
+      let range_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: self.keywords.range,
+      }));
+      let load_part = self.scout_arena.alloc(LoadPartSE {
+        name: range_name,
+        explicit_template_args: &[],
+      });
+      let callable_se = &*self.scout_arena.alloc(IExpressionSE::OverloadSet(OverloadSetSE {
+        lookup: OutsideLoadSE {
+          range: PostParser::eval_range(&file_coordinate, range_pe.range),
+          rules: &[],
+          parts: self.scout_arena.alloc_slice_copy(&[&*load_part]),
+        },
+      }));
+      let load_begin_as = match range_pe.from_expr {
+        IExpressionPE::SubExpression(_) => LoadAsP::Use,
+        _ => LoadAsP::LoadAsBorrow,
+      };
+      let (stack_frame1, begin_se, begin_self_uses, begin_child_uses) =
+        self.scout_expression_and_coerce(stack_frame, &mut lidb.child(), range_pe.from_expr, load_begin_as)?;
+      let load_end_as = match range_pe.to_expr {
+        IExpressionPE::SubExpression(_) => LoadAsP::Use,
+        _ => LoadAsP::LoadAsBorrow,
+      };
+      let (stack_frame2, end_se, end_self_uses, end_child_uses) =
+        self.scout_expression_and_coerce(stack_frame1, &mut lidb.child(), range_pe.to_expr, load_end_as)?;
+      let result_se = &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
+        range: PostParser::eval_range(&file_coordinate, range_pe.range),
+        location: lidb.child().consume_in_arena(self.scout_arena),
+        callable_expr: callable_se,
+        arg_exprs: self.scout_arena.alloc_slice_from_vec(vec![begin_se, end_se]),
+      }));
+      Ok((stack_frame2, IScoutResult::NormalResult(NormalResultS { expr: result_se }), begin_self_uses.then_merge(&end_self_uses), begin_child_uses.then_merge(&end_child_uses)))
+    }
     _ => panic!(
       "POSTPARSER_SCOUT_EXPRESSION_NOT_YET_IMPLEMENTED: {:?}",
       expression

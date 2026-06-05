@@ -1221,10 +1221,11 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   pub fn add_entry(
     &self,
     interner: &TypingInterner<'s, 't>,
+    scout_arena: &ScoutArena<'s>,
     name: INameT<'s, 't>,
     entry: IEnvEntryT<'s, 't>,
   ) -> TemplatasStoreT<'s, 't> {
-    panic!("Unimplemented: add_entry");
+    self.add_entries(interner, scout_arena, vec![(name, entry)])
   }
 }
 /*

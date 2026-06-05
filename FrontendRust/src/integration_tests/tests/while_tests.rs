@@ -586,9 +586,26 @@ fn each_on_int_range() {
 */
 // mig: fn parallel_foreach
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn parallel_foreach() {
-    panic!("Unmigrated test: parallel_foreach");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport intrange.*;\nimport list.*;\nimport listprintutils.*;\n\nexported func main() {\n  exponent = 3;\n\n  results =\n    parallel foreach i in 0..5 {\n      i + 1\n    };\n\n  println(&results);\n}\n",
+    );
+    assert_eq!(compile.eval_for_stdout(Vec::new()).trim(), "[1, 2, 3, 4, 5]");
 }
 /*
   test("Parallel foreach") {
