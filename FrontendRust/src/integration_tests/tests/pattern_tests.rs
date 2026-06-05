@@ -28,9 +28,39 @@ class PatternTests extends FunSuite with Matchers {
 */
 // mig: fn test_matching_a_multiple_member_seq_of_immutables
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_matching_a_multiple_member_seq_of_immutables() {
-    panic!("Unmigrated test: test_matching_a_multiple_member_seq_of_immutables");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Checks that the 5 made it into y, and it was an int
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "exported func main() int { [x, y] = (4, 5); return y; }",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        assert_eq!(main.header.return_type, crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        });
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
 }
 
 /*
@@ -45,9 +75,39 @@ fn test_matching_a_multiple_member_seq_of_immutables() {
 */
 // mig: fn test_matching_a_multiple_member_seq_of_mutables
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_matching_a_multiple_member_seq_of_mutables() {
-    panic!("Unmigrated test: test_matching_a_multiple_member_seq_of_mutables");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Checks that the 5 made it into y, and it was an int
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Marine { hp int; }\nexported func main() int { [x, y] = (Marine(6), Marine(8)); return y.hp; }\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        assert_eq!(main.header.return_type, crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        });
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
+        other => panic!("expected VonInt(8), got {:?}", other),
+    }
 }
 
 /*
@@ -66,9 +126,39 @@ fn test_matching_a_multiple_member_seq_of_mutables() {
 */
 // mig: fn test_matching_a_multiple_member_pack_of_immutable_and_own
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
-    panic!("Unmigrated test: test_matching_a_multiple_member_pack_of_immutable_and_own");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Checks that the 5 made it into y, and it was an int
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Marine { hp int; }\nexported func main() int { [x, y] = (7, Marine(8)); return y.hp; }\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        // BUG: Scala uses `==` (a pure expression with discarded result) instead of `shouldEqual`; the assertion is dead.
+        let _ = coutputs.functions[0].header.return_type == crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        };
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
+        other => panic!("expected VonInt(8), got {:?}", other),
+    }
 }
 
 /*
@@ -86,9 +176,73 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
 */
 // mig: fn test_matching_a_multiple_member_pack_of_immutable_and_borrow
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
-    panic!("Unmigrated test: test_matching_a_multiple_member_pack_of_immutable_and_borrow");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Checks that the 5 made it into y, and it was an int
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Marine { hp int; }\nexported func main() int {\n  m = Marine(8);\n  [x, y] = (7, &m);\n  return y.hp;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        // BUG: Scala uses `==` (a pure expression with discarded result) instead of `shouldEqual`; the assertion is dead.
+        let _ = coutputs.functions[0].header.return_type == crate::typing::types::types::CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Share,
+            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        };
+    }
+    {
+        let monouts = compile.get_monouts();
+        let tup_def = monouts.lookup_struct_by_name("Tup2");
+        let tup_def_member_types: Vec<crate::instantiating::ast::types::CoordI<'_, '_, crate::instantiating::ast::types::cI>> = tup_def.members.iter().filter_map(|m| match m.tyype {
+            crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(t) => Some(t.reference),
+            crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(t) => Some(t.reference),
+        }).collect();
+        match tup_def_member_types.as_slice() {
+            [
+                crate::instantiating::ast::types::CoordI {
+                    ownership: crate::instantiating::ast::types::OwnershipI::MutableShare,
+                    kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, .. }),
+                },
+                crate::instantiating::ast::types::CoordI {
+                    ownership: crate::instantiating::ast::types::OwnershipI::MutableBorrow,
+                    kind: crate::instantiating::ast::types::KindIT::StructIT(crate::instantiating::ast::types::StructIT {
+                        id: crate::instantiating::ast::names::IdI {
+                            init_steps: &[],
+                            local_name: crate::instantiating::ast::names::INameI::StructName(crate::instantiating::ast::names::StructNameI {
+                                template: crate::instantiating::ast::names::IStructTemplateNameI::StructTemplate(crate::instantiating::ast::names::StructTemplateNameI {
+                                    human_name: crate::interner::StrI("Marine"),
+                                    ..
+                                }),
+                                template_args: &[],
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                },
+            ] => {}
+            _ => panic!("tup_def_member_types shape mismatch"),
+        }
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
+        other => panic!("expected VonInt(8), got {:?}", other),
+    }
 }
 
 /*
@@ -232,7 +386,9 @@ fn ignore_destructure() {
       case VonInt(42) =>
     }
   }
+*/
 
+/*
 }
 
 */

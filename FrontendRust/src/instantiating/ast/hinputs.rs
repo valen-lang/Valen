@@ -315,9 +315,20 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct_by_name(
         &self,
-        _human_name: &str,
+        human_name: &str,
     ) -> &'i StructDefinitionI<'s, 'i, cI> {
-        panic!("Unimplemented: lookup_struct_by_name")
+        let matches: Vec<&&'i StructDefinitionI<'s, 'i, cI>> = self.structs.iter().filter(|s| {
+            match s.instantiated_citizen.id.local_name {
+                crate::instantiating::ast::names::INameI::StructName(crate::instantiating::ast::names::StructNameI { template: crate::instantiating::ast::names::IStructTemplateNameI::StructTemplate(t), .. }) if t.human_name.0 == human_name => true,
+                _ => false,
+            }
+        }).collect();
+        if matches.is_empty() {
+            panic!("Struct \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
 }
 /*
