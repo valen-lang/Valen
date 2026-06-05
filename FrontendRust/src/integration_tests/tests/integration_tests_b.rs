@@ -16,9 +16,26 @@ class IntegrationTestsB extends FunSuite with Matchers {
 */
 // mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_single_expression_and_single_statement_functions_returns() {
-    panic!("Unmigrated test: tests_single_expression_and_single_statement_functions_returns");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct MyThing { value int; }\nfunc moo() MyThing { return MyThing(4); }\nexported func main() { moo(); }\n      ",
+    );
+    compile.run_primitive_args(Vec::new());
 }
 /*
   test("Tests single expression and single statement functions' returns") {
