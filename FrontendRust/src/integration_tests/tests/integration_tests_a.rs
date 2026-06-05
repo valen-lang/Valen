@@ -904,8 +904,41 @@ fn test_taking_a_callable_param() {
 */
 // mig: fn stamps_an_interface_template_via_a_function_parameter
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn stamps_an_interface_template_via_a_function_parameter() { panic!("Unmigrated test: stamps_an_interface_template_via_a_function_parameter"); }
+fn stamps_an_interface_template_via_a_function_parameter() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let vivem_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\ninterface MyInterface<T Ref> { }\nfunc doAThing<T>(i MyInterface<T>) { }\n\nstruct SomeStruct<T Ref> { }\nfunc doAThing<T>(s SomeStruct<T>) { }\nimpl<T> MyInterface<T> for SomeStruct<T>;\n\nexport MyInterface<int> as SomeIntInterface;\nexport SomeStruct<int> as SomeIntStruct;\n\nexported func main(a SomeStruct<int>) {\n  doAThing<int>(a);\n}\n",
+    );
+    let package_h = compile.get_hamuts().lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
+    let mut vivem_dout = std::io::stdout();
+    let mut heap = crate::testvm::heap::HeapV::new(&hammer_interner, &mut vivem_dout, &vivem_bump);
+    let struct_instance = vivem_bump.alloc(crate::testvm::values::StructInstanceV {
+        struct_h: *package_h.lookup_struct("SomeStruct<i32>"),
+        members: std::cell::Cell::new(Some(&[])),
+    });
+    let r#ref = heap.add(
+        &hammer_interner,
+        crate::final_ast::types::OwnershipH::OwnH,
+        crate::final_ast::types::LocationH::YonderH,
+        crate::testvm::values::KindV::StructInstance(struct_instance),
+    );
+    compile.run_heap_args(heap, vec![r#ref]);
+}
 /*
   test("Stamps an interface template via a function parameter") {
     val compile = RunCompilation.test(

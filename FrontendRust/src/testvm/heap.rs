@@ -213,7 +213,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 // mig: fn size
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     pub fn size(&self) -> usize {
-        panic!("Unimplemented: size");
+        self.objects_by_id.len()
     }
 }
 /*
@@ -1165,8 +1165,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn count_unreachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn count_unreachable_allocations(&self, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
-        panic!("Unimplemented: count_unreachable_allocations");
+    pub fn count_unreachable_allocations(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
+        let num_reachables = self.find_reachable_allocations(interner, roots).len();
+        assert!(num_reachables <= self.objects_by_id.size());
+        self.objects_by_id.size() - num_reachables
     }
 }
 /*
@@ -1178,8 +1180,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn find_reachable_allocations(&self, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, AllocationV<'v, 'h, 's>> {
-        panic!("Unimplemented: find_reachable_allocations");
+    pub fn find_reachable_allocations<'a>(&'a self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> {
+        let mut destination_map: HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> = HashMap::new();
+        for input_reachable in input_reachables {
+            self.inner_find_reachable_allocations(interner, &mut destination_map, *input_reachable);
+        }
+        self.inner_find_reachable_allocations(interner, &mut destination_map, self.void());
+        destination_map
     }
 }
 /*
@@ -1195,8 +1202,30 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn inner_find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn inner_find_reachable_allocations(&self, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
-        panic!("Unimplemented: inner_find_reachable_allocations");
+    pub fn inner_find_reachable_allocations<'a>(&'a self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
+        // Doublecheck that all the inputReachables are actually in this ..
+        assert!(self.contains_live_object(input_reachable));
+        assert!(self.objects_by_id.get(interner, input_reachable.alloc_id()).kind.tyype(interner).hamut == input_reachable.actual_kind.hamut);
+
+        let allocation = self.objects_by_id.get(interner, input_reachable.alloc_id());
+        if destination_map.contains_key(&input_reachable) {
+            return;
+        }
+
+        destination_map.insert(input_reachable, allocation);
+        match allocation.kind {
+            KindV::Int(_) => {}
+            KindV::Void(_) => {}
+            KindV::Bool(_) => {}
+            KindV::Float(_) => {}
+            KindV::StructInstance(struct_instance) => {
+                let members = struct_instance.members.get().expect("StructInstance has no members");
+                for (reference, _struct_member_h) in members.iter().zip(struct_instance.struct_h.members.iter()) {
+                    self.inner_find_reachable_allocations(interner, destination_map, *reference);
+                }
+            }
+            _ => panic!(),
+        }
     }
 }
 /*

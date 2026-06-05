@@ -248,7 +248,15 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn run_heap_args (Scala overload `run(heap, args: Vector[ReferenceV])`)
-  pub fn run_heap_args<'v>(&self, _heap: crate::testvm::heap::HeapV<'v, 'h, 's>, _args: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>>) { panic!("Unimplemented: run_heap_args"); }
+  pub fn run_heap_args<'v>(&mut self, mut heap: crate::testvm::heap::HeapV<'v, 'h, 's>, args: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>>) {
+      let interner = self.hammer_compilation.interner;
+      let scout_arena = self.hammer_compilation.scout_arena;
+      let hamuts = self.get_hamuts();
+      let input_argument_references: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&args);
+      crate::testvm::vivem::execute_with_heap(
+          hamuts, interner, scout_arena, &mut heap, input_argument_references, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
+      );
+  }
   /*
   def run(heap: Heap, args: Vector[ReferenceV]): Unit = {
     Vivem.executeWithHeap(getHamuts(), heap, args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
