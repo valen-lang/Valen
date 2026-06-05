@@ -22,7 +22,7 @@ import scala.collection.immutable.List
 */
 // mig: struct PanicExceptionV
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PanicExceptionV;
 /*
 case class PanicException() extends Throwable {
@@ -42,7 +42,7 @@ override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: struct ConstraintViolatedExceptionV
 /// Temporary state
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct ConstraintViolatedExceptionV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
@@ -64,6 +64,17 @@ case class ConstraintViolatedException(msg: String) extends Throwable {
 override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
+*/
+// (no scala counterpart — Rust adaptation: enum wrapping the testvm exception structs so vm errors bubble as Result instead of Scala's throw/catch.)
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub enum VmRuntimeErrorV<'v, 'h, 's>
+where 's: 'h, 'h: 'v,
+{
+    PanicException(PanicExceptionV),
+    ConstraintViolatedException(ConstraintViolatedExceptionV<'v, 'h, 's>),
+}
+/* */
+/*
 
 object Vivem {
 */

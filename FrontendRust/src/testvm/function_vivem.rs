@@ -55,6 +55,7 @@ pub fn execute_function<'h, 's, 'v>(
         crate::testvm::expression_vivem::INodeExecuteResultV::Return(r) => NodeReturnV { return_ref: r.return_ref },
         crate::testvm::expression_vivem::INodeExecuteResultV::Break(_) => panic!("execute_function: NodeBreak vwat"),
         crate::testvm::expression_vivem::INodeExecuteResultV::Continue(c) => NodeReturnV { return_ref: c.result_ref },
+        crate::testvm::expression_vivem::INodeExecuteResultV::Error(_) => panic!("execute_function: Error propagation not yet implemented (pending Phase 3 boundary widening)"),
     };
     {
         use std::io::Write;

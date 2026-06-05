@@ -94,9 +94,30 @@ fn get_or_function() {
 */
 // mig: fn panic_on_drop_because_of_outstanding_borrow
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn panic_on_drop_because_of_outstanding_borrow() {
-    panic!("Unmigrated test: panic_on_drop_because_of_outstanding_borrow");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  ship; // drops it\n}\n",
+    );
+    let _ = compile.expect_compiler_outputs();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        compile.eval_for_kind_primitive_args(Vec::new())
+    }));
+    let _panic_payload = result.expect_err("It should panic instead");
 }
 /*
   // Not sure if this is desirable behavior, because borrow_ship isnt really used after
