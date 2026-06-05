@@ -29,7 +29,7 @@ fn printlning_an_int() {
         &instantiating_bump,
         "import printutils.*;\nexported func main() {\n  println(6);\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "6\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "6\n");
 }
 /*
   test("Println'ing an int") {
@@ -65,7 +65,7 @@ fn printlning_a_bool() {
         &instantiating_bump,
         "import printutils.*;\nexported func main() {\n  println(true);\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "true\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "true\n");
 }
 /*
   test("Println'ing a bool") {

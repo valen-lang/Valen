@@ -78,7 +78,7 @@ fn tests_import() {
         ),
     };
 
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -193,7 +193,7 @@ fn tests_non_imported_module_isnt_brought_in() {
 
     assert!(!compile.get_parseds().unwrap().package_coord_to_file_coords.contains_key(&module_b_coord));
 
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

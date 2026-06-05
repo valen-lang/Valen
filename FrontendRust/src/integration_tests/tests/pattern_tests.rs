@@ -57,7 +57,7 @@ fn test_matching_a_multiple_member_seq_of_immutables() {
             kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
         });
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -104,7 +104,7 @@ fn test_matching_a_multiple_member_seq_of_mutables() {
             kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
         });
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
@@ -155,7 +155,7 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
             kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
         };
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
@@ -239,7 +239,7 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
             _ => panic!("tup_def_member_types shape mismatch"),
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }
@@ -303,7 +303,7 @@ fn test_destructuring_a_shared() {
     {
         let _coutputs = compile.expect_compiler_outputs();
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -405,7 +405,7 @@ fn ignore_destructure() {
         &instantiating_bump,
         "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(4);\n  Marine[_] = m;\n  return 42;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

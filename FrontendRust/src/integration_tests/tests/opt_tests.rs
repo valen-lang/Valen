@@ -32,7 +32,7 @@ fn test_empty_and_get_for_some() {
         &instantiating_bump,
         "\nimport v.builtins.opt.*;\n\nexported func main() int {\n  opt Opt<int> = Some(9);\n  return if (opt.isEmpty()) { 0 }\n    else { opt.get() };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -74,7 +74,7 @@ fn test_empty_and_get_for_none() {
         &instantiating_bump,
         "\nexported func main() int {\n  opt Opt<int> = None<int>();\n  return if (opt.isEmpty()) { 0 }\n    else { opt.get() };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
@@ -114,7 +114,7 @@ fn test_empty_and_get_for_borrow() {
         &instantiating_bump,
         "\n// This is the same as the one in optutils.vale, just named differently,\n// so its easier to debug.\nfunc borrowGet<T>(opt &Some<T>) &T { &opt.value }\n\nstruct Spaceship { fuel int; }\nexported func main() int {\n  s = Spaceship(42);\n  bork = Some<&Spaceship>(&s);\n  return bork.borrowGet().fuel;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

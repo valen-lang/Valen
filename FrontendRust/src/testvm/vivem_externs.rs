@@ -14,9 +14,9 @@ import dev.vale.vfail
 object VivemExterns {
 */
 // mig: fn panic
-pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 0);
-    std::panic::panic_any(crate::testvm::vivem::PanicExceptionV);
+    Err(crate::testvm::vivem::VmRuntimeErrorV::PanicException(crate::testvm::vivem::PanicExceptionV))
 }
 /*
   def panic(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -25,16 +25,16 @@ pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
   }
 */
 // mig: fn add_float_float
-pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value + b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("add_float_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def addFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -49,16 +49,16 @@ pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
   }
 */
 // mig: fn multiply_float_float
-pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value * b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("multiply_float_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def multiplyFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -73,16 +73,16 @@ pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
   }
 */
 // mig: fn divide_float_float
-pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value / b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("divide_float_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def divideFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -97,16 +97,16 @@ pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h
   }
 */
 // mig: fn subtract_float_float
-pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value - b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("subtract_float_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def subtractFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -121,7 +121,7 @@ pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
   }
 */
 // mig: fn add_str_str
-pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
     let a_str = match memory.dereference(args[0]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("add_str_str: arg 0 not StrV") };
     let a_begin = match memory.dereference(args[1]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("add_str_str: arg 1 not IntV(_, 32)") };
@@ -133,7 +133,7 @@ pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, 
     let b_slice = &b_str.0[b_begin as usize .. (b_begin as i32 + b_length as i32) as usize];
     let concat = format!("{}{}", a_slice, b_slice);
     let interned = memory.scout_arena.intern_str(&concat);
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData })))
 }
 /*
   def addStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -148,11 +148,11 @@ pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, 
   }
 */
 // mig: fn getch
-pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.is_empty());
     let next = (memory.stdin)();
     let code = if next.0.is_empty() { 0i64 } else { next.0.chars().next().unwrap() as i64 };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: code, bits: 32, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: code, bits: 32, _phantom: std::marker::PhantomData })))
 }
 /*
   def getch(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -163,16 +163,16 @@ pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
   }
 */
 // mig: fn less_than_float
-pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value < b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("less_than_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def lessThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -187,7 +187,7 @@ pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
   }
 */
 // mig: fn greater_than_float
-pub fn greater_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_float"); }
+pub fn greater_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_float"); }
 /*
   def greaterThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -201,16 +201,16 @@ pub fn greater_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h
   }
 */
 // mig: fn eq_float_float
-pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: a_value, .. }), crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value == b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("eq_float_float: non-FloatV args"),
-    }
+    })
 }
 /*
   def eqFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -225,7 +225,7 @@ pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn eq_str_str
-pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
     let left_str = match memory.dereference(args[0]) { crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value, _ => panic!("eq_str_str: arg 0 not StrV") };
     let left_str_start = match memory.dereference(args[1]) { crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value, _ => panic!("eq_str_str: arg 1 not IntV(_, 32)") };
@@ -236,7 +236,7 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     // BUG: Scala uses .slice(start, len) but Scala's slice takes (from, until), so the
     // "len" arg is being misinterpreted as an end index. Mirroring Scala parity-faithfully.
     let result_eq = &left_str.0[left_str_start as usize .. left_str_len as usize] == &right_str.0[right_str_start as usize .. right_str_len as usize];
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: result_eq, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: result_eq, _phantom: std::marker::PhantomData })))
 }
 /*
   def eqStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -252,16 +252,16 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn eq_bool_bool
-pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value, .. }), crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: b_value, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value == b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("eq_bool_bool: non-BoolV args"),
-    }
+    })
 }
 /*
   def eqBoolBool(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -276,7 +276,7 @@ pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn and
-pub fn and<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: and"); }
+pub fn and<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: and"); }
 /*
   def and(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -290,7 +290,7 @@ pub fn and<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'
   }
 */
 // mig: fn or
-pub fn or<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: or"); }
+pub fn or<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: or"); }
 /*
   def or(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -304,13 +304,13 @@ pub fn or<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v
   }
 */
 // mig: fn not
-pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value, .. }) => value,
         _ => panic!("not: non-BoolV arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: !value, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: !value, _phantom: std::marker::PhantomData })))
 }
 /*
   def not(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -320,13 +320,13 @@ pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'
   }
 */
 // mig: fn sqrt
-pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
         _ => panic!("sqrt: non-FloatV arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value.sqrt(), _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value.sqrt(), _phantom: std::marker::PhantomData })))
 }
 /*
   def sqrt(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -336,13 +336,13 @@ pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &
   }
 */
 // mig: fn str_length
-pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value,
         _ => panic!("str_length: non-StrV arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value.0.len() as i64, bits: 32, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value.0.len() as i64, bits: 32, _phantom: std::marker::PhantomData })))
 }
 /*
   def strLength(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -352,14 +352,14 @@ pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn cast_float_str
-pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
         _ => panic!("cast_float_str: non-FloatV arg"),
     };
     let interned = memory.scout_arena.intern_str(&value.to_string());
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData })))
 }
 /*
   def castFloatStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -369,13 +369,13 @@ pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn negate_float
-pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
         _ => panic!("negate_float: non-FloatV arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: -value, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: -value, _phantom: std::marker::PhantomData })))
 }
 /*
   def negateFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -385,7 +385,7 @@ pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn print
-pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 3);
     let a_str = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value, .. }) => value,
@@ -402,7 +402,7 @@ pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
     let substring = &a_str.0[a_begin as usize .. (a_begin as i32 + a_length as i32) as usize];
     let substring_interned = memory.scout_arena.intern_str(substring);
     (memory.stdout)(substring_interned);
-    memory.make_void()
+    Ok(memory.make_void())
 }
 /*
   def print(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -415,16 +415,16 @@ pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
   }
 */
 // mig: fn add_i32
-pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32 + b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("add_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def addI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -439,16 +439,16 @@ pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn multiply_i32
-pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_mul(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("multiply_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def multiplyI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -463,16 +463,16 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn divide_i32
-pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_div(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("divide_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def divideI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -487,7 +487,7 @@ pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn mod_i32
-pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i32"); }
+pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i32"); }
 /*
   def modI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -505,16 +505,16 @@ pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn subtract_i32
-pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: (a_value as i32).wrapping_sub(b_value as i32) as i64, bits: 32, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("subtract_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def subtractI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -529,16 +529,16 @@ pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn less_than_i32
-pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value < b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("less_than_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def lessThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -553,16 +553,16 @@ pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>
   }
 */
 // mig: fn less_than_or_eq_i32
-pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value <= b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("less_than_or_eq_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def lessThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -577,16 +577,16 @@ pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
   }
 */
 // mig: fn greater_than_i32
-pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value > b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("greater_than_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def greaterThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -601,16 +601,16 @@ pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 
   }
 */
 // mig: fn greater_than_or_eq_i32
-pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value >= b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("greater_than_or_eq_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def greaterThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -625,16 +625,16 @@ pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v
   }
 */
 // mig: fn eq_i32
-pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: a_value == b_value, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("eq_i32: non-IntV(_, 32) args"),
-    }
+    })
 }
 /*
   def eqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -649,14 +649,14 @@ pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args:
   }
 */
 // mig: fn cast_i32_str
-pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
         _ => panic!("cast_i32_str: non-IntV(_, 32) arg"),
     };
     let interned = memory.scout_arena.intern_str(&value.to_string());
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData })))
 }
 /*
   def castI32Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -666,13 +666,13 @@ pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn cast_float_i32
-pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value, .. }) => value,
         _ => panic!("cast_float_i32: non-FloatV arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value as i32 as i64, bits: 32, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: value as i32 as i64, bits: 32, _phantom: std::marker::PhantomData })))
 }
 /*
   def castFloatI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -682,13 +682,13 @@ pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn cast_i32_float
-pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 32, .. }) => value,
         _ => panic!("cast_i32_float: non-IntV(_, 32) arg"),
     };
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value as f64, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Float(crate::testvm::values::FloatV { value: value as f64, _phantom: std::marker::PhantomData })))
 }
 /*
   def castI32Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -698,7 +698,7 @@ pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn add_i64
-pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
+pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
 /*
   def addI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -712,16 +712,16 @@ pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn multiply_i64
-pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_mul(b_value), bits: 64, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("multiply_i64: non-IntV(_, 64) args"),
-    }
+    })
 }
 /*
   def multiplyI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -736,16 +736,16 @@ pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn divide_i64
-pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_div(b_value), bits: 64, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("divide_i64: non-IntV(_, 64) args"),
-    }
+    })
 }
 /*
   def divideI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -760,14 +760,14 @@ pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn truncate_i64_to_i32
-pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 64, .. }) => value,
         _ => panic!("truncate_i64_to_i32: non-IntV(_, 64) arg"),
     };
     let result = value & 0xFFFFFFFFi64;
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: result, bits: 32, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: result, bits: 32, _phantom: std::marker::PhantomData })))
 }
 /*
   def truncateI64ToI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -778,7 +778,7 @@ pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
   }
 */
 // mig: fn mod_i64
-pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
+pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
 /*
   def modI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -796,16 +796,16 @@ pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
   }
 */
 // mig: fn subtract_i64
-pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
-    match (a_kind, b_kind) {
+    Ok(match (a_kind, b_kind) {
         (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 64, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 64, .. })) => {
             memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value.wrapping_sub(b_value), bits: 64, _phantom: std::marker::PhantomData }))
         }
         _ => panic!("subtract_i64: non-IntV(_, 64) args"),
-    }
+    })
 }
 /*
   def subtractI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -820,7 +820,7 @@ pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn less_than_i64
-pub fn less_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i64"); }
+pub fn less_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i64"); }
 /*
   def lessThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -834,7 +834,7 @@ pub fn less_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>
   }
 */
 // mig: fn less_than_or_eq_i64
-pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i64"); }
+pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i64"); }
 /*
   def lessThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -848,7 +848,7 @@ pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
   }
 */
 // mig: fn greater_than_i64
-pub fn greater_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i64"); }
+pub fn greater_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i64"); }
 /*
   def greaterThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -862,7 +862,7 @@ pub fn greater_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 
   }
 */
 // mig: fn greater_than_or_eq_i64
-pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i64"); }
+pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i64"); }
 /*
   def greaterThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -876,7 +876,7 @@ pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v
   }
 */
 // mig: fn eq_i64
-pub fn eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i64"); }
+pub fn eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i64"); }
 /*
   def eqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
@@ -890,14 +890,14 @@ pub fn eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args:
   }
 */
 // mig: fn cast_i64_str
-pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value, bits: 64, .. }) => value,
         _ => panic!("cast_i64_str: non-IntV(_, 64) arg"),
     };
     let interned = memory.scout_arena.intern_str(&value.to_string());
-    memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData }))
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::YonderH, crate::testvm::values::KindV::Str(crate::testvm::values::StrV { value: interned, _phantom: std::marker::PhantomData })))
 }
 /*
   def castI64Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
@@ -907,7 +907,7 @@ pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
   }
 */
 // mig: fn cast_float_i64
-pub fn cast_float_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i64"); }
+pub fn cast_float_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i64"); }
 /*
   def castFloatI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -916,7 +916,7 @@ pub fn cast_float_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn cast_i64_float
-pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_float"); }
+pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_float"); }
 /*
   def castI64Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -925,7 +925,7 @@ pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn new_vec
-pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
+pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
 /*
   def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)
@@ -937,7 +937,7 @@ pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prot
   }
 */
 // mig: fn new_vec_with_capacity
-pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
+pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
 /*
   def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -954,7 +954,7 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v,
   }
 */
 // mig: fn vec_capacity
-pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
+pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
 /*
   def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)

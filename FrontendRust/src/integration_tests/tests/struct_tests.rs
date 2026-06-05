@@ -29,7 +29,7 @@ fn make_empty_imm_struct() {
         &instantiating_bump,
         "struct Marine imm {}\nexported func main() {\n  Marine();\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Make empty imm struct") {
@@ -65,7 +65,7 @@ fn make_imm_struct_with_one_member() {
         &instantiating_bump,
         "struct Marine imm { hp int; }\nexported func main() {\n  Marine(7);\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Make imm struct with one member") {
@@ -101,7 +101,7 @@ fn make_nested_imm_struct() {
         &instantiating_bump,
         "struct Weapon imm { ammo int; }\nstruct Marine imm { hp int; weapon Weapon; }\nexported func main() {\n  Marine(5, Weapon(7));\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Make nested imm struct") {
@@ -138,7 +138,7 @@ fn make_empty_mut_struct() {
         &instantiating_bump,
         "struct Marine {}\nexported func main() {\n  Marine();\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Make empty mut struct") {
@@ -175,7 +175,7 @@ fn constructor_with_self() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("Expected VonInt(10), got {:?}", other),
     }
@@ -208,7 +208,7 @@ fn make_struct() {
         &instantiating_bump,
         "struct Marine { hp int; }\nexported func main() {\n  Marine(9);\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Make struct") {
@@ -245,7 +245,7 @@ fn make_struct_and_get_member() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
@@ -278,7 +278,7 @@ fn mutate_struct() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
     }
@@ -310,7 +310,7 @@ fn normal_destructure() {
         &instantiating_bump,
         "struct Marine {\n  hp int;\n  ammo int;\n}\nexported func main() int {\n  m = Marine(4, 7);\n  Marine[hp, ammo] = m;\n  return ammo;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
@@ -354,7 +354,7 @@ fn sugar_destructure() {
         &instantiating_bump,
         "struct Marine {\n  hp int;\n  ammo int;\n}\nexported func main() int {\n  m = Marine(4, 7);\n  destruct m;\n  return 9;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
@@ -398,7 +398,7 @@ fn destroy_members_at_right_times() {
         &instantiating_bump,
         "import printutils.*;\n\n#!DeriveStructDrop\nstruct Weapon { }\nfunc drop(weapon Weapon) {\n  println(\"Destroying weapon!\");\n  Weapon[ ] = weapon;\n}\n#!DeriveStructDrop\nstruct Marine {\n  weapon Weapon;\n}\nfunc drop(marine Marine) {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() {\n  Marine(Weapon());\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying marine!\nDestroying weapon!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying marine!\nDestroying weapon!\n");
 }
 /*
   test("Destroy members at right times") {
@@ -499,11 +499,10 @@ fn panic_function() {
         &instantiating_bump,
         "\nimport v.builtins.panic.*;\nimport v.builtins.drop.*;\n\nsealed interface XOpt<T Ref>\nwhere func drop(T)void {\n  func get(virtual opt &XOpt<T>) &T;\n}\n\nstruct XNone<T Ref> where func drop(T)void  { }\nimpl<T> XOpt<T> for XNone<T>;\n\nfunc get<T>(opt &XNone<T>) &T {\n  __vbi_panic();\n}\n\nexported func main() int {\n  m XOpt<int> = XNone<int>();\n  return m.get();\n}\n      ",
     );
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        compile.eval_for_kind_primitive_args(Vec::new())
-    }));
-    let panic_payload = result.expect_err("It should panic instead");
-    assert!(panic_payload.is::<crate::testvm::vivem::PanicExceptionV>(), "It should panic with PanicExceptionV instead");
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::PanicException(_)) => {}
+        other => panic!("Expected PanicException, got {:?}", other),
+    }
 }
 /*
   test("Panic function") {

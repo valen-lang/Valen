@@ -41,7 +41,7 @@ fn simple_string() {
             crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprogwoggle"), .. }) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprogwoggle" => {}
         other => panic!("expected VonStr(\"sprogwoggle\"), got {:?}", other),
     }
@@ -90,7 +90,7 @@ fn empty_string() {
             crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI(""), .. }) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "" => {}
         other => panic!("expected VonStr(\"\"), got {:?}", other),
     }
@@ -139,7 +139,7 @@ fn string_with_escapes() {
             crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprog\nwoggle"), .. }) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprog\nwoggle" => {}
         other => panic!("expected VonStr(\"sprog\\nwoggle\"), got {:?}", other),
     }
@@ -196,7 +196,7 @@ fn string_with_hex_escape() {
             }
         );
     }
-    let result = match compile.eval_for_kind_primitive_args(Vec::new()) {
+    let result = match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) => value,
         other => panic!("expected VonStr, got {:?}", other),
     };
@@ -248,7 +248,7 @@ fn int_to_string() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -281,7 +281,7 @@ fn i64_to_string() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -314,7 +314,7 @@ fn string_length() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 12 }) => {}
         other => panic!("expected VonInt(12), got {:?}", other),
     }
@@ -348,7 +348,7 @@ fn strings_equal() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -381,7 +381,7 @@ fn string_interpolate() {
         &instantiating_bump,
         "func +(s str, i int) str { return s + str(i); }\nfunc ns(i int) int { return i; }\nexported func main() str { return \"\"\"bl\"{ns(4)}rg\"\"\"; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "bl\"4rg" => {}
         other => panic!("expected VonStr(\"bl\\\"4rg\"), got {:?}", other),
     }
@@ -417,7 +417,7 @@ fn slice_a_slice() {
         &instantiating_bump,
         "import panicutils.*;\nimport printutils.*;\n\nstruct StrSlice imm {\n  string str;\n  begin int;\n  end int;\n}\nfunc newStrSlice(string str, begin int, end int) StrSlice {\n  vassert(begin >= 0, \"slice begin was negative!\");\n  vassert(end >= 0, \"slice end was negative!\");\n  vassert(begin <= string.len(), \"slice begin was more than length!\");\n  vassert(end <= string.len(), \"slice end was more than length!\");\n  vassert(end >= begin, \"slice end was before begin!\");\n  return StrSlice(string, begin, end);\n}\n\nfunc slice(s str) StrSlice {\n  return newStrSlice(s, 0, s.len());\n}\n\nfunc slice(s str, begin int) StrSlice { return s.slice().slice(begin); }\nfunc slice(s StrSlice, begin int) StrSlice {\n  newBegin = s.begin + begin;\n  vassert(newBegin <= s.string.len(), \"slice begin is more than string length!\");\n  return newStrSlice(s.string, newBegin, s.end);\n}\n\nfunc len(s StrSlice) int {\n  return s.end - s.begin;\n}\n\nfunc slice(s str, begin int, end int) StrSlice {\n  return newStrSlice(s, begin, end);\n}\n\nfunc slice(s StrSlice, begin int, end int) StrSlice {\n  newGlyphBeginOffset = s.begin + begin;\n  newGlyphEndOffset = s.begin + end;\n  return newStrSlice(s.string, newGlyphBeginOffset, newGlyphEndOffset);\n}\n\nexported func main() int {\n  return \"hello\".slice().slice(1, 4).len();\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }

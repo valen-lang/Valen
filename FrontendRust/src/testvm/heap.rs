@@ -800,7 +800,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
+    pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<&'v [ReferenceV<'v, 'h, 's>], crate::testvm::vivem::VmRuntimeErrorV<'s>> {
         let allocation = self.dereference(reference, false);
         match allocation {
             KindV::StructInstance(s) => {
@@ -814,8 +814,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                         *member_ref);
                 }
                 self.zero(reference);
-                self.deallocate_if_no_weak_refs(reference);
-                member_refs
+                self.deallocate_if_no_weak_refs(reference)?;
+                Ok(member_refs)
             }
             _ => panic!("destructure: not a StructInstance"),
         }
@@ -877,12 +877,14 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn deallocate_if_no_weak_refs
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn deallocate_if_no_weak_refs(&mut self, reference: ReferenceV<'v, 'h, 's>) {
+    pub fn deallocate_if_no_weak_refs(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
         let m = &mut self.objects_by_id.objects_by_id;
         let allocation = m.get(&reference.alloc_id()).expect("deallocate_if_no_weak_refs: not in objects_by_id");
         if reference.ownership == OwnershipH::OwnH &&
             (allocation.get_total_ref_count(Some(OwnershipH::MutableBorrowH)) + allocation.get_total_ref_count(Some(OwnershipH::ImmutableBorrowH))) > 0 {
-            panic!("Constraint violated!");
+            return Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(crate::testvm::vivem::ConstraintViolatedExceptionV {
+                msg: crate::interner::StrI("Constraint violated!"),
+            }));
         }
         if allocation.get_total_ref_count(None) == 0 {
             m.remove(&reference.alloc_id());
@@ -892,6 +894,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                 write!(handle, " o{}dealloc", reference.alloc_id().num).unwrap();
             }
         }
+        Ok(())
     }
 }
 /*
@@ -1032,10 +1035,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn ensure_ref_count(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
+    pub fn ensure_ref_count(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
         assert!(self.contains_live_object_alloc_id(reference.alloc_id()));
         let allocation = self.objects_by_id.get(interner, reference.alloc_id());
-        allocation.ensure_ref_count(ownership_filter, expected_num);
+        allocation.ensure_ref_count(scout_arena, ownership_filter, expected_num)
     }
 }
 /*

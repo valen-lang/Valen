@@ -250,14 +250,14 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn run_heap_args (Scala overload `run(heap, args: Vector[ReferenceV])`)
-  pub fn run_heap_args<'v>(&mut self, mut heap: crate::testvm::heap::HeapV<'v, 'h, 's>, args: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>>) {
+  pub fn run_heap_args<'v>(&mut self, mut heap: crate::testvm::heap::HeapV<'v, 'h, 's>, args: Vec<crate::testvm::values::ReferenceV<'v, 'h, 's>>) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let interner = self.hammer_compilation.interner;
       let scout_arena = self.hammer_compilation.scout_arena;
       let hamuts = self.get_hamuts();
       let input_argument_references: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&args);
       crate::testvm::vivem::execute_with_heap(
           hamuts, interner, scout_arena, &mut heap, input_argument_references, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
-      );
+      ).map(|_| ())
   }
   /*
   def run(heap: Heap, args: Vector[ReferenceV]): Unit = {
@@ -266,7 +266,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn run_primitive_args (Scala overload `run(args: Vector[PrimitiveKindV])`)
-  pub fn run_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) {
+  pub fn run_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let interner = self.hammer_compilation.interner;
       let scout_arena = self.hammer_compilation.scout_arena;
       let hamuts = self.get_hamuts();
@@ -274,7 +274,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
       let vivem_bump = bumpalo::Bump::new();
       crate::testvm::vivem::execute_with_primitive_args(
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &crate::testvm::vivem::regular_stdout,
-      );
+      ).map(|_| ())
   }
   /*
   def run(args: Vector[PrimitiveKindV]): Unit = {
@@ -283,7 +283,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_kind_primitive_args (Scala overload `evalForKind(args: Vector[PrimitiveKindV])`)
-  pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> crate::von::ast::IVonData {
+  pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> Result<crate::von::ast::IVonData, crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let interner = self.hammer_compilation.interner;
       let scout_arena = self.hammer_compilation.scout_arena;
       let hamuts = self.get_hamuts();
@@ -300,7 +300,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload `evalForKind(args, stdin)`)
-  pub fn eval_for_kind_primitive_args_with_stdin<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>, stdin: Vec<String>) -> crate::von::ast::IVonData {
+  pub fn eval_for_kind_primitive_args_with_stdin<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>, stdin: Vec<String>) -> Result<crate::von::ast::IVonData, crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let scout_arena = self.hammer_compilation.scout_arena;
       let interned_stdin: Vec<crate::interner::StrI<'s>> = stdin.iter().map(|s| scout_arena.intern_str(s)).collect();
       let interner = self.hammer_compilation.interner;
@@ -322,7 +322,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_stdout
-  pub fn eval_for_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> String {
+  pub fn eval_for_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> Result<String, crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let (stdoutput_string_builder, stdout_func) = crate::testvm::vivem::stdout_collector::<'s>();
       let interner = self.hammer_compilation.interner;
       let scout_arena = self.hammer_compilation.scout_arena;
@@ -331,9 +331,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
       let vivem_bump = bumpalo::Bump::new();
       crate::testvm::vivem::execute_with_primitive_args(
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &*stdout_func,
-      );
+      )?;
       let result = stdoutput_string_builder.borrow().clone();
-      result
+      Ok(result)
   }
   /*
   def evalForStdout(args: Vector[PrimitiveKindV]): String = {
@@ -344,7 +344,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_kind_and_stdout
-  pub fn eval_for_kind_and_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> (crate::von::ast::IVonData, String) {
+  pub fn eval_for_kind_and_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> Result<(crate::von::ast::IVonData, String), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
       let (stdoutput_string_builder, stdout_func) = crate::testvm::vivem::stdout_collector::<'s>();
       let interner = self.hammer_compilation.interner;
       let scout_arena = self.hammer_compilation.scout_arena;
@@ -353,9 +353,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
       let vivem_bump = bumpalo::Bump::new();
       let kind = crate::testvm::vivem::execute_with_primitive_args(
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &*stdout_func,
-      );
+      )?;
       let result = stdoutput_string_builder.borrow().clone();
-      (kind, result)
+      Ok((kind, result))
   }
   /*
   def evalForKindAndStdout(args: Vector[PrimitiveKindV]): (IVonData, String) = {

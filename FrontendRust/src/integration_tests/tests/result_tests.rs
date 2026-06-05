@@ -31,7 +31,7 @@ fn test_borrow_is_ok_and_expect_for_ok() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() int {\n  result Result<int, str> = Ok<int, str>(42);\n  return if (result.is_ok()) { result.expect(\"eh\") }\n    else { panic(\"wat\") };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -75,7 +75,7 @@ fn test_is_err_and_borrow_expect_err_for_err() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() str {\n  result Result<int, str> = Err<int, str>(\"file not found!\");\n  return if (result.is_err()) { result.expect_err(\"eh\") }\n    else { panic(\"fail!\") };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "file not found!" => {}
         other => panic!("expected VonStr(\"file not found!\"), got {:?}", other),
     }
@@ -119,7 +119,7 @@ fn test_owning_expect() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() int {\n  result Result<int, str> = Ok<int, str>(42);\n  return (result).expect(\"eh\");\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -162,7 +162,7 @@ fn test_owning_expect_err() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() str {\n  result Result<int, str> = Err<int, str>(\"file not found!\");\n  return (result).expect_err(\"eh\");\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "file not found!" => {}
         other => panic!("expected VonStr(\"file not found!\"), got {:?}", other),
     }
@@ -205,11 +205,10 @@ fn test_expect_panics_for_err() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() int {\n  result Result<int, str> = Err<int, str>(\"file not found!\");\n  return result.expect(\"eh\");\n}\n",
     );
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        compile.eval_for_kind_primitive_args(Vec::new())
-    }));
-    let panic_payload = result.expect_err("It should panic instead");
-    assert!(panic_payload.is::<crate::testvm::vivem::PanicExceptionV>(), "It should panic with PanicExceptionV instead");
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::PanicException(_)) => {}
+        other => panic!("Expected PanicException, got {:?}", other),
+    }
 }
 
 /*
@@ -254,11 +253,10 @@ fn test_expect_err_panics_for_ok() {
         &instantiating_bump,
         "\nimport v.builtins.panicutils.*;\nimport v.builtins.result.*;\n\nexported func main() str {\n  result Result<int, str> = Ok<int, str>(73);\n  return result.expect_err(\"eh\");\n}\n",
     );
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        compile.eval_for_kind_primitive_args(Vec::new())
-    }));
-    let panic_payload = result.expect_err("It should panic instead");
-    assert!(panic_payload.is::<crate::testvm::vivem::PanicExceptionV>(), "It should panic with PanicExceptionV instead");
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::PanicException(_)) => {}
+        other => panic!("Expected PanicException, got {:?}", other),
+    }
 }
 
 /*

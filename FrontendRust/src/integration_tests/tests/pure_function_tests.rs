@@ -36,7 +36,7 @@ fn simple_pure_function() {
         &instantiating_bump,
         "\nstruct Engine {\n  fuel int;\n}\nstruct Spaceship {\n  engine Engine;\n}\npure func pfunc(s &Spaceship) int {\n  return s.engine.fuel;\n}\nexported func main() int {\n  s = Spaceship(Engine(10));\n  return pfunc(&s);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }

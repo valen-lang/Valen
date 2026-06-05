@@ -271,7 +271,7 @@ fn owning_interface() {
         &instantiating_bump,
         "\nimport v.builtins.opt.*;\nexported func main() int {\n  x Opt<int> = Some(7);\n  return 7;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
@@ -458,7 +458,7 @@ fn imm_interface() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -759,7 +759,7 @@ fn successful_pointer_downcast_with_as() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -852,7 +852,7 @@ fn failed_pointer_downcast_with_as() {
         assert!(crate::instantiating::ast::templata::expect_coord_templata(success_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
         assert!(crate::instantiating::ast::templata::expect_coord_templata(fail_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -915,7 +915,7 @@ fn successful_owning_downcast_with_as() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -949,7 +949,7 @@ fn failed_owning_downcast_with_as() {
         &instantiating_bump,
         source.as_str(),
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }

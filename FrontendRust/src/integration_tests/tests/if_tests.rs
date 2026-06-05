@@ -74,7 +74,7 @@ fn simple_true_branch_returning_an_int() {
             crate::typing::test::traverse::NodeRefT::If(_) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -129,7 +129,7 @@ fn simple_false_branch_returning_an_int() {
         &instantiating_bump,
         "exported func main() int {\n  return if (false) { 3 } else { 5 };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -191,7 +191,7 @@ fn ladder() {
             }
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -265,7 +265,7 @@ fn moving_from_inside_if() {
             }
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -337,7 +337,7 @@ fn if_with_complex_condition() {
             });
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "#" => {}
         other => panic!("expected VonStr(\"#\"), got {:?}", other),
     }
@@ -383,7 +383,7 @@ fn if_with_condition_declaration() {
         &instantiating_bump,
         "exported func main() int {\n  return if x = 42; x < 50 { x }\n    else { 73 };\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -422,7 +422,7 @@ fn ret_from_inside_if_will_destroy_locals() {
         &instantiating_bump,
         "import printutils.*;\n#!DeriveStructDrop\nstruct Marine { hp int; }\nfunc drop(marine Marine) void {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() int {\n  m = Marine(5);\n  x =\n    if (true) {\n      println(\"In then!\");\n      return 7;\n    } else {\n      println(\"In else!\");\n      m.hp\n    };\n  println(\"In rest!\");\n  return x;\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "In then!\nDestroying marine!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In then!\nDestroying marine!\n");
 }
 /*
   test("Ret from inside if will destroy locals") {
@@ -477,7 +477,7 @@ fn can_continue_if_other_branch_would_have_returned() {
         let coutputs = compile.expect_compiler_outputs();
         let _main = coutputs.lookup_function_by_str("main");
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "In else!\nIn rest!\nDestroying marine!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In else!\nIn rest!\nDestroying marine!\n");
 }
 /*
   test("Can continue if other branch would have returned") {
@@ -535,7 +535,7 @@ fn destructure_inside_if() {
         let coutputs = compile.expect_compiler_outputs();
         let _main = coutputs.lookup_function_by_str("main");
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "5\n5\n5\n5\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "5\n5\n5\n5\n");
 }
 /*
   test("Destructure inside if") {
@@ -589,7 +589,7 @@ fn if_nevers() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -621,7 +621,7 @@ fn if_with_panics_and_rets() {
         &instantiating_bump,
         "exported func main() int {\n  a = 7;\n  if false {\n    panic(\"lol\");\n    return 73;\n  } else {\n    return 42;\n  }\n  return 73;\n}\n\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -671,7 +671,7 @@ fn toast() {
         let coutputs = compile.expect_compiler_outputs();
         let _main = coutputs.lookup_function_by_str("main");
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

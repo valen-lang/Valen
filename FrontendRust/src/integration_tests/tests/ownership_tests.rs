@@ -69,7 +69,7 @@ fn borrowing_a_temporary_mutable_makes_a_local_var() {
             }
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
@@ -123,7 +123,7 @@ fn owning_ref_method_call() {
     {
         let _main = compile.expect_compiler_outputs().lookup_function_by_str("main");
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
@@ -183,7 +183,7 @@ fn derive_drop() {
         );
         assert_eq!(matches.len(), 2);
     }
-    compile.eval_for_kind_primitive_args(Vec::new());
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
 /*
@@ -242,7 +242,7 @@ fn custom_drop_result_is_an_owning_ref_calls_destructor() {
         );
         assert_eq!(matches.len(), 2);
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
 }
 
 /*
@@ -302,7 +302,7 @@ fn saves_return_value_then_destroys_temporary() {
                 => Some(())
         );
     }
-    match compile.eval_for_kind_and_stdout(Vec::new()) {
+    match compile.eval_for_kind_and_stdout(Vec::new()).unwrap() {
         (crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
         other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
     }
@@ -369,7 +369,7 @@ fn calls_destructor_on_local_var() {
         );
         assert_eq!(matches.len(), 2);
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
 }
 
 /*
@@ -485,7 +485,7 @@ fn calls_destructor_on_local_var_unless_moved() {
         );
         assert_eq!(main_drops.len(), 0);
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
 }
 
 /*
@@ -576,7 +576,7 @@ fn saves_return_value_then_destroys_local_var() {
         );
         assert_eq!(matches.len(), 2);
     }
-    match compile.eval_for_kind_and_stdout(Vec::new()) {
+    match compile.eval_for_kind_and_stdout(Vec::new()).unwrap() {
         (crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
         other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
     }
@@ -630,7 +630,7 @@ fn gets_from_temporary_struct_a_members_member() {
         &instantiating_bump,
         "\nstruct Wand {\n  charges int;\n}\nstruct Wizard {\n  wand ^Wand;\n}\nexported func main() int {\n  return Wizard(Wand(10)).wand.charges;\n}\n      ",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("Expected VonInt(10), got {:?}", other),
     }
@@ -734,7 +734,7 @@ fn basic_builder_pattern() {
         &instantiating_bump,
         "\nstruct Ship { hp! int; fuel! int; }\nfunc setHp(ship Ship, hp int) Ship {\n  set ship.hp = hp;\n  return ship;\n}\nfunc setFuel(ship Ship, fuel int) Ship {\n  set ship.fuel = fuel;\n  return ship;\n}\nexported func main() int {\n  ship = Ship(0, 0).setHp(42).setFuel(43);\n  return ship.hp;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -783,7 +783,7 @@ fn member_access_on_returned_owning_ref() {
         &instantiating_bump,
         "\nstruct Ship { hp int; }\nexported func main() int {\n  return Ship(42).hp;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }

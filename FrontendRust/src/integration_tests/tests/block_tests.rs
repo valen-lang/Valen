@@ -55,7 +55,7 @@ fn empty_block() {
             _ => panic!("expected CodeBody(BodySE(_, _, BlockSE(_, _, ConsecutorSE([BlockSE(_), _]))))"),
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -141,7 +141,7 @@ fn simple_block_with_a_variable() {
             _ => panic!("expected LocalS(CodeVarName(\"y\"), NotUsed * 6)"),
         }
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -197,7 +197,7 @@ fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
         "exported func main() int {\n  block {\n    y = 6;\n  }\n  y = 3;\n  return y;\n}\n",
     );
     let _scoutput = compile.get_scoutput().expect("get_scoutput failed");
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }

@@ -85,7 +85,7 @@ pub fn test_inferring_a_borrowed_argument() {
             }) if x_package_coord.is_test() => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
@@ -141,7 +141,7 @@ pub fn test_inferring_a_borrowed_static_sized_array() {
         &instantiating_bump,
         "\nstruct Muta { hp int; }\nfunc moo<N Int>(m &[#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(&x);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
@@ -182,7 +182,7 @@ pub fn test_inferring_an_owning_static_sized_array() {
         &instantiating_bump,
         "\nstruct Muta { hp int; }\nfunc moo<N Int>(m [#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(x);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }

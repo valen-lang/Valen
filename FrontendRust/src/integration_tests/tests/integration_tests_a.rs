@@ -103,7 +103,7 @@ fn simple_program_returning_an_int() {
         &instantiating_bump,
         "exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -145,7 +145,7 @@ fn simple_program_with_arith() {
         &instantiating_bump,
         "import v.builtins.arith.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -177,7 +177,7 @@ fn simple_program_with_logic() {
         &instantiating_bump,
         "import v.builtins.logic.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -219,7 +219,7 @@ fn simple_program_with_str() {
         &instantiating_bump,
         "import v.builtins.str.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -303,7 +303,7 @@ fn simple_program_with_print() {
         &instantiating_bump,
         "import v.builtins.print.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -345,7 +345,7 @@ fn simple_program_with_panic() {
         &instantiating_bump,
         "import v.builtins.panic.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -397,7 +397,7 @@ fn simple_program_with_sameinstance() {
         &instantiating_bump,
         "import v.builtins.sameinstance.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -439,7 +439,7 @@ fn hardcoding_negative_numbers() {
         &instantiating_bump,
         "exported func main() int { return -3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: -3 }) => {}
         other => panic!("expected VonInt(-3), got {:?}", other),
     }
@@ -475,7 +475,7 @@ fn taking_an_argument_and_returning_it() {
         crate::testvm::values::PrimitiveKindV::Int(crate::testvm::values::IntV {
             value: 5, bits: 32, _phantom: std::marker::PhantomData,
         }),
-    ]) {
+    ]).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -507,7 +507,7 @@ fn tests_adding_two_numbers() {
         &instantiating_bump,
         "exported func main() int { return +(2, 3); }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -539,7 +539,7 @@ fn tests_adding_two_floats() {
         &instantiating_bump,
         "exported func main() float { return +(2.5, 3.5); }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Float(crate::von::ast::VonFloat { value }) if value == 6.0 => {}
         other => panic!("expected VonFloat(6.0), got {:?}", other),
     }
@@ -571,7 +571,7 @@ fn tests_inline_adding() {
         &instantiating_bump,
         "exported func main() int { return 2 + 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -604,7 +604,7 @@ fn test_constraint_ref() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("Expected VonInt(8), got {:?}", other),
     }
@@ -637,7 +637,7 @@ fn test_borrow_ref() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("Expected VonInt(8), got {:?}", other),
     }
@@ -669,7 +669,7 @@ fn tests_inline_adding_more() {
         &instantiating_bump,
         "exported func main() int { return 2 + 3 + 4 + 5 + 6; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 20 }) => {}
         other => panic!("expected VonInt(20), got {:?}", other),
     }
@@ -701,7 +701,7 @@ fn simple_lambda() {
         &instantiating_bump,
         "exported func main() int { return {7}(); }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -733,7 +733,7 @@ fn lambda_with_one_magic_arg() {
         &instantiating_bump,
         "exported func main() int { return {_}(3); }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -766,7 +766,7 @@ fn lambda_with_a_type_specified_param() {
         &instantiating_bump,
         "exported func main() int { return (a int) => { return +(a,a); }(3); }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
@@ -800,7 +800,7 @@ fn test_overloads() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
@@ -833,7 +833,7 @@ fn test_block() {
         &instantiating_bump,
         "exported func main() int {true; 200; return 300;}",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 300 }) => {}
         other => panic!("expected VonInt(300), got {:?}", other),
     }
@@ -865,7 +865,7 @@ fn test_generic() {
         &instantiating_bump,
         "\nfunc drop(x int) { }\nfunc bork<T>(a T) void where func drop(T)void {\n  // implicitly calls drop\n}\nexported func main() {\n  bork(3);\n}\n",
     );
-    let _ = compile.eval_for_kind_primitive_args(Vec::new());
+    let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Test generic") {
@@ -903,7 +903,7 @@ fn test_multiple_invocations_of_generic() {
         &instantiating_bump,
         "\nfunc bork<T>(a T, b T) T where func drop(T)void { return a; }\nexported func main() int {true bork false; 2 bork 2; return 3 bork 3;}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -939,7 +939,7 @@ fn test_mutating_a_local_var() {
         &instantiating_bump,
         "exported func main() {a = 3; set a = 4; }",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Test mutating a local var") {
@@ -968,7 +968,7 @@ fn test_returning_a_local_mutable_var() {
         &instantiating_bump,
         "exported func main() int {a = 3; set a = 4; return a;}",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -1000,7 +1000,7 @@ fn test_taking_a_callable_param() {
         &instantiating_bump,
         "\nfunc do<T>(callable T) int where func(&T)int, func drop(T)void { return callable(); }\nexported func main() int { return do({ 3 }); }\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
@@ -1050,7 +1050,7 @@ fn stamps_an_interface_template_via_a_function_parameter() {
         crate::final_ast::types::LocationH::YonderH,
         crate::testvm::values::KindV::StructInstance(struct_instance),
     );
-    compile.run_heap_args(heap, vec![r#ref]);
+    compile.run_heap_args(heap, vec![r#ref]).unwrap();
 }
 /*
   test("Stamps an interface template via a function parameter") {
@@ -1101,7 +1101,7 @@ fn tests_unstackifying_a_variable_multiple_times_in_a_function() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -1133,7 +1133,7 @@ fn reads_a_struct_member() {
         &instantiating_bump,
         "struct MyStruct { a int; }\nexported func main() int { ms = MyStruct(7); return ms.a; }\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
@@ -1172,7 +1172,7 @@ fn add_two_i64() {
     );
     let _coutputs = compile.get_compiler_outputs();
     let _hamuts = compile.get_hamuts();
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -1206,7 +1206,7 @@ fn equals_equals_equals_true() {
         &instantiating_bump,
         "\nstruct MyStruct { a int; }\nexported func main() bool {\n  a = MyStruct(7);\n  return &a === &a;\n}\n      ",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
         other => panic!("Expected VonBool(true), got {:?}", other),
     }
@@ -1245,7 +1245,7 @@ fn equals_equals_equals_false() {
         &instantiating_bump,
         "\nstruct MyStruct { a int; }\nexported func main() bool {\n  a = MyStruct(7);\n  b = MyStruct(7);\n  return &a === &b;\n}\n      ",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) => {}
         other => panic!("Expected VonBool(false), got {:?}", other),
     }
@@ -1286,7 +1286,7 @@ fn lambda_can_call_sibling_lambda() {
         &instantiating_bump,
         "\nexported func main() int {\n  continueF = (x) => { x };\n  barkF = (x) => { continueF(x) };\n  return barkF(42);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -1329,7 +1329,7 @@ fn set_swapping_locals() {
         &instantiating_bump,
         &code,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -1361,7 +1361,7 @@ fn simple_extern_function() {
         &instantiating_bump,
         "extern func __vbi_addI32(left int, right int) int;\nexported func main() int { return __vbi_addI32(27, 15); }\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

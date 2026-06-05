@@ -153,7 +153,7 @@ pub fn captured_own_is_borrow() {
         &instantiating_bump,
         "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(9);\n  return { m.hp }();\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -430,7 +430,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         );
     }
 
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -569,7 +569,7 @@ fn mutates_from_inside_a_closure() {
         );
     }
 
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -630,7 +630,7 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
         &instantiating_bump,
         "exported func main() int { x = 4; { { set x = x + 1; }(); }(); return x; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -663,7 +663,7 @@ fn read_from_inside_a_closure_inside_a_closure() {
         &instantiating_bump,
         "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -728,7 +728,7 @@ pub fn mutable_lambda() {
         let closure_struct = closure_structs[0];
         assert!(matches!(closure_struct.mutability, crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable })));
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

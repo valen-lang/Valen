@@ -31,7 +31,7 @@ fn simple_while_loop_that_doesnt_execute() {
         &instantiating_bump,
         "exported func main() int {\n  while (false) {}\n  return 5;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -70,7 +70,7 @@ fn test_a_for_ish_while_loop() {
         &instantiating_bump,
         "exported func main() int {\n  i = 0;\n  while (i < 4) {\n    set i = i + 1;\n  }\n  return i;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -112,7 +112,7 @@ fn tests_a_while_loop_with_a_complex_condition() {
         &instantiating_bump,
         "import ioutils.*;\nimport printutils.*;\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key < 96 {\n    print(key);\n  }\n  return key;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]) {
+    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
@@ -155,7 +155,7 @@ fn tests_a_while_loop_with_a_set_in_it() {
         &instantiating_bump,
         "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key != 99 {\n    print(key);\n  }\n  return key;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]) {
+    match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 99 }) => {}
         other => panic!("expected VonInt(99), got {:?}", other),
     }
@@ -201,7 +201,7 @@ fn tests_a_while_loop_with_a_declaration_in_it() {
         &instantiating_bump,
         "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() {\n  while key = __getch(); key != 99 {\n    print(key);\n  }\n}\n",
     );
-    compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]);
+    compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap();
 }
 /*
   test("Tests a while loop with a declaration in it") {
@@ -242,7 +242,7 @@ fn return_from_infinite_while_loop() {
         &instantiating_bump,
         "exported func main() int {\n  while (true) {\n    return 9;\n  }\n  return __vbi_panic();\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -283,7 +283,7 @@ fn infinite_while_loop_conditional_break() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    if true {\n      break;\n    }\n    4;\n  }\n  return 42;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -327,7 +327,7 @@ fn infinite_while_loop_unconditional_break() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    break;\n  }\n  return 42;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -368,7 +368,7 @@ fn infinite_while_loop_conditional_break_from_both_sides() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    if true {\n      break;\n    } else {\n      break;\n    }\n  }\n  return 42;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -413,7 +413,7 @@ fn infinite_while_loop_conditional_return() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    }\n    73;\n  }\n  return 74;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -457,7 +457,7 @@ fn infinite_while_loop_unconditional_return() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    return 42;\n  }\n  return 73;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -498,7 +498,7 @@ fn infinite_while_loop_conditional_return_from_both_sides() {
         &instantiating_bump,
         "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    } else {\n      return 73;\n    }\n  }\n  return 74;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -543,7 +543,7 @@ fn while_with_condition_declaration() {
         &instantiating_bump,
         "exported func main() int {\n  while x = 42; x < 50 { return x; }\n  return 73;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -670,7 +670,7 @@ fn mutable_foreach() {
         &instantiating_bump,
         "\n// A fake 1-element list\nstruct Ship {\n  fuel! int;\n}\nstruct List {\n  ship Ship;\n}\n\nstruct ListIter {\n  ship &Ship;\n  pos! int;\n}\nfunc begin(self &List) ListIter { ListIter(&self.ship, 0) }\nfunc next(iter &ListIter) Opt<&Ship> {\n  if pos = set iter.pos = iter.pos + 1; pos < 1 {\n    Some<&Ship>(iter.ship)\n  } else {\n    None<&Ship>()\n  }\n}\n\nexported func main() int {\n  list = List(Ship(73));\n  foreach i in &list {\n    set i.fuel = 42;\n  }\n  return list.ship.fuel;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
