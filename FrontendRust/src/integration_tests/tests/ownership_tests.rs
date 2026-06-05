@@ -273,9 +273,39 @@ fn custom_drop_result_is_an_owning_ref_calls_destructor() {
 */
 // mig: fn saves_return_value_then_destroys_temporary
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn saves_return_value_then_destroys_temporary() {
-    panic!("Unmigrated test: saves_return_value_then_destroys_temporary");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { hp int; }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[hp] = m;\n}\n\nexported func main() int {\n  return (Muta(10)).hp;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+    }
+    match compile.eval_for_kind_and_stdout(Vec::new()) {
+        (crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
+        other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
+    }
 }
 
 /*
