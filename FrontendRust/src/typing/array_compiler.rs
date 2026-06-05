@@ -320,7 +320,7 @@ where 's: 't,
         mutability_rune: IRuneS<'s>,
         size_te: ReferenceExpressionTE<'s, 't>,
         maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
-    ) -> ReferenceExpressionTE<'s, 't> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
         let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
         initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
@@ -405,7 +405,7 @@ where 's: 't,
             ITemplataT::Placeholder(_) => panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Placeholder mutability"),
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
                 let callable_te = match maybe_callable_te {
-                    None => panic!("Untested branch: Scala throws CompileErrorExceptionT(NewImmRSANeedsCallable) here when caller omits the generator"),
+                    None => return Err(ICompileErrorT::NewImmRSANeedsCallable { range: parent_ranges_t }),
                     Some(c) => c,
                 };
                 let prototype = self.get_array_generator_prototype(
@@ -417,13 +417,13 @@ where 's: 't,
                         panic!("Untested branch: Scala throws CompileErrorExceptionT(UnexpectedArrayElementType) here when prototype return type doesn't match the element-type rune");
                     }
                 }
-                ReferenceExpressionTE::NewImmRuntimeSizedArray(self.typing_interner.alloc(NewImmRuntimeSizedArrayTE {
+                Ok(ReferenceExpressionTE::NewImmRuntimeSizedArray(self.typing_interner.alloc(NewImmRuntimeSizedArrayTE {
                     array_type: self.typing_interner.alloc(rsa_mt),
                     region,
                     size_expr: size_te,
                     generator: callable_te,
                     generator_method: prototype,
-                }))
+                })))
             }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
                 let m_rune_name = self.scout_arena.intern_rune(crate::postparsing::names::IRuneValS::CodeRune(crate::postparsing::names::CodeRuneS { name: self.keywords.m }));
@@ -508,7 +508,7 @@ where 's: 't,
                     args: self.typing_interner.alloc_slice_from_vec(args_te),
                     return_type: result_te,
                 }));
-                call_te
+                Ok(call_te)
             }
             _ => panic!("vwat"),
         }

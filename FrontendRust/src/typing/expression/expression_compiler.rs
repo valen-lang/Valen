@@ -1797,7 +1797,7 @@ where 's: 't,
                     nrsa.mutability_st.rune,
                     size_te,
                     maybe_callable_te,
-                );
+                )?;
                 let mut returns = returns_from_size;
                 returns.extend(returns_from_callable);
                 Ok((ExpressionTE::Reference(expr_2), returns))
