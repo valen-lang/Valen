@@ -54,12 +54,13 @@ Scala → Rust mapping for collection literals. Typing pass:
 - `Map[K, V]` → `ArenaIndexMap<'t, K, V>` (insertion-ordered, arena-keyed). `mutable.Map` → builder `IndexMap`.
 - `Set[X]` → `ArenaIndexSet<'t, X>`.
 - Postparsing differs (uses `&'s [X]` and `IndexMap<...>` on the ScoutArena).
+- Simplifying / final_ast: `Vector[X]`/`List[X]`/`Array[X]` → `&'h [X]` (HammerArena slice); `Map[K, V]` → `ArenaIndexMap<'h, K, V>`; `mutable.Map` → builder `IndexMap`; `Set[X]` → `ArenaIndexSet<'h, X>`.
 - Testvm: stable/AST-derived data → `&'v [X]`. The **mutable runtime heap** uses owned `Vec`/`HashMap` (Scala `mutable.HashMap`/`mutable.ArrayBuffer`), with mutated cells wrapped in `Cell` (see the testvm Notes bullet).
 
 If the default is wrong for a specific stub, the agent leaves it and a manual fix happens in body migration — but the default needs to be right *most* of the time.
 
 ### String type
-Scala `String` → … . Typing pass: `StrI<'s>` (interned). Testvm: `StrI<'s>` (inherited from the `ProgramH`/final_ast names it reads). Most occurrences of `String` in a Scala signature are an interned identifier, not a free string.
+Scala `String` → … . Typing pass: `StrI<'s>` (interned). Simplifying / final_ast: `StrI<'s>` (re-keyed against ScoutArena; Hammer reads from upstream passes and doesn't re-intern strings). Testvm: `StrI<'s>` (inherited from the `ProgramH`/final_ast names it reads). Most occurrences of `String` in a Scala signature are an interned identifier, not a free string.
 
 ### Sealed-trait policy
 How `sealed trait Foo` translates. Options:
@@ -71,6 +72,8 @@ The policy file must also state: *does the sealed trait become Polyvalue?* (i.e.
 
 Testvm: `enum-with-arena-refs` on `VivemArena<'v>`. The Vivem value/kind hierarchies (e.g. `KindV`, `ReferenceV`) become enums; because the heap is mutable, variant payload fields that Scala declared `var` are wrapped in `Cell` (see the testvm Notes bullet). Not Polyvalue.
 
+Simplifying / final_ast: `enum-with-arena-refs` on `HammerArena`: `pub enum Foo<'s,'h> { Variant1(&'h Variant1Payload<'s,'h>), … }`. Outer wrappers (`ExpressionH`, `IExpressionH`) are **Polyvalue** — derive `PartialEq, Eq, Hash, Clone, Copy` per @PVECFPZ.
+
 ### Abstract-def dispatcher policy
 When a `sealed trait` declares abstract `def`s, what to emit. Options:
 - `dispatcher-on-enum`: emit `impl Foo { pub fn method(&self, ...) -> ... { match self { Foo::Variant1(p) => p.method(...), … } } }` on the enum, plus per-variant impl blocks. Default for typing pass.
@@ -78,6 +81,8 @@ When a `sealed trait` declares abstract `def`s, what to emit. Options:
 - `skip`: don't emit dispatcher (caller will pattern-match directly).
 
 Slice-placehold annotates emitted dispatchers with `/* Guardian: disable-all */` because they have no 1:1 Scala counterpart (dispatcher generation is a Rust adaptation of Scala's virtual call).
+
+Simplifying / final_ast: `dispatcher-on-enum` (typing-pass default).
 
 ### `equals` / `hashCode` / `unapply` policy
 - `override def equals` → realized via `impl PartialEq for FooT`, not a `pub fn eq`. slice-placehold emits a marker stub:
@@ -109,6 +114,7 @@ Which types use `ptr::eq` identity vs structural derive:
 ### `MustIntern` seal policy
 Whether the pass uses the `MustIntern` seal pattern (per @SICZ) for its arena-allocated types:
 - Typing pass: yes. Every struct that becomes a payload of an interned enum variant carries `pub _must_intern: MustIntern` as a private-module-only field.
+- Simplifying / final_ast: yes. Same pattern — every `XH` struct whose values are produced via `HammerInterner::intern_*` carries `pub _must_intern: MustIntern`.
 - slice-placehold emits the seal field on every struct that the policy classifies as interned. The placehold step doesn't *decide* — it copies what the policy says, and the policy file enumerates interned types by name regex (e.g. `^I[A-Z].*T$` for typing-pass `IFooT` interfaces, plus the named-type whitelist below).
 
 ### Val/Ref dual-enum pairs (IDEPFL)
@@ -119,6 +125,15 @@ Typing pass:
 - `INameT<'s,'t>` / `INameValT<'s,'t,'tmp>` / `typing_interner.intern_name`
 - `ITemplataT<'s,'t>` / `ITemplataValT<'s,'t,'tmp>` / `typing_interner.intern_templata`
 - (plus per-variant sub-pairs — see `docs/architecture/typing-pass-design-v3.md` §6)
+
+Simplifying / final_ast (per `HammerInterner` surface):
+- `IdH<'s,'h>` / `IdHValH<'s,'h>` / `hammer_interner.intern_id_h`
+- `StructHT<'s,'h>` / `StructHTValH<'s,'h>` / `hammer_interner.intern_struct_ht`
+- `InterfaceHT<'s,'h>` / `InterfaceHTValH<'s,'h>` / `hammer_interner.intern_interface_ht`
+- `StaticSizedArrayHT<'s,'h>` / `StaticSizedArrayHTValH<'s,'h>` / `hammer_interner.intern_static_sized_array_ht`
+- `RuntimeSizedArrayHT<'s,'h>` / `RuntimeSizedArrayHTValH<'s,'h>` / `hammer_interner.intern_runtime_sized_array_ht`
+- `PrototypeH<'s,'h>` / `PrototypeHValH<'s,'h>` / `hammer_interner.intern_prototype`
+- (plus `hammer_interner.intern_kind_payload` for `KindHT` enum-variant payloads — different shape than the Val/Ref pattern)
 
 ### Arena-classification doc-comment
 Every type definition gets one of:
@@ -136,12 +151,16 @@ Typing pass:
 - `NodeEnvironmentBox` → `NodeEnvironmentBuilder` + `NodeEnvironmentBoxT`
 - (full list in design-v3 §3.2)
 
+Simplifying / final_ast: **(none)**. Per the per-pass note: `VonHammer` and `HamutsBox` compiler classes were collapsed onto `Hammer`/`Hamuts` — no separate Builder/Frozen state. Extend this list if other split pairs surface during simplifying migration.
+
 ### Default fn skeleton
 What slice-placehold emits as the body of a freshly-stubbed `fn`. Options:
 - `whole-panic`: `{ panic!("Unimplemented: foo"); }`. Default; safest. Trips SPDMX when refined to skeleton-with-panics later.
 - `iteration-skeleton`: mirror Scala's outer iteration shape (`.map(|_| panic!())`, `for x in xs { panic!() }`) — only for fns whose Scala body is a single `.map`/`.foreach`/`groupBy` chain. Per TL.md §"Good Partial Implementing" + the SPDMX rationale boilerplate. **TL/architect-only**: emitting iteration-skeleton requires the policy file to whitelist the fn by name, since SPDMX will fire and need a temp-disable.
 
 Typing pass: default `whole-panic` everywhere; iteration-skeleton whitelist is empty (filled in as TL handles SPDMX escalations).
+
+Simplifying / final_ast: default `whole-panic` everywhere; iteration-skeleton whitelist is empty.
 
 Testvm: default `whole-panic` everywhere; iteration-skeleton whitelist is empty.
 
@@ -151,6 +170,8 @@ Pre-approved Scala → Rust renames, for cases where the literal translation col
 Typing pass:
 - `lookupFunctionByHumanName` → `lookup_function_by_str`
 - (extend as the architect approves more)
+
+Simplifying / final_ast: **(none)** initially; extend as approved.
 
 ---
 
