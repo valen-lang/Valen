@@ -166,7 +166,9 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn get_parseds
-  pub fn get_parseds(&self) { panic!("Unimplemented: get_parseds"); }
+  pub fn get_parseds(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, (crate::parsing::ast::FileP<'p>, Vec<crate::lexing::ast::RangeL>)>, crate::lexing::errors::FailedParse<'p>> {
+    self.hammer_compilation.get_parseds()
+  }
   /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = fullCompilation.getParseds()
   */

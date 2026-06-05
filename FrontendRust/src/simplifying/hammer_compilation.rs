@@ -190,8 +190,12 @@ pub fn get_code_map() -> Result<(), String> {
 */
 
 // mig: fn get_parseds
-pub fn get_parseds() -> Result<(), String> {
-  panic!("Unimplemented: get_parseds");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_parseds(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, (crate::parsing::ast::FileP<'p>, Vec<crate::lexing::ast::RangeL>)>, crate::lexing::errors::FailedParse<'p>> {
+    self.instantiated_compilation.get_parseds()
+  }
 }
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = instantiatedCompilation.getParseds()
