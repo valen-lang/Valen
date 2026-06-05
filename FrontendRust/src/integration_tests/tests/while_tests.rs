@@ -614,9 +614,29 @@ fn parallel_foreach() {
 */
 // mig: fn mutable_foreach
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn mutable_foreach() {
-    panic!("Unmigrated test: mutable_foreach");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\n// A fake 1-element list\nstruct Ship {\n  fuel! int;\n}\nstruct List {\n  ship Ship;\n}\n\nstruct ListIter {\n  ship &Ship;\n  pos! int;\n}\nfunc begin(self &List) ListIter { ListIter(&self.ship, 0) }\nfunc next(iter &ListIter) Opt<&Ship> {\n  if pos = set iter.pos = iter.pos + 1; pos < 1 {\n    Some<&Ship>(iter.ship)\n  } else {\n    None<&Ship>()\n  }\n}\n\nexported func main() int {\n  list = List(Ship(73));\n  foreach i in &list {\n    set i.fuel = 42;\n  }\n  return list.ship.fuel;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Mutable foreach") {
