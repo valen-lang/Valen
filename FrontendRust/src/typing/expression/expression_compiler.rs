@@ -1222,7 +1222,14 @@ where 's: 't,
                                     ReferenceExpressionTE::Defer(self.typing_interner.alloc(defer_te))
                                 }
                                 LoadAsP::LoadAsWeak => {
-                                    panic!("implement: Ownershipped OwnT LoadAsWeakP");
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                    let defer_te = self.make_temporary_local_defer(
+                                        coutputs, nenv, &range_with_parent, outer_call_location,
+                                        life.add(self.typing_interner, 3), region,
+                                        source_te, OwnershipT::Borrow);
+                                    let expr = ReferenceExpressionTE::Defer(self.typing_interner.alloc(defer_te));
+                                    self.weak_alias(coutputs, expr)
                                 }
                                 LoadAsP::Use => {
                                     panic!("implement: Ownershipped OwnT UseP (vcurious)");
@@ -3730,7 +3737,21 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         expr: ReferenceExpressionTE<'s, 't>,
     ) -> ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match expr.result().coord.kind {
+            KindT::Struct(sr) => {
+                let struct_def = coutputs.lookup_struct(sr.id, self);
+                assert!(struct_def.weakable, "TookWeakRefOfNonWeakableError");
+            }
+            KindT::Interface(_) => {
+                panic!();
+            }
+            _ => panic!("vfail"),
+        }
+
+        match expr.result().coord.ownership {
+            OwnershipT::Borrow => ReferenceExpressionTE::BorrowToWeak(self.typing_interner.alloc(BorrowToWeakTE { inner_expr: expr })),
+            other => panic!("vwat: {:?}", other),
+        }
     }
 /*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {

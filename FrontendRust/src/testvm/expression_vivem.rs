@@ -1087,6 +1087,72 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
         }
+        ExpressionH::BorrowToWeakH(wa_h) => {
+            let crate::final_ast::instructions::BorrowToWeakH { ref_expression: source_expr } = **wa_h;
+            let constraint_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            assert!(constraint_ref.ownership == OwnershipH::MutableBorrowH || constraint_ref.ownership == OwnershipH::ImmutableBorrowH);
+
+            let weak_ref = heap.transmute(constraint_ref, source_expr.result_type(), ExpressionH::BorrowToWeakH(wa_h).result_type());
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), constraint_ref);
+
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: weak_ref })
+        }
+        ExpressionH::LockWeakH(lw) => {
+            let crate::final_ast::instructions::LockWeakH { source_expression: source_expr, result_type, some_constructor, none_constructor } = **lw;
+            let weak_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            assert!(weak_ref.ownership == OwnershipH::WeakH);
+
+            if heap.contains_live_object(weak_ref) {
+                let expected_ref = CoordH { ownership: OwnershipH::MutableBorrowH, location: LocationH::YonderH, kind: source_expr.result_type().kind };
+                let constraint_ref = heap.transmute(weak_ref, source_expr.result_type(), expected_ref);
+                {
+                    let handle = &mut *heap.vivem_dout;
+                    writeln!(handle).unwrap();
+                    writeln!(handle, "{}Making new stack frame (lock call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+                }
+                let function = program_h.lookup_function(some_constructor);
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
+                let args_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&[constraint_ref]);
+                let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function);
+                {
+                    let handle = &mut *heap.vivem_dout;
+                    write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+                }
+                let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+                let target_interface_ref = match result_type.kind {
+                    KindHT::InterfaceHT(i) => i,
+                    _ => panic!("LockWeakH: result_type.kind not InterfaceHT"),
+                };
+                INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
+            } else {
+                discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), weak_ref);
+                {
+                    let handle = &mut *heap.vivem_dout;
+                    writeln!(handle).unwrap();
+                    writeln!(handle, "{}Making new stack frame (lock call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+                }
+                let function = program_h.lookup_function(none_constructor);
+                let args_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&[]);
+                let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function);
+                {
+                    let handle = &mut *heap.vivem_dout;
+                    write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
+                }
+                let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
+                let target_interface_ref = match result_type.kind {
+                    KindHT::InterfaceHT(i) => i,
+                    _ => panic!("LockWeakH: result_type.kind not InterfaceHT"),
+                };
+                INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
+            }
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

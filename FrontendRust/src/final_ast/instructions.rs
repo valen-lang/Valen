@@ -144,10 +144,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::NewStructH(n) => n.result_type,
         ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
         ExpressionH::ArrayCapacityH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
-        ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),
+        ExpressionH::BorrowToWeakH(b) => CoordH { ownership: OwnershipH::WeakH, location: LocationH::YonderH, kind: b.ref_expression.result_type().kind },
         ExpressionH::IsSameInstanceH(x) => x.result_type(),
         ExpressionH::AsSubtypeH(a) => a.result_type,
-        ExpressionH::LockWeakH(_) => panic!("Unimplemented: result_type for LockWeakH"),
+        ExpressionH::LockWeakH(l) => l.result_type,
         ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
     }

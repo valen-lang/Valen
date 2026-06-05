@@ -43,8 +43,8 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
     pub fn result(&self) -> CoordI<'s, 'i, R> {
         match self {
             ReferenceExpressionIE::LetAndLend(x) => x.result,
-            ReferenceExpressionIE::LockWeak(_) => panic!("RE::result: LockWeak"),
-            ReferenceExpressionIE::BorrowToWeak(_) => panic!("RE::result: BorrowToWeak"),
+            ReferenceExpressionIE::LockWeak(x) => x.result,
+            ReferenceExpressionIE::BorrowToWeak(x) => x.result,
             ReferenceExpressionIE::LetNormal(x) => x.result,
             ReferenceExpressionIE::Restackify(_) => panic!("RE::result: Restackify"),
             ReferenceExpressionIE::Unlet(x) => x.result,
