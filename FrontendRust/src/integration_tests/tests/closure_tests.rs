@@ -126,9 +126,37 @@ pub fn addressibility() {
 */
 // mig: fn captured_own_is_borrow
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 pub fn captured_own_is_borrow() {
-    panic!("Unmigrated test: captured_own_is_borrow");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Here, the scout determined that the closure is only ever borrowing
+    // it (during the dereference to get its member) so typingpass doesn't put
+    // an address into the closure, it instead puts a reference. Specifically,
+    // a borrow reference (because why would we want to move this into the
+    // closure struct?).
+    // This means the closure struct contains a borrow reference. This means
+    // the environment in the closure has to match this; the environment has
+    // to have a borrow reference instead of an owning reference.
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(9);\n  return { m.hp }();\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
 }
 /*
   test("Captured own is borrow") {
