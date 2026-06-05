@@ -2406,7 +2406,9 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &crate::simpl
     if heap.get_total_ref_count(actual_reference) == 0 {
         match expected_reference.ownership {
             OwnershipH::OwnH => {}
-            OwnershipH::WeakH => panic!("cleanup: Weak — pilot doesn't exercise"),
+            OwnershipH::WeakH => {
+                heap.deallocate_if_no_weak_refs(actual_reference);
+            }
             OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => {}
             OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
                 match expected_reference.kind {
