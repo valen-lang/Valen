@@ -2171,6 +2171,15 @@ pub enum CitizenTemplateNameT<'s, 't> {
     StructTemplate(&'t StructTemplateNameT<'s, 't>),
     InterfaceTemplate(&'t InterfaceTemplateNameT<'s, 't>),
 }
+impl<'s, 't> CitizenTemplateNameT<'s, 't> where 's: 't {
+  pub fn human_name(&self) -> StrI<'s> {
+    match self {
+      CitizenTemplateNameT::StructTemplate(x) => x.human_name,
+      CitizenTemplateNameT::InterfaceTemplate(x) => x.human_namee,
+    }
+  }
+  /* */
+}
 /*
 sealed trait CitizenTemplateNameT extends ICitizenTemplateNameT {
   def humanName: StrI

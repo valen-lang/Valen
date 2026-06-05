@@ -540,8 +540,39 @@ fn panic_function() {
 */
 // mig: fn odmfrc
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn odmfrc() { panic!("Unmigrated test: odmfrc"); }
+fn odmfrc() {
+    let code = "\nimport v.builtins.opt.*;\n\nstruct _X { }\nfunc __call(self &_X) int { 0 }\n\nstruct _Y<H>\nwhere func(&H)int, func drop(H)void {\n  hasher H;\n}\n\nstruct _Z {\n  idByName _Y<_X>;\n}\n    ";
+
+    let replacements_set: Vec<indexmap::IndexMap<&str, &str>> = crate::utils::utils::scrambles(&{
+        let mut m = indexmap::IndexMap::new();
+        m.insert("_X", "_A");
+        m.insert("_Y", "_B");
+        m.insert("_Z", "_C");
+        m
+    });
+    for replacements in &replacements_set {
+        let replaced_code = crate::utils::utils::replace_all(code, replacements);
+        let compilation_bump = bumpalo::Bump::new();
+        let parse_bump = bumpalo::Bump::new();
+        let scout_bump = bumpalo::Bump::new();
+        let typing_bump = bumpalo::Bump::new();
+        let instantiating_bump = bumpalo::Bump::new();
+        let hammer_bump = bumpalo::Bump::new();
+        let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+        let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+        let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+        let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+        let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+        let mut compile = crate::integration_tests::tests::run_compilation::test(
+            &compilation_bump,
+            &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+            &instantiating_bump,
+            &replaced_code,
+        );
+        let _ = compile.get_monouts();
+    }
+}
 /*
   test("ODMFRC") {
     // Order doesnt matter for resolving calls (ODMFRC)

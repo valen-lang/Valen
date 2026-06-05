@@ -1565,7 +1565,10 @@ where 's: 't,
                 }
             }
             // orderedEntries = orderableEntries.sortBy(_._1.humanName.str)
-            orderable_entries.sort_by(|(a, _), (b, _)| panic!("Unimplemented: sort orderable entries"));
+            orderable_entries.sort_by(|(a, _), (b, _)| {
+                crate::typing::names::names::CitizenTemplateNameT::try_from(*a).unwrap().human_name().0
+                    .cmp(crate::typing::names::names::CitizenTemplateNameT::try_from(*b).unwrap().human_name().0)
+            });
             let all_entries = orderable_entries.into_iter().chain(unordered_entries.into_iter());
             for (_name, entry) in all_entries {
                 match entry {
