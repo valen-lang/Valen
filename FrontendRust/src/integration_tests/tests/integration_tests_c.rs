@@ -152,9 +152,38 @@ fn unlet_to_avoid_an_outstanding_borrow_panic() {
 */
 // mig: fn function_return_with_return_upcasts
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn function_return_with_return_upcasts() {
-    panic!("Unmigrated test: function_return_with_return_upcasts");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/virtuals/retUpcast.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let do_it = coutputs.lookup_function_by_str("doIt");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(do_it),
+            crate::typing::test::traverse::NodeRefT::Upcast(_) => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("Expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("Function return with return upcasts") {
