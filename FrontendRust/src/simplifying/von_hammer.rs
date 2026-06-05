@@ -1546,7 +1546,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::StaticArrayFromCallableH(_) => panic!("vonify_expression: StaticArrayFromCallableH"),
+            ExpressionH::StaticArrayFromCallableH(s) => {
+                let crate::final_ast::instructions::StaticArrayFromCallableH { generator_expression: generator_expr, generator_method, element_type: _, result_type } = *s;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "StaticArrayFromCallable".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "generatorExpr".to_string(), value: self.vonify_expression(generator_expr) },
+                        crate::von::ast::VonMember { field_name: "generatorType".to_string(), value: self.vonify_coord(generator_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "generatorKind".to_string(), value: self.vonify_kind(generator_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "generatorMethod".to_string(), value: self.vonify_prototype(generator_method) },
+                        crate::von::ast::VonMember { field_name: "generatorKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(result_type) },
+                        crate::von::ast::VonMember { field_name: "elementType".to_string(), value: self.vonify_coord(result_type) },
+                    ],
+                })
+            }
             ExpressionH::DestroyStaticSizedArrayIntoFunctionH(d) => {
                 let crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH { array_expression: array_expr, consumer_expression: consumer_expr, consumer_method, array_element_type, array_size } = *d;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

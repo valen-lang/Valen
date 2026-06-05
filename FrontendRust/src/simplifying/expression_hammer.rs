@@ -319,7 +319,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let access = self.translate_new_mut_runtime_sized_array(hinputs, hamuts, current_function_header, locals, nmrsa_ie);
                     (access, Vec::new())
                 }
-                RE::StaticArrayFromCallable(a) => panic!("translate_expression: StaticArrayFromCallable branch"),
+                RE::StaticArrayFromCallable(a) => {
+                    let access = self.translate_static_array_from_callable(hinputs, hamuts, current_function_header, locals, a);
+                    (access, Vec::new())
+                }
                 RE::DestroyStaticSizedArrayIntoFunction(das2) => {
                     let das_h = self.translate_destroy_static_sized_array(hinputs, hamuts, current_function_header, locals, das2);
                     (das_h, Vec::new())
@@ -1522,10 +1525,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        expr_ie: &StaticArrayFromCallableIE<'s, 'i, cI>,
+        expr_ie: &'i StaticArrayFromCallableIE<'s, 'i, cI>,
     ) -> ExpressionH<'s, 'h>
     {
-        panic!("Unimplemented: translate_static_array_from_callable");
+        let StaticArrayFromCallableIE { array_type: array_type_2, generator: generator_expr_2, generator_method, result: _ } = *expr_ie;
+        let (generator_register_id, generator_deferreds) =
+            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(generator_expr_2));
+        let array_ref_type_h = self.translate_coord(hinputs, hamuts, expr_ie.result);
+        let array_type_h = self.translate_static_sized_array(hinputs, hamuts, array_type_2);
+        assert!(array_ref_type_h.expect_static_sized_array_coord().kind == crate::final_ast::types::KindHT::StaticSizedArrayHT(array_type_h));
+        let element_type = hamuts.get_static_sized_array(array_type_h).element_type;
+        let generator_method_h = self.translate_prototype(hinputs, hamuts, &expr_ie.generator_method);
+        let construct_array_call_node = ExpressionH::StaticArrayFromCallableH(self.interner.alloc(crate::final_ast::instructions::StaticArrayFromCallableH {
+            generator_expression: generator_register_id,
+            generator_method: generator_method_h,
+            element_type,
+            result_type: array_ref_type_h.expect_static_sized_array_coord(),
+        }));
+        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, generator_deferreds)
     }
 }
 /*

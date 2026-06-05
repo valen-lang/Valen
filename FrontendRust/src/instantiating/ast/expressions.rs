@@ -78,7 +78,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Reinterpret(_) => panic!("RE::result: Reinterpret"),
             ReferenceExpressionIE::Construct(c) => c.result,
             ReferenceExpressionIE::NewMutRuntimeSizedArray(n) => n.result,
-            ReferenceExpressionIE::StaticArrayFromCallable(_) => panic!("RE::result: StaticArrayFromCallable"),
+            ReferenceExpressionIE::StaticArrayFromCallable(s) => s.result,
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
             ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) },

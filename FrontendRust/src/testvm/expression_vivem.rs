@@ -1021,6 +1021,26 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let r#ref = heap.is_same_instance(interner, call_id, left_ref, right_ref);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
+        ExpressionH::StaticArrayFromCallableH(cac) => {
+            let crate::final_ast::instructions::StaticArrayFromCallableH { generator_expression: generator_expr, generator_method: generator_prototype, element_type: _, result_type: array_ref_type } = **cac;
+            let ssa_def = program_h.lookup_static_sized_array(array_ref_type.kind.expect_static_sized_array_ht());
+            let generator_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &generator_expr) {
+                nr @ INodeExecuteResultV::Return(_) => return nr,
+                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: StaticArrayFromCallableH generator produced Break — vwat"),
+                INodeExecuteResultV::Continue(v) => v.result_ref,
+            };
+            let mut element_refs: Vec<ReferenceV<'v, 'h, 's>> = Vec::new();
+            generate_elements(program_h, interner, scout_arena, stdin, stdout, heap, expression_id, call_id, generator_reference, *generator_prototype, ssa_def.size, &mut |_i, element_ref, _heap| {
+                element_refs.push(element_ref);
+            });
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, generator_expr.result_type(), generator_reference);
+            let element_refs_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&element_refs);
+            let (array_reference, array_instance) = heap.add_array(interner, *ssa_def, array_ref_type, element_refs_slice);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
+            heap.print_kind(crate::testvm::values::KindV::ArrayInstance(array_instance));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

@@ -3715,7 +3715,26 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::StaticArrayFromCallable(_) => panic!("Unimplemented: translate_ref_expr StaticArrayFromCallable"),
+            ReferenceExpressionTE::StaticArrayFromCallable(s) => {
+                let crate::typing::ast::expressions::StaticArrayFromCallableTE { array_type, region: _, generator, generator_method } = **s;
+                let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
+                let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
+                let (_generator_prototype_i, generator_prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
+                let result_it = CoordI {
+                    ownership: match ssa_it.mutability() {
+                        crate::instantiating::ast::types::MutabilityI::Mutable => crate::instantiating::ast::types::OwnershipI::Own,
+                        crate::instantiating::ast::types::MutabilityI::Immutable => crate::instantiating::ast::types::OwnershipI::MutableShare,
+                    },
+                    kind: crate::instantiating::ast::types::KindIT::StaticSizedArrayIT(self.interner.alloc(ssa_it)),
+                };
+                let result_ce = ReferenceExpressionIE::StaticArrayFromCallable(self.interner.alloc(crate::instantiating::ast::expressions::StaticArrayFromCallableIE {
+                    array_type: crate::instantiating::region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
+                    generator: generator_ce,
+                    generator_method: generator_prototype_c,
+                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                }));
+                (result_it, result_ce)
+            }
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(d) => {
                 let crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE { array_expr: array_expr_t, array_type: array_type_t, consumer: consumer_t, consumer_method: consumer_method_t } = **d;
                 let (_array_it, array_ce) =

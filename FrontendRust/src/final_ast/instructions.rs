@@ -1377,7 +1377,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,
             ExpressionH::PushRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,
-            ExpressionH::StaticArrayFromCallableH(_) => panic!("Unimplemented: result_type for StaticArrayFromCallableH"),
+            ExpressionH::StaticArrayFromCallableH(s) => s.result_type,
             ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
             ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
             ExpressionH::DestroyMutRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
