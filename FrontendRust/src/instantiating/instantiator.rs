@@ -2818,7 +2818,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_function_attribute(x: &IFunctionAttributeT<'s>) -> IFunctionAttributeI<'s> {
         match x {
             IFunctionAttributeT::UserFunction => IFunctionAttributeI::UserFunctionI,
-            IFunctionAttributeT::Pure => panic!("Unimplemented: translate_function_attribute Pure"),
+            IFunctionAttributeT::Pure => IFunctionAttributeI::PureI,
             IFunctionAttributeT::Extern(e) => IFunctionAttributeI::ExternI(crate::instantiating::ast::ast::ExternI { package_coord: e.package_coord }),
             _ => panic!("Unimplemented: translate_function_attribute other"),
         }
