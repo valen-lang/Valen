@@ -526,11 +526,30 @@ fn tests_making_a_variable_with_a_pattern() {
 */
 // mig: fn tests_a_linked_list
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_a_linked_list() {
-    panic!("Unmigrated test: tests_a_linked_list");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/virtuals/ordinarylinkedlist.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    let _ = compile.eval_for_kind_primitive_args(Vec::new());
 }
 /*
+Guardian: temp-disable: SPDMX — eval_for_kind_primitive_args is the Rust-side disambiguation for Scala's evalForKind(Vector[PrimitiveKindV]) overload (vs evalForKind(heap, args) elsewhere) — Exception S, established by the in-file precedent in every other test in this file (tests_calling_an_abstract_function, tests_calling_a_virtual_function, etc.). — FrontendRust/guardian-logs/request-3270-1780630106214/hook-3270/tests_a_linked_list--529.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
 
   test("Tests a linked list") {
     val compile = RunCompilation.test(
