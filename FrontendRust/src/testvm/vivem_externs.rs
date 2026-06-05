@@ -14,7 +14,10 @@ import dev.vale.vfail
 object VivemExterns {
 */
 // mig: fn panic
-pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, { panic!("Unimplemented: panic"); }
+pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 0);
+    std::panic::panic_any(crate::testvm::vivem::PanicExceptionV);
+}
 /*
   def panic(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)

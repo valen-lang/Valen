@@ -121,6 +121,7 @@ pub fn get_extern_function<'h, 's, 'v>(
     match name.as_str() {
         "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),
         "__vbi_addFloatFloat" => Box::new(crate::testvm::vivem_externs::add_float_float),
+        "__vbi_panic" => Box::new(crate::testvm::vivem_externs::panic),
         "__vbi_multiplyI32" => Box::new(crate::testvm::vivem_externs::multiply_i32),
         "__vbi_divideI32" => Box::new(crate::testvm::vivem_externs::divide_i32),
         "__vbi_subtractI32" => Box::new(crate::testvm::vivem_externs::subtract_i32),

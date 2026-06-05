@@ -280,6 +280,10 @@ where 's: 'i {
             let crate::instantiating::ast::names::StructTemplateNameI { human_name, .. } = **stn;
             INameI::StructTemplate(interner.intern_struct_template_name_ci(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name }))
         }
+        INameI::InterfaceTemplate(itn) => {
+            let crate::instantiating::ast::names::InterfaceTemplateNameI { human_namee, .. } = **itn;
+            INameI::InterfaceTemplate(interner.intern_interface_template_name_ci(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee }))
+        }
         other => panic!("Unimplemented: collapse_name {:?}", std::mem::discriminant(other)),
     }
 }

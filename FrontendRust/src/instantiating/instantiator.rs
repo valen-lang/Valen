@@ -1152,8 +1152,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl: std::collections::HashMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>> =
             _dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().flat_map(|(rune_in_impl, citizen_rune_to_bound)| {
                 citizen_rune_to_bound.iter().map(move |(rune_in_citizen, prototype_t)| {
-                    let _ = (rune_in_impl, rune_in_citizen, prototype_t, impl_rune_to_impl_instantiation_bound_args);
-                    panic!("translate_override: bound_param_prototype_t_to_bound_arg_prototype_i_from_impl closure body");
+                    let crate::typing::names::names::INameT::FunctionBound(_fbn) = prototype_t.id.local_name else {
+                        panic!("translate_override: prototype_t.id.local_name not FunctionBound");
+                    };
+                    let prototype_i = *impl_rune_to_impl_instantiation_bound_args.caller_rune_to_callee_rune_to_reachable_func
+                        .get(rune_in_impl).expect("vassertSome rune_in_impl")
+                        .get(rune_in_citizen).expect("vassertSome rune_in_citizen");
+                    (prototype_t.id, prototype_i)
                 })
             }).collect();
         let dispatcher_instantiation_bound_params_to_args = Self::assemble_instantiation_bound_param_to_arg(_dispatcher_instantiation_bound_params, _abstract_func_instantiation_bound_args);
@@ -1177,6 +1182,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
+Guardian: temp-disable: TUCMPX — IndexMap::new() at bound_param_impl_id_to_bound_arg_impl_id is 1:1 with Scala's Map() (with adjacent TODO: Catch impls up) — Scala-faithful empty literal, not a Rust-side unimplemented placeholder. TUCMPX can't see the canonical Scala source. — FrontendRust/guardian-logs/request-2774-1780621878200/hook-2774/translate_override--1092.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
   def translateOverride(
     opts: GlobalOptions,
     interner: Interner,
@@ -6302,7 +6308,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             INameT::AnonymousSubstructTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructTemplate"),
             INameT::LambdaCitizen(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizen"),
-            INameT::InterfaceTemplate(_) => panic!("Unimplemented: translate_name_substituting InterfaceTemplate"),
+            INameT::InterfaceTemplate(itn) => {
+                let crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. } = *itn;
+                INameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee }))
+            }
             INameT::Function(_) | INameT::ForwarderFunction(_) | INameT::ExternFunction(_) | INameT::FunctionBound(_) | INameT::LambdaCallFunction(_) | INameT::AnonymousSubstructConstructor(_) | INameT::PredictedFunction(_) => {
                 let f: IFunctionNameT<'s, 't> = (*name).try_into().unwrap();
                 INameI::from(self.translate_function_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &f))
