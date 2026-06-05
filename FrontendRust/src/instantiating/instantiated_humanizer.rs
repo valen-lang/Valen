@@ -246,6 +246,9 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
                 + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
         }
+        INameI::Iterator(i) => "it:".to_string() + &code_map(i.range.begin),
+        INameI::Iterable(i) => "ib:".to_string() + &code_map(i.range.begin),
+        INameI::IterationOption(i) => "io:".to_string() + &code_map(i.range.begin),
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }
 }

@@ -221,12 +221,12 @@ where 's: 'i {
         IVarNameI::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_ci(crate::instantiating::ast::names::TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
         IVarNameI::ClosureParam(crate::instantiating::ast::names::ClosureParamNameI { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_ci(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
         IVarNameI::MagicParam(crate::instantiating::ast::names::MagicParamNameI { code_location_2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_ci(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location_2 })),
-        IVarNameI::Iterable(_) => panic!("Unimplemented: collapse_var_name Iterable"),
+        IVarNameI::Iterable(crate::instantiating::ast::names::IterableNameI { range, .. }) => IVarNameI::Iterable(interner.intern_iterable_name_ci(crate::instantiating::ast::names::IterableNameI { _marker: std::marker::PhantomData, range: *range })),
         IVarNameI::ConstructingMember(crate::instantiating::ast::names::ConstructingMemberNameI { name, .. }) => {
             IVarNameI::ConstructingMember(interner.intern_constructing_member_name_ci(crate::instantiating::ast::names::ConstructingMemberNameI { _marker: std::marker::PhantomData, name: *name }))
         }
-        IVarNameI::Iterator(_) => panic!("Unimplemented: collapse_var_name Iterator"),
-        IVarNameI::IterationOption(_) => panic!("Unimplemented: collapse_var_name IterationOption"),
+        IVarNameI::Iterator(crate::instantiating::ast::names::IteratorNameI { range, .. }) => IVarNameI::Iterator(interner.intern_iterator_name_ci(crate::instantiating::ast::names::IteratorNameI { _marker: std::marker::PhantomData, range: *range })),
+        IVarNameI::IterationOption(crate::instantiating::ast::names::IterationOptionNameI { range, .. }) => IVarNameI::IterationOption(interner.intern_iteration_option_name_ci(crate::instantiating::ast::names::IterationOptionNameI { _marker: std::marker::PhantomData, range: *range })),
         IVarNameI::Self_(_) => panic!("Unimplemented: collapse_var_name SelfName"),
         _ => panic!("Unimplemented: collapse_var_name other"),
     }

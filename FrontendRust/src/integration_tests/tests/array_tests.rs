@@ -472,9 +472,29 @@ fn take_arraysequence_as_a_parameter() {
 */
 // mig: fn borrow_arraysequence_as_a_parameter
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn borrow_arraysequence_as_a_parameter() {
-    panic!("Unmigrated test: borrow_arraysequence_as_a_parameter");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct MutableStruct {\n  x int;\n}\n\nfunc doThings(arr &[#3]^MutableStruct) int {\n  return arr.2.x;\n}\nexported func main() int {\n  a = [#](MutableStruct(2), MutableStruct(3), MutableStruct(4));\n  return doThings(&a);\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Borrow arraysequence as a parameter") {
@@ -1129,9 +1149,26 @@ fn array_has() {
 */
 // mig: fn each_on_ssa
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn each_on_ssa() {
-    panic!("Unmigrated test: each_on_ssa");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nimport array.iter.*;\nexported func main() {\n  planets = [#](\"Venus\", \"Earth\", \"Mars\");\n  foreach planet in planets {\n    print(planet);\n  }\n}\n",
+    );
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "VenusEarthMars");
 }
 /*
   test("each on SSA") {

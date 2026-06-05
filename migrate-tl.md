@@ -85,7 +85,7 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Pause for explicit architect go-ahead before syncing to `experimental`** — the `git fetch . experimental-N:experimental` step never runs unprompted.
 
-**Test-only JR batches (parity-clean, no implementation changes): rebase + release JR uncommitted to accumulate; only surface to architect when JR's batch includes implementation changes.**
+**Test-only JR sync-readies (parity-clean, no body/scaffolding/SPDMX disables): parity-review, release for next test immediately — no architect surface, no fire commit; accumulate uncommitted across consecutive test-only greens until a substantive change arrives.**
 
 **Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver.
 

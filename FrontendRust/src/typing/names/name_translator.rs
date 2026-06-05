@@ -414,6 +414,18 @@ where 's: 't,
                 IVarNameT::ConstructingMember(self.typing_interner.intern_constructing_member_name(
                     ConstructingMemberNameT { name: n, _phantom: std::marker::PhantomData }))
             }
+            IVarNameS::IterableName(range) => {
+                IVarNameT::Iterable(self.typing_interner.intern_iterable_name(
+                    IterableNameT { range, _phantom: std::marker::PhantomData }))
+            }
+            IVarNameS::IteratorName(range) => {
+                IVarNameT::Iterator(self.typing_interner.intern_iterator_name(
+                    IteratorNameT { range, _phantom: std::marker::PhantomData }))
+            }
+            IVarNameS::IterationOptionName(range) => {
+                IVarNameT::IterationOption(self.typing_interner.intern_iteration_option_name(
+                    IterationOptionNameT { range, _phantom: std::marker::PhantomData }))
+            }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", std::mem::discriminant(&name));
             }
