@@ -403,9 +403,26 @@ fn if_with_condition_declaration() {
 */
 // mig: fn ret_from_inside_if_will_destroy_locals
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn ret_from_inside_if_will_destroy_locals() {
-    panic!("Unmigrated test: ret_from_inside_if_will_destroy_locals");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import printutils.*;\n#!DeriveStructDrop\nstruct Marine { hp int; }\nfunc drop(marine Marine) void {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() int {\n  m = Marine(5);\n  x =\n    if (true) {\n      println(\"In then!\");\n      return 7;\n    } else {\n      println(\"In else!\");\n      m.hp\n    };\n  println(\"In rest!\");\n  return x;\n}\n",
+    );
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "In then!\nDestroying marine!\n");
 }
 /*
   test("Ret from inside if will destroy locals") {
