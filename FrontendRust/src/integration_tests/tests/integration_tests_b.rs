@@ -88,9 +88,32 @@ fn tests_calling_a_templated_struct_constructor() {
 */
 // mig: fn test_array_push_pop_len_capacity_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_array_push_pop_len_capacity_drop() {
-    panic!("Unmigrated test: test_array_push_pop_len_capacity_drop");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport castutils.*;\nimport printutils.*;\nimport array.make.*;\n\nexported func main() int {\n  arr = Array<mut, int>(9);\n  arr.push(420);\n  arr.push(421);\n  arr.push(422);\n  arr.len();\n  return arr.capacity();\n  // implicit drop with pops\n}\n",
+    );
+    {
+        let _coutputs = compile.expect_compiler_outputs();
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
 }
 /*
   test("Test array push, pop, len, capacity, drop") {
@@ -259,9 +282,26 @@ fn tests_lambda() {
 */
 // mig: fn tests_generic_with_a_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_generic_with_a_lambda() {
-    panic!("Unmigrated test: tests_generic_with_a_lambda");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nfunc genFunc<T>(a &T) &T {\n  return { a }();\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+    );
+    compile.run_primitive_args(Vec::new());
 }
 /*
   test("Tests generic with a lambda") {
@@ -278,11 +318,29 @@ fn tests_generic_with_a_lambda() {
     compile.run(Vector())
   }
 */
+// See LCCPGB for explanation.
 // mig: fn tests_generic_s_lambda_calling_parent_function_s_bound
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_generic_s_lambda_calling_parent_function_s_bound() {
-    panic!("Unmigrated test: tests_generic_s_lambda_calling_parent_function_s_bound");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nfunc genFunc<T>(a &T)\nwhere func print(&T)void {\n  { print(a); }()\n}\nexported func main() {\n  genFunc(\"hello\");\n}\n",
+    );
+    compile.run_primitive_args(Vec::new());
 }
 /*
   test("Tests generic's lambda calling parent function's bound") {
@@ -301,11 +359,29 @@ fn tests_generic_s_lambda_calling_parent_function_s_bound() {
     compile.run(Vector())
   }
 */
+// This lambda has an implicit <Y> template param
 // mig: fn tests_generic_with_a_polymorphic_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_generic_with_a_polymorphic_lambda() {
-    panic!("Unmigrated test: tests_generic_with_a_polymorphic_lambda");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nfunc genFunc<T>(a &T) &T {\n  return (x => a)(true);\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+    );
+    compile.run_primitive_args(Vec::new());
 }
 /*
   test("Tests generic with a polymorphic lambda") {
@@ -323,11 +399,29 @@ fn tests_generic_with_a_polymorphic_lambda() {
     compile.run(Vector())
   }
 */
+// This lambda has an implicit <Y> template param, invoked with a bool then a string
 // mig: fn tests_generic_with_a_polymorphic_lambda_invoked_twice
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
-    panic!("Unmigrated test: tests_generic_with_a_polymorphic_lambda_invoked_twice");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nfunc genFunc<T>(a &T) &T {\n  lam = (x => a);\n  lam(true);\n  return lam(\"hello\");\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+    );
+    compile.run_primitive_args(Vec::new());
 }
 /*
   test("Tests generic with a polymorphic lambda invoked twice") {
@@ -679,9 +773,27 @@ fn template_overrides_are_stamped() {
 */
 // mig: fn tests_a_foreach_for_a_linked_list
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn tests_a_foreach_for_a_linked_list() {
-    panic!("Unmigrated test: tests_a_foreach_for_a_linked_list");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "102030");
 }
 /*
   test("Tests a foreach for a linked list") {

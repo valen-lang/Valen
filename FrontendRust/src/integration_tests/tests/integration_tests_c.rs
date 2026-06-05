@@ -651,9 +651,31 @@ fn moving_same_thing_from_both_branches_of_if() {
 */
 // mig: fn exporting_array
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn exporting_array() {
-    panic!("Unmigrated test: exporting_array");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compilation = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "export []<mut>int as IntArray;",
+    );
+    let hamuts = compilation.get_hamuts();
+    let test_package = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
+    let kind_h = *test_package.export_name_to_kind.get(&scout_arena.intern_str("IntArray")).expect("vassertSome: IntArray export missing");
+    let builtin_package = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::builtin(&parse_arena, &parser_keywords));
+    let rsa = builtin_package.runtime_sized_arrays.iter().find(|r| crate::final_ast::types::KindHT::RuntimeSizedArrayHT(r.kind(&hammer_interner)) == kind_h).expect("vassertSome: RSA matching IntArray");
+    assert_eq!(rsa.element_type.kind, crate::final_ast::types::KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }));
 }
 /*
   test("exporting array") {
