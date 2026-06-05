@@ -74,7 +74,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
             }
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -118,7 +118,7 @@ fn destroy_own_then_locking_gives_none_with_struct() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -182,7 +182,7 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
         );
         assert!(matches.len() >= 1);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -230,7 +230,7 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
         );
         assert!(matches.len() >= 1);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
