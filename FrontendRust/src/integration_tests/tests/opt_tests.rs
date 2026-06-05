@@ -13,8 +13,30 @@ class OptTests extends FunSuite with Matchers {
 */
 // mig: fn test_empty_and_get_for_some
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn test_empty_and_get_for_some() { panic!("Unmigrated test: test_empty_and_get_for_some"); }
+fn test_empty_and_get_for_some() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.opt.*;\n\nexported func main() int {\n  opt Opt<int> = Some(9);\n  return if (opt.isEmpty()) { 0 }\n    else { opt.get() };\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Test empty and get for Some") {
     val compile = RunCompilation.testNoBuiltins(
@@ -71,6 +93,9 @@ fn test_empty_and_get_for_borrow() { panic!("Unmigrated test: test_empty_and_get
 
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
+*/
+
+/*
 }
 
 */
