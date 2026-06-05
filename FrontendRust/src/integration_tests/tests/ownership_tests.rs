@@ -429,9 +429,36 @@ fn gets_from_temporary_struct_a_members_member() {
 */
 // mig: fn unstackifies_local_vars
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn unstackifies_local_vars() {
-    panic!("Unmigrated test: unstackifies_local_vars");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  i = 0;\n  return i;\n}\n",
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    let num_variables: Vec<()> = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::LetAndLend(_) | crate::typing::test::traverse::NodeRefT::LetNormal(_) => Some(())
+    );
+    let unlets: Vec<()> = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Unlet(_) => Some(())
+    );
+    assert_eq!(unlets.len(), num_variables.len());
 }
 
 /*
