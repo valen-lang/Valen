@@ -110,7 +110,7 @@ fn test_array_push_pop_len_capacity_drop() {
     {
         let _coutputs = compile.expect_compiler_outputs();
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -301,7 +301,7 @@ fn tests_generic_with_a_lambda() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  return { a }();\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a lambda") {
@@ -340,7 +340,7 @@ fn tests_generic_s_lambda_calling_parent_function_s_bound() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T)\nwhere func print(&T)void {\n  { print(a); }()\n}\nexported func main() {\n  genFunc(\"hello\");\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic's lambda calling parent function's bound") {
@@ -381,7 +381,7 @@ fn tests_generic_with_a_polymorphic_lambda() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  return (x => a)(true);\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a polymorphic lambda") {
@@ -421,7 +421,7 @@ fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  lam = (x => a);\n  lam(true);\n  return lam(\"hello\");\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a polymorphic lambda invoked twice") {
@@ -793,7 +793,7 @@ fn tests_a_foreach_for_a_linked_list() {
         &instantiating_bump,
         &source,
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "102030");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "102030");
 }
 /*
   test("Tests a foreach for a linked list") {

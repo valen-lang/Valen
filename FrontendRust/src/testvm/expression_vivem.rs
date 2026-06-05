@@ -1144,7 +1144,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 let function = program_h.lookup_function(some_constructor);
                 heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
                 let args_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&[constraint_ref]);
-                let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function);
+                let (callee_call_id, retuurn) = match crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function) { Ok(t) => t, Err(e) => return INodeExecuteResultV::Error(e), };
                 {
                     let handle = &mut *heap.vivem_dout;
                     write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
@@ -1164,7 +1164,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 }
                 let function = program_h.lookup_function(none_constructor);
                 let args_slice: &'v [crate::testvm::values::ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&[]);
-                let (callee_call_id, retuurn) = crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function);
+                let (callee_call_id, retuurn) = match crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function) { Ok(t) => t, Err(e) => return INodeExecuteResultV::Error(e), };
                 {
                     let handle = &mut *heap.vivem_dout;
                     write!(handle, "{}Getting return reference", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();

@@ -261,7 +261,7 @@ fn simple_program_with_mainargs() {
         &instantiating_bump,
         "import v.builtins.mainargs.*; exported func main() int { return 3; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }

@@ -582,7 +582,7 @@ fn each_on_int_range() {
         &instantiating_bump,
         "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    set sum = sum + i;\n  }\n  return sum;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 45 }) => {}
         other => panic!("expected VonInt(45), got {:?}", other),
     }
@@ -625,7 +625,7 @@ fn parallel_foreach() {
         &instantiating_bump,
         "\nimport intrange.*;\nimport list.*;\nimport listprintutils.*;\n\nexported func main() {\n  exponent = 3;\n\n  results =\n    parallel foreach i in 0..5 {\n      i + 1\n    };\n\n  println(&results);\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()).trim(), "[1, 2, 3, 4, 5]");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
 }
 /*
   test("Parallel foreach") {
@@ -732,7 +732,7 @@ fn each_on_int_range_with_conditional_break() {
         &instantiating_bump,
         "\nimport intrange.*;\nimport list.*;\n\nexported func main() int {\n  sum = 0;\n  results =\n    foreach i in 0..10 {\n      if true {\n        break;\n      }\n      3\n    };\n  return 0;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
@@ -780,7 +780,7 @@ fn each_on_int_range_with_unconditional_break() {
         &instantiating_bump,
         "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    break;\n  }\n  return sum;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
@@ -823,7 +823,7 @@ fn each_on_int_range_with_conditional_break_from_both_branches() {
         &instantiating_bump,
         "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    if true {\n      break;\n    } else {\n      break;\n    }\n  }\n  return sum;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 0 }) => {}
         other => panic!("expected VonInt(0), got {:?}", other),
     }
