@@ -516,11 +516,46 @@ fn borrow_arraysequence_as_a_parameter() {
     compile.evalForKind(Vector()) match { case VonInt(4) => }
   }
 */
+// the argument to __Array doesnt even have to be a struct or a lambda or an
+// interface or whatever, its just passed straight through to the prototype
 // mig: fn array_map_with_int
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn array_map_with_int() {
-    panic!("Unmigrated test: array_map_with_int");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nfunc __call(lol int, i int) int { return i; }\n\nexported func main() int {\n  a = #[]int(10, 1337);\n  return a.3;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::NewImmRuntimeSizedArray(crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE {
+                array_type: rsa,
+                ..
+            }) if rsa.mutability() == crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable })
+                && matches!(rsa.element_type(), crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Int(_), .. })
+                => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   // the argument to __Array doesnt even have to be a struct or a lambda or an
