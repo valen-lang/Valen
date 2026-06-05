@@ -148,7 +148,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
                         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, length_result_node, deferreds);
                     (array_length_and_deferreds_expr_h, Vec::new())
                 }
-                RE::RuntimeSizedArrayCapacity(a) => panic!("translate_expression: RuntimeSizedArrayCapacity branch"),
+                RE::RuntimeSizedArrayCapacity(a) => {
+                    let (result_he, deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(a.array_expr));
+                    let length_result_node = ExpressionH::ArrayCapacityH(self.interner.alloc(crate::final_ast::instructions::ArrayCapacityH { source_expression: result_he }));
+                    let array_length_and_deferreds_expr_h =
+                        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, length_result_node, deferreds);
+                    (array_length_and_deferreds_expr_h, Vec::new())
+                }
                 RE::ArraySize(a) => panic!("translate_expression: ArraySize branch"),
                 RE::LockWeak(a) => panic!("translate_expression: LockWeak branch"),
                 RE::BorrowToWeak(a) => panic!("translate_expression: BorrowToWeak branch"),

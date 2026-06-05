@@ -1607,7 +1607,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::ArrayCapacityH(_) => panic!("vonify_expression: ArrayCapacityH"),
+            ExpressionH::ArrayCapacityH(a) => {
+                let crate::final_ast::instructions::ArrayCapacityH { source_expression: source_expr } = *a;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "ArrayCapacity".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                    ],
+                })
+            }
             ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(isi) => {
                 let crate::final_ast::instructions::IsSameInstanceH { left_expression: left, right_expression: right } = *isi;

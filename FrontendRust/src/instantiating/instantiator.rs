@@ -3764,7 +3764,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
             }
-            ReferenceExpressionTE::RuntimeSizedArrayCapacity(_) => panic!("Unimplemented: translate_ref_expr RuntimeSizedArrayCapacity"),
+            ReferenceExpressionTE::RuntimeSizedArrayCapacity(r) => {
+                let crate::typing::ast::expressions::RuntimeSizedArrayCapacityTE { array_expr } = **r;
+                let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
+                let result_ce = ReferenceExpressionIE::RuntimeSizedArrayCapacity(self.interner.alloc(crate::instantiating::ast::expressions::RuntimeSizedArrayCapacityIE {
+                    array_expr: array_ce,
+                }));
+                (CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::PushRuntimeSizedArray(prsa) => {
                 let crate::typing::ast::expressions::PushRuntimeSizedArrayTE { array_expr, new_element_expr } = **prsa;
                 let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);

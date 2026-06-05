@@ -759,6 +759,21 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let len_ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(crate::testvm::values::IntV { value: arr.get_size(), bits: 32, _phantom: std::marker::PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: len_ref })
         }
+        ExpressionH::ArrayCapacityH(ac) => {
+            let crate::final_ast::instructions::ArrayCapacityH { source_expression: arr_expr } = **ac;
+            let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &arr_expr) {
+                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
+                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            let arr = match heap.dereference(array_reference, false) {
+                crate::testvm::values::KindV::ArrayInstance(a) => a,
+                _ => panic!("execute_node_inner: ArrayCapacityH array deref not ArrayInstance"),
+            };
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, arr_expr.result_type(), array_reference);
+            let len_ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(crate::testvm::values::IntV { value: arr.capacity as i64, bits: 32, _phantom: std::marker::PhantomData }));
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: len_ref })
+        }
         ExpressionH::WhileH(w) => {
             let crate::final_ast::instructions::WhileH { body_block } = **w;
             let mut r#continue = true;

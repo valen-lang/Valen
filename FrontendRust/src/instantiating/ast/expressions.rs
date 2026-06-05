@@ -82,7 +82,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
             ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) },
-            ReferenceExpressionIE::RuntimeSizedArrayCapacity(_) => panic!("RE::result: RuntimeSizedArrayCapacity"),
+            ReferenceExpressionIE::RuntimeSizedArrayCapacity(r) => r.result(),
             ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) },
             ReferenceExpressionIE::PopRuntimeSizedArray(p) => p.result,
             ReferenceExpressionIE::InterfaceToInterfaceUpcast(_) => panic!("RE::result: InterfaceToInterfaceUpcast"),
@@ -1830,7 +1830,9 @@ case class RuntimeSizedArrayCapacityIE(
 */
 // mig: fn result
 impl<'s, 'i, R> RuntimeSizedArrayCapacityIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }) }
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, IntIT(32))

@@ -118,9 +118,29 @@ fn simple_static_array_and_runtime_index_lookup() {
 */
 // mig: fn destroy_ssa_of_imms_into_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn destroy_ssa_of_imms_into_function() {
-    panic!("Unmigrated test: destroy_ssa_of_imms_into_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  a = [#](13, 14, 15);\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e; });\n  return sum;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Destroy SSA of imms into function") {
@@ -139,9 +159,29 @@ fn destroy_ssa_of_imms_into_function() {
 */
 // mig: fn destroy_rsa_of_imms_into_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn destroy_rsa_of_imms_into_function() {
-    panic!("Unmigrated test: destroy_rsa_of_imms_into_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  a = Array<imm, int>(3, {13 + _});\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e; });\n  return sum;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Destroy RSA of imms into function") {
@@ -160,9 +200,29 @@ fn destroy_rsa_of_imms_into_function() {
 */
 // mig: fn destroy_ssa_of_muts_into_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn destroy_ssa_of_muts_into_function() {
-    panic!("Unmigrated test: destroy_ssa_of_muts_into_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = [#](Spaceship(13), Spaceship(14), Spaceship(15));\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e.fuel; });\n  return sum;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Destroy SSA of muts into function") {
@@ -182,9 +242,29 @@ fn destroy_ssa_of_muts_into_function() {
 */
 // mig: fn destroy_rsa_of_muts_into_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn destroy_rsa_of_muts_into_function() {
-    panic!("Unmigrated test: destroy_rsa_of_muts_into_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = MakeArray<Spaceship>(3, &{Spaceship(13 + _)});\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e.fuel; });\n  return sum;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Destroy RSA of muts into function") {
@@ -205,9 +285,29 @@ fn destroy_rsa_of_muts_into_function() {
 */
 // mig: fn migrate_rsa
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn migrate_rsa() {
-    panic!("Unmigrated test: migrate_rsa");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = Array<mut, Spaceship>(3, &{Spaceship(41 + _)});\n  b = Array<mut, Spaceship>(3);\n  migrate(a, &b);\n  return b[1].fuel;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Migrate RSA") {
@@ -651,9 +751,42 @@ fn new_rsa() {
 */
 // mig: fn array_map_with_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn array_map_with_lambda() {
-    panic!("Unmigrated test: array_map_with_lambda");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Lam imm {}\nfunc __call(lam Lam, i int) int { return i; }\n\nexported func main() int\nwhere F Prot = func(Lam, int)int {\n  a = #[]int(10, Lam());\n  return a.3;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::NewImmRuntimeSizedArray(crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE {
+                array_type: rsa,
+                ..
+            }) if rsa.mutability() == crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable })
+                && matches!(rsa.element_type(), crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Int(_), .. })
+                => Some(())
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("array map with lambda") {
@@ -680,9 +813,29 @@ fn array_map_with_lambda() {
 */
 // mig: fn make_array_map_with_struct
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn make_array_map_with_struct() {
-    panic!("Unmigrated test: make_array_map_with_struct");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\n\nstruct Lam imm {}\nfunc __call(lam Lam, i int) int { return i; }\n\nexported func main() int {\n  a = MakeArray<int>(10, Lam());\n  return a.3;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("MakeArray map with struct") {
@@ -704,9 +857,29 @@ fn make_array_map_with_struct() {
 */
 // mig: fn make_array_map_with_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn make_array_map_with_lambda() {
-    panic!("Unmigrated test: make_array_map_with_lambda");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nexported func main() int {\n  a = MakeArray<int>(10, {_});\n  return a.3;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("MakeArray map with lambda") {
@@ -724,9 +897,32 @@ fn make_array_map_with_lambda() {
 */
 // mig: fn array_map_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn array_map_with_interface() {
-    panic!("Unmigrated test: array_map_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\n\nsealed interface IThing {\n  func __call(virtual self &IThing, i int) int;\n}\n\nstruct MyThing { }\nfunc __call(self &MyThing, i int) int { i }\n\nimpl IThing for MyThing;\n\nexported func main() int {\n  i IThing = MyThing();\n  a = Array<imm, int>(10, &i);\n  return a.3;\n}\n",
+    );
+    {
+        let _coutputs = compile.expect_compiler_outputs();
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("array map with interface") {
@@ -756,9 +952,29 @@ fn array_map_with_interface() {
 */
 // mig: fn array_map_taking_a_closure_which_captures_something
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn array_map_taking_a_closure_which_captures_something() {
-    panic!("Unmigrated test: array_map_taking_a_closure_which_captures_something");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import array.make.*;\nexported func main() int {\n  x = 7;\n  a = MakeImmArray<int>(10, { _ + x });\n  return a.3;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
+        other => panic!("expected VonInt(10), got {:?}", other),
+    }
 }
 /*
   test("Array map taking a closure which captures something") {
@@ -815,9 +1031,29 @@ fn simple_array_map_with_runtime_index_lookup() {
 */
 // mig: fn nested_array
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn nested_array() {
-    panic!("Unmigrated test: nested_array");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  return [#]([#](2)).0.0;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 2 }) => {}
+        other => panic!("expected VonInt(2), got {:?}", other),
+    }
 }
 /*
   test("Nested array") {
@@ -834,9 +1070,29 @@ fn nested_array() {
 */
 // mig: fn two_dimensional_array
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn two_dimensional_array() {
-    panic!("Unmigrated test: two_dimensional_array");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import array.make.*;\nexported func main() int {\n  board =\n      MakeArray<Array<mut, int>>(\n          3,\n          (row) => { MakeArray<int>(3, { row + _ }) });\n  return board.1.2;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("Two dimensional array") {
@@ -856,9 +1112,29 @@ fn two_dimensional_array() {
 */
 // mig: fn array_with_capture
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn array_with_capture() {
-    panic!("Unmigrated test: array_with_capture");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import array.make.*;\nstruct IntBox {\n  i int;\n}\n\nexported func main() int {\n  box = IntBox(7);\n  board = MakeArray<int>(3, &(col) => { box.i });\n  return board.1;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 /*
   test("Array with capture") {
@@ -975,9 +1251,29 @@ fn capture_mutable_array() {
 */
 // mig: fn swap_out_of_array
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn swap_out_of_array() {
-    panic!("Unmigrated test: swap_out_of_array");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import array.make.*;\nstruct Goblin { }\n\nexported func main() int {\n  arr = MakeArray<Goblin>(1, i => Goblin());\n  set arr.0 = Goblin();\n  return 4;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Swap out of array") {
@@ -1036,9 +1332,29 @@ fn test_array_length() {
 */
 // mig: fn map_using_array_construct
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn map_using_array_construct() {
-    panic!("Unmigrated test: map_using_array_construct");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nexported func main() int {\n  board = MakeArray<int>(5, {_});\n  result =\n      MakeArray<int>(5, &(i) => {\n        board[i] + 2\n      });\n  return result.2;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        other => panic!("expected VonInt(4), got {:?}", other),
+    }
 }
 /*
   test("Map using array construct") {
@@ -1082,9 +1398,29 @@ fn map_from_hardcoded_values() {
 */
 // mig: fn nested_imm_arrays
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn nested_imm_arrays() {
-    panic!("Unmigrated test: nested_imm_arrays");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport array.make.*;\nexported func main() int {\n  return #[#]#[]int(\n    #[#]int(6, 60).toImmArray(),\n    #[#]int(4, 40).toImmArray(),\n    #[#]int(3, 30).toImmArray()\n  ).toImmArray()[2][1];\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 30 }) => {}
+        other => panic!("expected VonInt(30), got {:?}", other),
+    }
 }
 /*
   test("Nested imm arrays") {

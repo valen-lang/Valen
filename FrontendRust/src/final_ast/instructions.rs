@@ -1259,6 +1259,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_interface_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1266,6 +1267,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         panic!("Unimplemented: expect_interface_access");
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_runtime_sized_array_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1276,6 +1278,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_static_sized_array_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1286,6 +1289,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_int_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1296,6 +1300,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_i64_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1303,6 +1308,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         panic!("Unimplemented: expect_i64_access");
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn expect_bool_access
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1313,6 +1319,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 /* Guardian: disable-all */
 // mig: fn result_type
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
@@ -1377,7 +1384,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
             ExpressionH::NewStructH(n) => n.result_type,
             ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
-            ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
+            ExpressionH::ArrayCapacityH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
             ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),
             ExpressionH::IsSameInstanceH(x) => x.result_type(),
             ExpressionH::AsSubtypeH(a) => a.result_type,
@@ -1387,6 +1394,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 }
+/* */
 
 // mig: trait IExpressionH
 /// Polyvalue
