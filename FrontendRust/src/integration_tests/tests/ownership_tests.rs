@@ -208,9 +208,41 @@ fn derive_drop() {
 */
 // mig: fn custom_drop_result_is_an_owning_ref_calls_destructor
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn custom_drop_result_is_an_owning_ref_calls_destructor() {
-    panic!("Unmigrated test: custom_drop_result_is_an_owning_ref_calls_destructor");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) void {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nexported func main() {\n  Muta();\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+        let matches = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+        assert_eq!(matches.len(), 2);
+    }
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
 }
 
 /*
@@ -273,9 +305,41 @@ fn saves_return_value_then_destroys_temporary() {
 */
 // mig: fn calls_destructor_on_local_var
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn calls_destructor_on_local_var() {
-    panic!("Unmigrated test: calls_destructor_on_local_var");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nexported func main() {\n  a = Muta();\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+        let matches = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+        assert_eq!(matches.len(), 2);
+    }
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
 }
 
 /*
@@ -306,9 +370,92 @@ fn calls_destructor_on_local_var() {
 */
 // mig: fn calls_destructor_on_local_var_unless_moved
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn calls_destructor_on_local_var_unless_moved() {
-    panic!("Unmigrated test: calls_destructor_on_local_var_unless_moved");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    // Should call the destructor in moo, but not in main
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nfunc moo(m ^Muta) {\n}\n\nexported func main() {\n  a = Muta();\n  moo(a);\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+
+        // Destructor should only be calling println, NOT the destructor (itself)
+        let destructor = coutputs.functions.iter().find(|func| {
+            matches!(func.header.id.local_name,
+                crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
+                    template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("drop"), .. },
+                    parameters: [crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Own,
+                        kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT {
+                            id: crate::typing::names::names::IdT {
+                                local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
+                                    template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(crate::typing::names::names::StructTemplateNameT {
+                                        human_name: crate::interner::StrI("Muta"), ..
+                                    }),
+                                    ..
+                                }),
+                                ..
+                            },
+                            ..
+                        }),
+                        ..
+                    }],
+                    ..
+                })
+            )
+        }).unwrap();
+        // The only function lookup should be println
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(destructor),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("println".to_string())
+                => Some(())
+        );
+        // Only one call (the above println)
+        let destructor_calls = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(destructor),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+        assert_eq!(destructor_calls.len(), 1);
+
+        // moo should be calling the destructor
+        let moo = coutputs.lookup_function_by_str("moo");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+
+        // main should not be calling the destructor
+        let main = coutputs.lookup_function_by_str("main");
+        let main_drops = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(true)
+        );
+        assert_eq!(main_drops.len(), 0);
+    }
+    assert_eq!(compile.eval_for_stdout(Vec::new()), "Destroying!\n");
 }
 
 /*
@@ -365,9 +512,44 @@ fn calls_destructor_on_local_var_unless_moved() {
 */
 // mig: fn saves_return_value_then_destroys_local_var
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn saves_return_value_then_destroys_local_var() {
-    panic!("Unmigrated test: saves_return_value_then_destroys_local_var");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { hp int; }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[hp] = m;\n}\n\nexported func main() int {\n  a = Muta(10);\n  return a.hp;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE { callable, .. })
+                if crate::typing::templata::templata_utils::unapply_function_name_prototype(callable) == Some("drop".to_string())
+                => Some(())
+        );
+        let matches = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        );
+        assert_eq!(matches.len(), 2);
+    }
+    match compile.eval_for_kind_and_stdout(Vec::new()) {
+        (crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }), ref s) if s == "Destroying!\n" => {}
+        other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
+    }
 }
 
 /*

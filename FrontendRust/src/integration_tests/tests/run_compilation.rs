@@ -342,7 +342,19 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
   */
 
   // mig: fn eval_for_kind_and_stdout
-  pub fn eval_for_kind_and_stdout<'v>(&self, _args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> (crate::von::ast::IVonData, String) { panic!("Unimplemented: eval_for_kind_and_stdout"); }
+  pub fn eval_for_kind_and_stdout<'v>(&mut self, args: Vec<crate::testvm::values::PrimitiveKindV<'v, 'h, 's>>) -> (crate::von::ast::IVonData, String) {
+      let (stdoutput_string_builder, stdout_func) = crate::testvm::vivem::stdout_collector::<'s>();
+      let interner = self.hammer_compilation.interner;
+      let scout_arena = self.hammer_compilation.scout_arena;
+      let hamuts = self.get_hamuts();
+      let mut vivem_dout = std::io::stdout();
+      let vivem_bump = bumpalo::Bump::new();
+      let kind = crate::testvm::vivem::execute_with_primitive_args(
+          hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &crate::testvm::vivem::empty_stdin, &*stdout_func,
+      );
+      let result = stdoutput_string_builder.borrow().clone();
+      (kind, result)
+  }
   /*
   def evalForKindAndStdout(args: Vector[PrimitiveKindV]): (IVonData, String) = {
     val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()
