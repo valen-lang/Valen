@@ -223,9 +223,52 @@ fn ladder() {
 */
 // mig: fn moving_from_inside_if
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn moving_from_inside_if() {
-    panic!("Unmigrated test: moving_from_inside_if");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Marine { x int; }\nexported func main() int {\n  m = Marine(5);\n  return if (false) {\n      [x] = m;\n      x\n    } else {\n      [y] = m;\n      y\n    };\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let ifs: Vec<&crate::typing::ast::expressions::IfTE> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::If(if2) => Some(if2)
+        );
+        for iff in &ifs {
+            assert_eq!(iff.result().coord, crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
+                kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+            });
+        }
+        let user_funcs = coutputs.get_all_user_functions();
+        for func in &user_funcs {
+            match func.header.return_type {
+                crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }), .. } => {}
+                crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: crate::typing::types::types::KindT::Bool(_), .. } => {}
+                other => panic!("vwat: {:?}", other),
+            }
+        }
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        other => panic!("expected VonInt(5), got {:?}", other),
+    }
 }
 /*
   test("Moving from inside if") {
