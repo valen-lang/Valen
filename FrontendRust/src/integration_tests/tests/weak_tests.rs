@@ -319,9 +319,61 @@ fn make_weak_ref_from_temporary() {
 */
 // mig: fn make_and_lock_weak_ref_then_destroy_own_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
-    panic!("Unmigrated test: make_and_lock_weak_ref_then_destroy_own_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/lockWhileLiveInterface.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+                variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("weakUnit"), .. }),
+                    variability: crate::typing::types::types::VariabilityT::Final,
+                    coord: crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Weak, .. },
+                }),
+                expr: ref_expr,
+            }) => match ref_expr.result().coord {
+                crate::typing::types::types::CoordT {
+                    ownership: crate::typing::types::types::OwnershipT::Weak,
+                    kind: crate::typing::types::types::KindT::Interface(crate::typing::types::types::InterfaceTT {
+                        id: crate::typing::names::names::IdT {
+                            local_name: crate::typing::names::names::INameT::Interface(crate::typing::names::names::InterfaceNameT {
+                                template: crate::typing::names::names::InterfaceTemplateNameT { human_namee: crate::interner::StrI("IUnit"), .. },
+                                ..
+                            }),
+                            ..
+                        },
+                        ..
+                    }),
+                    ..
+                } => Some(()),
+                _ => None,
+            }
+        );
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 /*
   test("Make and lock weak ref then destroy own, with interface") {
@@ -342,9 +394,30 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
 */
 // mig: fn destroy_own_then_locking_gives_none_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn destroy_own_then_locking_gives_none_with_interface() {
-    panic!("Unmigrated test: destroy_own_then_locking_gives_none_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/dropThenLockInterface.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Destroy own then locking gives none, with interface") {
@@ -356,9 +429,31 @@ fn destroy_own_then_locking_gives_none_with_interface() {
 */
 // mig: fn drop_while_locked_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn drop_while_locked_with_interface() {
-    panic!("Unmigrated test: drop_while_locked_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/dropWhileLockedInterface.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Ok(_) => panic!("vfail"),
+        Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
+        Err(other) => panic!("vfail: {:?}", other),
+    }
 }
 /*
   test("Drop while locked, with interface") {
@@ -376,9 +471,39 @@ fn drop_while_locked_with_interface() {
 */
 // mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
-    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/weakFromLocalCRefInterface.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let matches: Vec<()> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::SoftLoad(crate::typing::ast::expressions::SoftLoadTE { target_ownership: crate::typing::types::types::OwnershipT::Weak, .. }) => Some(())
+        );
+        assert!(matches.len() >= 1);
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 /*
   test("Make and lock weak ref from borrow local then destroy own, with interface") {
@@ -394,9 +519,39 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
 */
 // mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
-    panic!("Unmigrated test: make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/weakFromCRefInterface.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let matches: Vec<()> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::SoftLoad(crate::typing::ast::expressions::SoftLoadTE { target_ownership: crate::typing::types::types::OwnershipT::Weak, .. }) => Some(())
+        );
+        assert!(matches.len() >= 1);
+    }
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        other => panic!("expected VonInt(7), got {:?}", other),
+    }
 }
 /*
   test("Make and lock weak ref from borrow then destroy own, with interface") {
@@ -412,9 +567,41 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
 */
 // mig: fn call_weak_self_method_after_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn call_weak_self_method_after_drop() {
-    panic!("Unmigrated test: call_weak_self_method_after_drop");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/callWeakSelfMethodAfterDrop.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let matches: Vec<()> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::SoftLoad(crate::typing::ast::expressions::SoftLoadTE { target_ownership: crate::typing::types::types::OwnershipT::Weak, .. }) => Some(())
+        );
+        assert!(matches.len() >= 1);
+    }
+    let _hamuts = compile.get_hamuts();
+
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Call weak-self method, after drop") {
@@ -432,9 +619,41 @@ fn call_weak_self_method_after_drop() {
 */
 // mig: fn call_weak_self_method_while_alive
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn call_weak_self_method_while_alive() {
-    panic!("Unmigrated test: call_weak_self_method_while_alive");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/weaks/callWeakSelfMethodWhileLive.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        let matches: Vec<()> = crate::collect_where_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::SoftLoad(crate::typing::ast::expressions::SoftLoadTE { target_ownership: crate::typing::types::types::OwnershipT::Weak, .. }) => Some(())
+        );
+        assert!(matches.len() >= 1);
+    }
+    let _hamuts = compile.get_hamuts();
+
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Call weak-self method, while alive") {
@@ -452,9 +671,35 @@ fn call_weak_self_method_while_alive() {
 */
 // mig: fn weak_yonder_member
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn weak_yonder_member() {
-    panic!("Unmigrated test: weak_yonder_member");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nweakable struct Base {\n  hp int;\n}\nstruct Spaceship {\n  origin &&Base;\n}\nexported func main() int {\n  base = Base(73);\n  ship = Spaceship(&&base);\n\n  (base).drop(); // Destroys base.\n\n  maybeOrigin = lock(ship.origin);\n  if (not maybeOrigin.isEmpty()) {\n    o = maybeOrigin.get();\n    return o.hp;\n  } else {\n    return 42;\n  }\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let _main = coutputs.lookup_function_by_str("main");
+    }
+    let _hamuts = compile.get_hamuts();
+
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Weak yonder member") {
