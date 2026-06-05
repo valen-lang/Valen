@@ -14,6 +14,8 @@
 
 **Scope-bias trap: "lots of body fills" is still JR work.** A long mechanical port (e.g. an entire vonify_* family) is JR territory, not a TL one-shot. Push back when JR frames mechanical bulk as TL-level.
 
+**Routine JR prods don't gate on architect approval** — clear JR-scope continuations (body fills, "next test" dispatches) ship via `for-jr.md` directly. The approval gate is for structural/design rulings only.
+
 **Interner-threading channel:** parameters or god-structs. Runtime-state structs (`HeapV`, etc.) aren't god-structs just because they're widely-passed; don't bolt the interner onto them — thread it as a parameter.
 
 **Per-test Scala-arg discipline:** check the Scala for each test before defaulting to in-tree precedent — Scala explicit args, default args, and "previous Rust test did X" can disagree, and Scala parity wins.
