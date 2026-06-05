@@ -63,7 +63,7 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::Tuple(x) => x.result,
             ReferenceExpressionIE::StaticArrayFromValues(s) => s.result_reference,
             ReferenceExpressionIE::ArraySize(_) => panic!("RE::result: ArraySize"),
-            ReferenceExpressionIE::IsSameInstance(_) => panic!("RE::result: IsSameInstance"),
+            ReferenceExpressionIE::IsSameInstance(x) => x.result(),
             ReferenceExpressionIE::AsSubtype(x) => x.result,
             ReferenceExpressionIE::VoidLiteral(v) => v.result(),
             ReferenceExpressionIE::ConstantInt(x) => x.result(),
@@ -964,7 +964,9 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i, R> IsSameInstanceIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i, R> {
+		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::BoolIT(crate::instantiating::ast::types::BoolIT { _marker: std::marker::PhantomData }) }
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, BoolIT())

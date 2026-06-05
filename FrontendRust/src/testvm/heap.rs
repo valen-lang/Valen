@@ -710,8 +710,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn is_same_instance
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn is_same_instance(&self, call_id: CallIdV, left: ReferenceV, right: ReferenceV) -> ReferenceV {
-        panic!("Unimplemented: is_same_instance");
+    pub fn is_same_instance(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, left: ReferenceV<'v, 'h, 's>, right: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        let r#ref = self.allocate_transient(interner, crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: left.alloc_id() == right.alloc_id(), _phantom: std::marker::PhantomData }));
+        self.increment_reference_ref_count(crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: crate::final_ast::types::OwnershipH::MutableShareH }), r#ref);
+        r#ref
     }
 }
 /*

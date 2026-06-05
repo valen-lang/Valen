@@ -3529,7 +3529,18 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::ArraySize(_) => panic!("Unimplemented: translate_ref_expr ArraySize"),
-            ReferenceExpressionTE::IsSameInstance(_) => panic!("Unimplemented: translate_ref_expr IsSameInstance"),
+            ReferenceExpressionTE::IsSameInstance(isi) => {
+                let crate::typing::ast::expressions::IsSameInstanceTE { left, right } = **isi;
+                let (_left_it, left_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &left);
+                let (_right_it, right_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &right);
+                let result_ce = ReferenceExpressionIE::IsSameInstance(self.interner.alloc(crate::instantiating::ast::expressions::IsSameInstanceIE {
+                    left: left_ce,
+                    right: right_ce,
+                }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(crate::instantiating::ast::types::BoolIT { _marker: std::marker::PhantomData }) }, result_ce)
+            }
             ReferenceExpressionTE::AsSubtype(asx) => {
                 let crate::typing::ast::expressions::AsSubtypeTE { source_expr, target_type: target_subtype, result_result_type, ok_constructor, err_constructor, impl_name: impl_id_t, ok_impl_name: ok_result_impl_id_t, err_impl_name: err_result_impl_id_t } = **asx;
                 let (_source_it, source_ce) =

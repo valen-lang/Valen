@@ -989,6 +989,23 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_member_reference })
         }
+        ExpressionH::IsSameInstanceH(isi) => {
+            let crate::final_ast::instructions::IsSameInstanceH { left_expression: left_expr, right_expression: right_expr } = **isi;
+            let left_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &left_expr) {
+                ret @ INodeExecuteResultV::Return(_) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: IsSameInstanceH left produced Break — vwat"),
+            };
+            let right_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 1), &right_expr) {
+                ret @ INodeExecuteResultV::Return(_) => return ret,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: IsSameInstanceH right produced Break — vwat"),
+            };
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, left_expr.result_type(), left_ref);
+            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, right_expr.result_type(), right_ref);
+            let r#ref = heap.is_same_instance(interner, call_id, left_ref, right_ref);
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", std::mem::discriminant(other)),
     }
 }

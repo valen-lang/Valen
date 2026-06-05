@@ -241,7 +241,20 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
                     (new_struct_and_deferreds_expr_h, Vec::new())
                 }
-                RE::IsSameInstance(a) => panic!("translate_expression: IsSameInstance branch"),
+                RE::IsSameInstance(a) => {
+                    let crate::instantiating::ast::expressions::IsSameInstanceIE { left: left_expr_i, right: right_expr_i } = *a;
+                    let (left_expr_he, left_deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(left_expr_i));
+                    let (right_expr_he, right_deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(right_expr_i));
+                    let result_he = ExpressionH::IsSameInstanceH(self.interner.alloc(crate::final_ast::instructions::IsSameInstanceH {
+                        left_expression: left_expr_he,
+                        right_expression: right_expr_he,
+                    }));
+                    let all_deferreds: Vec<_> = left_deferreds.into_iter().chain(right_deferreds.into_iter()).collect();
+                    let expr = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, result_he, all_deferreds);
+                    (expr, Vec::new())
+                }
                 RE::AsSubtype(a) => {
                     let crate::instantiating::ast::expressions::AsSubtypeIE { source_expr: left_expr_i, target_type: target_subtype, result_result_type: result_opt_type, ok_constructor: some_constructor, err_constructor: none_constructor, .. } = *a;
                     let (result_he, deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(left_expr_i));

@@ -1609,7 +1609,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
             ExpressionH::ArrayCapacityH(_) => panic!("vonify_expression: ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
-            ExpressionH::IsSameInstanceH(_) => panic!("vonify_expression: IsSameInstanceH"),
+            ExpressionH::IsSameInstanceH(isi) => {
+                let crate::final_ast::instructions::IsSameInstanceH { left_expression: left, right_expression: right } = *isi;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "Is".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "leftExpr".to_string(), value: self.vonify_expression(left) },
+                        crate::von::ast::VonMember { field_name: "leftExprType".to_string(), value: self.vonify_coord(left.result_type()) },
+                        crate::von::ast::VonMember { field_name: "rightExpr".to_string(), value: self.vonify_expression(right) },
+                        crate::von::ast::VonMember { field_name: "rightExprType".to_string(), value: self.vonify_coord(right.result_type()) },
+                    ],
+                })
+            }
             ExpressionH::AsSubtypeH(a) => {
                 let crate::final_ast::instructions::AsSubtypeH { source_expression: source_expr, target_type, result_type: result_result_type, some_constructor: ok_constructor, none_constructor: err_constructor } = *a;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

@@ -497,7 +497,7 @@ fn panic_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import v.builtins.panic.*;\nimport v.builtins.drop.*;\n\nsealed interface XOpt<T Ref>\nwhere func drop(T)void {\n  func get(virtual opt &XOpt<T>) &T;\n}\n\nstruct XNone<T Ref> where func drop(T)void  { }\nimpl<T> XOpt<T> for XNone<T>;\n\nfunc get<T>(opt &XNone<T>) &T {\n  __vbi_panic();\n}\n\nexported func main() int {\n  m XOpt<int> = XNone<int>();\n  return m.get();\n}\n",
+        "\nimport v.builtins.panic.*;\nimport v.builtins.drop.*;\n\nsealed interface XOpt<T Ref>\nwhere func drop(T)void {\n  func get(virtual opt &XOpt<T>) &T;\n}\n\nstruct XNone<T Ref> where func drop(T)void  { }\nimpl<T> XOpt<T> for XNone<T>;\n\nfunc get<T>(opt &XNone<T>) &T {\n  __vbi_panic();\n}\n\nexported func main() int {\n  m XOpt<int> = XNone<int>();\n  return m.get();\n}\n      ",
     );
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         compile.eval_for_kind_primitive_args(Vec::new())

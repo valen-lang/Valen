@@ -1379,7 +1379,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
             ExpressionH::ArrayCapacityH(_) => panic!("Unimplemented: result_type for ArrayCapacityH"),
             ExpressionH::BorrowToWeakH(_) => panic!("Unimplemented: result_type for BorrowToWeakH"),
-            ExpressionH::IsSameInstanceH(_) => panic!("Unimplemented: result_type for IsSameInstanceH"),
+            ExpressionH::IsSameInstanceH(x) => x.result_type(),
             ExpressionH::AsSubtypeH(a) => a.result_type,
             ExpressionH::LockWeakH(_) => panic!("Unimplemented: result_type for LockWeakH"),
             ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
@@ -1817,6 +1817,12 @@ pub struct BorrowToWeakH<'s, 'h> where 's: 'h {
 pub struct IsSameInstanceH<'s, 'h> where 's: 'h {
     pub left_expression: ExpressionH<'s, 'h>,
     pub right_expression: ExpressionH<'s, 'h>,
+}
+impl<'s, 'h> IsSameInstanceH<'s, 'h> where 's: 'h {
+    pub fn result_type(&self) -> CoordH<'s, 'h> {
+        CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) }
+    }
+    /* */
 }
 
 // mig: case class AsSubtypeH
