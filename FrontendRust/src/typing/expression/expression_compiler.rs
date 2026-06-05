@@ -1240,7 +1240,7 @@ where 's: 't,
                             match ownershipped.target_ownership {
                                 LoadAsP::Move => panic!("implement: Ownershipped BorrowT MoveP (vcurious)"),
                                 LoadAsP::LoadAsBorrow => source_te,
-                                LoadAsP::LoadAsWeak => panic!("implement: Ownershipped BorrowT LoadAsWeakP"),
+                                LoadAsP::LoadAsWeak => self.weak_alias(coutputs, source_te),
                                 LoadAsP::Use => source_te,
                             }
                         }
