@@ -96,18 +96,23 @@ Eliminate all compiler warnings (unused imports, unused variables, dead code) be
 
 ## Bulk Edits
 
-`sed` and `perl -pi` are outlawed for editing this repo. They produce silent collateral damage, can't be reviewed pre-application, and have no error handling.
+`sed` and `perl -pi` are outlawed. For bulk transforms, **prefer the Edit tool** — ~40 distinct invocations is the threshold before Python becomes worth it.
 
-For bulk transforms, **prefer the Edit tool** — repetitive Edit calls are explicit, per-site reviewable, and don't need any script machinery. The Edit-tool threshold is ~40 *distinct invocations*, not total sites touched: 7 Edit calls × 6 sites each = 42 sites and stays in Edit territory; 50 one-off Edits crosses into Python.
+### Read-only scripts in `./tmp/scripts/`
 
-When Edit truly isn't enough, the alternative is a Python script in `./tmp/scripts/`, invoked stdin → stdout with output redirected to `./tmp/working/`. The script must be a pure stdin → stdout transform (no `open(`, no `subprocess`, no `shutil`/`pathlib`/`os.system`/`exec`/`eval`/`__import__`, no backtick); VRBX reads the script before approving and rejects on any banned token. Strict shape: literal `python3 <SCRIPT> < <SRC> > <DST>`, no inter-arg flags, no metacharacters (`$`, `{`, `}`, `*`, `?`, `~`, `` ` ``, `[`, `(`, `)`) in src or dst.
+`python3 ./tmp/scripts/<NAME>.py` auto-allows when the script is a pure stdin → stdout transform (no file I/O, no subprocess, no exec/eval). VRBX explains the exact shape constraints when something doesn't fit.
 
-Chain a read-only verifier to review the transform in the same command: `python3 ./tmp/scripts/edit.py < src > ./tmp/working/dst && diff -u src ./tmp/working/dst` (or `&& cat ./tmp/working/dst`) auto-allows because each chained segment is independently read-only.
+### Transform-then-apply bulk-edit sequence
 
-The apply step is the compound `[TS=$(date ...) &&] [mkdir -p ./tmp/backup/<TS> &&] cp <SRC> ./tmp/backup/<TS>/<SRC> && mv ./tmp/working/<SRC> <SRC>` — backs up the original then moves the transformed file into place, recoverable from the backup if anything fails. VRBX auto-allows this exact shape with strict src/basename equality across the cp and mv; bare `cp`/`mv` outside the shape remain dangerous.
+One file at a time:
 
-**No loops or batching, ever, without explicit "fire batch" approval from the architect.** Even when applying to 100 files, run the full per-file sequence (script invocation, `diff -u` review, `cp && mv` apply) serially, one command set per file. Bash `for`/`while`/`xargs` over the file list is blocked by VRBX's metachar reject on src/dst paths. The serial discipline catches script bugs on file 1 before they propagate to files 2–N and keeps every change individually visible.
+1. Write the script to `./tmp/scripts/<name>.py`.
+2. Transform + review: `python3 ./tmp/scripts/<name>.py < <SRC> > ./tmp/working/<BASENAME> && diff -u <SRC> ./tmp/working/<BASENAME>`.
+3. Iterate (edit script, re-run step 2) until the diff is right.
+4. Apply: `TS=$(date +%Y%m%d-%H%M%S) && mkdir -p ./tmp/backup/$TS && cp <SRC> ./tmp/backup/$TS/<BASENAME> && mv ./tmp/working/<BASENAME> <SRC>`.
+5. Next file: back to step 2.
 
+Loops over read-only scripts (analysis, transforms-to-tmp) auto-allow; loops including the cp+mv apply step reject. Recover from a failed apply: `mv ./tmp/backup/<TS>/<BASENAME> <SRC>`.
 
 ## Build & Run Convention
 
