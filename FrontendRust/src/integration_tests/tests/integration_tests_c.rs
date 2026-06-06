@@ -314,9 +314,30 @@ fn test_shaking() {
 */
 // mig: fn test_overloading_between_borrow_and_weak
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_overloading_between_borrow_and_weak() {
-    panic!("Unmigrated test: test_overloading_between_borrow_and_weak");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nsealed interface IMoo  {}\nstruct Moo {}\nimpl IMoo for Moo;\n\nabstract func func(virtual moo &IMoo) int;\nabstract func func(virtual moo &&IMoo) int;\n\nfunc func(moo &Moo) int { return 42; }\nfunc func(moo &&Moo) int { return 73; }\n\nexported func main() int {\n  return func(&Moo());\n}\n",
+    );
+    let _coutputs = compile.get_compiler_outputs().unwrap();
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Test overloading between borrow and weak") {
@@ -581,9 +602,30 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
 */
 // mig: fn test_catch_deref_after_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_catch_deref_after_drop() {
-    panic!("Unmigrated test: test_catch_deref_after_drop");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/invalidaccess.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
+        other => panic!("Expected ConstraintViolatedException, got {:?}", other),
+    }
 }
 /*
   test("Test catch deref after drop") {
