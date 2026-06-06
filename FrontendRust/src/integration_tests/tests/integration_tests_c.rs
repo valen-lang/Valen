@@ -145,10 +145,30 @@ fn panic_on_drop_because_of_outstanding_borrow() {
 
 */
 // mig: fn unlet_to_avoid_an_outstanding_borrow_panic
+// Not sure if this is desirable behavior, because borrow_ship isnt really used after
+// we drop ship. Still, let's have this test so we don't *accidentally* change it.
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn unlet_to_avoid_an_outstanding_borrow_panic() {
-    panic!("Unmigrated test: unlet_to_avoid_an_outstanding_borrow_panic");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  unlet borrow_ship;\n  ship; // drops it\n}\n",
+    );
+    let _ = compile.expect_compiler_outputs();
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   // Not sure if this is desirable behavior, because borrow_ship isnt really used after

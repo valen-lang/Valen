@@ -23,7 +23,7 @@ use crate::postparsing::names::{
 use crate::postparsing::post_parser::{
   CouldntFindRuneS, CouldntFindVarToMutateS, FunctionEnvironmentS, ICompileErrorS, IEnvironmentS,
   InitializingRuntimeSizedArrayRequiresSizeAndCallable,
-  InitializingStaticSizedArrayRequiresSizeAndCallable, PostParser, StackFrame, StatementAfterReturnS,
+  InitializingStaticSizedArrayRequiresSizeAndCallable, PostParser, RangedInternalErrorS, StackFrame, StatementAfterReturnS,
   VariableNameAlreadyExists,
 };
 use crate::postparsing::post_parser::translate_imprecise_name;
@@ -2361,6 +2361,21 @@ fn scout_expression(
       let range_s = PostParser::eval_range(&file_coordinate, break_pe.range);
       let expr = self.scout_arena.alloc(IExpressionSE::Break(crate::postparsing::expressions::BreakSE { range: range_s }));
       Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr }), VariableUses::empty(), VariableUses::empty()))
+    }
+    IExpressionPE::Unlet(unlet_pe) => {
+      let range_s = PostParser::eval_range(&file_coordinate, unlet_pe.range);
+      let imprecise_name_s = translate_imprecise_name(self.scout_arena, &file_coordinate, &unlet_pe.name);
+      let var_name_s = match self.find_local(&stack_frame, range_s, &imprecise_name_s) {
+        Some(LocalLookupResultS { range: _, name }) => name,
+        None => {
+          return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
+            range: range_s,
+            message: format!("Can't unlet local: {:?}", unlet_pe.name),
+          }));
+        }
+      };
+      let result = self.scout_arena.alloc(IExpressionSE::Unlet(crate::postparsing::expressions::UnletSE { range: range_s, name: var_name_s }));
+      Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr: result }), VariableUses::empty().mark_moved(var_name_s), VariableUses::empty()))
     }
     IExpressionPE::Range(range_pe) => {
       let range_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {

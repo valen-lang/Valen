@@ -2023,7 +2023,21 @@ where 's: 't,
                 };
                 Ok((ExpressionTE::Reference(destroy_2), returns_from_array_expr))
             }
-            IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),
+            IExpressionSE::Unlet(unlet_se) => {
+                let name = self.translate_var_name_step(unlet_se.name);
+                let local = match nenv.get_variable(name, self.typing_interner) {
+                    Some(IVariableT::ReferenceLocal(rlv)) => ILocalVariableT::Reference(rlv),
+                    Some(IVariableT::AddressibleLocal(_)) => panic!("implement: Unlet — AddressibleLocal"),
+                    Some(IVariableT::AddressibleClosure(_)) => panic!("implement: Unlet — AddressibleClosure (not a local)"),
+                    Some(IVariableT::ReferenceClosure(_)) => panic!("implement: Unlet — ReferenceClosure (not a local)"),
+                    None => panic!("implement: Unlet — No local with name"),
+                };
+                let result_expr = self.unlet_local_without_dropping(nenv, &local);
+                // This will likely be dropped, as theyre probably not doing anything with it.
+                // But who knows, maybe they'll do something with it, like pass it as a parameter
+                // to something.
+                Ok((ExpressionTE::Reference(ReferenceExpressionTE::Unlet(self.typing_interner.alloc(result_expr))), HashSet::new()))
+            }
             IExpressionSE::Index(index_se) => {
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
                     self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), index_se.left)?;
