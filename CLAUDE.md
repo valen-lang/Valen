@@ -94,27 +94,19 @@ Eliminate all compiler warnings (unused imports, unused variables, dead code) be
 - **Profiling:** Rust doesn't need Scala's `Profiler.frame(() => { ... })` wrappers.
 
 
-## Bulk Sed Safety Protocol
+## Bulk Edits
 
-Before running any `sed` command that modifies files in bulk, **always sanity-check first**:
+`sed` and `perl -pi` are outlawed for editing this repo. They produce silent collateral damage, can't be reviewed pre-application, and have no error handling.
 
-1. **Identify false positives in the target.** The pattern you're replacing may appear in contexts you don't intend to change:
-   - **Char literals**: `'a'` looks like lifetime `'a` followed by `'`. Use `s/'a\([^']\)/'p\1/g` to skip char literals.
-   - **Scala block comments**: This codebase has extensive `/* ... */` Scala code. Search inside block comments for your pattern: `python3 -c "import re; ..."` to extract comment blocks and grep within them.
-   - **String literals**: Your pattern might appear inside `"..."` strings.
-   - **Different semantic contexts**: e.g., `'a` in the solver directory is a local callback lifetime, NOT the interner — don't rename it.
+For bulk transforms, **prefer the Edit tool** — repetitive Edit calls are explicit, per-site reviewable, and don't need any script machinery. The Edit-tool threshold is ~40 *distinct invocations*, not total sites touched: 7 Edit calls × 6 sites each = 42 sites and stays in Edit territory; 50 one-off Edits crosses into Python.
 
-2. **Dry-run on representative files.** Pipe through sed without `-i` and diff or grep the output:
-   ```bash
-   sed "s/pattern/replace/g" file.rs | grep "unexpected_thing"
-   ```
+When Edit truly isn't enough, the alternative is a Python script in `./tmp/scripts/`, invoked stdin → stdout with output redirected to `./tmp/working/`. The script must be a pure stdin → stdout transform (no `open(`, no `subprocess`, no `shutil`/`pathlib`/`os.system`/`exec`/`eval`/`__import__`, no backtick); VRBX reads the script before approving and rejects on any banned token. Strict shape: literal `python3 <SCRIPT> < <SRC> > <DST>`, no inter-arg flags, no metacharacters (`$`, `{`, `}`, `*`, `?`, `~`, `` ` ``, `[`, `(`, `)`) in src or dst.
 
-3. **Check for collateral damage after the run.** For lifetime renames like `'a` → `'p`:
-   - Look for duplicated params: `grep -rn "'p, 'p"` (from collapsing `'a, 'p`)
-   - Look for corrupted char literals: `grep -rn "'p'"` where the original had `'a'`
-   - Look for changes inside block comments that shouldn't have been touched
+Chain a read-only verifier to review the transform in the same command: `python3 ./tmp/scripts/edit.py < src > ./tmp/working/dst && diff -u src ./tmp/working/dst` (or `&& cat ./tmp/working/dst`) auto-allows because each chained segment is independently read-only.
 
-4. **Scope your sed precisely.** Run per-directory or per-file, not blanket across the whole repo. Different directories may need different replacements (e.g., `'a` → `'p` in parsing vs `'a` → `'s` in postparsing).
+The apply step is the compound `[TS=$(date ...) &&] [mkdir -p ./tmp/backup/<TS> &&] cp <SRC> ./tmp/backup/<TS>/<SRC> && mv ./tmp/working/<SRC> <SRC>` — backs up the original then moves the transformed file into place, recoverable from the backup if anything fails. VRBX auto-allows this exact shape with strict src/basename equality across the cp and mv; bare `cp`/`mv` outside the shape remain dangerous.
+
+**No loops or batching, ever, without explicit "fire batch" approval from the architect.** Even when applying to 100 files, run the full per-file sequence (script invocation, `diff -u` review, `cp && mv` apply) serially, one command set per file. Bash `for`/`while`/`xargs` over the file list is blocked by VRBX's metachar reject on src/dst paths. The serial discipline catches script bugs on file 1 before they propagate to files 2–N and keeps every change individually visible.
 
 
 ## Build & Run Convention
