@@ -8,12 +8,14 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
-use std::marker::PhantomData;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
+use crate::simplifying::hammer_compilation::{HammerCompilation, HammerCompilationOptions};
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::typing::typing_interner::TypingInterner;
 
 /*
 package dev.vale.passmanager
@@ -57,15 +59,14 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation<'s, 'ctx, 't, 'p>
+pub struct FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where
+  's: 'h,
   's: 't,
+  's: 'i,
   'p: 'ctx,
 {
-  // Hammer wiring is stubbed pending the simplifying-pass body migration
-  // (transplanted HammerCompilation has no constructor yet). PhantomData
-  // keeps the four lifetimes live without holding a real HammerCompilation.
-  _marker: PhantomData<(&'t &'s (), &'ctx &'p ())>,
+  pub hammer_compilation: HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>,
 }
 /*
 class FullCompilation(
@@ -76,14 +77,18 @@ class FullCompilation(
   options: FullCompilationOptions = FullCompilationOptions()) {
 */
 
-impl<'s, 'ctx, 't, 'p> FullCompilation<'s, 'ctx, 't, 'p>
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where
+  's: 'h,
   's: 't,
+  's: 'i,
   'p: 'ctx,
 {
   // From FullCompilation.scala lines 30-45
   pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
+    interner: &'ctx HammerInterner<'s, 'h>,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     // VV: crate::
@@ -91,9 +96,25 @@ where
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: FullCompilationOptions,
-    typing_bump: &'t Bump,
+    instantiating_bump: &'i Bump,
   ) -> Self {
-    panic!("Unimplemented: HammerCompilation wiring pending simplifying-pass body migration (transplanted HammerCompilation has no constructor yet) - see HammerCompilation.scala");
+    let hammer_options = HammerCompilationOptions {
+      debug_out: options.debug_out,
+      global_options: options.global_options,
+    };
+    let hammer_compilation = HammerCompilation::new(
+      scout_arena,
+      interner,
+      typing_interner,
+      keywords,
+      parser_keywords,
+      parse_arena,
+      packages_to_build,
+      package_to_contents_resolver,
+      hammer_options,
+      instantiating_bump,
+    );
+    FullCompilation { hammer_compilation }
   }
 /*
   var hammerCompilation =
@@ -109,76 +130,113 @@ where
   def getVonHammer(): VonHammer = hammerCompilation.getVonHammer()
 */
 
-  // From FullCompilation.scala line 48: getCodeMap
+}
+
+// mig: fn get_code_map
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    panic!("FullCompilation.get_code_map: HammerCompilation wiring pending simplifying-pass body migration")
+    self.hammer_compilation.get_code_map()
   }
+}
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getCodeMap()
 */
 
-  // From FullCompilation.scala line 49: getParseds
+// mig: fn get_parseds
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-    panic!("FullCompilation.get_parseds: HammerCompilation wiring pending simplifying-pass body migration")
+    self.hammer_compilation.get_parseds()
   }
+}
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = hammerCompilation.getParseds()
 */
 
-  // From FullCompilation.scala line 50: getVpstMap
+// mig: fn get_vpst_map
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    panic!("FullCompilation.get_vpst_map: HammerCompilation wiring pending simplifying-pass body migration")
+    self.hammer_compilation.get_vpst_map()
   }
+}
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getVpstMap()
 */
 
-  // From FullCompilation.scala line 51: getScoutput
-  pub fn get_scoutput(&mut self) -> Result<(), String> {
-    panic!("FullCompilation.get_scoutput not yet implemented - see FullCompilation.scala line 51")
+// mig: fn get_scoutput
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn get_scoutput(&mut self) -> Result<&crate::utils::code_hierarchy::FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+    self.hammer_compilation.get_scoutput()
   }
+}
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = hammerCompilation.getScoutput()
 */
 
-  // From FullCompilation.scala line 52: getAstrouts
+// mig: fn get_astrouts
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
   pub fn get_astrouts(&mut self) -> Result<(), String> {
-    panic!("FullCompilation.get_astrouts not yet implemented - see FullCompilation.scala line 52")
+    self.hammer_compilation.get_astrouts()
   }
+}
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = hammerCompilation.getAstrouts()
 */
 
-  // From FullCompilation.scala line 53: getCompilerOutputs
-  pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
-    panic!("FullCompilation.get_compiler_outputs not yet implemented - see FullCompilation.scala line 53")
+// mig: fn get_compiler_outputs
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+    self.hammer_compilation.get_compiler_outputs()
   }
+}
 /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = hammerCompilation.getCompilerOutputs()
 */
 
-  // From FullCompilation.scala line 54: expectCompilerOutputs
-  pub fn expect_compiler_outputs(&mut self) -> () {
-    panic!("FullCompilation.expect_compiler_outputs not yet implemented - see FullCompilation.scala line 54")
+// mig: fn expect_compiler_outputs
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+    self.hammer_compilation.expect_compiler_outputs()
   }
+}
 /*
   def expectCompilerOutputs(): HinputsT = hammerCompilation.expectCompilerOutputs()
 */
 
-  // From FullCompilation.scala line 55: getHamuts
-  pub fn get_hamuts(&mut self) -> () {
-    panic!("FullCompilation.get_hamuts not yet implemented - see FullCompilation.scala line 55")
+// mig: fn get_hamuts
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn get_hamuts(&mut self) -> &'h crate::final_ast::ast::ProgramH<'s, 'h> {
+    self.hammer_compilation.get_hamuts()
   }
+}
 /*
   def getHamuts(): ProgramH = hammerCompilation.getHamuts()
 */
 
-  // From FullCompilation.scala line 56: getMonouts
-  pub fn get_monouts(&mut self) -> () {
-    panic!("FullCompilation.get_monouts not yet implemented - see FullCompilation.scala line 56")
+// mig: fn get_monouts
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn get_monouts(&mut self) -> &crate::instantiating::ast::hinputs::HinputsI<'s, 'i> {
+    self.hammer_compilation.get_monouts()
   }
+}
 /*
   def getMonouts(): HinputsI = hammerCompilation.getMonouts()
 }
 */
-}

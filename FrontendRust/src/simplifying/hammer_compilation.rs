@@ -182,8 +182,12 @@ where 's: 'h, 's: 'i,
 */
 
 // mig: fn get_code_map
-pub fn get_code_map() -> Result<(), String> {
-  panic!("Unimplemented: get_code_map");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_code_map(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, String>, crate::lexing::errors::FailedParse<'p>> {
+    self.instantiated_compilation.get_code_map()
+  }
 }
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getCodeMap()
@@ -202,8 +206,12 @@ where 's: 'h, 's: 'i,
 */
 
 // mig: fn get_vpst_map
-pub fn get_vpst_map() -> Result<(), String> {
-  panic!("Unimplemented: get_vpst_map");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_vpst_map(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, String>, crate::lexing::errors::FailedParse<'p>> {
+    self.instantiated_compilation.get_vpst_map()
+  }
 }
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getVpstMap()
@@ -222,8 +230,12 @@ where 's: 'h, 's: 'i,
 */
 
 // mig: fn get_astrouts
-pub fn get_astrouts() -> Result<(), String> {
-  panic!("Unimplemented: get_astrouts");
+impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 'i,
+{
+  pub fn get_astrouts(&mut self) -> Result<(), String> {
+    self.instantiated_compilation.get_astrouts()
+  }
 }
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = instantiatedCompilation.getAstrouts()
