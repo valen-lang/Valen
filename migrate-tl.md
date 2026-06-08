@@ -75,13 +75,15 @@ If a code comment or skill cites a former TL.md section by name (e.g. "Good Part
 
 ## Where We Are
 
-Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IRegionNameT` is the lone remaining `_Phantom`). Build is green (`cargo check --lib`; 2 pre-existing `expression_compiler.rs` warnings), SCPX 0.
+Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IRegionNameT` is the lone remaining `_Phantom`). Build is green (`cargo check --lib`; 0 warnings baseline), SCPX 260/260 OK.
 
 **Typing pass — core test suite migrated.** Every test tracked in the now-retired `docs/historical/typing-test-todo.md` passes. The only remaining typing-test tail is the 40 `after_regions_*` tests (~14 are deliberate Scala-side deferrals) — see the residuals doc.
 
 **Instantiating + simplifying — capstone landed.** `local_ids_unique` green; 6 hammer integration tests landed (`simple_main` → `tests_stripping_things_after_panic` + `two_templated_structs_make_it_into_hamuts`); X-bucket `top_level_extern_functions_wire_format_simple_id_has_flat_shape` green; peak 769/769.
 
-**Pilot landed: `simple_program_returning_an_int` green; 770/770 tests passing.** Active frontier: the four-way parallel migration (SI/CL/GE/MI buckets, see `master-todo.md`).
+**Parallel sprint Phase 2 — COMPLETE across all 4 buckets** (`Vale`→SI, `Vale2`→CL, `Vale3`→GE, `Vale4`→MI). Suite **1035/1035**, cargo 0/0, SCPX clean. Worktree-level `[x]` state in each `migration-drive-todo.md`. Infra landed during the sprint: SI's testvm Result-bubble refactor (lifetime-collapsed `VmRuntimeErrorV<'s>` + Result-at-eval-boundary plumbing for strict-parity exception discrimination); GE's deep slice-pipeline re-run on `final_ast/instructions.rs` (64→197 markers, full per-case-class `hashCode`/`equals`/`resultType` triplet audit-block coverage); simplifying-pass policy values codified in `FrontendRust/docs/migration/migration-policy.md` (9 schema sections: Val/Ref pairs from HammerInterner, sealed-trait policy, MustIntern seal: yes, etc.); MI's testvm Phase 2C (Option-ADT trio + Result-ADT sextet + each_on_int_range quartet + import_tests + Restackify pipeline); CL's array_map_* + destroy_*_into_function + StaticArrayFromCallable + ArrayCapacity clusters end-to-end across typing→instantiator→hammer→von→vivem.
+
+**Residual after Phase 2** (before any Phase 3 or wrap-up): ~49 unbucketed integration_tests stubs across 6 files (`hash_map_tests.rs` 13, `virtual_tests.rs` 12, `integration_tests_a.rs` 12, `array_list_test.rs` 10, `hammer_tests.rs` 2, plus 13 `after_regions_integration_tests.rs` deliberate-deferrals that should stay ignored); 12 audit-trail-debt temp-disables left as visible debt from the earlier curation pass (Cluster 4 `find_function` cross-section sandwich; Cluster 5 MKRFA/ECSIIOSZ MACTX comments; Cluster 12 synthesized accessors); open items in `FrontendRust/src/typing/typing-pass-todo.md` (IRegionNameT `_Phantom`, ~65 retired SPDMX-B comments to strip, nondeterminism via `PtrKey<IdT>`, `RUST_MIN_STACK` workaround, `after_regions_*` typing tail).
 
 **Parallel sprint structure:** `Vale` → `experimental-1` (SI), `Vale2` → `experimental-2` (CL), `Vale3` → `experimental-3` (GE), `Vale4` → `experimental-4` (MI). Each worktree has its own JR. `experimental` is the shared integration ref, **checked out in no worktree** — never `git checkout experimental` from any worktree.
 
