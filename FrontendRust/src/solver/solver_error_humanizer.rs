@@ -19,7 +19,7 @@ pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
   line_containing: impl Fn(&CodeLocationS<'a>) -> String,
   humanize_rune: impl Fn(RuneId) -> String,
   humanize_conclusion: impl Fn(Conclusion) -> String,
-  humanize_rule_error: impl Fn(ErrType) -> String,
+  humanize_rule_error: impl Fn(&ErrType) -> String,
   get_rule_range: impl Fn(&Rule) -> RangeS<'a>,
   get_rune_usages: impl Fn(&Rule) -> Vec<(RuneId, RangeS<'a>)>,
   rule_to_runes: impl Fn(&Rule) -> Vec<RuneId>,
@@ -29,7 +29,6 @@ pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
 where
   RuneId: Eq + std::hash::Hash + Copy,
   Conclusion: Copy,
-  ErrType: Copy,
   CodeLocationS<'a>: PartialEq + Copy,
   RangeS<'a>: PartialEq + Copy,
 {
@@ -39,7 +38,7 @@ where
       let names: Vec<String> = result.unsolved_runes.iter().map(|r| humanize_rune(*r)).collect();
       format!("Couldn't solve some runes: {}", names.join(", "))
     }
-    ISolverError::RuleError(rule_err) => humanize_rule_error(rule_err.err),
+    ISolverError::RuleError(rule_err) => humanize_rule_error(&rule_err.err),
   };
   let _verbose = true;
   let rules_to_summarize: Vec<&Rule> = result.unsolved_rules.iter()

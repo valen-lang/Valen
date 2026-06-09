@@ -654,8 +654,31 @@ Guardian: temp-disable: SPDMX — Rust enum decision: ITemplataT::Integer holds 
 */
 // mig: fn reports_when_we_give_too_many_args
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn reports_when_we_give_too_many_args() { panic!("Unmigrated test: reports_when_we_give_too_many_args"); }
+fn reports_when_we_give_too_many_args() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc moo(a int, b bool, s str) int { a }\nexported func main() int {\n  moo(42, true, \"hello\", false)\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+            assert!(fff.rejected_callee_to_reason.len() == 1);
+            match fff.rejected_callee_to_reason[0].1 {
+                crate::typing::overload_resolver::IFindFunctionFailureReason::WrongNumberOfArguments { supplied: 4, expected: 3 } => {}
+                _ => panic!("expected WrongNumberOfArguments(4, 3)"),
+            }
+        }
+        _ => panic!("expected CouldntFindFunctionToCallT"),
+    }
+}
 /*
   test("Reports when we give too many args") {
     val compile = CompilerTestCompilation.test(
@@ -713,8 +736,41 @@ fn reports_when_ownership_doesnt_match() { panic!("Unmigrated test: reports_when
 */
 // mig: fn failure_to_resolve_a_prot_rules_function_doesnt_halt
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn failure_to_resolve_a_prot_rules_function_doesnt_halt() { panic!("Unmigrated test: failure_to_resolve_a_prot_rules_function_doesnt_halt"); }
+fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
+    // In the below example, it should disqualify the first foo() because T = bool
+    // and there exists no moo(bool). Instead, we saw the Prot rule throw and halt
+    // compilation.
+
+    // Instead, we need to bubble up that failure to find the right function, so
+    // it disqualifies the candidate and goes with the other one.
+
+    // Note from later: It seems this isn't detected by the typing phase anymore.
+    // When we try to resolve a func moo(str)void, we actually find one in the overload index,
+    // specifically foo.bound:moo(str).
+    // Obviously we shouldnt be considering that.
+    // Normally, bounds have some sort of placeholder type that acts as a filter so people don't
+    // see them unless they have that placeholder type. Here, not so much.
+
+    // We can solve this in two ways:
+    // - Making a visibility mask for various overloads in the overload set. This one is only visible from foo,
+    //   so when we try to resolve it from main it wont be found.
+    // - Require all bounds have a placeholder type in them. Seems reasonable tbh.
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.drop.*;\n\nfunc moo(a str) { }\nfunc foo<T>(f T) void where func drop(T)void, func moo(str)void { }\nfunc foo<T>(f T) void where func drop(T)void, func moo(bool)void { }\nfunc main() { foo(\"hello\"); }\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    compile.expect_compiler_outputs();
+}
 /*
   test("Failure to resolve a Prot rule's function doesnt halt") {
     // In the below example, it should disqualify the first foo() because T = bool
@@ -748,9 +804,28 @@ fn failure_to_resolve_a_prot_rules_function_doesnt_halt() { panic!("Unmigrated t
   }
 */
 // mig: fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general
+// Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
+// bound `func(&G)E` where E is an identifying generic rune appearing only in the
+// bound's return position. The caller supplies a lambda for G but does not (and
+// syntactically cannot) write E. The relaxed ResolveSR (CompilerSolver.scala:636)
+// resolves `__call(&closure)` and takes its return type as E.
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() { panic!("Unmigrated test: bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general"); }
+fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc callAndReturn<E, G>(g &G) E\nwhere func(&G)E {\n  return g();\n}\n\nexported func main() int {\n  f = { 7 };\n  return callAndReturn(&f);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
 /*
   // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
   // bound `func(&G)E` where E is an identifying generic rune appearing only in the
@@ -774,9 +849,26 @@ fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() { pani
   }
 */
 // mig: fn brrz_nested_bound_return_inference_through_a_lambda_body
+// Edge case for @BRRZ: the lambda body itself invokes another generic function
+// with its own bound. Exercises stamping-during-solve recursing into a nested
+// generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn brrz_nested_bound_return_inference_through_a_lambda_body() { panic!("Unmigrated test: brrz_nested_bound_return_inference_through_a_lambda_body"); }
+fn brrz_nested_bound_return_inference_through_a_lambda_body() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc callAndReturn<E, G>(g &G) E\nwhere func(&G)E {\n  return g();\n}\n\nexported func main() int {\n  f = { 7 };\n  g = { callAndReturn(&f) };\n  return callAndReturn(&g);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
 /*
   // Edge case for @BRRZ: the lambda body itself invokes another generic function
   // with its own bound. Exercises stamping-during-solve recursing into a nested
@@ -799,9 +891,26 @@ fn brrz_nested_bound_return_inference_through_a_lambda_body() { panic!("Unmigrat
   }
 */
 // mig: fn brrz_two_bound_return_inferences_in_the_same_call
+// Edge case for @BRRZ: two bounds on the same function, each resolving to a
+// different lambda. Exercises multiple ResolveSR rules firing in the same solve
+// under the relaxed puzzle.
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn brrz_two_bound_return_inferences_in_the_same_call() { panic!("Unmigrated test: brrz_two_bound_return_inferences_in_the_same_call"); }
+fn brrz_two_bound_return_inferences_in_the_same_call() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc applyTwo<E, F, G, H>(g &G, h &H) E\nwhere func(&G)E, func(&H)F {\n  return g();\n}\n\nexported func main() int {\n  a = { 7 };\n  b = { true };\n  return applyTwo(&a, &b);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
 /*
   // Edge case for @BRRZ: two bounds on the same function, each resolving to a
   // different lambda. Exercises multiple ResolveSR rules firing in the same solve
@@ -824,9 +933,24 @@ fn brrz_two_bound_return_inferences_in_the_same_call() { panic!("Unmigrated test
   }
 */
 // mig: fn basic_ifunction1_anonymous_subclass
+// Depends on IFunction1, and maybe Generic interface anonymous subclass
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn basic_ifunction1_anonymous_subclass() { panic!("Unmigrated test: basic_ifunction1_anonymous_subclass"); }
+fn basic_ifunction1_anonymous_subclass() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport ifunction.ifunction1.*;\n\nexported func main() int {\n  f = IFunction1<mut, int, int>({_});\n  return (f)(7);\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
 /*
   // Depends on IFunction1, and maybe Generic interface anonymous subclass
   test("Basic IFunction1 anonymous subclass") {

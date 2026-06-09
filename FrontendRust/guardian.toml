@@ -82,6 +82,7 @@ include_shields = [
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
+    { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },

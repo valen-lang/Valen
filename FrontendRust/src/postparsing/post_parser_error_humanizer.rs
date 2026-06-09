@@ -132,10 +132,18 @@ where
     f"${posStr} error ${errorId}: ${errorStrBody}\n${nextStuff}\n"
   }
 */
-fn humanize_rune_type_error<'s>(
-  _error: &(),
+pub fn humanize_rune_type_error<'s>(
+  _code_map: &dyn Fn(crate::utils::range::CodeLocationS<'s>) -> String,
+  error: &crate::postparsing::rune_type_solver::IRuneTypeRuleError<'s>,
 ) -> String {
-  panic!("Unimplemented humanize_rune_type_error");
+  match error {
+    crate::postparsing::rune_type_solver::IRuneTypeRuleError::FoundTemplataDidntMatchExpectedType(_) => panic!("implement: humanize_rune_type_error FoundTemplataDidntMatchExpectedType"),
+    crate::postparsing::rune_type_solver::IRuneTypeRuleError::CouldntFindType(e) => {
+      format!("Couldn't find anything with the name '{}'", humanize_imprecise_name(e.name))
+    }
+    crate::postparsing::rune_type_solver::IRuneTypeRuleError::NotEnoughArgumentsForGenericCall(_) => panic!("implement: humanize_rune_type_error NotEnoughArgumentsForGenericCall"),
+    _ => panic!("implement: humanize_rune_type_error other"),
+  }
 }
 /*
   def humanizeRuneTypeError(
@@ -372,7 +380,7 @@ pub fn humanize_rune<'s>(
     }
   }
 */
-fn humanize_templata_type(
+pub fn humanize_templata_type(
   _tyype: &ITemplataType,
 ) -> String {
   panic!("Unimplemented humanize_templata_type");
@@ -417,7 +425,7 @@ pub fn humanize_rule<'s>(
     IRulexSR::CoordSend(_) => panic!("implement: humanize_rule CoordSend"),
     IRulexSR::CoerceToCoord(_) => panic!("implement: humanize_rule CoerceToCoord"),
     IRulexSR::MaybeCoercingCall(_) => panic!("implement: humanize_rule MaybeCoercingCall"),
-    IRulexSR::MaybeCoercingLookup(_) => panic!("implement: humanize_rule MaybeCoercingLookup"),
+    IRulexSR::MaybeCoercingLookup(r) => humanize_rune(r.rune.rune) + " = \"" + &humanize_imprecise_name(r.name) + "\"",
     IRulexSR::Call(_) => panic!("implement: humanize_rule Call"),
     IRulexSR::Lookup(_) => panic!("implement: humanize_rule Lookup"),
     IRulexSR::Literal(_) => panic!("implement: humanize_rule Literal"),

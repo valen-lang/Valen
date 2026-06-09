@@ -703,7 +703,7 @@ fn lookup_type(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, range: Ra
 
 */
 // mig: fn translate_struct
-fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, struct_s: &StructS<'s>) -> &'s StructA<'s> {
+fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, struct_s: &StructS<'s>) -> Result<&'s StructA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let StructS {
     range: range_s,
     name: name_s,
@@ -725,7 +725,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
   // Check cache
   if let Some(value) = astrouts.code_location_to_struct.get(&range_s.begin) {
-    return *value;
+    return Ok(*value);
   }
 
   // Check for cycles
@@ -752,7 +752,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       &[], // no params for structs
       &all_rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
 
   let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
@@ -825,7 +825,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   let methods_env = env.add_runes(rune_a_to_type.clone());
   let internal_methods_a: Vec<&'s FunctionA<'s>> = internal_methods_s.iter()
     .map(|method| self.translate_function(astrouts, &methods_env, *method))
-    .collect();
+    .collect::<Result<Vec<_>, _>>()?;
   let struct_a = self.scout_arena.alloc(StructA::new(
     range_s.clone(),
     IStructDeclarationNameS::TopLevelStructDeclarationName((*name_s).clone()),
@@ -843,7 +843,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     self.scout_arena.alloc_slice_from_vec(internal_methods_a),
   ));
   astrouts.code_location_to_struct.insert(range_s.begin.clone(), struct_a);
-  struct_a
+  Ok(struct_a)
 }
 /*
   def translateStruct(
@@ -977,7 +977,7 @@ fn get_interface_type(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'
 
 */
 // mig: fn translate_interface
-fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, interface_s: &InterfaceS<'s>) -> &'s InterfaceA<'s> {
+fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, interface_s: &InterfaceS<'s>) -> Result<&'s InterfaceA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let InterfaceS {
     range: range_s,
     name: name_s,
@@ -995,7 +995,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
 
   // Check cache
   if let Some(value) = astrouts.code_location_to_interface.get(&range_s.begin) {
-    return *value;
+    return Ok(*value);
   }
 
   // Check for cycles
@@ -1017,7 +1017,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
       &[],
       rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
 
   // getOrDie because we should have gotten a complete solve
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(ITemplataType::TemplateTemplataType(tyype.clone())));
@@ -1026,7 +1026,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
   let internal_methods_a: Vec<&'s FunctionA<'s>> =
     internal_methods_s.iter().map(|method| {
       self.translate_function(astrouts, &methods_env, method)
-    }).collect();
+    }).collect::<Result<Vec<_>, _>>()?;
 
   let rune_a_to_type_with_implicitly_coercing_lookups_s =
     self.calculate_rune_types(
@@ -1037,7 +1037,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
       &[],
       rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
 
   let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
@@ -1076,7 +1076,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
     self.scout_arena.alloc_slice_from_vec(internal_methods_a),
   ));
   astrouts.code_location_to_interface.insert(range_s.begin.clone(), interface_a);
-  interface_a
+  Ok(interface_a)
 }
 /*
   def translateInterface(astrouts: Astrouts,  env: EnvironmentA, interfaceS: InterfaceS): InterfaceA = {
@@ -1165,7 +1165,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
 
 */
 // mig: fn translate_impl
-fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, impl_s: &ImplS<'s>) -> &'s ImplA<'s> {
+fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, impl_s: &ImplS<'s>) -> Result<&'s ImplA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let ImplS {
     range: range_s,
     name: name_s,
@@ -1195,7 +1195,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
       &[], // Vector()
       rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
 
   // getOrDie because we should have gotten a complete solve
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(tyype.clone()));
@@ -1226,7 +1226,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
     Err(_e) => panic!("explicify_lookups failed for impl"),
   }
 
-  self.scout_arena.alloc(ImplA::new(
+  Ok(self.scout_arena.alloc(ImplA::new(
     range_s.clone(),
     IImplDeclarationNameS::ImplDeclarationName(name_s.clone()),
     identifying_runes_s,
@@ -1236,7 +1236,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
     sub_citizen_imprecise_name.clone(),
     interface_kind_rune_s.clone(),
     super_interface_imprecise_name.clone(),
-  ))
+  )))
 }
 /*
   def translateImpl(astrouts: Astrouts,  env: EnvironmentA, implS: ImplS): ImplA = {
@@ -1295,7 +1295,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
 
 */
 // mig: fn translate_export
-fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> &'s ExportAsA<'s> {
+fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> Result<&'s ExportAsA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let range_s = export_s.range.clone();
   let rules_with_implicitly_coercing_lookups_s = export_s.rules;
   let rune = export_s.rune.clone();
@@ -1308,7 +1308,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       &[],
       rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
   let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
@@ -1328,13 +1328,13 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     Ok(()) => {},
     Err(_e) => panic!("explicify_lookups failed"),
   }
-  self.scout_arena.alloc(ExportAsA {
+  Ok(self.scout_arena.alloc(ExportAsA {
     range: range_s,
     exported_name: export_s.exported_name,
     rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
     rune_to_type: self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
     type_rune: rune,
-  })
+  }))
 }
 /*
   def translateExport(astrouts: Astrouts,  env: EnvironmentA, exportS: ExportAsS): ExportAsA = {
@@ -1388,7 +1388,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
 */
 // mig: fn translate_function
-fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, function_s: &'s FunctionS<'s>) -> &'s FunctionA<'s> {
+fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, function_s: &'s FunctionS<'s>) -> Result<&'s FunctionA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let range_s = function_s.range.clone();
   let name_s = function_s.name.clone();
   let attributes_s = function_s.attributes;
@@ -1411,7 +1411,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
       params_s,
       rules_with_implicitly_coercing_lookups_s,
       env,
-    );
+    )?;
 
   let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
@@ -1440,7 +1440,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
   let mut attributes: Vec<IFunctionAttributeS<'s>> = attributes_s.to_vec();
   attributes.push(IFunctionAttributeS::UserFunction(UserFunctionS));
 
-  self.scout_arena.alloc(FunctionA::new(
+  Ok(self.scout_arena.alloc(FunctionA::new(
     range_s,
     name_s,
     self.scout_arena.alloc_slice_from_vec(attributes),
@@ -1451,7 +1451,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
     maybe_ret_coord_rune.clone(),
     self.scout_arena.alloc_slice_from_vec(rule_builder),
     *body_s,
-  ))
+  )))
 }
 /*
   def translateFunction(astrouts: Astrouts, env: EnvironmentA, functionS: FunctionS): FunctionA = {
@@ -1511,7 +1511,7 @@ fn calculate_rune_types(
   params_s: &[ParameterS<'s>],
   rules_s: &[IRulexSR<'s>],
   env: &EnvironmentA<'s>,
-) -> HashMap<IRuneS<'s>, ITemplataType<'s>> {
+) -> Result<HashMap<IRuneS<'s>, ITemplataType<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
     astrouts,
@@ -1539,8 +1539,8 @@ fn calculate_rune_types(
     rune_s_to_pre_known_type_a,
   );
   match rune_s_to_type {
-    Ok(t) => t,
-    Err(_e) => panic!("CouldntSolveRulesA"),
+    Ok(t) => Ok(t),
+    Err(e) => Err(crate::higher_typing::astronomer_error_reporter::ICompileErrorA::CouldntSolveRules(crate::higher_typing::astronomer_error_reporter::CouldntSolveRulesA { range: range_s, error: e })),
   }
 }
 /*
@@ -1583,7 +1583,7 @@ fn calculate_rune_types(
 
 */
 // mig: fn translate_program
-fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> ProgramA<'s> {
+fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> Result<ProgramA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   let env = EnvironmentA {
     maybe_name: None,
     maybe_parent_env: None,
@@ -1602,23 +1602,23 @@ fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>
     code_location_to_interface: HashMap::new(),
   };
 
-  let structs_a: Vec<&'s StructA<'s>> = env.structs_s().into_iter().map(|s| self.translate_struct(&mut astrouts, &env, s)).collect();
+  let structs_a: Vec<&'s StructA<'s>> = env.structs_s().into_iter().map(|s| self.translate_struct(&mut astrouts, &env, s)).collect::<Result<Vec<_>, _>>()?;
 
-  let interfaces_a: Vec<&'s InterfaceA<'s>> = env.interfaces_s().into_iter().map(|i| self.translate_interface(&mut astrouts, &env, i)).collect();
+  let interfaces_a: Vec<&'s InterfaceA<'s>> = env.interfaces_s().into_iter().map(|i| self.translate_interface(&mut astrouts, &env, i)).collect::<Result<Vec<_>, _>>()?;
 
-  let impls_a: Vec<&'s ImplA<'s>> = env.impls_s().into_iter().map(|im| self.translate_impl(&mut astrouts, &env, im)).collect();
+  let impls_a: Vec<&'s ImplA<'s>> = env.impls_s().into_iter().map(|im| self.translate_impl(&mut astrouts, &env, im)).collect::<Result<Vec<_>, _>>()?;
 
-  let functions_a: Vec<&'s FunctionA<'s>> = env.functions_s().into_iter().map(|f| self.translate_function(&mut astrouts, &env, f)).collect();
+  let functions_a: Vec<&'s FunctionA<'s>> = env.functions_s().into_iter().map(|f| self.translate_function(&mut astrouts, &env, f)).collect::<Result<Vec<_>, _>>()?;
 
-  let exports_a: Vec<&'s ExportAsA<'s>> = env.exports_s().into_iter().map(|e| self.translate_export(&mut astrouts, &env, e)).collect();
+  let exports_a: Vec<&'s ExportAsA<'s>> = env.exports_s().into_iter().map(|e| self.translate_export(&mut astrouts, &env, e)).collect::<Result<Vec<_>, _>>()?;
 
-  ProgramA {
+  Ok(ProgramA {
     structs: self.scout_arena.alloc_slice_from_vec(structs_a),
     interfaces: self.scout_arena.alloc_slice_from_vec(supplied_interfaces.into_iter().chain(interfaces_a).collect()),
     impls: self.scout_arena.alloc_slice_from_vec(impls_a),
     functions: self.scout_arena.alloc_slice_from_vec(supplied_functions.into_iter().chain(functions_a).collect()),
     exports: self.scout_arena.alloc_slice_from_vec(exports_a),
-  }
+  })
 }
 /*
   def translateProgram(
@@ -1689,7 +1689,7 @@ pub fn run_pass(
   let supplied_functions: Vec<&'s FunctionA<'s>> = Vec::new();
   let supplied_interfaces: Vec<&'s InterfaceA<'s>> = Vec::new();
   let program_a =
-    self.translate_program(merged_program_s, supplied_functions, supplied_interfaces);
+    self.translate_program(merged_program_s, supplied_functions, supplied_interfaces)?;
 
   // Group results by package coordinate
   let ProgramA { structs: structs_a, interfaces: interfaces_a, impls: impls_a, functions: functions_a, exports: exports_a } = program_a;
