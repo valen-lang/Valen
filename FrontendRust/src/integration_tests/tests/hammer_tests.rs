@@ -656,8 +656,54 @@ exported func main() int {
 
 // mig: fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id() { panic!("Unmigrated test: mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id"); }
+pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_id() {
+    // Per @PRIIROZ, the function's templateArgs are ordered [own..., inherited...]. For
+    // `Foo<A>.bar<C>(c C)` monomorphized as `Foo<i32>.bar<i64>(42i64)`, the leaf step's
+    // templateArgs are [i64, i32] (C own first, A inherited last). After reshape, the
+    // 1 trailing inherited arg moves to the Foo step:
+    //   [..., Foo<i32>, bar<i64>]
+    // Asserts both the splitAt count (1, not 0 or 2) and the splitAt direction. Uses
+    // i32 + i64 (not bool/str etc.) because NameHammer.simplifyKind currently only
+    // handles IntIT.
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let code = "
+extern struct Foo<A> imm {
+  extern func bar<C>(c C) int;
+}
+exported func main() int {
+  return Foo<int>.bar<str>(\"hello\");
+}
+";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+    );
+    let hamuts = compile.get_hamuts();
+    let package_h = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
+    let bar_extern = package_h.prototype_to_extern.iter().map(|(_, e)| e).find(|e| e.simple_id.steps.last().expect("empty steps").name.0 == "bar").expect("bar not found");
+    let steps = bar_extern.simple_id.steps;
+    assert!(steps.len() >= 2);
+    let leaf = steps.last().expect("empty steps");
+    let parent = &steps[steps.len() - 2];
+    assert_eq!(leaf.name.0, "bar");
+    assert_eq!(leaf.template_args.len(), 1);  // C (own) remains on the leaf.
+    assert_eq!(parent.name.0, "Foo");
+    assert_eq!(parent.template_args.len(), 1);  // A (inherited) moved up to the citizen.
+}
 /*
   test("Mixed own + inherited template args split correctly in wire-format SimpleId") {
     // Per @PRIIROZ, the function's templateArgs are ordered [own..., inherited...]. For

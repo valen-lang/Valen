@@ -273,13 +273,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         Some(Box::new(interface_env.clone()))
       }
     };
-    let declared_runes: IndexSet<IRuneS<'s>> = match &maybe_parent {
-      IFunctionParent::ParentCitizen(_) => IndexSet::new(),
-      _ => user_declared_runes
-        .iter()
-        .map(|rune_usage| rune_usage.rune.clone())
-        .collect(),
-    };
+    let declared_runes: IndexSet<IRuneS<'s>> = user_declared_runes
+      .iter()
+      .map(|rune_usage| rune_usage.rune.clone())
+      .collect();
     let function_environment = FunctionEnvironmentS {
       file: file_coordinate,
       name: function_declaration_name_for_env.clone(),
