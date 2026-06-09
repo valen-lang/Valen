@@ -694,8 +694,51 @@ pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_i
 
 // mig: fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id() { panic!("Unmigrated test: extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id"); }
+pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id() {
+    // The reshape moves the inherited container template args (T -> i32) off the leaf function
+    // step onto the immediately preceding citizen step. Final shape: [..., Vec<i32>, new]
+    // rather than [..., Vec, new<i32>]. This is what Backend's rustifySimpleId expects per
+    // @SMLRZ, so it can emit `Vec<i32>::new` rather than `Vec::new<i32>`.
+    use crate::utils::code_hierarchy::IPackageResolver;
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let code = "
+extern struct Vec<T> imm {
+  extern func new() Vec<T>;
+}
+exported func main() int {
+  v = Vec<int>.new();
+  return 42;
+}
+";
+    let resolver = crate::builtins::builtins::get_code_map(&parse_arena, &parser_keywords)
+        .expect("get_code_map failed to load builtins")
+        .or(crate::utils::code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = crate::simplifying::test::test_compilation::test(
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+    );
+    let hamuts = compile.get_hamuts();
+    let package_h = hamuts.lookup_package(*crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
+    let new_extern = package_h.prototype_to_extern.iter().map(|(_, e)| e).find(|e| e.simple_id.steps.last().expect("empty steps").name.0 == "new").expect("new not found");
+    let steps = new_extern.simple_id.steps;
+    assert!(steps.len() >= 2);
+    let leaf = steps.last().expect("empty steps");
+    let parent = &steps[steps.len() - 2];
+    assert_eq!(leaf.name.0, "new");
+    assert_eq!(leaf.template_args.len(), 0);  // No own template args, no surviving args after reshape.
+    assert_eq!(parent.name.0, "Vec");
+    assert_eq!(parent.template_args.len(), 1);  // <i32> moved up from the leaf.
+}
 /*
   test("Extern method in generic extern struct puts container args on citizen step in wire-format SimpleId") {
     // The reshape moves the inherited container template args (T -> i32) off the leaf function
