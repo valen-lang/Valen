@@ -441,6 +441,7 @@ where
     let maybe_identifying_runes = self.lex_angled(iter)?;
     iter.consume_comments_and_whitespace();
 
+    let interface_ownership_symbols = self.lex_impl_ownership_prefix(iter);
     let interface_name = self
         .lex_identifier(iter)
         .ok_or(ParseError::BadImplInterface(iter.get_pos()))?;
@@ -448,21 +449,19 @@ where
 
     let maybe_interface_generic_args = self.lex_angled(iter)?;
 
-    let interface = if let Some(interface_generic_args) = maybe_interface_generic_args {
-      ScrambleLE::<'p> {
-        range: RangeL::new(interface_name.range.begin(), interface_generic_args.range.end()),
-        elements: self.parse_arena.alloc_slice_copy(&[
-          &*self.parse_arena.alloc(INodeLEEnum::Word::<'p>(interface_name)),
-          &*self.parse_arena.alloc(INodeLEEnum::Angled::<'p>(interface_generic_args)),
-        ]),
-      }
-    } else {
-      ScrambleLE {
-        range: interface_name.range,
-        elements: self.parse_arena.alloc_slice_copy(&[
-          &*self.parse_arena.alloc(INodeLEEnum::Word(interface_name)),
-        ]),
-      }
+    let mut interface_elements: Vec<&'p INodeLEEnum<'p>> = Vec::new();
+    for sym in &interface_ownership_symbols {
+      interface_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Symbol(*sym)));
+    }
+    interface_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Word::<'p>(interface_name)));
+    if let Some(interface_generic_args) = maybe_interface_generic_args {
+      interface_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Angled::<'p>(interface_generic_args)));
+    }
+    let interface_begin = interface_elements.first().expect("interface_elements empty").range().begin();
+    let interface_end = interface_elements.last().expect("interface_elements empty").range().end();
+    let interface = ScrambleLE::<'p> {
+      range: RangeL::new(interface_begin, interface_end),
+      elements: self.parse_arena.alloc_slice_copy(&interface_elements),
     };
 
     iter.consume_comments_and_whitespace();
@@ -473,6 +472,7 @@ where
 
     iter.consume_comments_and_whitespace();
 
+    let struct_ownership_symbols = self.lex_impl_ownership_prefix(iter);
     let struct_name = self
         .lex_identifier(iter)
         .ok_or(ParseError::BadImplStruct(iter.get_pos()))?;
@@ -480,21 +480,19 @@ where
 
     let maybe_struct_generic_args = self.lex_angled(iter)?;
 
-    let struct_ = if let Some(struct_generic_args) = maybe_struct_generic_args {
-      ScrambleLE {
-        range: RangeL::new(struct_name.range.begin(), struct_generic_args.range.end()),
-        elements: self.parse_arena.alloc_slice_copy(&[
-          &*self.parse_arena.alloc(INodeLEEnum::Word(struct_name)),
-          &*self.parse_arena.alloc(INodeLEEnum::Angled(struct_generic_args)),
-        ]),
-      }
-    } else {
-      ScrambleLE {
-        range: struct_name.range,
-        elements: self.parse_arena.alloc_slice_copy(&[
-          &*self.parse_arena.alloc(INodeLEEnum::Word(struct_name)),
-        ]),
-      }
+    let mut struct_elements: Vec<&'p INodeLEEnum<'p>> = Vec::new();
+    for sym in &struct_ownership_symbols {
+      struct_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Symbol(*sym)));
+    }
+    struct_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Word(struct_name)));
+    if let Some(struct_generic_args) = maybe_struct_generic_args {
+      struct_elements.push(&*self.parse_arena.alloc(INodeLEEnum::Angled(struct_generic_args)));
+    }
+    let struct_begin = struct_elements.first().expect("struct_elements empty").range().begin();
+    let struct_end = struct_elements.last().expect("struct_elements empty").range().end();
+    let struct_ = ScrambleLE {
+      range: RangeL::new(struct_begin, struct_end),
+      elements: self.parse_arena.alloc_slice_copy(&struct_elements),
     };
 
     iter.consume_comments_and_whitespace();
@@ -2079,6 +2077,18 @@ where
         str: self.parse_arena.intern_str(word),
       })
     }
+  }
+  // Lex optional ownership prefix symbols (&, &&, ^) for impl interface/struct positions.
+  // Returns SymbolLE nodes for each prefix character, e.g. && becomes two SymbolLE('&').
+  fn lex_impl_ownership_prefix(&self, iter: &mut LexingIterator) -> Vec<SymbolLE> {
+    let mut symbols: Vec<SymbolLE> = Vec::new();
+    while !iter.at_end() && (iter.peek() == '&' || iter.peek() == '^') {
+      let begin = iter.get_pos();
+      let c = iter.peek();
+      iter.advance();
+      symbols.push(SymbolLE(RangeL::new(begin, iter.get_pos()), c));
+    }
+    symbols
   }
   /*
   // Lex optional ownership prefix symbols (&, &&, ^) for impl interface/struct positions.

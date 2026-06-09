@@ -564,9 +564,6 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
         }
     }
 }
-/*
-Guardian: temp-disable: NCWSRX — NCWSRX false-positive: the per-variant override def templateArgs = inner.templateArgs for ForwarderFunctionNameI lives in this same file at the ForwarderFunctionNameI struct audit block, outside the dispatcher-impl diff window. Mirrors the in-file precedent parameters() arm in the sibling IFunctionNameI::parameters dispatcher. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-703-1780975722250/hook-703/template_args--554.0.NoChangesWithoutScalaReference-NCWSRX.NoChangesWithoutScalaReference-NCWSRX.verdict.md
-*/
 // mig: fn template
 impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
     pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i, R> {

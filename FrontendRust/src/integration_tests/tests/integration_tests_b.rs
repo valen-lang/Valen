@@ -663,8 +663,6 @@ fn tests_a_linked_list() {
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
-Guardian: temp-disable: SPDMX — eval_for_kind_primitive_args is the Rust-side disambiguation for Scala's evalForKind(Vector[PrimitiveKindV]) overload (vs evalForKind(heap, args) elsewhere) — Exception S, established by the in-file precedent in every other test in this file (tests_calling_an_abstract_function, tests_calling_a_virtual_function, etc.). — FrontendRust/guardian-logs/request-3270-1780630106214/hook-3270/tests_a_linked_list--529.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
-
   test("Tests a linked list") {
     val compile = RunCompilation.test(
       Tests.loadExpected("programs/virtuals/ordinarylinkedlist.vale"))

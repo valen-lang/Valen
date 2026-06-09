@@ -1,3 +1,9 @@
+use bumpalo::Bump;
+use crate::parse_arena::ParseArena;
+use crate::keywords::Keywords;
+use crate::lexing::errors::ParseError;
+use crate::parsing::tests::utils::compile_denizen;
+
 /*
 package dev.vale.parsing.functions
 
@@ -12,8 +18,21 @@ class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUt
 */
 // mig: fn func_with_func_bound_with_missing_where
 #[test]
-#[ignore = "unmigrated - pending parsing-pass body migration"]
-fn func_with_func_bound_with_missing_where() { panic!("Unmigrated test: func_with_func_bound_with_missing_where"); }
+#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing 'where' for func bound"]
+fn func_with_func_bound_with_missing_where() {
+  // This test does not pass yet, use #[ignore].
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let err = compile_denizen(
+    &parse_arena,
+    &keywords,
+    "func sum<T>() func moo(&T)void {3}").unwrap_err();
+  match err {
+    ParseError::FuncBoundWithoutWhere(_) => {}
+    other => panic!("Expected FuncBoundWithoutWhere, got {:?}", other),
+  }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Func with func bound with missing 'where'") {

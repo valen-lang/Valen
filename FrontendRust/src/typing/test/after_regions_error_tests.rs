@@ -1,3 +1,12 @@
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::typing_interner::TypingInterner;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::utils::code_hierarchy::{self, IPackageResolver};
+
 // mig: struct AfterRegionsErrorTests
 pub struct AfterRegionsErrorTests {}
 /*
@@ -185,8 +194,30 @@ fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_e
 */
 // mig: fn report_when_downcasting_between_unrelated_types
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn report_when_downcasting_between_unrelated_types() { panic!("Unmigrated test: report_when_downcasting_between_unrelated_types"); }
+#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): downcasting-between-unrelated-types detection not yet wired"]
+fn report_when_downcasting_between_unrelated_types() {
+    // This test does not pass yet, use #[ignore].
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.as.*;\nimport panicutils.*;\n\ninterface ISpaceship { }\nstruct Spoon { }\n\nexported func main() {\n  ship = __pretend<ISpaceship>();\n  ship.as<Spoon>();\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::CantDowncastUnrelatedTypes { .. }) => {}
+        Err(other) => panic!("Expected CantDowncastUnrelatedTypes, got Err({:?})", other),
+        Ok(_) => panic!("Expected CantDowncastUnrelatedTypes, got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Report when downcasting between unrelated types") {
@@ -375,8 +406,32 @@ fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() 
 */
 // mig: fn ambiguous_call
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn ambiguous_call() { panic!("Unmigrated test: ambiguous_call"); }
+#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): overload narrowing for ambiguous-call detection not yet wired"]
+fn ambiguous_call() {
+    // This test does not pass yet, use #[ignore].
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc add<X>(i int, x &X) { }\nfunc add<X>(x &X, i int) { }\n\nexported func main() void {\n  add(3, 4);\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::CouldntNarrowDownCandidates { candidates, .. }) => {
+            assert_eq!(candidates.len(), 2);
+        }
+        Err(other) => panic!("Expected CouldntNarrowDownCandidates, got Err({:?})", other),
+        Ok(_) => panic!("Expected CouldntNarrowDownCandidates, got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Ambiguous call") {
@@ -479,8 +534,33 @@ fn cant_make_weak_ref_to_non_weakable() { panic!("Unmigrated test: cant_make_wea
 */
 // mig: fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() { panic!("Unmigrated test: hash_map_style_return_type_inference_must_not_skip_caller_bound_args"); }
+fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() {
+    // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
+    // that motivated removing return-type inference. With the relaxed ResolveSR puzzle
+    // the solver no longer stalls on K and V, but the post-solve bound-arg check
+    // (InferCompiler.checkResolvingConclusionsAndResolve:295) must still reject this
+    // because main doesn't supply enough to determine K and V. If this test ever
+    // passes, the safety property of BRRZ has drifted and needs immediate investigation.
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nstruct MyStruct<K, V, H> { }\n\nfunc make<K, V, H>(h H) MyStruct<K, V, H>\nwhere func drop(H)void {\n  return MyStruct<K, V, H>();\n}\n\nexported func main() int {\n  m = make(7);\n  return 0;\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(_) => {} // expected — K and V cannot be inferred
+        Ok(_) => panic!("Expected HashMap-style K/V inference from return type to fail, but compilation succeeded."),
+    }
+}
 /*
   // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
   // that motivated removing return-type inference. With the relaxed ResolveSR puzzle

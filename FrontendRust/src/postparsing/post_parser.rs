@@ -120,6 +120,8 @@ pub enum ICompileErrorS<'s> {
   ExternHasBodyS(ExternHasBodyS<'s>),
   IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS<'s>),
   RangedInternalErrorS(RangedInternalErrorS<'s>),
+  CantOwnershipInterfaceInImpl(CantOwnershipInterfaceInImpl<'s>),
+  CantOwnershipStructInImpl(CantOwnershipStructInImpl<'s>),
 }
 /*
 sealed trait ICompileErrorS { def range: RangeS }
@@ -140,6 +142,8 @@ impl ICompileErrorS<'_> {
       ICompileErrorS::ExternHasBodyS(x) => &x.range,
       ICompileErrorS::IdentifyingRunesIncompleteS(x) => &x.range,
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
+      ICompileErrorS::CantOwnershipInterfaceInImpl(x) => &x.range,
+      ICompileErrorS::CantOwnershipStructInImpl(x) => &x.range,
     }
   }
   /*
@@ -237,10 +241,19 @@ case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) ex
 override def hashCode(): Int = vcurious() }
 */
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CantOwnershipInterfaceInImpl<'s> {
+  pub range: RangeS<'s>,
+}
 /*
 case class CantOwnershipInterfaceInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CantOwnershipStructInImpl<'s> {
+  pub range: RangeS<'s>,
+}
 /*
 case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
@@ -1195,20 +1208,18 @@ fn scout_impl(
 
   match &impl0.interface {
     ITemplexPT::Interpreted(interpreted) => {
-      panic!(
-        "POSTPARSER_SCOUT_IMPL_CANT_OWNERSHIP_INTERFACE_IN_IMPL_NOT_YET_MIGRATED: {:?}",
-        PostParser::eval_range(file, interpreted.range)
-      );
+      return Err(ICompileErrorS::CantOwnershipInterfaceInImpl(CantOwnershipInterfaceInImpl {
+        range: PostParser::eval_range(file, interpreted.range),
+      }));
     }
     _ => {}
   }
 
   match &impl0.struct_ {
     Some(ITemplexPT::Interpreted(interpreted)) => {
-      panic!(
-        "POSTPARSER_SCOUT_IMPL_CANT_OWNERSHIP_STRUCT_IN_IMPL_NOT_YET_MIGRATED: {:?}",
-        PostParser::eval_range(file, interpreted.range)
-      );
+      return Err(ICompileErrorS::CantOwnershipStructInImpl(CantOwnershipStructInImpl {
+        range: PostParser::eval_range(file, interpreted.range),
+      }));
     }
     _ => {}
   }

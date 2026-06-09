@@ -1418,15 +1418,12 @@ where 's: 't,
                         //     consulted.
                         let ranges = std::iter::once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        match self.resolve_function(
-                            env.original_calling_env,
+                        match self.resolve_function_from_infer_env(
+                            env,
                             state,
                             ranges_slice,
-                            env.call_location,
                             resolve.name,
                             param_coords,
-                            env.context_region,
-                            true,
                         ).expect("CompileErrorExceptionT propagation") {
                             Ok(stamp_result) => {
                                 let return_type = stamp_result.prototype.return_type;
@@ -1904,7 +1901,6 @@ where 's: 't,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Exception B (Rust adaptation): Scala has a 5-arg `delegate.resolveFunction` trait method (CompilerSolver.scala:166) wrapping the underlying 8-arg InferCompiler.resolveFunction. Rust calls the underlying directly with env.call_location, env.context_region, verify_conclusions=true since the delegate trait layer was not introduced. The extra args are derived from `env` and from the Rust signature requirement. — FrontendRust/guardian-logs/request-2425-1780978130606/hook-2425/solve_rule--1285.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def solveRule(
     delegate: IInfererDelegate,
     state: CompilerOutputs,

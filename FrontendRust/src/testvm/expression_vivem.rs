@@ -1181,7 +1181,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Architect-approved testvm Result-bubble refactor: INodeExecuteResultV gained an Error(VmRuntimeErrorV) variant so PanicException/ConstraintViolatedException bubble through to the test boundary as Result, replacing catch_unwind/Any-downcast which cant reach lifetime-parameterized payloads. The new Error(_) =&gt; return ret arms propagate the error exactly like Return — no novel logic, pure transport. Scala uses throw/try-catch at the test boundary; Rust uses the in-band variant + Result-at-boundary as the lifetime-correct equivalent. — FrontendRust/guardian-logs/request-3350-1780632211894/hook-3350/execute_node_inner--236.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def executeNodeInner(
                    programH: ProgramH,
                    stdin: (() => String),

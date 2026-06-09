@@ -1188,7 +1188,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
 }
 /*
-Guardian: temp-disable: TUCMPX — IndexMap::new() at bound_param_impl_id_to_bound_arg_impl_id is 1:1 with Scala's Map() (with adjacent TODO: Catch impls up) — Scala-faithful empty literal, not a Rust-side unimplemented placeholder. TUCMPX can't see the canonical Scala source. — FrontendRust/guardian-logs/request-2774-1780621878200/hook-2774/translate_override--1092.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
   def translateOverride(
     opts: GlobalOptions,
     interner: Interner,

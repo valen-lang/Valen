@@ -3,6 +3,8 @@ name: migration-drive
 description: Iteratively replace panics in a Scala-to-Rust migration with minimal, iterative parity-only changes with no novel logic, adding panic/assert placeholders until compile/test paths are implemented.
 ---
 
+> **When editing this file:** (1) remove any conflicting existing directions first; (2) prefer extending an existing line/section over adding a new one; (3) keep it concise — under 25 words is the sweet spot, add a short example only when the instruction is complex.
+
 > **Every time you compact, re-read this file** (`docs/skills/migration-drive.md`). It changes often as the TL adds notes about new gotchas, escalation patterns, and migration rules learned during the session. Compaction drops the prior conversation but not the file — if you re-read it, you pick up everything the previous instance learned. If you don't, you'll repeat mistakes that have already been documented.
 
 **This skill is pass-agnostic.** It drives the panic-replacement migration loop for *any* pass (typing, instantiating, simplifying, …). Many examples in the Notes below are typing-pass-flavored — treat them as illustrations of pass-agnostic principles, not typing-only rules.
@@ -10,6 +12,8 @@ description: Iteratively replace panics in a Scala-to-Rust migration with minima
 **Required: a `migration-drive-todo.md` at the repo root.** It lists the targets to drive (tests or definitions) as a checklist — `- [ ]` not-yet-done, `- [x]` done, `- [~]` blocked-by-logic-bug (see step 5). The loop below marks items in it and picks the next `- [ ]`. If `migration-drive-todo.md` doesn't exist, stop and ask the architect to create it (or to name the targets to drive) before starting.
 
 Here's what I want you to do:
+
+0. Before starting a failing test, wait for TL to name it in `for-jr.md`. Before any substantive work, start a background `for-jr.md` watcher (snippet below) so TL can interrupt you mid-task; restart it after each consume.
 
 1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
     * FrontendRust/docs/migration/migration-policy.md
@@ -28,7 +32,7 @@ Here's what I want you to do:
 2. Try to build the project. if it doesn't build, then please make it build.
     * If you run into any easy lifetime fixes, please do them. If you run into any medium or complicated ones, or ones that span multiple definitions, please stop and tell me, because I like solving lifetime challenges.
     * **One-shot rule on lifetime fixes:** you get one attempt. If your first fix doesn't compile cleanly, stop and escalate immediately — don't iterate, don't try a second variant, even if you're confident you're close. Lifetime puzzles in this codebase fool rustc and they fool you; a "looks right" second fix usually compounds the original problem rather than solving it.
-3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/migration-drive-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "unimplemented"/"implement"/"not yet migrated", proceed to step 4. If it passes, follow the green-test flow described in step 5's "If it passes" branch (mark `[x]`, notify TL, wait for sync ack, then pick next).
+3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/migration-drive-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "unimplemented"/"implement"/"not yet migrated", proceed to step 4. If it passes, follow the green-test flow described in step 5's "If it passes" branch (mark `[x]`, notify TL, wait for TL to name the next target).
 4. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
     * DON'T IMPLEMENT ANYTHING ELSE. Just do the one step it gives you.
     * DO NOT ADD ANY novel logic! All the Rust functions you need should already exist somewhere. NO adding new functions. You will only be modifying existing functions.
@@ -49,8 +53,8 @@ Here's what I want you to do:
     * If you run into any lifetime errors, STOP. We'll need the TL to fix those, because lifetime errors in this project are incredibly difficult, and `rustc` ALWAYS LIES. You get bonus points and cookies if you stop because you found a lifetime error.
 5. Run the test again.
     * If it panics with "unimplemented"/"implement"/"not yet migrated" somewhere in the panic message, go to step 4.
-    * If it panics without "unimplemented"/"implement"/"not yet migrated" somewhere in the panic message, that's a **logic bug**, and it's not yours to fix. Mark the test `- [~]` in `migration-drive-todo.md` (change its `- [ ]` to `- [~]`) with a one-line note appended after the test name in the form `— BLOCKED: <rust_file:line> "<panic message>"`. Then append the same note to `from-jr.md` so the TL queues it for later. Then pick the next `- [ ]` test in `migration-drive-todo.md`, un-ignore it in the test file, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop. Don't try to fix logic bugs yourself.
-    * If it passes, mark the test done in `migration-drive-todo.md` (change its `- [ ]` to `- [x]`). Run the full suite first and confirm no regressions. **Then notify TL via `from-jr.md`** (test name + `git diff --name-only` output + "ready to sync") and **wait for `for-jr.md` ack** before un-ignoring the next test — see the "Sync after every green test" note below. Once acked, pick the next `- [ ]` test, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop. **Do not start on a new test until all currently-active tests are passing.**
+    * If it panics without "unimplemented"/"implement"/"not yet migrated" somewhere in the panic message, that's a **logic bug**, and it's not yours to fix. Mark the test `- [~]` in `migration-drive-todo.md` (change its `- [ ]` to `- [~]`) with a one-line note appended after the test name in the form `— BLOCKED: <rust_file:line> "<panic message>"`. Then append the same note to `from-jr.md` so the TL queues it for later. Then wait for TL to name the next target in `for-jr.md` before un-ignoring anything. Don't try to fix logic bugs yourself.
+    * If it passes, mark the test done in `migration-drive-todo.md` (change its `- [ ]` to `- [x]`). Run the full suite first and confirm no regressions. **Then notify TL via `from-jr.md`** (test name + `git diff --name-only` output + "ready to sync") and **wait for `for-jr.md` ack** before un-ignoring the next test — see the "Sync after every green test" note below. Once TL names the next target in `for-jr.md`, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop. **Do not start on a new test until all currently-active tests are passing.**
 
 
 Notes:

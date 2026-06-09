@@ -177,7 +177,6 @@ where 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — In-file precedent: the sibling mark_unstackified_by_var_name (hammer.rs lines 159-162) uses the identical typing_pass_locals.get + delegate-to-mark_unstackified pattern. Scala has a single Locals impl-via-Box that auto-resolves IVarNameI to VariableIdH internally; Rust collapsed the Box per Exception U so the lookup is hoisted to the by-var-name caller. Established adaptation, not novel. — FrontendRust/guardian-logs/request-1757-1780629160910/hook-1757/mark_restackified_by_var_name--174.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def markRestackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markRestackified(varId2)
   }

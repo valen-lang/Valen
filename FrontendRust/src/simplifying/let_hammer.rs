@@ -145,7 +145,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — In-file precedent: the sibling translate_let (let_hammer.rs line 68) uses the exact same ExpressionH::StackifyH(self.translate_mundane_let(...)) wrap pattern around translate_mundane_let's narrower &StackifyH return. Scala has implicit upcast from StackifyH/RestackifyH to ExpressionH[KindHT]; Rust requires the explicit enum-variant wrap. This is established Rust adaptation, not novel code. — FrontendRust/guardian-logs/request-1744-1780628858411/hook-1744/translate_restackify--119.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateRestackify(
     hinputs: HinputsI,
     hamuts: HamutsBox,

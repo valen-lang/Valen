@@ -804,6 +804,39 @@ where 's: 't,
                     paramCoords))),
               returnCoord))
         }
+*/
+    // mig: fn resolve_function_from_infer_env
+    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's inner
+    // IInfererDelegate (solver-side) anonymous-class `resolveFunction`
+    // (Compiler.scala:395-413) is flattened onto Rust's Compiler. The 5-arg
+    // surface is what the solver calls; the missing 3 args
+    // (`call_location`, `context_region`, `verify_conclusions`) are read from
+    // the supplied `InferEnv` and a hardcoded `true`, matching Scala's
+    // `envs.callLocation`, `envs.contextRegion`, and literal `true`. Body
+    // forwards to the sibling 8-arg `resolve_function` (the outer delegate's
+    // flatten); Scala's two delegate impls each call `overloadResolver.findFunction`
+    // directly, but the Rust port DRYs that through the 8-arg wrapper since both
+    // anonymous classes have already been flattened onto the same Compiler.
+    pub fn resolve_function_from_infer_env(
+        &self,
+        env: InferEnv<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        name: StrI<'s>,
+        param_coords: &[CoordT<'s, 't>],
+    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
+        self.resolve_function(
+            env.original_calling_env,
+            state,
+            ranges,
+            env.call_location,
+            name,
+            param_coords,
+            env.context_region,
+            true,
+        )
+    }
+    /*
         // Per @BRRZ, this is the real overload lookup invoked from inside the ResolveSR
         // handler when the return rune isn't yet known. Mirrors the outer delegate's
         // resolveFunction at line 455-477 below, but takes InferEnv so the solver-side

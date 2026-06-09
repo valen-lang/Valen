@@ -106,7 +106,6 @@ pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: 
     inner_execute(program_h, interner, scout_arena, input_argument_references, input_heap, stdin, stdout)
 }
 /*
-Guardian: temp-disable: SPDMX — Rust inner_execute does not take vivem_dout; it's accessible via heap.vivem_dout (HeapV holds the print stream). In-file precedent: execute_with_primitive_args at vivem.rs:78 also omits vivem_dout from its inner_execute call for the same reason. — FrontendRust/guardian-logs/request-228-1780620678084/hook-228/execute_with_heap--96.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def executeWithHeap(
       programH: ProgramH,
       inputHeap: Heap,

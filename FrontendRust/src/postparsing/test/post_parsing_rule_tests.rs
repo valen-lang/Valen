@@ -1,17 +1,17 @@
+use std::collections::HashMap;
 use bumpalo::Bump;
-use crate::compile_options::GlobalOptions;
-use crate::parsing::tests::utils::compile_file;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
   OwnershipTemplataType, VariabilityTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
-use crate::postparsing::post_parser::PostParser;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::post_parser::ICompileErrorS;
+use crate::postparsing::test::post_parser_test_compilation;
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 /*
 package dev.vale.postparsing
 
@@ -29,33 +29,21 @@ class PostParsingRuleTests extends FunSuite with Matchers {
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
+  parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
+  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   code: &str,
 ) -> ProgramS<'s>
 where 'p: 's,
 {
-  let options = GlobalOptions {
-    sanity_check: true,
-    use_overload_index: true,
-    use_optimized_solver: true,
-    verbose_errors: false,
-    debug_output: false,
-  };
-
-  let keywords_p = Keywords::new_for_parse(parse_arena);
-  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
-  // Re-intern FileCoordinate from 'p into 's
-  let file_coord_s = scout_arena.intern_file_coordinate(
-    scout_arena.intern_package_coordinate(
-      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
-    ),
-    only_file.file_coord.filepath.as_str(),
+  let mut compile = post_parser_test_compilation::test(
+    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
   );
-  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
-  post_parser
-    .scout_program(file_coord_s, &only_file)
-    .unwrap()
+  match compile.get_scoutput() {
+    // PostParserErrorHumanizer not yet ported; use unwrap() for now (documented gap).
+    Err(_) => panic!("compile failed"),
+    Ok(t) => *t.expect_one(),
+  }
 }
 /*
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
@@ -75,14 +63,22 @@ where 'p: 's,
   }
 */
 fn compile_for_error<'s, 'ctx, 'p>(
-  _scout_arena: &'ctx ScoutArena<'s>,
-  _keywords: &'ctx crate::Keywords<'s>,
-  _parse_arena: &'ctx ParseArena<'p>,
-  _code: &str,
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parser_keywords: &'ctx Keywords<'p>,
+  parse_arena: &'ctx ParseArena<'p>,
+  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  code: &str,
 ) -> ICompileErrorS<'s>
 where 'p: 's,
 {
-  panic!("Unimplemented: compile_for_error");
+  let mut compile = post_parser_test_compilation::test(
+    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
+  );
+  match compile.get_scoutput() {
+    Err(e) => e,
+    Ok(_) => panic!("Successfully compiled!"),
+  }
 }
 /*
   private def compileForError(code: String): ICompileErrorS = {
@@ -99,11 +95,17 @@ fn predict_simple_templex() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main(a int) {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main(a int) {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
   let rune = &main.params.first().unwrap().pattern.coord_rune.as_ref().unwrap().rune;
@@ -133,11 +135,17 @@ fn can_know_rune_type_from_simple_equals() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<T, Y>(a T) where Y = T {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<T, Y>(a T) where Y = T {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 
@@ -184,11 +192,17 @@ fn predict_knows_type_from_or_rule() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<M Ownership>(a int) where M = any(own, borrow) {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<M Ownership>(a int) where M = any(own, borrow) {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 
@@ -231,11 +245,17 @@ fn predict_coord_component_types() {
   //       |where T = Ref[O, R, K], O Ownership, R Region, K Kind {}
   //       |""".stripMargin, interner)
   // Take out with regions
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<T>(a T) where T = Ref[O, K], O Ownership, K Kind {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<T>(a T) where T = Ref[O, K], O Ownership, K Kind {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 
@@ -296,11 +316,17 @@ fn predict_call_types() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<A, B>(p1 A, p2 B) where A = T<B>, T = Option, A = int {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<A, B>(p1 A, p2 B) where A = T<B>, T = Option, A = int {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 
@@ -349,11 +375,17 @@ fn predict_array_sequence_types() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<M Mutability, V Variability, N Int, E>(t T) where T Ref = [#N]<M, V>E {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<M Mutability, V Variability, N Int, E>(t T) where T Ref = [#N]<M, V>E {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 
@@ -420,11 +452,17 @@ fn predict_for_is_interface() {
   let parse_arena = ParseArena::new(&parse_bump);
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "func main<A Kind, B Kind>() where A = isInterface(B) {}";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
     &scout_arena,
     &keywords,
+    &parser_keywords,
     &parse_arena,
-    "func main<A Kind, B Kind>() where A = isInterface(B) {}",
+    &resolver,
+    code,
   );
   let main = program.lookup_function("main");
 

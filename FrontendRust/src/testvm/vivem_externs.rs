@@ -499,7 +499,6 @@ pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
     })
 }
 /*
-Guardian: temp-disable: SPDMX — Per migration-policy.md, Scala vfail() maps 1:1 to Rust panic!(); Scala's catch ArithmeticException => vfail() is "panic on div-by-zero" and Rust's native i32 % 0 panic IS that vfail-equivalent, so bare % matches Scala 1:1. Adding checked_rem + Some/None would introduce Option-matching scaffolding Scala does not have. Re-enable if this function ever needs to recover from div-by-zero rather than panic. — FrontendRust/guardian-logs/request-2338-1780973805141/hook-2338/mod_i32--490.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def modI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
     val aKind = memory.dereference(args(0))

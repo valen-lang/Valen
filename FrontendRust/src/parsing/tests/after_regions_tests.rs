@@ -1,3 +1,9 @@
+use bumpalo::Bump;
+use crate::parse_arena::ParseArena;
+use crate::keywords::Keywords;
+use crate::lexing::errors::ParseError;
+use crate::parsing::tests::utils::{compile_statement, compile_block_contents};
+
 /*
 package dev.vale.parsing
 
@@ -10,8 +16,22 @@ class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
 */
 // mig: fn forgetting_set_when_changing
 #[test]
-#[ignore = "unmigrated - pending parsing-pass body migration"]
-fn forgetting_set_when_changing() { panic!("Unmigrated test: forgetting_set_when_changing"); }
+#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing `set` keyword in mutation statements"]
+fn forgetting_set_when_changing() {
+  // This test does not pass yet, use #[ignore].
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let error =
+    compile_statement(
+      &parse_arena,
+      &keywords,
+      "ship.x = 4;").unwrap_err();
+  match error {
+    ParseError::ForgotSetKeyword(_) => {}
+    other => panic!("Expected ForgotSetKeyword, got {:?}", other),
+  }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Forgetting set when changing") {
@@ -25,8 +45,21 @@ fn forgetting_set_when_changing() { panic!("Unmigrated test: forgetting_set_when
 */
 // mig: fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren
 #[test]
-#[ignore = "unmigrated - pending parsing-pass body migration"]
-fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren() { panic!("Unmigrated test: report_leaving_out_semicolon_or_ending_body_after_expression_for_paren"); }
+#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing semicolon before paren in block contents"]
+fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren() {
+  // This test does not pass yet, use #[ignore].
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let err = compile_block_contents(
+    &parse_arena,
+    &keywords,
+    "\n  a = 3;\n  set x = 7 )\n").unwrap_err();
+  match err {
+    ParseError::BadStartOfStatementError(_) => {}
+    other => panic!("Expected BadStartOfStatementError, got {:?}", other),
+  }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Report leaving out semicolon or ending body after expression, for paren") {

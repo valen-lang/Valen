@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+use bumpalo::Bump;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::post_parser::ICompileErrorS;
+use crate::postparsing::test::post_parser_test_compilation;
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 
 /*
 package dev.vale.postparsing
@@ -20,12 +24,21 @@ class AfterRegionsErrorTests extends FunSuite with Matchers with Collector {
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
+  parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
+  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   code: &str,
 ) -> ProgramS<'s>
 where 'p: 's,
 {
-  panic!("Unimplemented: compile");
+  let mut compile = post_parser_test_compilation::test(
+    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
+  );
+  match compile.get_scoutput() {
+    // PostParserErrorHumanizer not yet ported; use .unwrap() for now (documented gap).
+    Err(_) => panic!("compile failed"),
+    Ok(t) => *t.expect_one(),
+  }
 }
 /*
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
@@ -50,12 +63,20 @@ where 'p: 's,
 fn compile_for_error<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
+  parser_keywords: &'ctx Keywords<'p>,
   parse_arena: &'ctx ParseArena<'p>,
+  package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   code: &str,
 ) -> ICompileErrorS<'s>
 where 'p: 's,
 {
-  panic!("Unimplemented: compile_for_error");
+  let mut compile = post_parser_test_compilation::test(
+    scout_arena, keywords, parser_keywords, parse_arena, package_to_contents_resolver, code,
+  );
+  match compile.get_scoutput() {
+    Err(e) => e,
+    Ok(_) => panic!("Successfully compiled!"),
+  }
 }
 /*
   private def compileForError(code: String): ICompileErrorS = {
@@ -68,8 +89,29 @@ where 'p: 's,
 
 // mig: fn reports_when_non_kind_interface_in_impl
 #[test]
-#[ignore = "unmigrated - pending postparsing-pass body migration"]
-fn reports_when_non_kind_interface_in_impl() { panic!("Unmigrated test: reports_when_non_kind_interface_in_impl"); }
+fn reports_when_non_kind_interface_in_impl() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "\nstruct Moo {}\ninterface IMoo {}\nimpl &IMoo for Moo;\n";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let err = compile_for_error(
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &resolver,
+    code,
+  );
+  match err {
+    ICompileErrorS::CantOwnershipInterfaceInImpl(_) => {}
+    other => panic!("Expected CantOwnershipInterfaceInImpl, got {:?}", other),
+  }
+}
 /*
   test("Reports when non-kind interface in impl") {
     val err = compileForError(
@@ -86,8 +128,29 @@ fn reports_when_non_kind_interface_in_impl() { panic!("Unmigrated test: reports_
 
 // mig: fn reports_when_non_kind_struct_in_impl
 #[test]
-#[ignore = "unmigrated - pending postparsing-pass body migration"]
-fn reports_when_non_kind_struct_in_impl() { panic!("Unmigrated test: reports_when_non_kind_struct_in_impl"); }
+fn reports_when_non_kind_struct_in_impl() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "\nstruct Moo {}\ninterface IMoo {}\nimpl IMoo for &Moo;\n";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let err = compile_for_error(
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &resolver,
+    code,
+  );
+  match err {
+    ICompileErrorS::CantOwnershipStructInImpl(_) => {}
+    other => panic!("Expected CantOwnershipStructInImpl, got {:?}", other),
+  }
+}
 /*
   test("Reports when non-kind struct in impl") {
     val err = compileForError(
@@ -104,8 +167,29 @@ fn reports_when_non_kind_struct_in_impl() { panic!("Unmigrated test: reports_whe
 
 // mig: fn abstract_func_without_virtual
 #[test]
-#[ignore = "unmigrated - pending postparsing-pass body migration"]
-fn abstract_func_without_virtual() { panic!("Unmigrated test: abstract_func_without_virtual"); }
+fn abstract_func_without_virtual() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "\nsealed interface ISpaceship<X Ref, Y Ref, Z Ref> { }\nabstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop(X)void;\n";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let err = compile_for_error(
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &resolver,
+    code,
+  );
+  match err {
+    ICompileErrorS::VirtualAndAbstractGoTogether(_) => {}
+    other => panic!("Expected VirtualAndAbstractGoTogether, got {:?}", other),
+  }
+}
 /*
   test("Abstract func without virtual") {
     val err = compileForError(
@@ -121,8 +205,47 @@ fn abstract_func_without_virtual() { panic!("Unmigrated test: abstract_func_with
 
 // mig: fn test_one_anonymous_param_lambda_identifying_runes
 #[test]
-#[ignore = "unmigrated - pending postparsing-pass body migration"]
-fn test_one_anonymous_param_lambda_identifying_runes() { panic!("Unmigrated test: test_one_anonymous_param_lambda_identifying_runes"); }
+fn test_one_anonymous_param_lambda_identifying_runes() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(&parse_arena);
+  let code = "\nexported func main() int {do((_) => { true })}\n";
+  let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+      .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+  let bork = compile(
+    &scout_arena,
+    &keywords,
+    &parser_keywords,
+    &parse_arena,
+    &resolver,
+    code,
+  );
+
+  let main = bork.lookup_function("main");
+  // We dont support regions yet, so scout should filter them out.
+  assert_eq!(main.generic_params.len(), 0);
+  let lambda: &crate::postparsing::expressions::FunctionSE = crate::collect_only_snode!(
+    crate::postparsing::test::traverse::NodeRefS::Function(main),
+    crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::Function(
+      function_se
+    )) => Some(function_se)
+  );
+  // Per @LAGTNGZ, the postparser creates one GenericParameterS per untyped lambda
+  // param, regardless of whether the user wrote `<T>` or `(_)`. LAGTNGZ still governs how the typing pass
+  // specializes the lambda (per-call template expansion into LambdaCallFunctionTemplateNameT).
+  assert_eq!(lambda.function.generic_params.len(), 1);
+  let underscore_param =
+    lambda.function.params.iter().find(|p| p.pattern.name.is_none()).unwrap();
+  let underscore_rune = underscore_param.pattern.coord_rune.unwrap().rune;
+  assert_eq!(
+    *lambda.function.rune_to_predicted_type.get(&underscore_rune).unwrap(),
+    crate::postparsing::itemplatatype::ITemplataType::CoordTemplataType(crate::postparsing::itemplatatype::CoordTemplataType {})
+  );
+  assert!(lambda.function.generic_params.iter().any(|p| p.rune.rune == underscore_rune));
+}
 /*
   test("Test one-anonymous-param lambda identifying runes") {
     val bork = compile(
