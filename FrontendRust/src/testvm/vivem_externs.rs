@@ -487,8 +487,19 @@ pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
   }
 */
 // mig: fn mod_i32
-pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i32"); }
+pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
+    assert_eq!(args.len(), 2);
+    let a_kind = memory.dereference(args[0]);
+    let b_kind = memory.dereference(args[1]);
+    Ok(match (a_kind, b_kind) {
+        (crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: a_value, bits: 32, .. }), crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: b_value, bits: 32, .. })) => {
+            memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: ((a_value as i32) % (b_value as i32)) as i64, bits: 32, _phantom: std::marker::PhantomData }))
+        }
+        _ => panic!("mod_i32: non-IntV(_, 32) args"),
+    })
+}
 /*
+Guardian: temp-disable: SPDMX — Per migration-policy.md, Scala vfail() maps 1:1 to Rust panic!(); Scala's catch ArithmeticException => vfail() is "panic on div-by-zero" and Rust's native i32 % 0 panic IS that vfail-equivalent, so bare % matches Scala 1:1. Adding checked_rem + Some/None would introduce Option-matching scaffolding Scala does not have. Re-enable if this function ever needs to recover from div-by-zero rather than panic. — FrontendRust/guardian-logs/request-2338-1780973805141/hook-2338/mod_i32--490.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def modI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 2)
     val aKind = memory.dereference(args(0))

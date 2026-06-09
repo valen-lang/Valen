@@ -99,6 +99,8 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Test-only JR sync-readies (parity-clean, no body/scaffolding/SPDMX disables): parity-review, release for next test immediately — no architect surface, no fire commit; accumulate uncommitted across consecutive test-only greens until a substantive change arrives.**
 
+**Substantive JR sync-readies (body fill, scaffolding add, SPDMX disable): parity-review, surface to architect, and HOLD JR — don't release next test until the architect rules on the change.**
+
 **Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver. **Don't work on CoordSendSR until after Phase 3 lands** — `[~]` accumulation is the data we want for evaluating the fix's true blast radius.
 
 Body migration stays test-driven: the active test drives which panic stubs get implemented (see "How To Continue").
