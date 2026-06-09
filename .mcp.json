@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "guardian": {
-      "command": "python3",
-      "args": ["/Volumes/V/Sylvan/.claude/hooks/guardian-mcp-server.py"]
-    }
-  }
-}

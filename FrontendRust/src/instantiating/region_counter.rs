@@ -176,8 +176,17 @@ where 's: 'i {
             for template_arg in template_args { count_templata(counter, template_arg) }
             for param in parameters { count_coord(counter, param) }
         }
-        IFunctionNameI::AnonymousSubstructConstructor(_) => panic!("Unimplemented: count_function_name AnonymousSubstructConstructor"),
-        IFunctionNameI::ForwarderFunction(_) => panic!("Unimplemented: count_function_name ForwarderFunction"),
+        IFunctionNameI::AnonymousSubstructConstructor(n) => {
+            let crate::instantiating::ast::names::AnonymousSubstructConstructorNameI { template: crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI { substruct }, template_args, parameters } = *n;
+            count_name(counter, &INameI::from(substruct));
+            for template_arg in template_args { count_templata(counter, template_arg) }
+            for param in parameters { count_coord(counter, param) }
+        }
+        IFunctionNameI::ForwarderFunction(n) => {
+            let crate::instantiating::ast::names::ForwarderFunctionNameI { template: crate::instantiating::ast::names::ForwarderFunctionTemplateNameI { inner: func_template_name, index: _ }, inner: func_name } = *n;
+            count_name(counter, &INameI::from(func_template_name));
+            count_function_name(counter, &func_name);
+        }
         _ => panic!("Unimplemented: count_function_name other"),
     }
 }
@@ -232,7 +241,10 @@ pub fn count_citizen_name<'s, 'i>(counter: &mut CounterI, name: &crate::instanti
         ICitizenNameI::Interface(InterfaceNameI { template: _, template_args }) => {
             for t in template_args.iter() { count_templata(counter, t); }
         }
-        ICitizenNameI::AnonymousSubstruct(_) => panic!("count_citizen_name: AnonymousSubstruct branch"),
+        ICitizenNameI::AnonymousSubstruct(crate::instantiating::ast::names::AnonymousSubstructNameI { template: crate::instantiating::ast::names::AnonymousSubstructTemplateNameI { interface }, template_args }) => {
+            count_name(counter, &INameI::from(*interface));
+            for t in template_args.iter() { count_templata(counter, t); }
+        }
         ICitizenNameI::StaticSizedArray(_) => panic!("count_citizen_name: StaticSizedArray branch (no Scala counterpart)"),
         ICitizenNameI::RuntimeSizedArray(_) => panic!("count_citizen_name: RuntimeSizedArray branch (no Scala counterpart)"),
     }
@@ -555,7 +567,7 @@ pub fn count_static_sized_array<'s, 'i>(counter: &mut CounterI, ssa: &crate::ins
 pub fn count_citizen_id<'s, 'i>(counter: &mut CounterI, citizen_id: &IdI<'s, 'i, sI>)
 where 's: 'i {
     match citizen_id.local_name {
-        INameI::StructName(_) => count_struct_id(counter, citizen_id),
+        INameI::StructName(_) | INameI::LambdaCitizen(_) | INameI::AnonymousSubstruct(_) => count_struct_id(counter, citizen_id),
         INameI::InterfaceName(_) => count_interface_id(counter, citizen_id),
         _ => panic!("count_citizen_id: non-citizen local name"),
     }
@@ -623,7 +635,9 @@ where 's: 'i {
             for t in template_args.iter() { count_templata(counter, t); }
         }
         IStructNameI::LambdaCitizen(_) => {}
-        IStructNameI::AnonymousSubstruct(_) => panic!("count_struct_name: AnonymousSubstruct branch"),
+        IStructNameI::AnonymousSubstruct(crate::instantiating::ast::names::AnonymousSubstructNameI { template: _, template_args }) => {
+            for t in template_args.iter() { count_templata(counter, t); }
+        }
     }
 }
 /*
@@ -672,7 +686,11 @@ where 's: 'i {
             for t in template_args.iter() { count_templata(counter, t); }
             count_citizen_id(counter, &sub_citizen.id());
         }
-        IImplNameI::AnonymousSubstructImpl(_) => panic!("count_impl_name: AnonymousSubstructImpl branch"),
+        IImplNameI::AnonymousSubstructImpl(crate::instantiating::ast::names::AnonymousSubstructImplNameI { template: crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI { interface }, template_args, sub_citizen }) => {
+            count_name(counter, &INameI::from(*interface));
+            for t in template_args.iter() { count_templata(counter, t); }
+            count_citizen_id(counter, &sub_citizen.id());
+        }
         IImplNameI::ImplBound(_) => panic!("count_impl_name: ImplBound branch"),
     }
 }

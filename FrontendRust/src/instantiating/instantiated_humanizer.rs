@@ -249,6 +249,20 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
         INameI::Iterator(i) => "it:".to_string() + &code_map(i.range.begin),
         INameI::Iterable(i) => "ib:".to_string() + &code_map(i.range.begin),
         INameI::IterationOption(i) => "io:".to_string() + &code_map(i.range.begin),
+        INameI::AnonymousSubstruct(n) => {
+            humanize_name(code_map, INameI::AnonymousSubstructTemplate(&n.template), None)
+                + "<" + &n.template_args.iter().map(|t| humanize_templata(code_map, t)).collect::<Vec<_>>().join(",") + ">"
+        }
+        INameI::AnonymousSubstructTemplate(t) => {
+            humanize_name(code_map, t.interface.into(), None) + ".anonymous"
+        }
+        INameI::ForwarderFunction(n) => humanize_name(code_map, INameI::from(n.inner), None),
+        INameI::AnonymousSubstructConstructorTemplate(n) => "asc:".to_string() + &humanize_name(code_map, INameI::from(n.substruct), None),
+        INameI::AnonymousSubstructConstructor(n) => {
+            humanize_name(code_map, INameI::AnonymousSubstructConstructorTemplate(&n.template), None)
+                + "<" + &n.template_args.iter().map(|t| humanize_templata(code_map, t)).collect::<Vec<_>>().join(",") + ">"
+                + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
+        }
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }
 }

@@ -1123,11 +1123,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     crate::typing::names::names::INameT::NonKindNonRegionPlaceholder(nk) => nk.index,
                     _ => panic!("vwat translate_override dispatcher placeholder index"),
                 };
-                let impl_id_c_local = match _impl_id_c.local_name {
-                    crate::instantiating::ast::names::INameI::Impl(n) => n,
-                    _ => panic!("translate_override: _impl_id_c.local_name not Impl"),
-                };
-                let templata_c = impl_id_c_local.template_args[index as usize];
+                let impl_id_c_local: crate::instantiating::ast::names::IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
+                let templata_c = impl_id_c_local.template_args()[index as usize];
                 let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
                 (dispatcher_placeholder_id, templata_s)
             }).collect();
@@ -1136,18 +1133,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             _ => panic!("translate_override: dispatcher_case_id_t.local_name not OverrideDispatcherCase"),
         };
         let dispatcher_case_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
-            case_local_name.independent_impl_template_args.iter().enumerate().map(|(_outer_index, case_placeholder_templata)| {
+            case_local_name.independent_impl_template_args.iter().enumerate().map(|(_enum_index, case_placeholder_templata)| {
                 let case_placeholder_id = Compiler::get_placeholder_templata_id(*case_placeholder_templata);
                 let impl_placeholder = _impl_placeholder_to_case_placeholder.iter().find(|(_, v)| v == case_placeholder_templata).expect("vassertSome implPlaceholderToCasePlaceholder").0;
-                let crate::typing::names::names::INameT::KindPlaceholder(kp) = impl_placeholder.local_name else {
-                    panic!("vwat translate_override case placeholder — expected KindPlaceholder");
+                let index = match impl_placeholder.local_name {
+                    crate::typing::names::names::INameT::KindPlaceholder(kp) => kp.template.index,
+                    _ => panic!("vwat translate_override case placeholder index"),
                 };
-                let index = kp.template.index;
-                let impl_id_c_local = match _impl_id_c.local_name {
-                    crate::instantiating::ast::names::INameI::Impl(n) => n,
-                    _ => panic!("translate_override: _impl_id_c.local_name not Impl"),
-                };
-                let templata_c = impl_id_c_local.template_args[index as usize];
+                let impl_id_c_local: crate::instantiating::ast::names::IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
+                let templata_c = impl_id_c_local.template_args()[index as usize];
                 let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
                 (case_placeholder_id, templata_s)
             }).collect();
@@ -5994,7 +5988,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IVarNameT::Iterator(crate::typing::names::names::IteratorNameT { range, .. }) => IVarNameI::Iterator(interner.intern_iterator_name_si(crate::instantiating::ast::names::IteratorNameI { _marker: std::marker::PhantomData, range: *range })),
             IVarNameT::IterationOption(crate::typing::names::names::IterationOptionNameT { range, .. }) => IVarNameI::IterationOption(interner.intern_iteration_option_name_si(crate::instantiating::ast::names::IterationOptionNameI { _marker: std::marker::PhantomData, range: *range })),
             IVarNameT::MagicParam(crate::typing::names::names::MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_si(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location2 })),
-            IVarNameT::Self_(_) => panic!("Unimplemented: translate_var_name SelfName"),
+            IVarNameT::Self_(_) => IVarNameI::Self_(interner.intern_self_name_si(crate::instantiating::ast::names::SelfNameI(std::marker::PhantomData))),
             _ => panic!("Unimplemented: translate_var_name other"),
         }
     }
@@ -6021,8 +6015,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_function_template_name
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_function_template_name(_func_template_name_t: &IFunctionTemplateNameT<'s, 't>) -> IFunctionTemplateNameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_function_template_name");
+    pub fn translate_function_template_name(&self, _func_template_name_t: &IFunctionTemplateNameT<'s, 't>) -> IFunctionTemplateNameI<'s, 'i, sI> {
+        match _func_template_name_t {
+            IFunctionTemplateNameT::FunctionTemplate(ftn) => {
+                let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = **ftn;
+                IFunctionTemplateNameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
+            }
+            #[allow(unreachable_patterns)]
+            other => panic!("translate_function_template_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+        }
     }
 }
 /*
@@ -6049,7 +6050,18 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                             params.iter().map(|param| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, param).coord).collect::<Vec<_>>()),
                     }))
             }
-            IFunctionNameT::ForwarderFunction(_) => panic!("Unimplemented: translate_function_name ForwarderFunction"),
+            IFunctionNameT::ForwarderFunction(n) => {
+                let crate::typing::names::names::ForwarderFunctionNameT { template, inner } = *n;
+                let crate::typing::names::names::ForwarderFunctionTemplateNameT { inner: inner_template, index } = *template;
+                IFunctionNameI::ForwarderFunction(
+                    self.interner.intern_forwarder_function_name_si(crate::instantiating::ast::names::ForwarderFunctionNameI {
+                        template: *self.interner.intern_forwarder_function_template_name_si(crate::instantiating::ast::names::ForwarderFunctionTemplateNameI {
+                            inner: self.translate_function_template_name(&inner_template),
+                            index,
+                        }),
+                        inner: self.translate_function_name(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner),
+                    }))
+            }
             IFunctionNameT::ExternFunction(n) => {
                 let ExternFunctionNameT { human_name, template_args, parameters, .. } = *n;
                 IFunctionNameI::ExternFunction(
@@ -6071,7 +6083,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                             params.iter().map(|param| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, param).coord).collect::<Vec<_>>()),
                     }))
             }
-            IFunctionNameT::AnonymousSubstructConstructor(_) => panic!("Unimplemented: translate_function_name AnonymousSubstructConstructor"),
+            IFunctionNameT::AnonymousSubstructConstructor(n) => {
+                let crate::typing::names::names::AnonymousSubstructConstructorNameT { template, template_args, parameters: params, .. } = *n;
+                let inner_template_name_i = match self.translate_name_substituting(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &INameT::AnonymousSubstructConstructorTemplate(template)) {
+                    INameI::AnonymousSubstructConstructorTemplate(x) => *x,
+                    _ => panic!("translate_function_name AnonymousSubstructConstructor: expected AnonymousSubstructConstructorTemplate"),
+                };
+                IFunctionNameI::AnonymousSubstructConstructor(
+                    self.interner.intern_anonymous_substruct_constructor_name_si(crate::instantiating::ast::names::AnonymousSubstructConstructorNameI {
+                        template: inner_template_name_i,
+                        template_args: self.interner.alloc_slice_from_vec(template_args.iter().map(|t| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, t)).collect::<Vec<_>>()),
+                        parameters: self.interner.alloc_slice_from_vec(params.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
+                    }))
+            }
             IFunctionNameT::LambdaCallFunction(n) => {
                 let LambdaCallFunctionNameT { template: LambdaCallFunctionTemplateNameT { code_location, param_types: param_types_for_generic, .. }, template_args, parameters: param_types, .. } = *n;
                 IFunctionNameI::LambdaCallFunction(
@@ -6182,7 +6206,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }))
             }
             IImplNameT::ImplBound(_) => panic!("Unimplemented: translate_impl_name ImplBound"),
-            IImplNameT::AnonymousSubstructImpl(_) => panic!("Unimplemented: translate_impl_name AnonymousSubstructImpl"),
+            IImplNameT::AnonymousSubstructImpl(n) => {
+                let crate::typing::names::names::AnonymousSubstructImplNameT { template, template_args, sub_citizen, .. } = **n;
+                let crate::typing::names::names::AnonymousSubstructImplTemplateNameT { interface, .. } = *template;
+                let template_args_i: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
+                let sub_citizen_id = sub_citizen.id();
+                let bound_args_for_callee = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(sub_citizen_id));
+                let sub_citizen_i = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &sub_citizen, &bound_args_for_callee);
+                IImplNameI::AnonymousSubstructImpl(self.interner.intern_anonymous_substruct_impl_name_si(crate::instantiating::ast::names::AnonymousSubstructImplNameI {
+                    template: crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI {
+                        interface: self.translate_interface_template_name(&interface),
+                    },
+                    template_args: self.interner.bump().alloc_slice_fill_iter(template_args_i.into_iter()),
+                    sub_citizen: sub_citizen_i,
+                }))
+            }
         }
     }
 }
@@ -6280,7 +6318,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
-            IStructNameT::AnonymousSubstruct(_) => panic!("translate_struct_name: AnonymousSubstruct branch"),
+            IStructNameT::AnonymousSubstruct(AnonymousSubstructNameT { template, template_args, .. }) => {
+                let AnonymousSubstructTemplateNameT { interface, .. } = **template;
+                let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &new_perspective_region_t, t)).collect();
+                IStructNameI::AnonymousSubstruct(self.interner.intern_anonymous_substruct_name_si(crate::instantiating::ast::names::AnonymousSubstructNameI {
+                    template: *self.interner.intern_anonymous_substruct_template_name_si(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI {
+                        interface: self.translate_interface_template_name(&interface),
+                    }),
+                    template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
+                }))
+            }
             IStructNameT::LambdaCitizen(LambdaCitizenNameT { template: LambdaCitizenTemplateNameT { code_location, .. } }) => {
                 IStructNameI::LambdaCitizen(self.interner.intern_lambda_citizen_name_si(crate::instantiating::ast::names::LambdaCitizenNameI {
                     template: *self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }),
@@ -6363,8 +6410,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_interface_template_name
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_interface_template_name(_name: &IInterfaceTemplateNameT<'s, 't>) -> IInterfaceTemplateNameI<'s, 'i, sI> {
-        panic!("Unimplemented: translate_interface_template_name");
+    pub fn translate_interface_template_name(&self, _name: &IInterfaceTemplateNameT<'s, 't>) -> IInterfaceTemplateNameI<'s, 'i, sI> {
+        match _name {
+            IInterfaceTemplateNameT::InterfaceTemplate(crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. }) => {
+                IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee: *human_namee }))
+            }
+            #[allow(unreachable_patterns)]
+            other => panic!("translate_interface_template_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+        }
     }
 }
 /*
@@ -6389,8 +6442,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             INameT::KindPlaceholderTemplate(_) => panic!("translate_name_substituting: KindPlaceholderTemplate vwat"),
             INameT::KindPlaceholder(_) => panic!("translate_name_substituting: KindPlaceholder vwat"),
             INameT::Struct(_) => panic!("Unimplemented: translate_name_substituting Struct"),
-            INameT::ForwarderFunctionTemplate(_) => panic!("Unimplemented: translate_name_substituting ForwarderFunctionTemplate"),
-            INameT::AnonymousSubstructConstructorTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructConstructorTemplate"),
+            INameT::ForwarderFunctionTemplate(fftn) => {
+                let crate::typing::names::names::ForwarderFunctionTemplateNameT { inner, index } = *fftn;
+                INameI::ForwarderFunctionTemplate(self.interner.intern_forwarder_function_template_name_si(crate::instantiating::ast::names::ForwarderFunctionTemplateNameI {
+                    inner: self.translate_function_template_name(&inner),
+                    index,
+                }))
+            }
+            INameT::AnonymousSubstructConstructorTemplate(astn) => {
+                let crate::typing::names::names::AnonymousSubstructConstructorTemplateNameT { substruct, .. } = *astn;
+                let substruct_as_name: INameT<'s, 't> = match substruct {
+                    crate::typing::names::names::ICitizenTemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
+                    crate::typing::names::names::ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
+                    crate::typing::names::names::ICitizenTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+                    crate::typing::names::names::ICitizenTemplateNameT::StructTemplate(x) => x.into(),
+                    crate::typing::names::names::ICitizenTemplateNameT::InterfaceTemplate(x) => x.into(),
+                    crate::typing::names::names::ICitizenTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
+                };
+                let translated = self.translate_name_substituting(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &substruct_as_name);
+                let citizen_template_name_i: crate::instantiating::ast::names::ICitizenTemplateNameI<'s, 'i, sI> = crate::instantiating::ast::names::ICitizenTemplateNameI::try_from(translated).unwrap();
+                INameI::AnonymousSubstructConstructorTemplate(self.interner.intern_anonymous_substruct_constructor_template_name_si(crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI { substruct: citizen_template_name_i }))
+            }
             INameT::FunctionTemplate(ftn) => {
                 let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = *ftn;
                 INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
@@ -6402,7 +6474,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             INameT::LambdaCitizenTemplate(LambdaCitizenTemplateNameT { code_location, .. }) => {
                 INameI::LambdaCitizenTemplate(self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
             }
-            INameT::AnonymousSubstructTemplate(_) => panic!("Unimplemented: translate_name_substituting AnonymousSubstructTemplate"),
+            INameT::AnonymousSubstructTemplate(astn) => {
+                let crate::typing::names::names::AnonymousSubstructTemplateNameT { interface, .. } = *astn;
+                INameI::AnonymousSubstructTemplate(self.interner.intern_anonymous_substruct_template_name_si(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI {
+                    interface: self.translate_interface_template_name(&interface),
+                }))
+            }
             INameT::LambdaCitizen(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizen"),
             INameT::InterfaceTemplate(itn) => {
                 let crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. } = *itn;
