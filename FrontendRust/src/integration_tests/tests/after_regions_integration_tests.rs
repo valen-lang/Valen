@@ -425,8 +425,30 @@ fn make_array_without_type() { panic!("Unmigrated test: make_array_without_type"
 */
 // mig: fn borrowing_to_array
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn borrowing_to_array() { panic!("Unmigrated test: borrowing_to_array"); }
+fn borrowing_to_array() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\n\nfunc toArray<E>(list &List<E>) []<mut>&E {\n  return []&E(list.len(), { list.get(_) });\n}\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.toArray()[1];\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("Expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Borrowing toArray") {
     val compile = RunCompilation.test(
