@@ -215,8 +215,38 @@ fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated te
 */
 // mig: fn upcasting_in_a_generic_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn upcasting_in_a_generic_function() { panic!("Unmigrated test: upcasting_in_a_generic_function"); }
+#[ignore = "ignored upstream in Scala (see audit comment): pending CoordT redesign — make CoordT contain a placeholder and move Ownership to a generic param so the return type's ownership is calculated from the parameter"]
+fn upcasting_in_a_generic_function() {
+    // This is testing two things:
+    //  - Upcasting inside a generic function
+    //  - The return type's ownership is actually calculated from the parameter. This will
+    //    fail as long as we still have CoordT(Ownership, ITemplata[KindTemplataType])
+    //    because that ownership isn't a templata. The call site will correctly have that
+    //    ownership as borrow, but the definition will think it's an own, *not* a placeholder
+    //    or variable-thing or anything like that. So, when it gets to the instantiator, it
+    //    will actually make the wrong return type. I think the solution will be to make CoordT
+    //    contain a placeholder, and move O to be a generic param.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "func upcast<SuperKind Kind, SubType Ref>(left SubType) SuperType\nwhere O Ownership,\n  SubKind Kind,\n  SuperType Ref = Ref[O, SuperKind],\n  SubType Ref = Ref[O, SubKind],\n  implements(SubType, SuperType)\n{\n  left\n}\n\nsealed interface IShip  {}\nstruct Serenity {}\nimpl IShip for Serenity;\n\nexported func main() {\n  ship &IShip = upcast<IShip>(&Serenity());\n}\n\n",
+    );
+
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+}
 /*
   ignore("Upcasting in a generic function") {
     // This is testing two things:

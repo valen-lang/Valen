@@ -291,9 +291,27 @@ fn owning_interface() {
 */
 // mig: fn simple_override_with_param_and_bound
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn simple_override_with_param_and_bound() {
-    panic!("Unmigrated test: simple_override_with_param_and_bound");
+    // This is the Serenity case in ROWC.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Serenity<A Ref, B Ref, C Ref> { }\nimpl<H, I, J> ISpaceship<H, I, J> for Serenity<H, I, J>;\nfunc launch<M, N, P>(self &Serenity<M, N, P>, bork M)\n    where func drop(M)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Serenity<int, bool, str>();\n  ship.launch(7);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Simple override with param and bound") {
@@ -321,9 +339,27 @@ fn simple_override_with_param_and_bound() {
 */
 // mig: fn struct_with_different_ordered_runes
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn struct_with_different_ordered_runes() {
-    panic!("Unmigrated test: struct_with_different_ordered_runes");
+    // This is the Firefly case in ROWC.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Firefly<A Ref, B Ref, C Ref> { }\nimpl<H, I, J> ISpaceship<H, I, J> for Firefly<J, I, H>;\nfunc launch<M, N, P>(self &Firefly<M, N, P>, bork P)\n    where func drop(P)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Firefly<str, bool, int>();\n  ship.launch(7);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Struct with different ordered runes") {
@@ -351,9 +387,27 @@ fn struct_with_different_ordered_runes() {
 */
 // mig: fn struct_with_less_generic_params_than_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn struct_with_less_generic_params_than_interface() {
-    panic!("Unmigrated test: struct_with_less_generic_params_than_interface");
+    // This is the Raza case in ROWC.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Raza<B Ref, C Ref> { }\nimpl<I, J> ISpaceship<int, I, J> for Raza<I, J>;\nfunc launch<N, P>(self &Raza<N, P>, bork int) { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Raza<bool, str>();\n  ship.launch(7);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Struct with less generic params than interface") {
@@ -409,9 +463,27 @@ fn struct_with_more_generic_params_than_interface() {
 */
 // mig: fn struct_repeating_generic_params_for_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn struct_repeating_generic_params_for_interface() {
-    panic!("Unmigrated test: struct_repeating_generic_params_for_interface");
+    // This is the Enterprise case in ROWC.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Enterprise<A Ref> { }\nimpl<H> ISpaceship<H, H, H> for Enterprise<H>;\nfunc launch<H>(self &Enterprise<H>, bork H) where func drop(H)void { }\n\nexported func main() {\n  ship ISpaceship<int, int, int> = Enterprise<int>();\n  ship.launch(7);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Struct repeating generic params for interface") {
@@ -530,9 +602,26 @@ fn can_call_interface_envs_function_from_outside() {
 */
 // mig: fn interface_with_method_with_param_of_substruct
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn interface_with_method_with_param_of_substruct() {
-    panic!("Unmigrated test: interface_with_method_with_param_of_substruct");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "struct List<T Ref> { }\n\nsealed interface SectionMember {}\nstruct Header {}\nimpl SectionMember for Header;\nabstract func collectHeaders2(header &List<&Header>, virtual this &SectionMember);\nfunc collectHeaders2(header &List<&Header>, this &Header) { }\n",
+    );
+    let _coutputs = compile.get_hamuts();
 }
 /*
   test("Interface with method with param of substruct") {
@@ -551,9 +640,26 @@ fn interface_with_method_with_param_of_substruct() {
 */
 // mig: fn feeding_instantiation_bounds_for_something_created_in_same_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn feeding_instantiation_bounds_for_something_created_in_same_function() {
-    panic!("Unmigrated test: feeding_instantiation_bounds_for_something_created_in_same_function");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "#!DeriveStructDrop\nstruct Spork<T Ref, Y>\nwhere func splork(Y)void {\n  lam Y;\n}\n\nfunc bork<T, Y>(\n  self &Spork<T, Y> // It had trouble here finding the bound for splork\n) { }\n\nfunc splork(x int) {}\n\nexported func main() int {\n  f = Spork<int>(42);\n  f.bork(); // We should be feeding in Spork's instantiation bounds here for the params' reachables?\n  [z] = f;\n  return z;\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Feeding instantiation bounds for something created in same function") {
@@ -583,9 +689,26 @@ fn feeding_instantiation_bounds_for_something_created_in_same_function() {
 */
 // mig: fn generic_interface_forwarder_with_bound
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn generic_interface_forwarder_with_bound() {
-    panic!("Unmigrated test: generic_interface_forwarder_with_bound");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "#!DeriveInterfaceDrop\nsealed interface Bork<T Ref>\nwhere func threeify(T)T {\n  func bork(virtual self &Bork<T>) int;\n}\n\n#!DeriveStructDrop\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)().threeify();\n}\n\nfunc threeify(x int) int { 3 }\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  z = f.bork();\n  [_] = f;\n  return z;\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Generic interface forwarder with bound") {
@@ -623,9 +746,26 @@ fn generic_interface_forwarder_with_bound() {
 */
 // mig: fn generic_interface_forwarder_with_drop_bound
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn generic_interface_forwarder_with_drop_bound() {
-    panic!("Unmigrated test: generic_interface_forwarder_with_drop_bound");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "sealed interface Bork<T Ref>\nwhere func threeify(T)T {\n  func bork(virtual self &Bork<T>) int;\n}\n\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)().threeify();\n}\n\nfunc threeify(x int) int { 3 }\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  return f.bork();\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Generic interface forwarder with drop bound") {
