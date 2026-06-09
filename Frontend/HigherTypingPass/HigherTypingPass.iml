@@ -8,7 +8,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="Highlighter" />
     <orderEntry type="module" module-name="ParsingPass" />
     <orderEntry type="module" module-name="Tests" />
     <orderEntry type="module" module-name="PostParsingPass" />

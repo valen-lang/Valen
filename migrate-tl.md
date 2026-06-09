@@ -128,7 +128,7 @@ Moved to **`FrontendRust/src/typing/typing-pass-todo.md`** (open deferrals, clea
 
 - **Slicing** — complete (all passes, incl. TestVM).
 - **Test harness** (`run_compilation.rs` + per-pass `*test_compilation.rs`) — migrated; the capstone test runs through it.
-- **Pipeline / seam wiring** — finish `pass_manager::main`'s stubbed phases (Scout, `.vpst` loading, highlight mode), and replace the `full_compilation.rs` `HammerCompilation` `PhantomData` seam with the real thing.
+- **Pipeline / seam wiring** — finish `pass_manager::main`'s stubbed phases (Scout, `.vpst` loading), and replace the `full_compilation.rs` `HammerCompilation` `PhantomData` seam with the real thing. (Highlight mode retired — replaced by `VmdSiteGen/tools/highlighter` using inkjet + tree-sitter-vale.)
 - **`final_ast` data shapes** — `ast.rs`/`instructions.rs` payloads still on `PhantomData` need real field types.
 - **VON wire-format parity** — `von_hammer` output must match what the backend reads (the real acceptance criterion); the ignored tests must assert the *same* behavior as Scala, not merely compile.
 - **Cut over the build** — make the `frontend_rust` bin the actual frontend, replacing the Scala invocation.

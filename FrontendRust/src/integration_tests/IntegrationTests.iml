@@ -12,7 +12,6 @@
     <orderEntry type="module" module-name="HigherTypingPass" />
     <orderEntry type="module" module-name="PassManager" />
     <orderEntry type="module" module-name="SimplifyingPass" />
-    <orderEntry type="module" module-name="Highlighter" />
     <orderEntry type="module" module-name="FinalAST" />
     <orderEntry type="module" module-name="ParsingPass" />
     <orderEntry type="module" module-name="Tests" exported="" />

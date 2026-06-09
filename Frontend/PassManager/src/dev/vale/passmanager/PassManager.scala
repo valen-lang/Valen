@@ -2,7 +2,6 @@ package dev.vale.passmanager
 
 import dev.vale.highertyping.HigherTypingErrorHumanizer
 import dev.vale.simplifying.VonHammer
-import dev.vale.highlighter.{Highlighter, Spanner}
 import dev.vale.finalast.{PackageH, ProgramH}
 import dev.vale.options.GlobalOptions
 import dev.vale.parsing.{ParseErrorHumanizer, ParsedLoader, ParserVonifier}
@@ -15,7 +14,6 @@ import java.io.{BufferedWriter, File, FileNotFoundException, FileOutputStream, F
 import java.util.InputMismatchException
 import dev.vale.highertyping.ProgramA
 import dev.vale.simplifying.Hammer
-import dev.vale.highlighter.Spanner
 import dev.vale.finalast.PackageH
 import dev.vale.lexing.{FailedParse, InputException}
 import dev.vale.postparsing.PostParserErrorHumanizer
@@ -527,53 +525,12 @@ override def equals(obj: Any): Boolean = vcurious(); }
 
       opts.mode.get match {
         case "highlight" => {
-          vcheck(opts.inputs.size == 1, "Must have exactly 1 input file for highlighting", InputException)
-          val Vector(inputFilePath) = opts.inputs
-
-          val compilation =
-            new FullCompilation(
-              interner,
-              keywords,
-              opts.inputs.map(_.packageCoord(interner)).distinct,
-              Builtins.getCodeMap(interner, keywords).or(packageCoord => resolvePackageContents(interner, opts.inputs, packageCoord)),
-              passmanager.FullCompilationOptions(
-                GlobalOptions(opts.sanityCheck, true, opts.useOptimizedSolver, opts.verboseErrors, opts.debugOutput),
-                if (opts.verboseErrors) {
-                  (x => {
-                    println("##: " + x)
-                  })
-                } else {
-                  x => Unit // do nothing with it
-                }))
-
-          val parseds =
-            compilation.getParseds() match {
-              case Err(FailedParse(code, fileCoord, error)) => {
-                throw InputException(ParseErrorHumanizer.humanize(SourceCodeUtils.humanizeFile(fileCoord), code, error))
-              }
-              case Ok(p) => p
-            }
-          val valeCodeMap = compilation.getCodeMap().getOrDie()
-          val vpstCodeMap = compilation.getVpstMap().getOrDie()
-
-          val code =
-            valeCodeMap.fileCoordToContents.values.toVector match {
-              case Vector() => throw InputException("No vale code given to highlight!")
-              case Vector(x) => x
-              case _ => throw InputException("Too many files given to highlight!")
-            }
-          val vpst = vassertOne(vpstCodeMap.fileCoordToContents.values)
-
-          parseds.map({ case (FileCoordinate(_, filepath), (parsed, commentRanges)) =>
-            val span = Spanner.forProgram(parsed)
-            val highlights = Highlighter.toHTML(code, span, commentRanges)
-            if (opts.outputDirPath == Some("")) {
-              println(highlights)
-            } else {
-              val outputFilepath = filepath.replaceAll("\\.vale", ".html")
-              writeFile(outputFilepath, highlights)
-            }
-          })
+          // Retired. Static-HTML highlighting now lives in VmdSiteGen/tools/highlighter
+          // (Rust binary using inkjet + the tree-sitter-vale grammar). Editor
+          // highlighting uses the same tree-sitter grammar directly. See
+          // VmdSiteGen commit e4953c7 "Replace Java/highlight.js highlighting
+          // with build-time inkjet binary".
+          throw InputException("Highlight mode has been retired; use VmdSiteGen/tools/highlighter (inkjet + tree-sitter-vale) instead.")
         }
         case "build" => {
           vcheck(opts.outputDirPath.nonEmpty, "Must specify --output-dir!", InputException)

@@ -10,7 +10,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="org.scalatest:scalatest_2.12:3.0.8" level="project" />
     <orderEntry type="module" module-name="HigherTypingPass" />
-    <orderEntry type="module" module-name="Highlighter" />
     <orderEntry type="module" module-name="FinalAST" />
     <orderEntry type="module" module-name="ParsingPass" />
     <orderEntry type="module" module-name="Tests" />
