@@ -263,6 +263,7 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
                 + "<" + &n.template_args.iter().map(|t| humanize_templata(code_map, t)).collect::<Vec<_>>().join(",") + ">"
                 + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
         }
+        INameI::Self_(_) => "self".to_string(),
         other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
     }
 }

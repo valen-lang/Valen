@@ -817,7 +817,6 @@ fn generic_interface_forwarder_with_drop_bound() {
 */
 // mig: fn open_interface_constructor
 #[test]
-#[ignore = "blocked - InstantiatedHumanizer has no ConstructorTemplate arm in Scala either (upstream MatchError)"]
 fn open_interface_constructor() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1143,9 +1142,29 @@ fn failed_owning_downcast_with_as() {
 */
 // mig: fn lambda_is_compatible_anonymous_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn lambda_is_compatible_anonymous_interface() {
-    panic!("Unmigrated test: lambda_is_compatible_anonymous_interface");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport castutils.*;\n\ninterface AFunction2<R Ref, P1 Ref, P2 Ref> {\n  func __call(virtual this &AFunction2<R, P1, P2>, a P1, b P2) R;\n}\nexported func main() str {\n  func = AFunction2<str, int, bool>((i, b) => { str(i) + str(b) });\n  return func(42, true);\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "42true" => {}
+        other => panic!("Expected VonStr(\"42true\"), got {:?}", other),
+    }
 }
 /*
   test("Lambda is compatible anonymous interface") {
