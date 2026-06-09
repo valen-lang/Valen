@@ -383,8 +383,11 @@ where 's: 't,
         for e in self.get_param_environments(coutputs, range, param_filters) {
             self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
         }
-        for _e in extra_envs_to_look_in {
-            self.get_candidate_banners_inner(env, coutputs, range, function_name, searched_envs, results);
+        for e in self.get_placeholder_extra_call_envs(env, coutputs, range, param_filters) {
+            self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
+        }
+        for e in extra_envs_to_look_in {
+            self.get_candidate_banners_inner(*e, coutputs, range, function_name, searched_envs, results);
         }
     }
 /*
@@ -1046,6 +1049,47 @@ where 's: 't,
                 _ => Vec::new()
             }
         }).collect()
+    }
+
+    pub fn get_placeholder_extra_call_envs(
+        &self,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        param_filters: &[CoordT<'s, 't>],
+    ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
+        let mut collected: Vec<IInDenizenEnvironmentT<'s, 't>> = Vec::new();
+        let mut seen: std::collections::HashSet<IdT<'s, 't>> = std::collections::HashSet::new();
+        // Look through each parameter, and if it's a placeholder that impls an interface, grab
+        // the interface env so that callers can look inside them for methods too (see @BDPFWDZ).
+        for tyype in param_filters.iter() {
+            match tyype.kind {
+                KindT::KindPlaceholder(kp) => {
+                    let placeholder_imprecise = match get_imprecise_name(self.scout_arena, kp.id.local_name) {
+                        None => panic!("Placeholder localName had no imprecise name: {:?}", kp.id.local_name),
+                        Some(n) => n,
+                    };
+                    let impl_key = self.scout_arena.intern_imprecise_name(
+                        IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: placeholder_imprecise }));
+                    let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<std::collections::HashSet<_>>();
+                    let matching = calling_env.lookup_all_with_imprecise_name(impl_key, lookup_filter, self.typing_interner);
+                    for m in matching {
+                        match m {
+                            ITemplataT::Isa(&IsaTemplataT { super_kind: KindT::Interface(super_id), .. }) => {
+                                let template_id = self.get_interface_template(super_id.id);
+                                if !seen.contains(&template_id) {
+                                    seen.insert(template_id);
+                                    collected.push(coutputs.get_outer_env_for_type(range, template_id));
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        collected
     }
 /*
   // Gets all the environments for all the arguments.

@@ -113,8 +113,62 @@ fn imm_tuple_access() { panic!("Unmigrated test: imm_tuple_access"); }
 */
 // mig: fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() { panic!("Unmigrated test: interface_method_call_on_impl_bounded_generic_dispatches_through_interface"); }
+fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() {
+    // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
+    // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
+    // getFuel, then dispatch virtually to Raza's override at runtime.
+    //
+    // Why this isn't automatic: Vale's interface abstract methods don't sit at the package
+    // level. They live inside the interface's own outer env, reachable only via
+    // coutputs.getOuterEnvForType(getInterfaceTemplate(IShip)). For a *concrete* &IShip
+    // receiver, OverloadResolver.getParamEnvironments mechanically returns IShip's outer
+    // env (because the receiver's type names IShip directly). For a *placeholder* &T
+    // receiver, the type doesn't name IShip — IShip is one indirection away, declared via
+    // the where-clause as an IsaTemplataT(T, IShip) entry in genericGetFuel's near-env.
+    // Without something following that indirection, the lookup of getFuel finds only the
+    // free function `getFuel(self &Raza)` (which type-mismatches T) and never reaches
+    // IShip's outer env where the abstract method lives. Pre-fix, this produced
+    // "No ancestors satisfy call" and the program failed to type-check.
+    //
+    // What we changed: OverloadResolver.getCandidateBanners now also calls
+    // getPlaceholderImplBoundEnvs alongside getParamEnvironments. For each placeholder-
+    // typed param, it looks up ambient impl bounds keyed by the placeholder's imprecise
+    // name (ImplSubCitizenImpreciseNameS, populated automatically when addRunedDataToNearEnv
+    // writes the IsaTemplataT into the near-env), pulls each IsaTemplataT, and adds each
+    // super-interface's outer env to the candidate search. With that, the abstract
+    // getFuel(virtual self &IShip) becomes a candidate; the inner per-call-site solve
+    // verifies T isa IShip via the same IsaTemplataT (through ImplCompiler.isParent); the
+    // call resolves; the instantiator monomorphizes genericGetFuel<Raza>; and the backend
+    // dispatches getFuel virtually through Raza's vtable, returning 42.
+    //
+    // The fix is principle-aligned with @BDPFWDZ (By Default Pull From Where Declared):
+    // IShip's methods stay in IShip's outer env where they were declared; the resolver
+    // walks (via the where-clause's IsaTemplataT link) to find them; nothing is copied
+    // into the calling function's near-env. See
+    // docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md for the broader principle.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "sealed interface IShip {\n  func getFuel(virtual self &IShip) int;\n}\nstruct Raza { fuel int; }\nimpl IShip for Raza;\nfunc getFuel(self &Raza) int { return self.fuel; }\n\nfunc genericGetFuel<T>(x &T) int\nwhere implements(T, IShip) {\n  return x.getFuel();\n}\n\nexported func main() int {\n  return genericGetFuel(&Raza(42));\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
+}
 /*
   test("Interface Method call on impl-bounded generic dispatches through interface") {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
