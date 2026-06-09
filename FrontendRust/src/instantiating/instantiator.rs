@@ -1136,8 +1136,20 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             _ => panic!("translate_override: dispatcher_case_id_t.local_name not OverrideDispatcherCase"),
         };
         let dispatcher_case_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
-            case_local_name.independent_impl_template_args.iter().enumerate().map(|(_index, _case_placeholder_templata)| {
-                panic!("translate_override: case placeholder closure body");
+            case_local_name.independent_impl_template_args.iter().enumerate().map(|(_outer_index, case_placeholder_templata)| {
+                let case_placeholder_id = Compiler::get_placeholder_templata_id(*case_placeholder_templata);
+                let impl_placeholder = _impl_placeholder_to_case_placeholder.iter().find(|(_, v)| v == case_placeholder_templata).expect("vassertSome implPlaceholderToCasePlaceholder").0;
+                let crate::typing::names::names::INameT::KindPlaceholder(kp) = impl_placeholder.local_name else {
+                    panic!("vwat translate_override case placeholder — expected KindPlaceholder");
+                };
+                let index = kp.template.index;
+                let impl_id_c_local = match _impl_id_c.local_name {
+                    crate::instantiating::ast::names::INameI::Impl(n) => n,
+                    _ => panic!("translate_override: _impl_id_c.local_name not Impl"),
+                };
+                let templata_c = impl_id_c_local.template_args[index as usize];
+                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
+                (case_placeholder_id, templata_s)
             }).collect();
         let dispatcher_placeholder_id_to_supplied_templata_map: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
             dispatcher_placeholder_id_to_supplied_templata.iter().copied().collect();

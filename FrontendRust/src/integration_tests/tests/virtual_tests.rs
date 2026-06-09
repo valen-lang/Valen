@@ -434,9 +434,27 @@ fn struct_with_less_generic_params_than_interface() {
 */
 // mig: fn struct_with_more_generic_params_than_interface
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn struct_with_more_generic_params_than_interface() {
-    panic!("Unmigrated test: struct_with_more_generic_params_than_interface");
+    // This is the Milano case in ROWC.
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Milano<A Ref, B Ref, C Ref, D Ref> { }\nimpl<H, I, J, K> ISpaceship<H, I, J> for Milano<H, I, J, K>;\nfunc launch<H, I, J, K>(self &Milano<H, I, J, K>, bork H) where func drop(H)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Milano<int, bool, str, float>();\n  ship.launch(7);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Struct with more generic params than interface") {
