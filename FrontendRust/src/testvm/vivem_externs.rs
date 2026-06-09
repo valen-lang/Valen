@@ -955,7 +955,19 @@ pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prot
   }
 */
 // mig: fn new_vec_with_capacity
-pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec_with_capacity"); }
+pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
+    assert!(args.len() == 1);
+    // This whole function only exists for testing purposes
+    match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: 42, bits: 64, .. }) => {}
+        _ => panic!(),
+    }
+    let opaque_coord = match prototype.return_type {
+        crate::final_ast::types::CoordH { ownership: own, location: loc, kind: crate::final_ast::types::KindHT::OpaqueHT(s) } => crate::final_ast::types::CoordH { ownership: own, location: loc, kind: crate::final_ast::types::KindHT::OpaqueHT(s) },
+        _ => panic!(),
+    };
+    Ok(memory.new_opaque(opaque_coord))
+}
 /*
   def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
@@ -972,7 +984,15 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v,
   }
 */
 // mig: fn vec_capacity
-pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: vec_capacity"); }
+pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, _prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
+    assert!(args.len() == 1);
+    match memory.dereference(args[0]) {
+        crate::testvm::values::KindV::Opaque(_) => {}
+        _ => panic!(),
+    }
+    // This whole function just exists for testing, there are some tests that feed 42 in to newVecWithCapacity
+    Ok(memory.add_allocation_for_return(crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Int(crate::testvm::values::IntV { value: 42, bits: 64, _phantom: std::marker::PhantomData })))
+}
 /*
   def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 1)
