@@ -42,6 +42,13 @@ object CompilerErrorHumanizer {
         case RangedInternalErrorT(range, message) => {
           "Internal error: " + message
         }
+        case WeakableImplingMismatch(range, structWeakable, interfaceWeakable) => {
+          "Weakable mismatch in impl: struct " + (if (structWeakable) "is" else "is not") +
+            " weakable, but interface " + (if (interfaceWeakable) "is" else "is not") + "."
+        }
+        case TookWeakRefOfNonWeakableError(range) => {
+          "Took a weak reference of something that isn't weakable. Did you mean to add the `weakable` keyword?"
+        }
         case CouldntFindOverrideT(range, fff) => {
           "Couldn't find an override:\n" +
             humanizeFindFunctionFailure(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, range, fff)

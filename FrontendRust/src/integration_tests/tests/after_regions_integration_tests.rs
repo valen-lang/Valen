@@ -12,12 +12,10 @@ import dev.vale.passmanager.{FullCompilation, FullCompilationOptions}
 import dev.vale.postparsing._
 import dev.vale.testvm._
 import dev.vale.typing.ast._
-import dev.vale.typing.citizen.WeakableImplingMismatch
-import dev.vale.typing.expression.TookWeakRefOfNonWeakableError
 import dev.vale.typing.names.{FunctionNameT, FunctionTemplateNameT}
 import dev.vale.typing.templata.MutabilityTemplataT
 import dev.vale.typing.types._
-import dev.vale.typing.{HinputsT, ICompileErrorT}
+import dev.vale.typing.{HinputsT, ICompileErrorT, WeakableImplingMismatch, TookWeakRefOfNonWeakableError}
 import dev.vale.von.{IVonData, VonBool, VonFloat, VonInt}
 import org.scalatest._
 

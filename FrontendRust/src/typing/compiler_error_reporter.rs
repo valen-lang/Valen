@@ -132,6 +132,8 @@ pub enum ICompileErrorT<'s, 't> {
     CantImplNonInterface { range: &'t [RangeS<'s>], templata: ITemplataT<'s, 't> },
     NonCitizenCantImpl { range: &'t [RangeS<'s>], templata: ITemplataT<'s, 't> },
     RangedInternalErrorT { range: &'t [RangeS<'s>], message: &'s str },
+    WeakableImplingMismatch { range: &'t [RangeS<'s>], struct_weakable: bool, interface_weakable: bool },
+    TookWeakRefOfNonWeakableError { range: &'t [RangeS<'s>] },
 }
 /*
 sealed trait ICompileErrorT { def range: List[RangeS] }
@@ -195,6 +197,8 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::CantImplNonInterface { range, .. } => *range,
             Self::NonCitizenCantImpl { range, .. } => *range,
             Self::RangedInternalErrorT { range, .. } => *range,
+            Self::WeakableImplingMismatch { range, .. } => *range,
+            Self::TookWeakRefOfNonWeakableError { range, .. } => *range,
         }
     }
 }
@@ -565,6 +569,14 @@ override def hashCode(): Int = vcurious()
 */
 /*
   vbreak()
+}
+case class WeakableImplingMismatch(range: List[RangeS], structWeakable: Boolean, interfaceWeakable: Boolean) extends ICompileErrorT {
+override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+}
+case class TookWeakRefOfNonWeakableError(range: List[RangeS]) extends ICompileErrorT {
+override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 /*

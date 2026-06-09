@@ -80,15 +80,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 */
-pub struct TookWeakRefOfNonWeakableError;
-
-/*
-case class TookWeakRefOfNonWeakableError() extends Throwable {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-
-*/
 /*
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -279,7 +270,7 @@ where 's: 't,
           targetOwnership match {
             case LoadAsWeakP if x.result.coord.ownership != WeakT => {
               val borrowExpr = localHelper.softLoad(nenv, range, x, LoadAsBorrowP, region)
-              weakAlias(coutputs, borrowExpr)
+              weakAlias(coutputs, range, borrowExpr)
             }
             case _ => localHelper.softLoad(nenv, range, x, targetOwnership, region)
           }
@@ -1254,7 +1245,7 @@ where 's: 't,
                                         life.add(self.typing_interner, 3), region,
                                         source_te, OwnershipT::Borrow);
                                     let expr = ReferenceExpressionTE::Defer(self.typing_interner.alloc(defer_te));
-                                    self.weak_alias(coutputs, expr)
+                                    self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), expr)?
                                 }
                                 LoadAsP::Use => {
                                     panic!("implement: Ownershipped OwnT UseP (vcurious)");
@@ -1265,7 +1256,11 @@ where 's: 't,
                             match ownershipped.target_ownership {
                                 LoadAsP::Move => panic!("implement: Ownershipped BorrowT MoveP (vcurious)"),
                                 LoadAsP::LoadAsBorrow => source_te,
-                                LoadAsP::LoadAsWeak => self.weak_alias(coutputs, source_te),
+                                LoadAsP::LoadAsWeak => {
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                    self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), source_te)?
+                                }
                                 LoadAsP::Use => source_te,
                             }
                         }
@@ -2365,7 +2360,7 @@ where 's: 't,
                   }
                   case LoadAsWeakP => {
                     val expr = localHelper.makeTemporaryLocal(coutputs, nenv, range :: parentRanges, outerCallLocation, life + 3, region, sourceTE, BorrowT)
-                    weakAlias(coutputs, expr)
+                    weakAlias(coutputs, range :: parentRanges, expr)
                   }
                   case UseP => vcurious()
                 }
@@ -2374,7 +2369,7 @@ where 's: 't,
                 loadAsP match {
                   case MoveP => vcurious() // Can we even coerce to an owning reference?
                   case LoadAsBorrowP => sourceTE
-                  case LoadAsWeakP => weakAlias(coutputs, sourceTE)
+                  case LoadAsWeakP => weakAlias(coutputs, range :: parentRanges, sourceTE)
                   case UseP => sourceTE
                 }
               }
@@ -3783,34 +3778,44 @@ where 's: 't,
     pub fn weak_alias(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &'t [RangeS<'s>],
         expr: ReferenceExpressionTE<'s, 't>,
-    ) -> ReferenceExpressionTE<'s, 't> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match expr.result().coord.kind {
             KindT::Struct(sr) => {
                 let struct_def = coutputs.lookup_struct(sr.id, self);
-                assert!(struct_def.weakable, "TookWeakRefOfNonWeakableError");
+                if !struct_def.weakable {
+                    return Err(ICompileErrorT::TookWeakRefOfNonWeakableError { range: parent_ranges });
+                }
             }
-            KindT::Interface(_) => {
-                panic!();
+            KindT::Interface(ir) => {
+                let interface_def = coutputs.lookup_interface(*ir, self);
+                if !interface_def.weakable {
+                    return Err(ICompileErrorT::TookWeakRefOfNonWeakableError { range: parent_ranges });
+                }
             }
             _ => panic!("vfail"),
         }
 
         match expr.result().coord.ownership {
-            OwnershipT::Borrow => ReferenceExpressionTE::BorrowToWeak(self.typing_interner.alloc(BorrowToWeakTE { inner_expr: expr })),
+            OwnershipT::Borrow => Ok(ReferenceExpressionTE::BorrowToWeak(self.typing_interner.alloc(BorrowToWeakTE { inner_expr: expr }))),
             other => panic!("vwat: {:?}", other),
         }
     }
 /*
-  def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
+  def weakAlias(coutputs: CompilerOutputs, parentRanges: List[RangeS], expr: ReferenceExpressionTE): ReferenceExpressionTE = {
     expr.kind match {
       case sr @ StructTT(_) => {
         val structDef = coutputs.lookupStruct(sr.id)
-        vcheck(structDef.weakable, TookWeakRefOfNonWeakableError)
+        if (!structDef.weakable) {
+          throw CompileErrorExceptionT(TookWeakRefOfNonWeakableError(parentRanges))
+        }
       }
       case ir @ InterfaceTT(_) => {
         val interfaceDef = coutputs.lookupInterface(ir)
-        vcheck(interfaceDef.weakable, TookWeakRefOfNonWeakableError)
+        if (!interfaceDef.weakable) {
+          throw CompileErrorExceptionT(TookWeakRefOfNonWeakableError(parentRanges))
+        }
       }
       case _ => vfail()
     }

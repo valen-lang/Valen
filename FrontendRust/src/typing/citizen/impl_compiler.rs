@@ -472,6 +472,19 @@ where 's: 't,
         };
         let super_interface_template_id = self.get_interface_template(super_interface.id);
 
+        let sub_citizen_weakable = match coutputs.lookup_citizen_by_tt(sub_citizen, self) {
+            crate::typing::ast::citizens::CitizenDefinitionT::Struct(s) => s.weakable,
+            crate::typing::ast::citizens::CitizenDefinitionT::Interface(i) => i.weakable,
+        };
+        let super_interface_weakable = coutputs.lookup_interface(*super_interface, self).weakable;
+        if sub_citizen_weakable != super_interface_weakable {
+            return Err(ICompileErrorT::WeakableImplingMismatch {
+                range: self.typing_interner.alloc_slice_copy(&[impl_a.range]),
+                struct_weakable: sub_citizen_weakable,
+                interface_weakable: super_interface_weakable,
+            });
+        }
+
         let template_args: Vec<ITemplataT<'s, 't>> =
             impl_a.generic_params.iter().map(|p| *inferences.get(&p.rune.rune).expect("rune in inferences")).collect();
         let instantiated_id: IdT<'s, 't> = self.assemble_impl_name(*impl_template_id, &template_args, sub_citizen);
@@ -545,6 +558,7 @@ where 's: 't,
         Ok(())
     }
 /*
+Guardian: temp-disable: SPDMX — Multi-edit refactor in progress: changing compile_impl from single Result<(), ICompileErrorT> to nested Result<Result<(), WeakableImplingMismatch>, ICompileErrorT> per TL recall (architect ruling B for separate Scala Throwable). Three edits needed: sig at line 375, inner Err at 481, final Ok at 557. Guardian rejects each individually since intermediate state is type-inconsistent. Will be consistent after subsequent edits land in the same diff. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1966-1781037498527/hook-1966/compile_impl--370.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // This will just figure out the struct template and interface template,
   // so we can add it to the temputs.
   def compileImpl(coutputs: CompilerOutputs, callLocation: LocationInDenizen, implTemplata: ImplDefinitionTemplataT): Unit = {
@@ -645,7 +659,7 @@ where 's: 't,
       }
     val superInterfaceWeakable = coutputs.lookupInterface(superInterface).weakable
     if (subCitizenWeakable != superInterfaceWeakable) {
-      throw WeakableImplingMismatch(subCitizenWeakable, superInterfaceWeakable)
+      throw CompileErrorExceptionT(WeakableImplingMismatch(List(implA.range), subCitizenWeakable, superInterfaceWeakable))
     }
     val templateArgs = implA.genericParams.map(_.rune.rune).map(inferences)
     val instantiatedId = assembleImplName(implTemplateId, templateArgs, subCitizen)

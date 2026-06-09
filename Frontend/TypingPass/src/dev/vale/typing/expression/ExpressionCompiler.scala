@@ -32,11 +32,6 @@ import scala.collection.immutable.{List, Nil, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-case class TookWeakRefOfNonWeakableError() extends Throwable {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -152,7 +147,7 @@ class ExpressionCompiler(
           targetOwnership match {
             case LoadAsWeakP if x.result.coord.ownership != WeakT => {
               val borrowExpr = localHelper.softLoad(nenv, range, x, LoadAsBorrowP, region)
-              weakAlias(coutputs, borrowExpr)
+              weakAlias(coutputs, range, borrowExpr)
             }
             case _ => localHelper.softLoad(nenv, range, x, targetOwnership, region)
           }
@@ -631,7 +626,7 @@ class ExpressionCompiler(
                   }
                   case LoadAsWeakP => {
                     val expr = localHelper.makeTemporaryLocal(coutputs, nenv, range :: parentRanges, outerCallLocation, life + 3, region, sourceTE, BorrowT)
-                    weakAlias(coutputs, expr)
+                    weakAlias(coutputs, range :: parentRanges, expr)
                   }
                   case UseP => vcurious()
                 }
@@ -640,7 +635,7 @@ class ExpressionCompiler(
                 loadAsP match {
                   case MoveP => vcurious() // Can we even coerce to an owning reference?
                   case LoadAsBorrowP => sourceTE
-                  case LoadAsWeakP => weakAlias(coutputs, sourceTE)
+                  case LoadAsWeakP => weakAlias(coutputs, range :: parentRanges, sourceTE)
                   case UseP => sourceTE
                 }
               }
@@ -1768,15 +1763,19 @@ class ExpressionCompiler(
     (ownResultCoord, okConstructor, okResultImpl, errConstructor, errResultImpl)
   }
 
-  def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
+  def weakAlias(coutputs: CompilerOutputs, parentRanges: List[RangeS], expr: ReferenceExpressionTE): ReferenceExpressionTE = {
     expr.kind match {
       case sr @ StructTT(_) => {
         val structDef = coutputs.lookupStruct(sr.id)
-        vcheck(structDef.weakable, TookWeakRefOfNonWeakableError)
+        if (!structDef.weakable) {
+          throw CompileErrorExceptionT(TookWeakRefOfNonWeakableError(parentRanges))
+        }
       }
       case ir @ InterfaceTT(_) => {
         val interfaceDef = coutputs.lookupInterface(ir)
-        vcheck(interfaceDef.weakable, TookWeakRefOfNonWeakableError)
+        if (!interfaceDef.weakable) {
+          throw CompileErrorExceptionT(TookWeakRefOfNonWeakableError(parentRanges))
+        }
       }
       case _ => vfail()
     }

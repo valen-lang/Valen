@@ -276,6 +276,14 @@ case class RangedInternalErrorT(range: List[RangeS], message: String) extends IC
 override def hashCode(): Int = vcurious()
   vbreak()
 }
+case class WeakableImplingMismatch(range: List[RangeS], structWeakable: Boolean, interfaceWeakable: Boolean) extends ICompileErrorT {
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+}
+case class TookWeakRefOfNonWeakableError(range: List[RangeS]) extends ICompileErrorT {
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+}
 
 object ErrorReporter {
   def report(err: ICompileErrorT): Nothing = {

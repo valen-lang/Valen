@@ -50,32 +50,9 @@ import scala.collection.immutable.List
 import scala.collection.mutable
 */
 
-pub struct WeakableImplingMismatch {
-    pub struct_weakable: bool,
-    pub interface_weakable: bool,
-}
 /*
-case class WeakableImplingMismatch(structWeakable: Boolean, interfaceWeakable: Boolean) extends Throwable {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-*/
-impl WeakableImplingMismatch {
-    fn hash_code(&self) -> i32 {
-        panic!("Unimplemented: hash_code");
-    }
-/*
-override def hashCode(): Int = hash;
-*/
-}
-impl WeakableImplingMismatch {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool {
-        panic!("Unimplemented: equals");
-    }
-/*
-override def equals(obj: Any): Boolean = vcurious(); }
-
 // See ODMFRC.
 */
-}
 pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s, 't>,
     pub ranges: Vec<RangeS<'s>>,

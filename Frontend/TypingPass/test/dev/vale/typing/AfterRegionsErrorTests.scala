@@ -356,15 +356,10 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |func main(muta Muta) int  { return 7; }
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case WeakableImplingMismatch(false, true) =>
-      case other => {
-        other.printStackTrace()
-        vfail()
-      }
+    compile.getCompilerOutputs() match {
+      case Err(WeakableImplingMismatch(_, false, true)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
   }
 
@@ -378,12 +373,10 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |func main(muta Muta) int  { return 7; }
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case WeakableImplingMismatch(true, false) =>
-      case _ => vfail()
+    compile.getCompilerOutputs() match {
+      case Err(WeakableImplingMismatch(_, true, false)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
   }
 
@@ -399,14 +392,11 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |}
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case TookWeakRefOfNonWeakableError() =>
-      case other => vfail(other)
+    compile.getCompilerOutputs() match {
+      case Err(TookWeakRefOfNonWeakableError(_)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
-
   }
 
   // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539

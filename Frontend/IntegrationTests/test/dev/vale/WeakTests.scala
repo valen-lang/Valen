@@ -1,9 +1,8 @@
 package dev.vale
 
 import dev.vale.typing.ast.{BorrowToWeakTE, LetNormalTE, SoftLoadTE}
-import dev.vale.typing.citizen.WeakableImplingMismatch
+import dev.vale.typing.{WeakableImplingMismatch, TookWeakRefOfNonWeakableError}
 import dev.vale.typing.env.ReferenceLocalVariableT
-import dev.vale.typing.expression.TookWeakRefOfNonWeakableError
 import dev.vale.typing.names.{CodeVarNameT, IdT}
 import dev.vale.typing.templata.simpleNameT
 import dev.vale.typing.types._

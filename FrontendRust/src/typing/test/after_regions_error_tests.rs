@@ -469,9 +469,44 @@ fn accidentally_mention_type_rune() {
   }
 */
 // mig: fn call_bound_with_wrong_arguments
+// This test does not pass yet, use #[ignore].
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn call_bound_with_wrong_arguments() { panic!("Unmigrated test: call_bound_with_wrong_arguments"); }
+fn call_bound_with_wrong_arguments() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nfunc add<X>(i int, x &X) where func str(&X)str {\n  str(true);\n}\n\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::CouldntFindFunctionToCallT { fff, .. }) => {
+            assert!(fff.rejected_callee_to_reason.len() >= 1);
+            match &fff.rejected_callee_to_reason[0].1 {
+                crate::typing::overload_resolver::IFindFunctionFailureReason::SpecificParamDoesntSend {
+                    index: 0,
+                    argument: crate::typing::types::types::CoordT {
+                        ownership: crate::typing::types::types::OwnershipT::Share,
+                        kind: crate::typing::types::types::KindT::Bool(_),
+                        ..
+                    },
+                    ..
+                } => {}
+                other => panic!("expected SpecificParamDoesntSend(0, CoordT(Share,_,Bool), _), got {:?}", other),
+            }
+        }
+        Err(e) => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", e),
+        Ok(_) => panic!("expected CouldntFindFunctionToCallT, got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Call bound with wrong arguments") {
@@ -575,9 +610,30 @@ fn ambiguous_call() {
   }
 */
 // mig: fn cant_make_non_weakable_extend_a_weakable
+// This test does not pass yet, use #[ignore].
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn cant_make_non_weakable_extend_a_weakable() { panic!("Unmigrated test: cant_make_non_weakable_extend_a_weakable"); }
+fn cant_make_non_weakable_extend_a_weakable() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nweakable interface IUnit {}\nstruct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::WeakableImplingMismatch { struct_weakable: false, interface_weakable: true, .. }) => {}
+        Err(e) => panic!("expected WeakableImplingMismatch(false, true), got Err({:?})", e),
+        Ok(_) => panic!("expected WeakableImplingMismatch(false, true), got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Cant make non-weakable extend a weakable") {
@@ -589,22 +645,38 @@ fn cant_make_non_weakable_extend_a_weakable() { panic!("Unmigrated test: cant_ma
         |func main(muta Muta) int  { return 7; }
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case WeakableImplingMismatch(false, true) =>
-      case other => {
-        other.printStackTrace()
-        vfail()
-      }
+    compile.getCompilerOutputs() match {
+      case Err(WeakableImplingMismatch(_, false, true)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
   }
 */
 // mig: fn cant_make_weakable_extend_a_non_weakable
+// This test does not pass yet, use #[ignore].
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn cant_make_weakable_extend_a_non_weakable() { panic!("Unmigrated test: cant_make_weakable_extend_a_non_weakable"); }
+fn cant_make_weakable_extend_a_non_weakable() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\ninterface IUnit {}\nweakable struct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::WeakableImplingMismatch { struct_weakable: true, interface_weakable: false, .. }) => {}
+        Err(e) => panic!("expected WeakableImplingMismatch(true, false), got Err({:?})", e),
+        Ok(_) => panic!("expected WeakableImplingMismatch(true, false), got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Cant make weakable extend a non-weakable") {
@@ -616,19 +688,39 @@ fn cant_make_weakable_extend_a_non_weakable() { panic!("Unmigrated test: cant_ma
         |func main(muta Muta) int  { return 7; }
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case WeakableImplingMismatch(true, false) =>
-      case _ => vfail()
+    compile.getCompilerOutputs() match {
+      case Err(WeakableImplingMismatch(_, true, false)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
   }
 */
 // mig: fn cant_make_weak_ref_to_non_weakable
+// This test does not pass yet, use #[ignore].
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn cant_make_weak_ref_to_non_weakable() { panic!("Unmigrated test: cant_make_weak_ref_to_non_weakable"); }
+#[ignore = "blocked - Rust typing pass produces Ok where Scala throws TookWeakRefOfNonWeakableError for `&&m` on non-weakable struct"]
+fn cant_make_weak_ref_to_non_weakable() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nstruct Muta { hp int; }\nexported func main() int {\n  m = Muta(7);\n  w = &&m;\n  return m.hp;\n}\n";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::TookWeakRefOfNonWeakableError { .. }) => {}
+        Err(e) => panic!("expected TookWeakRefOfNonWeakableError, got Err({:?})", e),
+        Ok(_) => panic!("expected TookWeakRefOfNonWeakableError, got Ok"),
+    }
+}
 /*
   // This test does not pass yet, use #[ignore].
   test("Cant make weak ref to non-weakable") {
@@ -642,14 +734,11 @@ fn cant_make_weak_ref_to_non_weakable() { panic!("Unmigrated test: cant_make_wea
         |}
         |""".stripMargin)
 
-    try {
-      compile.expectCompilerOutputs().lookupFunction("main")
-      vfail()
-    } catch {
-      case TookWeakRefOfNonWeakableError() =>
-      case other => vfail(other)
+    compile.getCompilerOutputs() match {
+      case Err(TookWeakRefOfNonWeakableError(_)) =>
+      case Err(e) => vfail(e)
+      case Ok(_) => vfail()
     }
-
   }
 */
 // mig: fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args

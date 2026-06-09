@@ -261,7 +261,7 @@ class ImplCompiler(
       }
     val superInterfaceWeakable = coutputs.lookupInterface(superInterface).weakable
     if (subCitizenWeakable != superInterfaceWeakable) {
-      throw WeakableImplingMismatch(subCitizenWeakable, superInterfaceWeakable)
+      throw CompileErrorExceptionT(WeakableImplingMismatch(List(implA.range), subCitizenWeakable, superInterfaceWeakable))
     }
 
     val templateArgs = implA.genericParams.map(_.rune.rune).map(inferences)

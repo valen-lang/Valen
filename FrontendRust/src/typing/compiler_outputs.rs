@@ -1273,8 +1273,10 @@ where 's: 't,
     pub fn lookup_interface(
         &self,
         interface_tt: InterfaceTT<'s, 't>,
+        compiler: &Compiler<'s, '_, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let template_id = compiler.get_interface_template(interface_tt.id);
+        self.lookup_interface_by_template_name(template_id)
     }
     /*
       def lookupInterface(interfaceTT: InterfaceTT): InterfaceDefinitionT = {
@@ -1331,8 +1333,12 @@ where 's: 't,
     pub fn lookup_citizen_by_tt(
         &self,
         citizen_tt: ICitizenTT<'s, 't>,
-    ) -> &'t CitizenDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        compiler: &Compiler<'s, '_, 't>,
+    ) -> CitizenDefinitionT<'s, 't> {
+        match citizen_tt {
+            ICitizenTT::Struct(s) => CitizenDefinitionT::Struct(self.lookup_struct(s.id, compiler)),
+            ICitizenTT::Interface(i) => CitizenDefinitionT::Interface(self.lookup_interface(*i, compiler)),
+        }
     }
     /*
       def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
