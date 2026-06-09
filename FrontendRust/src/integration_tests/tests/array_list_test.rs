@@ -15,8 +15,30 @@ class ArrayListTest extends FunSuite with Matchers {
 */
 // mig: fn simple_array_list_no_optionals
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_array_list_no_optionals() { panic!("Unmigrated test: simple_array_list_no_optionals"); }
+fn simple_array_list_no_optionals() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.migrate.*;\n\n#!DeriveStructDrop\nstruct List<E Ref> {\n  array! []<mut>E;\n}\nfunc drop<E>(self List<E>)\nwhere func drop(E)void {\n  [array] = self;\n  drop(array);\n}\nfunc len<E>(list &List<E>) int { return len(&list.array); }\nfunc add<E>(list &List<E>, newElement E) {\n  oldArray = set list.array = Array<mut, E>(len(&list) + 1);\n  migrate(oldArray, list.array);\n  list.array.push(newElement);\n}\nfunc get<E>(list &List<E>, index int) &E {\n  a = list.array;\n  return a[index];\n}\nexported func main() int {\n  l = List<int>(Array<mut, int>(0));\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Simple ArrayList, no optionals") {
     val compile = RunCompilation.test(
@@ -56,8 +78,30 @@ fn simple_array_list_no_optionals() { panic!("Unmigrated test: simple_array_list
 */
 // mig: fn doubling_array_list
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn doubling_array_list() { panic!("Unmigrated test: doubling_array_list"); }
+fn doubling_array_list() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport list.*;\n\nexported func main() int {\n  l = List<int>(Array<mut, int>(0));\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Doubling ArrayList") {
     val compile = RunCompilation.test(
@@ -79,8 +123,30 @@ fn doubling_array_list() { panic!("Unmigrated test: doubling_array_list"); }
 */
 // mig: fn array_list_zero_constructor
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn array_list_zero_constructor() { panic!("Unmigrated test: array_list_zero_constructor"); }
+fn array_list_zero_constructor() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Array list zero-constructor") {
     val compile = RunCompilation.test(
@@ -101,8 +167,30 @@ fn array_list_zero_constructor() { panic!("Unmigrated test: array_list_zero_cons
 */
 // mig: fn array_list_len
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn array_list_len() { panic!("Unmigrated test: array_list_len"); }
+fn array_list_len() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.len();\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Array list len") {
     val compile = RunCompilation.test(
@@ -122,8 +210,30 @@ fn array_list_len() { panic!("Unmigrated test: array_list_len"); }
 */
 // mig: fn array_list_set
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn array_list_set() { panic!("Unmigrated test: array_list_set"); }
+fn array_list_set() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  set(&l, 1, 11);\n  return l.get(1);\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 11 }) => {}
+        other => panic!("expected VonInt(11), got {:?}", other),
+    }
+}
 /*
   test("Array list set") {
     val compile = RunCompilation.test(
@@ -144,8 +254,30 @@ fn array_list_set() { panic!("Unmigrated test: array_list_set"); }
 */
 // mig: fn array_list_with_optionals_with_mutable_element
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn array_list_with_optionals_with_mutable_element() { panic!("Unmigrated test: array_list_with_optionals_with_mutable_element"); }
+fn array_list_with_optionals_with_mutable_element() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  l =\n      List<Marine>(\n          Array<mut, Marine>(\n              0,\n              (index) => { Marine(index) }));\n  add(&l, Marine(5));\n  add(&l, Marine(9));\n  add(&l, Marine(7));\n  return l.get(1).hp;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Array list with optionals with mutable element") {
     val compile = RunCompilation.test(
@@ -170,8 +302,46 @@ fn array_list_with_optionals_with_mutable_element() { panic!("Unmigrated test: a
 */
 // mig: fn mutate_mutable_from_in_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn mutate_mutable_from_in_lambda() { panic!("Unmigrated test: mutate_mutable_from_in_lambda"); }
+fn mutate_mutable_from_in_lambda() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  m = Marine(6);\n  lam = {\n    set m = Marine(9);\n  };\n  lam();\n  lam();\n  return m.hp;\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+                variable: crate::typing::env::function_environment_t::ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("m"), .. }),
+                    variability: crate::typing::types::types::VariabilityT::Varying,
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
+    }
+
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        other => panic!("expected VonInt(9), got {:?}", other),
+    }
+}
 /*
   test("Mutate mutable from in lambda") {
     val compile = RunCompilation.test(
@@ -202,8 +372,46 @@ fn mutate_mutable_from_in_lambda() { panic!("Unmigrated test: mutate_mutable_fro
 */
 // mig: fn move_mutable_from_in_lambda
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn move_mutable_from_in_lambda() { panic!("Unmigrated test: move_mutable_from_in_lambda"); }
+fn move_mutable_from_in_lambda() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  m Opt<Marine> = Some(Marine(6));\n  lam = {\n    m2 = (set m = None<Marine>()).get();\n    m2.hp\n  };\n  return lam();\n}\n",
+    );
+    {
+        let coutputs = compile.expect_compiler_outputs();
+        let main = coutputs.lookup_function_by_str("main");
+        crate::collect_only_tnode!(
+            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+                variable: crate::typing::env::function_environment_t::ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("m"), .. }),
+                    variability: crate::typing::types::types::VariabilityT::Varying,
+                    ..
+                }),
+                ..
+            }) => Some(())
+        );
+    }
+
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
+        other => panic!("expected VonInt(6), got {:?}", other),
+    }
+}
 /*
   test("Move mutable from in lambda") {
     val compile = RunCompilation.test(
@@ -229,8 +437,27 @@ fn move_mutable_from_in_lambda() { panic!("Unmigrated test: move_mutable_from_in
 */
 // mig: fn remove_from_middle
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn remove_from_middle() { panic!("Unmigrated test: remove_from_middle"); }
+fn remove_from_middle() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\nimport panicutils.*;\nstruct Marine { hp int; }\n\nexported func main() {\n  l = List<Marine>();\n  add(&l, Marine(5));\n  add(&l, Marine(7));\n  add(&l, Marine(9));\n  add(&l, Marine(11));\n  add(&l, Marine(13));\n  l.remove(2);\n  vassert(l.get(0).hp == 5);\n  vassert(l.get(1).hp == 7);\n  vassert(l.get(2).hp == 11);\n  vassert(l.get(3).hp == 13);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+}
 /*
   test("Remove from middle") {
     val compile = RunCompilation.test(
@@ -258,8 +485,27 @@ fn remove_from_middle() { panic!("Unmigrated test: remove_from_middle"); }
 */
 // mig: fn remove_from_beginning
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn remove_from_beginning() { panic!("Unmigrated test: remove_from_beginning"); }
+fn remove_from_beginning() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import list.*;\nimport panicutils.*;\nstruct Marine { hp int; }\n\nexported func main() {\n  l = List<Marine>();\n  add(&l, Marine(5));\n  add(&l, Marine(7));\n  l.remove(0);\n  l.remove(0);\n  vassert(l.len() == 0);\n}\n",
+    );
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
+}
 /*
   test("Remove from beginning") {
     val compile = RunCompilation.test(
