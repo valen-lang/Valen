@@ -74,13 +74,7 @@ pub enum IFunctionParent<'s>
 
 {
   FunctionNoParent,
-  ParentCitizen {
-    citizen_is_interface: bool,
-    citizen_env: FunctionEnvironmentS<'s>,
-    citizen_generic_params: &'s [&'s GenericParameterS<'s>],
-    citizen_rules: Vec<IRulexSR<'s>>,
-    citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
-  },
+  ParentCitizen(ParentCitizen<'s>),
   ParentFunction {
     parent_stack_frame: StackFrame<'s>,
   },
@@ -92,6 +86,16 @@ sealed trait IFunctionParent
 /*
 case class FunctionNoParent() extends IFunctionParent
 */
+
+// mig: struct ParentCitizen
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParentCitizen<'s> {
+  pub citizen_is_interface: bool,
+  pub citizen_env: IEnvironmentS<'s>,
+  pub citizen_generic_params: &'s [&'s GenericParameterS<'s>],
+  pub citizen_rules: Vec<IRulexSR<'s>>,
+  pub citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+}
 /*
 case class ParentCitizen(
   citizenIsInterface: Boolean,
@@ -140,7 +144,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     // AFTERM: check the order of these various chunks of logic
 
     let is_parent_function = matches!(&maybe_parent, IFunctionParent::ParentFunction { .. });
-    let is_parent_interface = matches!(&maybe_parent, IFunctionParent::ParentCitizen { citizen_is_interface: true, .. });
+    let is_parent_interface = matches!(&maybe_parent, IFunctionParent::ParentCitizen(ParentCitizen { citizen_is_interface: true, .. }));
     let function_name = function.header.name.as_ref();
     let generic_parameters_p: &[GenericParameterP<'p>] = function
       .header
@@ -207,7 +211,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         }
       }
       IFunctionParent::ParentFunction { .. } => {}
-      IFunctionParent::ParentCitizen { citizen_is_interface, .. } => {
+      IFunctionParent::ParentCitizen(ParentCitizen { citizen_is_interface, .. }) => {
         // When we have traits that can have static methods, this check might need to go away
         if *citizen_is_interface {
           if let Some(params) = &function.header.params {
@@ -249,10 +253,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       _ => panic!("POSTPARSER_INTERN_FUNCTION_NAME_EXPECTED_FUNCTION_DECLARATION"),
     };
     let extra_generic_params_from_parent: Vec<&'s GenericParameterS<'s>> = match &maybe_parent {
-      IFunctionParent::ParentCitizen {
+      IFunctionParent::ParentCitizen(ParentCitizen {
         citizen_generic_params,
         ..
-      } => citizen_generic_params.to_vec(),
+      }) => citizen_generic_params.to_vec(),
       _ => Vec::new(),
     };
     for gp in &extra_generic_params_from_parent {
@@ -265,12 +269,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           parent_stack_frame.parent_env.clone(),
         )))
       }
-      IFunctionParent::ParentCitizen { citizen_env: interface_env, .. } => {
-        Some(Box::new(IEnvironmentS::FunctionEnvironment(interface_env.clone())))
+      IFunctionParent::ParentCitizen(ParentCitizen { citizen_env: interface_env, .. }) => {
+        Some(Box::new(interface_env.clone()))
       }
     };
     let declared_runes: IndexSet<IRuneS<'s>> = match &maybe_parent {
-      IFunctionParent::ParentCitizen { .. } => IndexSet::new(),
+      IFunctionParent::ParentCitizen(_) => IndexSet::new(),
       _ => user_declared_runes
         .iter()
         .map(|rune_usage| rune_usage.rune.clone())
@@ -287,7 +291,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .as_ref()
         .map(|params| params.params.len() as i32)
         .unwrap_or(0),
-      is_interface_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen { .. }),
+      is_interface_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen(_)),
     };
     let header_range_s = Self::eval_range(file_coordinate, function.header.range);
     let (default_region_rune, _maybe_region_generic_param): (IRuneS<'s>, _) = match function
@@ -363,12 +367,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           "POSTPARSER_SCOUT_FUNCTION_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
         );
       }
-      IFunctionParent::ParentCitizen { citizen_env: interface_env, .. } => {
+      IFunctionParent::ParentCitizen(ParentCitizen { citizen_env: interface_env, .. }) => {
         let mut child_lidb = lidb.child();
         translate_rulexes(
           self.scout_arena,
           self.keywords,
-          IEnvironmentS::FunctionEnvironment(interface_env.clone()),
+          interface_env.clone(),
           &mut child_lidb,
           &mut rules,
           &mut rune_to_explicit_type,
@@ -404,7 +408,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           .iter()
           .map(|param| {
             match &maybe_parent {
-              IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen { .. } => {
+              IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen(_) => {
                 assert!(
                   param.pattern.as_ref().map(|pattern| pattern.templex.is_some()).unwrap_or(false),
                   "POSTPARSER_SCOUT_FUNCTION_PARAM_TYPE_REQUIRED_NOT_YET_IMPLEMENTED"
@@ -426,7 +430,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
             let param_range = PostParser::eval_range(file_coordinate, param.range);
             let virtuality = param.virtuality.as_ref().map(|abstract_p| AbstractSP {
               range: PostParser::eval_range(file_coordinate, abstract_p.range),
-              is_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen { .. }),
+              is_internal_method: matches!(&maybe_parent, IFunctionParent::ParentCitizen(_)),
             });
             let (pattern, synthesized_rune): (AtomSP<'s>, Option<RuneUsage<'s>>) = match (&param.self_borrow, &param.pattern) {
               (Some(_), None) => {
@@ -539,7 +543,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       None => None,
       Some(_) => {
         let mut first_params = match &maybe_parent {
-          IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen { .. } => {
+          IFunctionParent::FunctionNoParent | IFunctionParent::ParentCitizen(_) => {
             VariableDeclarations { vars: Vec::new() }
           }
           IFunctionParent::ParentFunction { .. } => {
@@ -801,7 +805,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 
     let unfiltered_rules_array: Vec<IRulexSR<'s>> = rules;
     let rules_array = match &maybe_parent {
-      IFunctionParent::ParentCitizen { .. } => unfiltered_rules_array
+      IFunctionParent::ParentCitizen(_) => unfiltered_rules_array
         .into_iter()
         .filter(|rule| !matches!(rule, IRulexSR::RuneParentEnvLookup(_)))
         .collect::<Vec<_>>(),
@@ -814,7 +818,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         .iter()
         .filter(|a| !matches!(a, IAttributeP::AbstractAttribute(_)))
         .collect(),
-      IFunctionParent::ParentCitizen { .. } => unfiltered_attrs_p.iter().collect(),
+      IFunctionParent::ParentCitizen(_) => unfiltered_attrs_p.iter().collect(),
       IFunctionParent::ParentFunction { .. } => unfiltered_attrs_p.iter().collect(),
     };
     let func_attrs_s: Vec<IFunctionAttributeS<'s>> = filtered_attrs
@@ -1863,80 +1867,13 @@ fn create_magic_parameters(
 */
   pub(crate) fn scout_interface_member(
     &self,
-    file_coordinate: &'s FileCoordinate<'s>,
+    parent_interface: ParentCitizen<'s>,
     function_p: &FunctionP<'p>,
-    parent_interface_env: &IEnvironmentS<'s>,
-    interface_generic_params: &'s [&'s GenericParameterS<'s>],
-    interface_rules: &[IRulexSR<'s>],
-    interface_rune_to_explicit_type: &ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
   ) -> Result<&'s FunctionS<'s>, ICompileErrorS<'s>>
   {
-    assert!(
-      function_p.body.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_BODY_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
-      function_p.header.attributes.is_empty(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_ATTRIBUTES_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
-      function_p.header.generic_parameters.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_GENERIC_PARAMETERS_NOT_YET_IMPLEMENTED"
-    );
-    if let Some(params) = &function_p.header.params {
-      if !params.params.iter().any(|param| param.virtuality.is_some()) {
-        return Err(ICompileErrorS::InterfaceMethodNeedsSelf(
-          InterfaceMethodNeedsSelf {
-            range: Self::eval_range(file_coordinate, function_p.range),
-          },
-        ));
-      }
-    }
-    let Some(method_name_p) = function_p.header.name.as_ref() else {
-      panic!("POSTPARSER_INTERFACE_MEMBER_WITHOUT_NAME");
-    };
-    let method_name = self.scout_arena.intern_name(INameValS::FunctionDeclaration(
-      IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
-        name: self.scout_arena.intern_str(method_name_p.str().as_str()),
-        code_location: Self::eval_pos(file_coordinate, method_name_p.range().begin()),
-      }),
-    ));
-    let parent_declared_runes = match parent_interface_env {
-      IEnvironmentS::Environment(env) => env.user_declared_runes.clone(),
-      _ => panic!("Expected EnvironmentS for interface env"),
-    };
-    let interface_env = FunctionEnvironmentS {
-      file: file_coordinate,
-      name: match &method_name {
-        INameS::FunctionDeclaration(r) => (*r).clone(),
-        _ => panic!("POSTPARSER_INTERN_INTERFACE_METHOD_NAME_EXPECTED_FUNCTION_DECLARATION"),
-      },
-      parent_env: None,
-      declared_runes: parent_declared_runes,
-      num_explicit_params: function_p
-        .header
-        .params
-        .as_ref()
-        .map(|params| params.params.len() as i32)
-        .unwrap_or(0),
-      is_interface_internal_method: true,
-    };
-    let (function_s, variable_uses) = self.scout_function(
-      file_coordinate,
-      function_p,
-      IFunctionParent::ParentCitizen {
-        citizen_is_interface: true,
-        citizen_env: interface_env,
-        citizen_generic_params: interface_generic_params,
-        citizen_rules: interface_rules.to_vec(),
-        citizen_rune_to_explicit_type: interface_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
-      },
-    )?;
-    assert!(
-      variable_uses.uses.is_empty(),
-      "POSTPARSER_SCOUT_INTERFACE_MEMBER_VARIABLE_USES_NOT_EMPTY_NOT_YET_IMPLEMENTED: {:?}",
-      variable_uses.uses
-    );
+    let file = parent_interface.citizen_env.file();
+    let (function_s, variable_uses) = self.scout_function(file, function_p, IFunctionParent::ParentCitizen(parent_interface))?;
+    assert!(variable_uses.uses.is_empty());
     Ok(function_s)
   }
 /*

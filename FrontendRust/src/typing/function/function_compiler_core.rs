@@ -800,7 +800,7 @@ where 's: 't,
                 let maybe_inheritance = match ICitizenTemplateNameT::try_from(extern_prototype.id.init_id(self.typing_interner).local_name) {
                     Ok(_ctn) => {
                         let citizen = coutputs.lookup_citizen_by_template_name(extern_prototype.id.init_id(self.typing_interner));
-                        Some(GenericParametersInheritance { num_inherited_generic_parameters: citizen.generic_param_types().len() as i32 })
+                        Some(GenericParametersInheritance { num_inherited_generic_parameters: citizen.generic_param_types(self.scout_arena).len() as i32 })
                     }
                     Err(_) => None,
                 };

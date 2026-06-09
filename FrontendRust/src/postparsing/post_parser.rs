@@ -1915,6 +1915,7 @@ fn predict_mutability(
       ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
     ));
 
+    let mut internal_methods_p = Vec::<&'p crate::parsing::ast::FunctionP<'p>>::new();
     let members_s = head
       .members
       .contents
@@ -1963,8 +1964,9 @@ fn predict_mutability(
             type_rune: member_rune,
           })]
         }
-        IStructContent::StructMethod(_) => {
-          panic!("Unimplemented: struct internal methods (StructMethodP) — Scala collects into internalMethodsP then scouts via functionScout.scoutInterfaceMember; not yet ported");
+        IStructContent::StructMethod(func_p) => {
+          internal_methods_p.push(func_p);
+          vec![]
         }
       })
       .collect::<Vec<_>>();
@@ -2060,6 +2062,20 @@ fn predict_mutability(
       }));
     }
 
+    let generic_parameters_s_arena: &'s [&'s GenericParameterS<'s>] = self.scout_arena.alloc_slice_from_vec(generic_parameters_s.clone());
+    let internal_methods_s_vec: Vec<&'s FunctionS<'s>> = internal_methods_p.iter().map(|method| -> Result<&'s FunctionS<'s>, ICompileErrorS<'s>> {
+      self.scout_interface_member(
+        crate::postparsing::function_scout::ParentCitizen {
+          citizen_is_interface: false,
+          citizen_env: struct_env.clone(),
+          citizen_generic_params: generic_parameters_s_arena,
+          citizen_rules: all_rules_s.clone(),
+          citizen_rune_to_explicit_type: all_rune_to_explicit_type.iter().map(|(r, t)| (r.clone(), t.clone())).collect(),
+        },
+        method,
+      )
+    }).collect::<Result<Vec<_>, _>>()?;
+
     Ok(StructS::new(
       struct_range_s,
       struct_name,
@@ -2076,7 +2092,7 @@ fn predict_mutability(
       members_rune_to_predicted_type,
       self.scout_arena.alloc_slice_from_vec(member_rules_s),
       self.scout_arena.alloc_slice_from_vec(members_s),
-      &[],
+      self.scout_arena.alloc_slice_from_vec(internal_methods_s_vec),
     ))
   }
 /*
@@ -2596,12 +2612,14 @@ pub(crate) fn check_identifiability(
     let mut internal_methods = Vec::new();
     for member in interface.members {
       internal_methods.push(self.scout_interface_member(
-        file,
+        crate::postparsing::function_scout::ParentCitizen {
+          citizen_is_interface: true,
+          citizen_env: interface_env.clone(),
+          citizen_generic_params: generic_parameters_s,
+          citizen_rules: rules_s.clone(),
+          citizen_rune_to_explicit_type: rune_to_explicit_type.iter().cloned().collect(),
+        },
         member,
-        &interface_env,
-        generic_parameters_s,
-        &rules_s,
-        &self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.iter().cloned()),
       )?);
     }
 

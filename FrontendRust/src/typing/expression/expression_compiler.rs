@@ -1128,14 +1128,37 @@ where 's: 't,
                                 fc.arg_exprs)?;
                         let mut range_list = vec![fc.range];
                         range_list.extend_from_slice(parent_ranges);
-                        // Per @PRIIROZ, walk parts.dropRight(1) to build finalLookInEnv and
-                        // containerReceivingRuneToExplicitTemplateArgRune. Not yet ported — single-part
-                        // OverloadSet (the only kind expression_scout currently builds) skips the fold.
-                        if overload_set.lookup.parts.len() > 1 {
-                            panic!("Unimplemented: @PRIIROZ container-chain fold for multi-part OverloadSet (see ExpressionCompiler.scala:545-587)");
-                        }
-                        let snapshot_env = nenv.snapshot(self.typing_interner);
-                        let env_ref = IInDenizenEnvironmentT::Node(snapshot_env);
+                        let initial_container_receiving: Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)> = Vec::new();
+                        let initial_look_in_env: IInDenizenEnvironmentT<'s, 't> = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+                        let parts = overload_set.lookup.parts;
+                        let (final_look_in_env, container_receiving_rune_to_explicit_template_arg_rune) =
+                            parts[..parts.len() - 1].iter().try_fold(
+                                (initial_look_in_env, initial_container_receiving),
+                                |(previous_look_in_env, previous_container_receiving), part| -> Result<(IInDenizenEnvironmentT<'s, 't>, Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)>), ICompileErrorT<'s, 't>> {
+                                    let struct_templata = match previous_look_in_env.lookup_nearest_with_imprecise_name(
+                                        part.name,
+                                        std::iter::once(crate::typing::env::environment::ILookupContext::TemplataLookupContext).collect(),
+                                        self.typing_interner,
+                                    ) {
+                                        Some(ITemplataT::StructDefinition(s)) => s,
+                                        _ => return Err(ICompileErrorT::CouldntFindTypeT {
+                                            range: self.typing_interner.alloc_slice_copy(&range_list),
+                                            name: part.name,
+                                        }),
+                                    };
+                                    let struct_template_id = self.resolve_struct_template(struct_templata);
+                                    let look_in_env = coutputs.get_outer_env_for_type(&range_list, *struct_template_id);
+                                    let part_rune_to_template_arg: Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)> =
+                                        struct_templata.origin_struct.generic_parameters.iter()
+                                            .zip(part.explicit_template_args.iter())
+                                            .map(|(gp, arg_rune)| (gp.rune, *arg_rune))
+                                            .collect();
+                                    let mut next_container_receiving = previous_container_receiving;
+                                    next_container_receiving.extend(part_rune_to_template_arg);
+                                    Ok((look_in_env, next_container_receiving))
+                                },
+                            )?;
+                        let env_ref = final_look_in_env;
                         let last_part = overload_set.lookup.parts.last().expect("OverloadSet parts must be non-empty");
                         let callable_expr = self.new_global_function_group_expression(
                             env_ref,
@@ -1154,6 +1177,7 @@ where 's: 't,
                                 callable_expr,
                                 overload_set.lookup.rules,
                                 &template_arg_runes,
+                                &container_receiving_rune_to_explicit_template_arg_rune,
                                 &args_exprs_2)?;
                         Ok((ExpressionTE::Reference(call_expr_2), returns_from_args))
                     }
@@ -1183,6 +1207,7 @@ where 's: 't,
                                 fc.location,
                                 region,
                                 decayed_callable_reference_expr_2,
+                                &[],
                                 &[],
                                 &[],
                                 &args_exprs_2)?;
@@ -1668,6 +1693,7 @@ where 's: 't,
                     make_list_callable,
                     &[rune_parent_env_lookup_rule],
                     &[self_rune_irune],
+                    &[],
                     &[])?;
 
                 let list_local = self.make_temporary_local(
@@ -1721,6 +1747,7 @@ where 's: 't,
                         outer_call_location,
                         region,
                         add_callable,
+                        &[],
                         &[],
                         &[],
                         &[borrow_load, unlet_iter])?;

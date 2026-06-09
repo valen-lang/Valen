@@ -38,9 +38,9 @@ impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
     /*
       def templateName: IdT[ICitizenTemplateNameT]
     */
-    pub fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
+    pub fn generic_param_types(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
         match self {
-            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: generic_param_types Struct"),
+            CitizenDefinitionT::Struct(s) => s.generic_param_types(scout_arena),
             CitizenDefinitionT::Interface(i) => panic!("Unimplemented: generic_param_types Interface"),
         }
     }
@@ -100,8 +100,8 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 */
 }
 impl<'s, 't> StructDefinitionT<'s, 't> {
-    fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
-        panic!("Unimplemented: generic_param_types");
+    fn generic_param_types(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
+        IStructNameT::try_from(self.instantiated_citizen.id.local_name).unwrap().template_args().iter().map(|t| t.tyype(scout_arena)).collect()
     }
 /*
   override def genericParamTypes: Vector[ITemplataType] = {

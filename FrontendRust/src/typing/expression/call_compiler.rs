@@ -2,7 +2,8 @@ use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
-use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
+use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
@@ -60,6 +61,7 @@ where 's: 't,
         callable_expr: ReferenceExpressionTE<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match callable_expr.result().coord.kind {
@@ -82,12 +84,15 @@ where 's: 't,
                         *overload_set.name,
                         explicit_template_arg_rules_s,
                         explicit_template_arg_runes_s,
-                        &[],
+                        receiving_rune_to_explicit_template_arg_rune,
                         context_region,
                         &unconverted_args_pointer_types_2,
                         &[],
                         false)?
                 {
+                    Err(FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }), .. }) if *as_name == self.keywords.r#as => {
+                        panic!("Unimplemented: evaluate_call as-keyword isaFailures branch");
+                    }
                     Err(e) => return Err(ICompileErrorT::CouldntFindFunctionToCallT {
                         range: self.typing_interner.alloc_slice_copy(range),
                         fff: e,
@@ -131,6 +136,7 @@ where 's: 't,
                     other,
                     explicit_template_arg_rules_s,
                     explicit_template_arg_runes_s,
+                    receiving_rune_to_explicit_template_arg_rune,
                     callable_expr,
                     given_args_exprs_2)
             }
@@ -288,6 +294,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         given_callable_unborrowed_expr_2: ReferenceExpressionTE<'s, 't>,
         given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
@@ -317,7 +324,7 @@ where 's: 't,
                 self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call })),
                 explicit_template_arg_rules_s,
                 explicit_template_arg_runes_s,
-                &[],
+                receiving_rune_to_explicit_template_arg_rune,
                 context_region,
                 &param_filters,
                 &[],
@@ -549,6 +556,7 @@ where 's: 't,
         callable_reference_expr_2: ReferenceExpressionTE<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
+        receiving_rune_to_explicit_template_arg_rune: &[(RuneUsage<'s>, RuneUsage<'s>)],
         args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let call_expr =
@@ -562,6 +570,7 @@ where 's: 't,
                 callable_reference_expr_2,
                 explicit_template_arg_rules_s,
                 explicit_template_arg_runes_s,
+                receiving_rune_to_explicit_template_arg_rune,
                 args_exprs_2)?;
         Ok(call_expr)
     }

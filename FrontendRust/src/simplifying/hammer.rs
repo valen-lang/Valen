@@ -671,7 +671,32 @@ where 's: 'h, 's: 'i, 'i: 'h,
             let export_simplified_id = if num_inherited == 0 {
                 raw_simple_id
             } else {
-                panic!("translate functionExterns: numInherited != 0 branch")
+                // Per @PRIIROZ, inherited generic params come AFTER own ones in the leaf step's
+                // templateArgs (e.g. `zork<N, K, V>` where N is own and K, V are inherited).
+                // Move the trailing `numInherited` args off the leaf step onto the immediately
+                // preceding (parent citizen) step, producing e.g. `[..., Vec<i32>, capacity]`
+                // instead of `[..., Vec, capacity<i32>]`. This is the shape Backend's
+                // rustifySimpleId expects per @SMLRZ.
+                let steps = raw_simple_id.steps;
+                let leaf = steps.last().unwrap();
+                let parent_idx = steps.len() - 2;
+                let parent = &steps[parent_idx];
+                let split_point = leaf.template_args.len() - num_inherited as usize;
+                let (own, inherited) = leaf.template_args.split_at(split_point);
+                let new_parent_template_args: Vec<crate::final_ast::types::SimpleId<'s, 'h>> = parent.template_args.iter().copied().chain(inherited.iter().copied()).collect();
+                let new_parent = crate::final_ast::types::SimpleIdStep {
+                    name: parent.name,
+                    template_args: self.interner.bump().alloc_slice_copy(&new_parent_template_args),
+                };
+                let new_leaf = crate::final_ast::types::SimpleIdStep {
+                    name: leaf.name,
+                    template_args: self.interner.bump().alloc_slice_copy(own),
+                };
+                let mut new_steps: Vec<crate::final_ast::types::SimpleIdStep<'s, 'h>> = steps.to_vec();
+                new_steps[parent_idx] = new_parent;
+                let last_idx = new_steps.len() - 1;
+                new_steps[last_idx] = new_leaf;
+                crate::final_ast::types::SimpleId { steps: self.interner.bump().alloc_slice_copy(&new_steps) }
             };
             let prototype_h = self.translate_prototype(hinputs, &mut hamuts, prototype);
             hamuts.add_function_extern(prototype_h, export_simplified_id, export_name);
