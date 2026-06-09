@@ -116,8 +116,30 @@ fn simple_program_returning_an_int() {
 */
 // mig: fn simple_program_with_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_drop() { panic!("Unmigrated test: simple_program_with_drop"); }
+fn simple_program_with_drop() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.drop.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with drop") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.drop.*; exported func main() int { return 3; }")
@@ -190,8 +212,30 @@ fn simple_program_with_logic() {
 */
 // mig: fn simple_program_with_migrate
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_migrate() { panic!("Unmigrated test: simple_program_with_migrate"); }
+fn simple_program_with_migrate() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.migrate.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with migrate") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.migrate.*; exported func main() int { return 3; }")
@@ -232,8 +276,30 @@ fn simple_program_with_str() {
 */
 // mig: fn simple_program_with_arrays
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_arrays() { panic!("Unmigrated test: simple_program_with_arrays"); }
+fn simple_program_with_arrays() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.arrays.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with arrays") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.arrays.*; exported func main() int { return 3; }")
@@ -274,8 +340,30 @@ fn simple_program_with_mainargs() {
 */
 // mig: fn simple_program_with_as
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_as() { panic!("Unmigrated test: simple_program_with_as"); }
+fn simple_program_with_as() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.as.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with as") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.as.*; exported func main() int { return 3; }")
@@ -316,8 +404,30 @@ fn simple_program_with_print() {
 */
 // mig: fn simple_program_with_tup
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_tup() { panic!("Unmigrated test: simple_program_with_tup"); }
+fn simple_program_with_tup() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.tup2.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with tup") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.tup2.*; exported func main() int { return 3; }")
@@ -358,8 +468,30 @@ fn simple_program_with_panic() {
 */
 // mig: fn simple_program_with_opt
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_opt() { panic!("Unmigrated test: simple_program_with_opt"); }
+fn simple_program_with_opt() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.opt.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with opt") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.opt.*; exported func main() int { return 3; }")
@@ -368,8 +500,30 @@ fn simple_program_with_opt() { panic!("Unmigrated test: simple_program_with_opt"
 */
 // mig: fn simple_program_with_result
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_result() { panic!("Unmigrated test: simple_program_with_result"); }
+fn simple_program_with_result() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.result.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with result") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.result.*; exported func main() int { return 3; }")
@@ -410,8 +564,30 @@ fn simple_program_with_sameinstance() {
 */
 // mig: fn simple_program_with_weak
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn simple_program_with_weak() { panic!("Unmigrated test: simple_program_with_weak"); }
+fn simple_program_with_weak() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import v.builtins.weak.*; exported func main() int { return 3; }",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Simple program with weak") {
     val compile = RunCompilation.testNoBuiltins("import v.builtins.weak.*; exported func main() int { return 3; }")
