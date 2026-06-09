@@ -38,7 +38,7 @@ fn dividing() {
         &instantiating_bump,
         "exported func main() int { return 5 / 2; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 2 }) => {}
         other => panic!("expected VonInt(2), got {:?}", other),
     }

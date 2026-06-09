@@ -170,10 +170,10 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn ensure_ref_count(&self, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) {
+  pub fn ensure_ref_count(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
     if matches!(self.kind, KindV::Void(_)) {
       // Void has no RC
-      return;
+      return Ok(());
     }
     let referrers: Vec<(&IObjectReferrerV<'v, 'h, 's>, &i32)> = match maybe_ownership_filter {
       None => self.referrers.iter().collect(),
@@ -181,12 +181,14 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     };
     let matching_referrers: Vec<i32> = referrers.iter().map(|(_, v)| **v).collect();
     if matching_referrers.len() as i32 != expected_num {
-      panic!("Expected {} of {}but was {}:\n{:?}",
+      let msg = format!("Expected {} of {}but was {}:\n{:?}",
         expected_num,
         maybe_ownership_filter.map(|of| format!("{:?} ", of)).unwrap_or_default(),
         matching_referrers.len(),
         matching_referrers);
+      return Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(crate::testvm::vivem::ConstraintViolatedExceptionV { msg: scout_arena.intern_str(&msg) }));
     }
+    Ok(())
   }
 }
 /*

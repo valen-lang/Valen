@@ -309,7 +309,7 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
       override def result: ReferenceResultT
     */
     pub fn kind(&self) -> KindT<'s, 't> {
-        panic!("Unimplemented: kind");
+        self.result().coord.kind
     }
     /*
       override def kind = result.coord.kind
@@ -528,7 +528,9 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 */
 }
 impl<'s, 't> BorrowToWeakTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Weak, region: self.inner_expr.result().coord.region, kind: self.inner_expr.kind() } }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(WeakT, innerExpr.result.coord.region, innerExpr.kind))

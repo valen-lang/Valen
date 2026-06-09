@@ -25,7 +25,7 @@ pub fn execute_function<'h, 's, 'v>(
     heap: &mut HeapV<'v, 'h, 's>,
     args: &'v [ReferenceV<'v, 'h, 's>],
     function_h: &'h FunctionH<'s, 'h>,
-) -> (CallIdV<'v, 'h, 's>, NodeReturnV<'v, 'h, 's>) {
+) -> Result<(CallIdV<'v, 'h, 's>, NodeReturnV<'v, 'h, 's>), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
     let call_id = heap.push_new_stack_frame(function_h.prototype, args);
     {
         use std::io::Write;
@@ -55,7 +55,7 @@ pub fn execute_function<'h, 's, 'v>(
         crate::testvm::expression_vivem::INodeExecuteResultV::Return(r) => NodeReturnV { return_ref: r.return_ref },
         crate::testvm::expression_vivem::INodeExecuteResultV::Break(_) => panic!("execute_function: NodeBreak vwat"),
         crate::testvm::expression_vivem::INodeExecuteResultV::Continue(c) => NodeReturnV { return_ref: c.result_ref },
-        crate::testvm::expression_vivem::INodeExecuteResultV::Error(_) => panic!("execute_function: Error propagation not yet implemented (pending Phase 3 boundary widening)"),
+        crate::testvm::expression_vivem::INodeExecuteResultV::Error(e) => return Err(e),
     };
     {
         use std::io::Write;
@@ -70,7 +70,7 @@ pub fn execute_function<'h, 's, 'v>(
         let handle = &mut *heap.vivem_dout;
         writeln!(handle).unwrap();
     }
-    (call_id, return_ref)
+    Ok((call_id, return_ref))
 }
 /*
   def executeFunction(
@@ -117,7 +117,7 @@ pub fn execute_function<'h, 's, 'v>(
 pub fn get_extern_function<'h, 's, 'v>(
     _program_h: &ProgramH<'s, 'h>,
     ref_: &PrototypeH<'s, 'h>,
-) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's>> {
+) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>>> {
     let name = ref_.id.fully_qualified_name.0.replace("v::builtins::arith", "");
     match name.as_str() {
         "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),

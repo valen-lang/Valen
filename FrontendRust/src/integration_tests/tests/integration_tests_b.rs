@@ -35,7 +35,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
         &instantiating_bump,
         "\nstruct MyThing { value int; }\nfunc moo() MyThing { return MyThing(4); }\nexported func main() { moo(); }\n      ",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests single expression and single statement functions' returns") {
@@ -69,7 +69,7 @@ fn tests_calling_a_templated_struct_constructor() {
         &instantiating_bump,
         "\n#!DeriveStructDrop\nstruct MySome<T Ref> { value T; }\n\nexported func main() int {\n  [x] = MySome<int>(4);\n  return x;\n}\n",
     );
-    let _ = compile.eval_for_kind_primitive_args(Vec::new());
+    let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests calling a templated struct's constructor") {
@@ -110,7 +110,7 @@ fn test_array_push_pop_len_capacity_drop() {
     {
         let _coutputs = compile.expect_compiler_outputs();
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -158,7 +158,7 @@ fn test_int_generic() {
         &instantiating_bump,
         "\nstruct Vec<N Int, T>\n{\n  values [#N]<imm>T;\n}\n\nexported func main() int {\n  v = Vec<3, int>(#[#](3, 4, 5));\n  return v.values.2;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
@@ -203,7 +203,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         &instantiating_bump,
         &source,
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests upcasting from a struct to an interface") {
@@ -233,7 +233,7 @@ fn tests_upcasting_from_if() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
@@ -265,7 +265,7 @@ fn tests_lambda() {
         &instantiating_bump,
         "\nexported func main() int {\n  a = 7;\n  return { a }();\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests lambda") {
@@ -301,7 +301,7 @@ fn tests_generic_with_a_lambda() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  return { a }();\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a lambda") {
@@ -340,7 +340,7 @@ fn tests_generic_s_lambda_calling_parent_function_s_bound() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T)\nwhere func print(&T)void {\n  { print(a); }()\n}\nexported func main() {\n  genFunc(\"hello\");\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic's lambda calling parent function's bound") {
@@ -381,7 +381,7 @@ fn tests_generic_with_a_polymorphic_lambda() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  return (x => a)(true);\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a polymorphic lambda") {
@@ -421,7 +421,7 @@ fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
         &instantiating_bump,
         "\nfunc genFunc<T>(a &T) &T {\n  lam = (x => a);\n  lam(true);\n  return lam(\"hello\");\n}\nexported func main() int {\n  genFunc(7)\n}\n",
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests generic with a polymorphic lambda invoked twice") {
@@ -480,7 +480,7 @@ fn tests_double_closure() {
         &instantiating_bump,
         &source,
     );
-    compile.run_primitive_args(Vec::new());
+    compile.run_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests double closure") {
@@ -510,7 +510,7 @@ fn tests_from_subdir_file() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("Expected VonInt(8), got {:?}", other),
     }
@@ -542,7 +542,7 @@ fn test_generic_param_default() {
         &instantiating_bump,
         "\nfunc bork<N Int = 42>() int { return N; }\nexported func main() int { bork() }\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -579,7 +579,7 @@ fn tests_calling_a_virtual_function() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
@@ -611,7 +611,7 @@ fn tests_making_a_variable_with_a_pattern() {
         &instantiating_bump,
         "\ninterface MyOption<T> where T Ref { }\n\nstruct MySome<T> where T Ref {}\nimpl<T> MyOption<T> for MySome<T>;\n\nfunc doSomething(opt MyOption<int>) int {\n  return 9;\n}\n\nexported func main() int {\n\t x MyOption<int> = MySome<int>();\n\t return doSomething(x);\n}\n      ",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
@@ -660,7 +660,7 @@ fn tests_a_linked_list() {
         &instantiating_bump,
         &source,
     );
-    let _ = compile.eval_for_kind_primitive_args(Vec::new());
+    let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
 Guardian: temp-disable: SPDMX — eval_for_kind_primitive_args is the Rust-side disambiguation for Scala's evalForKind(Vector[PrimitiveKindV]) overload (vs evalForKind(heap, args) elsewhere) — Exception S, established by the in-file precedent in every other test in this file (tests_calling_an_abstract_function, tests_calling_a_virtual_function, etc.). — FrontendRust/guardian-logs/request-3270-1780630106214/hook-3270/tests_a_linked_list--529.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
@@ -693,7 +693,7 @@ fn tests_a_templated_linked_list() {
         &instantiating_bump,
         &source,
     );
-    let _ = compile.eval_for_kind_primitive_args(Vec::new());
+    let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   test("Tests a templated linked list") {
@@ -724,7 +724,7 @@ fn tests_calling_an_abstract_function() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
     }
@@ -758,7 +758,7 @@ fn template_overrides_are_stamped() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1 }) => {}
         other => panic!("expected VonInt(1), got {:?}", other),
     }
@@ -793,7 +793,7 @@ fn tests_a_foreach_for_a_linked_list() {
         &instantiating_bump,
         &source,
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "102030");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "102030");
 }
 /*
   test("Tests a foreach for a linked list") {
@@ -836,7 +836,7 @@ fn tests_recursion() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 120 }) => {}
         other => panic!("expected VonInt(120), got {:?}", other),
     }
@@ -868,7 +868,7 @@ fn tests_generic_recursion() {
         &instantiating_bump,
         "\nfunc factorial<T>(one T, x T) T\nwhere func isZero(&T)bool, func *(&T, &T)T, func -(&T, &T)T, func drop(T)void {\n  return if isZero(&x) {\n      one\n    } else {\n      q = &one;\n      x * factorial(one, x - q)\n    };\n}\n\nfunc isZero(x int) bool { x == 0 }\n\nexported func main() int {\n  return factorial(1, 5);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 120 }) => {}
         other => panic!("expected VonInt(120), got {:?}", other),
     }

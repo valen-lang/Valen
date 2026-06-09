@@ -2246,9 +2246,21 @@ where 's: 't,
 
         match (source_ownership, target_ownership) {
             (a, b) if a == b => {}
-            _ => {
-                panic!("implement: isTypeConvertible — non-equal ownership cases");
-            }
+            // At some point maybe we should automatically convert borrow to pointer and vice versa
+            // and perhaps automatically promote borrow or pointer to weak?
+            (OwnershipT::Own, OwnershipT::Borrow) => return false,
+            (OwnershipT::Own, OwnershipT::Weak) => return false,
+            (OwnershipT::Own, OwnershipT::Share) => return false,
+            (OwnershipT::Borrow, OwnershipT::Own) => return false,
+            (OwnershipT::Borrow, OwnershipT::Weak) => return false,
+            (OwnershipT::Borrow, OwnershipT::Share) => return false,
+            (OwnershipT::Weak, OwnershipT::Own) => return false,
+            (OwnershipT::Weak, OwnershipT::Borrow) => return false,
+            (OwnershipT::Weak, OwnershipT::Share) => return false,
+            (OwnershipT::Share, OwnershipT::Borrow) => return false,
+            (OwnershipT::Share, OwnershipT::Weak) => return false,
+            (OwnershipT::Share, OwnershipT::Own) => return false,
+            _ => unreachable!(),
         }
 
         true

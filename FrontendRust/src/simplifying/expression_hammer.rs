@@ -160,8 +160,26 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (array_length_and_deferreds_expr_h, Vec::new())
                 }
                 RE::ArraySize(a) => panic!("translate_expression: ArraySize branch"),
-                RE::LockWeak(a) => panic!("translate_expression: LockWeak branch"),
-                RE::BorrowToWeak(a) => panic!("translate_expression: BorrowToWeak branch"),
+                RE::LockWeak(lw) => {
+                    let crate::instantiating::ast::expressions::LockWeakIE { inner_expr: inner_expr_2, result_opt_borrow_type: result_opt_borrow_type_2, .. } = *lw;
+                    let (result_he, deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(inner_expr_2));
+                    let result_opt_borrow_type_h = self.translate_coord(hinputs, hamuts, result_opt_borrow_type_2).expect_interface_coord();
+                    let some_constructor_h = self.translate_function_ref(hinputs, hamuts, current_function_header, &lw.some_constructor);
+                    let none_constructor_h = self.translate_function_ref(hinputs, hamuts, current_function_header, &lw.none_constructor);
+                    let result_node = ExpressionH::LockWeakH(self.interner.alloc(crate::final_ast::instructions::LockWeakH {
+                        source_expression: result_he,
+                        result_type: result_opt_borrow_type_h,
+                        some_constructor: some_constructor_h.prototype,
+                        none_constructor: none_constructor_h.prototype,
+                    }));
+                    (result_node, deferreds)
+                }
+                RE::BorrowToWeak(b) => {
+                    let crate::instantiating::ast::expressions::BorrowToWeakIE { inner_expr, result: _ } = *b;
+                    let (inner_expr_he, inner_deferreds) =
+                        self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
+                    (ExpressionH::BorrowToWeakH(self.interner.alloc(crate::final_ast::instructions::BorrowToWeakH { ref_expression: inner_expr_he })), inner_deferreds)
+                }
                 RE::Defer(d2) => {
                     let crate::instantiating::ast::expressions::DeferIE { inner_expr, deferred_expr, result: _ } = *d2;
                     let (inner_expr_he, inner_deferreds) =

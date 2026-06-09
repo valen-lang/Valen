@@ -40,7 +40,7 @@ fn extract_seq() {
         );
         assert_eq!(matches.len(), 1);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("Expected VonInt(5), got {:?}", other),
     }
@@ -98,7 +98,7 @@ fn nested_seqs() {
         );
         assert_eq!(matches.len(), 1);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
         other => panic!("Expected VonInt(6), got {:?}", other),
     }
@@ -162,7 +162,7 @@ fn nested_tuples() {
         );
         assert_eq!(matches.len(), 1);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
         other => panic!("Expected VonInt(5), got {:?}", other),
     }

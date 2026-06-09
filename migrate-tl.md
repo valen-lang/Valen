@@ -14,6 +14,8 @@
 
 **Scope-bias trap: "lots of body fills" is still JR work.** A long mechanical port (e.g. an entire vonify_* family) is JR territory, not a TL one-shot. Push back when JR frames mechanical bulk as TL-level.
 
+**TL-slip trap (mirror of the above):** mid-refactor sed passes and unwrap cascades are JR-tractable even when the TL is faster. Hand mechanical propagation back; the TL's job is the NNDX-blocked seed (new enum/variant/sig), not the cascade.
+
 **Routine JR prods don't gate on architect approval** — clear JR-scope continuations (body fills, "next test" dispatches) ship via `for-jr.md` directly. The approval gate is for structural/design rulings only.
 
 **Interner-threading channel:** parameters or god-structs. Runtime-state structs (`HeapV`, etc.) aren't god-structs just because they're widely-passed; don't bolt the interner onto them — thread it as a parameter.
@@ -44,6 +46,12 @@
 
 **Run `git submodule update --recursive` after a rebase that pulls in Luz/Guardian pin advances** — otherwise the sub-clone's working tree stays on the old SHA and `diff --submodule HEAD` reports a spurious "rewind".
 
+**Always keep a `from-*.md` watcher armed** — at every point the TL session is alive, even mid-conversation, mid-investigation, between escalations. JR or other TLs can drop a message anytime; an unarmed watcher means the message sits unread.
+
+**Broadcast heads-ups on large refactors.** Before you (or your JR) start a multi-file signature change, lifetime threading, struct/enum reshape, or any cross-cutting edit: write a one-line heads-up to every other TL via `/Volumes/V/Vale{2,3,4}/from-<your-name>.md` so they don't collide.
+
+**No eager cross-bucket stealing.** Don't pull from another TL's tail unprompted, even with bandwidth — wait for an explicit architect prompt.
+
 **Use absolute paths in `from-*.md` watchers** — relative paths resolve against the bash sandbox's cwd, which may silently differ from the worktree root and never match. Watch the glob `*from-*.md` to catch incoming from any sender (JR via `from-jr.md`, other TLs via `from-vale2.md` / `from-vale3.md` / `from-vale4.md`). Outgoing to another TL: write `from-<your-name>.md` in their worktree root (e.g. SI TL in `/Volumes/V/Vale` writes `/Volumes/V/Vale2/from-vale.md` to reach Vale2's TL).
 
 **Don't kill `ps -ef` PIDs unless you can trace them to your own session's task IDs** — other TLs' watchers appear globally, and SIGTERMing them fires a spurious task-completion notification on the wrong TL.
@@ -73,15 +81,17 @@ If a code comment or skill cites a former TL.md section by name (e.g. "Good Part
 
 ## Where We Are
 
-Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IRegionNameT` is the lone remaining `_Phantom`). Build is green (`cargo check --lib`; 2 pre-existing `expression_compiler.rs` warnings), SCPX 0.
+Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IRegionNameT` is the lone remaining `_Phantom`). Build is green (`cargo check --lib`; 0 warnings baseline), SCPX 260/260 OK.
 
 **Typing pass — core test suite migrated.** Every test tracked in the now-retired `docs/historical/typing-test-todo.md` passes. The only remaining typing-test tail is the 40 `after_regions_*` tests (~14 are deliberate Scala-side deferrals) — see the residuals doc.
 
 **Instantiating + simplifying — capstone landed.** `local_ids_unique` green; 6 hammer integration tests landed (`simple_main` → `tests_stripping_things_after_panic` + `two_templated_structs_make_it_into_hamuts`); X-bucket `top_level_extern_functions_wire_format_simple_id_has_flat_shape` green; peak 769/769.
 
-**Pilot landed: `simple_program_returning_an_int` green; 770/770 tests passing.** Active frontier: the four-way parallel migration (SI/CL/GE/MI buckets, see `master-todo.md`).
+**Parallel sprint Phase 2 — COMPLETE across all 4 buckets** (`Vale`→SI, `Vale2`→CL, `Vale3`→GE, `Vale4`→MI). Suite **1035/1035**, cargo 0/0, SCPX clean. Worktree-level `[x]` state in each `migration-drive-todo.md`. Infra landed during the sprint: SI's testvm Result-bubble refactor (lifetime-collapsed `VmRuntimeErrorV<'s>` + Result-at-eval-boundary plumbing for strict-parity exception discrimination); GE's deep slice-pipeline re-run on `final_ast/instructions.rs` (64→197 markers, full per-case-class `hashCode`/`equals`/`resultType` triplet audit-block coverage); simplifying-pass policy values codified in `FrontendRust/docs/migration/migration-policy.md` (9 schema sections: Val/Ref pairs from HammerInterner, sealed-trait policy, MustIntern seal: yes, etc.); MI's testvm Phase 2C (Option-ADT trio + Result-ADT sextet + each_on_int_range quartet + import_tests + Restackify pipeline); CL's array_map_* + destroy_*_into_function + StaticArrayFromCallable + ArrayCapacity clusters end-to-end across typing→instantiator→hammer→von→vivem.
 
-**Parallel sprint structure:** `Vale` → `experimental-1` (SI), `Vale2` → `experimental-2` (CL), `Vale3` → `experimental-3` (GE), `Vale4` → `experimental-4` (MI). Each worktree has its own JR. `experimental` is the shared integration ref, **checked out in no worktree** — never `git checkout experimental` from any worktree.
+**Residual after Phase 2** (before any Phase 3 or wrap-up): ~49 unbucketed integration_tests stubs across 6 files (`hash_map_tests.rs` 13, `virtual_tests.rs` 12, `integration_tests_a.rs` 12, `array_list_test.rs` 10, `hammer_tests.rs` 2, plus 13 `after_regions_integration_tests.rs` deliberate-deferrals that should stay ignored); 12 audit-trail-debt temp-disables left as visible debt from the earlier curation pass (Cluster 4 `find_function` cross-section sandwich; Cluster 5 MKRFA/ECSIIOSZ MACTX comments; Cluster 12 synthesized accessors); open items in `FrontendRust/src/typing/typing-pass-todo.md` (IRegionNameT `_Phantom`, ~65 retired SPDMX-B comments to strip, nondeterminism via `PtrKey<IdT>`, `RUST_MIN_STACK` workaround, `after_regions_*` typing tail).
+
+**Parallel sprint structure:** `Vale` → `experimental-1` (T1), `Vale2` → `experimental-2` (T2), `Vale3` → `experimental-3` (T3), `Vale4` → `experimental-4` (T4). Each worktree has its own JR. `experimental` is the shared integration ref, **checked out in no worktree** — never `git checkout experimental` from any worktree. (SI/CL/GE/MI terminology retired; thread labels are T1/T2/T3/T4.)
 
 **Per-TL CI loop (after every green test, from your own worktree):** JR posts sync-ready to `from-jr.md` (test name + `git diff --name-only` + "ready to sync") → **TL parity-reviews every JR change before surfacing to architect**: read `git diff` end-to-end, and for each Rust edit, also read the adjacent `/* scala */` audit block — confirm 1:1 parity, no smuggled simplifications, no inlined helpers, no novel logic. Special attention to **any new `Guardian: temp-disable: …` directives** and `/* Guardian: disable-all */` markers (verify each rationale is principled and matches in-tree precedent — temp-disables are easy to miss in a long diff and the architect can't see them otherwise). Then **pause and wait for the architect's explicit go-ahead before any state-mutating step (commit, rebase, or sync).** On go-ahead: `git commit` on `experimental-N` → `git rebase experimental` → re-verify green → `git fetch . experimental-N:experimental` to fast-forward `experimental` to your tip. Check the exit code; non-ff rejection means another TL beat you — re-rebase and retry. The architect gate is non-negotiable: never commit, rebase, or sync to `experimental` unilaterally. Never queue a second JR task while one is in flight — wait for sync-ready before re-dispatching, or `from-jr.md` / `for-jr.md` races and the parity-review trail gets confused. Concurrency-safe via git's ref locking. No remote pushes during the sprint; all worktrees share `/Volumes/V/Vale/.git` so branches are visible by name from anywhere.
 
@@ -89,7 +99,7 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Test-only JR sync-readies (parity-clean, no body/scaffolding/SPDMX disables): parity-review, release for next test immediately — no architect surface, no fire commit; accumulate uncommitted across consecutive test-only greens until a substantive change arrives.**
 
-**Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver.
+**Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver. **Don't work on CoordSendSR until after Phase 3 lands** — `[~]` accumulation is the data we want for evaluating the fix's true blast radius.
 
 Body migration stays test-driven: the active test drives which panic stubs get implemented (see "How To Continue").
 

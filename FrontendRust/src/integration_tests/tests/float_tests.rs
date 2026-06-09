@@ -34,7 +34,7 @@ fn print_float() {
         &instantiating_bump,
         "import printutils.*;\n\nexported func main() {\n  a = 42.125;\n  print(a);\n}\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()).trim(), "42.125");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "42.125");
 }
 /*
   test("Print float") {
@@ -73,7 +73,7 @@ fn float_arithmetic() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -107,7 +107,7 @@ fn float_equals() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -141,7 +141,7 @@ fn concat_string_and_float() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }

@@ -37,7 +37,7 @@ fn tests_floats() {
         &instantiating_bump,
         "struct Moo imm {\n  x float;\n}\nexported func main() int {\n  return 7;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -79,7 +79,7 @@ fn get_or_function() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
@@ -114,10 +114,10 @@ fn panic_on_drop_because_of_outstanding_borrow() {
         "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  ship; // drops it\n}\n",
     );
     let _ = compile.expect_compiler_outputs();
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        compile.eval_for_kind_primitive_args(Vec::new())
-    }));
-    let _panic_payload = result.expect_err("It should panic instead");
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
+        other => panic!("Expected ConstraintViolatedException, got {:?}", other),
+    }
 }
 /*
   // Not sure if this is desirable behavior, because borrow_ship isnt really used after
@@ -145,10 +145,30 @@ fn panic_on_drop_because_of_outstanding_borrow() {
 
 */
 // mig: fn unlet_to_avoid_an_outstanding_borrow_panic
+// Not sure if this is desirable behavior, because borrow_ship isnt really used after
+// we drop ship. Still, let's have this test so we don't *accidentally* change it.
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn unlet_to_avoid_an_outstanding_borrow_panic() {
-    panic!("Unmigrated test: unlet_to_avoid_an_outstanding_borrow_panic");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  unlet borrow_ship;\n  ship; // drops it\n}\n",
+    );
+    let _ = compile.expect_compiler_outputs();
+    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 /*
   // Not sure if this is desirable behavior, because borrow_ship isnt really used after
@@ -201,7 +221,7 @@ fn function_return_with_return_upcasts() {
             crate::typing::test::traverse::NodeRefT::Upcast(_) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
@@ -222,9 +242,44 @@ fn function_return_with_return_upcasts() {
 */
 // mig: fn test_shaking
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_shaking() {
-    panic!("Unmigrated test: test_shaking");
+    // Make sure that functions that cant be called by main will not be included.
+
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "import printutils.*;\nfunc bork(x str) { print(x); }\nfunc helperFunc(x int) { print(x); }\nfunc helperFunc(x str) { print(x); }\nexported func main() {\n  helperFunc(4);\n}\n",
+    );
+    let hinputs = compile.get_monouts();
+
+    assert!(
+        !hinputs.functions.iter().any(|func| matches!(func.header.id.local_name,
+            crate::instantiating::ast::names::INameI::FunctionNameIX(crate::instantiating::ast::names::FunctionNameIX {
+                template: crate::instantiating::ast::names::FunctionTemplateNameI { human_name: crate::interner::StrI("bork"), .. },
+                ..
+            })
+        )));
+
+    assert!(
+        hinputs.functions.iter().find(|func| matches!(func.header.id.local_name,
+            crate::instantiating::ast::names::INameI::FunctionNameIX(crate::instantiating::ast::names::FunctionNameIX {
+                template: crate::instantiating::ast::names::FunctionTemplateNameI { human_name: crate::interner::StrI("helperFunc"), .. },
+                ..
+            })
+        )).is_some());
 }
 /*
   test("Test shaking") {
@@ -259,9 +314,30 @@ fn test_shaking() {
 */
 // mig: fn test_overloading_between_borrow_and_weak
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_overloading_between_borrow_and_weak() {
-    panic!("Unmigrated test: test_overloading_between_borrow_and_weak");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nsealed interface IMoo  {}\nstruct Moo {}\nimpl IMoo for Moo;\n\nabstract func func(virtual moo &IMoo) int;\nabstract func func(virtual moo &&IMoo) int;\n\nfunc func(moo &Moo) int { return 42; }\nfunc func(moo &&Moo) int { return 73; }\n\nexported func main() int {\n  return func(&Moo());\n}\n",
+    );
+    let _coutputs = compile.get_compiler_outputs().unwrap();
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
 }
 /*
   test("Test overloading between borrow and weak") {
@@ -309,7 +385,7 @@ fn truncate_i64_to_i32() {
         "exported func main() int {\n  return TruncateI64ToI32(4300000000i64);\n}\n",
     );
     let _coutputs = compile.expect_compiler_outputs();
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5032704 }) => {}
         other => panic!("expected VonInt(5032704), got {:?}", other),
     }
@@ -349,7 +425,7 @@ fn return_without_return() {
         &instantiating_bump,
         "exported func main() int { 73 }\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 73 }) => {}
         other => panic!("expected VonInt(73), got {:?}", other),
     }
@@ -437,7 +513,7 @@ fn test_extern_functions() {
         let extern_sqrt = package_h.lookup_function("sqrt(float)");
         assert!(extern_sqrt.is_extern);
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
@@ -489,7 +565,7 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
         &instantiating_bump,
         "\nimport panicutils.*;\n\nsealed interface XOpt<T> where T Ref { }\nstruct XNone<T> where T Ref { }\nimpl<T> XOpt<T> for XNone<T>;\n\nabstract func get<T>(virtual opt XOpt<T>) int;\nfunc get<T>(opt XNone<T>) int { __vbi_panic() }\n\nabstract func get<T>(virtual opt &XOpt<T>) int;\nfunc get<T>(opt &XNone<T>) int { return 42; }\n\nexported func main() int {\n  opt XOpt<int> = XNone<int>();\n  return opt.get();\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -526,9 +602,30 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
 */
 // mig: fn test_catch_deref_after_drop
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn test_catch_deref_after_drop() {
-    panic!("Unmigrated test: test_catch_deref_after_drop");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/invalidaccess.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        &source,
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()) {
+        Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(_)) => {}
+        other => panic!("Expected ConstraintViolatedException, got {:?}", other),
+    }
 }
 /*
   test("Test catch deref after drop") {
@@ -565,7 +662,7 @@ fn using_same_constraint_ref_from_both_branches_of_if() {
         &instantiating_bump,
         "\nstruct Moo {}\nfunc foo(a &Moo) int { return 41; }\nfunc bork(a &Moo) int {\n  if (false) {\n    return foo(a);\n  } else if (false) {\n    return foo(a);\n  } else {\n    // continue\n  }\n  return foo(a) + 1;\n}\nexported func main() int {\n  return bork(&Moo());\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -619,7 +716,7 @@ fn moving_same_thing_from_both_branches_of_if() {
         &instantiating_bump,
         "\nstruct Moo {}\nfunc foo(a Moo) int { return 41; }\nfunc bork(a Moo) int {\n  if (false) {\n    return foo(a);\n  } else if (false) {\n    return foo(a);\n  } else {\n    // continue\n  }\n  return 42;\n}\nexported func main() int {\n  return bork(Moo());\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -711,7 +808,7 @@ fn call_borrow_parameter_with_shared_reference() {
         &instantiating_bump,
         "\nfunc bork<T>(a &T) &T { return a; }\n\nexported func main() int {\n  return bork(6);\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
         other => panic!("expected VonInt(6), got {:?}", other),
     }
@@ -752,7 +849,7 @@ fn supplying_bounded_struct_to_struct_accepting() {
         &instantiating_bump,
         "\nstruct Bork<T> where func drop(T)void { a T; }\n\nstruct Spork<T> where func drop(T)void { a T; }\n\nexported func main() int {\n  return Spork<Bork<int>>(Bork(7)).a.a;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -821,7 +918,7 @@ fn same_type_multiple_times_in_an_invocation() {
         &instantiating_bump,
         "\nstruct Bork<T> where func drop(T)void {\n  a T;\n}\n\nexported func main() int {\n  return Bork<Bork<Bork<int>>>(Bork(Bork(7))).a.a.a;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
@@ -866,7 +963,7 @@ fn restackify() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -902,7 +999,7 @@ fn destructure_restackify() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -940,7 +1037,7 @@ fn loop_restackify() {
         &instantiating_bump,
         &source,
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
@@ -985,7 +1082,7 @@ fn ignoring_receiver() {
             kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
         });
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 8 }) => {}
         other => panic!("expected VonInt(8), got {:?}", other),
     }

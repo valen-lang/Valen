@@ -1658,7 +1658,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::BorrowToWeakH(_) => panic!("vonify_expression: BorrowToWeakH"),
+            ExpressionH::BorrowToWeakH(wa) => {
+                let crate::final_ast::instructions::BorrowToWeakH { ref_expression: source_expr } = *wa;
+                let wa_result_type = ExpressionH::BorrowToWeakH(wa).result_type();
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "BorrowToWeak".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceKind".to_string(), value: self.vonify_kind(source_expr.result_type().kind) },
+                        crate::von::ast::VonMember { field_name: "resultType".to_string(), value: self.vonify_coord(wa_result_type) },
+                        crate::von::ast::VonMember { field_name: "resultKind".to_string(), value: self.vonify_kind(wa_result_type.kind) },
+                    ],
+                })
+            }
             ExpressionH::IsSameInstanceH(isi) => {
                 let crate::final_ast::instructions::IsSameInstanceH { left_expression: left, right_expression: right } = *isi;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
@@ -1693,7 +1707,26 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     ],
                 })
             }
-            ExpressionH::LockWeakH(_) => panic!("vonify_expression: LockWeakH"),
+            ExpressionH::LockWeakH(lw) => {
+                let crate::final_ast::instructions::LockWeakH { source_expression: source_expr, result_type: result_opt_type, some_constructor, none_constructor } = *lw;
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: "LockWeak".to_string(),
+                    id: None,
+                    members: vec![
+                        crate::von::ast::VonMember { field_name: "sourceExpr".to_string(), value: self.vonify_expression(source_expr) },
+                        crate::von::ast::VonMember { field_name: "sourceType".to_string(), value: self.vonify_coord(source_expr.result_type()) },
+                        crate::von::ast::VonMember { field_name: "sourceKnownLive".to_string(), value: crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: false }) },
+                        crate::von::ast::VonMember { field_name: "someConstructor".to_string(), value: self.vonify_prototype(some_constructor) },
+                        crate::von::ast::VonMember { field_name: "someType".to_string(), value: self.vonify_coord(some_constructor.return_type) },
+                        crate::von::ast::VonMember { field_name: "someKind".to_string(), value: self.vonify_kind(some_constructor.return_type.kind) },
+                        crate::von::ast::VonMember { field_name: "noneConstructor".to_string(), value: self.vonify_prototype(none_constructor) },
+                        crate::von::ast::VonMember { field_name: "noneType".to_string(), value: self.vonify_coord(none_constructor.return_type) },
+                        crate::von::ast::VonMember { field_name: "noneKind".to_string(), value: self.vonify_kind(none_constructor.return_type.kind) },
+                        crate::von::ast::VonMember { field_name: "resultOptType".to_string(), value: self.vonify_coord(result_opt_type) },
+                        crate::von::ast::VonMember { field_name: "resultOptKind".to_string(), value: self.vonify_kind(result_opt_type.kind) },
+                    ],
+                })
+            }
             ExpressionH::DiscardH(d) => {
                 let crate::final_ast::instructions::DiscardH { source_expression: source_expr } = *d;
                 crate::von::ast::IVonData::Object(crate::von::ast::VonObject {

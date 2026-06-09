@@ -22,7 +22,7 @@ import scala.collection.immutable.List
 */
 // mig: struct PanicExceptionV
 /// Temporary state
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct PanicExceptionV;
 /*
 case class PanicException() extends Throwable {
@@ -42,12 +42,10 @@ override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: struct ConstraintViolatedExceptionV
 /// Temporary state
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub struct ConstraintViolatedExceptionV<'v, 'h, 's>
-where 's: 'h, 'h: 'v,
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct ConstraintViolatedExceptionV<'s>
 {
     pub msg: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<(&'v (), &'h ())>,
 }
 /*
 case class ConstraintViolatedException(msg: String) extends Throwable {
@@ -65,13 +63,12 @@ override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 */
-// (no scala counterpart — Rust adaptation: enum wrapping the testvm exception structs so vm errors bubble as Result instead of Scala's throw/catch.)
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub enum VmRuntimeErrorV<'v, 'h, 's>
-where 's: 'h, 'h: 'v,
+// (no scala counterpart — Rust adaptation: enum wrapping the testvm exception structs so vm errors bubble as Result instead of Scala's throw/catch. Carries only the 's lifetime — the vm/heap lifetimes from the original phantoms were vacuous and prevent the Result from outliving the eval_for_* boundary.)
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum VmRuntimeErrorV<'s>
 {
     PanicException(PanicExceptionV),
-    ConstraintViolatedException(ConstraintViolatedExceptionV<'v, 'h, 's>),
+    ConstraintViolatedException(ConstraintViolatedExceptionV<'s>),
 }
 /* */
 /*
@@ -79,7 +76,7 @@ where 's: 'h, 'h: 'v,
 object Vivem {
 */
 // mig: fn execute_with_primitive_args
-pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mut heap = HeapV::new(interner, vivem_dout, vivem_bump);
     let arg_references: &'v [ReferenceV<'v, 'h, 's>] =
         vivem_bump.alloc_slice_fill_iter(
@@ -104,7 +101,7 @@ pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, 
   }
 */
 // mig: fn execute_with_heap
-pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, input_heap: &mut HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
+pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, input_heap: &mut HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     assert_eq!(input_heap.count_unreachable_allocations(interner, input_argument_references), 0);
     inner_execute(program_h, interner, scout_arena, input_argument_references, input_heap, stdin, stdout)
 }
@@ -190,7 +187,7 @@ pub fn stdout_collector<'s>() -> (std::rc::Rc<std::cell::RefCell<String>>, Box<d
   }
 */
 // mig: fn inner_execute
-pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> IVonData {
+pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mains: Vec<&'h crate::final_ast::ast::FunctionH<'s, 'h>> =
         program_h.packages.package_coord_to_contents.iter().flat_map(|(_package_coord, paackage)| {
             paackage.export_name_to_function.iter()
@@ -216,7 +213,7 @@ pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &cra
     }
 
     let (callee_call_id, retuurn) =
-        crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, argument_references, main);
+        crate::testvm::function_vivem::execute_function(program_h, interner, scout_arena, stdin, stdout, heap, argument_references, main)?;
     let return_ref = retuurn.return_ref;
 
     {
@@ -225,7 +222,7 @@ pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &cra
     }
 
     let von = heap.to_von(return_ref);
-    crate::testvm::expression_vivem::discard(program_h, interner, scout_arena, heap, stdout, stdin, callee_call_id, main.prototype.return_type, return_ref);
+    crate::testvm::expression_vivem::discard(program_h, interner, scout_arena, heap, stdout, stdin, callee_call_id, main.prototype.return_type, return_ref)?;
     {
         use std::io::Write;
         writeln!(heap.vivem_dout).unwrap();
@@ -236,7 +233,7 @@ pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &cra
         use std::io::Write;
         writeln!(heap.vivem_dout).unwrap();
     }
-    von
+    Ok(von)
 }
 /*
   def innerExecute(

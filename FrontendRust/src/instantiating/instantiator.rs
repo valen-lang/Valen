@@ -3357,8 +3357,40 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::LockWeak(_) => panic!("Unimplemented: translate_ref_expr LockWeak"),
-            ReferenceExpressionTE::BorrowToWeak(_) => panic!("Unimplemented: translate_ref_expr BorrowToWeak"),
+            ReferenceExpressionTE::LockWeak(lw) => {
+                let crate::typing::ast::expressions::LockWeakTE { inner_expr, result_opt_borrow_type, some_constructor, none_constructor, some_impl_name, none_impl_name } = **lw;
+                let result_it =
+                    self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_opt_borrow_type).coord;
+                let result_ct = region_collapser_individual::collapse_coord(self.interner, &result_it);
+                let (_inner_it_s, inner_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
+                let (_some_proto_s, some_proto_c) =
+                    self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, some_constructor);
+                let (_none_proto_s, none_proto_c) =
+                    self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, none_constructor);
+                let some_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &some_impl_name);
+                let some_impl_id_c = region_collapser_individual::collapse_impl_id(self.interner, &some_impl_id_s);
+                let none_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &none_impl_name);
+                let none_impl_id_c = region_collapser_individual::collapse_impl_id(self.interner, &none_impl_id_s);
+                let result_ce = ReferenceExpressionIE::LockWeak(self.interner.bump().alloc(LockWeakIE {
+                    inner_expr: inner_ce,
+                    result_opt_borrow_type: result_ct,
+                    some_constructor: some_proto_c,
+                    none_constructor: none_proto_c,
+                    some_impl_name: some_impl_id_c,
+                    none_impl_name: none_impl_id_c,
+                    result: result_ct,
+                }));
+                (result_it, result_ce)
+            }
+            ReferenceExpressionTE::BorrowToWeak(b) => {
+                let crate::typing::ast::expressions::BorrowToWeakTE { inner_expr } = **b;
+                let (inner_it, inner_ce) =
+                    self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
+                let result_it = CoordI { ownership: OwnershipI::Weak, kind: inner_it.kind };
+                let result_ct = region_collapser_individual::collapse_coord(self.interner, &result_it);
+                (result_it, ReferenceExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, result: result_ct })))
+            }
             ReferenceExpressionTE::LetNormal(l) => {
                 let (_inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &l.expr);

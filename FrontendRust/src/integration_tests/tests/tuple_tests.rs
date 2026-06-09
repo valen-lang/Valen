@@ -33,7 +33,7 @@ fn returning_tuple_from_function_and_dotting_it() {
         &instantiating_bump,
         "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc makeTup() (int, int) { return (2, 3); }\nexported func main() int {\n  return makeTup().1;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
@@ -75,7 +75,7 @@ fn tuple_with_two_things() {
         &instantiating_bump,
         "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nexported func main() bool {\n  return (9, true).1;\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
         other => panic!("Expected VonBool(true), got {:?}", other),
     }
@@ -115,7 +115,7 @@ fn tuple_type() {
         &instantiating_bump,
         "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc moo(a (int, int)) int { return a.1; }\n\nexported func main() int {\n  return moo((3, 4));\n}\n",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
         other => panic!("Expected VonInt(4), got {:?}", other),
     }
@@ -167,7 +167,7 @@ fn simple_tuple_with_one_int() {
             crate::typing::test::traverse::NodeRefT::Tuple(_) => Some(())
         );
     }
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
         other => panic!("Expected VonInt(9), got {:?}", other),
     }

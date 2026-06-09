@@ -94,28 +94,25 @@ Eliminate all compiler warnings (unused imports, unused variables, dead code) be
 - **Profiling:** Rust doesn't need Scala's `Profiler.frame(() => { ... })` wrappers.
 
 
-## Bulk Sed Safety Protocol
+## Bulk Edits
 
-Before running any `sed` command that modifies files in bulk, **always sanity-check first**:
+`sed` and `perl -pi` are outlawed. For bulk transforms, **prefer the Edit tool** — ~40 distinct invocations is the threshold before Python becomes worth it.
 
-1. **Identify false positives in the target.** The pattern you're replacing may appear in contexts you don't intend to change:
-   - **Char literals**: `'a'` looks like lifetime `'a` followed by `'`. Use `s/'a\([^']\)/'p\1/g` to skip char literals.
-   - **Scala block comments**: This codebase has extensive `/* ... */` Scala code. Search inside block comments for your pattern: `python3 -c "import re; ..."` to extract comment blocks and grep within them.
-   - **String literals**: Your pattern might appear inside `"..."` strings.
-   - **Different semantic contexts**: e.g., `'a` in the solver directory is a local callback lifetime, NOT the interner — don't rename it.
+### Read-only scripts in `./tmp/scripts/`
 
-2. **Dry-run on representative files.** Pipe through sed without `-i` and diff or grep the output:
-   ```bash
-   sed "s/pattern/replace/g" file.rs | grep "unexpected_thing"
-   ```
+`python3 ./tmp/scripts/<NAME>.py` auto-allows when the script is a pure stdin → stdout transform (no file I/O, no subprocess, no exec/eval). VRBX explains the exact shape constraints when something doesn't fit.
 
-3. **Check for collateral damage after the run.** For lifetime renames like `'a` → `'p`:
-   - Look for duplicated params: `grep -rn "'p, 'p"` (from collapsing `'a, 'p`)
-   - Look for corrupted char literals: `grep -rn "'p'"` where the original had `'a'`
-   - Look for changes inside block comments that shouldn't have been touched
+### Transform-then-apply bulk-edit sequence
 
-4. **Scope your sed precisely.** Run per-directory or per-file, not blanket across the whole repo. Different directories may need different replacements (e.g., `'a` → `'p` in parsing vs `'a` → `'s` in postparsing).
+One file at a time:
 
+1. Write the script to `./tmp/scripts/<name>.py`.
+2. Transform + review: `python3 ./tmp/scripts/<name>.py < <SRC> > ./tmp/working/<BASENAME> && diff -u <SRC> ./tmp/working/<BASENAME>`.
+3. Iterate (edit script, re-run step 2) until the diff is right.
+4. Apply: `TS=$(date +%Y%m%d-%H%M%S) && mkdir -p ./tmp/backup/$TS && cp <SRC> ./tmp/backup/$TS/<BASENAME> && mv ./tmp/working/<BASENAME> <SRC>`.
+5. Next file: back to step 2.
+
+Loops over read-only scripts (analysis, transforms-to-tmp) auto-allow; loops including the cp+mv apply step reject. Recover from a failed apply: `mv ./tmp/backup/<TS>/<BASENAME> <SRC>`.
 
 ## Build & Run Convention
 

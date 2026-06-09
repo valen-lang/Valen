@@ -31,7 +31,7 @@ fn and() {
         &instantiating_bump,
         "exported func main() bool { return true and true; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
         other => panic!("expected VonBool(true), got {:?}", other),
     }
@@ -63,7 +63,7 @@ fn or() {
         &instantiating_bump,
         "exported func main() bool { return true or false; }",
     );
-    match compile.eval_for_kind_primitive_args(Vec::new()) {
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: true }) => {}
         other => panic!("expected VonBool(true), got {:?}", other),
     }
@@ -95,7 +95,7 @@ fn and_short_circuiting() {
         &instantiating_bump,
         "func printAndFalse() bool { print(\"bork!\"); return false; }\nexported func main() bool { return printAndFalse() and printAndFalse(); }\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "bork!");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "bork!");
 }
 /*
   test("And short-circuiting") {
@@ -129,7 +129,7 @@ fn or_short_circuiting() {
         &instantiating_bump,
         "func printAndTrue() bool { print(\"bork!\"); return true; }\nexported func main() bool { return printAndTrue() or printAndTrue(); }\n",
     );
-    assert_eq!(compile.eval_for_stdout(Vec::new()), "bork!");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "bork!");
 }
 /*
   test("Or short-circuiting") {

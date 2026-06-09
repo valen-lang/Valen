@@ -1073,6 +1073,10 @@ fn load_expression<'p>(
     "Break" => IExpressionPE::Break(BreakPE {
       range: load_range(get_object_field(jobj, "range")),
     }),
+    "Unlet" => IExpressionPE::Unlet(UnletPE {
+      range: load_range(get_object_field(jobj, "range")),
+      name: load_imprecise_name(parse_arena, get_object_field(jobj, "localName")),
+    }),
     other => panic!("Not implemented: load_expression {}", other),
   }
 }
