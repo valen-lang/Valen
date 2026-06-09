@@ -252,9 +252,29 @@ fn hash_map_collisions() {
 */
 // mig: fn hash_map_with_functors
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_with_functors() {
-    panic!("Unmigrated test: hash_map_with_functors");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nfunc add42(map &HashMap<int, int, IntHasher, IntEquator>) {\n  map.add(42, 100);\n}\n\nexported func main() int {\n  m = HashMap<int, int, IntHasher, IntEquator>(IntHasher(), IntEquator());\n  add42(&m);\n  return m.get(42).get();\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 100 }) => {}
+        other => panic!("expected VonInt(100), got {:?}", other),
+    }
 }
 /*
   test("Hash map with functors") {
@@ -277,9 +297,29 @@ fn hash_map_with_functors() {
 */
 // mig: fn hash_map_with_struct_as_key
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_with_struct_as_key() {
-    panic!("Unmigrated test: hash_map_with_struct_as_key");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\n\nstruct Location imm {\n  groupX int;\n  groupY int;\n  indexInGroup int;\n}\n\nstruct LocationHasher { }\nfunc __call(this &LocationHasher, loc Location) int {\n  hash = 0;\n  set hash = 41 * hash + loc.groupX;\n  set hash = 41 * hash + loc.groupY;\n  set hash = 41 * hash + loc.indexInGroup;\n  return hash;\n}\n\nstruct LocationEquator { }\nfunc __call(this &LocationEquator, a Location, b Location) bool {\n  return (a.groupX == b.groupX) and (a.groupY == b.groupY) and (a.indexInGroup == b.indexInGroup);\n}\n\nexported func main() int {\n  m = HashMap<Location, int>(LocationHasher(), LocationEquator());\n  m.add(Location(4, 5, 6), 100);\n  return m.get(Location(4, 5, 6)).get();\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 100 }) => {}
+        other => panic!("expected VonInt(100), got {:?}", other),
+    }
 }
 /*
   test("Hash map with struct as key") {
@@ -319,9 +359,29 @@ fn hash_map_with_struct_as_key() {
 */
 // mig: fn hash_map_has
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_has() {
-    panic!("Unmigrated test: hash_map_has");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nimport panicutils.*;\nexported func main() int {\n  m = HashMap<int, int>(IntHasher(), IntEquator());\n  m.add(0, 100);\n  m.add(4, 101);\n  m.add(8, 102);\n  m.add(12, 103);\n  vassert(m.has(0));\n  vassert(not(m.has(1)));\n  vassert(not(m.has(2)));\n  vassert(not(m.has(3)));\n  vassert(m.has(4));\n  vassert(m.has(8));\n  vassert(m.has(12));\n  return 111;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 111 }) => {}
+        other => panic!("expected VonInt(111), got {:?}", other),
+    }
 }
 /*
   test("Hash map has") {
@@ -351,9 +411,32 @@ fn hash_map_has() {
 */
 // mig: fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
-    panic!("Unmigrated test: gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots");
+    // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
+    // come from substituting existing ones.
+
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.arith.*;\n\nextern func __vbi_panic() __Never;\n\nextern(\"vale_runtime_sized_array_len\")\nfunc len<M Mutability, E>(arr &[]<M>E) int;\n\nextern(\"vale_runtime_sized_array_mut_new\")\nfunc Array<M Mutability, E Ref>(size int) []<M>E\nwhere M = mut;\n\nfunc __pretend<T>() T { __vbi_panic() }\n\n#!DeriveStructDrop\nstruct HashMapNode<K Ref imm> {\n  key K;\n}\n\n#!DeriveStructDrop\nstruct HashMap<K Ref imm> {\n  table! Array<mut, HashMapNode<K>>;\n}\n\nfunc keys<K Ref imm>(self &HashMap<K>) {\n  self.table.len();\n}\n\nexported func main() int {\n  m = HashMap<int>([]HashMapNode<int>(0));\n  m.keys();\n  [arr] = m;\n  [] = arr;\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Gathers/substitutes bounds for structs inside things accessed from dots") {
@@ -403,9 +486,32 @@ fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
 */
 // mig: fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
-    panic!("Unmigrated test: gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots");
+    // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
+    // come from substituting existing ones.
+
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport v.builtins.arith.*;\n\nextern func __vbi_panic() __Never;\n\nextern(\"vale_runtime_sized_array_len\")\nfunc len<M Mutability, E>(arr &[]<M>E) int;\n\nextern(\"vale_runtime_sized_array_mut_new\")\nfunc Array<M Mutability, E Ref>(size int) []<M>E\nwhere M = mut;\n\nfunc __pretend<T>() T { __vbi_panic() }\n\n#!DeriveStructDrop\ninterface HashMapNode<K Ref imm> { }\n\n#!DeriveStructDrop\nstruct HashMap<K Ref imm> {\n  table! Array<mut, HashMapNode<K>>;\n}\n\nfunc keys<K Ref imm>(self &HashMap<K>) {\n  self.table.len();\n}\n\nexported func main() int {\n  m = HashMap<int>([]HashMapNode<int>(0));\n  m.keys();\n  [arr] = m;\n  [] = arr;\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Gathers/substitutes bounds for interfaces inside things accessed from dots") {
@@ -453,9 +559,29 @@ fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() 
 */
 // mig: fn hash_map_values
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_values() {
-    panic!("Unmigrated test: hash_map_values");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nimport panicutils.*;\nexported func main() int {\n  m = HashMap<int, int>(IntHasher(), IntEquator());\n  m.add(0, 100);\n  m.add(4, 101);\n  m.add(8, 102);\n  m.add(12, 103);\n  k = m.values();\n  vassertEq(k.len(), 4);\n  vassertEq(k[0], 100);\n  vassertEq(k[1], 101);\n  vassertEq(k[2], 102);\n  vassertEq(k[3], 103);\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Hash map values") {
@@ -484,9 +610,29 @@ fn hash_map_values() {
 */
 // mig: fn hash_map_with_mutable_values
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_with_mutable_values() {
-    panic!("Unmigrated test: hash_map_with_mutable_values");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nimport panicutils.*;\nstruct Plane {}\n\nexported func main() int {\n  m = HashMap<int, Plane>(IntHasher(), IntEquator());\n  m.add(0, Plane());\n  m.add(4, Plane());\n  m.add(8, Plane());\n  m.add(12, Plane());\n  vassert(m.has(0));\n  vassert(m.has(4));\n  vassert(m.has(8));\n  vassert(m.has(12));\n  m.remove(12);\n  vassert(not m.has(12));\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Hash map with mutable values") {
@@ -517,9 +663,29 @@ fn hash_map_with_mutable_values() {
 */
 // mig: fn hash_map_remove
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_remove() {
-    panic!("Unmigrated test: hash_map_remove");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nimport panicutils.*;\nexported func main() int {\n  m = HashMap<int, int>(IntHasher(), IntEquator());\n  m.add(0, 100);\n  m.add(4, 101);\n  m.add(8, 102);\n  m.add(12, 103);\n  vassert(m.has(8));\n  m.remove(8);\n  vassert(not m.has(8));\n  m.add(8, 102);\n  vassert(m.has(8));\n  vassert(m.has(4));\n  m.remove(4);\n  vassert(not m.has(4));\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Hash map remove") {
@@ -550,9 +716,29 @@ fn hash_map_remove() {
 */
 // mig: fn hash_map_remove_2
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn hash_map_remove_2() {
-    panic!("Unmigrated test: hash_map_remove_2");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nimport hashmap.*;\nimport panicutils.*;\n\nexported func main() int {\n  m = HashMap<int, int>(IntHasher(), IntEquator());\n  m.add(0, 0);\n  m.add(1, 1);\n  m.add(2, 2);\n  m.add(3, 3);\n  m.remove(1);\n  m.remove(2);\n  m.add(4, 4);\n\n  values = m.values();\n  vassertEq(values.len(), 3, \"wat\");\n  vassertEq(values[0], 0, \"wat\");\n  vassertEq(values[1], 3, \"wat\");\n  vassertEq(values[2], 4, \"wat\");\n  return 1337;\n}\n",
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 1337 }) => {}
+        other => panic!("expected VonInt(1337), got {:?}", other),
+    }
 }
 /*
   test("Hash map remove 2") {
