@@ -103,8 +103,31 @@ fn map_function() { panic!("Unmigrated test: map_function"); }
 */
 // mig: fn imm_tuple_access
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn imm_tuple_access() { panic!("Unmigrated test: imm_tuple_access"); }
+fn imm_tuple_access() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let source = crate::tests::tests::load_expected("programs/tuples/immtupleaccess.vale");
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        source.as_str(),
+    );
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        other => panic!("Expected VonInt(42), got {:?}", other),
+    }
+}
 /*
   test("imm tuple access") {
     val compile = RunCompilation.test(Tests.loadExpected("programs/tuples/immtupleaccess.vale"))
@@ -407,8 +430,32 @@ fn call_array_without_element_type() { panic!("Unmigrated test: call_array_witho
 */
 // mig: fn make_array_without_type
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
-fn make_array_without_type() { panic!("Unmigrated test: make_array_without_type"); }
+fn make_array_without_type() {
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\nexported func main() int {\n  a = #[](10, {_});\n  return a.3;\n}\n",
+    );
+
+    let _coutputs = compile.expect_compiler_outputs();
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("Expected VonInt(3), got {:?}", other),
+    }
+}
 /*
   test("Make array without type") {
     val compile = RunCompilation.test(
