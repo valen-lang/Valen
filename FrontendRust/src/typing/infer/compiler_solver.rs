@@ -1403,13 +1403,46 @@ where 's: 't,
                     Some(_) => panic!("Expected CoordTemplataT in ResolveSR returnRune"),
                     //         case None => {
                     None => {
-                        // Per @BRRZ, params are known but return isn't. Scala does a real overload
-                        // lookup via delegate.resolveFunction (the same delegate method the
-                        // post-solve phase uses at InferCompiler.scala:350) to discover the return
-                        // type and unblock the solver. Safety of this mid-solve lookup is documented
-                        // in CompilerSolver.scala:668-680. Not yet migrated — the second puzzle path
-                        // (params-only solved) doesn't yet have a Rust test exercising it.
-                        panic!("Unimplemented: ResolveSR @BRRZ None branch — real overload lookup via resolve_function (see Frontend/TypingPass/.../CompilerSolver.scala:668-691)");
+                        // Per @BRRZ, params are known but return isn't. Do a real overload lookup
+                        // (the same delegate.resolveFunction the post-solve phase uses at
+                        // InferCompiler.scala:350) so we can discover the return type and unblock
+                        // the solver. Safety of this mid-solve lookup:
+                        //   - CompilerOutputs.lookupFunction's signatureToFunction cache is the
+                        //     recursion terminator for nested bound resolution.
+                        //   - RuneTypeSolver.scala:210 already types returnRune as
+                        //     CoordTemplataType, so the commitStep below is guaranteed well-typed.
+                        //   - Per @SROACSD, no solver call site coexists DefinitionFuncSR with
+                        //     ResolveSR, so there is no rule-ordering hazard.
+                        //   - All state read by the call chain is frozen env + settled
+                        //     CompilerOutputs; the outer solver's in-flight state is never
+                        //     consulted.
+                        let ranges = std::iter::once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        match self.resolve_function(
+                            env.original_calling_env,
+                            state,
+                            ranges_slice,
+                            env.call_location,
+                            resolve.name,
+                            param_coords,
+                            env.context_region,
+                            true,
+                        ).expect("CompileErrorExceptionT propagation") {
+                            Ok(stamp_result) => {
+                                let return_type = stamp_result.prototype.return_type;
+                                let mut conclusions = HashMap::new();
+                                conclusions.insert(resolve.result_rune.rune, ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: stamp_result.prototype })));
+                                conclusions.insert(resolve.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: return_type })));
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                    Ok(_) => Ok(()),
+                                    Err(e) => {
+                                        let error = self.typing_interner.alloc(e);
+                                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                    }
+                                }
+                            }
+                            Err(fff) => Err(ITypingPassSolverError::CouldntFindFunction { range: ranges_slice, fff }),
+                        }
                     }
                 }
             }
@@ -1871,6 +1904,7 @@ where 's: 't,
     }
 }
 /*
+Guardian: temp-disable: SPDMX — Exception B (Rust adaptation): Scala has a 5-arg `delegate.resolveFunction` trait method (CompilerSolver.scala:166) wrapping the underlying 8-arg InferCompiler.resolveFunction. Rust calls the underlying directly with env.call_location, env.context_region, verify_conclusions=true since the delegate trait layer was not introduced. The extra args are derived from `env` and from the Rust signature requirement. — FrontendRust/guardian-logs/request-2425-1780978130606/hook-2425/solve_rule--1285.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def solveRule(
     delegate: IInfererDelegate,
     state: CompilerOutputs,

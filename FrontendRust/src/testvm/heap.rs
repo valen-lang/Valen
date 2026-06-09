@@ -1866,8 +1866,28 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             KindV::Float(v) => crate::von::ast::IVonData::Float(crate::von::ast::VonFloat { value: v.value }),
             KindV::Bool(v) => crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: v.value }),
             KindV::Str(v) => crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: v.value.0.to_string() }),
-            KindV::ArrayInstance(_) => panic!("to_von: ArrayInstance — pilot doesn't exercise"),
-            KindV::StructInstance(_) => panic!("to_von: StructInstance — pilot doesn't exercise"),
+            KindV::ArrayInstance(ai) => {
+                let elements_von: Vec<crate::von::ast::IVonData> =
+                    ai.elements.get().iter().map(|e| self.to_von(*e)).collect();
+                crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: elements_von })
+            }
+            KindV::StructInstance(si) => {
+                let members = si.members.get().expect("vassertSome StructInstance members");
+                assert_eq!(members.len(), si.struct_h.members.len());
+                let von_members: Vec<crate::von::ast::VonMember> =
+                    si.struct_h.members.iter().zip(members.iter()).enumerate().map(|(_index, (member_h, member_v))| {
+                        let _ = member_h;
+                        crate::von::ast::VonMember {
+                            field_name: panic!("vimpl: memberH.name.toString"),
+                            value: self.to_von(*member_v),
+                        }
+                    }).collect();
+                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                    tyype: si.struct_h.id.to_string(),
+                    id: None,
+                    members: von_members,
+                })
+            }
             KindV::Opaque(_) => panic!("to_von: Opaque — pilot doesn't exercise"),
         }
     }

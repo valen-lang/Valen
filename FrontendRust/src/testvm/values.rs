@@ -216,8 +216,12 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn print_refs
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn print_refs(&self, _vivem_dout: &mut crate::testvm::vivem::PrintStream) {
-    panic!("Unimplemented: print_refs");
+  pub fn print_refs(&self, vivem_dout: &mut crate::testvm::vivem::PrintStream) {
+    if self.get_total_ref_count(None) > 0 {
+      use std::io::Write;
+      let referrers_str = self.referrers.iter().map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
+      writeln!(vivem_dout, "o{}: {}", self.reference.alloc_id().num, referrers_str).unwrap();
+    }
   }
 }
 /*
