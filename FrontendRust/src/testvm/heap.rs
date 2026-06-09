@@ -62,8 +62,8 @@ impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v
 */
 // mig: fn new_opaque
 impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
-    pub fn new_opaque(&self, opaque_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: new_opaque");
+    pub fn new_opaque(&mut self, opaque_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        self.heap.new_opaque(self.interner, opaque_ht)
     }
 }
 /*
@@ -1459,8 +1459,20 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_opaque(&self, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-        panic!("Unimplemented: new_opaque");
+    pub fn new_opaque(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+        let opaque_ht = match opaque_coord_ht.kind {
+            crate::final_ast::types::KindHT::OpaqueHT(o) => o,
+            _ => panic!(),
+        };
+        let instance = crate::testvm::values::KindV::Opaque(crate::testvm::values::OpaqueV { opaque_ht: *opaque_ht, _phantom: std::marker::PhantomData });
+        let reference = self.add(interner, opaque_coord_ht.ownership, opaque_coord_ht.location, instance);
+        {
+            use std::io::Write;
+            let handle = &mut *self.vivem_dout;
+            write!(handle, " o{}=", reference.num).unwrap();
+        }
+        self.print_kind(instance);
+        reference
     }
 }
 /*
@@ -1642,7 +1654,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                     panic!("Expected {:?} but was {:?}", expected, actual);
                 }
             }
-            (KindV::Opaque(_), KindHT::OpaqueHT(_)) => panic!("check_kind: Opaque — pilot doesn't exercise"),
+            (KindV::Opaque(a), KindHT::OpaqueHT(b)) => {
+                if a.opaque_ht != *b {
+                    panic!("Expected {:?} but was {:?}", expected_type, actual_kind);
+                }
+            }
             (KindV::Void(_), KindHT::VoidHT(_)) => {}
             (KindV::Bool(_), KindHT::BoolHT(_)) => {}
             (KindV::Str(_), KindHT::StrHT(_)) => {}

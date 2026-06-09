@@ -2613,9 +2613,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
         };
         assert_eq!(result.instantiated_citizen.id, *_new_id);
-        let attrs_for_extern_check = self.interner.bump().alloc_slice_fill_iter(result.attributes.iter().copied()) as &[_];
         let result_ref: &'i crate::instantiating::ast::citizens::StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.structs.insert(result_ref.instantiated_citizen.id, result_ref);
+        if result_ref.attributes.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_))) {
+            _monouts.kind_externs.push(crate::instantiating::ast::ast::KindExternI { r#struct: result_ref.instantiated_citizen });
+        }
     }
 }
 /*

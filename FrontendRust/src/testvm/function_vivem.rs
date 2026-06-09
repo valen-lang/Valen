@@ -117,7 +117,9 @@ pub fn execute_function<'h, 's, 'v>(
 pub fn get_extern_function<'h, 's, 'v>(
     _program_h: &ProgramH<'s, 'h>,
     ref_: &PrototypeH<'s, 'h>,
-) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>>> {
+) -> Box<dyn for<'a> Fn(&mut AdapterForExternsV<'a, 'v, 'h, 's>, &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> + 'h>
+where 's: 'h, 'h: 'v,
+{
     let name = ref_.id.fully_qualified_name.0.replace("v::builtins::arith", "");
     match name.as_str() {
         "__vbi_addI32" => Box::new(crate::testvm::vivem_externs::add_i32),
@@ -154,6 +156,10 @@ pub fn get_extern_function<'h, 's, 'v>(
         "__vbi_greaterThanOrEqI32" => Box::new(crate::testvm::vivem_externs::greater_than_or_eq_i32),
         "__vbi_lessThanOrEqI32" => Box::new(crate::testvm::vivem_externs::less_than_or_eq_i32),
         "__vbi_eqBoolBool" => Box::new(crate::testvm::vivem_externs::eq_bool_bool),
+        "VecOuterNew<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| crate::testvm::vivem_externs::new_vec(memory, &ref_, args)) },
+        "Vec.new<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| crate::testvm::vivem_externs::new_vec(memory, &ref_, args)) },
+        "Vec.with_capacity<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| crate::testvm::vivem_externs::new_vec_with_capacity(memory, &ref_, args)) },
+        "Vec.capacity<i32>" => { let ref_ = ref_.clone(); Box::new(move |memory, args| crate::testvm::vivem_externs::vec_capacity(memory, &ref_, args)) },
         other => panic!("get_extern_function: unimplemented extern {}", other),
     }
 }

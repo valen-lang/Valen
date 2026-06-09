@@ -465,7 +465,7 @@ case class OpaqueV(opaqueHT: OpaqueHT) extends PrimitiveKindV {
 // mig: fn tyype
 impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    panic!("Unimplemented: tyype_opaque");
+    RRKindV { hamut: crate::final_ast::types::KindHT::OpaqueHT(_interner.bump().alloc(self.opaque_ht)), _phantom: std::marker::PhantomData }
   }
 }
 /*

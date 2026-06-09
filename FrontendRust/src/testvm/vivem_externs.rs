@@ -925,7 +925,14 @@ pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
   }
 */
 // mig: fn new_vec
-pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: new_vec"); }
+pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, crate::testvm::vivem::VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
+    assert!(args.len() == 0);
+    let opaque_coord = match prototype.return_type {
+        crate::final_ast::types::CoordH { ownership: own, location: loc, kind: crate::final_ast::types::KindHT::OpaqueHT(s) } => crate::final_ast::types::CoordH { ownership: own, location: loc, kind: crate::final_ast::types::KindHT::OpaqueHT(s) },
+        _ => panic!(),
+    };
+    Ok(memory.new_opaque(opaque_coord))
+}
 /*
   def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
     vassert(args.size == 0)
