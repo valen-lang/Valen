@@ -1,3 +1,19 @@
+use bumpalo::Bump;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT, IStructTemplateNameT, StructNameT, StructTemplateNameT};
+use crate::typing::templata::templata::{CoordTemplataT, ITemplataT};
+use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::{CoordT, KindT, StructTT};
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
+
 // mig: struct AfterRegionsTests
 pub struct AfterRegionsTests {}
 /*
@@ -24,8 +40,58 @@ class AfterRegionsTests extends FunSuite with Matchers {
 */
 // mig: fn method_call_on_generic_data
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn method_call_on_generic_data() { panic!("Unmigrated test: method_call_on_generic_data"); }
+fn method_call_on_generic_data() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.drop.*;\n\nsealed interface IShip {\n  func launch(virtual self &IShip);\n}\n\nstruct Raza { fuel int; }\n\nimpl IShip for Raza;\nfunc launch(self &Raza) { }\n\nfunc launchGeneric<T>(x &T)\nwhere implements(T, IShip) {\n  x.launch();\n}\n\nexported func main() {\n  launchGeneric(&Raza(42));\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+
+    let launch_generic = coutputs.lookup_function_by_str("launchGeneric");
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(launch_generic),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT { local_name: INameT::Function(FunctionNameT { template: FunctionTemplateNameT { human_name: StrI("launch"), .. }, .. }), .. },
+                ..
+            },
+            ..
+        }) => Some(())
+    );
+
+    let main = coutputs.lookup_function_by_str("main");
+    let upcasts: Vec<_> = crate::collect_where_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::Upcast(u) => Some(u)
+    );
+    assert_eq!(upcasts.len(), 0);
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("launchGeneric"), .. },
+                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Raza"), .. }), .. }), .. }, .. }), .. }, .. })],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            },
+            ..
+        }) => Some(())
+    );
+}
 /*
   test("Method call on generic data") {
     val compile = CompilerTestCompilation.test(
@@ -79,7 +145,7 @@ fn method_call_on_generic_data() { panic!("Unmigrated test: method_call_on_gener
 */
 // mig: fn tests_overload_set_and_concept_function
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn tests_overload_set_and_concept_function() { panic!("Unmigrated test: tests_overload_set_and_concept_function"); }
 /*
   ignore("Tests overload set and concept function") {
@@ -103,7 +169,7 @@ fn tests_overload_set_and_concept_function() { panic!("Unmigrated test: tests_ov
 */
 // mig: fn generic_interface_anonymous_subclass
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn generic_interface_anonymous_subclass() { panic!("Unmigrated test: generic_interface_anonymous_subclass"); }
 /*
   ignore("Generic interface anonymous subclass") {
@@ -123,8 +189,22 @@ fn generic_interface_anonymous_subclass() { panic!("Unmigrated test: generic_int
 */
 // mig: fn lambda_body_type_matches_anonymous_interface_return_type
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn lambda_body_type_matches_anonymous_interface_return_type() { panic!("Unmigrated test: lambda_body_type_matches_anonymous_interface_return_type"); }
+fn lambda_body_type_matches_anonymous_interface_return_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\ninterface AFunction1<P Ref> {\n  func __call(virtual this &AFunction1<P>, a P) int;\n}\nexported func main() {\n  arr = AFunction1<int>((_) => { 4 });\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
 /*
   test("Lambda body type matches anonymous interface return type") {
     val compile = CompilerTestCompilation.test(
@@ -167,7 +247,7 @@ fn lambda_body_type_matches_anonymous_interface_return_type() { panic!("Unmigrat
 */
 // mig: fn tuple_with_all_imm_fields_is_imm
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_imm_fields_is_imm"); }
 /*
   ignore("Tuple with all imm fields is imm") {
@@ -204,8 +284,27 @@ fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_
 */
 // mig: fn can_destructure_and_assemble_tuple
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn can_destructure_and_assemble_tuple() { panic!("Unmigrated test: can_destructure_and_assemble_tuple"); }
+fn can_destructure_and_assemble_tuple() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc swap<T, Y>(x (T, Y)) (Y, T) {\n  [a, b] = x;\n  return (b, a);\n}\n\nexported func main() bool {\n  return swap((5, true)).0;\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+
+    match coutputs.lookup_function_by_str("main").header.return_type {
+        CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
+    }
+}
 /*
   test("Can destructure and assemble tuple") {
     val compile = CompilerTestCompilation.test(
@@ -236,8 +335,26 @@ fn can_destructure_and_assemble_tuple() { panic!("Unmigrated test: can_destructu
 */
 // mig: fn can_turn_a_borrow_coord_into_an_owning_coord
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn can_turn_a_borrow_coord_into_an_owning_coord() { panic!("Unmigrated test: can_turn_a_borrow_coord_into_an_owning_coord"); }
+fn can_turn_a_borrow_coord_into_an_owning_coord() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.panicutils.*;\n\nstruct SomeStruct { }\n\nfunc inner<T>() T {\n  panic(\"never\");\n}\n\nfunc bork() ^&SomeStruct {\n  return inner<^&SomeStruct>();\n}\n\nexported func main() {\n  bork();\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+    match coutputs.lookup_function_by_str("bork").header.return_type {
+        CoordT { ownership: crate::typing::types::types::OwnershipT::Own, kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }), .. } => {}
+        other => panic!("expected CoordT(OwnT, _, StructTT(SomeStruct)), got {:?}", other),
+    }
+}
 /*
   test("Can turn a borrow coord into an owning coord") {
     val compile = CompilerTestCompilation.test(
@@ -267,8 +384,46 @@ fn can_turn_a_borrow_coord_into_an_owning_coord() { panic!("Unmigrated test: can
 */
 // mig: fn impl_rule
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn impl_rule() { panic!("Unmigrated test: impl_rule"); }
+fn impl_rule() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\n\n\ninterface IShip {\n  func getFuel(virtual self &IShip) int;\n}\nstruct Firefly {}\nfunc getFuel(self &Firefly) int { return 7; }\nimpl IShip for Firefly;\n\nfunc genericGetFuel<T>(x &T) int\nwhere implements(T, IShip) {\n  return x.getFuel();\n}\n\nexported func main() int {\n  return genericGetFuel(&Firefly());\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+    let generic_get_fuel = coutputs.lookup_function_by_str("genericGetFuel");
+    let template_args = crate::typing::names::names::IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
+    match template_args.last().unwrap() {
+        ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(crate::typing::types::types::KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(crate::typing::names::names::KindPlaceholderNameT { template: crate::typing::names::names::KindPlaceholderTemplateNameT { index: 0, rune: crate::postparsing::names::IRuneS::CodeRune(crate::postparsing::names::CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }), .. } }) => {}
+        other => panic!("expected CoordTemplataT(KindPlaceholderT(T)), got {:?}", other),
+    }
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::FunctionCall(FunctionCallTE {
+            callable: PrototypeT {
+                id: IdT {
+                    local_name: INameT::Function(FunctionNameT {
+                        template: FunctionTemplateNameT { human_name: StrI("genericGetFuel"), .. },
+                        template_args: &[ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Firefly"), .. }), .. }), .. }, .. }), .. }, .. })],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            },
+            ..
+        }) => Some(())
+    );
+}
 /*
   // Depends on Method call on generic data
   test("Impl rule") {
@@ -315,8 +470,27 @@ fn impl_rule() { panic!("Unmigrated test: impl_rule"); }
 */
 // mig: fn can_downcast_interface_to_interface_through_registered_impl
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn can_downcast_interface_to_interface_through_registered_impl() { panic!("Unmigrated test: can_downcast_interface_to_interface_through_registered_impl"); }
+fn can_downcast_interface_to_interface_through_registered_impl() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.as.*;\nimport v.builtins.result.*;\nimport v.builtins.logic.*;\nimport v.builtins.drop.*;\nimport panicutils.*;\n\nsealed interface ISuper { }\nsealed interface ISub { }\nimpl ISuper for ISub;\n\nfunc tryDowncast(ship ISuper) bool {\n  result Result<&ISub, &ISuper> = (&ship).as<ISub>();\n  return result.is_ok();\n}\n\nexported func main() bool {\n  return tryDowncast(__pretend<ISuper>());\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+
+    match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
+        CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
+    }
+}
 /*
   test("Can downcast interface to interface through registered impl") {
     val compile = CompilerTestCompilation.test(
@@ -349,8 +523,31 @@ fn can_downcast_interface_to_interface_through_registered_impl() { panic!("Unmig
 */
 // mig: fn test_two_instantiations_of_anonymous_param_lambda
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn test_two_instantiations_of_anonymous_param_lambda() { panic!("Unmigrated test: test_two_instantiations_of_anonymous_param_lambda"); }
+fn test_two_instantiations_of_anonymous_param_lambda() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nimport v.builtins.arith.*;\nimport v.builtins.logic.*;\n\nfunc doThing<T, F>(func F, a T, b T) bool\nwhere func __call(&F, T, T)bool, func drop(F)void {\n  func(a, b)\n}\n\nexported func main() {\n  lam = (a, b) => { a == b };\n  doThing(lam, 7, 8);\n  doThing(lam, true, false);\n}\n\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+
+    let lambda_funcs = coutputs.lookup_lambdas_in("main");
+    assert_eq!(lambda_funcs.len(), 2);
+
+    let param_type_tuples: std::collections::HashSet<&[CoordT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
+        INameT::LambdaCallFunction(crate::typing::names::names::LambdaCallFunctionNameT { template: crate::typing::names::names::LambdaCallFunctionTemplateNameT { param_types, .. }, .. }) => *param_types,
+        _ => panic!("expected LambdaCallFunctionNameT"),
+    }).collect();
+    assert_eq!(param_type_tuples.len(), 2);
+}
 /*
   test("Test two instantiations of anonymous-param lambda") {
     val compile = CompilerTestCompilation.test(
@@ -386,9 +583,50 @@ fn test_two_instantiations_of_anonymous_param_lambda() { panic!("Unmigrated test
 */
 // mig: fn test_interface_default_generic_argument_in_type
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn test_interface_default_generic_argument_in_type() { panic!("Unmigrated test: test_interface_default_generic_argument_in_type"); }
+fn test_interface_default_generic_argument_in_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nsealed interface MyInterface<K Ref, H Int = 5> { }\nstruct MyStruct {\n  x MyInterface<bool>;\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let coutputs = compile.expect_compiler_outputs();
+    let moo = coutputs.lookup_struct_by_str("MyStruct");
+    let tyype: CoordT = crate::collect_only_tnode!(
+        NodeRefT::StructDefinition(moo),
+        NodeRefT::ReferenceMemberType(crate::typing::ast::citizens::ReferenceMemberTypeT { reference }) => Some(*reference)
+    );
+    match tyype {
+        CoordT {
+            ownership: crate::typing::types::types::OwnershipT::Own,
+            kind: KindT::Interface(crate::typing::types::types::InterfaceTT {
+                id: IdT {
+                    local_name: INameT::Interface(crate::typing::names::names::InterfaceNameT {
+                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
+                        template_args: &[
+                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } }),
+                            ITemplataT::Integer(5),
+                        ],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        other => panic!("expected CoordT(OwnT, _, InterfaceTT(MyInterface<bool,5>)), got {:?}", other),
+    }
+}
 /*
+Guardian: temp-disable: SPDMX — Rust enum decision: ITemplataT::Integer holds i64 directly (templata.rs:212), not a wrapping IntegerTemplataT struct. Strong in-file precedent: compiler_solver_tests.rs:320, compiler_mutate_tests.rs:92, compiler_mutate_tests.rs:426 all use ITemplataT::Integer(N) literal form. The struct-wrapped form never compiled. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1165-1781021715924/hook-1165/test_interface_default_generic_argument_in_type--586.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Test interface default generic argument in type") {
     val compile = CompilerTestCompilation.test(
       """

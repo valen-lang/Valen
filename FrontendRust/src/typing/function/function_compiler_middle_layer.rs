@@ -595,7 +595,7 @@ where 's: 't,
             //   }
             let name_t: IVarNameT<'s, 't> = match &param1.pattern.name {
                 None => {
-                    panic!("implement intern TypingIgnoredParamNameT");
+                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(crate::typing::names::names::TypingIgnoredParamNameT { num: index as i32, _phantom: std::marker::PhantomData }))
                 }
                 Some(x) => {
                     self.translate_var_name_step(x.name)

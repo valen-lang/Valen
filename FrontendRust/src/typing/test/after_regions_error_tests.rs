@@ -21,7 +21,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
 */
 // mig: fn prints_bread_crumb_trail
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn prints_bread_crumb_trail() { panic!("Unmigrated test: prints_bread_crumb_trail"); }
 /*
   ignore("Prints bread crumb trail") {
@@ -113,7 +113,7 @@ fn prints_bread_crumb_trail() { panic!("Unmigrated test: prints_bread_crumb_trai
 */
 // mig: fn reports_error
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn reports_error() { panic!("Unmigrated test: reports_error"); }
 /*
   // https://github.com/ValeLang/Vale/issues/548
@@ -142,7 +142,7 @@ fn reports_error() { panic!("Unmigrated test: reports_error"); }
 */
 // mig: fn reports_error_imm_interface_imm_struct
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_error_imm_interface_imm_struct"); }
 /*
   ignore("Reports error (imm interface + imm struct)") {
@@ -347,7 +347,7 @@ fn call_bound_with_wrong_arguments() { panic!("Unmigrated test: call_bound_with_
 */
 // mig: fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt
 #[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() { panic!("Unmigrated test: inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt"); }
 /*
   ignore("Inherit reachable bounds for params and things inside params too (IRBFPTIPT)") {

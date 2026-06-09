@@ -50,7 +50,7 @@ impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
     pub fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
         match self {
             CitizenDefinitionT::Struct(s) => ICitizenTT::Struct(&s.instantiated_citizen),
-            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: instantiated_citizen Interface"),
+            CitizenDefinitionT::Interface(i) => ICitizenTT::Interface(&i.instantiated_interface),
         }
     }
     /*

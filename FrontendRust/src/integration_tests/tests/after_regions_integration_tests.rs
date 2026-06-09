@@ -26,7 +26,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 */
 // mig: fn todo
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn todo() { panic!("Unmigrated test: todo"); }
 /*
   ignore("TODO") {
@@ -97,7 +97,7 @@ fn test_returning_empty_seq() {
 */
 // mig: fn map_function
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn map_function() { panic!("Unmigrated test: map_function"); }
 /*
   // Family 3: generic virtual dispatcher with abstract generics not reachable from
@@ -272,7 +272,7 @@ fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() 
 */
 // mig: fn test_overload_set
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
 /*
   ignore("Test overload set") {
@@ -293,7 +293,7 @@ fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
 */
 // mig: fn pass_overload_set_into_placeholder_parameter_posipp
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated test: pass_overload_set_into_placeholder_parameter_posipp"); }
 /*
   ignore("Pass overload set into placeholder parameter (@POSIPP)") {
@@ -383,7 +383,7 @@ fn upcasting_in_a_generic_function() {
 */
 // mig: fn diff_iter
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn diff_iter() { panic!("Unmigrated test: diff_iter"); }
 /*
   ignore("Diff iter") {
@@ -563,7 +563,7 @@ fn borrowing_to_array() {
 */
 // mig: fn infinite_lambda_call
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
+#[ignore = "ignored upstream in Scala"]
 fn infinite_lambda_call() { panic!("Unmigrated test: infinite_lambda_call"); }
 /*
   ignore("Infinite lambda call") {

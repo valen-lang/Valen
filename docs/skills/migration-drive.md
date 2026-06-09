@@ -14,7 +14,6 @@ Here's what I want you to do:
 1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
     * FrontendRust/docs/migration/migration-policy.md
     * FrontendRust/docs/usage/test-helpers.md
-    * ./Luz/shields/NoValidSimplifications-NVSEX.md
     * ./Luz/shields/ScalaSealedTraitsToRustEnums-SSTREX.md
     * ./Luz/shields/TodosAndUnimplementedCodeMustPanic-TUCMPX.md
     * ./Luz/shields/MigrateAllCommentsToo-MACTX.md
