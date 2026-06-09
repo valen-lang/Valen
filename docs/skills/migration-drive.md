@@ -13,7 +13,7 @@ description: Iteratively replace panics in a Scala-to-Rust migration with minima
 
 Here's what I want you to do:
 
-0. **All TL ↔ JR messaging goes through the `mailbox` binary** at `Luz/mailbox/target/release/mailbox` (build with `cargo build --manifest-path Luz/mailbox/Cargo.toml --release` if missing; see `Luz/mailbox/README.md`). Your identity is `--as jr`. The TL in this worktree is `--as vale-tl` (or `vale2-tl` / `vale3-tl` / `vale4-tl` if you're in `/Volumes/V/Vale2`/`3`/`4`). Before starting a failing test, wait for TL to name it via mailbox. Before any substantive work, start a background `mailbox watch --as jr` (snippet at step 5) so TL can interrupt you mid-task; restart it after each `recv`.
+0. **All TL ↔ JR messaging goes through the `mailbox` binary** at `Luz/mailbox/target/release/mailbox` (build with `cargo build --manifest-path Luz/mailbox/Cargo.toml --release` if missing; see `Luz/mailbox/README.md`). Your identity is `--as jr`. The TL in this worktree is `--as vale-tl` (or `vale2-tl` / `vale3-tl` / `vale4-tl` if you're in `/Volumes/V/Vale2`/`3`/`4`). Before starting a failing test, wait for TL to name it via mailbox. Before any substantive work, start a background `mailbox watch --as jr` (snippet at step 5) so TL can interrupt you mid-task; **always re-arm a fresh watcher immediately after every `mailbox recv` (before doing any other work, in the same turn) — the watcher exits when it fires, so without immediate re-arming you are deaf to interrupts during the work you're about to do**.
 
 1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
     * FrontendRust/docs/migration/migration-policy.md
@@ -69,7 +69,7 @@ Notes:
   ```bash
   cd /Volumes/V/Vale && Luz/mailbox/target/release/mailbox watch --as jr
   ```
-  Run that with `run_in_background: true` — `mailbox watch` polls cwd every 500ms for `from-*-to-jr-*.md`, **blocks until the first new arrival, prints its absolute path, and exits 0**. The harness fires its task-completion notification on process exit, so you wake up the moment TL's reply lands. When it fires, `mailbox recv --as jr` consumes the oldest unread (prints header + body, archives to `./tmp/messages/`). Loop `recv` if multiple arrived. Apply the instructions, continue driving, and **arm a fresh `mailbox watch` next turn** (the previous one already exited).
+  Run that with `run_in_background: true` — `mailbox watch` polls cwd every 500ms for `from-*-to-jr-*.md`, **blocks until the first new arrival, prints its absolute path, and exits 0**. The harness fires its task-completion notification on process exit, so you wake up the moment TL's reply lands. When it fires: (1) `mailbox recv --as jr` consumes the oldest unread (prints header + body, archives to `./tmp/messages/`); loop `recv` if multiple arrived. (2) **Immediately arm a fresh `mailbox watch --as jr` before doing anything else** — the previous one already exited on the fire, so without re-arming RIGHT NOW you are deaf to a follow-up TL interrupt during whatever work you're about to do. (3) Then apply the instructions and continue driving.
 
 * **When the architect says just "z," run `mailbox recv --as jr`; if it prints a message, apply the TL's instructions and continue driving. If stdout is empty, nothing's pending — don't invent work.**
 

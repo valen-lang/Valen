@@ -141,6 +141,9 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
     ICompileErrorT::CouldntFindIdentifierToLoadT { range: _, name } => {
       format!("Couldn't find anything named `{}`!", crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*name))
     }
+    ICompileErrorT::CantUseRuneValueAsExpression { range: _, rune } => {
+      format!("Can't use rune `{}` as a value expression. Did you mean a local variable with a similar name?", crate::postparsing::post_parser_error_humanizer::humanize_rune(*rune))
+    }
     ICompileErrorT::NonReadonlyReferenceFoundInPureFunctionParameter { range: _, param_name } => {
       format!("Parameter `{:?}` should be readonly, because it's in a pure function.", param_name)
     }

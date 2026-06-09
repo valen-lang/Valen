@@ -2135,7 +2135,14 @@ where 's: 't,
                             coutputs, RegionT { region: IRegionT::Default }, arbitrary_imprecise);
                         Ok((ExpressionTE::Reference(expr), HashSet::new()))
                     }
-                    _ => panic!("implement: evaluate_expression RuneLookup — unexpected templata"),
+                    _ => {
+                        let mut ranges: Vec<RangeS<'s>> = vec![r.range.clone()];
+                        ranges.extend_from_slice(parent_ranges);
+                        return Err(ICompileErrorT::CantUseRuneValueAsExpression {
+                            range: self.typing_interner.alloc_slice_copy(&ranges),
+                            rune: r.rune,
+                        });
+                    }
                 }
             }
             IExpressionSE::ConstantBool(c) => {
