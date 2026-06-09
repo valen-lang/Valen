@@ -58,7 +58,6 @@ fn todo() { panic!("Unmigrated test: todo"); }
 */
 // mig: fn test_returning_empty_seq
 #[test]
-#[ignore = "[~] testvm leak on Tup0 path — third-layer cascade past to_von + print_refs; refcount-handling gap in heap.rs leak checker. Test body migration is in place; un-ignore once the testvm refcount path is filled."]
 fn test_returning_empty_seq() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
