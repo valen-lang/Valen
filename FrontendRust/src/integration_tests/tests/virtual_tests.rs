@@ -868,9 +868,30 @@ fn open_interface_constructor() {
 */
 // mig: fn open_interface_constructor_multiple_methods
 #[test]
-#[ignore = "unmigrated - pending integration-tests body migration"]
 fn open_interface_constructor_multiple_methods() {
-    panic!("Unmigrated test: open_interface_constructor_multiple_methods");
+    let compilation_bump = bumpalo::Bump::new();
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
+    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
+    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let mut compile = crate::integration_tests::tests::run_compilation::test(
+        &compilation_bump,
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
+        &instantiating_bump,
+        "\ninterface Bipedal {\n  func hop(virtual s &Bipedal) int;\n  func skip(virtual s &Bipedal) int;\n}\n\nstruct Human {  }\nfunc hop(s &Human) int { return 7; }\nfunc skip(s &Human) int { return 9; }\nimpl Bipedal for Human;\n\nfunc hopscotch(s &Bipedal) int {\n  s.hop();\n  s.skip();\n  return s.hop();\n}\n\nexported func main() int {\n   x = Bipedal({ 3 }, { 5 });\n  // x is an unnamed substruct which implements Bipedal.\n\n  return hopscotch(&x);\n}\n",
+    );
+    let _coutputs = compile.get_hamuts();
+    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
+        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        other => panic!("Expected VonInt(3), got {:?}", other),
+    }
 }
 /*
   test("Open interface constructor, multiple methods") {

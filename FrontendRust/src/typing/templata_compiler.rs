@@ -2227,9 +2227,9 @@ where 's: 't,
                 return false;
             }
             (_, KindT::Struct(_)) => return false,
-            (_, KindT::Interface(_)) => {
-                let source_sub_kind = ISubKindTT::try_from(source_type).unwrap_or_else(|_| panic!("vfail: source is not ISubKindTT: {:?}", source_type));
-                let target_super_kind = ISuperKindTT::try_from(target_type).unwrap_or_else(|_| panic!("vfail: target is not ISuperKindTT: {:?}", target_type));
+            (a, b) if ISubKindTT::try_from(*a).is_ok() && ISuperKindTT::try_from(*b).is_ok() => {
+                let source_sub_kind = ISubKindTT::try_from(source_type).unwrap();
+                let target_super_kind = ISuperKindTT::try_from(target_type).unwrap();
                 match self.is_parent(coutputs, calling_env, parent_ranges, call_location, source_sub_kind, target_super_kind) {
                     IsParentResult::IsParent(_) => {}
                     IsParentResult::IsntParent(_) => return false,
