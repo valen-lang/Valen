@@ -56,18 +56,12 @@ case class InstantiatorCompilationOptions(
 */
 // mig: fn hash_code
 impl InstantiatorCompilationOptions {
-fn hash_code(&self) -> i32 {
-  panic!("Unimplemented: hash_code");
-}
 }
 /*
 override def hashCode(): Int = hash;
 */
 // mig: fn equals
 impl InstantiatorCompilationOptions {
-fn equals(&self, obj: &dyn Any) -> bool {
-  panic!("Unimplemented: equals");
-}
 }
 /*
 override def equals(obj: Any): Boolean = vcurious(); }

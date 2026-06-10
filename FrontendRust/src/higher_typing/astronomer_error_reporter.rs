@@ -25,16 +25,10 @@ case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException 
 // mig: impl CompileErrorExceptionA
 impl<'s> CompileErrorExceptionA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 }
 /*
   override def hashCode(): Int = vcurious()
@@ -97,13 +91,7 @@ case class TooManyMatchingTypesA(range: RangeS, name: IImpreciseNameS) extends I
 // mig: impl TooManyMatchingTypesA
 impl<'s> TooManyMatchingTypesA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
@@ -124,13 +112,7 @@ case class CouldntFindTypeA(range: RangeS, name: IImpreciseNameS) extends ILooku
 // mig: impl CouldntFindTypeA
 impl<'s> CouldntFindTypeA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
@@ -151,13 +133,7 @@ case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends 
 // mig: impl CouldntSolveRulesA
 impl<'s> CouldntSolveRulesA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();

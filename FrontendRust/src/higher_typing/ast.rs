@@ -52,16 +52,10 @@ impl<'s> ProgramA<'s> {
 /*
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = vcurious()
 
@@ -248,9 +242,6 @@ pub fn new(
 /*
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = hash;
 
@@ -289,9 +280,6 @@ pub fn hash_code(&self) -> i32 {
     }))
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 }
 /*
   override def equals(obj: Any): Boolean = {
@@ -363,16 +351,10 @@ pub fn new(
 /*
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 }
 /*
   override def equals(obj: Any): Boolean = {
@@ -406,16 +388,10 @@ impl<'s> ExportAsA<'s> {
 /*
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 }
 /*
   override def equals(obj: Any): Boolean = {
@@ -546,16 +522,10 @@ pub fn new(
 /*
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 }
 /*
   override def equals(obj: Any): Boolean = {
@@ -731,16 +701,10 @@ pub fn new(
   vassert(range.begin.file.packageCoordinate == name.packageCoordinate)
 */
 // mig: fn hash_code
-pub fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn Any) -> bool {
-    panic!("Unimplemented: equals");
-}
 /*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[FunctionA]) { return false }

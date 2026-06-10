@@ -159,16 +159,10 @@ impl<'s> RuneTypingTooManyMatchingTypes<'s> {
 case class RuneTypingTooManyMatchingTypes(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
 */
 // mig: fn equals
-fn equals(&self, _obj: ()) -> bool {
-  panic!("Unimplemented equals");
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-  panic!("Unimplemented hash_code");
-}
 } // end impl RuneTypingTooManyMatchingTypes
 /*
   override def hashCode(): Int = vcurious()
@@ -186,16 +180,10 @@ impl<'s> RuneTypingCouldntFindType<'s> {
 case class RuneTypingCouldntFindType(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
 */
 // mig: fn equals
-fn equals(&self, _obj: ()) -> bool {
-  panic!("Unimplemented equals");
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-  panic!("Unimplemented hash_code");
-}
 } // end impl RuneTypingCouldntFindType
 /*
   override def hashCode(): Int = vcurious()

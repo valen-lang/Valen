@@ -107,9 +107,6 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 */
-    fn equals(&self, obj: &Self) -> bool {
-        panic!("Unimplemented: equals");
-    }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
@@ -319,9 +316,6 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
 /*
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface
 */
-    fn equals(&self, obj: &Self) -> bool {
-        panic!("Unimplemented: equals");
-    }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()

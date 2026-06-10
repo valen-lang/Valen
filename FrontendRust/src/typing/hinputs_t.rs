@@ -178,16 +178,10 @@ impl<'s, 't> HinputsT<'s, 't> {
 
     */
     // mig: fn equals
-    pub fn equals(&self, obj: &HinputsT) -> bool {
-        panic!("Unimplemented: equals");
-    }
     /*
       override def equals(obj: Any): Boolean = vcurious();
     */
     // mig: fn hash_code
-    pub fn hash_code(&self) -> i32 {
-        panic!("Unimplemented: hash_code");
-    }
     /*
       override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
     */

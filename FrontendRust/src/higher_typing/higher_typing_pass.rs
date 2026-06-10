@@ -105,16 +105,10 @@ case class EnvironmentA(
     runeToType: Map[IRuneS, ITemplataType]) {
 */
 // mig: fn equals
-fn equals(&self, _obj: &dyn Any) -> bool {
-  panic!("Unimplemented: equals");
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-  panic!("Unimplemented: hash_code");
-}
 /*
   override def hashCode(): Int = vcurious()
 */
