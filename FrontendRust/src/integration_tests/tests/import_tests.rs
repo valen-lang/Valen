@@ -69,9 +69,7 @@ fn tests_import() {
         PackageCoordinate::builtin(&parse_arena, &parser_keywords),
         parse_arena.intern_package_coordinate(parse_arena.intern_str("moduleA"), &[]),
     ];
-    let base_code_map =
-        get_code_map(&parse_arena, &parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_code_map(&parse_arena, &parser_keywords);
     let resolver_concrete = base_code_map
         .or(map)
         .or(get_package_to_resource_resolver());
@@ -181,9 +179,7 @@ fn tests_non_imported_module_isnt_brought_in() {
         PackageCoordinate::builtin(&parse_arena, &parser_keywords),
         module_a_coord,
     ];
-    let base_code_map =
-        get_code_map(&parse_arena, &parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_code_map(&parse_arena, &parser_keywords);
     let resolver_concrete = base_code_map
         .or(map)
         .or(get_package_to_resource_resolver());
@@ -292,9 +288,7 @@ fn tests_import_with_paackage() {
         PackageCoordinate::builtin(&parse_arena, &parser_keywords),
         module_a_coord,
     ];
-    let base_code_map =
-        get_code_map(&parse_arena, &parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_code_map(&parse_arena, &parser_keywords);
     let resolver_concrete = base_code_map
         .or(map)
         .or(get_package_to_resource_resolver());
@@ -393,9 +387,7 @@ fn tests_import_of_directory_with_no_vale_files() {
         PackageCoordinate::builtin(&parse_arena, &parser_keywords),
         parse_arena.intern_package_coordinate(parse_arena.intern_str("moduleA"), &[]),
     ];
-    let base_code_map =
-        get_code_map(&parse_arena, &parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_code_map(&parse_arena, &parser_keywords);
     let resolver_concrete = base_code_map
         .or(get_package_to_resource_resolver())
         .or(map)

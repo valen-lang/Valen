@@ -73,9 +73,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
             PackageCoordinate::builtin(parse_arena, parser_keywords),
             PackageCoordinate::test_tld(parse_arena, parser_keywords),
         ];
-    let base_code_map =
-        get_code_map(parse_arena, parser_keywords)
-            .expect("Builtins code map failed to load");
+    let base_code_map = get_code_map(parse_arena, parser_keywords);
     let resolver_concrete = base_code_map
         .or(test_from_vec(parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());

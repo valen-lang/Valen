@@ -19,6 +19,7 @@ use std::sync::Arc;
 use crate::parsing::vonifier::ParserVonifier;
 use crate::von::printer::VonPrinter;
 use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::builtins::builtins::get_code_map as get_builtins_code_map;
 use crate::final_ast::ast::PackageH;
 use crate::simplifying::hammer::Hammer;
 use crate::simplifying::hammer_interner::HammerInterner;
@@ -686,10 +687,7 @@ where
     .collect();
 
   // From PassManager.scala lines 231-253: Create FullCompilation
-  // Note: Builtins are needed but we don't have builtins_dir available yet.
-  // For now, create an empty builtins map. This will need to be fixed when
-  // builtins are actually required for parsing.
-  let builtins_code_map = FileCoordinateMap::<String>::new();
+  let builtins_code_map = get_builtins_code_map(parse_arena, keywords);
 
   // From PassManager.scala line 235: Add BUILTIN package coordinate
   let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];

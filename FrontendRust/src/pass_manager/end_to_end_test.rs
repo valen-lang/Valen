@@ -61,13 +61,56 @@ fn pass_manager_main_builds_simple_program_end_to_end() {
 }
 
 #[test]
+fn pass_manager_main_builds_program_using_builtin_some() {
+  let work = tempfile::tempdir().unwrap();
+  let src_dir = work.path().join("src");
+  fs::create_dir_all(&src_dir).unwrap();
+  fs::write(
+    src_dir.join("main.vale"),
+    "exported func main() int { x = Some<int>(3); return 0; }",
+  )
+  .unwrap();
+  let out_dir = work.path().join("out");
+  fs::create_dir_all(&out_dir).unwrap();
+
+  let args = vec![
+    "build".to_string(),
+    "--output_dir".to_string(),
+    out_dir.display().to_string(),
+    "--output_vast".to_string(),
+    "true".to_string(),
+    "--include_builtins".to_string(),
+    "true".to_string(),
+    format!("test={}", src_dir.display()),
+  ];
+
+  crate::pass_manager::pass_manager::main(args);
+
+  let vast_dir = out_dir.join("vast");
+  assert!(
+    vast_dir.is_dir(),
+    "expected vast output dir at {}",
+    vast_dir.display()
+  );
+  let vast_files: Vec<_> = fs::read_dir(&vast_dir)
+    .unwrap()
+    .filter_map(|e| e.ok())
+    .collect();
+  assert!(
+    !vast_files.is_empty(),
+    "expected at least one .vast file in {}",
+    vast_dir.display()
+  );
+}
+
+#[test]
 fn pass_manager_build_returns_humanized_couldnt_find_function() {
   let work = tempfile::tempdir().unwrap();
   let src_dir = work.path().join("src");
   fs::create_dir_all(&src_dir).unwrap();
   fs::write(
     src_dir.join("main.vale"),
-    "exported func main() int {\n  s = \"x\";\n  return s.len();\n}\n",
+    "exported func main() int { return nonexistent_function(0); }",
   )
   .unwrap();
   let out_dir = work.path().join("out");
@@ -110,9 +153,9 @@ fn pass_manager_build_returns_humanized_couldnt_find_function() {
   );
 
   let result = crate::pass_manager::pass_manager::build(&parse_arena, &keywords, &opts);
-  let err = result.expect_err("expected compile error for s.len() on str");
+  let err = result.expect_err("expected compile error for nonexistent_function call");
   let expected_suffix =
-    "Couldn't find a suitable function len(str). No function with that name exists.\n\n";
+    "Couldn't find a suitable function nonexistent_function(i32). No function with that name exists.\n\n";
   assert!(
     err.ends_with(expected_suffix),
     "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",

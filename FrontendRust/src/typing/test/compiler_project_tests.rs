@@ -301,7 +301,7 @@ fn typing_pass_array_type_convertible() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -354,7 +354,7 @@ fn typing_pass_uses_same_instance() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -403,7 +403,7 @@ fn typing_pass_ssa_destructure() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -455,7 +455,7 @@ fn typing_pass_closure_var_mutate() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -507,7 +507,7 @@ fn typing_pass_tuple_literal() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -558,7 +558,7 @@ fn typing_pass_destruct_struct() {
             HashMap::from([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,
@@ -617,7 +617,7 @@ fn typing_pass_on_roguelike() {
             HashMap::from([("0.vale".to_string(), source)]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
-            .expect("get_code_map failed to load builtins"))
+)
         .or(get_package_to_resource_resolver());
     let global_options = GlobalOptions {
         sanity_check: true,

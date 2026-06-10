@@ -71,7 +71,6 @@ exported func main() {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -147,7 +146,6 @@ fn returns_int() {
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 7; }\n";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let _compile = test(

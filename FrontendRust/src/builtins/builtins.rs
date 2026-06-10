@@ -133,11 +133,41 @@ pub fn get_embedded_modulized_code_map<'a>(
 pub fn get_code_map<'a>(
     parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,
-) -> Result<FileCoordinateMap<'a, String>, String> {
+) -> FileCoordinateMap<'a, String> {
+    let entries: &[(&str, &str, &str)] = &[
+        ("arith",                          "arith.vale",                          include_str!("resources/arith.vale")),
+        ("logic",                          "logic.vale",                          include_str!("resources/logic.vale")),
+        ("migrate",                        "migrate.vale",                        include_str!("resources/migrate.vale")),
+        ("str",                            "str.vale",                            include_str!("resources/str.vale")),
+        ("drop",                           "drop.vale",                           include_str!("resources/drop.vale")),
+        ("clone",                          "clone.vale",                          include_str!("resources/clone.vale")),
+        ("arrays",                         "arrays.vale",                         include_str!("resources/arrays.vale")),
+        ("runtime_sized_array_mut_new",    "runtime_sized_array_mut_new.vale",    include_str!("resources/runtime_sized_array_mut_new.vale")),
+        ("runtime_sized_array_push",       "runtime_sized_array_push.vale",       include_str!("resources/runtime_sized_array_push.vale")),
+        ("runtime_sized_array_pop",        "runtime_sized_array_pop.vale",        include_str!("resources/runtime_sized_array_pop.vale")),
+        ("runtime_sized_array_len",        "runtime_sized_array_len.vale",        include_str!("resources/runtime_sized_array_len.vale")),
+        ("runtime_sized_array_capacity",   "runtime_sized_array_capacity.vale",   include_str!("resources/runtime_sized_array_capacity.vale")),
+        ("runtime_sized_array_mut_drop",   "runtime_sized_array_mut_drop.vale",   include_str!("resources/runtime_sized_array_mut_drop.vale")),
+        ("static_sized_array_mut_drop",    "static_sized_array_mut_drop.vale",    include_str!("resources/static_sized_array_mut_drop.vale")),
+        ("mainargs",                       "mainargs.vale",                       include_str!("resources/mainargs.vale")),
+        ("as",                             "as.vale",                             include_str!("resources/as.vale")),
+        ("print",                          "print.vale",                          include_str!("resources/print.vale")),
+        ("tup0",                           "tup0.vale",                           include_str!("resources/tup0.vale")),
+        ("tup1",                           "tup1.vale",                           include_str!("resources/tup1.vale")),
+        ("tup2",                           "tup2.vale",                           include_str!("resources/tup2.vale")),
+        ("tupN",                           "tupN.vale",                           include_str!("resources/tupN.vale")),
+        ("streq",                          "streq.vale",                          include_str!("resources/streq.vale")),
+        ("panic",                          "panic.vale",                          include_str!("resources/panic.vale")),
+        ("panicutils",                     "panicutils.vale",                     include_str!("resources/panicutils.vale")),
+        ("opt",                            "opt.vale",                            include_str!("resources/opt.vale")),
+        ("result",                         "result.vale",                         include_str!("resources/result.vale")),
+        ("sameinstance",                   "sameinstance.vale",                   include_str!("resources/sameinstance.vale")),
+        ("weak",                           "weak.vale",                           include_str!("resources/weak.vale")),
+    ];
     let builtin_namespace_coord = parse_arena.intern_package_coordinate(keywords.empty_string, &[]);
     let mut result = FileCoordinateMap::new();
 
-    for (module_name, filename) in MODULE_TO_FILENAME {
+    for (module_name, filename, contents) in entries {
         let module_name_stri = parse_arena.intern_str(module_name);
         // Put empty string for v.builtins.moduleName
         let modulized_package_coord = parse_arena.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri]);
@@ -145,11 +175,10 @@ pub fn get_code_map<'a>(
         result.put(modulized_file_coord, String::new());
         // Put actual code for root package
         let root_file_coord = parse_arena.intern_file_coordinate(builtin_namespace_coord, filename);
-        let code = load(BUILTINS_DIR, filename)?;
-        result.put(root_file_coord, code);
+        result.put(root_file_coord, contents.to_string());
     }
 
-    Ok(result)
+    result
 }
 /*
 package dev.vale

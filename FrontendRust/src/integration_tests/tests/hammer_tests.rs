@@ -61,7 +61,6 @@ pub fn simple_main() {
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 3; }";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -128,7 +127,6 @@ exported func main() {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -218,7 +216,6 @@ exported func main() int {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -282,7 +279,6 @@ exported func main() int {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -362,7 +358,6 @@ pub fn tests_export_function() {
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func moo() int { return 42; }";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -402,7 +397,6 @@ pub fn tests_export_struct() {
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported struct Moo { }";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -443,7 +437,6 @@ pub fn tests_export_interface() {
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported interface Moo { }";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -494,7 +487,6 @@ pub fn tests_exports_from_two_modules_different_names() {
         "exported struct StructB { a int; }".to_string(),
     );
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(map)
         .or(get_package_to_resource_resolver());
     let builtin = PackageCoordinate::builtin(&parse_arena, &parser_keywords);
@@ -630,7 +622,6 @@ exported func main() int {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -700,7 +691,6 @@ exported func main() int {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(
@@ -780,7 +770,6 @@ exported func main() int {
 }
 ";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .expect("get_code_map failed to load builtins")
         .or(test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
     let mut compile = test(

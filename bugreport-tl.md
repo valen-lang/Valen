@@ -19,6 +19,7 @@ External real-world report → in-tree regression test asserting *correct* outpu
 - **No bug-class commentary in test bodies.** The "what went wrong" lives in the commit message. Tests are self-evident from name + code.
 - **Tight assertions only.** `assert_eq!` or `ends_with(<deterministic suffix>)`. Never `contains() && contains()` (NSTDX).
 - **Tests live in `<module>/tests/<module>_tests.rs`.** Mirror the `parsing/tests/` convention. No inline `#[cfg(test)] mod` in production source.
+- **Never modify the user's source.** Probes / hypothesis tests on real-world programs (VmdSiteGen etc.) run against `cp -R` copies in `/tmp/`, never in-place edits — and never `sed -i` anywhere.
 - **Verify the in-tree repro fires at the same panic site, not just *any* error.** Run the test and confirm the panic file:line matches the probe before dispatching JR. A test that reaches a different failure silently widens scope and dispatches against the wrong arm.
 - **Place the minimal repro at the earliest pass that triggers it.** If the panic fires in higher-typing, the test lives in `higher_typing/tests/`, not `pass_manager/end_to_end_test.rs`. End-to-end is the surface that surfaces the gap; the regression test belongs at the lowest layer that still reproduces it — narrower call graph, faster iteration, fewer downstream changes that could mask it.
 - **External-repro tests stay `#[ignore]`'d.** Out-of-tree-path / real-world probes document the bug; only the minimal in-tree repro joins the baseline.
