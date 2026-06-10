@@ -148,8 +148,8 @@ pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, I
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = higherTypingCompilation.getScoutput()
 */
-pub fn get_astrouts(&mut self) -> Result<(), String> {
-  panic!("TypingPassCompilation.get_astrouts not yet implemented - see Compilation.scala line 38")
+pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+  self.higher_typing_compilation.get_astrouts()
 }
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = higherTypingCompilation.getAstrouts()

@@ -897,7 +897,7 @@ where
 
     // From PassManager.scala lines 406-409
     match compilation.get_astrouts() {
-      Err(e) => panic!("HigherTypingErrorHumanizer.humanize not yet implemented: {:?}", e),
+      Err(_) => panic!("HigherTypingErrorHumanizer.humanize not yet implemented"),
       Ok(_) => {}
     }
 

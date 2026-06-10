@@ -204,7 +204,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn get_astrouts(&mut self) -> Result<(), String> {
+  pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.hammer_compilation.get_astrouts()
   }
 }

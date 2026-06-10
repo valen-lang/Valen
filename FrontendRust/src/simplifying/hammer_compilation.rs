@@ -244,7 +244,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_astrouts(&mut self) -> Result<(), String> {
+  pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.instantiated_compilation.get_astrouts()
   }
 }
