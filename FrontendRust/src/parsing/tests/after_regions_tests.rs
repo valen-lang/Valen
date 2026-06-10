@@ -16,7 +16,6 @@ class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
 */
 // mig: fn forgetting_set_when_changing
 #[test]
-#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing `set` keyword in mutation statements"]
 fn forgetting_set_when_changing() {
   // This test does not pass yet, use #[ignore].
   let parse_bump = Bump::new();
@@ -45,7 +44,7 @@ fn forgetting_set_when_changing() {
 */
 // mig: fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren
 #[test]
-#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing semicolon before paren in block contents"]
+#[ignore = "blocked - Rust parser produces Consecutor(...) for `set x = 7 )` instead of ParseError::BadStartOfStatementError on the stray `)`. Tracked in migration-drive-todo.md Phase 4e."]
 fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren() {
   // This test does not pass yet, use #[ignore].
   let parse_bump = Bump::new();

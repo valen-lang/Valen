@@ -1203,7 +1203,7 @@ where 's: 't,
             Ok(Ok(successes.into_iter().next().unwrap()))
         } else {
             let (best, _outscore_reason_by_banner) =
-                self.narrow_down_callable_overloads(coutputs, env, call_range, call_location, &successes, args);
+                self.narrow_down_callable_overloads(coutputs, env, call_range, call_location, &successes, args)?;
             Ok(Ok(best))
         }
     }
@@ -1347,7 +1347,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         unfiltered_banners: &[AttemptedCandidate<'s, 't>],
         arg_types: &[CoordT<'s, 't>],
-    ) -> (AttemptedCandidate<'s, 't>, HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>) {
+    ) -> Result<(AttemptedCandidate<'s, 't>, HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>), ICompileErrorT<'s, 't>> {
         let deduped_banners: Vec<AttemptedCandidate<'s, 't>> = {
             let mut seen = HashSet::new();
             unfiltered_banners.iter().filter(|b| seen.insert(**b)).copied().collect()
@@ -1398,7 +1398,12 @@ where 's: 't,
 
         let final_banner_index =
             if normal_indices_and_candidates.len() > 1 {
-                panic!("implement: narrow_down — CouldntNarrowDownCandidates (multiple normal candidates)");
+                let duplicate_banners: Vec<PrototypeT<'s, 't>> =
+                    normal_indices_and_candidates.iter().map(|(_, p)| **p).collect();
+                return Err(ICompileErrorT::CouldntNarrowDownCandidates {
+                    range: self.typing_interner.alloc_slice_copy(call_range),
+                    candidates: self.typing_interner.alloc_slice_from_vec(duplicate_banners),
+                });
             } else if normal_indices_and_candidates.len() == 1 {
                 normal_indices_and_candidates[0].0
             } else if !bound_indices_and_candidates.is_empty() {
@@ -1419,7 +1424,7 @@ where 's: 't,
                 .map(|(_, banner)| (*banner, IFindFunctionFailureReason::Outscored))
                 .collect();
 
-        (banners[final_banner_index], rejection_reason_by_banner)
+        Ok((banners[final_banner_index], rejection_reason_by_banner))
     }
 /*
   private def narrowDownCallableOverloads(

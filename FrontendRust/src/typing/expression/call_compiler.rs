@@ -3,7 +3,10 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
-use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::typing::overload_resolver::{FindFunctionFailure, IFindFunctionFailureReason};
+use crate::typing::infer_compiler::IResolvingError;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::solver::solver::{FailedSolve, ISolverError};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
@@ -90,8 +93,50 @@ where 's: 't,
                         &[],
                         false)?
                 {
-                    Err(FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }), .. }) if *as_name == self.keywords.r#as => {
-                        panic!("Unimplemented: evaluate_call as-keyword isaFailures branch");
+                    Err(e @ FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: as_name }), .. }) if *as_name == self.keywords.r#as => {
+                        let isa_failures: Vec<(KindT<'s, 't>, KindT<'s, 't>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>)> =
+                            e.rejected_callee_to_reason.iter().filter_map(|(_, reason)| {
+                                match reason {
+                                    IFindFunctionFailureReason::InferFailure { reason: fs } => {
+                                        match &fs.error {
+                                            ISolverError::RuleError(rule_err) => {
+                                                match &rule_err.err {
+                                                    ITypingPassSolverError::IsaFailed { sub, suuper } => Some((*sub, *suuper, fs.clone())),
+                                                    _ => None,
+                                                }
+                                            }
+                                            _ => None,
+                                        }
+                                    }
+                                    IFindFunctionFailureReason::FindFunctionResolveFailure { reason: IResolvingError::ResolvingSolveFailedOrIncomplete(fs) } => {
+                                        match &fs.error {
+                                            ISolverError::RuleError(rule_err) => {
+                                                match &rule_err.err {
+                                                    ITypingPassSolverError::IsaFailed { sub, suuper } => Some((*sub, *suuper, fs.clone())),
+                                                    _ => None,
+                                                }
+                                            }
+                                            _ => None,
+                                        }
+                                    }
+                                    _ => None,
+                                }
+                            }).collect();
+                        if !isa_failures.is_empty() {
+                            let (sub, suuper, _) = isa_failures[0].clone();
+                            let failed_solves: Vec<_> = isa_failures.into_iter().map(|(_, _, fs)| fs).collect();
+                            return Err(ICompileErrorT::CantDowncastUnrelatedTypes {
+                                range: self.typing_interner.alloc_slice_copy(range),
+                                source_kind: suuper,
+                                target_kind: sub,
+                                candidates: self.typing_interner.alloc_slice_from_vec(failed_solves),
+                            });
+                        } else {
+                            return Err(ICompileErrorT::CouldntFindFunctionToCallT {
+                                range: self.typing_interner.alloc_slice_copy(range),
+                                fff: e,
+                            });
+                        }
                     }
                     Err(e) => return Err(ICompileErrorT::CouldntFindFunctionToCallT {
                         range: self.typing_interner.alloc_slice_copy(range),

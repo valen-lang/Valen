@@ -207,7 +207,6 @@ fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_e
 */
 // mig: fn report_when_downcasting_between_unrelated_types
 #[test]
-#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): downcasting-between-unrelated-types detection not yet wired"]
 fn report_when_downcasting_between_unrelated_types() {
     // This test does not pass yet, use #[ignore].
     let parse_bump = Bump::new();
@@ -574,7 +573,6 @@ fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() 
 */
 // mig: fn ambiguous_call
 #[test]
-#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): overload narrowing for ambiguous-call detection not yet wired"]
 fn ambiguous_call() {
     // This test does not pass yet, use #[ignore].
     let parse_bump = Bump::new();

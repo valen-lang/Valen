@@ -18,7 +18,7 @@ class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUt
 */
 // mig: fn func_with_func_bound_with_missing_where
 #[test]
-#[ignore = "ignored upstream in Scala (`// This test does not pass yet, use #[ignore].`): parser doesn't yet detect missing 'where' for func bound"]
+#[ignore = "blocked - Rust parser produces TopLevelFunction for `func sum<T>() func moo(&T)void {3}` instead of ParseError::FuncBoundWithoutWhere. Tracked in migration-drive-todo.md Phase 4e."]
 fn func_with_func_bound_with_missing_where() {
   // This test does not pass yet, use #[ignore].
   let parse_bump = Bump::new();
