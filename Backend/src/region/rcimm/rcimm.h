@@ -514,10 +514,6 @@ public:
       Ref ref,
       Reference* targetRefMT) override;
 
-  void declareOpaque(Opaque* opaque) override;
-  void defineOpaque(Opaque* opaque, int size, int alignment) override;
-
-
 private:
   void declareConcreteUnserializeFunction(Kind* valeKindM);
   void defineConcreteUnserializeFunction(Kind* valeKindM);

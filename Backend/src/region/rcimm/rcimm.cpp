@@ -94,8 +94,7 @@ void RCImm::alias(
   if (dynamic_cast<Int *>(sourceRnd) ||
       dynamic_cast<Bool *>(sourceRnd) ||
       dynamic_cast<Float *>(sourceRnd) ||
-      dynamic_cast<Void *>(sourceRnd) ||
-      dynamic_cast<Opaque *>(sourceRnd)) {
+      dynamic_cast<Void *>(sourceRnd)) {
     // Do nothing for these, they're always inlined and copied.
   } else if (dynamic_cast<InterfaceKind *>(sourceRnd) ||
              dynamic_cast<StructKind *>(sourceRnd) ||
@@ -224,18 +223,6 @@ void RCImm::defineStruct(
   }
   kindStructs.defineStruct(structM->kind, innerStructMemberTypesL);
 }
-
-
-void RCImm::declareOpaque(Opaque* opaque) {
-  std::cerr << "Declaring RC opaque: " << opaque->name->name << std::endl;
-  globalState->regionIdByKind.emplace(opaque, getRegionId());
-}
-
-void RCImm::defineOpaque(Opaque* opaque, int size, int alignment) {
-  std::cerr << "Defining RC opaque: " << opaque->name->name << std::endl;
-  globalState->setOpaqueMeasurements(opaque, std::make_pair(size, alignment));
-}
-
 
 void RCImm::defineStructExtraFunctions(StructDefinition* structDefM) {
   defineConcreteUnserializeFunction(structDefM->kind);
@@ -778,8 +765,7 @@ void RCImm::discard(
 
   if (dynamic_cast<Int *>(sourceRnd) ||
       dynamic_cast<Bool *>(sourceRnd) ||
-      dynamic_cast<Float *>(sourceRnd) ||
-      dynamic_cast<Opaque *>(sourceRnd)) { // DO NOT SUBMIT
+      dynamic_cast<Float *>(sourceRnd)) {
     buildFlare(FL(), globalState, functionState, builder);
     // Do nothing for these, they're always inlined and copied.
   } else if (
@@ -877,14 +863,6 @@ LLVMTypeRef RCImm::translateType(Reference* referenceM) {
       auto result = LLVMPointerType(makeNeverType(globalState), 0);
       assert(LLVMTypeOf(globalState->neverPtrLE) == result);
       return result;
-    } else if (auto opaque = dynamic_cast<Opaque*>(referenceM->kind)) {
-      int size = 0, alignment = 0;
-      std::tie(size, alignment) = globalState->getOpaqueMeasurements(opaque);
-      int numBytes = alignSize(size, alignment);
-      LLVMTypeRef memberArrType =
-          LLVMArrayType(LLVMInt8TypeInContext(globalState->context), numBytes);
-      auto lt = LLVMStructTypeInContext(globalState->context, &memberArrType, 1, false);
-      return lt;
     } else {
       std::cerr << "Unimplemented type: " << typeid(*referenceM->kind).name() << std::endl;
       { assert(false); throw 1337; }
@@ -1025,10 +1003,6 @@ std::pair<Ref, Ref> RCImm::receiveUnencryptedAlienReference(
     auto resultRef = toRef(globalState->getRegion(hostRefMT), valeRefMT, sourceRefLE);
     // Vale doesn't care about the size, only extern (linear) does, so just return zero.
     return std::make_pair(resultRef, globalState->constI32(0));
-  } else if (dynamic_cast<Opaque*>(hostRefMT->kind)) {
-    auto resultRef = toRef(globalState->getRegion(hostRefMT), valeRefMT, sourceRefLE);
-    // Vale doesn't care about the size, only extern (linear) does, so just return zero.
-    return std::make_pair(resultRef, globalState->constI32(0));
   } else if (dynamic_cast<Bool*>(hostRefMT->kind)) {
     auto asI1LE =
         LLVMBuildTrunc(
@@ -1054,13 +1028,7 @@ std::pair<Ref, Ref> RCImm::receiveUnencryptedAlienReference(
         // Vale doesn't care about the size, only extern (linear) does, so just return zero.
         return std::make_pair(resultRef, globalState->constI32(0));
       } else {
-        if (hostRefMT->kind->getPackageCoordinate()->projectName == "rust") {
-          auto resultRef = topLevelUnserialize(functionState, builder, targetRegionInstanceRef, sourceRegionInstanceRef, valeRefMT->kind, sourceRef);
-          // Vale doesn't care about the size, only extern (linear) does, so just return zero.
-          return std::make_pair(resultRef, globalState->constI32(0));
-        } else {
-          { assert(false); throw 1337; }
-        }
+        { assert(false); throw 1337; }
       }
     } else {
       auto resultRef = topLevelUnserialize(functionState, builder, targetRegionInstanceRef, sourceRegionInstanceRef, valeRefMT->kind, sourceRef);
@@ -1243,12 +1211,9 @@ Ref RCImm::callUnserialize(
 
 Prototype* RCImm::getUnserializePrototype(Kind* valeKind) {
   auto boolMT = globalState->metalCache->boolRef;
-  auto location = // DO NOT SUBMIT
-      valeKind->getPackageCoordinate()->projectName == "rust" ?
-      Location::INLINE : Location::YONDER;
   auto valeRefMT =
       globalState->metalCache->getReference(
-          Ownership::MUTABLE_SHARE, location, valeKind);
+          Ownership::MUTABLE_SHARE, Location::YONDER, valeKind);
   auto hostRefMT = globalState->linearRegion->linearizeReference(valeRefMT, true);
   auto hostRegionRefMT = globalState->linearRegion->getRegionRefType();
   return globalState->metalCache->getPrototype(
@@ -1300,8 +1265,6 @@ void RCImm::defineConcreteUnserializeFunction(Kind* valeKind) {
           auto resultLE = LLVMBuildTrunc(builder, hostMemberLE, LLVMInt1TypeInContext(globalState->context), "boolAsI1");
           return toRef(globalState->getRegion(valeMemberRefMT), valeMemberRefMT, resultLE);
         } else if (dynamic_cast<Float*>(hostMemberRefMT->kind)) {
-          return toRef(globalState->getRegion(valeMemberRefMT), valeMemberRefMT, hostMemberLE);
-        } else if (dynamic_cast<Opaque*>(hostMemberRefMT->kind)) {
           return toRef(globalState->getRegion(valeMemberRefMT), valeMemberRefMT, hostMemberLE);
         } else if (
             dynamic_cast<Str*>(hostMemberRefMT->kind) ||

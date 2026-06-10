@@ -15,8 +15,6 @@ Location readLocation(MetalCache* cache, const json& location);
 Mutability readMutability(const json& mutability);
 Variability readVariability(const json& variability);
 Name* readName(MetalCache* cache, const json& name);
-SimpleIdStep* readSimpleIdStep(MetalCache* cache, const json& prototype);
-SimpleId* readSimpleId(MetalCache* cache, const json& prototype);
 
 //template<typename T>
 //concept ReturnsVec = requires(T a) {
@@ -101,16 +99,6 @@ StructKind* readStructKind(MetalCache* cache, const json& kind) {
   return result;
 }
 
-Opaque* readOpaqueKind(MetalCache* cache, const json& obj) {
-  assert(obj.is_object());
-  assert(obj["__type"] == "Opaque");
-
-  auto structId = readName(cache, obj["structId"]);
-  auto structSimpleId = readSimpleId(cache, obj["structSimpleId"]);
-
-  return cache->getOpaque(structId, structSimpleId);
-}
-
 InterfaceKind* readInterfaceKind(MetalCache* cache, const json& kind) {
   assert(kind["__type"] == "InterfaceId");
 
@@ -172,8 +160,6 @@ Kind* readKind(MetalCache* cache, const json& kind) {
     return cache->str;
   } else if (kind["__type"] == "StructId") {
     return readStructKind(cache, kind);
-  } else if (kind["__type"] == "Opaque") {
-    return readOpaqueKind(cache, kind);
   } else if (kind["__type"] == "Never") {
     return cache->never;
   } else if (kind["__type"] == "RuntimeSizedArray") {
@@ -197,7 +183,10 @@ Reference* readReference(MetalCache* cache, const json& reference) {
   auto kind = readKind(cache, reference["kind"]);
 //  std::string debugStr = reference["debugStr"];
 
-  return cache->getReference(ownership,location,kind);
+  return cache->getReference(
+      ownership,
+      location,
+      kind);
 }
 
 Mutability readMutability(const json& mutability) {
@@ -269,47 +258,6 @@ Prototype* readPrototype(MetalCache* cache, const json& prototype) {
   auto retuurn = readReference(cache, prototype["return"]);
 
   return cache->getPrototype(name, retuurn, params);
-}
-
-SimpleIdStep* readSimpleIdStep(MetalCache* cache, const json& prototype) {
-  assert(prototype.is_object());
-  assert(prototype["__type"] == "IdStep");
-
-  std::string name = prototype["name"];
-  auto templateArgs = readArray(cache, prototype["templateArgs"], readSimpleId);
-
-  return new SimpleIdStep{name, templateArgs};
-}
-
-SimpleId* readSimpleId(MetalCache* cache, const json& prototype) {
-  assert(prototype.is_object());
-  assert(prototype["__type"] == "Id");
-
-  auto steps = readArray(cache, prototype["steps"], readSimpleIdStep);
-
-  return new SimpleId{steps};
-}
-
-ExternFunction* readExternFunction(MetalCache* cache, const json& obj) {
-  assert(obj.is_object());
-  assert(obj["__type"] == "ExternFunction");
-
-  std::string mangledName = obj["mangledName"];
-  auto simpleId = readSimpleId(cache, obj["id"]);
-  auto prototype = readPrototype(cache, obj["prototype"]);
-
-  return new ExternFunction{std::move(mangledName), simpleId, prototype};
-}
-
-ExternKind* readExternKind(MetalCache* cache, const json& obj) {
-  assert(obj.is_object());
-  assert(obj["__type"] == "ExternKind");
-
-  std::string mangledName = obj["mangledName"];
-  auto simpleId = readSimpleId(cache, obj["id"]);
-  auto kind = readOpaqueKind(cache, obj["kind"]);
-
-  return new ExternKind{std::move(mangledName), simpleId, kind};
 }
 
 VariableId* readVariableId(MetalCache* cache, const json& variable) {
@@ -707,8 +655,7 @@ StructDefinition* readStruct(MetalCache* cache, const json& struuct) {
           mutability,
           readArray(cache, struuct["edges"], readEdge),
           readArray(cache, struuct["members"], readStructMember),
-          struuct["weakable"] ? Weakability::WEAKABLE : Weakability::NON_WEAKABLE,
-          struuct["extern"]);
+          struuct["weakable"] ? Weakability::WEAKABLE : Weakability::NON_WEAKABLE);
 
   return result;
 }
@@ -829,23 +776,25 @@ Package* readPackage(MetalCache* cache, const json& program) {
             auto kind = readKind(cache, entryJ["kind"]);
             return std::make_pair(exportName, kind);
           }),
-      readArrayIntoMap<Prototype*, ExternFunction*>(
+      readArrayIntoMap<std::string, Prototype*>(
           cache,
-          AddressHasher<Prototype*>(cache->addressNumberer),
-          AddressEquator<Prototype*>(),
-          program["prototypeToExtern"],
+          std::hash<std::string>(),
+          std::equal_to<std::string>(),
+          program["externNameToFunction"],
           [](MetalCache* cache, json entryJ){
-            auto externFunc = readExternFunction(cache, entryJ);
-            return std::make_pair(externFunc->prototype, externFunc);
+            auto externName = readString(cache, entryJ["externName"]);
+            auto prototype = readPrototype(cache, entryJ["prototype"]);
+            return std::make_pair(externName, prototype);
           }),
-      readArrayIntoMap<Opaque*, ExternKind*>(
+      readArrayIntoMap<std::string, Kind*>(
           cache,
-          AddressHasher<Opaque*>(cache->addressNumberer),
-          AddressEquator<Opaque*>(),
-          program["kindToExtern"],
+          std::hash<std::string>(),
+          std::equal_to<std::string>(),
+          program["externNameToKind"],
           [](MetalCache* cache, json entryJ){
-              auto externKind = readExternKind(cache, entryJ);
-              return std::make_pair(externKind->kind, externKind);
+            auto externName = readString(cache, entryJ["externName"]);
+            auto kind = readKind(cache, entryJ["kind"]);
+            return std::make_pair(externName, kind);
           }));
 }
 

@@ -64,11 +64,7 @@ enum
 
     OPT_BNF,
     OPT_ANTLR,
-    OPT_ANTLRRAW,
-
-    OPT_DIVINATION_PATH,
-    OPT_RUST_CARGO_TOML,
-    OPT_RUST_OUTPUT_DIR
+    OPT_ANTLRRAW
 };
 
 static opt_arg_t args[] =
@@ -123,10 +119,6 @@ static opt_arg_t args[] =
     { "extfun", '\0', OPT_ARG_NONE, OPT_EXTFUN },
     { "simplebuiltin", '\0', OPT_ARG_NONE, OPT_SIMPLEBUILTIN },
     { "lint_llvm", '\0', OPT_ARG_NONE, OPT_LINT_LLVM },
-
-    { "divination_path", '\0', OPT_ARG_REQUIRED, OPT_DIVINATION_PATH },
-    { "rust_cargo_toml", '\0', OPT_ARG_REQUIRED, OPT_RUST_CARGO_TOML },
-    { "rust_output_dir", '\0', OPT_ARG_REQUIRED, OPT_RUST_OUTPUT_DIR },
 
     OPT_ARGS_FINISH
 };
@@ -458,16 +450,6 @@ int valeOptSet(ValeOptions *opt, int *argc, char **argv) {
         opt->projectNameToReplayWhitelistedExterns[moduleName].insert(functionName);
         break;
       }
-
-      case OPT_DIVINATION_PATH:
-        opt->divinationPath = s.arg_val;
-        break;
-      case OPT_RUST_CARGO_TOML:
-        opt->rustCargoToml = s.arg_val;
-        break;
-      case OPT_RUST_OUTPUT_DIR:
-        opt->rustOutputDir = s.arg_val;
-        break;
 
       default:
         std::cerr << "Unrecognized option!" << std::endl;

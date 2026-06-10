@@ -37,55 +37,6 @@ class Edge;
 class Function;
 class Prototype;
 class Name;
-class SimpleId;
-class SimpleIdStep;
-class ExternFunction;
-class ExternKind;
-
-// Not interned
-class SimpleIdStep {
-public:
-  std::string name;
-  std::vector<SimpleId*> templateArgs;
-};
-
-// Not interned
-class SimpleId {
-public:
-  std::vector<SimpleIdStep*> steps;
-};
-
-// Not interned
-class ExternFunction {
-public:
-  std::string mangledName;
-  SimpleId* simpleId;
-  Prototype* prototype;
-
-  ExternFunction(
-      std::string mangledName_,
-      SimpleId* simpleId_,
-      Prototype* prototype_) :
-      mangledName(std::move(mangledName_)),
-      simpleId(simpleId_),
-      prototype(prototype_) {}
-};
-
-// Not interned
-class ExternKind {
-public:
-  std::string mangledName; // We update this from empty to something, later on. DO NOT SUBMIT
-  SimpleId* simpleId;
-  Opaque* kind;
-
-  ExternKind(
-      std::string mangledName_,
-      SimpleId* simpleId_,
-      Opaque* kind_) :
-      mangledName(std::move(mangledName_)),
-      simpleId(simpleId_),
-      kind(kind_) {}
-};
 
 class Package {
 public:
@@ -101,11 +52,13 @@ public:
   // be defined somewhere else.
   std::unordered_map<std::string, Prototype*> exportNameToFunction;
   std::unordered_map<std::string, Kind*> exportNameToKind;
-  std::unordered_map<Prototype*, ExternFunction*, AddressHasher<Prototype*>, AddressEquator<Prototype*>> functionToExtern;
-  std::unordered_map<Opaque*, ExternKind*, AddressHasher<Opaque*>, AddressEquator<Opaque*>> kindToExtern;
+  std::unordered_map<std::string, Prototype*> externNameToFunction;
+  std::unordered_map<std::string, Kind*> externNameToKind;
   // These are inverses of the above maps
   std::unordered_map<Prototype*, std::string, AddressHasher<Prototype*>> functionToExportName;
   std::unordered_map<Kind*, std::string, AddressHasher<Kind*>> kindToExportName;
+  std::unordered_map<Prototype*, std::string, AddressHasher<Prototype*>> functionToExternName;
+  std::unordered_map<Kind*, std::string, AddressHasher<Kind*>> kindToExternName;
 
   Package(
     AddressNumberer* addressNumberer,
@@ -118,8 +71,8 @@ public:
 //    std::unordered_map<Kind*, Prototype*, AddressHasher<Kind*>> immDestructorsByKind_,
     std::unordered_map<std::string, Prototype*> exportNameToFunction_,
     std::unordered_map<std::string, Kind*> exportNameToKind_,
-    std::unordered_map<Prototype*, ExternFunction*, AddressHasher<Prototype*>, AddressEquator<Prototype*>> functionToExtern_,
-    std::unordered_map<Opaque*, ExternKind*, AddressHasher<Opaque*>, AddressEquator<Opaque*>> kindToExtern_) :
+    std::unordered_map<std::string, Prototype*> externNameToFunction_,
+    std::unordered_map<std::string, Kind*> externNameToKind_) :
       packageCoordinate(packageCoordinate_),
       interfaces(std::move(interfaces_)),
       structs(std::move(structs_)),
@@ -129,10 +82,12 @@ public:
 //      immDestructorsByKind(std::move(immDestructorsByKind_)),
       exportNameToFunction(std::move(exportNameToFunction_)),
       exportNameToKind(std::move(exportNameToKind_)),
+      externNameToFunction(std::move(externNameToFunction_)),
+      externNameToKind(std::move(externNameToKind_)),
       functionToExportName(0, addressNumberer->makeHasher<Prototype*>()),
       kindToExportName(0, addressNumberer->makeHasher<Kind*>()),
-      functionToExtern(0, addressNumberer->makeHasher<Prototype*>()),
-      kindToExtern(0, addressNumberer->makeHasher<Opaque*>()) {
+      functionToExternName(0, addressNumberer->makeHasher<Prototype*>()),
+      kindToExternName(0, addressNumberer->makeHasher<Kind*>()) {
     for (auto [exportName, prototype] : exportNameToFunction) {
       assert(functionToExportName.count(prototype) == 0);
       functionToExportName[prototype] = exportName;
@@ -141,13 +96,13 @@ public:
       assert(kindToExportName.count(kind) == 0);
       kindToExportName[kind] = exportName;
     }
-    for (auto [prototype, exterrn] : functionToExtern_) {
-      assert(functionToExtern.count(exterrn->prototype) == 0);
-      functionToExtern[exterrn->prototype] = exterrn;
+    for (auto [externName, prototype] : externNameToFunction) {
+      assert(functionToExternName.count(prototype) == 0);
+      functionToExternName[prototype] = externName;
     }
-    for (auto [kind, exterrn] : kindToExtern_) {
-      assert(kindToExtern.count(kind) == 0);
-      kindToExtern[exterrn->kind] = exterrn;
+    for (auto [externName, kind] : externNameToKind) {
+      assert(kindToExternName.count(kind) == 0);
+      kindToExternName[kind] = externName;
     }
   }
 
@@ -223,8 +178,24 @@ public:
 //    return iter->second;
 //  }
 
-  std::string getKindExportName(Kind* kind, bool includeProjectName) const;
-
+  std::string getKindExportName(Kind* kind, bool includeProjectName) const {
+    if (auto innt = dynamic_cast<Int *>(kind)) {
+      return std::string() + "int" + std::to_string(innt->bits) + "_t";
+    } else if (dynamic_cast<Bool *>(kind)) {
+      return "int8_t";
+    } else if (dynamic_cast<Float *>(kind)) {
+      return "double";
+    } else if (dynamic_cast<Str *>(kind)) {
+      return "ValeStr*";
+    } else {
+      auto iter = kindToExportName.find(kind);
+      if (iter == kindToExportName.end()) {
+        std::cerr << "Couldn't find export name for: " << getKindHumanName(kind) << std::endl;
+        exit(1);
+      }
+      return (includeProjectName && !packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + iter->second;
+    }
+  }
   std::string getKindHumanName(Kind* kind) const {
     if (auto innt = dynamic_cast<Int *>(kind)) {
       return std::string() + "i" + std::to_string(innt->bits);
@@ -251,24 +222,16 @@ public:
     assert(iter != functionToExportName.end());
     return (!packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + iter->second;
   }
-  ExternKind* getKindExtern(Opaque* kind) const {
-    auto iter = kindToExtern.find(kind);
-    assert(iter != kindToExtern.end());
-    return iter->second;
+  std::string getKindExternName(Kind* kind) const {
+    auto iter = kindToExternName.find(kind);
+    assert(iter != kindToExternName.end());
+    return (!packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + iter->second;
   }
-  ExternFunction* getFunctionExtern(Prototype* kind) const {
-    auto iter = functionToExtern.find(kind);
-    assert(iter != functionToExtern.end());
-    return iter->second;
+  std::string getFunctionExternName(Prototype* kind) const {
+    auto iter = functionToExternName.find(kind);
+    assert(iter != functionToExternName.end());
+    return (!packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + iter->second;
   }
-//  std::string getKindExternName(Kind* kind) const {
-//    auto kindExtern = getKindExtern(kind);
-//    return (!packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + kindExtern->mangledName;
-//  }
-//  std::string getFunctionExternName(Prototype* kind) const {
-//    auto functionExtern = getFunctionExtern(kind);
-//    return (!packageCoordinate->projectName.empty() ? packageCoordinate->projectName + "_" : "") + functionExtern->mangledName;
-//  }
 //  bool isExported(Name* name) {
 //    auto exportedNameI = fullNameToExportName.find(name);
 //    return exportedNameI != fullNameToExportName.end();
@@ -392,7 +355,6 @@ public:
     std::vector<Edge*> edges;
     std::vector<StructMember*> members;
     Weakability weakability;
-    bool exterrn;
 
     StructDefinition(
         Name* name_,
@@ -401,16 +363,14 @@ public:
         Mutability mutability_,
         std::vector<Edge*> edges_,
         std::vector<StructMember*> members_,
-        Weakability weakable_,
-        bool extern_) :
+        Weakability weakable_) :
         name(name_),
         kind(kind_),
         regionId(regionId_),
         mutability(mutability_),
         edges(edges_),
         members(members_),
-        weakability(weakable_),
-        exterrn(extern_) {}
+        weakability(weakable_) {}
 
     Edge* getEdgeForInterface(InterfaceKind* interfaceMT) {
       for (auto e : edges) {

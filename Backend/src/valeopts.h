@@ -30,12 +30,6 @@ enum class ValeOptimizationLevel {
 struct ValeOptions {
     std::string outputDir;
 
-    // Rust interop paths. When all three are set, doRustyThings() will invoke Divination
-    // to measure sizes/alignments of imported Rust types. When empty, Rust interop is disabled.
-    std::string divinationPath;
-    std::string rustCargoToml;
-    std::string rustOutputDir;
-
     std::string triple;
     std::string cpu;
     std::string features;

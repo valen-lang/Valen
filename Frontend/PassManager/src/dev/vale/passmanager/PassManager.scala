@@ -70,10 +70,7 @@ override def equals(obj: Any): Boolean = vcurious();
     useOptimizedSolver: Boolean,
     useOverloadIndex: Boolean,
     verboseErrors: Boolean,
-    debugOutput: Boolean,
-    valeRusterPath: Option[String] = None,
-    rustCargoToml: Option[String] = None,
-    rustOutputDir: Option[String] = None
+    debugOutput: Boolean
   ) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
@@ -119,15 +116,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
       }
       case ("--debug_output") :: tail => {
         parseOpts(interner, opts.copy(debugOutput = true), tail)
-      }
-      case "--vale_ruster_path" :: value :: tail => {
-        parseOpts(interner, opts.copy(valeRusterPath = Some(value)), tail)
-      }
-      case "--rust_cargo_toml" :: value :: tail => {
-        parseOpts(interner, opts.copy(rustCargoToml = Some(value)), tail)
-      }
-      case "--rust_output_dir" :: value :: tail => {
-        parseOpts(interner, opts.copy(rustOutputDir = Some(value)), tail)
       }
       case value :: _ if value.startsWith("-") => throw InputException("Unknown option " + value)
       case value :: tail => {
@@ -220,92 +208,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
     Some(filepathToSource)
   }
 
-  // AFTERM: nuke this entire function once we have proper rust interop
-  private def invokeValeRusterIfNeeded(
-    opts: Options,
-    allInputs: Vector[IFrontendInput]):
-  Option[String] = {
-    (opts.valeRusterPath, opts.rustCargoToml, opts.rustOutputDir) match {
-      case (Some(valeRusterPath), Some(cargoToml), Some(outputDir)) => {
-        val importRegex = """import\s+rust\s*\.([\w\.]+)""".r
-        val rustImports = allInputs.flatMap({
-          case SourceInput(_, _, code) => importRegex.findAllMatchIn(code).map(_.group(1)).toVector
-          case ModulePathInput(_, modulePath) => {
-            val directory = new java.io.File(modulePath)
-            val files = Option(directory.listFiles()).getOrElse(Array())
-            files.filter(_.getName.endsWith(".vale")).flatMap(file => {
-              val code = Source.fromFile(file).mkString
-              importRegex.findAllMatchIn(code).map(_.group(1)).toVector
-            }).toVector
-          }
-          case DirectFilePathInput(_, path) => {
-            val code = Source.fromFile(path).mkString
-            importRegex.findAllMatchIn(code).map(_.group(1)).toVector
-          }
-        }).distinct
-
-        if (rustImports.nonEmpty) {
-          val bindingsDir = outputDir + "/vale_bindings"
-          new java.io.File(bindingsDir).mkdirs()
-          val scratchDir = outputDir + "/rust_scratch"
-          new java.io.File(scratchDir).mkdirs()
-
-          val crateName = rustImports.head.split("\\.").head
-
-          for (typePath <- rustImports) {
-            import scala.sys.process._
-            val cmd = Seq(
-              valeRusterPath,
-              "--crate", crateName,
-              "--cargo_toml", cargoToml,
-              "--vale_bindings_dir", bindingsDir,
-              "--output_dir", scratchDir,
-              "--type", typePath,
-              "list")
-            val exitCode = cmd.!
-            if (exitCode != 0) {
-              throw InputException("ValeRuster failed for type " + typePath + " (exit code " + exitCode + ")")
-            }
-          }
-          Some(bindingsDir)
-        } else {
-          None
-        }
-      }
-      case (None, None, None) => None
-      case _ => throw InputException("Must specify all of --vale_ruster_path, --rust_cargo_toml, --rust_output_dir, or none of them.")
-    }
-  }
-
-  // AFTERM: nuke this entire function once we have proper rust interop
-  private def resolveRustPackageContents(
-    rustBindingsDir: Option[String],
-    packageCoord: PackageCoordinate):
-  Option[Map[String, String]] = {
-    rustBindingsDir match {
-      case None => None
-      case Some(bindingsDir) => {
-        if (packageCoord.module.str != "rust") {
-          None
-        } else {
-          val subPath = packageCoord.packages.map(_.str).mkString(java.io.File.separator)
-          val directory = new java.io.File(bindingsDir + java.io.File.separator + subPath)
-          val files = Option(directory.listFiles()).getOrElse(Array())
-          val valeFiles = files.filter(_.getName.endsWith(".vale"))
-          if (valeFiles.isEmpty) {
-            None
-          } else {
-            val filepathToCode = valeFiles.map(file => {
-              val code = Source.fromFile(file).mkString
-              (file.getPath -> code)
-            }).toMap
-            Some(filepathToCode)
-          }
-        }
-      }
-    }
-  }
-
   def build(interner: Interner, keywords: Keywords, opts: Options):
   Result[Option[ProgramH], String] = {
     new java.io.File(opts.outputDirPath.get).mkdirs()
@@ -332,8 +234,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
       case None => opts.inputs
     }
 
-    val rustBindingsDir = invokeValeRusterIfNeeded(opts, allInputs)
-
     val packageCoords = allInputs.map(_.packageCoord(interner)).distinct
 
     val compilation =
@@ -342,7 +242,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
         keywords,
         Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
         Builtins.getCodeMap(interner, keywords)
-          .or(packageCoord => resolveRustPackageContents(rustBindingsDir, packageCoord))
           .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
         passmanager.FullCompilationOptions(
           GlobalOptions(

@@ -224,9 +224,6 @@ public:
     Package* currentPackage,
       RuntimeSizedArrayDefinitionT* rsaDefM) = 0;
 
-  virtual void declareOpaque(Opaque* opaque) = 0;
-  virtual void defineOpaque(Opaque* opaque, int size, int alignment) = 0;
-
   virtual void declareStruct(StructDefinition* structM) = 0;
   virtual void declareStructExtraFunctions(StructDefinition* structM) = 0;
   virtual void defineStruct(StructDefinition* structM) = 0;

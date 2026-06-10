@@ -2148,7 +2148,3 @@ LLVMValueRef decompressI52PtrToI64(GlobalState* globalState, FunctionState* func
 
   return ptrI64LE;
 }
-
-int alignSize(int size, int alignment) {
-  return size + (alignment - size % alignment);
-}

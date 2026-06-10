@@ -8,7 +8,7 @@ For body-migration TL/JR process, see `Luz/skills/guardian-tl.md`. For operation
 
 ## Part 1: Arena and Lifetime Model
 
-The simplifying pass takes instantiator output (`HinputsI<'s, 'i>`) and lowers it to a **wire-format-ready** AST (the `H`-suffix types: `ProgramH`, `ExpressionH`, `CoordH`, etc.). The output is consumed by `VonHammer` (see Part 5) to emit VON wire format that the backend (C-backend or ValeRuster) reads.
+The simplifying pass takes instantiator output (`HinputsI<'s, 'i>`) and lowers it to a **wire-format-ready** AST (the `H`-suffix types: `ProgramH`, `ExpressionH`, `CoordH`, etc.). The output is consumed by `VonHammer` (see Part 5) to emit VON wire format that the backend reads.
 
 **The trade.** The hammer pass is the last stop before serialization. Output lives just long enough for VON emission, but the pass still uses an arena (`'h`) because:
 - The H-side AST is mutually recursive (`KindHT → CoordH → KindHT`); arena allocation avoids `Box` chains.
@@ -196,7 +196,7 @@ pub struct VonObject {
 // etc.
 ```
 
-This is a tree of self-describing tagged data — the wire format the C-backend and ValeRuster expect.
+This is a tree of self-describing tagged data — the wire format the C-backend expects.
 
 ### 5.3 Pipeline Position
 
@@ -331,7 +331,7 @@ For the rest (`'s: 'h`, `'i: 'h`, copy-out-before-`&mut`, sub-enum stack-only re
 
 - **`HashMap<&'i StructIT, _>` borrow conflicts.** Reading the map and then calling a `&mut hamuts` method holds the borrow across the call — copy out the value first (typing §4.3 pattern).
 - **Reintroducing `HamutsBox`/`LocalsBox`.** The borrow-checker pain when first migrating a method is real, but the fix is short-borrow-and-copy-out, not reinstating the Box. See `hamuts.rs:430-436`.
-- **`@PRIIROZ` / `@SMLRZ` template-args reshuffling** (`hammer.rs:796-801`). Extern translation moves trailing `numInherited` template args from the leaf step to the parent step, matching backend `rustifySimpleId` expectations. Forgetting this breaks extern wire format.
+- **`@PRIIROZ` template-args reshuffling** (`hammer.rs:796-801`). Extern translation moves trailing `numInherited` template args from the leaf step to the parent step. Forgetting this breaks extern wire format on the inheritance path.
 - **Mangling stubs.** `mangle_*` methods mostly panic; many call sites use shortcuts that work for the current test corpus. Don't fill mangling in just because a stub panicked — verify Scala actually produces the mangled name on that path.
 - **`@TFITCX` classification on `Hamuts`.** Temporary state, not arena-allocated. Don't add `/// Arena-allocated` annotations to H-side accumulator types.
 - **VON output drift.** When body-migrating a `*_von` method, run the typing-pass + instantiator tests, then diff `IVonData` output against a known-Scala-correct baseline. Drift here is the only kind of drift that breaks downstream.

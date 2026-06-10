@@ -24,11 +24,7 @@ func invoke_backend(
   use_atomic_rc bool,
   gen_size int,
   force_all_known_live bool,
-  include_bounds_checks bool,
-  // Rust interop: empty when disabled. When set, Backend invokes Divination.
-  divination_path str,
-  rust_cargo_toml str,
-  rust_output_dir str)
+  include_bounds_checks bool)
 Subprocess {
   //backend_program_name = if (IsWindows()) { "backend.exe" } else { "backend" };
   //backend_program_path = backend_path./(backend_program_name);
@@ -111,15 +107,6 @@ Subprocess {
   }
 
   command_line_args.add("--gen_size={gen_size}");
-
-  if divination_path != "" {
-    command_line_args.add("--divination_path");
-    command_line_args.add(divination_path);
-    command_line_args.add("--rust_cargo_toml");
-    command_line_args.add(rust_cargo_toml);
-    command_line_args.add("--rust_output_dir");
-    command_line_args.add(rust_output_dir);
-  }
 
   vast_files.each((vast_file) => {
     command_line_args.add(vast_file.str());

@@ -186,10 +186,8 @@ public:
   void defineEdge(
       Edge* edge) override;
 
-  void declareOpaque(Opaque* opaque) override;
-  void defineOpaque(Opaque* opaque, int size, int alignment) override;
-
-  void defineStruct(StructDefinition* structM) override;
+  void defineStruct(
+      StructDefinition* structM) override;
 
   void declareStruct(
       StructDefinition* structM) override;

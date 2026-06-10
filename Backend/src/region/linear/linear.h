@@ -97,9 +97,6 @@ public:
   void declareEdge(Edge* edge) override;
   void defineEdge(Edge* edge) override;
 
-  void declareOpaque(Opaque* opaque) override;
-  void defineOpaque(Opaque* opaque, int size, int alignment) override;
-
   Ref weakAlias(
       FunctionState* functionState, LLVMBuilderRef builder, Reference* sourceRefMT, Reference* targetRefMT, Ref sourceRef) override;
 

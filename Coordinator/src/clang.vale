@@ -1,5 +1,4 @@
 import stdlib.os.*;
-import coordinator.platform.*;
 
 func invoke_clang(
   windows bool,
@@ -11,20 +10,8 @@ func invoke_clang(
   debug_symbols bool,
   output_dir &Path,
   pic bool,
-  pie bool,
-  // Rust interop: empty when disabled. Points at the dir containing rust_deps.h (cbindgen output).
-  rust_include_dir str)
+  pie bool)
 Subprocess {
-  // Per @CADFRTZ, derive the Rust target triple from rust_include_dir instead of accepting
-  // it as a separate parameter. Divination's cbuild writes its output to
-  // `<rust_output_dir>/target/<triple>/release/`, so the parent directory name of
-  // rust_include_dir IS the triple (e.g. "aarch64-apple-darwin", "x86_64-apple-darwin").
-  rust_target_triple =
-      if rust_include_dir == "" {
-        ""
-      } else {
-        Path(rust_include_dir)&.parent()&.name()
-      };
   program =
     if maybe_clang_path_override.isEmpty() {
       if (windows) {
@@ -41,9 +28,6 @@ Subprocess {
   args = List<str>();
 
   args.add("-I" + output_dir./("include").str());
-  if rust_include_dir != "" {
-    args.add("-I" + rust_include_dir);
-  }
 
   if not maybe_libc_path_override.isEmpty() {
     libc_path_str = maybe_libc_path_override.get();
@@ -77,18 +61,12 @@ Subprocess {
     args.add("-o");
     args.add(exe_file.str());
     args.add("-lm");
-    //args.add("-Wall");
-    //args.add("-Werror");
-  }
-
-  // Per @CADFRTZ, force -arch arm64 on Darwin so a Rosetta-translated parent (x86_64 valec
-  // on an arm64 Mac) doesn't silently cause clang to emit x86_64 output that then fails to
-  // link against the arm64 build.o (or arm64 Rust .a). Linux/Windows don't use -arch this
-  // way. Hardcoded arm64 is adequate for our current Apple Silicon target; revisit if we
-  // need to support x86_64 mac builds again.
-  if IsDarwin() {
+    // Force arm64 so that an x86_64 (Rosetta'd) parent process doesn't make
+    // child clang default to x86_64 when the backend produced arm64 build.o.
     args.add("-arch");
     args.add("arm64");
+    //args.add("-Wall");
+    //args.add("-Werror");
   }
 
   if (debug_symbols) {

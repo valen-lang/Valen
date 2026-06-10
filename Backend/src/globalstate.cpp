@@ -13,8 +13,7 @@ GlobalState::GlobalState(AddressNumberer* addressNumberer_) :
     overridesBySubstructByInterface(0, addressNumberer->makeHasher<InterfaceKind*>()),
     extraFunctions(0, addressNumberer->makeHasher<Prototype*>()),
     regions(0, addressNumberer->makeHasher<RegionId*>()),
-    regionIdByKind(0, addressNumberer->makeHasher<Kind*>()),
-    opaqueToMeasurements(0, addressNumberer->makeHasher<Opaque*>())
+    regionIdByKind(0, addressNumberer->makeHasher<Kind*>())
 {}
 
 std::vector<LLVMTypeRef> GlobalState::getInterfaceFunctionTypesNonPointer(InterfaceKind* kind) {
