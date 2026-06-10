@@ -1,5 +1,6 @@
 use crate::higher_typing::astronomer_error_reporter::ICompileErrorA;
 use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
 use crate::postparsing::post_parser_error_humanizer::humanize_rule;
 use crate::postparsing::post_parser_error_humanizer::humanize_rune;
 use crate::postparsing::post_parser_error_humanizer::humanize_rune_type_error;
@@ -86,7 +87,9 @@ pub fn humanize<'s>(
     let error_str_body =
         match err {
             ICompileErrorA::RangedInternalError(_) => panic!("implement: humanize RangedInternalErrorA"),
-            ICompileErrorA::CouldntFindType(_) => panic!("implement: humanize CouldntFindTypeA"),
+            ICompileErrorA::CouldntFindType(e) => {
+                format!(": Couldn't find type `{}`:\n", humanize_imprecise_name(e.name))
+            }
             ICompileErrorA::CouldntSolveRules(e) => {
                 let code_map_ref = |c: &CodeLocationS<'s>| code_map(*c);
                 let lines_between_ref = |a: &CodeLocationS<'s>, b: &CodeLocationS<'s>| lines_between(*a, *b);

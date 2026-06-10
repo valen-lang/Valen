@@ -2,6 +2,8 @@
 // Main entry point for the Vale compiler
 
 use crate::compile_options::GlobalOptions;
+use crate::higher_typing::higher_typing_error_humanizer;
+use crate::utils::source_code_utils;
 use crate::interner::StrI;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -896,7 +898,12 @@ where
 
     // From PassManager.scala lines 406-409
     match compilation.get_astrouts() {
-      Err(_) => panic!("HigherTypingErrorHumanizer.humanize not yet implemented"),
+      Err(error) => return Err(higher_typing_error_humanizer::humanize(
+        &|x| source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
+        &|a, b| source_code_utils::lines_between(&vale_code_map, &a, &b),
+        &|x| source_code_utils::line_range_containing(&vale_code_map, &x),
+        &|x| source_code_utils::line_containing(&vale_code_map, &x),
+        &error)),
       Ok(_) => {}
     }
 

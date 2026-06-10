@@ -10,6 +10,8 @@
 
 **No bugfix without an in-tree minimal repro first.** External probes (out-of-tree files, real-world programs, file-path-dependent tests) prove the bug exists; they never license a fix on their own.
 
+**Migrating panic placeholders is JR's job.** Replacing `panic!(...)` with its Scala-faithful body is JR work — TL plans, dispatches, parity-reviews; never lands the body itself.
+
 **No simplifications.** 1:1 Scala parity outranks tidiness and blast radius; never omit dead bindings, inline helpers, skip checks, or substitute idioms without the architect's explicit go-ahead. Temp-disable rationales can hide simplifications (no-op closures, panic stubs, partial ports masquerading as "documented Rust adaptation") — when sweeping, allocate per-site investigation time and read the actual function body, don't bulk-strip on rationale text.
 
 **Edit-surface aversion is not a reason to simplify.** When the lower-ripple option is less Scala-faithful, surface the tradeoff to the architect — don't pick quietly.

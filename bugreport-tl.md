@@ -14,6 +14,7 @@ External real-world report → in-tree regression test asserting *correct* outpu
 ## Rules
 
 - **No fix without an in-tree minimal repro first.** External probes (out-of-tree files, real-world programs, file-path-dependent tests) prove the bug exists; they never license a fix on their own.
+- **Print the test for explicit architect approval before the fix lands.** The test motivates the fix and pins the contract — get it ratified before embarking on the implementation.
 - **Tests assert correct behavior, not symptoms.** Don't pin current panic messages or buggy output.
 - **No bug-class commentary in test bodies.** The "what went wrong" lives in the commit message. Tests are self-evident from name + code.
 - **Tight assertions only.** `assert_eq!` or `ends_with(<deterministic suffix>)`. Never `contains() && contains()` (NSTDX).
