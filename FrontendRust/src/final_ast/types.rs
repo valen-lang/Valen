@@ -9,6 +9,9 @@ use std::marker::PhantomData;
 use crate::final_ast::ast::{IdH, PrototypeH};
 use crate::interner::StrI;
 use crate::simplifying::hammer_interner::MustIntern;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::utils::code_hierarchy::FileCoordinate;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 /*
 package dev.vale.finalast
@@ -249,7 +252,7 @@ case class VoidHT() extends KindHT {
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OpaqueHT<'s, 'h> where 's: 'h {
-    pub package_coord: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub package_coord: PackageCoordinate<'s>,
     pub struct_id: &'h IdH<'s, 'h>,
     pub simple_id: SimpleId<'s, 'h>,
 }
@@ -417,7 +420,7 @@ pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
 }
 // mig: fn kind (on StaticSizedArrayDefinitionHT — see Scala `def kind = StaticSizedArrayHT(name)` in audit block below)
 impl<'s, 'h> StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub fn kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h StaticSizedArrayHT<'s, 'h> {
+    pub fn kind(&self, interner: &HammerInterner<'s, 'h>) -> &'h StaticSizedArrayHT<'s, 'h> {
         interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: self.name })
     }
 }
@@ -475,7 +478,7 @@ pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
 }
 // mig: fn kind (on RuntimeSizedArrayDefinitionHT — see Scala `def kind = RuntimeSizedArrayHT(name)` in audit block below)
 impl<'s, 'h> RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub fn kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h RuntimeSizedArrayHT<'s, 'h> {
+    pub fn kind(&self, interner: &HammerInterner<'s, 'h>) -> &'h RuntimeSizedArrayHT<'s, 'h> {
         interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: self.name })
     }
 }
@@ -496,7 +499,7 @@ case class RuntimeSizedArrayDefinitionHT(
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct CodeLocation<'s> {
-    pub file: crate::utils::code_hierarchy::FileCoordinate<'s>,
+    pub file: FileCoordinate<'s>,
     pub offset: i32,
 }
 /*

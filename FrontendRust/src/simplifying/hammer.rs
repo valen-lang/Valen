@@ -22,6 +22,22 @@ use crate::keywords::Keywords;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hamuts::Hamuts;
 use std::collections::{HashMap, HashSet};
+use crate::final_ast::ast::FunctionH;
+use crate::final_ast::ast::InterfaceDefinitionH;
+use crate::final_ast::ast::PackageH;
+use crate::final_ast::ast::StructDefinitionH;
+use crate::final_ast::types::RuntimeSizedArrayDefinitionHT;
+use crate::final_ast::types::SimpleId;
+use crate::final_ast::types::SimpleIdStep;
+use crate::final_ast::types::StaticSizedArrayDefinitionHT;
+use crate::instantiating::ast::ast::KindExportI;
+use crate::instantiating::instantiating_interner::InstantiatingInterner;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::name_hammer::simplify_id;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::code_hierarchy::PackageCoordinateMap;
+use std::mem::discriminant;
 
 /*
 package dev.vale.simplifying
@@ -453,8 +469,8 @@ where 's: 'i, 's: 'h, 'i: 'h,
 {
     pub interner: &'ctx HammerInterner<'s, 'h>,
     pub keywords: &'ctx Keywords<'s>,
-    pub scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
-    pub instantiating_interner: &'ctx crate::instantiating::instantiating_interner::InstantiatingInterner<'s, 'i>,
+    pub scout_arena: &'ctx ScoutArena<'s>,
+    pub instantiating_interner: &'ctx InstantiatingInterner<'s, 'i>,
 }
 /*
 class Hammer(interner: Interner, keywords: Keywords) {
@@ -639,7 +655,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             package_coord_to_kind_to_extern: HashMap::new(),
         };
 
-        for crate::instantiating::ast::ast::KindExportI { range: _, tyype, id: export_id, exported_name } in kind_exports.iter() {
+        for KindExportI { range: _, tyype, id: export_id, exported_name } in kind_exports.iter() {
             let kind_h = self.translate_kind(hinputs, &mut hamuts, *tyype);
             hamuts.add_kind_export(kind_h, *export_id.package_coord, *exported_name);
         }
@@ -651,7 +667,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 
         for (r#struct, _kind_extern) in kind_externs.iter() {
             let export_name = self.mangle_struct(&r#struct.id);
-            let export_simplified_id = crate::simplifying::name_hammer::simplify_id(self.interner, self.scout_arena, &r#struct.id);
+            let export_simplified_id = simplify_id(self.interner, self.scout_arena, &r#struct.id);
             let opaque_h = self.translate_opaque_i(hinputs, &mut hamuts, *r#struct);
             hamuts.add_kind_extern(self.scout_arena, opaque_h, export_simplified_id, export_name);
         }
@@ -662,11 +678,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 panic!("translate functionExterns: rust-package empty-name branch")
             } else {
                 match prototype.id.local_name {
-                    crate::instantiating::ast::names::INameI::ExternFunction(extern_fn) => extern_fn.human_name,
-                    other => panic!("translate functionExterns: unexpected local_name variant {:?}", std::mem::discriminant(&other)),
+                    INameI::ExternFunction(extern_fn) => extern_fn.human_name,
+                    other => panic!("translate functionExterns: unexpected local_name variant {:?}", discriminant(&other)),
                 }
             };
-            let raw_simple_id = crate::simplifying::name_hammer::simplify_id(self.interner, self.scout_arena, &prototype.id);
+            let raw_simple_id = simplify_id(self.interner, self.scout_arena, &prototype.id);
             let export_simplified_id = if num_inherited == 0 {
                 raw_simple_id
             } else {
@@ -682,20 +698,20 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 let parent = &steps[parent_idx];
                 let split_point = leaf.template_args.len() - num_inherited as usize;
                 let (own, inherited) = leaf.template_args.split_at(split_point);
-                let new_parent_template_args: Vec<crate::final_ast::types::SimpleId<'s, 'h>> = parent.template_args.iter().copied().chain(inherited.iter().copied()).collect();
-                let new_parent = crate::final_ast::types::SimpleIdStep {
+                let new_parent_template_args: Vec<SimpleId<'s, 'h>> = parent.template_args.iter().copied().chain(inherited.iter().copied()).collect();
+                let new_parent = SimpleIdStep {
                     name: parent.name,
                     template_args: self.interner.bump().alloc_slice_copy(&new_parent_template_args),
                 };
-                let new_leaf = crate::final_ast::types::SimpleIdStep {
+                let new_leaf = SimpleIdStep {
                     name: leaf.name,
                     template_args: self.interner.bump().alloc_slice_copy(own),
                 };
-                let mut new_steps: Vec<crate::final_ast::types::SimpleIdStep<'s, 'h>> = steps.to_vec();
+                let mut new_steps: Vec<SimpleIdStep<'s, 'h>> = steps.to_vec();
                 new_steps[parent_idx] = new_parent;
                 let last_idx = new_steps.len() - 1;
                 new_steps[last_idx] = new_leaf;
-                crate::final_ast::types::SimpleId { steps: self.interner.bump().alloc_slice_copy(&new_steps) }
+                SimpleId { steps: self.interner.bump().alloc_slice_copy(&new_steps) }
             };
             let prototype_h = self.translate_prototype(hinputs, &mut hamuts, prototype);
             hamuts.add_function_extern(prototype_h, export_simplified_id, export_name);
@@ -708,27 +724,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         self.translate_functions(hinputs, &mut hamuts, &user_functions);
         self.translate_functions(hinputs, &mut hamuts, &non_user_functions);
 
-        let mut package_to_interface_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::InterfaceDefinitionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_interface_defs: HashMap<PackageCoordinate<'s>, Vec<InterfaceDefinitionH<'s, 'h>>> = HashMap::new();
         for (it, idh) in hamuts.interface_t_to_interface_def_h.iter() {
             package_to_interface_defs.entry(*it.id.package_coord).or_insert_with(Vec::new).push(*idh);
         }
-        let mut package_to_struct_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::StructDefinitionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_struct_defs: HashMap<PackageCoordinate<'s>, Vec<StructDefinitionH<'s, 'h>>> = HashMap::new();
         for sd in hamuts.struct_defs.iter() {
             package_to_struct_defs.entry(sd.id.package_coordinate).or_insert_with(Vec::new).push(*sd);
         }
-        let mut package_to_function_defs: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::ast::FunctionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_function_defs: HashMap<PackageCoordinate<'s>, Vec<FunctionH<'s, 'h>>> = HashMap::new();
         for (proto, fdh) in hamuts.function_defs.iter() {
             package_to_function_defs.entry(*proto.id.package_coord).or_insert_with(Vec::new).push(*fdh);
         }
-        let mut package_to_static_sized_arrays: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::types::StaticSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        let mut package_to_static_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<StaticSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
         for (_, ssad) in hamuts.static_sized_arrays.iter() {
             package_to_static_sized_arrays.entry(ssad.name.package_coordinate).or_insert_with(Vec::new).push(*ssad);
         }
-        let mut package_to_runtime_sized_arrays: HashMap<crate::utils::code_hierarchy::PackageCoordinate<'s>, Vec<crate::final_ast::types::RuntimeSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        let mut package_to_runtime_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<RuntimeSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
         for (_, rsad) in hamuts.runtime_sized_arrays.iter() {
             package_to_runtime_sized_arrays.entry(rsad.name.package_coordinate).or_insert_with(Vec::new).push(*rsad);
         }
-        let mut all_package_coords: std::collections::HashSet<crate::utils::code_hierarchy::PackageCoordinate<'s>> = std::collections::HashSet::new();
+        let mut all_package_coords: HashSet<PackageCoordinate<'s>> = HashSet::new();
         all_package_coords.extend(package_to_interface_defs.keys());
         all_package_coords.extend(package_to_struct_defs.keys());
         all_package_coords.extend(package_to_function_defs.keys());
@@ -738,24 +754,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
         all_package_coords.extend(hamuts.package_coord_to_export_name_to_kind.keys());
         all_package_coords.extend(hamuts.package_coord_to_prototype_to_extern.keys());
         all_package_coords.extend(hamuts.package_coord_to_kind_to_extern.keys());
-        let mut packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::final_ast::ast::PackageH<'s, 'h>> = crate::utils::code_hierarchy::PackageCoordinateMap::new();
+        let mut packages: PackageCoordinateMap<'s, PackageH<'s, 'h>> = PackageCoordinateMap::new();
         for package_coord in all_package_coords.into_iter() {
             let interfaces = self.interner.alloc_slice_from_vec(package_to_interface_defs.get(&package_coord).cloned().unwrap_or_default());
             let structs = self.interner.alloc_slice_from_vec(package_to_struct_defs.get(&package_coord).cloned().unwrap_or_default());
             let functions = self.interner.alloc_slice_from_vec(package_to_function_defs.get(&package_coord).cloned().unwrap_or_default());
             let static_sized_arrays = self.interner.alloc_slice_from_vec(package_to_static_sized_arrays.get(&package_coord).cloned().unwrap_or_default());
             let runtime_sized_arrays = self.interner.alloc_slice_from_vec(package_to_runtime_sized_arrays.get(&package_coord).cloned().unwrap_or_default());
-            let export_name_to_function = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_function.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
-            let export_name_to_kind = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_kind.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
-            let prototype_to_extern = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_prototype_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
-            let kind_to_extern = self.interner.alloc(crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(hamuts.package_coord_to_kind_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let export_name_to_function = self.interner.alloc(ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_function.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let export_name_to_kind = self.interner.alloc(ArenaIndexMap::from_iter_in(hamuts.package_coord_to_export_name_to_kind.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let prototype_to_extern = self.interner.alloc(ArenaIndexMap::from_iter_in(hamuts.package_coord_to_prototype_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
+            let kind_to_extern = self.interner.alloc(ArenaIndexMap::from_iter_in(hamuts.package_coord_to_kind_to_extern.get(&package_coord).into_iter().flat_map(|m| m.iter().map(|(k, v)| (*k, *v))), self.interner.bump()));
             let package_coord_ref = self.scout_arena.intern_package_coordinate(package_coord.module, package_coord.packages.as_slice());
-            packages.put(package_coord_ref, crate::final_ast::ast::PackageH {
+            packages.put(package_coord_ref, PackageH {
                 interfaces, structs, functions, static_sized_arrays, runtime_sized_arrays,
                 export_name_to_function, export_name_to_kind, prototype_to_extern, kind_to_extern,
             });
         }
-        self.interner.alloc(crate::final_ast::ast::ProgramH { packages })
+        self.interner.alloc(ProgramH { packages })
     }
 }
 /*
@@ -992,7 +1008,7 @@ where 's: 'h,
     match filtered_flattened_exprs_he.as_slice() {
         [] => panic!("Cant have empty consecutive"),
         [only] => *only,
-        multiple => ExpressionH::ConsecutorH(interner.alloc(crate::final_ast::instructions::ConsecutorH { exprs: interner.alloc_slice_copy(multiple) })),
+        multiple => ExpressionH::ConsecutorH(interner.alloc(ConsecutorH { exprs: interner.alloc_slice_copy(multiple) })),
     }
 }
 /*

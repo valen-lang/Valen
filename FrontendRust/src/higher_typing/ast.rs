@@ -12,6 +12,11 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
 use crate::utils::range::RangeS;
+use std::any::Any;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ptr::eq;
+use std::ptr::hash;
 /*
 package dev.vale.highertyping
 
@@ -47,7 +52,7 @@ impl<'s> ProgramA<'s> {
 /*
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 /*
@@ -284,7 +289,7 @@ pub fn hash_code(&self) -> i32 {
     }))
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 }
@@ -365,7 +370,7 @@ pub fn hash_code(&self) -> i32 {
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 }
@@ -408,7 +413,7 @@ pub fn hash_code(&self) -> i32 {
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 }
@@ -548,7 +553,7 @@ pub fn hash_code(&self) -> i32 {
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 }
@@ -733,7 +738,7 @@ pub fn hash_code(&self) -> i32 {
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 /*
@@ -793,41 +798,41 @@ pub fn is_lambda(&self) -> bool {
 // so `==` and `Hash` use `std::ptr::eq`/`std::ptr::hash` on `&self`.
 
 impl<'s> PartialEq for StructA<'s> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    fn eq(&self, other: &Self) -> bool { eq(self, other) }
     /* Guardian: disable-all */
 }
 impl<'s> Eq for StructA<'s> {}
-impl<'s> std::hash::Hash for StructA<'s> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+impl<'s> Hash for StructA<'s> {
+    fn hash<H: Hasher>(&self, state: &mut H) { hash(self, state) }
     /* Guardian: disable-all */
 }
 
 impl<'s> PartialEq for InterfaceA<'s> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    fn eq(&self, other: &Self) -> bool { eq(self, other) }
     /* Guardian: disable-all */
 }
 impl<'s> Eq for InterfaceA<'s> {}
-impl<'s> std::hash::Hash for InterfaceA<'s> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+impl<'s> Hash for InterfaceA<'s> {
+    fn hash<H: Hasher>(&self, state: &mut H) { hash(self, state) }
     /* Guardian: disable-all */
 }
 
 impl<'s> PartialEq for ImplA<'s> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    fn eq(&self, other: &Self) -> bool { eq(self, other) }
     /* Guardian: disable-all */
 }
 impl<'s> Eq for ImplA<'s> {}
-impl<'s> std::hash::Hash for ImplA<'s> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+impl<'s> Hash for ImplA<'s> {
+    fn hash<H: Hasher>(&self, state: &mut H) { hash(self, state) }
     /* Guardian: disable-all */
 }
 
 impl<'s> PartialEq for FunctionA<'s> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    fn eq(&self, other: &Self) -> bool { eq(self, other) }
     /* Guardian: disable-all */
 }
 impl<'s> Eq for FunctionA<'s> {}
-impl<'s> std::hash::Hash for FunctionA<'s> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+impl<'s> Hash for FunctionA<'s> {
+    fn hash<H: Hasher>(&self, state: &mut H) { hash(self, state) }
     /* Guardian: disable-all */
 }

@@ -20,6 +20,8 @@ use crate::utils::range::RangeS;
 use crate::postparsing::itemplatatype::*;
 use std::collections::HashMap;
 use crate::postparsing::itemplatatype::ImplTemplataType;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 
 
 // mig: struct RuneTypeSolveError
@@ -324,9 +326,9 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
     rules_s: &[IRulexSR<'s>],
     additional_runes: &[IRuneS<'s>],
     expect_complete_solve: bool,
-    unpreprocessed_initially_known_runes: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+    unpreprocessed_initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>>,
   ) -> Result<
-    std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+    HashMap<IRuneS<'s>, ITemplataType<'s>>,
     RuneTypeSolveError<'s>,
   > {
     solve_rune_type(self.scout_arena, sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
@@ -526,27 +528,27 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
         (x.mutability_rune.rune.clone(), ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::CoordComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         (x.ownership_rune.rune.clone(), ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})),
         (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::PrototypeComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
         (x.params_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::MaybeCoercingCall(x) => {
       match solver_state.get_conclusion(&x.template_rune.rune).expect("MaybeCoercingCallSR: template rune has no conclusion") {
         ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type: _ }) => {
-          let conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter().cloned()).collect();
-          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new())
+          let conclusions: HashMap<IRuneS<'s>, ITemplataType<'s>> = x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter().cloned()).collect();
+          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], HashSet::new())
         }
         other => panic!("MaybeCoercingCallSR: unexpected template type: {:?}", other),
       }
@@ -556,62 +558,62 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
         (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::CallSiteFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.prototype_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
         (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::DefinitionFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
         (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::DefinitionCoordIsa(x) => {
         solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
             (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {})),
             (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
             (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-        ].into_iter().collect(), vec![], std::collections::HashSet::new())
+        ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::CallSiteCoordIsa(x) => {
-        let mut conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = [
+        let mut conclusions: HashMap<IRuneS<'s>, ITemplataType<'s>> = [
             (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
             (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         ].into_iter().collect();
         if let Some(result_rune) = &x.result_rune {
             conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(ImplTemplataType {}));
         }
-        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new())
+        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], HashSet::new())
     }
     IRulexSR::OneOf(x) => {
-      let types: std::collections::HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
+      let types: HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
       if types.len() > 1 {
         panic!("OneOf rule's possibilities must all be the same type!");
       }
       let the_type = types.into_iter().next().unwrap();
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), the_type)].into_iter().collect(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), the_type)].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::Equals(x) => {
       let left_conclusion = solver_state.get_conclusion(&x.left.rune);
       match left_conclusion {
         None => {
           let right_conclusion = solver_state.get_conclusion(&x.right.rune).expect("Neither side of EqualsSR has a conclusion");
-          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.left.rune.clone(), right_conclusion)].into_iter().collect(), vec![], std::collections::HashSet::new())
+          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.left.rune.clone(), right_conclusion)].into_iter().collect(), vec![], HashSet::new())
         }
         Some(left) => {
-          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.right.rune.clone(), left)].into_iter().collect(), vec![], std::collections::HashSet::new())
+          solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.right.rune.clone(), left)].into_iter().collect(), vec![], HashSet::new())
         }
       }
     }
     IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule"),
     IRulexSR::IsInterface(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule"),
     IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule"),
@@ -619,10 +621,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::Literal(x) => {
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::Lookup(x) => {
       let actual_lookup_result =
@@ -635,7 +637,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         IRuneTypeSolverLookupResult::Templata(t) => t.templata,
         IRuneTypeSolverLookupResult::Citizen(c) => c.tyype,
       };
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), tyype)].into_iter().collect(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), tyype)].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::MaybeCoercingLookup(x) => {
       let actual_lookup_result =
@@ -645,7 +647,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
           };
       // AFTERM: lookup_rune_type only validates, doesn't conclude runes. Need to add commitStep here.
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], HashMap::new(), vec![], HashSet::new())
     }
     IRulexSR::RuneParentEnvLookup(x) => {
       let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
@@ -655,20 +657,20 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
             Ok(r) => r,
           };
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], HashMap::new(), vec![], HashSet::new())
     }
     IRulexSR::Augment(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
         (x.inner_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
-      ].into_iter().collect(), vec![], std::collections::HashSet::new())
+      ].into_iter().collect(), vec![], HashSet::new())
     }
     IRulexSR::Pack(x) => {
-      let mut conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = x.members.iter()
+      let mut conclusions: HashMap<IRuneS<'s>, ITemplataType<'s>> = x.members.iter()
         .map(|m| (m.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})))
         .collect();
       conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) }));
-      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new())
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![], HashSet::new())
     }
     IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type solve_rule"),
     IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type solve_rule"),
@@ -850,7 +852,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           // Then it's an implicit call.
           match check_generic_call(vec![_range.clone()], &[], &[]) {
             Ok(()) => {},
-            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
           }
         }
         _ => panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated"),
@@ -862,7 +864,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           // Then it's an implicit call, straight from being looked up.
           match check_generic_call(vec![_range.clone()], &c.generic_params, &[]) {
             Ok(()) => {},
-            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
           }
         }
         x if *x == c.tyype => {}
@@ -942,9 +944,9 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   rules_s: &[IRulexSR<'s>],
   additional_runes: &[IRuneS<'s>],
   expect_complete_solve: bool,
-  unpreprocessed_initially_known_runes: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  unpreprocessed_initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>>,
 ) -> Result<
-  std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  HashMap<IRuneS<'s>, ITemplataType<'s>>,
   RuneTypeSolveError<'s>,
 > {
 
@@ -1001,13 +1003,13 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
                 range: vec![lookup.range.clone()],
                 failed_solve: FailedSolve {
                     steps: vec![],
-                    conclusions: std::collections::HashMap::new(),
+                    conclusions: HashMap::new(),
                     unsolved_rules: rules_s.to_vec(),
                     unsolved_runes: vec![],
                     error: ISolverError::RuleError(
                       RuleError {
                         err: e.into(),
-                        _phantom: std::marker::PhantomData,
+                        _phantom: PhantomData,
                       }
                     ),
                 },
@@ -1057,7 +1059,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 
   // Compute all_runes for solver = rules.flatMap(getRunes) ++ initiallyKnownRunes.keys, deduplicated
   // (additionalRunes are NOT included here — they're added after solving for the completeness check)
-  let mut all_runes_set = std::collections::HashSet::new();
+  let mut all_runes_set = HashSet::new();
   for rule in rules_s {
     for rune_usage in rule.rune_usages() {
       all_runes_set.insert(rune_usage.rune.clone());
@@ -1129,7 +1131,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           unsolved_runes,
           error: ISolverError::SolveIncomplete(
             SolveIncomplete {
-              _phantom: std::marker::PhantomData,
+              _phantom: PhantomData,
             }
           ),
       },

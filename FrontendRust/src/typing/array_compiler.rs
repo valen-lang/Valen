@@ -25,6 +25,20 @@ use std::collections::HashSet;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
 use crate::typing::templata::templata::expect_coord_templata;
+use crate::higher_typing::higher_typing_pass::explicify_lookups;
+use crate::postparsing::names::CodeNameS;
+use crate::postparsing::names::CodeRuneS;
+use crate::postparsing::names::IImpreciseNameValS;
+use crate::postparsing::names::IRuneValS;
+use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
+use crate::postparsing::rules::rules::RuneUsage;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::names::names::RuneNameT;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::types::types::MutabilityT;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -116,7 +130,7 @@ where 's: 't,
         let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+        match explicify_lookups(
             &rune_typing_env,
             self.scout_arena,
             &mut rune_a_to_type,
@@ -139,7 +153,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = std::collections::HashSet::new();
+                            let mut filter = HashSet::new();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = calling_env.lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();
@@ -342,7 +356,7 @@ where 's: 't,
         let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+        match explicify_lookups(
             &rune_typing_env,
             self.scout_arena,
             &mut rune_a_to_type,
@@ -365,7 +379,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = std::collections::HashSet::new();
+                            let mut filter = HashSet::new();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = IInDenizenEnvironmentT::Node(calling_env).lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();
@@ -426,26 +440,26 @@ where 's: 't,
                 })))
             }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
-                let m_rune_name = self.scout_arena.intern_rune(crate::postparsing::names::IRuneValS::CodeRune(crate::postparsing::names::CodeRuneS { name: self.keywords.m }));
-                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: m_rune_name, _phantom: std::marker::PhantomData }));
-                let mut entries: Vec<(INameT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)> = Vec::new();
-                entries.push((m_rune_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }))));
+                let m_rune_name = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.m }));
+                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: m_rune_name, _phantom: PhantomData }));
+                let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
+                entries.push((m_rune_name_t, IEnvEntryT::Templata(ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))));
                 if let Some(e) = maybe_element_type_rune {
-                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: e, _phantom: std::marker::PhantomData }));
+                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e, _phantom: PhantomData }));
                     let element_type = self.get_array_element_type(&templatas, e);
-                    entries.push((e_rune_name_t, crate::typing::env::i_env_entry::IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: element_type })))));
+                    entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: element_type })))));
                 }
                 let extended_env = calling_env.add_entries(self.typing_interner, self.scout_arena, &entries);
                 let head_range = parent_ranges[0];
                 let mut explicit_rules: Vec<IRulexSR<'s>> = Vec::new();
-                explicit_rules.push(IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                explicit_rules.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
                     range: head_range,
-                    rune: crate::postparsing::rules::rules::RuneUsage { range: head_range, rune: m_rune_name },
+                    rune: RuneUsage { range: head_range, rune: m_rune_name },
                 }));
                 if let Some(e) = maybe_element_type_rune {
-                    explicit_rules.push(IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                    explicit_rules.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
                         range: head_range,
-                        rune: crate::postparsing::rules::rules::RuneUsage { range: head_range, rune: e },
+                        rune: RuneUsage { range: head_range, rune: e },
                     }));
                 }
                 let mut positional_runes: Vec<IRuneS<'s>> = Vec::new();
@@ -459,7 +473,7 @@ where 's: 't,
                     args.push(c.result().coord);
                 }
                 let array_imprecise_name = self.scout_arena.intern_imprecise_name(
-                    crate::postparsing::names::IImpreciseNameValS::CodeName(crate::postparsing::names::CodeNameS { name: self.keywords.array }));
+                    IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
                 let stamp = self.find_function(
                     IInDenizenEnvironmentT::Node(extended_env),
                     coutputs,
@@ -481,7 +495,7 @@ where 's: 't,
                     KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
                         INameT::RuntimeSizedArray(name) => {
                             let raw = name.arr;
-                            if raw.mutability != ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }) {
+                            if raw.mutability != ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) {
                                 panic!("Array function returned wrong mutability!");
                             }
                             raw.element_type
@@ -503,7 +517,7 @@ where 's: 't,
                 if let Some(c) = maybe_callable_te {
                     args_te.push(c);
                 }
-                let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(crate::typing::ast::expressions::FunctionCallTE {
+                let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
                     callable: prototype,
                     args: self.typing_interner.alloc_slice_from_vec(args_te),
                     return_type: result_te,
@@ -766,7 +780,7 @@ where 's: 't,
         let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+        match explicify_lookups(
             &rune_typing_env,
             self.scout_arena,
             &mut rune_a_to_type,
@@ -789,7 +803,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = std::collections::HashSet::new();
+                            let mut filter = HashSet::new();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = calling_env.lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();
@@ -1121,7 +1135,7 @@ where 's: 't,
         // val templateId =
         //   IdT(builtinPackage, Vector.empty, interner.intern(StaticSizedArrayTemplateNameT()))
         let template_name = self.typing_interner.intern_static_sized_array_template_name(
-            StaticSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+            StaticSizedArrayTemplateNameT { _phantom: PhantomData }
         );
         let template_id = self.typing_interner.intern_id(IdValT {
             package_coord: builtin_package,
@@ -1302,7 +1316,7 @@ where 's: 't,
         let builtin_package: &'s PackageCoordinate<'s> =
             self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
         let template_name = self.typing_interner.intern_static_sized_array_template_name(
-            StaticSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+            StaticSizedArrayTemplateNameT { _phantom: PhantomData }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
             RawArrayNameT { mutability, element_type: type_2, self_region: region }
@@ -1348,7 +1362,7 @@ where 's: 't,
         // val templateId =
         //   IdT(builtinPackage, Vector.empty, interner.intern(RuntimeSizedArrayTemplateNameT()))
         let template_name = self.typing_interner.intern_runtime_sized_array_template_name(
-            RuntimeSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+            RuntimeSizedArrayTemplateNameT { _phantom: PhantomData }
         );
         let template_id = self.typing_interner.intern_id(IdValT {
             package_coord: builtin_package,
@@ -1499,7 +1513,7 @@ where 's: 't,
         let builtin_package: &'s PackageCoordinate<'s> =
             self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
         let template_name = self.typing_interner.intern_runtime_sized_array_template_name(
-            RuntimeSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+            RuntimeSizedArrayTemplateNameT { _phantom: PhantomData }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
             RawArrayNameT { mutability, element_type: type_2, self_region: region }

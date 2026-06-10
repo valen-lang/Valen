@@ -16,6 +16,12 @@ use crate::parse_arena::ParseArena;
 use crate::simplifying::hammer_compilation::{HammerCompilation, HammerCompilationOptions};
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
+use crate::final_ast::ast::ProgramH;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::hinputs_t::HinputsT;
 
 /*
 package dev.vale.passmanager
@@ -127,23 +133,10 @@ where
         options.debugOut,
         options.globalOptions))
 
-*/
-
-}
-
-// mig: fn get_von_hammer
-impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
-{
-  pub fn get_von_hammer<'a>(&'a self) -> crate::simplifying::hammer::Hammer<'s, 'i, 'h, 'a>
-  where 'ctx: 'a,
-  {
-    self.hammer_compilation.get_von_hammer()
-  }
-}
-/*
   def getVonHammer(): VonHammer = hammerCompilation.getVonHammer()
 */
+
+}
 
 // mig: fn get_code_map
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
@@ -185,7 +178,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn get_scoutput(&mut self) -> Result<&crate::utils::code_hierarchy::FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.hammer_compilation.get_scoutput()
   }
 }
@@ -209,7 +202,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+  pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.hammer_compilation.get_compiler_outputs()
   }
 }
@@ -221,7 +214,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+  pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.hammer_compilation.expect_compiler_outputs()
   }
 }
@@ -233,7 +226,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn get_hamuts(&mut self) -> &'h crate::final_ast::ast::ProgramH<'s, 'h> {
+  pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
     self.hammer_compilation.get_hamuts()
   }
 }
@@ -245,7 +238,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  pub fn get_monouts(&mut self) -> &crate::instantiating::ast::hinputs::HinputsI<'s, 'i> {
+  pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.hammer_compilation.get_monouts()
   }
 }

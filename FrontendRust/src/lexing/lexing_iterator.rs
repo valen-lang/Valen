@@ -1,4 +1,5 @@
 use super::ast::RangeL;
+use std::cmp::min;
 /*
 package dev.vale.lexing
 
@@ -541,7 +542,7 @@ impl<'a> LexingIterator<'a> {
     if self.position + n > self.code.len() {
       None
     } else {
-      Some(self.code[self.position..std::cmp::min(self.position + n, self.code.len())].to_string())
+      Some(self.code[self.position..min(self.position + n, self.code.len())].to_string())
     }
   }
   /*

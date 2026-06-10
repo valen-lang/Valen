@@ -4,6 +4,7 @@ use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing
@@ -22,12 +23,12 @@ import scala.collection.mutable
 
 */
 pub struct Reachables<'s, 't> {
-    pub functions: std::collections::HashSet<SignatureT<'s, 't>>,
-    pub structs: std::collections::HashSet<StructTT<'s, 't>>,
-    pub static_sized_arrays: std::collections::HashSet<StaticSizedArrayTT<'s, 't>>,
-    pub runtime_sized_arrays: std::collections::HashSet<RuntimeSizedArrayTT<'s, 't>>,
-    pub interfaces: std::collections::HashSet<InterfaceTT<'s, 't>>,
-    pub edges: std::collections::HashSet<EdgeT<'s, 't>>,
+    pub functions: HashSet<SignatureT<'s, 't>>,
+    pub structs: HashSet<StructTT<'s, 't>>,
+    pub static_sized_arrays: HashSet<StaticSizedArrayTT<'s, 't>>,
+    pub runtime_sized_arrays: HashSet<RuntimeSizedArrayTT<'s, 't>>,
+    pub interfaces: HashSet<InterfaceTT<'s, 't>>,
+    pub edges: HashSet<EdgeT<'s, 't>>,
 }
 
 impl<'s, 't> Reachables<'s, 't> {

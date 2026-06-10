@@ -5,6 +5,9 @@ Guardian: disable-all
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::fmt::Result;
+use std::marker::PhantomData;
+use std::slice::Iter;
 
 
 /// Interned string: a by-value wrapper around arena-backed `&'a str`.
@@ -15,7 +18,7 @@ pub struct StrI<'a>(pub &'a str);
 /// Placeholder for Scala's `Interner`. Not actually used for interning in
 /// Rust (arenas replace it); only kept as a type alias so stale typing-pass
 /// stubs that mention `&'ctx Interner<'s>` continue to compile.
-pub struct Interner<'s>(pub std::marker::PhantomData<&'s ()>);
+pub struct Interner<'s>(pub PhantomData<&'s ()>);
 
 impl<'a> StrI<'a> {
   pub fn as_str(&self) -> &'a str {
@@ -32,13 +35,13 @@ impl Deref for StrI<'_> {
 }
 
 impl Debug for StrI<'_> {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     Debug::fmt(self.0, f)
   }
 }
 
 impl Display for StrI<'_> {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     Display::fmt(self.0, f)
   }
 }
@@ -69,7 +72,7 @@ impl<'a, T: Copy> InternedSlice<'a, T> {
     self.slice
   }
 
-  pub fn iter(&self) -> std::slice::Iter<'a, T> {
+  pub fn iter(&self) -> Iter<'a, T> {
     self.slice.iter()
   }
 
@@ -84,7 +87,7 @@ impl<'a, T: Copy> InternedSlice<'a, T> {
 
 impl<'a, T: Copy> IntoIterator for &InternedSlice<'a, T> {
   type Item = &'a T;
-  type IntoIter = std::slice::Iter<'a, T>;
+  type IntoIter = Iter<'a, T>;
 
   fn into_iter(self) -> Self::IntoIter {
     self.slice.iter()
@@ -92,7 +95,7 @@ impl<'a, T: Copy> IntoIterator for &InternedSlice<'a, T> {
 }
 
 impl<T: Copy + Debug> Debug for InternedSlice<'_, T> {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     Debug::fmt(self.slice, f)
   }
 }

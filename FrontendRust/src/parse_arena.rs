@@ -10,6 +10,9 @@ use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use bumpalo::Bump;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ptr::eq;
 
 /// Lookup key for file coordinates; uses String for filepath to allow lookup with arbitrary &str.
 #[derive(Clone)]
@@ -20,13 +23,13 @@ struct FileCoordLookupKey<'p> {
 
 impl<'p> PartialEq for FileCoordLookupKey<'p> {
   fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.package_coord, other.package_coord) && self.filepath == other.filepath
+    eq(self.package_coord, other.package_coord) && self.filepath == other.filepath
   }
 }
 impl<'p> Eq for FileCoordLookupKey<'p> {}
 
-impl<'p> std::hash::Hash for FileCoordLookupKey<'p> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<'p> Hash for FileCoordLookupKey<'p> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
     (self.package_coord as *const PackageCoordinate<'_>).hash(state);
     self.filepath.hash(state);
   }

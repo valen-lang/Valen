@@ -11,6 +11,27 @@ use crate::instantiating::ast::names::IVarNameI;
 use crate::instantiating::ast::types::{cI, CoordI, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
+use crate::final_ast::instructions::LocalStoreH;
+use crate::final_ast::instructions::MemberLoadH;
+use crate::final_ast::instructions::MemberStoreH;
+use crate::final_ast::instructions::RuntimeSizedArrayStoreH;
+use crate::final_ast::types::CoordH;
+use crate::final_ast::types::KindHT;
+use crate::final_ast::types::LocationH;
+use crate::final_ast::types::OwnershipH;
+use crate::instantiating::ast::ast::AddressibleLocalVariableI;
+use crate::instantiating::ast::ast::ILocalVariableI;
+use crate::instantiating::ast::ast::ReferenceLocalVariableI;
+use crate::instantiating::ast::expressions::AddressExpressionIE;
+use crate::instantiating::ast::expressions::AddressMemberLookupIE;
+use crate::instantiating::ast::expressions::LocalLookupIE;
+use crate::instantiating::ast::expressions::ReferenceMemberLookupIE;
+use crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE;
+use crate::instantiating::ast::expressions::StaticSizedArrayLookupIE;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::add_step;
+use crate::instantiating::ast::types::KindIT;
+use crate::simplifying::let_hammer::BOX_MEMBER_INDEX;
 
 /*
 package dev.vale.simplifying
@@ -46,22 +67,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let _source_result_pointer_type_h =
             self.translate_coord(hinputs, hamuts, source_expr2.result());
         let (old_value_access, destination_deferreds) = match destination_expr2 {
-            crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(crate::instantiating::ast::expressions::LocalLookupIE { local_variable: crate::instantiating::ast::ast::ILocalVariableI::ReferenceLocalVariableI(crate::instantiating::ast::ast::ReferenceLocalVariableI { name: var_id, variability: _, collapsed_coord: _ }), .. }) => {
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::ReferenceLocalVariableI(ReferenceLocalVariableI { name: var_id, variability: _, collapsed_coord: _ }), .. }) => {
                 self.translate_mundane_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, var_id)
             }
-            crate::instantiating::ast::expressions::AddressExpressionIE::LocalLookup(crate::instantiating::ast::expressions::LocalLookupIE { local_variable: crate::instantiating::ast::ast::ILocalVariableI::AddressibleLocalVariableI(crate::instantiating::ast::ast::AddressibleLocalVariableI { name: var_id, variability, collapsed_coord: reference }), .. }) => {
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::AddressibleLocalVariableI(AddressibleLocalVariableI { name: var_id, variability, collapsed_coord: reference }), .. }) => {
                 self.translate_addressible_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, _source_result_pointer_type_h, var_id, *variability, *reference)
             }
-            crate::instantiating::ast::expressions::AddressExpressionIE::ReferenceMemberLookup(crate::instantiating::ast::expressions::ReferenceMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
+            AddressExpressionIE::ReferenceMemberLookup(ReferenceMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
                 self.translate_mundane_member_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *struct_expr2, member_name)
             }
-            crate::instantiating::ast::expressions::AddressExpressionIE::AddressMemberLookup(crate::instantiating::ast::expressions::AddressMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
+            AddressExpressionIE::AddressMemberLookup(AddressMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
                 self.translate_addressible_member_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *struct_expr2, member_name)
             }
-            crate::instantiating::ast::expressions::AddressExpressionIE::StaticSizedArrayLookup(crate::instantiating::ast::expressions::StaticSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
+            AddressExpressionIE::StaticSizedArrayLookup(StaticSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
                 self.translate_mundane_static_sized_array_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *array_expr2, *index_expr2)
             }
-            crate::instantiating::ast::expressions::AddressExpressionIE::RuntimeSizedArrayLookup(crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
+            AddressExpressionIE::RuntimeSizedArrayLookup(RuntimeSizedArrayLookupIE { array_expr: array_expr2, index_expr: index_expr2, .. }) => {
                 self.translate_mundane_runtime_sized_array_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *array_expr2, *index_expr2)
             }
         };
@@ -135,7 +156,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 destination_result_line.expect_runtime_sized_array_access().result_type().kind.expect_runtime_sized_array_ht())
                 .element_type;
         // We're storing into a regular reference element of an array.
-        let store_node = ExpressionH::RuntimeSizedArrayStoreH(self.interner.alloc(crate::final_ast::instructions::RuntimeSizedArrayStoreH {
+        let store_node = ExpressionH::RuntimeSizedArrayStoreH(self.interner.alloc(RuntimeSizedArrayStoreH {
             array_expression: destination_result_line.expect_runtime_sized_array_access(),
             index_expression: index_expr_result_line.expect_int_access(),
             source_expression: source_expr_result_line,
@@ -241,7 +262,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         let (destination_result_line, destination_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
-            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            KindIT::StructIT(sr) => sr,
             _ => panic!("translate_addressible_member_mutate: non-struct kind"),
         };
         let struct_def_i = hinputs.lookup_struct(&struct_it.id);
@@ -252,28 +273,28 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let boxed_type2 = member2.tyype.expect_address_member().reference;
         let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
         let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
-        let expected_struct_box_member_type = crate::final_ast::types::CoordH {
-            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
-            location: crate::final_ast::types::LocationH::YonderH,
-            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        let expected_struct_box_member_type = CoordH {
+            ownership: OwnershipH::MutableBorrowH,
+            location: LocationH::YonderH,
+            kind: KindHT::StructHT(box_struct_ref_h),
         };
-        let name_h = self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*member_name)));
-        let load_result_type = crate::final_ast::types::CoordH {
-            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
-            location: crate::final_ast::types::LocationH::YonderH,
-            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        let name_h = self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, INameI::from(*member_name)));
+        let load_result_type = CoordH {
+            ownership: OwnershipH::MutableBorrowH,
+            location: LocationH::YonderH,
+            kind: KindHT::StructHT(box_struct_ref_h),
         };
-        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: destination_result_line.expect_struct_access(),
             member_index,
             expected_member_type: expected_struct_box_member_type,
             result_type: load_result_type,
             member_name: name_h,
         }));
-        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(crate::final_ast::instructions::MemberStoreH {
+        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(MemberStoreH {
             result_type: boxed_type_h,
             struct_expression: load_box_node.expect_struct_access(),
-            member_index: crate::simplifying::let_hammer::BOX_MEMBER_INDEX,
+            member_index: BOX_MEMBER_INDEX,
             source_expression: source_expr_result_line,
             member_name: self.add_step(hamuts, box_struct_ref_h.id, self.keywords.box_member_name),
         }));
@@ -364,18 +385,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let (destination_result_line, destination_deferreds) =
             self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
-            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            KindIT::StructIT(sr) => sr,
             _ => panic!("translate_mundane_member_mutate: struct_expr2.result.kind not StructIT"),
         };
         let struct_def_i = hinputs.lookup_struct(&struct_it.id);
         let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("memberIndex >= 0") as i32;
         let struct_def_h = *hamuts.struct_t_to_struct_def_h().get(struct_it).expect("structDefH not in map");
-        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(crate::final_ast::instructions::MemberStoreH {
+        let store_node = ExpressionH::MemberStoreH(self.interner.alloc(MemberStoreH {
             result_type: struct_def_h.members[member_index as usize].tyype,
             struct_expression: destination_result_line.expect_struct_access(),
             member_index,
             source_expression: source_expr_result_line,
-            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*member_name).into())),
+            member_name: self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, (*member_name).into())),
         }));
         (store_node, destination_deferreds)
     }
@@ -428,7 +449,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        source_result_pointer_type_h: crate::final_ast::types::CoordH<'s, 'h>,
+        source_result_pointer_type_h: CoordH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i, cI>,
         variability: VariabilityI,
         reference: CoordI<'s, 'i, cI>,
@@ -490,9 +511,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         let local = locals.get_by_var_name(var_id).expect("local not found");
         assert!(!locals.unstackified_vars.contains(&local.id));
-        let new_local_name = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*var_id));
+        let new_local_name = add_step(&current_function_header.id, INameI::from(*var_id));
         let new_store_node =
-            ExpressionH::LocalStoreH(self.interner.alloc(crate::final_ast::instructions::LocalStoreH {
+            ExpressionH::LocalStoreH(self.interner.alloc(LocalStoreH {
                 local,
                 source_expression: source_expr_result_line,
                 local_name: self.translate_full_name(hinputs, hamuts, &new_local_name),

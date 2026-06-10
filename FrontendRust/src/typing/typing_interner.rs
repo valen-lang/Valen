@@ -26,6 +26,7 @@ use crate::typing::types::types::{
     OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT,
     StaticSizedArrayTT, StaticSizedArrayTTValT, StructTT, StructTTValT,
 };
+use std::hash::Hash;
 
 // 6-family HashMap design mirroring scout_arena.rs. Values with subcollections
 // or that need to fit behind &'t in a Copy enum are interned here (see @WVSBIZ).
@@ -115,12 +116,12 @@ where 's: 't,
     }
 
     // Per @IIIOZ, arena maps use ArenaIndexMap (insertion-ordered) rather than HashMap for cross-run determinism.
-    pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'t, K, V> {
+    pub fn alloc_index_map<K: Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'t, K, V> {
         ArenaIndexMap::new_in(self.bump)
     }
 
     pub fn alloc_index_map_from_iter<K, V, I>(&self, iter: I) -> ArenaIndexMap<'t, K, V>
-    where K: std::hash::Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
+    where K: Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
     {
         ArenaIndexMap::from_iter_in(iter, self.bump)
     }

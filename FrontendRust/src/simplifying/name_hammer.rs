@@ -16,6 +16,21 @@ use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::{IdI, INameI};
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::instantiating::ast::types::{cI, CoordI, KindIT};
+use crate::final_ast::ast::IdHValH;
+use crate::instantiating::ast::names::IStructTemplateNameI;
+use crate::instantiating::ast::names::StructNameI;
+use crate::instantiating::ast::types::IntIT;
+use crate::instantiating::ast::types::OwnershipI;
+use crate::instantiating::instantiated_humanizer::humanize_id;
+use crate::instantiating::instantiated_humanizer::humanize_name;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonArray;
+use crate::von::ast::VonMember;
+use crate::von::ast::VonStr;
+use std::marker::PhantomData;
+use std::mem::discriminant;
 
 /*
 package dev.vale.simplifying
@@ -45,15 +60,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) -> &'h IdH<'s, 'h>
     {
         let IdI { package_coord, init_steps: _, local_name: local_name_t } = full_name2;
-        let code_map = |loc: crate::utils::range::CodeLocationS<'s>| format!("{:?}", loc);
-        let long_name = crate::instantiating::instantiated_humanizer::humanize_id(&code_map, full_name2, None);
-        let local_name = crate::instantiating::instantiated_humanizer::humanize_name(&code_map, *local_name_t, None);
-        self.interner.intern_id_h(crate::final_ast::ast::IdHValH {
+        let code_map = |loc: CodeLocationS<'s>| format!("{:?}", loc);
+        let long_name = humanize_id(&code_map, full_name2, None);
+        let local_name = humanize_name(&code_map, *local_name_t, None);
+        self.interner.intern_id_h(IdHValH {
             local_name: self.scout_arena.intern_str(&local_name),
             package_coordinate: **package_coord,
             shortened_name: self.scout_arena.intern_str(&long_name),
             fully_qualified_name: self.scout_arena.intern_str(&long_name),
-            _phantom_h: std::marker::PhantomData,
+            _phantom_h: PhantomData,
         })
     }
 }
@@ -81,15 +96,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
         s: StrI<'s>,
     ) -> &'h IdH<'s, 'h>
     {
-        let crate::final_ast::ast::IdH { package_coordinate, shortened_name, fully_qualified_name, .. } = *full_name;
+        let IdH { package_coordinate, shortened_name, fully_qualified_name, .. } = *full_name;
         let new_shortened = format!("{}.{}", shortened_name.0, s.0);
         let new_fqn = format!("{}.{}", fully_qualified_name.0, s.0);
-        self.interner.intern_id_h(crate::final_ast::ast::IdHValH {
+        self.interner.intern_id_h(IdHValH {
             local_name: s,
             package_coordinate,
             shortened_name: self.scout_arena.intern_str(&new_shortened),
             fully_qualified_name: self.scout_arena.intern_str(&new_fqn),
-            _phantom_h: std::marker::PhantomData,
+            _phantom_h: PhantomData,
         })
     }
 }
@@ -147,19 +162,19 @@ pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
 pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObject {
     let PackageCoordinate { module, packages: paackage } = coord;
     let non_empty_module_name = if module.0 == "" { "__vale".to_string() } else { module.0.to_string() };
-    crate::von::ast::VonObject {
+    VonObject {
         tyype: "PackageCoordinate".to_string(),
         id: None,
         members: vec![
-            crate::von::ast::VonMember {
+            VonMember {
                 field_name: "project".to_string(),
-                value: crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: non_empty_module_name }),
+                value: IVonData::Str(VonStr { value: non_empty_module_name }),
             },
-            crate::von::ast::VonMember {
+            VonMember {
                 field_name: "packageSteps".to_string(),
-                value: crate::von::ast::IVonData::Array(crate::von::ast::VonArray {
+                value: IVonData::Array(VonArray {
                     id: None,
-                    members: paackage.iter().map(|s| crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: s.0.to_string() })).collect(),
+                    members: paackage.iter().map(|s| IVonData::Str(VonStr { value: s.0.to_string() })).collect(),
                 }),
             },
         ],
@@ -179,7 +194,7 @@ pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObj
 */
 
 // mig: fn simplify_id (object NameHammer free function)
-pub fn simplify_id<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, id: &IdI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_id<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, id: &IdI<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     let IdI { package_coord, init_steps, local_name } = id;
@@ -208,11 +223,11 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_name (object NameHammer free function)
-pub fn simplify_name<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, name: &INameI<'s, 'i, cI>) -> SimpleIdStep<'s, 'h>
+pub fn simplify_name<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, name: &INameI<'s, 'i, cI>) -> SimpleIdStep<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match name {
-        INameI::StructName(crate::instantiating::ast::names::StructNameI { template: crate::instantiating::ast::names::IStructTemplateNameI::StructTemplate(t), template_args }) => SimpleIdStep {
+        INameI::StructName(StructNameI { template: IStructTemplateNameI::StructTemplate(t), template_args }) => SimpleIdStep {
             name: t.human_name,
             template_args: interner.alloc_slice_from_vec(template_args.iter().map(|t| simplify_templata(interner, scout_arena, t)).collect()),
         },
@@ -227,7 +242,7 @@ where 's: 'i, 'i: 'h,
             name: f.human_name,
             template_args: interner.alloc_slice_from_vec(f.template_args.iter().map(|t| simplify_templata(interner, scout_arena, t)).collect()),
         },
-        other => panic!("simplify_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+        other => panic!("simplify_name: unimplemented variant {:?}", discriminant(other)),
     }
 }
 /*
@@ -249,12 +264,12 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_templata (object NameHammer free function)
-pub fn simplify_templata<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, templata: &ITemplataI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_templata<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, templata: &ITemplataI<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match templata {
         ITemplataI::Coord(c) => simplify_coord(interner, scout_arena, &c.coord),
-        other => panic!("simplify_templata: unimplemented variant {:?}", std::mem::discriminant(other)),
+        other => panic!("simplify_templata: unimplemented variant {:?}", discriminant(other)),
     }
 }
 /*
@@ -267,11 +282,11 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_kind (object NameHammer free function)
-pub fn simplify_kind<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, value: &KindIT<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_kind<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &KindIT<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match value {
-        KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits, .. }) => {
+        KindIT::IntIT(IntIT { bits, .. }) => {
             let name = scout_arena.intern_str(&format!("i{}", bits));
             SimpleId { steps: interner.alloc_slice_from_vec(vec![SimpleIdStep { name, template_args: &[] }]) }
         }
@@ -279,7 +294,7 @@ where 's: 'i, 'i: 'h,
             let name = scout_arena.intern_str("str");
             SimpleId { steps: interner.alloc_slice_from_vec(vec![SimpleIdStep { name, template_args: &[] }]) }
         }
-        other => panic!("simplify_kind: unimplemented variant {:?}", std::mem::discriminant(other)),
+        other => panic!("simplify_kind: unimplemented variant {:?}", discriminant(other)),
     }
 }
 /*
@@ -293,18 +308,18 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_coord (object NameHammer free function)
-pub fn simplify_coord<'s, 'i, 'h>(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, value: &CoordI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_coord<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &CoordI<'s, 'i, cI>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     let CoordI { ownership, kind } = *value;
     let kind_id = simplify_kind(interner, scout_arena, &kind);
     match ownership {
-        crate::instantiating::ast::types::OwnershipI::ImmutableShare => kind_id,
-        crate::instantiating::ast::types::OwnershipI::MutableShare => kind_id,
-        crate::instantiating::ast::types::OwnershipI::Own => kind_id,
-        crate::instantiating::ast::types::OwnershipI::Weak => panic!("simplify_coord: Weak"),
-        crate::instantiating::ast::types::OwnershipI::ImmutableBorrow => panic!("simplify_coord: ImmutableBorrow"),
-        crate::instantiating::ast::types::OwnershipI::MutableBorrow => panic!("simplify_coord: MutableBorrow"),
+        OwnershipI::ImmutableShare => kind_id,
+        OwnershipI::MutableShare => kind_id,
+        OwnershipI::Own => kind_id,
+        OwnershipI::Weak => panic!("simplify_coord: Weak"),
+        OwnershipI::ImmutableBorrow => panic!("simplify_coord: ImmutableBorrow"),
+        OwnershipI::MutableBorrow => panic!("simplify_coord: MutableBorrow"),
     }
 }
 /*

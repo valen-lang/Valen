@@ -12,6 +12,9 @@ use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::types::cI;
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
+use crate::final_ast::types::KindHT;
+use crate::instantiating::ast::expressions::ExpressionIE;
+use std::collections::HashSet;
 
 /*
 package dev.vale.simplifying
@@ -39,17 +42,17 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let mut block_locals = parent_locals.snapshot();
         let expr_h = self.translate_expressions_and_deferreds(
             hinputs, hamuts, current_function_header, &mut block_locals,
-            &[crate::instantiating::ast::expressions::ExpressionIE::Reference(block2.inner)]);
-        let parent_local_ids: std::collections::HashSet<_> = parent_locals.locals.keys().copied().collect();
-        let local_ids_in_this_block: std::collections::HashSet<_> = block_locals.locals.keys().copied().filter(|k| !parent_local_ids.contains(k)).collect();
-        let unstackified_local_ids_in_this_block: std::collections::HashSet<_> = block_locals.unstackified_vars.iter().copied().filter(|k| local_ids_in_this_block.contains(k)).collect();
+            &[ExpressionIE::Reference(block2.inner)]);
+        let parent_local_ids: HashSet<_> = parent_locals.locals.keys().copied().collect();
+        let local_ids_in_this_block: HashSet<_> = block_locals.locals.keys().copied().filter(|k| !parent_local_ids.contains(k)).collect();
+        let unstackified_local_ids_in_this_block: HashSet<_> = block_locals.unstackified_vars.iter().copied().filter(|k| local_ids_in_this_block.contains(k)).collect();
         if local_ids_in_this_block != unstackified_local_ids_in_this_block {
             match expr_h.result_type().kind {
-                crate::final_ast::types::KindHT::NeverHT(_) => {}
+                KindHT::NeverHT(_) => {}
                 _ => panic!("Ununstackified local: {:?}", local_ids_in_this_block.difference(&unstackified_local_ids_in_this_block).collect::<Vec<_>>()),
             }
         }
-        let parent_unstackified: std::collections::HashSet<_> = parent_locals.unstackified_vars.iter().copied().collect();
+        let parent_unstackified: HashSet<_> = parent_locals.unstackified_vars.iter().copied().collect();
         let unstackified_locals_from_parent: Vec<_> = parent_locals.locals.keys().copied()
             .filter(|k| !parent_unstackified.contains(k))
             .filter(|k| block_locals.unstackified_vars.contains(k))
@@ -58,7 +61,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             parent_locals.mark_unstackified(var);
         }
         parent_locals.set_next_local_id_number(block_locals.next_local_id_number);
-        self.interner.alloc(crate::final_ast::instructions::BlockH { inner: expr_h })
+        self.interner.alloc(BlockH { inner: expr_h })
     }
 }
 /*

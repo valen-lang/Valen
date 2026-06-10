@@ -47,6 +47,185 @@ use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::expressions::{ReferenceExpressionTE, ExpressionTE, AddressExpressionTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT};
 use indexmap::IndexMap;
+use crate::instantiating::ast::ast::ExternI;
+use crate::instantiating::ast::ast::ICitizenAttributeI;
+use crate::instantiating::ast::ast::KindExternI;
+use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
+use crate::instantiating::ast::ast::ReferenceLocalVariableI;
+use crate::instantiating::ast::citizens::AddressMemberTypeI;
+use crate::instantiating::ast::citizens::IMemberTypeI;
+use crate::instantiating::ast::citizens::InterfaceDefinitionI;
+use crate::instantiating::ast::citizens::ReferenceMemberTypeI;
+use crate::instantiating::ast::citizens::StructDefinitionI;
+use crate::instantiating::ast::citizens::StructMemberI;
+use crate::instantiating::ast::expressions::AddressExpressionIE;
+use crate::instantiating::ast::expressions::AddressMemberLookupIE;
+use crate::instantiating::ast::expressions::ArgLookupIE;
+use crate::instantiating::ast::expressions::ArrayLengthIE;
+use crate::instantiating::ast::expressions::AsSubtypeIE;
+use crate::instantiating::ast::expressions::ConstructIE;
+use crate::instantiating::ast::expressions::DestroyIE;
+use crate::instantiating::ast::expressions::DestroyMutRuntimeSizedArrayIE;
+use crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoFunctionIE;
+use crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoLocalsIE;
+use crate::instantiating::ast::expressions::ExpressionIE;
+use crate::instantiating::ast::expressions::ExternFunctionCallIE;
+use crate::instantiating::ast::expressions::FunctionCallIE;
+use crate::instantiating::ast::expressions::InterfaceFunctionCallIE;
+use crate::instantiating::ast::expressions::IsSameInstanceIE;
+use crate::instantiating::ast::expressions::LocalLookupIE;
+use crate::instantiating::ast::expressions::MutateIE;
+use crate::instantiating::ast::expressions::NewImmRuntimeSizedArrayIE;
+use crate::instantiating::ast::expressions::NewMutRuntimeSizedArrayIE;
+use crate::instantiating::ast::expressions::PopRuntimeSizedArrayIE;
+use crate::instantiating::ast::expressions::PushRuntimeSizedArrayIE;
+use crate::instantiating::ast::expressions::ReferenceExpressionIE;
+use crate::instantiating::ast::expressions::ReferenceMemberLookupIE;
+use crate::instantiating::ast::expressions::RestackifyIE;
+use crate::instantiating::ast::expressions::RuntimeSizedArrayCapacityIE;
+use crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE;
+use crate::instantiating::ast::expressions::SoftLoadIE;
+use crate::instantiating::ast::expressions::StaticArrayFromCallableIE;
+use crate::instantiating::ast::expressions::StaticArrayFromValuesIE;
+use crate::instantiating::ast::expressions::StaticSizedArrayLookupIE;
+use crate::instantiating::ast::expressions::UpcastIE;
+use crate::instantiating::ast::names::AnonymousSubstructConstructorNameI;
+use crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI;
+use crate::instantiating::ast::names::AnonymousSubstructImplNameI;
+use crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI;
+use crate::instantiating::ast::names::AnonymousSubstructNameI;
+use crate::instantiating::ast::names::AnonymousSubstructTemplateNameI;
+use crate::instantiating::ast::names::ClosureParamNameI;
+use crate::instantiating::ast::names::ConstructingMemberNameI;
+use crate::instantiating::ast::names::ForwarderFunctionNameI;
+use crate::instantiating::ast::names::ForwarderFunctionTemplateNameI;
+use crate::instantiating::ast::names::ICitizenTemplateNameI;
+use crate::instantiating::ast::names::IImplNameI;
+use crate::instantiating::ast::names::IImplTemplateNameI;
+use crate::instantiating::ast::names::IInterfaceTemplateNameI;
+use crate::instantiating::ast::names::ImplNameI;
+use crate::instantiating::ast::names::ImplTemplateNameI;
+use crate::instantiating::ast::names::InterfaceNameI;
+use crate::instantiating::ast::names::InterfaceTemplateNameI;
+use crate::instantiating::ast::names::IterableNameI;
+use crate::instantiating::ast::names::IterationOptionNameI;
+use crate::instantiating::ast::names::IteratorNameI;
+use crate::instantiating::ast::names::LambdaCitizenNameI;
+use crate::instantiating::ast::names::LambdaCitizenTemplateNameI;
+use crate::instantiating::ast::names::MagicParamNameI;
+use crate::instantiating::ast::names::RawArrayNameI;
+use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
+use crate::instantiating::ast::names::RuntimeSizedArrayTemplateNameI;
+use crate::instantiating::ast::names::SelfNameI;
+use crate::instantiating::ast::names::StaticSizedArrayNameI;
+use crate::instantiating::ast::names::StaticSizedArrayTemplateNameI;
+use crate::instantiating::ast::names::StructNameI;
+use crate::instantiating::ast::names::StructTemplateNameI;
+use crate::instantiating::ast::names::TypingPassBlockResultVarNameI;
+use crate::instantiating::ast::names::TypingPassTemporaryVarNameI;
+use crate::instantiating::ast::templata::MutabilityTemplataI;
+use crate::instantiating::ast::templata::RegionTemplataI;
+use crate::instantiating::ast::templata::VariabilityTemplataI;
+use crate::instantiating::ast::templata::expect_integer_templata;
+use crate::instantiating::ast::templata::expect_mutability_templata;
+use crate::instantiating::ast::templata::expect_variability_templata;
+use crate::instantiating::ast::types::BoolIT;
+use crate::instantiating::ast::types::IntIT;
+use crate::instantiating::ast::types::InterfaceITValI;
+use crate::instantiating::ast::types::KindIT;
+use crate::instantiating::ast::types::OwnershipI;
+use crate::instantiating::ast::types::StrIT;
+use crate::instantiating::ast::types::StructITValI;
+use crate::instantiating::ast::types::VoidIT;
+use crate::instantiating::region_collapser_consistent::collapse_impl_id as collapse_impl_id_consistent;
+use crate::instantiating::region_collapser_consistent::collapse_prototype as collapse_prototype_consistent;
+use crate::instantiating::region_collapser_individual::collapse_citizen;
+use crate::instantiating::region_collapser_individual::collapse_coord;
+use crate::instantiating::region_collapser_individual::collapse_impl_id;
+use crate::instantiating::region_collapser_individual::collapse_interface_id;
+use crate::instantiating::region_collapser_individual::collapse_prototype;
+use crate::instantiating::region_collapser_individual::collapse_runtime_sized_array;
+use crate::instantiating::region_collapser_individual::collapse_static_sized_array;
+use crate::instantiating::region_collapser_individual::collapse_struct_id;
+use crate::instantiating::region_collapser_individual::collapse_var_name;
+use crate::instantiating::region_counter::count_impl_id_map;
+use crate::instantiating::region_counter::count_prototype_map;
+use crate::typing::ast::ast::ICitizenAttributeT;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::ast::citizens::IMemberTypeT;
+use crate::typing::ast::citizens::NormalStructMemberT;
+use crate::typing::ast::expressions::AddressMemberLookupTE;
+use crate::typing::ast::expressions::ArgLookupTE;
+use crate::typing::ast::expressions::ArrayLengthTE;
+use crate::typing::ast::expressions::AsSubtypeTE;
+use crate::typing::ast::expressions::BorrowToWeakTE;
+use crate::typing::ast::expressions::ConstructTE;
+use crate::typing::ast::expressions::DeferTE;
+use crate::typing::ast::expressions::DestroyMutRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
+use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoLocalsTE;
+use crate::typing::ast::expressions::DestroyTE;
+use crate::typing::ast::expressions::ExternFunctionCallTE;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::ast::expressions::InterfaceFunctionCallTE;
+use crate::typing::ast::expressions::IsSameInstanceTE;
+use crate::typing::ast::expressions::LetAndLendTE;
+use crate::typing::ast::expressions::LocalLookupTE;
+use crate::typing::ast::expressions::LockWeakTE;
+use crate::typing::ast::expressions::MutateTE;
+use crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::NewMutRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::PopRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::PushRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::ast::expressions::RuntimeSizedArrayCapacityTE;
+use crate::typing::ast::expressions::RuntimeSizedArrayLookupTE;
+use crate::typing::ast::expressions::SoftLoadTE;
+use crate::typing::ast::expressions::StaticArrayFromCallableTE;
+use crate::typing::ast::expressions::StaticArrayFromValuesTE;
+use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
+use crate::typing::ast::expressions::TupleTE;
+use crate::typing::ast::expressions::UpcastTE;
+use crate::typing::names::names::AnonymousSubstructConstructorNameT;
+use crate::typing::names::names::AnonymousSubstructConstructorTemplateNameT;
+use crate::typing::names::names::AnonymousSubstructImplNameT;
+use crate::typing::names::names::AnonymousSubstructImplTemplateNameT;
+use crate::typing::names::names::AnonymousSubstructTemplateNameT;
+use crate::typing::names::names::ClosureParamNameT;
+use crate::typing::names::names::ExternFunctionNameT;
+use crate::typing::names::names::ForwarderFunctionNameT;
+use crate::typing::names::names::ForwarderFunctionTemplateNameT;
+use crate::typing::names::names::FunctionBoundNameT;
+use crate::typing::names::names::FunctionBoundTemplateNameT;
+use crate::typing::names::names::ICitizenTemplateNameT;
+use crate::typing::names::names::IInstantiationNameT;
+use crate::typing::names::names::IInterfaceNameT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::ImplNameT;
+use crate::typing::names::names::ImplTemplateNameT;
+use crate::typing::names::names::InterfaceNameT;
+use crate::typing::names::names::InterfaceTemplateNameT;
+use crate::typing::names::names::IterableNameT;
+use crate::typing::names::names::IterationOptionNameT;
+use crate::typing::names::names::IteratorNameT;
+use crate::typing::names::names::MagicParamNameT;
+use crate::typing::names::names::RawArrayNameT;
+use crate::typing::names::names::RuntimeSizedArrayNameT;
+use crate::typing::names::names::StaticSizedArrayNameT;
+use crate::typing::names::names::StructTemplateNameT;
+use crate::typing::names::names::TypingPassBlockResultVarNameT;
+use crate::typing::names::names::TypingPassTemporaryVarNameT;
+use crate::typing::templata::templata::PlaceholderTemplataT;
+use crate::typing::types::types::IRegionT;
+use crate::utils::utils::union_maps_expect_no_conflict;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::marker::PhantomData;
+use std::mem::discriminant;
+use std::mem::transmute;
+use crate::instantiating::ast::types::MutabilityI;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::MutabilityT;
 // mig: struct DenizenBoundToDenizenCallerBoundArgI
 /// Temporary state
 #[derive(Clone, PartialEq, Eq)]
@@ -64,8 +243,8 @@ case class DenizenBoundToDenizenCallerBoundArgS(
 impl<'s, 't, 'i> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> where 's: 't, 's: 'i {
     pub fn plus(&self, that: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>) -> DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i> {
         DenizenBoundToDenizenCallerBoundArgI {
-            func_id_to_bound_arg_prototype: crate::utils::utils::union_maps_expect_no_conflict(&self.func_id_to_bound_arg_prototype, &that.func_id_to_bound_arg_prototype, |x, y| x == y),
-            bound_param_impl_id_to_bound_arg_impl_id: crate::utils::utils::union_maps_expect_no_conflict(&self.bound_param_impl_id_to_bound_arg_impl_id, &that.bound_param_impl_id_to_bound_arg_impl_id, |x, y| x == y),
+            func_id_to_bound_arg_prototype: union_maps_expect_no_conflict(&self.func_id_to_bound_arg_prototype, &that.func_id_to_bound_arg_prototype, |x, y| x == y),
+            bound_param_impl_id_to_bound_arg_impl_id: union_maps_expect_no_conflict(&self.bound_param_impl_id_to_bound_arg_impl_id, &that.bound_param_impl_id_to_bound_arg_impl_id, |x, y| x == y),
         }
     }
 }
@@ -276,8 +455,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         match export_name_t {
                             INameT::Export(ExportNameT { template: ExportTemplateNameT { code_loc, .. }, .. }) => {
                                 INameValI::Export(ExportNameI {
-                                    template: ExportTemplateNameI { _marker: std::marker::PhantomData, code_loc: *code_loc },
-                                    region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                                    template: ExportTemplateNameI { _marker: PhantomData, code_loc: *code_loc },
+                                    region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
                                 })
                             }
                             _ => panic!("Unimplemented: translate_method kind_exports translateId closure"),
@@ -316,8 +495,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         match export_name_t {
                             INameT::Export(ExportNameT { template: ExportTemplateNameT { code_loc, .. }, .. }) => {
                                 INameValI::Export(ExportNameI {
-                                    template: ExportTemplateNameI { _marker: std::marker::PhantomData, code_loc: *code_loc },
-                                    region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                                    template: ExportTemplateNameI { _marker: PhantomData, code_loc: *code_loc },
+                                    region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
                                 })
                             }
                             _ => panic!("Unimplemented: translate_method function_exports translateId closure"),
@@ -368,8 +547,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                             match extern_name_t {
                                 INameT::Extern(ExternNameT { template: ExternTemplateNameT { code_loc, .. }, .. }) => {
                                     INameValI::Extern(ExternNameI {
-                                        template: ExternTemplateNameI { _marker: std::marker::PhantomData, code_loc: *code_loc },
-                                        region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                                        template: ExternTemplateNameI { _marker: PhantomData, code_loc: *code_loc },
+                                        region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
                                     })
                                 }
                                 _ => panic!("Unimplemented: translate_method function_externs translateId closure"),
@@ -448,21 +627,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let interfaces: Vec<InterfaceDefinitionI<'s, 'i, cI>> =
             monouts.interfaces_without_methods.values().map(|interface| {
-                let crate::instantiating::ast::citizens::InterfaceDefinitionI { instantiated_interface: ref_, attributes, weakable, mutability, .. } = **interface;
+                let InterfaceDefinitionI { instantiated_interface: ref_, attributes, weakable, mutability, .. } = **interface;
                 let map = monouts.interface_to_abstract_func_to_virtual_index.get(&ref_.id).expect("vassertSome: interface_to_abstract_func_to_virtual_index");
                 let mut methods_entries: Vec<(&'i PrototypeI<'s, 'i, cI>, i32)> = Vec::new();
                 for (proto, idx) in map.iter() {
                     methods_entries.push((self.interner.alloc(*proto), *idx as i32));
                 }
-                crate::instantiating::ast::citizens::InterfaceDefinitionI {
+                InterfaceDefinitionI {
                     instantiated_interface: ref_,
                     attributes,
                     weakable,
                     mutability,
-                    rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
-                    rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+                    rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
+                    rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
                     internal_methods: self.interner.bump().alloc_slice_fill_iter(methods_entries.into_iter()),
-                    _marker: std::marker::PhantomData,
+                    _marker: PhantomData,
                 }
             }).collect();
 
@@ -804,7 +983,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         }
         _monouts.interface_to_bounds.insert(*_interface_id_s, denizen_bound_to_denizen_caller_supplied_thing.clone());
         let substitutions = self.assemble_placeholder_map(&interface_def_t.instantiated_interface.id, _interface_id_s);
-        let interface_id_c = crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, _interface_id_s);
+        let interface_id_c = collapse_interface_id(self.interner, _interface_id_s);
         self.translate_collapsed_interface_definition(_monouts, _interface_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, &interface_id_c, interface_def_t);
     }
 }
@@ -973,7 +1152,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         }
         _monouts.struct_to_bounds.insert(*_struct_id_s, denizen_bound_to_denizen_caller_supplied_thing.clone());
         let substitutions = self.assemble_placeholder_map(&struct_def_t.instantiated_citizen.id, _struct_id_s);
-        let struct_id_c = crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, _struct_id_s);
+        let struct_id_c = collapse_struct_id(self.interner, _struct_id_s);
         self.translate_collapsed_struct_definition(_monouts, _struct_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _struct_id_t, &struct_id_c, struct_def_t);
     }
 }
@@ -1035,8 +1214,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn find_struct
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn find_struct(&self, _struct_id: &IdT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
-        let target = crate::typing::compiler::Compiler::get_super_template(self.typing_interner, *_struct_id);
-        let matches: Vec<_> = self.hinputs.structs.iter().filter(|s| crate::typing::compiler::Compiler::get_super_template(self.typing_interner, s.instantiated_citizen.id) == target).collect();
+        let target = Compiler::get_super_template(self.typing_interner, *_struct_id);
+        let matches: Vec<_> = self.hinputs.structs.iter().filter(|s| Compiler::get_super_template(self.typing_interner, s.instantiated_citizen.id) == target).collect();
         assert_eq!(matches.len(), 1);
         matches[0]
     }
@@ -1054,8 +1233,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn find_interface
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn find_interface(&self, _interface_id: &IdT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
-        let target = crate::typing::compiler::Compiler::get_super_template(self.typing_interner, *_interface_id);
-        let matches: Vec<_> = self.hinputs.interfaces.iter().filter(|i| crate::typing::compiler::Compiler::get_super_template(self.typing_interner, i.instantiated_interface.id) == target).collect();
+        let target = Compiler::get_super_template(self.typing_interner, *_interface_id);
+        let matches: Vec<_> = self.hinputs.interfaces.iter().filter(|i| Compiler::get_super_template(self.typing_interner, i.instantiated_interface.id) == target).collect();
         assert_eq!(matches.len(), 1);
         matches[0]
     }
@@ -1091,7 +1270,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_override(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, impl_id_t: &IdT<'s, 't>, _impl_id_c: &IdI<'s, 'i, cI>, abstract_func_prototype_t: &PrototypeT<'s, 't>, _abstract_func_prototype_c: &PrototypeI<'s, 'i, cI>, _abstract_func_instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         let impl_template_id = Compiler::get_impl_template(self.typing_interner, *impl_id_t);
-        let edge_t = crate::utils::vassert::vassert_one(
+        let edge_t = vassert_one(
             self.hinputs.interface_to_sub_citizen_to_edge.values()
                 .flat_map(|sub_to_edge| sub_to_edge.values().copied())
                 .filter(|edge| Compiler::get_impl_template(self.typing_interner, edge.edge_id) == impl_template_id));
@@ -1113,23 +1292,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let _override_prototype_t = override_t.override_prototype;
         let _dispatcher_instantiation_bound_params = override_t.dispatcher_instantiation_bound_params;
         let _dispatcher_template_id = Compiler::get_template(self.typing_interner, dispatcher_id_t);
-        let dispatcher_template_args = crate::typing::names::names::IInstantiationNameT::try_from(dispatcher_id_t.local_name).unwrap().template_args();
+        let dispatcher_template_args = IInstantiationNameT::try_from(dispatcher_id_t.local_name).unwrap().template_args();
         let dispatcher_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
             dispatcher_template_args.iter().map(|dispatcher_placeholder_templata| {
                 let dispatcher_placeholder_id = Compiler::get_placeholder_templata_id(*dispatcher_placeholder_templata);
                 let impl_placeholder = _impl_placeholder_to_dispatcher_placeholder.iter().find(|(_, v)| v == dispatcher_placeholder_templata).expect("vassertSome implPlaceholderToDispatcherPlaceholder").0;
                 let index = match impl_placeholder.local_name {
-                    crate::typing::names::names::INameT::KindPlaceholder(kp) => kp.template.index,
-                    crate::typing::names::names::INameT::NonKindNonRegionPlaceholder(nk) => nk.index,
+                    INameT::KindPlaceholder(kp) => kp.template.index,
+                    INameT::NonKindNonRegionPlaceholder(nk) => nk.index,
                     _ => panic!("vwat translate_override dispatcher placeholder index"),
                 };
-                let impl_id_c_local: crate::instantiating::ast::names::IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
+                let impl_id_c_local: IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
                 let templata_c = impl_id_c_local.template_args()[index as usize];
-                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
+                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { transmute(templata_c) };
                 (dispatcher_placeholder_id, templata_s)
             }).collect();
         let case_local_name = match _dispatcher_case_id_t.local_name {
-            crate::typing::names::names::INameT::OverrideDispatcherCase(n) => n,
+            INameT::OverrideDispatcherCase(n) => n,
             _ => panic!("translate_override: dispatcher_case_id_t.local_name not OverrideDispatcherCase"),
         };
         let dispatcher_case_placeholder_id_to_supplied_templata: Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> =
@@ -1137,28 +1316,28 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let case_placeholder_id = Compiler::get_placeholder_templata_id(*case_placeholder_templata);
                 let impl_placeholder = _impl_placeholder_to_case_placeholder.iter().find(|(_, v)| v == case_placeholder_templata).expect("vassertSome implPlaceholderToCasePlaceholder").0;
                 let index = match impl_placeholder.local_name {
-                    crate::typing::names::names::INameT::KindPlaceholder(kp) => kp.template.index,
+                    INameT::KindPlaceholder(kp) => kp.template.index,
                     _ => panic!("vwat translate_override case placeholder index"),
                 };
-                let impl_id_c_local: crate::instantiating::ast::names::IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
+                let impl_id_c_local: IImplNameI<'s, 'i, cI> = _impl_id_c.local_name.try_into().unwrap();
                 let templata_c = impl_id_c_local.template_args()[index as usize];
-                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { std::mem::transmute(templata_c) };
+                let templata_s: ITemplataI<'s, 'i, sI> = unsafe { transmute(templata_c) };
                 (case_placeholder_id, templata_s)
             }).collect();
-        let dispatcher_placeholder_id_to_supplied_templata_map: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
+        let dispatcher_placeholder_id_to_supplied_templata_map: HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
             dispatcher_placeholder_id_to_supplied_templata.iter().copied().collect();
-        let dispatcher_case_placeholder_id_to_supplied_templata_map: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
+        let dispatcher_case_placeholder_id_to_supplied_templata_map: HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> =
             dispatcher_case_placeholder_id_to_supplied_templata.iter().copied().collect();
         assert!(dispatcher_placeholder_id_to_supplied_templata_map.len() + dispatcher_case_placeholder_id_to_supplied_templata_map.len() ==
-            dispatcher_placeholder_id_to_supplied_templata_map.iter().chain(dispatcher_case_placeholder_id_to_supplied_templata_map.iter()).map(|(k, _)| *k).collect::<std::collections::HashSet<_>>().len());
-        let mut _case_substitutions: std::collections::HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = dispatcher_placeholder_id_to_supplied_templata_map.clone();
+            dispatcher_placeholder_id_to_supplied_templata_map.iter().chain(dispatcher_case_placeholder_id_to_supplied_templata_map.iter()).map(|(k, _)| *k).collect::<HashSet<_>>().len());
+        let mut _case_substitutions: HashMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>> = dispatcher_placeholder_id_to_supplied_templata_map.clone();
         _case_substitutions.extend(dispatcher_case_placeholder_id_to_supplied_templata_map.iter().map(|(k, v)| (*k, *v)));
 
         let impl_rune_to_impl_instantiation_bound_args = &_monouts.impls.get(_impl_id_c).expect("vassertSome monouts.impls").3;
-        let _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl: std::collections::HashMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>> =
+        let _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl: HashMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i, sI>> =
             _dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().flat_map(|(rune_in_impl, citizen_rune_to_bound)| {
                 citizen_rune_to_bound.iter().map(move |(rune_in_citizen, prototype_t)| {
-                    let crate::typing::names::names::INameT::FunctionBound(_fbn) = prototype_t.id.local_name else {
+                    let INameT::FunctionBound(_fbn) = prototype_t.id.local_name else {
                         panic!("translate_override: prototype_t.id.local_name not FunctionBound");
                     };
                     let prototype_i = *impl_rune_to_impl_instantiation_bound_args.caller_rune_to_callee_rune_to_reachable_func
@@ -1426,7 +1605,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         // This works because the sI/cI are never actually used in these instances, they are just a
         // compile-time type-system bit of tracking, see CCFCTS.
         let impl_id_s: &IdI<'s, 'i, sI> = unsafe { &*(_impl_id_n as *const IdI<'s, 'i, nI> as *const IdI<'s, 'i, sI>) };
-        let impl_id_c = crate::instantiating::region_collapser_individual::collapse_impl_id(self.interner, impl_id_s);
+        let impl_id_c = collapse_impl_id(self.interner, impl_id_s);
 
         let impl_template_id = Compiler::get_impl_template(self.typing_interner, *_impl_id_t);
         let impl_definition = vassert_one(self.hinputs.interface_to_sub_citizen_to_edge.iter().flat_map(|(_, m)| m.values()).filter(|edge| {
@@ -1609,12 +1788,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_abstract_func(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, interface_id_c: &IdI<'s, 'i, cI>, desired_abstract_prototype_t: &PrototypeT<'s, 't>, desired_abstract_prototype_n: &PrototypeI<'s, 'i, nI>, virtual_index: usize, supplied_bound_args: InstantiationBoundArgumentsI<'s, 'i>) {
         // sI/cI/nI are compile-time tracking only, see CCFCTS.
-        let desired_abstract_prototype_s: PrototypeI<'s, 'i, sI> = unsafe { std::mem::transmute(*desired_abstract_prototype_n) };
+        let desired_abstract_prototype_s: PrototypeI<'s, 'i, sI> = unsafe { transmute(*desired_abstract_prototype_n) };
         let desired_abstract_prototype_c =
-            crate::instantiating::region_collapser_individual::collapse_prototype(self.interner, &desired_abstract_prototype_s);
+            collapse_prototype(self.interner, &desired_abstract_prototype_s);
 
         let desired_super_template_id = Compiler::get_super_template(self.typing_interner, desired_abstract_prototype_t.id);
-        let func_t = crate::utils::vassert::vassert_one(self.hinputs.functions.iter().copied().filter(|f| {
+        let func_t = vassert_one(self.hinputs.functions.iter().copied().filter(|f| {
             Compiler::get_super_template(self.typing_interner, f.header.id) == desired_super_template_id
         }));
 
@@ -1622,7 +1801,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             Self::assemble_instantiation_bound_param_to_arg(&func_t.instantiation_bound_params, &supplied_bound_args);
 
         let _args_m: Vec<KindIT<'s, 'i, sI>> = IFunctionNameI::try_from(desired_abstract_prototype_s.id.local_name).unwrap().parameters().iter().map(|c| c.kind).collect();
-        let _params_t: Vec<crate::typing::types::types::KindT<'s, 't>> = func_t.header.params.iter().map(|p| p.tyype.kind).collect();
+        let _params_t: Vec<KindT<'s, 't>> = func_t.header.params.iter().map(|p| p.tyype.kind).collect();
 
         let denizen_bound_to_denizen_caller_supplied_thing = denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself;
 
@@ -1779,9 +1958,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             .iter()
             .zip(IInstantiationNameI::try_from(id_s.local_name).unwrap().template_args(self.interner).iter())
             .flat_map(|(template_arg_t, template_arg_i)| -> Vec<(IdT<'s, 't>, ITemplataI<'s, 'i, sI>)> {
-                use crate::typing::templata::templata::ITemplataT;
-                use crate::typing::types::types::{KindT, MutabilityT};
-                use crate::instantiating::ast::types::MutabilityI;
                 match (template_arg_t, template_arg_i) {
                     (ITemplataT::Coord(ct), c @ ITemplataI::Coord(_)) => {
                         match ct.coord.kind {
@@ -2049,30 +2225,30 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct_member(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _member: &IStructMemberT<'s, 't>) -> (CoordI<'s, 'i, sI>, StructMemberI<'s, 'i, cI>) {
         match _member {
             IStructMemberT::Normal(n) => {
-                let crate::typing::ast::citizens::NormalStructMemberT { name, variability, tyype } = n;
+                let NormalStructMemberT { name, variability, tyype } = n;
                 let (member_subjective_it, member_type_i) = match tyype {
-                    crate::typing::ast::citizens::IMemberTypeT::Reference(r) => {
+                    IMemberTypeT::Reference(r) => {
                         let type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &r.reference);
-                        let result_ref = crate::instantiating::ast::citizens::ReferenceMemberTypeI {
-                            reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s.coord),
-                            _marker: std::marker::PhantomData,
+                        let result_ref = ReferenceMemberTypeI {
+                            reference: collapse_coord(self.interner, &type_s.coord),
+                            _marker: PhantomData,
                         };
-                        let result_ref: &'i crate::instantiating::ast::citizens::ReferenceMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result_ref);
-                        (type_s.coord, crate::instantiating::ast::citizens::IMemberTypeI::ReferenceMemberTypeI(result_ref))
+                        let result_ref: &'i ReferenceMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result_ref);
+                        (type_s.coord, IMemberTypeI::ReferenceMemberTypeI(result_ref))
                     }
-                    crate::typing::ast::citizens::IMemberTypeT::Address(a) => {
+                    IMemberTypeT::Address(a) => {
                         let type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &a.reference);
-                        let result = crate::instantiating::ast::citizens::AddressMemberTypeI {
-                            reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &type_s.coord),
-                            _marker: std::marker::PhantomData,
+                        let result = AddressMemberTypeI {
+                            reference: collapse_coord(self.interner, &type_s.coord),
+                            _marker: PhantomData,
                         };
-                        let result: &'i crate::instantiating::ast::citizens::AddressMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result);
-                        (type_s.coord, crate::instantiating::ast::citizens::IMemberTypeI::AddressMemberTypeI(result))
+                        let result: &'i AddressMemberTypeI<'s, 'i, cI> = self.interner.bump().alloc(result);
+                        (type_s.coord, IMemberTypeI::AddressMemberTypeI(result))
                     }
                 };
                 let name_s = Self::translate_var_name(self.interner, name);
                 let member_c = StructMemberI {
-                    name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &name_s),
+                    name: collapse_var_name(self.interner, &name_s),
                     variability: Self::translate_variability(variability),
                     tyype: member_type_i,
                 };
@@ -2214,8 +2390,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         // - We're in a lambda and we want to call an even deeper lambda.
                         // - (This is the weird one) we want to call a *sibling* lambda.
                         // In all cases, make sure the denizen roots of everyone agree.
-                        let denizen_root_super_template = crate::typing::compiler::Compiler::get_root_super_template(self.typing_interner, *denizen_name);
-                        let desired_prototype_root_super_template = crate::typing::compiler::Compiler::get_root_super_template(self.typing_interner, desired_prototype_t.id);
+                        let denizen_root_super_template = Compiler::get_root_super_template(self.typing_interner, *denizen_name);
+                        let desired_prototype_root_super_template = Compiler::get_root_super_template(self.typing_interner, desired_prototype_t.id);
                         assert!(denizen_root_super_template == desired_prototype_root_super_template);
                     }
                     _ => {}
@@ -2476,7 +2652,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ArenaIndexMap::from_iter_in(
                 rune_to_supplied_impl_for_call_unsubstituted.iter().map(|(rune, supplied_impl_unsubstituted)| {
                     let impl_id_s = match supplied_impl_unsubstituted.local_name {
-                        crate::typing::names::names::INameT::ImplBound(_) => {
+                        INameT::ImplBound(_) => {
                             *_denizen_bound_to_denizen_caller_supplied_thing.bound_param_impl_id_to_bound_arg_impl_id.get(supplied_impl_unsubstituted).expect("vassertSome bound_param_impl_id_to_bound_arg_impl_id")
                         }
                         _ => {
@@ -2597,31 +2773,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i, cI>, _struct_def_t: &StructDefinitionT<'s, 't>) {
         let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, mutability: mutability_t, members, is_closure, instantiation_bound_params: _ } = _struct_def_t;
         let perspective_region_t = RegionT { region: IRegionT::Default };
-        let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
+        let mutability = expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
         if _monouts.struct_to_mutability.contains_key(_new_id) {
             return;
         }
         _monouts.struct_to_mutability.insert(*_new_id, mutability);
-        let attributes_i: Vec<crate::instantiating::ast::ast::ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
-        let members_i: Vec<crate::instantiating::ast::citizens::StructMemberI<'s, 'i, cI>> = members.iter().map(|m| {
+        let attributes_i: Vec<ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
+        let members_i: Vec<StructMemberI<'s, 'i, cI>> = members.iter().map(|m| {
             let (_, sm) = self.translate_struct_member(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, m);
             sm
         }).collect();
-        let result = crate::instantiating::ast::citizens::StructDefinitionI {
-            instantiated_citizen: self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: *_new_id }),
+        let result = StructDefinitionI {
+            instantiated_citizen: self.interner.intern_struct_it_ci(StructITValI { id: *_new_id }),
             attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
             weakable: *weakable,
             mutability,
             members: self.interner.bump().alloc_slice_fill_iter(members_i.into_iter()),
             is_closure: *is_closure,
-            rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
-            rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
         };
         assert_eq!(result.instantiated_citizen.id, *_new_id);
-        let result_ref: &'i crate::instantiating::ast::citizens::StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
+        let result_ref: &'i StructDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.structs.insert(result_ref.instantiated_citizen.id, result_ref);
-        if result_ref.attributes.iter().any(|a| matches!(a, crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(_))) {
-            _monouts.kind_externs.push(crate::instantiating::ast::ast::KindExternI { r#struct: result_ref.instantiated_citizen });
+        if result_ref.attributes.iter().any(|a| matches!(a, ICitizenAttributeI::ExternI(_))) {
+            _monouts.kind_externs.push(KindExternI { r#struct: result_ref.instantiated_citizen });
         }
     }
 }
@@ -2691,22 +2867,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         assert!(!_monouts.interface_to_impls.contains_key(_new_id_c));
         _monouts.interface_to_impls.insert(*_new_id_c, Vec::new());
         let perspective_region_t = RegionT { region: IRegionT::Default };
-        let mutability = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
+        let mutability = expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
         assert!(!_monouts.interface_to_mutability.contains_key(_new_id_c));
         _monouts.interface_to_mutability.insert(*_new_id_c, mutability);
-        let new_interface_it = self.interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: *_new_id_c });
-        let attributes_i: Vec<crate::instantiating::ast::ast::ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
-        let result = crate::instantiating::ast::citizens::InterfaceDefinitionI {
+        let new_interface_it = self.interner.intern_interface_it_ci(InterfaceITValI { id: *_new_id_c });
+        let attributes_i: Vec<ICitizenAttributeI<'s>> = attributes.iter().map(|a| Self::translate_citizen_attribute(a)).collect();
+        let result = InterfaceDefinitionI {
             instantiated_interface: new_interface_it,
             attributes: self.interner.bump().alloc_slice_fill_iter(attributes_i.into_iter()),
             weakable: *weakable,
             mutability,
-            rune_to_function_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
-            rune_to_impl_bound: crate::utils::arena_index_map::ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_function_bound: ArenaIndexMap::new_in(self.interner.bump()),
+            rune_to_impl_bound: ArenaIndexMap::new_in(self.interner.bump()),
             internal_methods: &[],
-            _marker: std::marker::PhantomData,
+            _marker: PhantomData,
         };
-        let result_ref: &'i crate::instantiating::ast::citizens::InterfaceDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
+        let result_ref: &'i InterfaceDefinitionI<'s, 'i, cI> = self.interner.alloc(result);
         _monouts.interfaces_without_methods.insert(result_ref.instantiated_interface.id, result_ref);
         assert_eq!(result_ref.instantiated_interface.id, *_new_id_c);
     }
@@ -2832,7 +3008,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match x {
             IFunctionAttributeT::UserFunction => IFunctionAttributeI::UserFunctionI,
             IFunctionAttributeT::Pure => IFunctionAttributeI::PureI,
-            IFunctionAttributeT::Extern(e) => IFunctionAttributeI::ExternI(crate::instantiating::ast::ast::ExternI { package_coord: e.package_coord }),
+            IFunctionAttributeT::Extern(e) => IFunctionAttributeI::ExternI(ExternI { package_coord: e.package_coord }),
             _ => panic!("Unimplemented: translate_function_attribute other"),
         }
     }
@@ -2849,10 +3025,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_citizen_attribute
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
-    pub fn translate_citizen_attribute(x: &crate::typing::ast::ast::ICitizenAttributeT<'s>) -> crate::instantiating::ast::ast::ICitizenAttributeI<'s> {
+    pub fn translate_citizen_attribute(x: &ICitizenAttributeT<'s>) -> ICitizenAttributeI<'s> {
         match x {
-            crate::typing::ast::ast::ICitizenAttributeT::Sealed => crate::instantiating::ast::ast::ICitizenAttributeI::SealedI,
-            crate::typing::ast::ast::ICitizenAttributeT::Extern(extern_t) => crate::instantiating::ast::ast::ICitizenAttributeI::ExternI(crate::instantiating::ast::ast::ExternI { package_coord: extern_t.package_coord }),
+            ICitizenAttributeT::Sealed => ICitizenAttributeI::SealedI,
+            ICitizenAttributeT::Extern(extern_t) => ICitizenAttributeI::ExternI(ExternI { package_coord: extern_t.package_coord }),
         }
     }
 }
@@ -3059,9 +3235,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let coord_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &RegionT { region: IRegionT::Default }, coord);
         let var_s = Self::translate_var_name(self.interner, id);
         let local_c = AddressibleLocalVariableI {
-            name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &var_s),
+            name: collapse_var_name(self.interner, &var_s),
             variability: Self::translate_variability(variability),
-            collapsed_coord: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &coord_s.coord),
+            collapsed_coord: collapse_coord(self.interner, &coord_s.coord),
         };
         (coord_s.coord, local_c)
     }
@@ -3097,40 +3273,40 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_addr_expr(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _expr: &AddressExpressionTE<'s, 't>) -> (CoordI<'s, 'i, sI>, AddressExpressionIE<'s, 'i, cI>) {
         match _expr {
             AddressExpressionTE::LocalLookup(ll) => {
-                let crate::typing::ast::expressions::LocalLookupTE { range: _range, local_variable: local_variable_t } = **ll;
+                let LocalLookupTE { range: _range, local_variable: local_variable_t } = **ll;
                 let (local_subjective_it, local_variable_i) = self.translate_local_variable(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &local_variable_t);
                 let result_subjective_it = local_subjective_it;
-                let result_ce = AddressExpressionIE::LocalLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::LocalLookupIE {
+                let result_ce = AddressExpressionIE::LocalLookup(self.interner.bump().alloc(LocalLookupIE {
                     local_variable: local_variable_i,
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_subjective_it),
+                    result: collapse_coord(self.interner, &result_subjective_it),
                 }));
                 (result_subjective_it, result_ce)
             }
             AddressExpressionTE::ReferenceMemberLookup(rml) => {
-                let crate::typing::ast::expressions::ReferenceMemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, member_reference: member_coord_t, variability } = **rml;
+                let ReferenceMemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, member_reference: member_coord_t, variability } = **rml;
                 let (_struct_subjective_it, struct_ce) =
                     self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &struct_expr_t);
                 let member_name = Self::translate_var_name(self.interner, &member_name_t);
                 let member_coord_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &member_coord_t);
                 let result_subjective_it = member_coord_s;
-                let result_ce = AddressExpressionIE::ReferenceMemberLookup(self.interner.bump().alloc(crate::instantiating::ast::expressions::ReferenceMemberLookupIE {
+                let result_ce = AddressExpressionIE::ReferenceMemberLookup(self.interner.bump().alloc(ReferenceMemberLookupIE {
                     range,
                     struct_expr: struct_ce,
-                    member_name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &member_name),
-                    member_reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_subjective_it.coord),
+                    member_name: collapse_var_name(self.interner, &member_name),
+                    member_reference: collapse_coord(self.interner, &result_subjective_it.coord),
                     variability: Self::translate_variability(&variability),
                 }));
                 (result_subjective_it.coord, result_ce)
             }
             AddressExpressionTE::StaticSizedArrayLookup(s) => {
-                let crate::typing::ast::expressions::StaticSizedArrayLookupTE { range, array_expr: array_expr_t, array_type: _, index_expr: index_expr_t, element_type: element_type_t, variability } = **s;
+                let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, array_type: _, index_expr: index_expr_t, element_type: element_type_t, variability } = **s;
                 let (_array_subjective_it, array_ce) =
                     self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &array_expr_t);
                 let element_type_s = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &element_type_t).coord;
                 let (_index_it, index_ce) =
                     self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &index_expr_t);
                 let result_coord = CoordI { ownership: element_type_s.ownership, kind: element_type_s.kind };
-                let result_ce = AddressExpressionIE::StaticSizedArrayLookup(self.interner.alloc(crate::instantiating::ast::expressions::StaticSizedArrayLookupIE {
+                let result_ce = AddressExpressionIE::StaticSizedArrayLookup(self.interner.alloc(StaticSizedArrayLookupIE {
                     range,
                     array_expr: array_ce,
                     index_expr: index_ce,
@@ -3140,31 +3316,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_coord, result_ce)
             }
             AddressExpressionTE::AddressMemberLookup(a) => {
-                let crate::typing::ast::expressions::AddressMemberLookupTE { range: _range, struct_expr, member_name, result_type2, variability } = **a;
+                let AddressMemberLookupTE { range: _range, struct_expr, member_name, result_type2, variability } = **a;
                 let (_struct_it, struct_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &struct_expr);
                 let var_name_s = Self::translate_var_name(self.interner, &member_name);
                 let result_it = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &result_type2);
                 let variability_c = Self::translate_variability(&variability);
-                let result_ce = AddressExpressionIE::AddressMemberLookup(self.interner.alloc(crate::instantiating::ast::expressions::AddressMemberLookupIE {
+                let result_ce = AddressExpressionIE::AddressMemberLookup(self.interner.alloc(AddressMemberLookupIE {
                     struct_expr: struct_ce,
-                    member_name: crate::instantiating::region_collapser_individual::collapse_var_name(self.interner, &var_name_s),
-                    member_reference: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it.coord),
+                    member_name: collapse_var_name(self.interner, &var_name_s),
+                    member_reference: collapse_coord(self.interner, &result_it.coord),
                     variability: variability_c,
                 }));
                 (result_it.coord, result_ce)
             }
             AddressExpressionTE::RuntimeSizedArrayLookup(rslt) => {
-                let crate::typing::ast::expressions::RuntimeSizedArrayLookupTE { range: _, array_expr, array_type: rsa_tt, index_expr, variability } = *rslt;
+                let RuntimeSizedArrayLookupTE { range: _, array_expr, array_type: rsa_tt, index_expr, variability } = *rslt;
                 let (_array_it, array_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &array_expr);
                 let _rsa_it = self.translate_runtime_sized_array(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, rsa_tt);
                 let (_index_it, index_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &index_expr);
                 let variability_c = Self::translate_variability(&variability);
                 let element_it = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &rsa_tt.element_type());
                 let result_it = element_it;
-                let result_ce = crate::instantiating::ast::expressions::AddressExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(crate::instantiating::ast::expressions::RuntimeSizedArrayLookupIE {
+                let result_ce = AddressExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(RuntimeSizedArrayLookupIE {
                     array_expr: array_ce,
                     index_expr: index_ce,
-                    element_type: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &element_it.coord),
+                    element_type: collapse_coord(self.interner, &element_it.coord),
                     variability: variability_c,
                 }));
                 (result_it.coord, result_ce)
@@ -3344,7 +3520,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let _denizen_template_name = Compiler::get_template(self.typing_interner, *denizen_name);
         match expr {
             ReferenceExpressionTE::LetAndLend(lal) => {
-                let crate::typing::ast::expressions::LetAndLendTE { variable, expr: source_expr_t, target_ownership: outer_ownership_t } = **lal;
+                let LetAndLendTE { variable, expr: source_expr_t, target_ownership: outer_ownership_t } = **lal;
                 let (source_subjective_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr_t);
                 let result_ownership_c =
@@ -3365,7 +3541,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::LockWeak(lw) => {
-                let crate::typing::ast::expressions::LockWeakTE { inner_expr, result_opt_borrow_type, some_constructor, none_constructor, some_impl_name, none_impl_name } = **lw;
+                let LockWeakTE { inner_expr, result_opt_borrow_type, some_constructor, none_constructor, some_impl_name, none_impl_name } = **lw;
                 let result_it =
                     self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_opt_borrow_type).coord;
                 let result_ct = region_collapser_individual::collapse_coord(self.interner, &result_it);
@@ -3391,7 +3567,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::BorrowToWeak(b) => {
-                let crate::typing::ast::expressions::BorrowToWeakTE { inner_expr } = **b;
+                let BorrowToWeakTE { inner_expr } = **b;
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let result_it = CoordI { ownership: OwnershipI::Weak, kind: inner_it.kind };
@@ -3404,7 +3580,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &l.variable);
                 // env.addTranslatedVariable(variableT.name, vimpl(translatedVariable))
-                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) };
+                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) };
                 let expr_ce = ReferenceExpressionIE::LetNormal(self.interner.alloc(LetNormalIE {
                     variable: local_i,
                     expr: inner_ce,
@@ -3427,10 +3603,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &d.expr);
                 let result_ce = ReferenceExpressionIE::Discard(self.interner.alloc(DiscardIE { expr: inner_ce }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::Defer(d) => {
-                let crate::typing::ast::expressions::DeferTE { inner_expr, deferred_expr } = **d;
+                let DeferTE { inner_expr, deferred_expr } = **d;
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let (_deferred_it, deferred_ce) =
@@ -3475,7 +3651,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_it =
                     match inner_it {
                         CoordI { kind: KindIT::VoidIT(_), .. } => inner_it,
-                        CoordI { kind: KindIT::NeverIT(NeverIT { from_break: true, .. }), .. } => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) },
+                        CoordI { kind: KindIT::NeverIT(NeverIT { from_break: true, .. }), .. } => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) },
                         CoordI { kind: KindIT::NeverIT(NeverIT { from_break: false, .. }), .. } => inner_it,
                         _ => panic!("vwat"),
                     };
@@ -3487,11 +3663,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::Mutate(m) => {
-                let crate::typing::ast::expressions::MutateTE { destination_expr: destination_tt, source_expr } = **m;
+                let MutateTE { destination_expr: destination_tt, source_expr } = **m;
                 let (destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
                 let (_source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
                 let result_it = destination_it;
-                let result_ce = ReferenceExpressionIE::Mutate(self.interner.bump().alloc(crate::instantiating::ast::expressions::MutateIE {
+                let result_ce = ReferenceExpressionIE::Mutate(self.interner.bump().alloc(MutateIE {
                     destination_expr: destination_ce,
                     source_expr: source_ce,
                     result: region_collapser_individual::collapse_coord(self.interner, &result_it),
@@ -3504,8 +3680,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.variable);
                 // env.addTranslatedVariable(variableT.name, vimpl(translatedVariable))
-                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) };
-                let expr_ce = ReferenceExpressionIE::Restackify(self.interner.alloc(crate::instantiating::ast::expressions::RestackifyIE {
+                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) };
+                let expr_ce = ReferenceExpressionIE::Restackify(self.interner.alloc(RestackifyIE {
                     variable: local_i,
                     expr: inner_ce,
                     result: region_collapser_individual::collapse_coord(self.interner, &subjective_result_it),
@@ -3519,11 +3695,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_ce = ReferenceExpressionIE::Return(self.interner.alloc(ReturnIE {
                     source_expr: inner_ce,
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::NeverIT(NeverIT { from_break: false, _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::NeverIT(NeverIT { from_break: false, _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::Break(_) => {
-                let result_ce = ReferenceExpressionIE::Break(self.interner.alloc(BreakIE(std::marker::PhantomData)));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::NeverIT(NeverIT { from_break: true, _marker: std::marker::PhantomData }) }, result_ce)
+                let result_ce = ReferenceExpressionIE::Break(self.interner.alloc(BreakIE(PhantomData)));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::NeverIT(NeverIT { from_break: true, _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::Block(b) => {
                 let (inner_it, inner_ce) =
@@ -3552,7 +3728,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::Tuple(t) => {
-                let crate::typing::ast::expressions::TupleTE { elements, result_reference } = **t;
+                let TupleTE { elements, result_reference } = **t;
                 let elements_ce: Vec<_> = elements.iter().map(|element_te| {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, element_te).1
                 }).collect();
@@ -3565,7 +3741,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 })))
             }
             ReferenceExpressionTE::StaticArrayFromValues(s) => {
-                let crate::typing::ast::expressions::StaticArrayFromValuesTE { elements, result_reference, array_type } = **s;
+                let StaticArrayFromValuesTE { elements, result_reference, array_type } = **s;
                 let result_it =
                     self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference)
                         .coord;
@@ -3573,7 +3749,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, element_te).1
                 }).collect();
                 let ssa_tt = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_type);
-                let result_ce = ReferenceExpressionIE::StaticArrayFromValues(self.interner.alloc(crate::instantiating::ast::expressions::StaticArrayFromValuesIE {
+                let result_ce = ReferenceExpressionIE::StaticArrayFromValues(self.interner.alloc(StaticArrayFromValuesIE {
                     elements: self.interner.alloc_slice_from_vec(elements_ce),
                     result_reference: region_collapser_individual::collapse_coord(self.interner, &result_it),
                     array_type: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_tt),
@@ -3582,19 +3758,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::ArraySize(_) => panic!("Unimplemented: translate_ref_expr ArraySize"),
             ReferenceExpressionTE::IsSameInstance(isi) => {
-                let crate::typing::ast::expressions::IsSameInstanceTE { left, right } = **isi;
+                let IsSameInstanceTE { left, right } = **isi;
                 let (_left_it, left_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &left);
                 let (_right_it, right_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &right);
-                let result_ce = ReferenceExpressionIE::IsSameInstance(self.interner.alloc(crate::instantiating::ast::expressions::IsSameInstanceIE {
+                let result_ce = ReferenceExpressionIE::IsSameInstance(self.interner.alloc(IsSameInstanceIE {
                     left: left_ce,
                     right: right_ce,
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(crate::instantiating::ast::types::BoolIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::AsSubtype(asx) => {
-                let crate::typing::ast::expressions::AsSubtypeTE { source_expr, target_type: target_subtype, result_result_type, ok_constructor, err_constructor, impl_name: impl_id_t, ok_impl_name: ok_result_impl_id_t, err_impl_name: err_result_impl_id_t } = **asx;
+                let AsSubtypeTE { source_expr, target_type: target_subtype, result_result_type, ok_constructor, err_constructor, impl_name: impl_id_t, ok_impl_name: ok_result_impl_id_t, err_impl_name: err_result_impl_id_t } = **asx;
                 let (_source_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
                 let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_result_type).coord;
@@ -3605,7 +3781,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &impl_id_t);
                 let ok_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &ok_result_impl_id_t);
                 let err_impl_id_s = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &err_result_impl_id_t);
-                let result_ce = ReferenceExpressionIE::AsSubtype(self.interner.bump().alloc(crate::instantiating::ast::expressions::AsSubtypeIE {
+                let result_ce = ReferenceExpressionIE::AsSubtype(self.interner.bump().alloc(AsSubtypeIE {
                     source_expr: source_ce,
                     target_type: region_collapser_individual::collapse_coord(self.interner, &target_coord_s),
                     result_result_type: region_collapser_individual::collapse_coord(self.interner, &result_result_coord_s),
@@ -3619,55 +3795,55 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::VoidLiteral(_) => {
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) },
-                 ReferenceExpressionIE::VoidLiteral(self.interner.alloc(VoidLiteralIE(std::marker::PhantomData))))
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) },
+                 ReferenceExpressionIE::VoidLiteral(self.interner.alloc(VoidLiteralIE(PhantomData))))
             }
             ReferenceExpressionTE::ConstantInt(c) => {
                 let result_ce = ReferenceExpressionIE::ConstantInt(self.interner.alloc(ConstantIntIE {
                     value: expect_integer_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &c.value)).value,
                     bits: c.bits,
-                    _marker: std::marker::PhantomData,
+                    _marker: PhantomData,
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: c.bits, _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: c.bits, _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::ConstantBool(c) => {
-                let result_ce = ReferenceExpressionIE::ConstantBool(self.interner.alloc(ConstantBoolIE { _marker: std::marker::PhantomData, value: c.value }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }) }, result_ce)
+                let result_ce = ReferenceExpressionIE::ConstantBool(self.interner.alloc(ConstantBoolIE { _marker: PhantomData, value: c.value }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::ConstantStr(c) => {
-                let result_ce = ReferenceExpressionIE::ConstantStr(self.interner.alloc(ConstantStrIE { _marker: std::marker::PhantomData, value: c.value.0 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(crate::instantiating::ast::types::StrIT { _marker: std::marker::PhantomData }) }, result_ce)
+                let result_ce = ReferenceExpressionIE::ConstantStr(self.interner.alloc(ConstantStrIE { _marker: PhantomData, value: c.value.0 }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(StrIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::ConstantFloat(c) => {
-                let result_ce = ReferenceExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { _marker: std::marker::PhantomData, value: c.value }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: std::marker::PhantomData }) }, result_ce)
+                let result_ce = ReferenceExpressionIE::ConstantFloat(self.interner.alloc(ConstantFloatIE { _marker: PhantomData, value: c.value }));
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::ArgLookup(al) => {
-                let crate::typing::ast::expressions::ArgLookupTE { param_index, coord: reference } = **al;
+                let ArgLookupTE { param_index, coord: reference } = **al;
                 let type_s =
                     self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &reference)
                         .coord;
-                let result_ce = ReferenceExpressionIE::ArgLookup(self.interner.alloc(crate::instantiating::ast::expressions::ArgLookupIE { param_index, coord: region_collapser_individual::collapse_coord(self.interner, &type_s) }));
+                let result_ce = ReferenceExpressionIE::ArgLookup(self.interner.alloc(ArgLookupIE { param_index, coord: region_collapser_individual::collapse_coord(self.interner, &type_s) }));
                 (type_s, result_ce)
             }
             ReferenceExpressionTE::ArrayLength(al) => {
-                let crate::typing::ast::expressions::ArrayLengthTE { array_expr } = **al;
+                let ArrayLengthTE { array_expr } = **al;
                 let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let result_it = CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }) };
-                let result_ce = ReferenceExpressionIE::ArrayLength(self.interner.alloc(crate::instantiating::ast::expressions::ArrayLengthIE {
+                let result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: 32, _marker: PhantomData }) };
+                let result_ce = ReferenceExpressionIE::ArrayLength(self.interner.alloc(ArrayLengthIE {
                     array_expr: array_ce,
                 }));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::InterfaceFunctionCall(ifc) => {
-                let crate::typing::ast::expressions::InterfaceFunctionCallTE { super_function_prototype: super_function_prototype_t, virtual_param_index, result_reference: _result_reference, args } = **ifc;
+                let InterfaceFunctionCallTE { super_function_prototype: super_function_prototype_t, virtual_param_index, result_reference: _result_reference, args } = **ifc;
                 let (super_function_prototype_i, super_function_prototype_c) =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, super_function_prototype_t);
                 let result_it = super_function_prototype_i.return_type;
                 let args_ce: Vec<ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg| {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg).1
                 }).collect();
-                let result_ce = ReferenceExpressionIE::InterfaceFunctionCall(self.interner.bump().alloc(crate::instantiating::ast::expressions::InterfaceFunctionCallIE {
+                let result_ce = ReferenceExpressionIE::InterfaceFunctionCall(self.interner.bump().alloc(InterfaceFunctionCallIE {
                     super_function_prototype: self.interner.bump().alloc(super_function_prototype_c),
                     virtual_param_index,
                     args: self.interner.alloc_slice_from_vec(args_ce),
@@ -3676,27 +3852,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let interface_id_c = super_function_prototype_c.param_types()[virtual_param_index as usize].kind.expect_interface().id;
                 let instantiation_bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, self.hinputs.get_instantiation_bound_args(super_function_prototype_t.id));
                 let super_function_prototype_n =
-                    crate::instantiating::region_collapser_consistent::collapse_prototype(
+                    collapse_prototype_consistent(
                         self.interner,
-                        crate::instantiating::region_counter::count_prototype_map(&super_function_prototype_i),
+                        count_prototype_map(&super_function_prototype_i),
                         &super_function_prototype_i);
-                assert!(crate::instantiating::region_collapser_individual::collapse_prototype(self.interner, &super_function_prototype_n) == super_function_prototype_c);
+                assert!(collapse_prototype(self.interner, &super_function_prototype_n) == super_function_prototype_c);
                 monouts.new_abstract_funcs.push((*super_function_prototype_t, super_function_prototype_n, virtual_param_index as usize, interface_id_c, instantiation_bound_args));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::ExternFunctionCall(efc) => {
-                let crate::typing::ast::expressions::ExternFunctionCallTE { prototype2, args } = **efc;
+                let ExternFunctionCallTE { prototype2, args } = **efc;
                 let (prototype_i, prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
                 let args_ce: Vec<ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1).collect();
                 let result_it = prototype_i.return_type;
-                let result_ce = ReferenceExpressionIE::ExternFunctionCall(self.interner.bump().alloc(crate::instantiating::ast::expressions::ExternFunctionCallIE { prototype2: prototype_c, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: prototype_c.return_type }));
+                let result_ce = ReferenceExpressionIE::ExternFunctionCall(self.interner.bump().alloc(ExternFunctionCallIE { prototype2: prototype_c, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: prototype_c.return_type }));
                 match prototype2.id.local_name {
-                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
+                    INameT::ExternFunction(ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
                         let num_inherited = self.hinputs.function_externs.iter().find(|fe| {
                             fe.prototype.id.package_coord == prototype2.id.package_coord
                                 && fe.prototype.id.init_steps == prototype2.id.init_steps
                                 && match fe.prototype.id.local_name {
-                                    INameT::ExternFunction(crate::typing::names::names::ExternFunctionNameT { human_name: hn, .. }) => hn == human_name,
+                                    INameT::ExternFunction(ExternFunctionNameT { human_name: hn, .. }) => hn == human_name,
                                     _ => false,
                                 }
                         })
@@ -3712,83 +3888,83 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::FunctionCall(fc) => {
-                let crate::typing::ast::expressions::FunctionCallTE { callable: prototype_t, args, return_type: _return_type } = fc;
-                let inners_ce: Vec<crate::instantiating::ast::expressions::ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
+                let FunctionCallTE { callable: prototype_t, args, return_type: _return_type } = fc;
+                let inners_ce: Vec<ReferenceExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
                     let (_arg_it, arg_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te);
                     arg_ce
                 }).collect();
                 let (prototype_i, prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype_t);
                 let return_coord_it = prototype_i.return_type;
-                let return_coord_ct = crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &return_coord_it);
-                let result_ce = crate::instantiating::ast::expressions::ReferenceExpressionIE::FunctionCall(self.interner.alloc(crate::instantiating::ast::expressions::FunctionCallIE {
+                let return_coord_ct = collapse_coord(self.interner, &return_coord_it);
+                let result_ce = ReferenceExpressionIE::FunctionCall(self.interner.alloc(FunctionCallIE {
                     callable: prototype_c,
                     args: self.interner.bump().alloc_slice_fill_iter(inners_ce.into_iter()),
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &return_coord_it),
+                    result: collapse_coord(self.interner, &return_coord_it),
                 }));
                 let _ = return_coord_ct;
                 (return_coord_it, result_ce)
             }
             ReferenceExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
             ReferenceExpressionTE::Construct(c) => {
-                let crate::typing::ast::expressions::ConstructTE { struct_tt, result_reference, args } = **c;
+                let ConstructTE { struct_tt, result_reference, args } = **c;
                 let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference).coord;
-                let args_ce: Vec<crate::instantiating::ast::expressions::ExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
+                let args_ce: Vec<ExpressionIE<'s, 'i, cI>> = args.iter().map(|arg_te| {
                     self.translate_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1
                 }).collect();
                 let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
                 let struct_it = self.translate_struct(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, struct_tt, &bound_args);
-                let result_ce = ReferenceExpressionIE::Construct(self.interner.bump().alloc(crate::instantiating::ast::expressions::ConstructIE {
-                    struct_tt: *self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, &struct_it.id) }),
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                let result_ce = ReferenceExpressionIE::Construct(self.interner.bump().alloc(ConstructIE {
+                    struct_tt: *self.interner.intern_struct_it_ci(StructITValI { id: collapse_struct_id(self.interner, &struct_it.id) }),
+                    result: collapse_coord(self.interner, &result_it),
                     args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()),
                 }));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::NewMutRuntimeSizedArray(nmrsa) => {
-                let crate::typing::ast::expressions::NewMutRuntimeSizedArrayTE { array_type: array_tt, region: _, capacity_expr } = **nmrsa;
+                let NewMutRuntimeSizedArrayTE { array_type: array_tt, region: _, capacity_expr } = **nmrsa;
                 let array_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_tt);
                 let array_mutability = match array_it.name.local_name {
                     INameI::RuntimeSizedArray(n) => n.arr.mutability,
                     _ => panic!("translate_ref_expr NewMutRuntimeSizedArray: local_name not RuntimeSizedArrayNameI"),
                 };
                 let result_ownership = match array_mutability {
-                    crate::instantiating::ast::types::MutabilityI::Mutable => crate::instantiating::ast::types::OwnershipI::Own,
-                    crate::instantiating::ast::types::MutabilityI::Immutable => crate::instantiating::ast::types::OwnershipI::MutableShare,
+                    MutabilityI::Mutable => OwnershipI::Own,
+                    MutabilityI::Immutable => OwnershipI::MutableShare,
                 };
                 let result_it = CoordI {
                     ownership: result_ownership,
-                    kind: crate::instantiating::ast::types::KindIT::RuntimeSizedArrayIT(self.interner.alloc(array_it)),
+                    kind: KindIT::RuntimeSizedArrayIT(self.interner.alloc(array_it)),
                 };
                 let (_capacity_it, capacity_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &capacity_expr);
-                let result_ce = ReferenceExpressionIE::NewMutRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::NewMutRuntimeSizedArrayIE {
-                    array_type: crate::instantiating::region_collapser_individual::collapse_runtime_sized_array(self.interner, &array_it),
+                let result_ce = ReferenceExpressionIE::NewMutRuntimeSizedArray(self.interner.alloc(NewMutRuntimeSizedArrayIE {
+                    array_type: collapse_runtime_sized_array(self.interner, &array_it),
                     capacity_expr: capacity_ce,
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                    result: collapse_coord(self.interner, &result_it),
                 }));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::StaticArrayFromCallable(s) => {
-                let crate::typing::ast::expressions::StaticArrayFromCallableTE { array_type, region: _, generator, generator_method } = **s;
+                let StaticArrayFromCallableTE { array_type, region: _, generator, generator_method } = **s;
                 let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
                 let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
                 let (_generator_prototype_i, generator_prototype_c) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
                 let result_it = CoordI {
                     ownership: match ssa_it.mutability() {
-                        crate::instantiating::ast::types::MutabilityI::Mutable => crate::instantiating::ast::types::OwnershipI::Own,
-                        crate::instantiating::ast::types::MutabilityI::Immutable => crate::instantiating::ast::types::OwnershipI::MutableShare,
+                        MutabilityI::Mutable => OwnershipI::Own,
+                        MutabilityI::Immutable => OwnershipI::MutableShare,
                     },
-                    kind: crate::instantiating::ast::types::KindIT::StaticSizedArrayIT(self.interner.alloc(ssa_it)),
+                    kind: KindIT::StaticSizedArrayIT(self.interner.alloc(ssa_it)),
                 };
-                let result_ce = ReferenceExpressionIE::StaticArrayFromCallable(self.interner.alloc(crate::instantiating::ast::expressions::StaticArrayFromCallableIE {
-                    array_type: crate::instantiating::region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
+                let result_ce = ReferenceExpressionIE::StaticArrayFromCallable(self.interner.alloc(StaticArrayFromCallableIE {
+                    array_type: collapse_static_sized_array(self.interner, &ssa_it),
                     generator: generator_ce,
                     generator_method: generator_prototype_c,
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                    result: collapse_coord(self.interner, &result_it),
                 }));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(d) => {
-                let crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE { array_expr: array_expr_t, array_type: array_type_t, consumer: consumer_t, consumer_method: consumer_method_t } = **d;
+                let DestroyStaticSizedArrayIntoFunctionTE { array_expr: array_expr_t, array_type: array_type_t, consumer: consumer_t, consumer_method: consumer_method_t } = **d;
                 let (_array_it, array_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr_t);
                 let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type_t);
@@ -3796,16 +3972,16 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &consumer_t);
                 let (_consumer_prototype_i, consumer_prototype_c) =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, consumer_method_t);
-                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(self.interner.alloc(crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoFunctionIE {
+                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(self.interner.alloc(DestroyStaticSizedArrayIntoFunctionIE {
                     array_expr: array_ce,
                     array_type: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
                     consumer: consumer_ce,
                     consumer_method: consumer_prototype_c,
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(d) => {
-                let crate::typing::ast::expressions::DestroyStaticSizedArrayIntoLocalsTE { expr: expr_t, static_sized_array: ssa_tt, destination_reference_variables } = **d;
+                let DestroyStaticSizedArrayIntoLocalsTE { expr: expr_t, static_sized_array: ssa_tt, destination_reference_variables } = **d;
                 let (source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr_t);
                 let (ssa_it, size) = match source_it.kind {
                     KindIT::StaticSizedArrayIT(s) => {
@@ -3817,75 +3993,75 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     _ => panic!("DestroyStaticSizedArrayIntoLocals: source_it.kind not StaticSizedArrayIT"),
                 };
                 assert!(size == destination_reference_variables.len() as i64);
-                let dest_vars_vec: Vec<crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> = destination_reference_variables.iter().map(|dest_ref_var_t| {
+                let dest_vars_vec: Vec<ReferenceLocalVariableI<'s, 'i>> = destination_reference_variables.iter().map(|dest_ref_var_t| {
                     self.translate_reference_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
                 }).collect();
-                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(self.interner.alloc(crate::instantiating::ast::expressions::DestroyStaticSizedArrayIntoLocalsIE {
+                let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(self.interner.alloc(DestroyStaticSizedArrayIntoLocalsIE {
                     expr: source_ce,
                     static_sized_array: region_collapser_individual::collapse_static_sized_array(self.interner, &ssa_it),
                     destination_reference_variables: self.interner.alloc_slice_from_vec(dest_vars_vec),
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::DestroyMutRuntimeSizedArray(d) => {
-                let crate::typing::ast::expressions::DestroyMutRuntimeSizedArrayTE { array_expr } = **d;
+                let DestroyMutRuntimeSizedArrayTE { array_expr } = **d;
                 let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let result_ce = ReferenceExpressionIE::DestroyMutRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::DestroyMutRuntimeSizedArrayIE {
+                let result_ce = ReferenceExpressionIE::DestroyMutRuntimeSizedArray(self.interner.alloc(DestroyMutRuntimeSizedArrayIE {
                     array_expr: array_ce,
                 }));
-                (CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::RuntimeSizedArrayCapacity(r) => {
-                let crate::typing::ast::expressions::RuntimeSizedArrayCapacityTE { array_expr } = **r;
+                let RuntimeSizedArrayCapacityTE { array_expr } = **r;
                 let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
-                let result_ce = ReferenceExpressionIE::RuntimeSizedArrayCapacity(self.interner.alloc(crate::instantiating::ast::expressions::RuntimeSizedArrayCapacityIE {
+                let result_ce = ReferenceExpressionIE::RuntimeSizedArrayCapacity(self.interner.alloc(RuntimeSizedArrayCapacityIE {
                     array_expr: array_ce,
                 }));
-                (CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: 32, _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::PushRuntimeSizedArray(prsa) => {
-                let crate::typing::ast::expressions::PushRuntimeSizedArrayTE { array_expr, new_element_expr } = **prsa;
+                let PushRuntimeSizedArrayTE { array_expr, new_element_expr } = **prsa;
                 let (_array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
                 let (_element_it, element_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &new_element_expr);
-                let result_ce = ReferenceExpressionIE::PushRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::PushRuntimeSizedArrayIE {
+                let result_ce = ReferenceExpressionIE::PushRuntimeSizedArray(self.interner.alloc(PushRuntimeSizedArrayIE {
                     array_expr: array_ce,
                     new_element_expr: element_ce,
                 }));
-                (CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::PopRuntimeSizedArray(p) => {
-                let crate::typing::ast::expressions::PopRuntimeSizedArrayTE { array_expr, element_type: _ } = **p;
+                let PopRuntimeSizedArrayTE { array_expr, element_type: _ } = **p;
                 let (array_it, array_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &array_expr);
                 let element_it = match array_it.kind {
-                    crate::instantiating::ast::types::KindIT::RuntimeSizedArrayIT(rsa) => match rsa.name.local_name {
+                    KindIT::RuntimeSizedArrayIT(rsa) => match rsa.name.local_name {
                         INameI::RuntimeSizedArray(n) => n.arr.element_type.coord,
                         _ => panic!("translate_ref_expr PopRuntimeSizedArray: local_name not RuntimeSizedArrayNameI"),
                     },
                     _ => panic!("translate_ref_expr PopRuntimeSizedArray: kind not RuntimeSizedArrayIT"),
                 };
-                let result_ce = ReferenceExpressionIE::PopRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::PopRuntimeSizedArrayIE {
+                let result_ce = ReferenceExpressionIE::PopRuntimeSizedArray(self.interner.alloc(PopRuntimeSizedArrayIE {
                     array_expr: array_ce,
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &element_it),
+                    result: collapse_coord(self.interner, &element_it),
                 }));
                 (element_it, result_ce)
             }
             ReferenceExpressionTE::InterfaceToInterfaceUpcast(_) => panic!("Unimplemented: translate_ref_expr InterfaceToInterfaceUpcast"),
             ReferenceExpressionTE::Upcast(u) => {
-                let crate::typing::ast::expressions::UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id } = *u;
+                let UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id } = *u;
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
                 let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.result().coord);
                 let (_inner_it, inner_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr_unsubstituted);
                 let super_kind_s = self.translate_super_kind(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_super_kind);
-                let result_ce = ReferenceExpressionIE::Upcast(self.interner.bump().alloc(crate::instantiating::ast::expressions::UpcastIE {
+                let result_ce = ReferenceExpressionIE::Upcast(self.interner.bump().alloc(UpcastIE {
                     inner_expr: inner_ce,
-                    target_interface: *self.interner.intern_interface_it_ci(crate::instantiating::ast::types::InterfaceITValI { id: crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, &super_kind_s.id) }),
-                    impl_name: crate::instantiating::region_collapser_individual::collapse_impl_id(self.interner, &impl_id),
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it.coord),
+                    target_interface: *self.interner.intern_interface_it_ci(InterfaceITValI { id: collapse_interface_id(self.interner, &super_kind_s.id) }),
+                    impl_name: collapse_impl_id(self.interner, &impl_id),
+                    result: collapse_coord(self.interner, &result_it.coord),
                 }));
                 (result_it.coord, result_ce)
             }
             ReferenceExpressionTE::SoftLoad(sl) => {
-                let crate::typing::ast::expressions::SoftLoadTE { expr: original_inner, target_ownership: original_target_ownership } = **sl;
+                let SoftLoadTE { expr: original_inner, target_ownership: original_target_ownership } = **sl;
                 let (inner_it, inner_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &original_inner);
                 let target_ownership = match (original_target_ownership, inner_it.ownership) {
                     (OwnershipT::Share, OwnershipI::ImmutableShare) => OwnershipI::ImmutableShare,
@@ -3907,29 +4083,29 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     other => panic!("SoftLoad: vwat {:?}", other),
                 };
                 let result_it = CoordI { ownership: target_ownership, kind: inner_it.kind };
-                let result_ce = ReferenceExpressionIE::SoftLoad(self.interner.bump().alloc(crate::instantiating::ast::expressions::SoftLoadIE { expr: inner_ce, target_ownership, result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it) }));
+                let result_ce = ReferenceExpressionIE::SoftLoad(self.interner.bump().alloc(SoftLoadIE { expr: inner_ce, target_ownership, result: collapse_coord(self.interner, &result_it) }));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::Destroy(d) => {
-                let crate::typing::ast::expressions::DestroyTE { expr: expr_t, struct_tt, destination_reference_variables } = **d;
+                let DestroyTE { expr: expr_t, struct_tt, destination_reference_variables } = **d;
                 let (_source_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &expr_t);
                 let bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &self.hinputs.get_instantiation_bound_args(struct_tt.id));
                 let struct_it = self.translate_struct_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &struct_tt.id, &bound_args);
-                let dest_ref_vars: Vec<crate::instantiating::ast::ast::ReferenceLocalVariableI<'s, 'i>> =
+                let dest_ref_vars: Vec<ReferenceLocalVariableI<'s, 'i>> =
                     destination_reference_variables.iter().map(|dest_ref_var_t| {
                         self.translate_reference_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, dest_ref_var_t).1
                     }).collect();
-                let result_ce = ReferenceExpressionIE::Destroy(self.interner.bump().alloc(crate::instantiating::ast::expressions::DestroyIE {
+                let result_ce = ReferenceExpressionIE::Destroy(self.interner.bump().alloc(DestroyIE {
                     expr: source_ce,
-                    struct_tt: *self.interner.intern_struct_it_ci(crate::instantiating::ast::types::StructITValI { id: crate::instantiating::region_collapser_individual::collapse_struct_id(self.interner, &struct_it) }),
+                    struct_tt: *self.interner.intern_struct_it_ci(StructITValI { id: collapse_struct_id(self.interner, &struct_it) }),
                     destination_reference_variables: self.interner.bump().alloc_slice_copy(&dest_ref_vars),
                 }));
-                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }) }, result_ce)
+                (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }, result_ce)
             }
             ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray"),
             ReferenceExpressionTE::NewImmRuntimeSizedArray(nrsa_t) => {
-                let crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE { array_type, region: _, size_expr, generator, generator_method } = **nrsa_t;
+                let NewImmRuntimeSizedArrayTE { array_type, region: _, size_expr, generator, generator_method } = **nrsa_t;
                 let rsa_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
                 let (_size_it, size_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &size_expr);
                 let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
@@ -3939,19 +4115,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     _ => panic!("translate_ref_expr NewImmRuntimeSizedArray: local_name not RuntimeSizedArrayNameI"),
                 };
                 let result_ownership = match array_mutability {
-                    crate::instantiating::ast::types::MutabilityI::Mutable => crate::instantiating::ast::types::OwnershipI::Own,
-                    crate::instantiating::ast::types::MutabilityI::Immutable => crate::instantiating::ast::types::OwnershipI::MutableShare,
+                    MutabilityI::Mutable => OwnershipI::Own,
+                    MutabilityI::Immutable => OwnershipI::MutableShare,
                 };
                 let result_it = CoordI {
                     ownership: result_ownership,
-                    kind: crate::instantiating::ast::types::KindIT::RuntimeSizedArrayIT(self.interner.alloc(rsa_it)),
+                    kind: KindIT::RuntimeSizedArrayIT(self.interner.alloc(rsa_it)),
                 };
-                let result_ce = ReferenceExpressionIE::NewImmRuntimeSizedArray(self.interner.alloc(crate::instantiating::ast::expressions::NewImmRuntimeSizedArrayIE {
-                    array_type: crate::instantiating::region_collapser_individual::collapse_runtime_sized_array(self.interner, &rsa_it),
+                let result_ce = ReferenceExpressionIE::NewImmRuntimeSizedArray(self.interner.alloc(NewImmRuntimeSizedArrayIE {
+                    array_type: collapse_runtime_sized_array(self.interner, &rsa_it),
                     size_expr: size_ce,
                     generator: generator_ce,
                     generator_method: generator_prototype_c,
-                    result: crate::instantiating::region_collapser_individual::collapse_coord(self.interner, &result_it),
+                    result: collapse_coord(self.interner, &result_it),
                 }));
                 (result_it, result_ce)
             }
@@ -5115,7 +5291,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _interface_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i, sI> {
         let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = _interface_id_t;
         let last_t_interface = match last_t {
-            INameT::Interface(i) => crate::typing::names::names::IInterfaceNameT::Interface(*i),
+            INameT::Interface(i) => IInterfaceNameT::Interface(*i),
             _ => panic!("translate_interface_id: local_name not Interface"),
         };
         let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|_n| panic!("translate_interface_id: non-empty init_steps not yet ported")).collect();
@@ -5165,7 +5341,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let translated_steps: Vec<INameI<'s, 'i, sI>> = steps.iter().map(|s| Self::translate_name(s)).collect();
                 let impl_name_i = self.translate_impl_name(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &IImplNameT::try_from(last_t).expect("translate_impl_id: non-impl name"));
                 let impl_id_s = IdI { package_coord: module, init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()), local_name: INameI::from(impl_name_i) };
-                let impl_id_n = crate::instantiating::region_collapser_consistent::collapse_impl_id(self.interner, &crate::instantiating::region_counter::count_impl_id_map(&impl_id_s), &impl_id_s);
+                let impl_id_n = collapse_impl_id_consistent(self.interner, &count_impl_id_map(&impl_id_s), &impl_id_s);
                 let bound_args_for_call_unsubstituted = self.hinputs.get_instantiation_bound_args(*_impl_id_t);
                 let rune_to_bound_args_for_new_impl = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &bound_args_for_call_unsubstituted);
                 _monouts.new_impls.push((*_impl_id_t, impl_id_n, rune_to_bound_args_for_new_impl));
@@ -5305,7 +5481,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     ITemplataI::Coord(c) => {
                         let CoordTemplataI { region: _region, coord: CoordI { ownership: inner_ownership, kind: inner_kind } } = *c;
                         let combined_ownership = Self::compose_ownerships(outer_ownership, &inner_ownership, &inner_kind);
-                        CoordTemplataI { region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData }, coord: CoordI { ownership: combined_ownership, kind: inner_kind } }
+                        CoordTemplataI { region: RegionTemplataI { pure_height: 0, _marker: PhantomData }, coord: CoordI { ownership: combined_ownership, kind: inner_kind } }
                     }
                     ITemplataI::Kind(_) => panic!("Unimplemented: translate_coord KindPlaceholder->Kind"),
                     _ => panic!("Unimplemented: translate_coord KindPlaceholder other"),
@@ -5356,7 +5532,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         }
                     };
 //        val newRegion = expectRegionTemplata(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, outerRegion))
-                CoordTemplataI { region: RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData }, coord: CoordI { ownership: new_ownership, kind } }
+                CoordTemplataI { region: RegionTemplataI { pure_height: 0, _marker: PhantomData }, coord: CoordI { ownership: new_ownership, kind } }
             }
         }
     }
@@ -5501,11 +5677,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match _citizen {
             ICitizenTT::Struct(s) => {
                 let s_i = self.translate_struct(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, s, _instantiation_bound_args);
-                ICitizenIT::StructIT(self.interner.intern_struct_it_si(crate::instantiating::ast::types::StructITValI { id: s_i.id }))
+                ICitizenIT::StructIT(self.interner.intern_struct_it_si(StructITValI { id: s_i.id }))
             }
             ICitizenTT::Interface(i) => {
                 let i_i = self.translate_interface(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, i, _instantiation_bound_args);
-                ICitizenIT::InterfaceIT(self.interner.intern_interface_it_si(crate::instantiating::ast::types::InterfaceITValI { id: i_i.id }))
+                ICitizenIT::InterfaceIT(self.interner.intern_interface_it_si(InterfaceITValI { id: i_i.id }))
             }
         }
     }
@@ -5530,7 +5706,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_struct(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _struct: &StructTT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> StructIT<'s, 'i, sI> {
         let StructTT { id: full_name, .. } = _struct;
         let translated_id = self.translate_struct_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, full_name, _instantiation_bound_args);
-        let desired_struct = *self.interner.intern_struct_it_si(crate::instantiating::ast::types::StructITValI { id: translated_id });
+        let desired_struct = *self.interner.intern_struct_it_si(StructITValI { id: translated_id });
         desired_struct
     }
 }
@@ -5654,23 +5830,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             INameT::StaticSizedArray(n) => *n,
             _ => panic!("translate_static_sized_array: local_name not StaticSizedArrayNameT"),
         };
-        let crate::typing::names::names::StaticSizedArrayNameT { template: _, size: size_t, variability: variability_t, arr } = ssa_name_t;
-        let crate::typing::names::names::RawArrayNameT { mutability: mutability_t, element_type: element_type_t, self_region: _ } = *arr;
-        let new_perspective_region_t = RegionT { region: crate::typing::types::types::IRegionT::Default };
-        let _ssa_region = RegionT { region: crate::typing::types::types::IRegionT::Default };
-        let int_templata = crate::instantiating::ast::templata::expect_integer_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &size_t)).value;
-        let variability_templata = crate::instantiating::ast::templata::expect_variability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &variability_t)).variability;
-        let mutability_templata = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &mutability_t)).mutability;
+        let StaticSizedArrayNameT { template: _, size: size_t, variability: variability_t, arr } = ssa_name_t;
+        let RawArrayNameT { mutability: mutability_t, element_type: element_type_t, self_region: _ } = *arr;
+        let new_perspective_region_t = RegionT { region: IRegionT::Default };
+        let _ssa_region = RegionT { region: IRegionT::Default };
+        let int_templata = expect_integer_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &size_t)).value;
+        let variability_templata = expect_variability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &variability_t)).variability;
+        let mutability_templata = expect_mutability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &mutability_t)).mutability;
         let element_type = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &element_type_t);
         let translated_init_steps: Vec<INameI<'s, 'i, sI>> = init_steps.iter().map(|n| Self::translate_name(n)).collect();
-        let local_name_i = INameI::StaticSizedArray(self.interner.alloc(crate::instantiating::ast::names::StaticSizedArrayNameI {
-            template: crate::instantiating::ast::names::StaticSizedArrayTemplateNameI(std::marker::PhantomData),
+        let local_name_i = INameI::StaticSizedArray(self.interner.alloc(StaticSizedArrayNameI {
+            template: StaticSizedArrayTemplateNameI(PhantomData),
             size: int_templata,
             variability: variability_templata,
-            arr: crate::instantiating::ast::names::RawArrayNameI {
+            arr: RawArrayNameI {
                 mutability: mutability_templata,
                 element_type,
-                self_region: crate::instantiating::ast::templata::RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                self_region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
             },
         }));
         let id_i = IdI {
@@ -5739,19 +5915,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             INameT::RuntimeSizedArray(n) => *n,
             _ => panic!("translate_runtime_sized_array: local_name not RuntimeSizedArrayNameT"),
         };
-        let crate::typing::names::names::RuntimeSizedArrayNameT { template: _, arr } = rsa_name_t;
-        let crate::typing::names::names::RawArrayNameT { mutability: mutability_t, element_type: element_type_t, self_region: _ } = *arr;
-        let new_perspective_region_t = RegionT { region: crate::typing::types::types::IRegionT::Default };
-        let _rsa_region = RegionT { region: crate::typing::types::types::IRegionT::Default };
-        let mutability_templata = crate::instantiating::ast::templata::expect_mutability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &mutability_t)).mutability;
+        let RuntimeSizedArrayNameT { template: _, arr } = rsa_name_t;
+        let RawArrayNameT { mutability: mutability_t, element_type: element_type_t, self_region: _ } = *arr;
+        let new_perspective_region_t = RegionT { region: IRegionT::Default };
+        let _rsa_region = RegionT { region: IRegionT::Default };
+        let mutability_templata = expect_mutability_templata(self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &mutability_t)).mutability;
         let element_type = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &new_perspective_region_t, &element_type_t);
         let translated_init_steps: Vec<INameI<'s, 'i, sI>> = init_steps.iter().map(|n| Self::translate_name(n)).collect();
-        let local_name_i = INameI::RuntimeSizedArray(self.interner.intern_runtime_sized_array_name_si(crate::instantiating::ast::names::RuntimeSizedArrayNameI {
-            template: crate::instantiating::ast::names::RuntimeSizedArrayTemplateNameI(std::marker::PhantomData),
-            arr: crate::instantiating::ast::names::RawArrayNameI {
+        let local_name_i = INameI::RuntimeSizedArray(self.interner.intern_runtime_sized_array_name_si(RuntimeSizedArrayNameI {
+            template: RuntimeSizedArrayTemplateNameI(PhantomData),
+            arr: RawArrayNameI {
                 mutability: mutability_templata,
                 element_type,
-                self_region: crate::instantiating::ast::templata::RegionTemplataI { pure_height: 0, _marker: std::marker::PhantomData },
+                self_region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
             },
         }));
         let id_i = IdI {
@@ -5810,12 +5986,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_kind(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, kind_t: &KindT<'s, 't>) -> KindIT<'s, 'i, sI> {
         match kind_t {
-            KindT::Int(int_t) => KindIT::IntIT(IntIT { bits: int_t.bits, _marker: std::marker::PhantomData }),
-            KindT::Bool(_) => KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }),
-            KindT::Float(_) => KindIT::FloatIT(FloatIT { _marker: std::marker::PhantomData }),
-            KindT::Void(_) => KindIT::VoidIT(VoidIT { _marker: std::marker::PhantomData }),
-            KindT::Str(_) => KindIT::StrIT(StrIT { _marker: std::marker::PhantomData }),
-            KindT::Never(never_t) => KindIT::NeverIT(NeverIT { from_break: never_t.from_break, _marker: std::marker::PhantomData }),
+            KindT::Int(int_t) => KindIT::IntIT(IntIT { bits: int_t.bits, _marker: PhantomData }),
+            KindT::Bool(_) => KindIT::BoolIT(BoolIT { _marker: PhantomData }),
+            KindT::Float(_) => KindIT::FloatIT(FloatIT { _marker: PhantomData }),
+            KindT::Void(_) => KindIT::VoidIT(VoidIT { _marker: PhantomData }),
+            KindT::Str(_) => KindIT::StrIT(StrIT { _marker: PhantomData }),
+            KindT::Never(never_t) => KindIT::NeverIT(NeverIT { from_break: never_t.from_break, _marker: PhantomData }),
             KindT::KindPlaceholder(_p) => panic!("Unimplemented: translate_kind KindPlaceholder"),
             KindT::Struct(s) => {
                 let bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(s.id));
@@ -5918,15 +6094,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_templata(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, templata_t: &ITemplataT<'s, 't>) -> ITemplataI<'s, 'i, sI> {
         let result = match templata_t {
             ITemplataT::Placeholder(p) => {
-                let crate::typing::templata::templata::PlaceholderTemplataT { id: n, tyype: _ } = **p;
+                let PlaceholderTemplataT { id: n, tyype: _ } = **p;
                 *_substitutions.get(&n).expect("translate_templata Placeholder: substitution missing")
             }
-            ITemplataT::Integer(value) => ITemplataI::Integer(IntegerTemplataI { value: *value, _marker: std::marker::PhantomData }),
+            ITemplataT::Integer(value) => ITemplataI::Integer(IntegerTemplataI { value: *value, _marker: PhantomData }),
             ITemplataT::Boolean(_) => panic!("Unimplemented: translate_templata Boolean"),
             ITemplataT::String(_) => panic!("Unimplemented: translate_templata String"),
             ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
-            ITemplataT::Mutability(m) => ITemplataI::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability: Self::translate_mutability(&m.mutability), _marker: std::marker::PhantomData }),
-            ITemplataT::Variability(v) => ITemplataI::Variability(crate::instantiating::ast::templata::VariabilityTemplataI { variability: Self::translate_variability(&v.variability), _marker: std::marker::PhantomData }),
+            ITemplataT::Mutability(m) => ITemplataI::Mutability(MutabilityTemplataI { mutability: Self::translate_mutability(&m.mutability), _marker: PhantomData }),
+            ITemplataT::Variability(v) => ITemplataI::Variability(VariabilityTemplataI { variability: Self::translate_variability(&v.variability), _marker: PhantomData }),
             ITemplataT::Kind(_) => panic!("Unimplemented: translate_templata Kind"),
             _ => panic!("Unimplemented: translate_templata other"),
         };
@@ -5967,27 +6143,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_var_name(interner: &InstantiatingInterner<'s, 'i>, name: &IVarNameT<'s, 't>) -> IVarNameI<'s, 'i, sI> {
         match name {
-            IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_si(TypingPassFunctionResultVarNameI(std::marker::PhantomData))),
-            IVarNameT::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_si(CodeVarNameI { _marker: std::marker::PhantomData, name: x.name })),
-            IVarNameT::ClosureParam(crate::typing::names::names::ClosureParamNameT { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_si(crate::instantiating::ast::names::ClosureParamNameI { _marker: std::marker::PhantomData, code_location: *code_location })),
-            IVarNameT::TypingPassBlockResultVar(crate::typing::names::names::TypingPassBlockResultVarNameT { life: crate::typing::ast::ast::LocationInFunctionEnvironmentT { path, .. } }) => {
-                IVarNameI::TypingPassBlockResultVar(interner.intern_typing_pass_block_result_var_name_si(crate::instantiating::ast::names::TypingPassBlockResultVarNameI {
-                    _marker: std::marker::PhantomData,
-                    life: crate::instantiating::ast::ast::LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+            IVarNameT::TypingPassFunctionResultVar(_) => IVarNameI::TypingPassFunctionResultVar(interner.intern_typing_pass_function_result_var_name_si(TypingPassFunctionResultVarNameI(PhantomData))),
+            IVarNameT::CodeVar(x) => IVarNameI::CodeVar(interner.intern_code_var_name_si(CodeVarNameI { _marker: PhantomData, name: x.name })),
+            IVarNameT::ClosureParam(ClosureParamNameT { code_location, .. }) => IVarNameI::ClosureParam(interner.intern_closure_param_name_si(ClosureParamNameI { _marker: PhantomData, code_location: *code_location })),
+            IVarNameT::TypingPassBlockResultVar(TypingPassBlockResultVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
+                IVarNameI::TypingPassBlockResultVar(interner.intern_typing_pass_block_result_var_name_si(TypingPassBlockResultVarNameI {
+                    _marker: PhantomData,
+                    life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
-            IVarNameT::TypingPassTemporaryVar(crate::typing::names::names::TypingPassTemporaryVarNameT { life: crate::typing::ast::ast::LocationInFunctionEnvironmentT { path, .. } }) => {
-                IVarNameI::TypingPassTemporaryVar(interner.intern_typing_pass_temporary_var_name_si(crate::instantiating::ast::names::TypingPassTemporaryVarNameI {
-                    _marker: std::marker::PhantomData,
-                    life: crate::instantiating::ast::ast::LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
+            IVarNameT::TypingPassTemporaryVar(TypingPassTemporaryVarNameT { life: LocationInFunctionEnvironmentT { path, .. } }) => {
+                IVarNameI::TypingPassTemporaryVar(interner.intern_typing_pass_temporary_var_name_si(TypingPassTemporaryVarNameI {
+                    _marker: PhantomData,
+                    life: LocationInFunctionEnvironmentI { path: interner.alloc_slice_from_vec(path.to_vec()) },
                 }))
             }
-            IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(interner.intern_constructing_member_name_si(crate::instantiating::ast::names::ConstructingMemberNameI { _marker: std::marker::PhantomData, name: x.name })),
-            IVarNameT::Iterable(crate::typing::names::names::IterableNameT { range, .. }) => IVarNameI::Iterable(interner.intern_iterable_name_si(crate::instantiating::ast::names::IterableNameI { _marker: std::marker::PhantomData, range: *range })),
-            IVarNameT::Iterator(crate::typing::names::names::IteratorNameT { range, .. }) => IVarNameI::Iterator(interner.intern_iterator_name_si(crate::instantiating::ast::names::IteratorNameI { _marker: std::marker::PhantomData, range: *range })),
-            IVarNameT::IterationOption(crate::typing::names::names::IterationOptionNameT { range, .. }) => IVarNameI::IterationOption(interner.intern_iteration_option_name_si(crate::instantiating::ast::names::IterationOptionNameI { _marker: std::marker::PhantomData, range: *range })),
-            IVarNameT::MagicParam(crate::typing::names::names::MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_si(crate::instantiating::ast::names::MagicParamNameI { _marker: std::marker::PhantomData, code_location_2: *code_location2 })),
-            IVarNameT::Self_(_) => IVarNameI::Self_(interner.intern_self_name_si(crate::instantiating::ast::names::SelfNameI(std::marker::PhantomData))),
+            IVarNameT::ConstructingMember(x) => IVarNameI::ConstructingMember(interner.intern_constructing_member_name_si(ConstructingMemberNameI { _marker: PhantomData, name: x.name })),
+            IVarNameT::Iterable(IterableNameT { range, .. }) => IVarNameI::Iterable(interner.intern_iterable_name_si(IterableNameI { _marker: PhantomData, range: *range })),
+            IVarNameT::Iterator(IteratorNameT { range, .. }) => IVarNameI::Iterator(interner.intern_iterator_name_si(IteratorNameI { _marker: PhantomData, range: *range })),
+            IVarNameT::IterationOption(IterationOptionNameT { range, .. }) => IVarNameI::IterationOption(interner.intern_iteration_option_name_si(IterationOptionNameI { _marker: PhantomData, range: *range })),
+            IVarNameT::MagicParam(MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_si(MagicParamNameI { _marker: PhantomData, code_location_2: *code_location2 })),
+            IVarNameT::Self_(_) => IVarNameI::Self_(interner.intern_self_name_si(SelfNameI(PhantomData))),
             _ => panic!("Unimplemented: translate_var_name other"),
         }
     }
@@ -6018,10 +6194,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match _func_template_name_t {
             IFunctionTemplateNameT::FunctionTemplate(ftn) => {
                 let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = **ftn;
-                IFunctionTemplateNameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
+                IFunctionTemplateNameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: PhantomData, human_name, code_location: code_loc }))
             }
             #[allow(unreachable_patterns)]
-            other => panic!("translate_function_template_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+            other => panic!("translate_function_template_name: unimplemented variant {:?}", discriminant(other)),
         }
     }
 }
@@ -6042,7 +6218,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = *function_template_name_t;
                 IFunctionNameI::Function(
                     self.interner.intern_function_name_x_si(FunctionNameIX {
-                        template: FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc },
+                        template: FunctionTemplateNameI { _marker: PhantomData, human_name, code_location: code_loc },
                         template_args: self.interner.alloc_slice_from_vec(
                             template_args.iter().map(|template_arg| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, template_arg)).collect::<Vec<_>>()),
                         parameters: self.interner.alloc_slice_from_vec(
@@ -6050,11 +6226,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }))
             }
             IFunctionNameT::ForwarderFunction(n) => {
-                let crate::typing::names::names::ForwarderFunctionNameT { template, inner } = *n;
-                let crate::typing::names::names::ForwarderFunctionTemplateNameT { inner: inner_template, index } = *template;
+                let ForwarderFunctionNameT { template, inner } = *n;
+                let ForwarderFunctionTemplateNameT { inner: inner_template, index } = *template;
                 IFunctionNameI::ForwarderFunction(
-                    self.interner.intern_forwarder_function_name_si(crate::instantiating::ast::names::ForwarderFunctionNameI {
-                        template: *self.interner.intern_forwarder_function_template_name_si(crate::instantiating::ast::names::ForwarderFunctionTemplateNameI {
+                    self.interner.intern_forwarder_function_name_si(ForwarderFunctionNameI {
+                        template: *self.interner.intern_forwarder_function_template_name_si(ForwarderFunctionTemplateNameI {
                             inner: self.translate_function_template_name(&inner_template),
                             index,
                         }),
@@ -6071,11 +6247,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }))
             }
             IFunctionNameT::FunctionBound(fbn) => {
-                let crate::typing::names::names::FunctionBoundNameT { template, template_args, parameters: params, .. } = *fbn;
-                let crate::typing::names::names::FunctionBoundTemplateNameT { human_name, .. } = *template;
+                let FunctionBoundNameT { template, template_args, parameters: params, .. } = *fbn;
+                let FunctionBoundTemplateNameT { human_name, .. } = *template;
                 IFunctionNameI::FunctionBound(
                     self.interner.intern_function_bound_name_si(FunctionBoundNameI {
-                        template: FunctionBoundTemplateNameI { _marker: std::marker::PhantomData, human_name },
+                        template: FunctionBoundTemplateNameI { _marker: PhantomData, human_name },
                         template_args: self.interner.alloc_slice_from_vec(
                             template_args.iter().map(|template_arg| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, template_arg)).collect::<Vec<_>>()),
                         parameters: self.interner.alloc_slice_from_vec(
@@ -6083,13 +6259,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     }))
             }
             IFunctionNameT::AnonymousSubstructConstructor(n) => {
-                let crate::typing::names::names::AnonymousSubstructConstructorNameT { template, template_args, parameters: params, .. } = *n;
+                let AnonymousSubstructConstructorNameT { template, template_args, parameters: params, .. } = *n;
                 let inner_template_name_i = match self.translate_name_substituting(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &INameT::AnonymousSubstructConstructorTemplate(template)) {
                     INameI::AnonymousSubstructConstructorTemplate(x) => *x,
                     _ => panic!("translate_function_name AnonymousSubstructConstructor: expected AnonymousSubstructConstructorTemplate"),
                 };
                 IFunctionNameI::AnonymousSubstructConstructor(
-                    self.interner.intern_anonymous_substruct_constructor_name_si(crate::instantiating::ast::names::AnonymousSubstructConstructorNameI {
+                    self.interner.intern_anonymous_substruct_constructor_name_si(AnonymousSubstructConstructorNameI {
                         template: inner_template_name_i,
                         template_args: self.interner.alloc_slice_from_vec(template_args.iter().map(|t| self.translate_templata(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, t)).collect::<Vec<_>>()),
                         parameters: self.interner.alloc_slice_from_vec(params.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
@@ -6100,7 +6276,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 IFunctionNameI::LambdaCallFunction(
                     self.interner.intern_lambda_call_function_name_si(LambdaCallFunctionNameI {
                         template: *self.interner.intern_lambda_call_function_template_name_si(LambdaCallFunctionTemplateNameI {
-                            _marker: std::marker::PhantomData,
+                            _marker: PhantomData,
                             code_location: *code_location,
                             param_types: self.interner.alloc_slice_from_vec(param_types_for_generic.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
                         }),
@@ -6193,27 +6369,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_impl_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &IImplNameT<'s, 't>) -> IImplNameI<'s, 'i, sI> {
         match _name {
             IImplNameT::Impl(n) => {
-                let crate::typing::names::names::ImplNameT { template: crate::typing::names::names::ImplTemplateNameT { code_location_s, .. }, template_args, sub_citizen, .. } = **n;
+                let ImplNameT { template: ImplTemplateNameT { code_location_s, .. }, template_args, sub_citizen, .. } = **n;
                 let template_args_i: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
                 let sub_citizen_id = sub_citizen.id();
                 let bound_args_for_callee = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(sub_citizen_id));
                 let sub_citizen_i = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &sub_citizen, &bound_args_for_callee);
-                IImplNameI::Impl(self.interner.intern_impl_name_si(crate::instantiating::ast::names::ImplNameI {
-                    template: crate::instantiating::ast::names::IImplTemplateNameI::ImplTemplate(self.interner.intern_impl_template_name_si(crate::instantiating::ast::names::ImplTemplateNameI { _marker: std::marker::PhantomData, code_location_s: *code_location_s })),
+                IImplNameI::Impl(self.interner.intern_impl_name_si(ImplNameI {
+                    template: IImplTemplateNameI::ImplTemplate(self.interner.intern_impl_template_name_si(ImplTemplateNameI { _marker: PhantomData, code_location_s: *code_location_s })),
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_i.into_iter()),
                     sub_citizen: sub_citizen_i,
                 }))
             }
             IImplNameT::ImplBound(_) => panic!("Unimplemented: translate_impl_name ImplBound"),
             IImplNameT::AnonymousSubstructImpl(n) => {
-                let crate::typing::names::names::AnonymousSubstructImplNameT { template, template_args, sub_citizen, .. } = **n;
-                let crate::typing::names::names::AnonymousSubstructImplTemplateNameT { interface, .. } = *template;
+                let AnonymousSubstructImplNameT { template, template_args, sub_citizen, .. } = **n;
+                let AnonymousSubstructImplTemplateNameT { interface, .. } = *template;
                 let template_args_i: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
                 let sub_citizen_id = sub_citizen.id();
                 let bound_args_for_callee = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &self.hinputs.get_instantiation_bound_args(sub_citizen_id));
                 let sub_citizen_i = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &sub_citizen, &bound_args_for_callee);
-                IImplNameI::AnonymousSubstructImpl(self.interner.intern_anonymous_substruct_impl_name_si(crate::instantiating::ast::names::AnonymousSubstructImplNameI {
-                    template: crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI {
+                IImplNameI::AnonymousSubstructImpl(self.interner.intern_anonymous_substruct_impl_name_si(AnonymousSubstructImplNameI {
+                    template: AnonymousSubstructImplTemplateNameI {
                         interface: self.translate_interface_template_name(&interface),
                     },
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_i.into_iter()),
@@ -6312,27 +6488,27 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match _name {
             IStructNameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name, .. }), template_args, .. }) => {
                 let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &new_perspective_region_t, t)).collect();
-                IStructNameI::Struct(self.interner.intern_struct_name_si(crate::instantiating::ast::names::StructNameI {
-                    template: IStructTemplateNameI::StructTemplate(self.interner.intern_struct_template_name_si(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name: *human_name })),
+                IStructNameI::Struct(self.interner.intern_struct_name_si(StructNameI {
+                    template: IStructTemplateNameI::StructTemplate(self.interner.intern_struct_template_name_si(StructTemplateNameI { _marker: PhantomData, human_name: *human_name })),
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
             IStructNameT::AnonymousSubstruct(AnonymousSubstructNameT { template, template_args, .. }) => {
                 let AnonymousSubstructTemplateNameT { interface, .. } = **template;
                 let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &new_perspective_region_t, t)).collect();
-                IStructNameI::AnonymousSubstruct(self.interner.intern_anonymous_substruct_name_si(crate::instantiating::ast::names::AnonymousSubstructNameI {
-                    template: *self.interner.intern_anonymous_substruct_template_name_si(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI {
+                IStructNameI::AnonymousSubstruct(self.interner.intern_anonymous_substruct_name_si(AnonymousSubstructNameI {
+                    template: *self.interner.intern_anonymous_substruct_template_name_si(AnonymousSubstructTemplateNameI {
                         interface: self.translate_interface_template_name(&interface),
                     }),
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
             IStructNameT::LambdaCitizen(LambdaCitizenNameT { template: LambdaCitizenTemplateNameT { code_location, .. } }) => {
-                IStructNameI::LambdaCitizen(self.interner.intern_lambda_citizen_name_si(crate::instantiating::ast::names::LambdaCitizenNameI {
-                    template: *self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }),
+                IStructNameI::LambdaCitizen(self.interner.intern_lambda_citizen_name_si(LambdaCitizenNameI {
+                    template: *self.interner.intern_lambda_citizen_template_name_si(LambdaCitizenTemplateNameI { _marker: PhantomData, code_location: *code_location }),
                 }))
             }
-            other => panic!("translate_struct_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+            other => panic!("translate_struct_name: unimplemented variant {:?}", discriminant(other)),
         }
     }
 }
@@ -6377,15 +6553,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface_name(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, sI>>, _perspective_region_t: &RegionT, _name: &IInterfaceNameT<'s, 't>) -> IInterfaceNameI<'s, 'i, sI> {
         match _name {
-            IInterfaceNameT::Interface(crate::typing::names::names::InterfaceNameT { template: crate::typing::names::names::InterfaceTemplateNameT { human_namee: human_name, .. }, template_args, .. }) => {
+            IInterfaceNameT::Interface(InterfaceNameT { template: InterfaceTemplateNameT { human_namee: human_name, .. }, template_args, .. }) => {
                 let template_args_si: Vec<ITemplataI<'s, 'i, sI>> = template_args.iter().map(|t| self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, t)).collect();
-                IInterfaceNameI::Interface(self.interner.intern_interface_name_si(crate::instantiating::ast::names::InterfaceNameI {
-                    template: crate::instantiating::ast::names::IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee: *human_name })),
+                IInterfaceNameI::Interface(self.interner.intern_interface_name_si(InterfaceNameI {
+                    template: IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(InterfaceTemplateNameI { _marker: PhantomData, human_namee: *human_name })),
                     template_args: self.interner.bump().alloc_slice_fill_iter(template_args_si.into_iter()),
                 }))
             }
             #[allow(unreachable_patterns)] // mirrors Scala's `case other => vimpl(other)` catch-all; unreachable until more IInterfaceNameT variants migrate
-            other => panic!("translate_interface_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+            other => panic!("translate_interface_name: unimplemented variant {:?}", discriminant(other)),
         }
     }
 }
@@ -6411,11 +6587,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     pub fn translate_interface_template_name(&self, _name: &IInterfaceTemplateNameT<'s, 't>) -> IInterfaceTemplateNameI<'s, 'i, sI> {
         match _name {
-            IInterfaceTemplateNameT::InterfaceTemplate(crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. }) => {
-                IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee: *human_namee }))
+            IInterfaceTemplateNameT::InterfaceTemplate(InterfaceTemplateNameT { human_namee, .. }) => {
+                IInterfaceTemplateNameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(InterfaceTemplateNameI { _marker: PhantomData, human_namee: *human_namee }))
             }
             #[allow(unreachable_patterns)]
-            other => panic!("translate_interface_template_name: unimplemented variant {:?}", std::mem::discriminant(other)),
+            other => panic!("translate_interface_template_name: unimplemented variant {:?}", discriminant(other)),
         }
     }
 }
@@ -6442,47 +6618,47 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             INameT::KindPlaceholder(_) => panic!("translate_name_substituting: KindPlaceholder vwat"),
             INameT::Struct(_) => panic!("Unimplemented: translate_name_substituting Struct"),
             INameT::ForwarderFunctionTemplate(fftn) => {
-                let crate::typing::names::names::ForwarderFunctionTemplateNameT { inner, index } = *fftn;
-                INameI::ForwarderFunctionTemplate(self.interner.intern_forwarder_function_template_name_si(crate::instantiating::ast::names::ForwarderFunctionTemplateNameI {
+                let ForwarderFunctionTemplateNameT { inner, index } = *fftn;
+                INameI::ForwarderFunctionTemplate(self.interner.intern_forwarder_function_template_name_si(ForwarderFunctionTemplateNameI {
                     inner: self.translate_function_template_name(&inner),
                     index,
                 }))
             }
             INameT::AnonymousSubstructConstructorTemplate(astn) => {
-                let crate::typing::names::names::AnonymousSubstructConstructorTemplateNameT { substruct, .. } = *astn;
+                let AnonymousSubstructConstructorTemplateNameT { substruct, .. } = *astn;
                 let substruct_as_name: INameT<'s, 't> = match substruct {
-                    crate::typing::names::names::ICitizenTemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
-                    crate::typing::names::names::ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
-                    crate::typing::names::names::ICitizenTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
-                    crate::typing::names::names::ICitizenTemplateNameT::StructTemplate(x) => x.into(),
-                    crate::typing::names::names::ICitizenTemplateNameT::InterfaceTemplate(x) => x.into(),
-                    crate::typing::names::names::ICitizenTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::StructTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::InterfaceTemplate(x) => x.into(),
+                    ICitizenTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
                 };
                 let translated = self.translate_name_substituting(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &substruct_as_name);
-                let citizen_template_name_i: crate::instantiating::ast::names::ICitizenTemplateNameI<'s, 'i, sI> = crate::instantiating::ast::names::ICitizenTemplateNameI::try_from(translated).unwrap();
-                INameI::AnonymousSubstructConstructorTemplate(self.interner.intern_anonymous_substruct_constructor_template_name_si(crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI { substruct: citizen_template_name_i }))
+                let citizen_template_name_i: ICitizenTemplateNameI<'s, 'i, sI> = ICitizenTemplateNameI::try_from(translated).unwrap();
+                INameI::AnonymousSubstructConstructorTemplate(self.interner.intern_anonymous_substruct_constructor_template_name_si(AnonymousSubstructConstructorTemplateNameI { substruct: citizen_template_name_i }))
             }
             INameT::FunctionTemplate(ftn) => {
                 let FunctionTemplateNameT { human_name, code_location: code_loc, .. } = *ftn;
-                INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: std::marker::PhantomData, human_name, code_location: code_loc }))
+                INameI::FunctionTemplate(self.interner.intern_function_template_name_si(FunctionTemplateNameI { _marker: PhantomData, human_name, code_location: code_loc }))
             }
             INameT::StructTemplate(stn) => {
-                let crate::typing::names::names::StructTemplateNameT { human_name, .. } = *stn;
-                INameI::StructTemplate(self.interner.intern_struct_template_name_si(crate::instantiating::ast::names::StructTemplateNameI { _marker: std::marker::PhantomData, human_name }))
+                let StructTemplateNameT { human_name, .. } = *stn;
+                INameI::StructTemplate(self.interner.intern_struct_template_name_si(StructTemplateNameI { _marker: PhantomData, human_name }))
             }
             INameT::LambdaCitizenTemplate(LambdaCitizenTemplateNameT { code_location, .. }) => {
-                INameI::LambdaCitizenTemplate(self.interner.intern_lambda_citizen_template_name_si(crate::instantiating::ast::names::LambdaCitizenTemplateNameI { _marker: std::marker::PhantomData, code_location: *code_location }))
+                INameI::LambdaCitizenTemplate(self.interner.intern_lambda_citizen_template_name_si(LambdaCitizenTemplateNameI { _marker: PhantomData, code_location: *code_location }))
             }
             INameT::AnonymousSubstructTemplate(astn) => {
-                let crate::typing::names::names::AnonymousSubstructTemplateNameT { interface, .. } = *astn;
-                INameI::AnonymousSubstructTemplate(self.interner.intern_anonymous_substruct_template_name_si(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI {
+                let AnonymousSubstructTemplateNameT { interface, .. } = *astn;
+                INameI::AnonymousSubstructTemplate(self.interner.intern_anonymous_substruct_template_name_si(AnonymousSubstructTemplateNameI {
                     interface: self.translate_interface_template_name(&interface),
                 }))
             }
             INameT::LambdaCitizen(_) => panic!("Unimplemented: translate_name_substituting LambdaCitizen"),
             INameT::InterfaceTemplate(itn) => {
-                let crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. } = *itn;
-                INameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(crate::instantiating::ast::names::InterfaceTemplateNameI { _marker: std::marker::PhantomData, human_namee }))
+                let InterfaceTemplateNameT { human_namee, .. } = *itn;
+                INameI::InterfaceTemplate(self.interner.intern_interface_template_name_si(InterfaceTemplateNameI { _marker: PhantomData, human_namee }))
             }
             INameT::Function(_) | INameT::ForwarderFunction(_) | INameT::ExternFunction(_) | INameT::FunctionBound(_) | INameT::LambdaCallFunction(_) | INameT::AnonymousSubstructConstructor(_) | INameT::PredictedFunction(_) => {
                 let f: IFunctionNameT<'s, 't> = (*name).try_into().unwrap();
@@ -6544,10 +6720,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let sub_citizen_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.sub_citizen.id()));
         let sub_citizen_s = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.sub_citizen, &sub_citizen_bound_args);
-        let sub_citizen_c = crate::instantiating::region_collapser_individual::collapse_citizen(self.interner, &sub_citizen_s);
+        let sub_citizen_c = collapse_citizen(self.interner, &sub_citizen_s);
         let super_interface_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.super_interface));
         let super_interface_s = self.translate_interface_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.super_interface, &super_interface_bound_args);
-        let super_interface_c = crate::instantiating::region_collapser_individual::collapse_interface_id(self.interner, &super_interface_s);
+        let super_interface_c = collapse_interface_id(self.interner, &super_interface_s);
 
         let mutability = *_monouts.interface_to_mutability.get(&super_interface_c).expect("translate_collapsed_impl_definition: superInterfaceC mutability missing");
         if _monouts.impl_to_mutability.contains_key(_impl_id_c) {

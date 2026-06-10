@@ -10,6 +10,7 @@ use crate::parsing::ast::MutabilityP;
 use crate::parsing::ast::VariabilityP;
 use crate::parsing::ast::OwnershipP;
 use crate::postparsing::rules::rules::RuneUsage;
+use crate::postparsing::rune_type_solver::IRuneTypeRuleError;
 /*
 package dev.vale.postparsing
 
@@ -133,15 +134,15 @@ where
   }
 */
 pub fn humanize_rune_type_error<'s>(
-  _code_map: &dyn Fn(crate::utils::range::CodeLocationS<'s>) -> String,
-  error: &crate::postparsing::rune_type_solver::IRuneTypeRuleError<'s>,
+  _code_map: &dyn Fn(CodeLocationS<'s>) -> String,
+  error: &IRuneTypeRuleError<'s>,
 ) -> String {
   match error {
-    crate::postparsing::rune_type_solver::IRuneTypeRuleError::FoundTemplataDidntMatchExpectedType(_) => panic!("implement: humanize_rune_type_error FoundTemplataDidntMatchExpectedType"),
-    crate::postparsing::rune_type_solver::IRuneTypeRuleError::CouldntFindType(e) => {
+    IRuneTypeRuleError::FoundTemplataDidntMatchExpectedType(_) => panic!("implement: humanize_rune_type_error FoundTemplataDidntMatchExpectedType"),
+    IRuneTypeRuleError::CouldntFindType(e) => {
       format!("Couldn't find anything with the name '{}'", humanize_imprecise_name(e.name))
     }
-    crate::postparsing::rune_type_solver::IRuneTypeRuleError::NotEnoughArgumentsForGenericCall(_) => panic!("implement: humanize_rune_type_error NotEnoughArgumentsForGenericCall"),
+    IRuneTypeRuleError::NotEnoughArgumentsForGenericCall(_) => panic!("implement: humanize_rune_type_error NotEnoughArgumentsForGenericCall"),
     _ => panic!("implement: humanize_rune_type_error other"),
   }
 }

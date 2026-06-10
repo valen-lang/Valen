@@ -17,6 +17,7 @@ use crate::parsing::parsed_loader;
 use crate::parsing::vonifier::ParserVonifier;
 use crate::von::printer::VonPrinter;
 use crate::parse_arena::ParseArena;
+use std::collections::HashSet;
 
 /*
 package dev.vale.parsing
@@ -1695,7 +1696,7 @@ where
     FailedParse<'p>,
   > {
     // From Parser.scala line 712: Check for duplicates
-    let unique_packages: std::collections::HashSet<_> = needed_packages.iter().collect();
+    let unique_packages: HashSet<_> = needed_packages.iter().collect();
     assert!(
       unique_packages.len() == needed_packages.len(),
       "Duplicate modules in: {:?}",

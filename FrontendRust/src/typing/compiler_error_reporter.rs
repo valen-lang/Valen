@@ -11,6 +11,7 @@ use crate::typing::templata::templata::ITemplataT;
 use crate::typing::types::types::{CoordT, InterfaceTT, KindT, StructTT};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
+use std::slice::from_ref;
 
 /*
 package dev.vale.typing
@@ -182,7 +183,7 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::CantUseUnstackifiedLocal { range, .. } => *range,
             Self::CantUnstackifyOutsideLocalFromInsideWhile { range, .. } => *range,
             Self::CantRestackifyOutsideLocalFromInsideWhile { range, .. } => *range,
-            Self::FunctionAlreadyExists { new_function_range, .. } => std::slice::from_ref(new_function_range),
+            Self::FunctionAlreadyExists { new_function_range, .. } => from_ref(new_function_range),
             Self::CantMutateFinalMember { range, .. } => *range,
             Self::CantMutateFinalElement { range, .. } => *range,
             Self::CantUseReadonlyReferenceAsReadwrite { range, .. } => *range,

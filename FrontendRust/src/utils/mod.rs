@@ -1,3 +1,4 @@
+use std::result::Result as StdResult;
 // From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
 pub mod arena_index_map;
@@ -10,7 +11,7 @@ pub mod utils;
 pub mod vassert;
 
 /// Result type matching Scala's Result[T, E]
-pub type Result<T, E> = std::result::Result<T, E>;
+pub type Result<T, E> = StdResult<T, E>;
 
 /// Scala's vpass() — a deliberate no-op used as a breakpoint target for debugging.
 #[inline(always)]

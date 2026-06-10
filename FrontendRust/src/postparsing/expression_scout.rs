@@ -34,6 +34,9 @@ use crate::postparsing::loop_post_parser::{scout_each, scout_while};
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
 use crate::postparsing::expressions::ConstantFloatSE;
+use crate::postparsing::expressions::BreakSE;
+use crate::postparsing::expressions::UnletSE;
+use std::collections::HashMap;
 
 /*
 package dev.vale.postparsing
@@ -1972,7 +1975,7 @@ fn scout_expression(
         let mut pattern_lidb = lidb.child();
         let mut rune_to_explicit_type_map = rune_to_explicit_type
           .into_iter()
-          .collect::<std::collections::HashMap<_, _>>();
+          .collect::<HashMap<_, _>>();
         translate_pattern(
           self.scout_arena,
           self.keywords,
@@ -2359,7 +2362,7 @@ fn scout_expression(
     }
     IExpressionPE::Break(break_pe) => {
       let range_s = PostParser::eval_range(&file_coordinate, break_pe.range);
-      let expr = self.scout_arena.alloc(IExpressionSE::Break(crate::postparsing::expressions::BreakSE { range: range_s }));
+      let expr = self.scout_arena.alloc(IExpressionSE::Break(BreakSE { range: range_s }));
       Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr }), VariableUses::empty(), VariableUses::empty()))
     }
     IExpressionPE::Unlet(unlet_pe) => {
@@ -2374,7 +2377,7 @@ fn scout_expression(
           }));
         }
       };
-      let result = self.scout_arena.alloc(IExpressionSE::Unlet(crate::postparsing::expressions::UnletSE { range: range_s, name: var_name_s }));
+      let result = self.scout_arena.alloc(IExpressionSE::Unlet(UnletSE { range: range_s, name: var_name_s }));
       Ok((stack_frame, IScoutResult::NormalResult(NormalResultS { expr: result }), VariableUses::empty().mark_moved(var_name_s), VariableUses::empty()))
     }
     IExpressionPE::Range(range_pe) => {

@@ -69,6 +69,11 @@ use crate::postparsing::rules::rules::IRulexSR;
 use crate::typing::env::function_environment_t::FunctionEnvironmentT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::ast::ast::ParameterT;
+use crate::typing::ast::ast::ICitizenAttributeT;
+use crate::typing::names::names::CitizenTemplateNameT;
+use std::collections::HashSet;
+use std::iter::empty;
+use std::iter::once;
 
 /*
 package dev.vale.typing
@@ -717,8 +722,8 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         descendant: KindT<'s, 't>,
         include_self: bool,
-    ) -> std::collections::HashSet<KindT<'s, 't>> {
-        let mut result: std::collections::HashSet<KindT<'s, 't>> = std::collections::HashSet::new();
+    ) -> HashSet<KindT<'s, 't>> {
+        let mut result: HashSet<KindT<'s, 't>> = HashSet::new();
         if include_self {
             result.insert(descendant);
         }
@@ -779,7 +784,7 @@ where 's: 't,
         param_coords: &'t [CoordT<'s, 't>],
         return_coord: CoordT<'s, 't>,
     ) -> PrototypeTemplataT<'s, 't> {
-        let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
+        let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name, _phantom: PhantomData });
         let pred_name = self.typing_interner.intern_predicted_function_name(PredictedFunctionNameValT { template: tmpl, template_args: &[], parameters: param_coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::PredictedFunction(pred_name));
         let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type: return_coord });
@@ -875,15 +880,15 @@ where 's: 't,
         coords: &'t [CoordT<'s, 't>],
         return_type: CoordT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
+        let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name, _phantom: PhantomData });
         let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: tmpl, template_args: &[], parameters: coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::FunctionBound(bound_name));
         let result = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type });
         // This is a function bound, and there's no such thing as a function bound with function bounds.
         let empty_bounds = self.typing_interner.alloc(InstantiationBoundArgumentsT {
-            rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
-            rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
-            rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
+            rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(empty()),
+            rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(empty()),
+            rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(empty()),
         });
         state.add_instantiation_bounds(self.opts.global_options.sanity_check, self.typing_interner, envs.original_calling_env.denizen_template_id(), result.id, empty_bounds);
         result
@@ -929,7 +934,7 @@ where 's: 't,
         super_kind: KindT<'s, 't>,
     ) -> IsaTemplataT<'s, 't> {
         let tmpl = self.typing_interner.intern_impl_bound_template_name(
-            ImplBoundTemplateNameT { code_location_s: range.begin, _phantom: std::marker::PhantomData });
+            ImplBoundTemplateNameT { code_location_s: range.begin, _phantom: PhantomData });
         let bound_name = self.typing_interner.intern_impl_bound_name(
             ImplBoundNameValT { template: tmpl, template_args: &[] });
         let id = *env.original_calling_env.denizen_id().add_step(
@@ -1599,8 +1604,8 @@ where 's: 't,
             }
             // orderedEntries = orderableEntries.sortBy(_._1.humanName.str)
             orderable_entries.sort_by(|(a, _), (b, _)| {
-                crate::typing::names::names::CitizenTemplateNameT::try_from(*a).unwrap().human_name().0
-                    .cmp(crate::typing::names::names::CitizenTemplateNameT::try_from(*b).unwrap().human_name().0)
+                CitizenTemplateNameT::try_from(*a).unwrap().human_name().0
+                    .cmp(CitizenTemplateNameT::try_from(*b).unwrap().human_name().0)
             });
             let all_entries = orderable_entries.into_iter().chain(unordered_entries.into_iter());
             for (_name, entry) in all_entries {
@@ -2115,7 +2120,7 @@ where 's: 't,
         // vassert(reachableFunctions.toVector.map(_.header.id).distinct.size == reachableFunctions.toVector.map(_.header.id).size)
         {
             let ids: Vec<_> = reachable_functions.iter().map(|f| f.header.id).collect();
-            let distinct: std::collections::HashSet<_> = ids.iter().collect();
+            let distinct: HashSet<_> = ids.iter().collect();
             assert!(ids.len() == distinct.len());
         }
 
@@ -2969,7 +2974,7 @@ where 's: 't,
         let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
         for func_export in coutputs.get_function_exports().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
-            let all_types: Vec<CoordT<'s, 't>> = std::iter::once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
+            let all_types: Vec<CoordT<'s, 't>> = once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
                     let range_t = self.typing_interner.alloc_slice_copy(&[func_export.range]);
@@ -2986,7 +2991,7 @@ where 's: 't,
 
         for function_extern in coutputs.get_function_externs().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(function_extern.extern_placeholdered_id.package_coord).unwrap_or(&empty_kind_map);
-            let all_types: Vec<CoordT<'s, 't>> = std::iter::once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
+            let all_types: Vec<CoordT<'s, 't>> = once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
                     // Method-own and container-inherited template params surface here as
@@ -2996,7 +3001,7 @@ where 's: 't,
                     // actual concrete kind for each monomorphization is what matters for ABI,
                     // and gets checked at instantiation.
                     let kind_is_fine_in_extern_func = match param_type.kind {
-                        KindT::Struct(s) => coutputs.lookup_struct(s.id, self).attributes.iter().any(|a| matches!(a, crate::typing::ast::ast::ICitizenAttributeT::Extern(_))),
+                        KindT::Struct(s) => coutputs.lookup_struct(s.id, self).attributes.iter().any(|a| matches!(a, ICitizenAttributeT::Extern(_))),
                         KindT::KindPlaceholder(_) => true,
                         _ => false,
                     };

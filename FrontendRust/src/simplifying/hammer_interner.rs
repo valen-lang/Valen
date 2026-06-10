@@ -31,6 +31,8 @@ use crate::final_ast::types::{
     StructHT, StructHTValH,
 };
 use crate::final_ast::ast::{IdH, IdHValH, PrototypeH, PrototypeHValH};
+use std::hash::Hash;
+use std::marker::PhantomData;
 
 /// Temporary state (see @TFITCX)
 pub struct HammerInterner<'s, 'h>
@@ -73,12 +75,12 @@ where 's: 'h,
         self.bump.alloc_slice_fill_iter(vec.into_iter())
     }
 
-    pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'h, K, V> {
+    pub fn alloc_index_map<K: Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'h, K, V> {
         ArenaIndexMap::new_in(self.bump)
     }
 
     pub fn alloc_index_map_from_iter<K, V, I>(&self, iter: I) -> ArenaIndexMap<'h, K, V>
-    where K: std::hash::Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
+    where K: Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
     {
         ArenaIndexMap::from_iter_in(iter, self.bump)
     }
@@ -183,7 +185,7 @@ where 's: 'h,
             shortened_name: val.shortened_name,
             fully_qualified_name: val.fully_qualified_name,
             _must_intern: MustIntern(()),
-            _phantom_h: std::marker::PhantomData,
+            _phantom_h: PhantomData,
         };
         let canonical: &'h IdH<'s, 'h> = self.bump.alloc(c);
         let mut inner = self.inner.borrow_mut();
@@ -200,7 +202,6 @@ where 's: 'h,
 #[cfg(all(test, any()))]
 mod tests {
     use super::*;
-    use crate::final_ast::ast::IdH;
 
     // Two structurally equal Vals canonicalize to the same arena pointer.
     #[test]

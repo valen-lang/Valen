@@ -4,6 +4,17 @@ use crate::instantiating::ast::types::{CoordI, KindIT};
 use crate::instantiating::ast::names::{IdI, INameI};
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::instantiating::ast::ast::SignatureI;
+use crate::instantiating::ast::names::RawArrayNameI;
+use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
+use crate::instantiating::ast::names::StaticSizedArrayNameI;
+use crate::instantiating::ast::templata::IntegerTemplataI;
+use crate::instantiating::ast::templata::MutabilityTemplataI;
+use crate::instantiating::ast::templata::VariabilityTemplataI;
+use crate::instantiating::ast::types::MutabilityI;
+use crate::instantiating::ast::types::OwnershipI;
+use crate::instantiating::ast::types::VariabilityI;
+use std::marker::PhantomData;
+use std::mem::discriminant;
 
 /*
 package dev.vale.instantiating
@@ -24,13 +35,13 @@ pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
         ITemplataI::InterfaceDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::Variability(v) => match v.variability {
-            crate::instantiating::ast::types::VariabilityI::Final => "final".to_string(),
-            crate::instantiating::ast::types::VariabilityI::Varying => "vary".to_string(),
+            VariabilityI::Final => "final".to_string(),
+            VariabilityI::Varying => "vary".to_string(),
         },
         ITemplataI::Integer(i) => i.value.to_string(),
         ITemplataI::Mutability(m) => match m.mutability {
-            crate::instantiating::ast::types::MutabilityI::Mutable => "mut".to_string(),
-            crate::instantiating::ast::types::MutabilityI::Immutable => "imm".to_string(),
+            MutabilityI::Mutable => "mut".to_string(),
+            MutabilityI::Immutable => "imm".to_string(),
         },
         ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
@@ -95,12 +106,12 @@ pub fn humanize_coord<'s, 'i, R: Copy + PartialEq>(
     coord: &CoordI<'s, 'i, R>,
 ) -> String {
     let ownership_str = match coord.ownership {
-        crate::instantiating::ast::types::OwnershipI::Own => "",
-        crate::instantiating::ast::types::OwnershipI::MutableShare => "",
-        crate::instantiating::ast::types::OwnershipI::MutableBorrow => "&",
-        crate::instantiating::ast::types::OwnershipI::ImmutableShare => "#",
-        crate::instantiating::ast::types::OwnershipI::ImmutableBorrow => "&#",
-        crate::instantiating::ast::types::OwnershipI::Weak => "weak&",
+        OwnershipI::Own => "",
+        OwnershipI::MutableShare => "",
+        OwnershipI::MutableBorrow => "&",
+        OwnershipI::ImmutableShare => "#",
+        OwnershipI::ImmutableBorrow => "&#",
+        OwnershipI::Weak => "weak&",
     };
     let kind_str = humanize_kind(code_map, &coord.kind);
     ownership_str.to_string() + &kind_str
@@ -229,22 +240,22 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
                 + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
         }
         INameI::StaticSizedArray(n) => {
-            let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
-            let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            let StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
+            let RawArrayNameI { mutability, element_type, self_region: region } = arr;
             "[]<".to_string()
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Integer(crate::instantiating::ast::templata::IntegerTemplataI { value: size, _marker: std::marker::PhantomData })) + ","
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Mutability(crate::instantiating::ast::templata::MutabilityTemplataI { mutability, _marker: std::marker::PhantomData })) + ","
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Variability(crate::instantiating::ast::templata::VariabilityTemplataI { variability, _marker: std::marker::PhantomData })) + ","
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
+                + &humanize_templata(code_map, &ITemplataI::<R>::Integer(IntegerTemplataI { value: size, _marker: PhantomData })) + ","
+                + &humanize_templata(code_map, &ITemplataI::<R>::Mutability(MutabilityTemplataI { mutability, _marker: PhantomData })) + ","
+                + &humanize_templata(code_map, &ITemplataI::<R>::Variability(VariabilityTemplataI { variability, _marker: PhantomData })) + ","
+                + &humanize_templata(code_map, &ITemplataI::<R>::Region(region)) + ">"
+                + &humanize_templata(code_map, &ITemplataI::<R>::Coord(element_type))
         }
         INameI::RuntimeSizedArray(n) => {
-            let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = *n;
-            let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            let RuntimeSizedArrayNameI { template: _, arr } = *n;
+            let RawArrayNameI { mutability, element_type, self_region: region } = arr;
             "[]<".to_string()
-                + (match mutability { crate::instantiating::ast::types::MutabilityI::Immutable => "i", crate::instantiating::ast::types::MutabilityI::Mutable => "m" }) + ","
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Region(region)) + ">"
-                + &humanize_templata(code_map, &crate::instantiating::ast::templata::ITemplataI::<R>::Coord(element_type))
+                + (match mutability { MutabilityI::Immutable => "i", MutabilityI::Mutable => "m" }) + ","
+                + &humanize_templata(code_map, &ITemplataI::<R>::Region(region)) + ">"
+                + &humanize_templata(code_map, &ITemplataI::<R>::Coord(element_type))
         }
         INameI::Iterator(i) => "it:".to_string() + &code_map(i.range.begin),
         INameI::Iterable(i) => "ib:".to_string() + &code_map(i.range.begin),
@@ -264,7 +275,7 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
                 + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
         }
         INameI::Self_(_) => "self".to_string(),
-        other => panic!("humanize_name: unimplemented variant {:?}", std::mem::discriminant(&other)),
+        other => panic!("humanize_name: unimplemented variant {:?}", discriminant(&other)),
     }
 }
 /*

@@ -12,6 +12,17 @@ use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, In
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::final_ast::ast::ProgramH;
+use crate::instantiating::ast::hinputs::HinputsI;
+use crate::lexing::ast::RangeL;
+use crate::lexing::errors::FailedParse;
+use crate::parsing::ast::FileP;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::hinputs_t::HinputsT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 
 /*
 package dev.vale.simplifying
@@ -89,8 +100,8 @@ where 's: 'h, 's: 'i,
   pub packages_to_build: Vec<&'ctx PackageCoordinate<'p>>,
   pub package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   pub options: HammerCompilationOptions,
-  pub instantiated_compilation: crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
-  pub hamuts_cache: Option<&'h crate::final_ast::ast::ProgramH<'s, 'h>>,
+  pub instantiated_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
+  pub hamuts_cache: Option<&'h ProgramH<'s, 'h>>,
   // Scala has `var vonHammerCache: Option[VonHammer]`. Dropped: per
   // typing-pass precedent the VonHammer compiler class was collapsed
   // onto `Hammer` (no separate VonHammer state), so there is nothing
@@ -125,7 +136,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
   pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
     interner: &'ctx HammerInterner<'s, 'h>,
-    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
@@ -166,10 +177,10 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_von_hammer<'a>(&'a self) -> crate::simplifying::hammer::Hammer<'s, 'i, 'h, 'a>
+  pub fn get_von_hammer<'a>(&'a self) -> Hammer<'s, 'i, 'h, 'a>
   where 'ctx: 'a,
   {
-    crate::simplifying::hammer::Hammer {
+    Hammer {
       interner: self.interner,
       keywords: self.keywords,
       scout_arena: self.scout_arena,
@@ -185,7 +196,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_code_map(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, String>, crate::lexing::errors::FailedParse<'p>> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_code_map()
   }
 }
@@ -197,7 +208,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_parseds(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, (crate::parsing::ast::FileP<'p>, Vec<crate::lexing::ast::RangeL>)>, crate::lexing::errors::FailedParse<'p>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.instantiated_compilation.get_parseds()
   }
 }
@@ -209,7 +220,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_vpst_map(&mut self) -> Result<crate::utils::code_hierarchy::FileCoordinateMap<'p, String>, crate::lexing::errors::FailedParse<'p>> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_vpst_map()
   }
 }
@@ -221,7 +232,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_scoutput(&mut self) -> Result<&crate::utils::code_hierarchy::FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.instantiated_compilation.get_scoutput()
   }
 }
@@ -245,7 +256,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+  pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.instantiated_compilation.get_compiler_outputs()
   }
 }
@@ -257,7 +268,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_monouts(&mut self) -> &crate::instantiating::ast::hinputs::HinputsI<'s, 'i> {
+  pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.instantiated_compilation.get_monouts()
   }
 }
@@ -269,7 +280,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+  pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.instantiated_compilation.expect_compiler_outputs()
   }
 }
@@ -281,7 +292,7 @@ where 's: 'h, 's: 'i,
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
-  pub fn get_hamuts(&mut self) -> &'h crate::final_ast::ast::ProgramH<'s, 'h> {
+  pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
     match self.hamuts_cache {
       Some(hamuts) => hamuts,
       None => {

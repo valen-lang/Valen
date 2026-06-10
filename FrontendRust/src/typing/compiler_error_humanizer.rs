@@ -23,6 +23,12 @@ use crate::higher_typing::ast::FunctionA;
 use crate::typing::citizen::struct_compiler::*;
 use crate::utils::code_hierarchy::FileCoordinate;
 use crate::typing::types::types::OwnershipT;
+use crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name;
+use crate::postparsing::post_parser_error_humanizer::humanize_rule;
+use crate::postparsing::post_parser_error_humanizer::humanize_rune;
+use crate::solver::solver_error_humanizer::humanize_failed_solve as solver_humanize_failed_solve;
+use crate::utils::source_code_utils::humanize_package;
+use std::iter::once;
 
 /*
 package dev.vale.typing
@@ -139,10 +145,10 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *result_type }))))
     }
     ICompileErrorT::CouldntFindIdentifierToLoadT { range: _, name } => {
-      format!("Couldn't find anything named `{}`!", crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*name))
+      format!("Couldn't find anything named `{}`!", humanize_imprecise_name(*name))
     }
     ICompileErrorT::CantUseRuneValueAsExpression { range: _, rune } => {
-      format!("Can't use rune `{}` as a value expression. Did you mean a local variable with a similar name?", crate::postparsing::post_parser_error_humanizer::humanize_rune(*rune))
+      format!("Can't use rune `{}` as a value expression. Did you mean a local variable with a similar name?", humanize_rune(*rune))
     }
     ICompileErrorT::WeakableImplingMismatch { range: _, struct_weakable, interface_weakable } => {
       format!("Weakable mismatch in impl: struct {} weakable, but interface {}.",
@@ -190,7 +196,7 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Exported function:\n{}\ndepends on kind:\n{}\nthat wasn't exported from package {}",
         humanize_signature(scout_arena, typing_interner, code_map, **signature),
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
-        crate::utils::source_code_utils::humanize_package(paackage))
+        humanize_package(paackage))
     }
     ICompileErrorT::TypeExportedMultipleTimes { range: _, paackage: _, exports } => {
       let parts: Vec<String> = exports.iter().map(|export| {
@@ -204,13 +210,13 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Extern function {} depends on kind {} that wasn't exported from package {}",
         humanize_signature(scout_arena, typing_interner, code_map, **signature),
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
-        crate::utils::source_code_utils::humanize_package(paackage))
+        humanize_package(paackage))
     }
     ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { range: _, paackage, exported_kind, non_exported_kind } => {
       format!("Exported kind {} depends on kind {} that wasn't exported from package {}",
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *exported_kind }))),
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
-        crate::utils::source_code_utils::humanize_package(paackage))
+        humanize_package(paackage))
     }
     ICompileErrorT::InitializedWrongNumberOfElements { range: _, expected_num_elements, num_elements_initialized } => {
       format!("Supplied {} elements, but expected {}.", num_elements_initialized, expected_num_elements)
@@ -597,7 +603,7 @@ pub fn humanize_find_function_failure<'s, 't>(scout_arena: &ScoutArena<'s>, typi
     format!("Rejected candidates:\n\n{}", parts)
   };
   format!("Couldn't find a suitable function {}({}). {}",
-    crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*name),
+    humanize_imprecise_name(*name),
     args_str,
     tail)
 }
@@ -936,18 +942,18 @@ pub fn humanize_rule_error<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner
   }
 */
 pub fn humanize_candidate_and_failed_solve<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, result: &FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
-  let (text, _line_begins) = crate::solver::solver_error_humanizer::humanize_failed_solve(
+  let (text, _line_begins) = solver_humanize_failed_solve(
     |loc| code_map(*loc),
     |a, b| lines_between(*a, *b),
     |loc| line_range_containing(*loc),
     |loc| line_containing(*loc),
-    |rune| crate::postparsing::post_parser_error_humanizer::humanize_rune(rune),
+    |rune| humanize_rune(rune),
     |t| humanize_templata(scout_arena, typing_interner, &|loc| code_map(loc), t),
     |err| humanize_rule_error(scout_arena, typing_interner, code_map, lines_between, line_range_containing, line_containing, *err),
     |rule: &IRulexSR<'s>| *rule.range(),
     |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| (u.rune, u.range)).collect(),
     |rule: &IRulexSR<'s>| rule.rune_usages().iter().map(|u| u.rune).collect(),
-    |rule: &IRulexSR<'s>| crate::postparsing::post_parser_error_humanizer::humanize_rule(rule),
+    |rule: &IRulexSR<'s>| humanize_rule(rule),
     result,
   );
   text
@@ -1121,7 +1127,7 @@ fn humanize_kind<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingI
     KindT::Void(_) => "void".to_string(),
     KindT::Float(_) => "float".to_string(),
     KindT::OverloadSet(s) => format!("(overloads: {})",
-      crate::postparsing::post_parser_error_humanizer::humanize_imprecise_name(*s.name)),
+      humanize_imprecise_name(*s.name)),
     KindT::Interface(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
     KindT::Struct(name) => humanize_id(scout_arena, typing_interner, code_map, name.id, containing_region),
     KindT::RuntimeSizedArray(rsa) => panic!("implement: humanize_kind RuntimeSizedArray"),
@@ -1371,7 +1377,7 @@ fn humanize_generic_args<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: 
       Some(_) => "_".to_string(),
     };
     let parts = init.iter().map(|t| humanize_templata(scout_arena, typing_interner, code_map, *t))
-      .chain(std::iter::once(last_str))
+      .chain(once(last_str))
       .collect::<Vec<_>>().join(", ");
     format!("<{}>", parts)
   }

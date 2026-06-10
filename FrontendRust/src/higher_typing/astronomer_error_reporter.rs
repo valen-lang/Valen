@@ -1,6 +1,8 @@
 use crate::utils::range::RangeS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::rune_type_solver::RuneTypeSolveError;
+use std::any::Any;
+use std::collections::HashSet;
 // VISTODO: rename
 /*
 package dev.vale.highertyping
@@ -23,7 +25,7 @@ case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException 
 // mig: impl CompileErrorExceptionA
 impl<'s> CompileErrorExceptionA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 /*
@@ -95,7 +97,7 @@ case class TooManyMatchingTypesA(range: RangeS, name: IImpreciseNameS) extends I
 // mig: impl TooManyMatchingTypesA
 impl<'s> TooManyMatchingTypesA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -122,7 +124,7 @@ case class CouldntFindTypeA(range: RangeS, name: IImpreciseNameS) extends ILooku
 // mig: impl CouldntFindTypeA
 impl<'s> CouldntFindTypeA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -149,7 +151,7 @@ case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends 
 // mig: impl CouldntSolveRulesA
 impl<'s> CouldntSolveRulesA<'s> {
 // mig: fn equals
-pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -167,7 +169,7 @@ pub fn hash_code(&self) -> i32 {
 // mig: struct CircularModuleDependency
 pub struct CircularModuleDependency<'s> {
     pub range: RangeS<'s>,
-    pub modules: std::collections::HashSet<String>,
+    pub modules: HashSet<String>,
 }
 /*
 case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();

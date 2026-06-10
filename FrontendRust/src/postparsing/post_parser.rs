@@ -62,6 +62,12 @@ use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::ast::ExportS;
 use crate::postparsing::ast::SealedS;
 use crate::parsing::ast::InterfaceP;
+use crate::parsing::ast::FunctionP;
+use crate::postparsing::ast::ExternS;
+use crate::postparsing::function_scout::ParentCitizen;
+use crate::postparsing::identifiability_solver::solve_identifiability;
+use crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune;
+use std::collections::HashSet;
 
 /*
 package dev.vale.postparsing
@@ -670,7 +676,7 @@ pub(crate) fn translate_imprecise_name<'s, 'p>(
 fn determine_denizen_type<'s>(
   _template_result_type: ITemplataType<'s>,
   _identifying_runes_s: &[IRuneS<'s>],
-  _rune_a_to_type: &std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  _rune_a_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
 ) -> Result<ITemplataType<'s>, IRuneS<'s>> {
   panic!("Unimplemented determine_denizen_type");
 }
@@ -1253,7 +1259,7 @@ fn scout_impl(
   // Mirrors:
   // RulePUtils.getOrderedRuneDeclarationsFromRulexesWithDuplicates(templateRulesP)
   let runes_from_rules =
-    crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates(
+    get_ordered_rune_declarations_from_rulexes_with_duplicates(
       template_rules_p,
     )
     .into_iter()
@@ -1336,7 +1342,7 @@ fn scout_impl(
 
   {
     let mut child_lidb = lidb.child();
-    crate::postparsing::rules::rule_scout::translate_rulexes(self.scout_arena,
+    translate_rulexes(self.scout_arena,
       self.keywords,
       impl_env.clone(),
       &mut child_lidb,
@@ -1359,7 +1365,7 @@ fn scout_impl(
 
   let struct_rune = {
     let mut child_lidb = lidb.child();
-    crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
+    translate_maybe_type_into_rune(
       self.scout_arena,
         self.keywords,
       impl_env.clone(),
@@ -1373,7 +1379,7 @@ fn scout_impl(
 
   let interface_rune = {
     let mut child_lidb = lidb.child();
-    crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
+    translate_maybe_type_into_rune(
       self.scout_arena,
         self.keywords,
       impl_env.clone(),
@@ -1926,7 +1932,7 @@ fn predict_mutability(
       ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
     ));
 
-    let mut internal_methods_p = Vec::<&'p crate::parsing::ast::FunctionP<'p>>::new();
+    let mut internal_methods_p = Vec::<&'p FunctionP<'p>>::new();
     let members_s = head
       .members
       .contents
@@ -2018,7 +2024,7 @@ fn predict_mutability(
           .into_iter()
           .map(|usage| usage.rune.clone())
       }))
-      .collect::<std::collections::HashSet<_>>();
+      .collect::<HashSet<_>>();
     let header_rune_to_predicted_type = self.scout_arena.alloc_index_map_from_iter(
       rune_to_predicted_type
         .iter()
@@ -2076,7 +2082,7 @@ fn predict_mutability(
     let generic_parameters_s_arena: &'s [&'s GenericParameterS<'s>] = self.scout_arena.alloc_slice_from_vec(generic_parameters_s.clone());
     let internal_methods_s_vec: Vec<&'s FunctionS<'s>> = internal_methods_p.iter().map(|method| -> Result<&'s FunctionS<'s>, ICompileErrorS<'s>> {
       self.scout_interface_member(
-        crate::postparsing::function_scout::ParentCitizen {
+        ParentCitizen {
           citizen_is_interface: false,
           citizen_env: struct_env.clone(),
           citizen_generic_params: generic_parameters_s_arena,
@@ -2285,7 +2291,7 @@ fn translate_citizen_attributes(
         })
       }
       IAttributeP::ExternAttribute(_) => {
-        ICitizenAttributeS::Extern(crate::postparsing::ast::ExternS {
+        ICitizenAttributeS::Extern(ExternS {
           package_coord: file.package_coord,
         })
       }
@@ -2324,7 +2330,7 @@ pub(crate) fn predict_rune_types(
   ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   ICompileErrorS<'s>,
 > {
-  let mut grouped_explicit_types = std::collections::HashMap::<
+  let mut grouped_explicit_types = HashMap::<
     IRuneS<'s>,
     Vec<ITemplataType<'s>>,
   >::new();
@@ -2406,7 +2412,7 @@ pub(crate) fn check_identifiability(
   identifying_runes_s: &[IRuneS<'s>],
   rules_s: &'s [IRulexSR<'s>],
 ) -> Result<(), ICompileErrorS<'s>> {
-  match crate::postparsing::identifiability_solver::solve_identifiability(
+  match solve_identifiability(
     self.global_options.sanity_check,
     self.global_options.use_optimized_solver,
     self.scout_arena,
@@ -2623,7 +2629,7 @@ pub(crate) fn check_identifiability(
     let mut internal_methods = Vec::new();
     for member in interface.members {
       internal_methods.push(self.scout_interface_member(
-        crate::postparsing::function_scout::ParentCitizen {
+        ParentCitizen {
           citizen_is_interface: true,
           citizen_env: interface_env.clone(),
           citizen_generic_params: generic_parameters_s,

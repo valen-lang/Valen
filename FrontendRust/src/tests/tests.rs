@@ -8,6 +8,8 @@ object Tests {
 use std::collections::HashMap;
 use std::path::PathBuf;
 use crate::utils::code_hierarchy::PackageCoordinate;
+use std::fs::File;
+use std::io::read_to_string;
 
 // mig: fn load
 // Rust adaptation: Scala's `vassert(source != null)` is dropped — `read_to_string`
@@ -16,12 +18,12 @@ pub fn load(resource_filename: &str) -> Option<String> {
   let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     .join("src/tests")
     .join(resource_filename);
-  let stream = std::fs::File::open(&full_path);
+  let stream = File::open(&full_path);
   if stream.is_err() {
     return None;
   }
   let stream = stream.unwrap();
-  let source = std::io::read_to_string(stream).unwrap();
+  let source = read_to_string(stream).unwrap();
   Some(source)
 }
 /*

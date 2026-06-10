@@ -14,6 +14,12 @@ use std::marker::PhantomData;
 
 use crate::final_ast::ast::{IdH, PrototypeH};
 use crate::final_ast::types::*;
+use crate::final_ast::types::CoordH;
+use crate::final_ast::types::IntHT;
+use crate::final_ast::types::KindHT;
+use crate::final_ast::types::LocationH;
+use crate::final_ast::types::OwnershipH;
+use crate::final_ast::types::VoidHT;
 
 /*
 package dev.vale.finalast
@@ -97,7 +103,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::StructToInterfaceUpcastH(u) => {
             let src = u.source_expression.result_type();
-            CoordH { ownership: src.ownership, location: src.location, kind: crate::final_ast::types::KindHT::InterfaceHT(u.target_interface) }
+            CoordH { ownership: src.ownership, location: src.location, kind: KindHT::InterfaceHT(u.target_interface) }
         }
         ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH"),
         ExpressionH::LocalStoreH(s) => s.local.type_h,
@@ -134,16 +140,16 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
         ExpressionH::NewImmRuntimeSizedArrayH(n) => n.result_type,
         ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,
-        ExpressionH::PushRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
+        ExpressionH::PushRuntimeSizedArrayH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,
         ExpressionH::StaticArrayFromCallableH(s) => s.result_type,
-        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
+        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
-        ExpressionH::DestroyMutRuntimeSizedArrayH(_) => crate::final_ast::types::CoordH { ownership: crate::final_ast::types::OwnershipH::MutableShareH, location: crate::final_ast::types::LocationH::InlineH, kind: crate::final_ast::types::KindHT::VoidHT(crate::final_ast::types::VoidHT) },
+        ExpressionH::DestroyMutRuntimeSizedArrayH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
         ExpressionH::NewStructH(n) => n.result_type,
-        ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
-        ExpressionH::ArrayCapacityH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(crate::final_ast::types::IntHT { bits: 32 }) },
+        ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) },
+        ExpressionH::ArrayCapacityH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) },
         ExpressionH::BorrowToWeakH(b) => CoordH { ownership: OwnershipH::WeakH, location: LocationH::YonderH, kind: b.ref_expression.result_type().kind },
         ExpressionH::IsSameInstanceH(x) => x.result_type(),
         ExpressionH::AsSubtypeH(a) => a.result_type,
@@ -163,7 +169,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_struct_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
-            crate::final_ast::types::KindHT::StructHT(_) => *self,
+            KindHT::StructHT(_) => *self,
             _ => panic!("expect_struct_access: not a struct"),
         }
     }
@@ -197,7 +203,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_runtime_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
-            crate::final_ast::types::KindHT::RuntimeSizedArrayHT(_) => *self,
+            KindHT::RuntimeSizedArrayHT(_) => *self,
             _ => panic!("expect_runtime_sized_array_access: not a runtime sized array"),
         }
     }
@@ -215,7 +221,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_static_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
-            crate::final_ast::types::KindHT::StaticSizedArrayHT(_) => *self,
+            KindHT::StaticSizedArrayHT(_) => *self,
             _ => panic!("expect_static_sized_array_access: not a static sized array"),
         }
     }
@@ -233,7 +239,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_int_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
-            crate::final_ast::types::KindHT::IntHT(_) => *self,
+            KindHT::IntHT(_) => *self,
             _ => panic!("expect_int_access: not an int"),
         }
     }
@@ -368,7 +374,7 @@ override def equals(obj: Any): Boolean = vcurious();
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrH<'s, 'h> where 's: 'h {
     pub value: &'h str,
-    pub _marker: std::marker::PhantomData<&'s ()>,
+    pub _marker: PhantomData<&'s ()>,
 }
 /*
 case class ConstantStrH(

@@ -22,6 +22,11 @@ use crate::typing::ast::ast::{PrototypeT, SignatureT};
 use crate::typing::names::names::INameT;
 use crate::typing::names::names::IdT;
 use crate::typing::types::types::{CoordT, KindT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::InterfaceTT;
+use crate::typing::types::types::RuntimeSizedArrayTT;
+use crate::typing::types::types::StaticSizedArrayTT;
+use crate::typing::types::types::StructTT;
 
 /// Re-intern a typing-pass name into the instantiating arena. Region mode = `sI`.
 pub fn name<'s, 't, 'i>(
@@ -80,7 +85,7 @@ where 's: 't, 's: 'i {
 /// Re-intern a typing-pass StructTT payload as a StructIT.
 pub fn struct_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
-    _s: &'t crate::typing::types::types::StructTT<'s, 't>,
+    _s: &'t StructTT<'s, 't>,
 ) -> &'i StructIT<'s, 'i, sI>
 where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::struct_payload")
@@ -89,7 +94,7 @@ where 's: 't, 's: 'i {
 /// Re-intern a typing-pass InterfaceTT payload as an InterfaceIT.
 pub fn interface_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
-    _x: &'t crate::typing::types::types::InterfaceTT<'s, 't>,
+    _x: &'t InterfaceTT<'s, 't>,
 ) -> &'i InterfaceIT<'s, 'i, sI>
 where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::interface_payload")
@@ -98,7 +103,7 @@ where 's: 't, 's: 'i {
 /// Re-intern a typing-pass StaticSizedArrayTT payload.
 pub fn static_sized_array_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
-    _x: &'t crate::typing::types::types::StaticSizedArrayTT<'s, 't>,
+    _x: &'t StaticSizedArrayTT<'s, 't>,
 ) -> &'i StaticSizedArrayIT<'s, 'i, sI>
 where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::static_sized_array_payload")
@@ -107,7 +112,7 @@ where 's: 't, 's: 'i {
 /// Re-intern a typing-pass RuntimeSizedArrayTT payload.
 pub fn runtime_sized_array_payload<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
-    _x: &'t crate::typing::types::types::RuntimeSizedArrayTT<'s, 't>,
+    _x: &'t RuntimeSizedArrayTT<'s, 't>,
 ) -> &'i RuntimeSizedArrayIT<'s, 'i, sI>
 where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::runtime_sized_array_payload")
@@ -116,7 +121,7 @@ where 's: 't, 's: 'i {
 /// Re-intern a typing-pass Templata.
 pub fn templata<'s, 't, 'i>(
     _intr: &InstantiatingInterner<'s, 'i>,
-    _t: crate::typing::templata::templata::ITemplataT<'s, 't>,
+    _t: ITemplataT<'s, 't>,
 ) -> () // ITemplataI<'s, 'i, sI> when templata.rs is migrated
 where 's: 't, 's: 'i {
     panic!("Unimplemented: reintern::templata")

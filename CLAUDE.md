@@ -114,6 +114,10 @@ One file at a time:
 
 Loops over read-only scripts (analysis, transforms-to-tmp) auto-allow; loops including the cp+mv apply step reject. Recover from a failed apply: `mv ./tmp/backup/<TS>/<BASENAME> <SRC>`.
 
+### Reviewing diffs
+
+You **MUST** look at the **ENTIRE** diff every time before applying. **NO `head`, `tail`, or `grep` on the diff output** — those truncate and hide the changes you need to judge. Run `diff -u <SRC> ./tmp/working/<BASENAME>` unpiped and read every line. Cargo will catch naming/syntax errors but not script-introduced semantic renames to a wrong-but-compatible symbol; the only defense is reading the full diff.
+
 ## Build & Run Convention
 
 Always pipe `cargo run`, `cargo test`, `cargo build`, `cargo check`, and all `sbt` output into a fixed file in `./tmp/` (use the same file for the entire session/project, e.g. `./tmp/refactor-project.txt`). Come up with a name instead of refactor-project.txt, and then use the same file for the rest of the session.

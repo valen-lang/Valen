@@ -19,6 +19,9 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::ICompileErrorS;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -41,7 +44,7 @@ pub struct TypingPassOptions<'s> {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub tree_shaking_enabled: bool,
-  pub _phantom: std::marker::PhantomData<&'s ()>,
+  pub _phantom: PhantomData<&'s ()>,
 }
 /*
 case class TypingPassOptions(
@@ -92,7 +95,7 @@ where 's: 't,
       global_options,
       debug_out: instantiator_options.debug_out.clone(),
       tree_shaking_enabled: true,
-      _phantom: std::marker::PhantomData,
+      _phantom: PhantomData,
     };
 
     let higher_typing_compilation = HigherTypingCompilation::new(
@@ -139,7 +142,7 @@ pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedPa
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = higherTypingCompilation.getVpstMap()
 */
-pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
   self.higher_typing_compilation.get_scoutput()
 }
 /*

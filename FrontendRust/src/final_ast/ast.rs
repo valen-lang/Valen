@@ -16,6 +16,17 @@ use crate::final_ast::types::*;
 use crate::final_ast::instructions::ExpressionH;
 use crate::simplifying::hammer_interner::MustIntern;
 use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::final_ast::types::InterfaceHT;
+use crate::final_ast::types::InterfaceHTValH;
+use crate::final_ast::types::StructHT;
+use crate::final_ast::types::StructHTValH;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::code_hierarchy::PackageCoordinateMap;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result;
+use std::ptr::eq;
 
 /*
 package dev.vale.finalast
@@ -164,14 +175,14 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     let from_functions: Vec<&'h PrototypeH<'s, 'h>> = self.functions.iter().filter(|f| f.prototype.id.local_name.0 == readable_name).map(|f| f.prototype).collect();
     let mut matches: Vec<&'h PrototypeH<'s, 'h>> = Vec::new();
     for p in from_exports.into_iter().chain(from_functions.into_iter()) {
-        if !matches.iter().any(|q| std::ptr::eq(*q as *const _, p as *const _)) {
+        if !matches.iter().any(|q| eq(*q as *const _, p as *const _)) {
             matches.push(p);
         }
     }
     assert!(!matches.is_empty());
     assert!(matches.len() <= 1);
     let first = matches[0];
-    self.functions.iter().find(|f| std::ptr::eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
+    self.functions.iter().find(|f| eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
 }
 /*
@@ -227,7 +238,7 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 // mig: case class ProgramH
 /// Temporary state
 pub struct ProgramH<'s, 'h> where 's: 'h {
-    pub packages: crate::utils::code_hierarchy::PackageCoordinateMap<'s, PackageH<'s, 'h>>,
+    pub packages: PackageCoordinateMap<'s, PackageH<'s, 'h>>,
 }
 /*
 case class ProgramH(
@@ -237,7 +248,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 */
 // mig: fn lookup_package
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-  pub fn lookup_package(&self, package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>) -> PackageH<'s, 'h> {
+  pub fn lookup_package(&self, package_coordinate: PackageCoordinate<'s>) -> PackageH<'s, 'h> {
     *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
 }
@@ -265,7 +276,7 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_struct
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-    pub fn lookup_struct(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
+    pub fn lookup_struct(&self, interner: &HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
         paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
     }
@@ -278,7 +289,7 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 */
 // mig: fn lookup_interface
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
-    pub fn lookup_interface(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
+    pub fn lookup_interface(&self, interner: &HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
         paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
     }
@@ -333,8 +344,8 @@ pub struct StructDefinitionH<'s, 'h> where 's: 'h {
 }
 // mig: fn get_ref (on StructDefinitionH — see Scala `def getRef: StructHT = StructHT(id)` in the StructDefinitionH audit block below)
 impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
-    pub fn get_ref(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h crate::final_ast::types::StructHT<'s, 'h> {
-        interner.intern_struct_ht(crate::final_ast::types::StructHTValH { id: self.id })
+    pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h StructHT<'s, 'h> {
+        interner.intern_struct_ht(StructHTValH { id: self.id })
     }
 }
 /*
@@ -410,8 +421,8 @@ pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
 }
 // mig: fn get_ref (on InterfaceDefinitionH — see Scala `def getRef = InterfaceHT(id)` in audit-trail below)
 impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
-    pub fn get_ref(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> &'h crate::final_ast::types::InterfaceHT<'s, 'h> {
-        interner.intern_interface_ht(crate::final_ast::types::InterfaceHTValH { id: self.id })
+    pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h InterfaceHT<'s, 'h> {
+        interner.intern_interface_ht(InterfaceHTValH { id: self.id })
     }
 }
 /*
@@ -584,18 +595,18 @@ pub struct PrototypeHValH<'s, 'h> where 's: 'h {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdH<'s, 'h> where 's: 'h {
     pub local_name: StrI<'s>,
-    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub package_coordinate: PackageCoordinate<'s>,
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
-    pub _must_intern: crate::simplifying::hammer_interner::MustIntern,
+    pub _must_intern: MustIntern,
     pub _phantom_h: PhantomData<&'h ()>,
 }
 // Realizes Scala's case-class auto-toString for IdH:
 //   IdH(<local_name>,<package_coordinate>,<shortened_name>,<fully_qualified_name>)
 // Per Scala convention: no space between case-class fields. StrI fields print as bare strings
 // per Rust StrI's existing Display canon (interner.rs:40); Scala would wrap each as StrI(<v>).
-impl<'s, 'h> std::fmt::Display for IdH<'s, 'h> where 's: 'h {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'s, 'h> Display for IdH<'s, 'h> where 's: 'h {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
     }
 }
@@ -644,7 +655,7 @@ case class IdH(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdHValH<'s, 'h> where 's: 'h {
     pub local_name: StrI<'s>,
-    pub package_coordinate: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub package_coordinate: PackageCoordinate<'s>,
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
     pub _phantom_h: PhantomData<&'h ()>,

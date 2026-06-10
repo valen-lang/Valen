@@ -18,6 +18,13 @@ use crate::parse_arena::ParseArena;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::instantiator;
+use crate::compile_options::GlobalOptions;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::hinputs_t::HinputsT;
+use crate::typing::typing_interner::TypingInterner;
+use std::any::Any;
 
 
 /*
@@ -58,7 +65,7 @@ override def hashCode(): Int = hash;
 */
 // mig: fn equals
 impl InstantiatorCompilationOptions {
-fn equals(&self, obj: &dyn std::any::Any) -> bool {
+fn equals(&self, obj: &dyn Any) -> bool {
   panic!("Unimplemented: equals");
 }
 }
@@ -75,7 +82,7 @@ where 's: 't, 's: 'i,
   // Retained from `new` to feed `Instantiator::translate` in `get_monouts`
   // (Scala's `val keywords` + `options` class fields).
   keywords: &'ctx Keywords<'s>,
-  global_options: crate::compile_options::GlobalOptions,
+  global_options: GlobalOptions,
   // The instantiating arena's interner, built from the externally-owned 'i Bump
   // passed to `new` — mirrors TypingPassCompilation's `typing_interner` (built
   // from `typing_bump: &'t Bump`).
@@ -102,14 +109,14 @@ where
   // From InstantiatedCompilation.scala lines 19-34
   // Rust adaptation (SPDMX Exception B): `typing_interner` borrowed from test wrapper, threaded down to TypingPassCompilation (mirrors Scala `val interner` flowing from RunCompilation through the pipeline).
   pub fn new(
-    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    global_options: crate::compile_options::GlobalOptions,
+    global_options: GlobalOptions,
     options: InstantiatorCompilationOptions,
     instantiating_bump: &'i Bump,
   ) -> Self {
@@ -201,7 +208,7 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, crate::postparsing::ast::ProgramS<'s>>, crate::postparsing::post_parser::ICompileErrorS<'s>> {
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.typing_pass_compilation.get_scoutput()
   }
 }
@@ -229,7 +236,7 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn get_compiler_outputs(&mut self) -> Result<&crate::typing::hinputs_t::HinputsT<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+  pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.typing_pass_compilation.get_compiler_outputs()
   }
 }
@@ -243,7 +250,7 @@ where
     's: 'i,
     'p: 'ctx,
 {
-  pub fn expect_compiler_outputs(&mut self) -> &crate::typing::hinputs_t::HinputsT<'s, 't> {
+  pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.typing_pass_compilation.expect_compiler_outputs()
   }
 }

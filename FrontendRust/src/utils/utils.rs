@@ -1,3 +1,4 @@
+use std::hash::Hash;
 /*
 package dev.vale
 
@@ -267,7 +268,7 @@ pub fn union_maps_expect_no_conflict<K, V, F>(
     b: &indexmap::IndexMap<K, V>,
     equator: F,
 ) -> indexmap::IndexMap<K, V>
-where K: Copy + Eq + std::hash::Hash, V: Copy, F: Fn(V, V) -> bool,
+where K: Copy + Eq + Hash, V: Copy, F: Fn(V, V) -> bool,
 {
     let mut result: indexmap::IndexMap<K, V> = indexmap::IndexMap::new();
     for (k, v) in a {
@@ -354,7 +355,7 @@ pub fn replace_all(original: &str, replacements: &indexmap::IndexMap<&str, &str>
 // Get all possible versions of original_map where the keys are the same
 // but the value for each is randomized.
 pub fn scrambles<T, Y>(original_map: &indexmap::IndexMap<T, Y>) -> Vec<indexmap::IndexMap<T, Y>>
-where T: Clone + Eq + std::hash::Hash, Y: Clone,
+where T: Clone + Eq + Hash, Y: Clone,
 {
     let original_keys: Vec<T> = original_map.keys().cloned().collect();
     let original_vals: Vec<Y> = original_map.values().cloned().collect();

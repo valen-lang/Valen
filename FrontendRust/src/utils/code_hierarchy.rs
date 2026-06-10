@@ -6,6 +6,9 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::Keywords;
 use bumpalo::Bump;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result;
 
 pub struct OrResolver<P, F> {
   primary: P,
@@ -216,8 +219,8 @@ object FileCoordinateMap {
 // NOTE: Rust StrI's Display canon (interner.rs:40) prints the bare string, while Scala StrI's
 // own case-class toString wraps as `StrI(<value>)`. This divergence is inherited from the
 // existing canon and not propagated here.
-impl<'a> std::fmt::Display for PackageCoordinate<'a> {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'a> Display for PackageCoordinate<'a> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     write!(f, "PackageCoordinate({},Vector(", self.module)?;
     let mut first = true;
     for pkg in self.packages.as_slice() {

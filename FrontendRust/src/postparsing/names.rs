@@ -4,6 +4,9 @@ use crate::postparsing::ast::{LocationInDenizen, LocationInDenizenVal};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use IRuneValS::*;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ptr::eq;
 /*
 package dev.vale.postparsing
 
@@ -59,7 +62,7 @@ impl<'s> INameS<'s> {
   /// Returns true iff both refer to the same canonical interned value.
   #[inline(always)]
   pub fn ptr_eq(&self, other: &INameS<'s>) -> bool {
-    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+    eq(self.canonical_ptr(), other.canonical_ptr())
   }
   /* Guardian: disable-all */
 
@@ -168,7 +171,7 @@ impl<'s> IImpreciseNameS<'s> {
   /// Returns true iff both refer to the same canonical interned value.
   #[inline(always)]
   pub fn ptr_eq(&self, other: &IImpreciseNameS<'s>) -> bool {
-    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+    eq(self.canonical_ptr(), other.canonical_ptr())
   }
   /* Guardian: disable-all */
 }
@@ -1028,7 +1031,7 @@ impl<'s> IRuneS<'s> {
   /// Returns true iff both refer to the same canonical interned value.
   #[inline(always)]
   pub fn ptr_eq(&self, other: &IRuneS<'s>) -> bool {
-    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+    eq(self.canonical_ptr(), other.canonical_ptr())
   }
   /*
   Guardian: disable-all
@@ -1225,8 +1228,8 @@ pub enum IRuneValS<'s, 'tmp> {
 /// both LocationInDenizenVal and LocationInDenizen hash by slice contents.
 pub struct RuneValQuery<'a, 's, 'tmp>(pub &'a IRuneValS<'s, 'tmp>);
 
-impl<'a, 's, 'tmp> std::hash::Hash for RuneValQuery<'a, 's, 'tmp> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+impl<'a, 's, 'tmp> Hash for RuneValQuery<'a, 's, 'tmp> {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
 }
 
 impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a, 's, 'tmp> {

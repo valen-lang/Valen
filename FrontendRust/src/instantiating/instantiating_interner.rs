@@ -39,6 +39,11 @@ use crate::instantiating::ast::ast::{
     PrototypeI, PrototypeIValI, SignatureI, SignatureIValI,
 };
 use crate::instantiating::ast::names::*;
+use std::hash::Hash;
+use std::ptr::eq;
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::names::PackageTopLevelNameI;
+use std::marker::PhantomData;
 
 /// Temporary state (see @TFITCX)
 pub struct InstantiatingInterner<'s, 'i>
@@ -244,12 +249,12 @@ where 's: 'i,
         self.bump.alloc_slice_fill_iter(vec.into_iter())
     }
 
-    pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'i, K, V> {
+    pub fn alloc_index_map<K: Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'i, K, V> {
         ArenaIndexMap::new_in(self.bump)
     }
 
     pub fn alloc_index_map_from_iter<K, V, I>(&self, iter: I) -> ArenaIndexMap<'i, K, V>
-    where K: std::hash::Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
+    where K: Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
     {
         ArenaIndexMap::from_iter_in(iter, self.bump)
     }
@@ -693,9 +698,6 @@ where 's: 'i,
 #[cfg(all(test, any()))]
 mod tests {
     use super::*;
-    use bumpalo::Bump;
-    use std::marker::PhantomData;
-    use crate::instantiating::ast::names::IdI;
 
     #[test]
     fn intern_struct_it_si_canonicalizes() {
@@ -709,7 +711,7 @@ mod tests {
         let r2 = intr.intern_struct_it_si(v2);
 
         // Pointer equality: two equal Val inputs canonicalize to the same arena ref.
-        assert!(std::ptr::eq(r1, r2));
+        assert!(eq(r1, r2));
     }
 
     #[test]
@@ -723,7 +725,7 @@ mod tests {
 
         match (r1, r2) {
             (InternedKindPayloadI::StructIT(a), InternedKindPayloadI::StructIT(b)) => {
-                assert!(std::ptr::eq(a, b));
+                assert!(eq(a, b));
             }
             _ => panic!("expected StructIT variant"),
         }
@@ -756,12 +758,11 @@ mod tests {
         };
 
         // Two equal Val inputs canonicalize to the same arena ref via family dispatch.
-        assert!(std::ptr::eq(r1, r2));
+        assert!(eq(r1, r2));
     }
 
     #[test]
     fn intern_name_per_concrete_wrapper_works() {
-        use crate::instantiating::ast::names::PackageTopLevelNameI;
         let bump = Bump::new();
         let intr = InstantiatingInterner::new(&bump);
 
@@ -770,6 +771,6 @@ mod tests {
         let r2 = intr.intern_package_top_level_name_si(v);
 
         // Per-concrete wrapper goes through the family dispatch and unwraps.
-        assert!(std::ptr::eq(r1, r2));
+        assert!(eq(r1, r2));
     }
 }

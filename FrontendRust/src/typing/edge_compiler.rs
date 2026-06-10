@@ -37,6 +37,8 @@ use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::types::types::CoordT;
 use crate::postparsing::names::CaseRuneFromImplValS;
 use crate::typing::infer_compiler::CompleteResolveSolve;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -271,9 +273,9 @@ where 's: 't,
                     .find(|i| i.template_name == interface_template_id)
                     .unwrap_or_else(|| panic!("vassertSome: find interface by templateName in x4"));
             // Make sure `functions` has everything that the interface def wanted.
-            let functions_set: std::collections::HashSet<(SignatureT<'s, 't>, usize)> =
+            let functions_set: HashSet<(SignatureT<'s, 't>, usize)> =
                 functions.iter().map(|f| (f.header.to_signature(), f.header.get_virtual_index().expect("vassertSome"))).collect();
-            let internal_methods_set: std::collections::HashSet<(SignatureT<'s, 't>, usize)> =
+            let internal_methods_set: HashSet<(SignatureT<'s, 't>, usize)> =
                 interface_def.internal_methods.iter().map(|(p, vi)| (p.to_signature(), *vi)).collect();
             let missing = internal_methods_set.difference(&functions_set).count();
             assert!(missing == 0, "vassert: functions missing some internal methods");
@@ -382,7 +384,7 @@ where 's: 't,
             template: self.typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT {
                 index,
                 rune,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             }),
         });
         let placeholder_id_ref = dispatcher_outer_env.id().add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
@@ -674,7 +676,7 @@ where 's: 't,
         // placeholder that doesn't appear here can't be substituted and trips a vassertSome later.
         // Example: map<T, R>(&Opt<T>, &IFunction1<mut,&T,R>) Opt<R> with impl<I> Opt<I> for Some<I> —
         // T is mimicked from I, but R has no impl-side counterpart and is a fresh placeholder.
-        let existing_dispatcher_placeholder_ids: std::collections::HashSet<IdT<'s, 't>> =
+        let existing_dispatcher_placeholder_ids: HashSet<IdT<'s, 't>> =
             dispatcher_placeholders.iter()
                 .map(|p| Compiler::get_placeholder_templata_id(*p))
                 .collect();
@@ -714,7 +716,7 @@ where 's: 't,
             *dispatcher_template_id_ref,
             dispatcher_id_ref,
             dispatcher_inner_inferences.iter().map(|(name_s, templata): (&IRuneS<'s>, &ITemplataT<'s, 't>)| {
-                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: std::marker::PhantomData });
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: PhantomData });
                 (INameT::from(rune_name), IEnvEntryT::Templata(*templata))
             }).collect(),
         );
@@ -818,7 +820,7 @@ where 's: 't,
                     // Phase 2: apply mutation, building substituted prototypes
                     raw_entries.into_iter().map(|(rune_in_citizen, human_name, template_args, params, return_type)| {
                         let function_bound_template_name = self.typing_interner.intern_function_bound_template_name(
-                            FunctionBoundTemplateNameT { human_name: human_name.human_name, _phantom: std::marker::PhantomData });
+                            FunctionBoundTemplateNameT { human_name: human_name.human_name, _phantom: PhantomData });
                         let function_bound_name = self.typing_interner.intern_function_bound_name(
                             FunctionBoundNameValT { template: function_bound_template_name, template_args, parameters: params });
                         let sub_citizen_placeholdered_prototype = self.typing_interner.intern_prototype(PrototypeValT {
@@ -841,7 +843,7 @@ where 's: 't,
             dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().enumerate()
                 .map(|(index, (_rune_in_impl, _rune_in_citizen, dispatcher_placeholdered_reachable_prototype))| {
                     let reachable_prototype_name = self.typing_interner.intern_reachable_prototype_name(
-                        ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                        ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
                     (INameT::ReachablePrototype(reachable_prototype_name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: dispatcher_placeholdered_reachable_prototype.prototype }))))
                 })
                 .collect(),
@@ -949,7 +951,7 @@ where 's: 't,
             self.typing_interner.alloc_slice_from_vec(impl_independent_placeholder_to_case_placeholder);
 
         let reachable_map = {
-            let mut grouped: std::collections::HashMap<IRuneS<'s>, Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>> = std::collections::HashMap::new();
+            let mut grouped: HashMap<IRuneS<'s>, Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>> = HashMap::new();
             for (rune_in_impl, rune_in_citizen, prototype_templata) in &dispatcher_and_case_placeholdered_impl_reachable_prototypes {
                 grouped.entry(*rune_in_impl).or_default().push((*rune_in_citizen, *prototype_templata.prototype));
             }

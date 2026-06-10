@@ -14,16 +14,42 @@ use crate::instantiating::ast::ast::PrototypeI;
 use crate::instantiating::ast::types::{CoordI, KindIT};
 use crate::instantiating::ast::types::sI;
 use crate::instantiating::ast::templata::RegionTemplataI;
+use crate::instantiating::ast::names::AnonymousSubstructConstructorNameI;
+use crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI;
+use crate::instantiating::ast::names::AnonymousSubstructImplNameI;
+use crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI;
+use crate::instantiating::ast::names::AnonymousSubstructNameI;
+use crate::instantiating::ast::names::AnonymousSubstructTemplateNameI;
+use crate::instantiating::ast::names::ForwarderFunctionNameI;
+use crate::instantiating::ast::names::ForwarderFunctionTemplateNameI;
+use crate::instantiating::ast::names::LambdaCallFunctionNameI;
+use crate::instantiating::ast::names::RawArrayNameI;
+use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
+use crate::instantiating::ast::names::StaticSizedArrayNameI;
+use crate::instantiating::ast::types::RuntimeSizedArrayIT;
+use crate::instantiating::ast::types::StaticSizedArrayIT;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::mem::discriminant;
+use crate::instantiating::ast::names::ICitizenNameI;
+use crate::instantiating::ast::names::IImplNameI;
+use crate::instantiating::ast::names::IImplTemplateNameI;
+use crate::instantiating::ast::names::IStructNameI;
+use crate::instantiating::ast::names::IStructTemplateNameI;
+use crate::instantiating::ast::names::ImplNameI;
+use crate::instantiating::ast::names::InterfaceNameI;
+use crate::instantiating::ast::names::StructNameI;
+use crate::instantiating::ast::templata::ITemplataI;
 
 // mig: struct CounterI
 pub struct CounterI {
-    set: std::collections::HashSet<i32>,
+    set: HashSet<i32>,
 }
 // mig: impl CounterI
 // mig: fn new
 impl CounterI {
     pub fn new() -> Self {
-        CounterI { set: std::collections::HashSet::new() }
+        CounterI { set: HashSet::new() }
     }
 }
 /*
@@ -47,7 +73,7 @@ impl CounterI {
 */
 // mig: fn assemble_map
 impl CounterI {
-    pub fn assemble_map(&self) -> std::collections::HashMap<i32, i32> {
+    pub fn assemble_map(&self) -> HashMap<i32, i32> {
         let num_regions = self.set.len();
         // Let's say we have a set that contains 3, 5, -2, 0, 4, it becomes...
         let mut sorted = self.set.iter().copied().collect::<Vec<i32>>();
@@ -172,18 +198,18 @@ where 's: 'i {
             for param in parameters { count_coord(counter, param) }
         }
         IFunctionNameI::LambdaCallFunction(n) => {
-            let crate::instantiating::ast::names::LambdaCallFunctionNameI { template_args, parameters, .. } = *n;
+            let LambdaCallFunctionNameI { template_args, parameters, .. } = *n;
             for template_arg in template_args { count_templata(counter, template_arg) }
             for param in parameters { count_coord(counter, param) }
         }
         IFunctionNameI::AnonymousSubstructConstructor(n) => {
-            let crate::instantiating::ast::names::AnonymousSubstructConstructorNameI { template: crate::instantiating::ast::names::AnonymousSubstructConstructorTemplateNameI { substruct }, template_args, parameters } = *n;
+            let AnonymousSubstructConstructorNameI { template: AnonymousSubstructConstructorTemplateNameI { substruct }, template_args, parameters } = *n;
             count_name(counter, &INameI::from(substruct));
             for template_arg in template_args { count_templata(counter, template_arg) }
             for param in parameters { count_coord(counter, param) }
         }
         IFunctionNameI::ForwarderFunction(n) => {
-            let crate::instantiating::ast::names::ForwarderFunctionNameI { template: crate::instantiating::ast::names::ForwarderFunctionTemplateNameI { inner: func_template_name, index: _ }, inner: func_name } = *n;
+            let ForwarderFunctionNameI { template: ForwarderFunctionTemplateNameI { inner: func_template_name, index: _ }, inner: func_name } = *n;
             count_name(counter, &INameI::from(func_template_name));
             count_function_name(counter, &func_name);
         }
@@ -231,8 +257,7 @@ where 's: 'i {
 
 */
 // mig: fn count_citizen_name
-pub fn count_citizen_name<'s, 'i>(counter: &mut CounterI, name: &crate::instantiating::ast::names::ICitizenNameI<'s, 'i, sI>) {
-    use crate::instantiating::ast::names::{ICitizenNameI, StructNameI, InterfaceNameI};
+pub fn count_citizen_name<'s, 'i>(counter: &mut CounterI, name: &ICitizenNameI<'s, 'i, sI>) {
     match name {
         ICitizenNameI::Struct(StructNameI { template: _, template_args }) => {
             for t in template_args.iter() { count_templata(counter, t); }
@@ -241,7 +266,7 @@ pub fn count_citizen_name<'s, 'i>(counter: &mut CounterI, name: &crate::instanti
         ICitizenNameI::Interface(InterfaceNameI { template: _, template_args }) => {
             for t in template_args.iter() { count_templata(counter, t); }
         }
-        ICitizenNameI::AnonymousSubstruct(crate::instantiating::ast::names::AnonymousSubstructNameI { template: crate::instantiating::ast::names::AnonymousSubstructTemplateNameI { interface }, template_args }) => {
+        ICitizenNameI::AnonymousSubstruct(AnonymousSubstructNameI { template: AnonymousSubstructTemplateNameI { interface }, template_args }) => {
             count_name(counter, &INameI::from(*interface));
             for t in template_args.iter() { count_templata(counter, t); }
         }
@@ -306,17 +331,17 @@ where 's: 'i {
             counter.count(extern_name.region);
         }
         INameI::StructName(_) | INameI::InterfaceName(_) | INameI::LambdaCitizen(_) | INameI::AnonymousSubstruct(_) => {
-            let c: crate::instantiating::ast::names::ICitizenNameI<'s, 'i, sI> = (*name).try_into().unwrap();
+            let c: ICitizenNameI<'s, 'i, sI> = (*name).try_into().unwrap();
             count_citizen_name(counter, &c);
         }
         INameI::StructTemplate(_) => {}
         INameI::LambdaCitizenTemplate(_) => {}
         INameI::InterfaceTemplate(_) => {}
-        INameI::AnonymousSubstructTemplate(crate::instantiating::ast::names::AnonymousSubstructTemplateNameI { interface, .. }) => {
+        INameI::AnonymousSubstructTemplate(AnonymousSubstructTemplateNameI { interface, .. }) => {
             count_name(counter, &INameI::from(*interface));
         }
         INameI::FunctionTemplate(_) => {}
-        other => panic!("Unimplemented: count_name {:?}", std::mem::discriminant(other)),
+        other => panic!("Unimplemented: count_name {:?}", discriminant(other)),
     }
 }
 /*
@@ -360,8 +385,7 @@ where 's: 'i {
 
 */
 // mig: fn count_templata
-pub fn count_templata<'s, 'i>(_counter: &mut CounterI, _templata: &crate::instantiating::ast::templata::ITemplataI<'s, 'i, sI>) {
-    use crate::instantiating::ast::templata::ITemplataI;
+pub fn count_templata<'s, 'i>(_counter: &mut CounterI, _templata: &ITemplataI<'s, 'i, sI>) {
     match _templata {
         ITemplataI::Coord(c) => {
             count_templata(_counter, &ITemplataI::Region(c.region));
@@ -412,7 +436,7 @@ where 's: 'i {
 
 */
 // mig: fn count_kind
-pub fn count_kind_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_kind_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_kind");
 }
 /*
@@ -440,9 +464,9 @@ where 's: 'i {
             count_id(counter, &ssa_id, |counter, local_name| {
                 match local_name {
                     INameI::StaticSizedArray(n) => {
-                        let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
-                        let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
-                        count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                        let StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
+                        let RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                        count_templata(counter, &ITemplataI::Coord(element_type));
                         counter.count(self_region);
                     }
                     _ => panic!("count_kind StaticSizedArray: non-StaticSizedArrayName local name"),
@@ -454,9 +478,9 @@ where 's: 'i {
             count_id(counter, &rsa_id, |counter, local_name| {
                 match local_name {
                     INameI::RuntimeSizedArray(n) => {
-                        let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = **n;
-                        let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
-                        count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                        let RuntimeSizedArrayNameI { template: _, arr } = **n;
+                        let RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                        count_templata(counter, &ITemplataI::Coord(element_type));
                         counter.count(self_region);
                     }
                     _ => panic!("count_kind RuntimeSizedArray: non-RuntimeSizedArrayName local name"),
@@ -502,14 +526,14 @@ where 's: 'i {
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array<'s, 'i>(counter: &mut CounterI, rsa: &crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) {
+pub fn count_runtime_sized_array<'s, 'i>(counter: &mut CounterI, rsa: &RuntimeSizedArrayIT<'s, 'i, sI>) {
     let rsa_id = rsa.name;
     count_id(counter, &rsa_id, |counter, local_name| {
         match local_name {
             INameI::RuntimeSizedArray(n) => {
-                let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = **n;
-                let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
-                count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                let RuntimeSizedArrayNameI { template: _, arr } = **n;
+                let RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                count_templata(counter, &ITemplataI::Coord(element_type));
                 counter.count(self_region);
             }
             _ => panic!("count_runtime_sized_array: non-RuntimeSizedArrayName local name"),
@@ -533,14 +557,14 @@ pub fn count_runtime_sized_array<'s, 'i>(counter: &mut CounterI, rsa: &crate::in
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array<'s, 'i>(counter: &mut CounterI, ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) {
+pub fn count_static_sized_array<'s, 'i>(counter: &mut CounterI, ssa: &StaticSizedArrayIT<'s, 'i, sI>) {
     let ssa_id = ssa.name;
     count_id(counter, &ssa_id, |counter, local_name| {
         match local_name {
             INameI::StaticSizedArray(n) => {
-                let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
-                let crate::instantiating::ast::names::RawArrayNameI { mutability: _, element_type, self_region } = arr;
-                count_templata(counter, &crate::instantiating::ast::templata::ITemplataI::Coord(element_type));
+                let StaticSizedArrayNameI { template: _, size: _, variability: _, arr } = **n;
+                let RawArrayNameI { mutability: _, element_type, self_region } = arr;
+                count_templata(counter, &ITemplataI::Coord(element_type));
                 counter.count(self_region);
             }
             _ => panic!("count_static_sized_array: non-StaticSizedArrayName local name"),
@@ -591,7 +615,7 @@ where 's: 'i {
 // mig: fn count_struct_id
 pub fn count_struct_id<'s, 'i>(counter: &mut CounterI, struct_id: &IdI<'s, 'i, sI>)
 where 's: 'i {
-    count_id(counter, struct_id, |counter, x| count_struct_name(counter, &crate::instantiating::ast::names::IStructNameI::try_from(*x).unwrap()))
+    count_id(counter, struct_id, |counter, x| count_struct_name(counter, &IStructNameI::try_from(*x).unwrap()))
 }
 /*
   def countStructId(
@@ -606,9 +630,8 @@ where 's: 'i {
 
 */
 // mig: fn count_struct_template_name
-pub fn count_struct_template_name<'s, 'i>(_counter: &mut CounterI, struct_name: &crate::instantiating::ast::names::IStructTemplateNameI<'s, 'i, sI>)
+pub fn count_struct_template_name<'s, 'i>(_counter: &mut CounterI, struct_name: &IStructTemplateNameI<'s, 'i, sI>)
 where 's: 'i {
-    use crate::instantiating::ast::names::IStructTemplateNameI;
     match struct_name {
         IStructTemplateNameI::StructTemplate(_) => {}
         _ => panic!("count_struct_template_name: other"),
@@ -626,16 +649,15 @@ where 's: 'i {
 
 */
 // mig: fn count_struct_name
-pub fn count_struct_name<'s, 'i>(counter: &mut CounterI, struct_name: &crate::instantiating::ast::names::IStructNameI<'s, 'i, sI>)
+pub fn count_struct_name<'s, 'i>(counter: &mut CounterI, struct_name: &IStructNameI<'s, 'i, sI>)
 where 's: 'i {
-    use crate::instantiating::ast::names::{IStructNameI, StructNameI};
     match struct_name {
         IStructNameI::Struct(StructNameI { template, template_args }) => {
             count_struct_template_name(counter, template);
             for t in template_args.iter() { count_templata(counter, t); }
         }
         IStructNameI::LambdaCitizen(_) => {}
-        IStructNameI::AnonymousSubstruct(crate::instantiating::ast::names::AnonymousSubstructNameI { template: _, template_args }) => {
+        IStructNameI::AnonymousSubstruct(AnonymousSubstructNameI { template: _, template_args }) => {
             for t in template_args.iter() { count_templata(counter, t); }
         }
     }
@@ -662,7 +684,7 @@ where 's: 'i {
 // mig: fn count_impl_id
 pub fn count_impl_id<'s, 'i>(counter: &mut CounterI, struct_id: &IdI<'s, 'i, sI>)
 where 's: 'i {
-    count_id(counter, struct_id, |counter, x| count_impl_name(counter, &crate::instantiating::ast::names::IImplNameI::try_from(*x).unwrap()))
+    count_id(counter, struct_id, |counter, x| count_impl_name(counter, &IImplNameI::try_from(*x).unwrap()))
 }
 /*
   def countImplId(
@@ -677,16 +699,15 @@ where 's: 'i {
 
 */
 // mig: fn count_impl_name
-pub fn count_impl_name<'s, 'i>(counter: &mut CounterI, impl_id: &crate::instantiating::ast::names::IImplNameI<'s, 'i, sI>)
+pub fn count_impl_name<'s, 'i>(counter: &mut CounterI, impl_id: &IImplNameI<'s, 'i, sI>)
 where 's: 'i {
-    use crate::instantiating::ast::names::{IImplNameI, ImplNameI};
     match impl_id {
         IImplNameI::Impl(ImplNameI { template, template_args, sub_citizen }) => {
             count_impl_template_name(counter, template);
             for t in template_args.iter() { count_templata(counter, t); }
             count_citizen_id(counter, &sub_citizen.id());
         }
-        IImplNameI::AnonymousSubstructImpl(crate::instantiating::ast::names::AnonymousSubstructImplNameI { template: crate::instantiating::ast::names::AnonymousSubstructImplTemplateNameI { interface }, template_args, sub_citizen }) => {
+        IImplNameI::AnonymousSubstructImpl(AnonymousSubstructImplNameI { template: AnonymousSubstructImplTemplateNameI { interface }, template_args, sub_citizen }) => {
             count_name(counter, &INameI::from(*interface));
             for t in template_args.iter() { count_templata(counter, t); }
             count_citizen_id(counter, &sub_citizen.id());
@@ -718,9 +739,8 @@ where 's: 'i {
 
 */
 // mig: fn count_impl_template_name
-pub fn count_impl_template_name<'s, 'i>(_counter: &mut CounterI, name: &crate::instantiating::ast::names::IImplTemplateNameI<'s, 'i, sI>)
+pub fn count_impl_template_name<'s, 'i>(_counter: &mut CounterI, name: &IImplTemplateNameI<'s, 'i, sI>)
 where 's: 'i {
-    use crate::instantiating::ast::names::IImplTemplateNameI;
     match name {
         IImplTemplateNameI::ImplTemplate(_) => {}
         _ => panic!("count_impl_template_name: other"),
@@ -738,7 +758,7 @@ where 's: 'i {
 
 */
 // mig: fn count_export_id
-pub fn count_export_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_export_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_id(&mut counter, id_i, |counter, x| count_name(counter, x));
@@ -753,7 +773,7 @@ where 's: 'i {
 
 */
 // mig: fn count_extern_id
-pub fn count_extern_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_extern_id<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_id(&mut counter, id_i, |counter, x| count_name(counter, x));
@@ -768,7 +788,7 @@ where 's: 'i {
 
 */
 // mig: fn count_struct_id
-pub fn count_struct_id_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_struct_id_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_struct_id");
 }
 /*
@@ -780,7 +800,7 @@ pub fn count_struct_id_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_interface_id
-pub fn count_interface_id_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_interface_id_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_interface_id");
 }
 /*
@@ -806,7 +826,7 @@ where 's: 'i {
 
 */
 // mig: fn count_function_id
-pub fn count_function_id_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_function_id_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_function_id");
 }
 /*
@@ -818,10 +838,10 @@ pub fn count_function_id_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_impl_id
-pub fn count_impl_id_map<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_impl_id_map<'s, 'i>(id_i: &IdI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
-    count_id(&mut counter, id_i, |counter, x| count_impl_name(counter, &crate::instantiating::ast::names::IImplNameI::try_from(*x).unwrap()));
+    count_id(&mut counter, id_i, |counter, x| count_impl_name(counter, &IImplNameI::try_from(*x).unwrap()));
     counter.assemble_map()
 }
 /*
@@ -836,7 +856,7 @@ where 's: 'i {
 
 */
 // mig: fn count_coord
-pub fn count_coord_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_coord_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_coord");
 }
 /*
@@ -848,7 +868,7 @@ pub fn count_coord_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_var_name
-pub fn count_var_name_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_var_name_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_var_name");
 }
 /*
@@ -862,7 +882,7 @@ pub fn count_var_name_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_static_sized_array
-pub fn count_static_sized_array_map<'s, 'i>(ssa: &crate::instantiating::ast::types::StaticSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_static_sized_array_map<'s, 'i>(ssa: &StaticSizedArrayIT<'s, 'i, sI>) -> HashMap<i32, i32> {
     let mut counter = CounterI::new();
     count_static_sized_array(&mut counter, ssa);
     counter.assemble_map()
@@ -878,7 +898,7 @@ pub fn count_static_sized_array_map<'s, 'i>(ssa: &crate::instantiating::ast::typ
 
 */
 // mig: fn count_runtime_sized_array
-pub fn count_runtime_sized_array_map<'s, 'i>(rsa: &crate::instantiating::ast::types::RuntimeSizedArrayIT<'s, 'i, crate::instantiating::ast::types::sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_runtime_sized_array_map<'s, 'i>(rsa: &RuntimeSizedArrayIT<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_runtime_sized_array(&mut counter, rsa);
@@ -895,7 +915,7 @@ where 's: 'i {
 
 */
 // mig: fn count_prototype
-pub fn count_prototype_map<'s, 'i>(prototype: &PrototypeI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_prototype_map<'s, 'i>(prototype: &PrototypeI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_prototype(&mut counter, prototype);
@@ -910,7 +930,7 @@ where 's: 'i {
 
 */
 // mig: fn count_function_name
-pub fn count_function_name_map<'s, 'i>(name: &IFunctionNameI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_function_name_map<'s, 'i>(name: &IFunctionNameI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_function_name(&mut counter, name);
@@ -927,7 +947,7 @@ where 's: 'i {
 
 */
 // mig: fn count_impl_name
-pub fn count_impl_name_map<'s, 'i>(name: &crate::instantiating::ast::names::IImplNameI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32>
+pub fn count_impl_name_map<'s, 'i>(name: &IImplNameI<'s, 'i, sI>) -> HashMap<i32, i32>
 where 's: 'i {
     let mut counter = CounterI::new();
     count_impl_name(&mut counter, name);
@@ -944,7 +964,7 @@ where 's: 'i {
 
 */
 // mig: fn count_citizen_name
-pub fn count_citizen_name_map<'s, 'i>(name: &crate::instantiating::ast::names::ICitizenNameI<'s, 'i, sI>) -> std::collections::HashMap<i32, i32> {
+pub fn count_citizen_name_map<'s, 'i>(name: &ICitizenNameI<'s, 'i, sI>) -> HashMap<i32, i32> {
     let mut counter = CounterI::new();
     count_citizen_name(&mut counter, name);
     counter.assemble_map()
@@ -960,7 +980,7 @@ pub fn count_citizen_name_map<'s, 'i>(name: &crate::instantiating::ast::names::I
 
 */
 // mig: fn count_citizen_id
-pub fn count_citizen_id_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_citizen_id_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_citizen_id");
 }
 /*
@@ -974,7 +994,7 @@ pub fn count_citizen_id_map() -> std::collections::HashMap<i32, i32> {
 
 */
 // mig: fn count_templata
-pub fn count_templata_map() -> std::collections::HashMap<i32, i32> {
+pub fn count_templata_map() -> HashMap<i32, i32> {
     panic!("Unimplemented: count_templata");
 }
 /*

@@ -16,6 +16,8 @@ use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 use crate::typing::citizen::struct_compiler::IResolveOutcome;
 use std::collections::HashSet;
+use std::iter::once;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -89,7 +91,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         types: Vec<CoordT<'s, 't>>,
     ) -> StructTT<'s, 't> {
-        let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()], _phantom: std::marker::PhantomData });
+        let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()], _phantom: PhantomData });
         let tuple_template = match env.lookup_nearest_with_name(INameT::StructTemplate(tuple_template_name), {
             let mut s = HashSet::new();
             s.insert(ILookupContext::TemplataLookupContext);
@@ -98,7 +100,7 @@ where 's: 't,
             ITemplataT::StructDefinition(t) => *t,
             _ => panic!("make_tuple_kind: expected StructDefinitionTemplataT"),
         };
-        let new_parent_ranges: Vec<RangeS<'s>> = std::iter::once(RangeS::internal(self.scout_arena, -17653)).chain(parent_ranges.iter().copied()).collect();
+        let new_parent_ranges: Vec<RangeS<'s>> = once(RangeS::internal(self.scout_arena, -17653)).chain(parent_ranges.iter().copied()).collect();
         let uncoerced_template_args: Vec<ITemplataT<'s, 't>> = types.iter().map(|c| ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *c }))).collect();
         match self.resolve_struct(coutputs, env, self.typing_interner.alloc_slice_from_vec(new_parent_ranges), call_location, tuple_template, &uncoerced_template_args) {
             IResolveOutcome::ResolveSuccess(s) => s.kind,

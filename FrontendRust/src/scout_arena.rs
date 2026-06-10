@@ -36,6 +36,9 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::AnonymousSubstructImplDeclarationNameS;
 use crate::postparsing::names::AnonymousSubstructTemplateNameS;
 use crate::postparsing::names::RuneValQuery;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ptr::eq;
 
 #[derive(Clone)]
 struct FileCoordLookupKey<'s> {
@@ -45,13 +48,13 @@ struct FileCoordLookupKey<'s> {
 
 impl<'s> PartialEq for FileCoordLookupKey<'s> {
   fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.package_coord, other.package_coord) && self.filepath == other.filepath
+    eq(self.package_coord, other.package_coord) && self.filepath == other.filepath
   }
 }
 impl<'s> Eq for FileCoordLookupKey<'s> {}
 
-impl<'s> std::hash::Hash for FileCoordLookupKey<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<'s> Hash for FileCoordLookupKey<'s> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
     (self.package_coord as *const PackageCoordinate<'_>).hash(state);
     self.filepath.hash(state);
   }
@@ -101,12 +104,12 @@ impl<'s> ScoutArena<'s> {
   }
 
   /// Create an empty ArenaIndexMap allocated in this arena.
-  pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'s, K, V> {
+  pub fn alloc_index_map<K: Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'s, K, V> {
     ArenaIndexMap::new_in(self.bump)
   }
 
   /// Create an ArenaIndexMap from an iterator, allocated in this arena.
-  pub fn alloc_index_map_from_iter<K: std::hash::Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> ArenaIndexMap<'s, K, V> {
+  pub fn alloc_index_map_from_iter<K: Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> ArenaIndexMap<'s, K, V> {
     ArenaIndexMap::from_iter_in(iter, self.bump)
   }
 

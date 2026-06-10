@@ -10,6 +10,10 @@ object SolverErrorHumanizer {
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::solver::solver::ISolverError;
 use crate::solver::solver::FailedSolve;
+use std::cmp::max;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::hash::Hash;
 
 // mig: fn humanize_failed_solve
 pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
@@ -27,7 +31,7 @@ pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
   result: &FailedSolve<Rule, RuneId, Conclusion, ErrType>,
 ) -> (String, Vec<CodeLocationS<'a>>)
 where
-  RuneId: Eq + std::hash::Hash + Copy,
+  RuneId: Eq + Hash + Copy,
   Conclusion: Copy,
   CodeLocationS<'a>: PartialEq + Copy,
   RangeS<'a>: PartialEq + Copy,
@@ -61,15 +65,15 @@ where
     for item in raw { if !distinct.contains(&item) { distinct.push(item); } }
     distinct
   };
-  let line_begin_loc_to_rune_usage: std::collections::HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = {
-    let mut map: std::collections::HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = std::collections::HashMap::new();
+  let line_begin_loc_to_rune_usage: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = {
+    let mut map: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = HashMap::new();
     for rune_usage in &all_rune_usages {
       let usage_begin_line = line_range_containing(&rune_usage.1.begin).begin.offset;
       map.entry(usage_begin_line).or_default().push(*rune_usage);
     }
     map
   };
-  let incomplete_conclusions: std::collections::HashMap<RuneId, Conclusion> = result.steps.iter()
+  let incomplete_conclusions: HashMap<RuneId, Conclusion> = result.steps.iter()
     .flat_map(|step| step.conclusions.iter().map(|(r, c)| (*r, *c)))
     .collect();
   let text_from_user_rules: String = {
@@ -82,7 +86,7 @@ where
         sorted_usages.sort_by_key(|u| -u.1.begin.offset);
         sorted_usages.iter().map(|(rune, range)| {
           let num_spaces = range.begin.offset - loc.offset;
-          let num_arrows = std::cmp::max(range.end.offset - range.begin.offset, 1);
+          let num_arrows = max(range.end.offset - range.begin.offset, 1);
           let rune_name = humanize_rune(*rune);
           let conclusion_str = incomplete_conclusions.get(rune)
             .map(|c| humanize_conclusion(*c))
@@ -99,7 +103,7 @@ where
   };
   let text_from_steps: String = {
     let fold_result = result.steps.iter().fold(
-      ("".to_string(), std::collections::HashSet::<RuneId>::new()),
+      ("".to_string(), HashSet::<RuneId>::new()),
       |(string_so_far, previously_printed), step| {
         let new_string = format!("{}{}{}{}{}",
           if !step.complex && step.solved_rules.is_empty() { "Supplied:" } else { "" },

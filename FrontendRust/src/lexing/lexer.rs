@@ -3,6 +3,7 @@ use super::errors::*;
 use super::lexing_iterator::*;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
+use std::result::Result as StdResult;
 /*
 package dev.vale.lexing
 
@@ -11,7 +12,7 @@ import dev.vale.{Accumulator, Err, Interner, Keywords, Ok, Profiler, Result, Str
 import scala.collection.mutable
 */
 
-type Result<T> = std::result::Result<T, ParseError>;
+type Result<T> = StdResult<T, ParseError>;
 
 /// Helper enum for string parsing
 enum StringPartResult<'p> {

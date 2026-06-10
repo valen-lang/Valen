@@ -27,6 +27,11 @@ use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::names::names::ImplBoundNameValT;
 use crate::typing::names::names::IdValT;
+use crate::typing::templata::templata::expect_integer;
+use crate::typing::templata::templata::expect_mutability;
+use crate::typing::templata::templata::expect_variability;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -358,7 +363,7 @@ where 's: 't,
                     match &generic_param.default {
                         Some(default_rules) => {
                             let default_rule_vec: Vec<IRulexSR<'s>> = default_rules.rules.iter().map(|r| **r).collect();
-                            let new_runes: std::collections::HashSet<IRuneS<'s>> =
+                            let new_runes: HashSet<IRuneS<'s>> =
                                 default_rules.rune_to_type.iter().map(|(k, _)| *k).collect();
                             solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
                                 false, vec![], HashMap::new(), default_rule_vec, new_runes
@@ -617,7 +622,7 @@ where 's: 't,
         let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
             solver_state.userify_conclusions().into_iter().collect();
 
-        let all_runes: std::collections::HashSet<IRuneS<'s>> =
+        let all_runes: HashSet<IRuneS<'s>> =
             rune_to_type.keys().copied().chain(solver_state.get_all_runes().into_iter()).collect();
 
         // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
@@ -629,7 +634,7 @@ where 's: 't,
                     conclusions: solver_state.get_conclusions().into_iter().collect(),
                     unsolved_rules: solver_state.get_unsolved_rules(),
                     unsolved_runes: solver_state.get_unsolved_runes(),
-                    error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: std::marker::PhantomData }),
+                    error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: PhantomData }),
                 })));
         }
 
@@ -748,7 +753,7 @@ where 's: 't,
                                     unsolved_runes: solver_state.get_unsolved_runes(),
                                     error: ISolverError::RuleError(RuleError {
                                         err: ITypingPassSolverError::CouldntResolveKind { rf },
-                                        _phantom: std::marker::PhantomData,
+                                        _phantom: PhantomData,
                                     }),
                                 })));
                         }
@@ -773,7 +778,7 @@ where 's: 't,
             }
         }
         {
-            let mut seen: std::collections::HashSet<IRuneS<'s>> = std::collections::HashSet::new();
+            let mut seen: HashSet<IRuneS<'s>> = HashSet::new();
             for (rune, _) in runes_and_prototypes.iter() {
                 if !seen.insert(*rune) {
                     panic!("vwat: duplicate rune in runesAndPrototypes");
@@ -792,7 +797,7 @@ where 's: 't,
                 _ => None,
             }).collect();
         {
-            let mut seen: std::collections::HashSet<IRuneS<'s>> = std::collections::HashSet::new();
+            let mut seen: HashSet<IRuneS<'s>> = HashSet::new();
             for (rune, _) in runes_and_impls.iter() {
                 if !seen.insert(*rune) {
                     panic!("vwat: duplicate rune in runesAndImpls");
@@ -955,7 +960,7 @@ where 's: 't,
         // `&HashMap<IRuneS<'s>, ITemplataT<'s, 't>>` signatures (FailedSolve fields, add_runed_data_to_near_env,
         // check_defining_conclusions_and_resolve, etc.). Determinism here deferred to a follow-up sweep.
         let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = solver_state.userify_conclusions().into_iter().collect();
-        let mut all_runes: std::collections::HashSet<IRuneS<'s>> = rune_to_type.keys().cloned().collect();
+        let mut all_runes: HashSet<IRuneS<'s>> = rune_to_type.keys().cloned().collect();
         all_runes.extend(solver_state.get_all_runes());
         // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
         // Caller should remember to do that!
@@ -966,7 +971,7 @@ where 's: 't,
                     conclusions: solver_state.get_conclusions().into_iter().collect(),
                     unsolved_rules: solver_state.get_unsolved_rules(),
                     unsolved_runes: solver_state.get_unsolved_runes(),
-                    error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: std::marker::PhantomData }),
+                    error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: PhantomData }),
                 })
         } else {
             Ok(conclusions)
@@ -1175,7 +1180,7 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
                     (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(*reachable_bound) }))))
                 })
                 .collect();
@@ -1223,7 +1228,7 @@ where 's: 't,
             conclusions
                 .iter()
                 .map(|(name_s, templata)| {
-                    let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: std::marker::PhantomData });
+                    let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: PhantomData });
                     (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
                 })
                 .collect();
@@ -1233,7 +1238,7 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
                     let entry = IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: reachable_bound })));
                     (INameT::ReachablePrototype(name), entry)
                 })
@@ -1650,7 +1655,7 @@ where 's: 't,
                     ITemplataT::Coord(ct) => ct.coord,
                     _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
-                let mutability = crate::typing::templata::templata::expect_mutability(m);
+                let mutability = expect_mutability(m);
                 let context_region = RegionT { region: IRegionT::Default };
                 let _rsa = self.resolve_runtime_sized_array(coord, mutability, context_region);
                 Ok(())
@@ -1663,9 +1668,9 @@ where 's: 't,
                     ITemplataT::Coord(ct) => ct.coord,
                     _ => panic!("Expected CoordTemplataT as fourth arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
                 };
-                let size = crate::typing::templata::templata::expect_integer(s);
-                let mutability = crate::typing::templata::templata::expect_mutability(m);
-                let variability = crate::typing::templata::templata::expect_variability(v);
+                let size = expect_integer(s);
+                let mutability = expect_mutability(m);
+                let variability = expect_variability(v);
                 let context_region = RegionT { region: IRegionT::Default };
                 let _ssa = self.resolve_static_sized_array(mutability, variability, size, coord, context_region);
                 Ok(())
@@ -1678,7 +1683,7 @@ where 's: 't,
                 // resolve_struct adds defaults incrementally via solve_for_resolving for unsolved runes.
                 match self.resolve_struct(state, calling_env, call_ranges_slice, call_location, *it, &args) {
                     IResolveOutcome::ResolveSuccess(_kind) => {}
-                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
+                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: PhantomData }),
                 }
                 Ok(())
             }
@@ -1690,7 +1695,7 @@ where 's: 't,
                 // resolve_interface adds defaults incrementally via solve_for_resolving for unsolved runes.
                 match self.resolve_interface(state, calling_env, call_ranges_slice, call_location, *it, &args) {
                     IResolveOutcome::ResolveSuccess(_kind) => {}
-                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
+                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: PhantomData }),
                 }
                 Ok(())
             }

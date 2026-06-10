@@ -27,6 +27,7 @@ use crate::final_ast::types::{
     RuntimeSizedArrayDefinitionHT, RuntimeSizedArrayHT, SimpleId, StaticSizedArrayDefinitionHT,
     StaticSizedArrayHT, StructHT,
 };
+use crate::scout_arena::ScoutArena;
 
 /*
 package dev.vale.simplifying
@@ -356,14 +357,14 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 
 // mig: fn add_kind_extern (HamutsBox mutator)
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
-    pub fn add_kind_extern(&mut self, scout_arena: &crate::scout_arena::ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
+    pub fn add_kind_extern(&mut self, scout_arena: &ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
         let package_coordinate = opaque_h.package_coord;
         let kind_to_extern = self.package_coord_to_kind_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
         match kind_to_extern.get(&opaque_h) {
             None => {
-                kind_to_extern.insert(opaque_h, crate::final_ast::types::HamutsKindExtern {
+                kind_to_extern.insert(opaque_h, HamutsKindExtern {
                     maybe_extern_name: scout_arena.intern_str(&exported_name),
-                    kind: crate::final_ast::types::KindHT::OpaqueHT(opaque_h),
+                    kind: KindHT::OpaqueHT(opaque_h),
                     simple_id,
                 });
             }

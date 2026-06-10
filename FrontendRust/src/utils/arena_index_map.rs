@@ -81,7 +81,7 @@ where
   pub fn insert(&mut self, key: K, value: V) -> Option<V> {
     match self.indices.get(&key) {
       Some(&idx) => {
-        let old = std::mem::replace(&mut self.entries[idx].1, value);
+        let old = replace(&mut self.entries[idx].1, value);
         Some(old)
       }
       None => {
@@ -121,7 +121,7 @@ where
       F: FnMut(&K, &V) -> bool,
   {
     let bump = self.entries.bump();
-    let old_entries = std::mem::replace(&mut self.entries, BumpVec::new_in(bump));
+    let old_entries = replace(&mut self.entries, BumpVec::new_in(bump));
     self.indices.clear();
 
     for (k, v) in old_entries {
@@ -212,7 +212,7 @@ impl<'bump, K, V> ArenaIndexMap<'bump, K, V> {
 
 /// An iterator over references to key-value pairs in insertion order.
 pub struct Iter<'a, K, V> {
-  inner: std::slice::Iter<'a, (K, V)>,
+  inner: SliceIter<'a, (K, V)>,
 }
 
 impl<'a, K, V> Iterator for Iter<'a, K, V> {
@@ -236,7 +236,7 @@ impl<K, V> DoubleEndedIterator for Iter<'_, K, V> {
 
 /// An iterator over mutable references to key-value pairs in insertion order.
 pub struct IterMut<'a, K, V> {
-  inner: std::slice::IterMut<'a, (K, V)>,
+  inner: SliceIterMut<'a, (K, V)>,
 }
 
 impl<'a, K, V> Iterator for IterMut<'a, K, V> {
@@ -370,6 +370,9 @@ where
 // ---------------------------------------------------------------------------
 
 use std::hash::Hash;
+use std::mem::replace;
+use std::slice::Iter as SliceIter;
+use std::slice::IterMut as SliceIterMut;
 
 impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for ArenaIndexMap<'_, K, V>
 where
@@ -433,7 +436,6 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use bumpalo::Bump;
 
   // -- Basic operations --------------------------------------------------
 

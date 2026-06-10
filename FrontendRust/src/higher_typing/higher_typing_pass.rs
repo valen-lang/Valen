@@ -45,6 +45,10 @@ use crate::postparsing::rune_type_solver::TemplataLookupResult;
 use crate::postparsing::rune_type_solver::{RuneTypingTooManyMatchingTypes, RuneTypingCouldntFindType};
 use crate::postparsing::rune_type_solver::RuneTypeSolver;
 use crate::parse_arena::ParseArena;
+use crate::higher_typing::astronomer_error_reporter::CouldntSolveRulesA;
+use std::any::Any;
+use std::collections::HashSet;
+use std::iter::once;
 /*
 package dev.vale.highertyping
 
@@ -68,9 +72,9 @@ import scala.collection.mutable.ArrayBuffer
 */
 // mig: struct Astrouts
 pub struct Astrouts<'s> {
-  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS<'s>, Option<ITemplataType<'s>>>,
-  code_location_to_struct: std::collections::HashMap<CodeLocationS<'s>, &'s StructA<'s>>,
-  code_location_to_interface: std::collections::HashMap<CodeLocationS<'s>, &'s InterfaceA<'s>>,
+  code_location_to_maybe_type: HashMap<CodeLocationS<'s>, Option<ITemplataType<'s>>>,
+  code_location_to_struct: HashMap<CodeLocationS<'s>, &'s StructA<'s>>,
+  code_location_to_interface: HashMap<CodeLocationS<'s>, &'s InterfaceA<'s>>,
 }
 
 // mig: impl Astrouts
@@ -88,7 +92,7 @@ pub struct EnvironmentA<'s> {
   maybe_name: Option<&'s INameS<'s>>,
   maybe_parent_env: Option<&'s EnvironmentA<'s>>,
   code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>,
-  rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
 }
 
 // mig: impl EnvironmentA
@@ -103,7 +107,7 @@ case class EnvironmentA(
     runeToType: Map[IRuneS, ITemplataType]) {
 */
 // mig: fn equals
-fn equals(&self, _obj: &dyn std::any::Any) -> bool {
+fn equals(&self, _obj: &dyn Any) -> bool {
   panic!("Unimplemented: equals");
 }
 /*
@@ -154,7 +158,7 @@ fn hash_code(&self) -> i32 {
 */
 
 // mig: fn add_runes
-fn add_runes(&self, new_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>) -> EnvironmentA<'s> {
+fn add_runes(&self, new_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>) -> EnvironmentA<'s> {
   let mut merged = self.rune_to_type.clone();
   merged.extend(new_rune_to_type);
   EnvironmentA {
@@ -381,7 +385,7 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
 
 */
 // mig: fn coerce_kind_lookup_to_coord
-fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
+fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
   let kind_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
     range: range.clone(),
     original_coord_rune: result_rune.rune.clone(),
@@ -407,7 +411,7 @@ fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type:
 
 */
 // mig: fn coerce_kind_template_lookup_to_kind
-fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
+fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
     original_kind_rune: result_rune.rune.clone(),
@@ -434,7 +438,7 @@ fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_
 
 */
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
+fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
 
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
@@ -479,7 +483,7 @@ pub struct HigherTypingPass<'s, 'ctx> {
   global_options: GlobalOptions,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
-  primitives: std::collections::HashMap<StrI<'s>, ITemplataType<'s>>,
+  primitives: HashMap<StrI<'s>, ITemplataType<'s>>,
 }
 
 // mig: impl HigherTypingPass
@@ -703,7 +707,7 @@ fn lookup_type(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, range: Ra
 
 */
 // mig: fn translate_struct
-fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, struct_s: &StructS<'s>) -> Result<&'s StructA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, struct_s: &StructS<'s>) -> Result<&'s StructA<'s>, ICompileErrorA<'s>> {
   let StructS {
     range: range_s,
     name: name_s,
@@ -789,7 +793,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   }
 
   // Split rune_a_to_type into header vs member portions
-  let mut runes_in_header: std::collections::HashSet<IRuneS<'s>> = std::collections::HashSet::new();
+  let mut runes_in_header: HashSet<IRuneS<'s>> = HashSet::new();
   for gp in generic_parameters_s.iter() {
     runes_in_header.insert(gp.rune.rune.clone());
     if let Some(ref default) = gp.default {
@@ -977,7 +981,7 @@ fn get_interface_type(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'
 
 */
 // mig: fn translate_interface
-fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, interface_s: &InterfaceS<'s>) -> Result<&'s InterfaceA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, interface_s: &InterfaceS<'s>) -> Result<&'s InterfaceA<'s>, ICompileErrorA<'s>> {
   let InterfaceS {
     range: range_s,
     name: name_s,
@@ -1165,7 +1169,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
 
 */
 // mig: fn translate_impl
-fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, impl_s: &ImplS<'s>) -> Result<&'s ImplA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, impl_s: &ImplS<'s>) -> Result<&'s ImplA<'s>, ICompileErrorA<'s>> {
   let ImplS {
     range: range_s,
     name: name_s,
@@ -1295,7 +1299,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
 
 */
 // mig: fn translate_export
-fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> Result<&'s ExportAsA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> Result<&'s ExportAsA<'s>, ICompileErrorA<'s>> {
   let range_s = export_s.range.clone();
   let rules_with_implicitly_coercing_lookups_s = export_s.rules;
   let rune = export_s.rune.clone();
@@ -1304,7 +1308,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       astrouts,
       range_s.clone(),
       Vec::new(),
-      std::iter::once((rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))).collect(),
+      once((rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))).collect(),
       &[],
       rules_with_implicitly_coercing_lookups_s,
       env,
@@ -1388,7 +1392,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
 */
 // mig: fn translate_function
-fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, function_s: &'s FunctionS<'s>) -> Result<&'s FunctionA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, function_s: &'s FunctionS<'s>) -> Result<&'s FunctionA<'s>, ICompileErrorA<'s>> {
   let range_s = function_s.range.clone();
   let name_s = function_s.name.clone();
   let attributes_s = function_s.attributes;
@@ -1511,7 +1515,7 @@ fn calculate_rune_types(
   params_s: &[ParameterS<'s>],
   rules_s: &[IRulexSR<'s>],
   env: &EnvironmentA<'s>,
-) -> Result<HashMap<IRuneS<'s>, ITemplataType<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+) -> Result<HashMap<IRuneS<'s>, ITemplataType<'s>>, ICompileErrorA<'s>> {
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
     astrouts,
@@ -1540,7 +1544,7 @@ fn calculate_rune_types(
   );
   match rune_s_to_type {
     Ok(t) => Ok(t),
-    Err(e) => Err(crate::higher_typing::astronomer_error_reporter::ICompileErrorA::CouldntSolveRules(crate::higher_typing::astronomer_error_reporter::CouldntSolveRulesA { range: range_s, error: e })),
+    Err(e) => Err(ICompileErrorA::CouldntSolveRules(CouldntSolveRulesA { range: range_s, error: e })),
   }
 }
 /*
@@ -1583,7 +1587,7 @@ fn calculate_rune_types(
 
 */
 // mig: fn translate_program
-fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> Result<ProgramA<'s>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
+fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> Result<ProgramA<'s>, ICompileErrorA<'s>> {
   let env = EnvironmentA {
     maybe_name: None,
     maybe_parent_env: None,
@@ -1719,7 +1723,7 @@ pub fn run_pass(
     package_to_exports_a.entry(e.range.begin.file.package_coord).or_default().push(e);
   }
 
-  let mut all_packages: std::collections::HashSet<&'s PackageCoordinate<'s>> = std::collections::HashSet::new();
+  let mut all_packages: HashSet<&'s PackageCoordinate<'s>> = HashSet::new();
   all_packages.extend(package_to_structs_a.keys());
   all_packages.extend(package_to_interfaces_a.keys());
   all_packages.extend(package_to_functions_a.keys());

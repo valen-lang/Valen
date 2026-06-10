@@ -44,6 +44,9 @@ use crate::typing::env::environment::ILookupContext;
 use crate::typing::templata::templata::ITemplataT;
 use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
 use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
+use std::collections::HashSet;
+use std::iter::empty;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -1069,14 +1072,14 @@ where 's: 't,
                 x
             }
             IBoundArgumentsSource::UseBoundsFromContainer { instantiation_bound_params: container_instantiation_bound_params, instantiation_bound_arguments: container_instantiation_bound_args } => {
-                let container_func_bound_to_bound_arg: std::collections::HashMap<PrototypeT<'s, 't>, PrototypeT<'s, 't>> =
+                let container_func_bound_to_bound_arg: HashMap<PrototypeT<'s, 't>, PrototypeT<'s, 't>> =
                     container_instantiation_bound_args.rune_to_bound_prototype.iter()
                         .map(|(rune, container_func_bound_arg)| {
                             let param_proto = *container_instantiation_bound_params.rune_to_bound_prototype.get(rune).unwrap();
                             (param_proto, *container_func_bound_arg)
                         })
                         .collect();
-                let container_impl_bound_to_bound_arg: std::collections::HashMap<IdT<'s, 't>, IdT<'s, 't>> =
+                let container_impl_bound_to_bound_arg: HashMap<IdT<'s, 't>, IdT<'s, 't>> =
                     container_instantiation_bound_args.rune_to_bound_impl.iter()
                         .map(|(rune, container_impl_bound_arg)| {
                             let param_impl = *container_instantiation_bound_params.rune_to_bound_impl.get(rune).unwrap();
@@ -1559,9 +1562,9 @@ where 's: 't,
                     original_calling_denizen_id,
                     imported_id,
                     interner.alloc(InstantiationBoundArgumentsT {
-                        rune_to_bound_prototype: interner.alloc_index_map_from_iter(std::iter::empty()),
-                        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(std::iter::empty()),
-                        rune_to_bound_impl: interner.alloc_index_map_from_iter(std::iter::empty()),
+                        rune_to_bound_prototype: interner.alloc_index_map_from_iter(empty()),
+                        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(empty()),
+                        rune_to_bound_impl: interner.alloc_index_map_from_iter(empty()),
                     }),
                 );
                 imported_id
@@ -2122,7 +2125,7 @@ where
                 ))
             }
             _ => {
-                let mut filter = std::collections::HashSet::new();
+                let mut filter = HashSet::new();
                 filter.insert(ILookupContext::TemplataLookupContext);
                 match self.parent_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
                     Some(ITemplataT::StructDefinition(t)) => {
@@ -2505,7 +2508,7 @@ where 's: 't,
         // Changed this from AnythingLookupContext to TemplataLookupContext
         // because this is called from StructCompiler to figure out its members.
         // We could instead pipe a lookup context through, if this proves problematic.
-        let mut lookup_filter = std::collections::HashSet::new();
+        let mut lookup_filter = HashSet::new();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
         let results = env.lookup_nearest_with_imprecise_name(name, lookup_filter, self.typing_interner);
         if results.iter().count() > 1 {
@@ -2933,7 +2936,7 @@ where 's: 't,
         //     interner.intern(KindPlaceholderNameT(
         //       interner.intern(KindPlaceholderTemplateNameT(index, rune)))))
         let template_name = self.typing_interner.intern_kind_placeholder_template_name(
-            KindPlaceholderTemplateNameT { index, rune, _phantom: std::marker::PhantomData });
+            KindPlaceholderTemplateNameT { index, rune, _phantom: PhantomData });
         let placeholder_name = self.typing_interner.intern_kind_placeholder_name(
             KindPlaceholderNameT { template: template_name });
         let kind_placeholder_id = name_prefix.add_step(
@@ -3045,7 +3048,7 @@ where 's: 't,
     ) -> ITemplataT<'s, 't> {
         // val idT = namePrefix.addStep(interner.intern(NonKindNonRegionPlaceholderNameT(index, rune)))
         let placeholder_name = self.typing_interner.intern_non_kind_non_region_placeholder_name(
-            NonKindNonRegionPlaceholderNameT { index, rune, _phantom: std::marker::PhantomData }
+            NonKindNonRegionPlaceholderNameT { index, rune, _phantom: PhantomData }
         );
         let id_t = name_prefix.add_step(
             self.typing_interner,

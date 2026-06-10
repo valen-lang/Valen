@@ -10,22 +10,26 @@ import scala.collection.mutable
 use std::marker::PhantomData;
 
 use super::simple_solver_state::SimpleSolverState;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::convert::Infallible;
+use std::hash::Hash;
 
 // mig: struct Step
 #[derive(Clone, Debug, PartialEq)]
 pub struct Step<Rule, Rune, Conclusion>
 where
-    Rune: Eq + std::hash::Hash,
+    Rune: Eq + Hash,
 {
     pub complex: bool,
     pub solved_rules: Vec<(i32, Rule)>,
     pub added_rules: Vec<Rule>,
-    pub conclusions: std::collections::HashMap<Rune, Conclusion>,
+    pub conclusions: HashMap<Rune, Conclusion>,
 }
 // mig: impl Step
 impl<Rule, Rune, Conclusion> Step<Rule, Rune, Conclusion>
 where
-    Rune: Eq + std::hash::Hash,
+    Rune: Eq + Hash,
 {
 }
 /*
@@ -46,10 +50,10 @@ case class FailedSolve[Rule, Rune, Conclusion, ErrType](
 #[derive(Clone, Debug, PartialEq)]
 pub struct FailedSolve<Rule, Rune, Conclusion, ErrType>
 where
-    Rune: Eq + std::hash::Hash,
+    Rune: Eq + Hash,
 {
     pub steps: Vec<Step<Rule, Rune, Conclusion>>,
-    pub conclusions: std::collections::HashMap<Rune, Conclusion>,
+    pub conclusions: HashMap<Rune, Conclusion>,
     pub unsolved_rules: Vec<Rule>,
     pub unsolved_runes: Vec<Rune>,
     pub error: ISolverError<Rune, Conclusion, ErrType>,
@@ -57,7 +61,7 @@ where
 // mig: impl FailedSolve
 impl<Rule, Rune, Conclusion, ErrType> FailedSolve<Rule, Rune, Conclusion, ErrType>
 where
-    Rune: Eq + std::hash::Hash,
+    Rune: Eq + Hash,
 {
 }
 
@@ -154,12 +158,12 @@ pub fn make_solver_state<Rule, Rune, Conclusion>(
     rule_to_puzzles: Box<dyn Fn(&Rule) -> Vec<Vec<Rune>>>,
     rule_to_runes: &dyn Fn(&Rule) -> Vec<Rune>,
     initial_rules: Vec<Rule>,
-    initially_known_runes: std::collections::HashMap<Rune, Conclusion>,
+    initially_known_runes: HashMap<Rune, Conclusion>,
     all_runes: Vec<Rune>,
 ) -> SimpleSolverState<Rule, Rune, Conclusion>
 where
     Rule: Clone,
-    Rune: Clone + std::hash::Hash + Eq,
+    Rune: Clone + Hash + Eq,
     Conclusion: Clone + PartialEq,
 {
     let mut solver_state = SimpleSolverState::new(rule_to_puzzles, all_runes.clone());
@@ -180,12 +184,12 @@ where
     }
 
     // Matches Scala: solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
-    match solver_state.commit_step::<std::convert::Infallible>(
+    match solver_state.commit_step::<Infallible>(
         false,
         vec![],
         initially_known_runes,
         initial_rules,
-        std::collections::HashSet::new(),
+        HashSet::new(),
     ) {
         Ok(()) => {},
         Err(_) => panic!("Initial commitStep should not fail"),
