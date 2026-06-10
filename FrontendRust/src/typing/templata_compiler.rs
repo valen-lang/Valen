@@ -879,7 +879,16 @@ where 's: 't,
     ) -> &'t StructTT<'s, 't> {
         let id = struct_tt.id;
         let new_local_name = match id.local_name {
-            INameT::AnonymousSubstruct(_) => panic!("implement: substituteTemplatasInStruct — AnonymousSubstructNameT"),
+            INameT::AnonymousSubstruct(asub_name_t) => {
+                let new_template_args: Vec<ITemplataT<'s, 't>> = asub_name_t.template_args.iter()
+                    .map(|templata| Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata))
+                    .collect();
+                let new_template_args_ref = interner.alloc_slice_from_vec(new_template_args);
+                interner.intern_name(INameValT::AnonymousSubstruct(AnonymousSubstructNameValT {
+                    template: asub_name_t.template,
+                    template_args: new_template_args_ref,
+                }))
+            }
             INameT::Struct(struct_name_t) => {
                 let new_template_args: Vec<ITemplataT<'s, 't>> = struct_name_t.template_args.iter()
                     .map(|templata| Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata))

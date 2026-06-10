@@ -113,6 +113,22 @@ fn test_templates() {
     let mut compile = test(&compilation_bump, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &instantiating_bump, code);
     compile.get_monouts();
 }
+#[test]
+fn nested_anonymous_substruct_captures_outer() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let instantiating_bump = Bump::new();
+    let compilation_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let code = "\ninterface IF<R Ref, P Ref> {\n  func __call(virtual this &IF<R, P>, p P) R;\n}\nexported func main() int {\n  inner = IF<bool, int>((it) => { true });\n  outer = IF<bool, int>((it) => { inner(it) });\n  return 0;\n}\n";
+    let mut compile = test(&compilation_bump, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &instantiating_bump, code);
+    compile.get_monouts();
+}
 /*
   test("Test templates") {
     val compile = InstantiatingCompilation.test(
