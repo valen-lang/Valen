@@ -51,3 +51,9 @@ for-jr.md
 TL.md
 migration-drive-todo.md
 migration-drive-todo.legacy.md
+
+# VmdSiteGen test setup (copied in, not part of Vale3)
+/VmdSiteGen/
+/VmdParse/
+/ParseIter/
+/SylvanHighlighting/

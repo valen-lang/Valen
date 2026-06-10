@@ -17,6 +17,7 @@ rustc-hash = "2"
 paste = "1"
 
 [dev-dependencies]
+tempfile = "3"
 
 [lib]
 name = "frontend_rust"

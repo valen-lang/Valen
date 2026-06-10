@@ -127,10 +127,23 @@ where
         options.debugOut,
         options.globalOptions))
 
-  def getVonHammer(): VonHammer = hammerCompilation.getVonHammer()
 */
 
 }
+
+// mig: fn get_von_hammer
+impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
+{
+  pub fn get_von_hammer<'a>(&'a self) -> crate::simplifying::hammer::Hammer<'s, 'i, 'h, 'a>
+  where 'ctx: 'a,
+  {
+    self.hammer_compilation.get_von_hammer()
+  }
+}
+/*
+  def getVonHammer(): VonHammer = hammerCompilation.getVonHammer()
+*/
 
 // mig: fn get_code_map
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
