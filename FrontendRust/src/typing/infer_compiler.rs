@@ -332,11 +332,6 @@ where 's: 't,
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
     //
     // ⚠ Same MKRFA caller contract as make_solver_state above. Expression-level `rules` must have
@@ -430,11 +425,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn partial_solve(
         &self,
         envs: InferEnv<'s, 't>,
@@ -473,11 +463,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
     // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
     // filtering, CSSNCE env threading, DRSINI incremental defaults).
@@ -578,11 +563,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn r#continue(
         &self,
         envs: InferEnv<'s, 't>,
@@ -602,11 +582,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn check_resolving_conclusions_and_resolve(
         &self,
         envs: InferEnv<'s, 't>,
@@ -946,11 +921,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn interpret_results(
         &self,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -996,11 +966,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Counter to @BDPFWDZ: this harvests bound prototypes from citizen-typed param inner envs
     // for the caller to push into its near-env. Pull-aligned replacement is to walk the citizen's
     // env at lookup time instead.
@@ -1163,11 +1128,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation (SPDMX-B): returns &'t reference because GeneralEnvironmentT is arena-allocated.
     pub fn import_reachable_bounds(
         &self,
@@ -1211,11 +1171,6 @@ where 's: 't,
 
   // This includes putting newly defined bound functions in.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn import_conclusions_and_reachable_bounds(
         &self,
         original_calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1277,11 +1232,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_conclusions_for_define(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -1452,11 +1402,6 @@ where 's: 't,
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_function_call_conclusion(
         &self,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1533,11 +1478,6 @@ where 's: 't,
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_impl_conclusion(
         &self,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1616,11 +1556,6 @@ where 's: 't,
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_template_call_conclusion(
         &self,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1774,11 +1709,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation (SPDMX-B): Scala's callback was `(SolverState) => Boolean` and
     // captured `coutputs` from its enclosing scope via JVM shared-reference semantics.
     // Rust's borrow checker forbids capturing `&mut coutputs` while

@@ -437,8 +437,6 @@ impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
 //    outerEnv.fullName.addStep(nameTranslator.translateFunctionNameToTemplateName(function.name))
   }
   */
-}
-impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
   pub fn debug_string(&self) -> String {
     panic!("Unimplemented: debug_string");
   }
@@ -580,8 +578,6 @@ impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
   /*
   def declaringEnv: IEnvironmentT
   */
-}
-impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
   pub fn origin_citizen(&self) -> &'s dyn CitizenA<'s> {
     panic!("Unimplemented: origin_citizen");
   }

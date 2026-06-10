@@ -85,7 +85,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         };
         (loaded_access_h, source_deferreds)
     }
-}
 /*
   def translateLoad(
       hinputs: HinputsI,
@@ -191,9 +190,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_runtime_sized_array_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_runtime_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -235,7 +231,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         deferreds.extend(index_deferreds);
         (loaded_node_h, deferreds)
     }
-}
 /*
   private def translateMundaneRuntimeSizedArrayLoad(
       hinputs: HinputsI,
@@ -290,9 +285,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_static_sized_array_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_static_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -331,7 +323,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         combined_deferreds.extend(index_deferreds);
         (loaded_node_h, combined_deferreds)
     }
-}
 /*
   private def translateMundaneStaticSizedArrayLoad(
     hinputs: HinputsI,
@@ -385,9 +376,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_member_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_addressible_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -441,7 +429,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (loaded_node_h, struct_deferreds)
     }
-}
 /*
   private def translateAddressibleMemberLoad(
       hinputs: HinputsI,
@@ -513,9 +500,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_member_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -548,7 +532,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (loaded_node, struct_deferreds)
     }
-}
 /*
   private def translateMundaneMemberLoad(
       hinputs: HinputsI,
@@ -595,9 +578,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_local_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_addressible_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -636,7 +616,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (loaded_node, Vec::new())
     }
-}
 /*
   def translateAddressibleLocalLoad(
       hinputs: HinputsI,
@@ -683,9 +662,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_local_load
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -707,7 +683,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (loaded_node, Vec::new())
     }
-}
 /*
   def translateMundaneLocalLoad(
     hinputs: HinputsI,
@@ -743,9 +718,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_local_address
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_local_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -766,7 +738,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             local_name: self.translate_full_name(hinputs, hamuts, &var_id_full),
         }))
     }
-}
 /*
   def translateLocalAddress(
       hinputs: HinputsI,
@@ -795,9 +766,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_member_address
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_member_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,

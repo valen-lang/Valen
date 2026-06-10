@@ -187,111 +187,75 @@ where 's: 'h, 's: 'i,
       instantiating_interner: &self.instantiated_compilation.instantiating_interner,
     }
   }
-}
 /*
   def getVonHammer() = vassertSome(vonHammerCache)
 */
 
 // mig: fn get_code_map
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_code_map()
   }
-}
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getCodeMap()
 */
 
 // mig: fn get_parseds
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.instantiated_compilation.get_parseds()
   }
-}
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = instantiatedCompilation.getParseds()
 */
 
 // mig: fn get_vpst_map
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_vpst_map()
   }
-}
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = instantiatedCompilation.getVpstMap()
 */
 
 // mig: fn get_scoutput
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.instantiated_compilation.get_scoutput()
   }
-}
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = instantiatedCompilation.getScoutput()
 */
 
 // mig: fn get_astrouts
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.instantiated_compilation.get_astrouts()
   }
-}
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = instantiatedCompilation.getAstrouts()
 */
 
 // mig: fn get_compiler_outputs
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.instantiated_compilation.get_compiler_outputs()
   }
-}
 /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = instantiatedCompilation.getCompilerOutputs()
 */
 
 // mig: fn get_monouts
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.instantiated_compilation.get_monouts()
   }
-}
 /*
   def getMonouts(): HinputsI = instantiatedCompilation.getMonouts()
 */
 
 // mig: fn expect_compiler_outputs
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.instantiated_compilation.expect_compiler_outputs()
   }
-}
 /*
   def expectCompilerOutputs(): HinputsT = instantiatedCompilation.expectCompilerOutputs()
 */
 
 // mig: fn get_hamuts
-impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
-{
   pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
     match self.hamuts_cache {
       Some(hamuts) => hamuts,

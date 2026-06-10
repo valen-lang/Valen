@@ -65,16 +65,9 @@ where
       entries: BumpVec::with_capacity_in(capacity, bump),
     }
   }
-}
-
 // ---------------------------------------------------------------------------
 // Mutation
 // ---------------------------------------------------------------------------
-
-impl<'bump, K, V> ArenaIndexMap<'bump, K, V>
-where
-    K: Hash + Eq + Clone,
-{
   /// Inserts a key-value pair. If the key already exists, the value is
   /// overwritten and the old value is returned. Insertion order of the
   /// key is preserved (the key stays at its original position).

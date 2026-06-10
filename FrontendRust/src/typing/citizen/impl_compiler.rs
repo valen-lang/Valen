@@ -246,11 +246,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn partial_resolve_impl(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -365,11 +360,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_impl(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -708,11 +698,6 @@ Guardian: temp-disable: SPDMX — Multi-edit refactor in progress: changing comp
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn calculate_runes_independence(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -784,11 +769,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_impl_name(
         &self,
         template_name: IdT<'s, 't>,
@@ -976,11 +956,6 @@ where 's: 't,
   //
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_descendant(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1028,11 +1003,6 @@ where 's: 't,
   // }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_impl_parent_given_sub_citizen(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1093,11 +1063,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_parents(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1220,11 +1185,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_parent(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

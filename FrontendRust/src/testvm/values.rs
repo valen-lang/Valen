@@ -86,12 +86,10 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn id(&self) -> AllocationIdV<'v, 'h, 's> {
     panic!("Unimplemented: id");
   }
-}
 /*
   def id = reference.allocId
 */
 // mig: fn increment_ref_count
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn increment_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
@@ -110,7 +108,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     let current = *referrers.get(&referrer).unwrap_or(&0);
     referrers.insert(referrer, current + 1);
   }
-}
 /*
   def incrementRefCount(referrer: IObjectReferrer): Unit = {
     if (kind == VoidV) {
@@ -131,7 +128,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn decrement_ref_count
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn decrement_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
@@ -147,7 +143,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
       assert!(!referrers.contains_key(&referrer));
     }
   }
-}
 /*
   def decrementRefCount(referrer: IObjectReferrer): Unit = {
     if (kind == VoidV) {
@@ -165,11 +160,9 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn get_ref_count
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn get_ref_count(&self) -> i32 {
     panic!("Unimplemented: get_ref_count");
   }
-}
 /*
   def getRefCount(): Int = {
     if (kind == VoidV) {
@@ -183,7 +176,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn ensure_ref_count
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn ensure_ref_count(&self, scout_arena: &ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
     if matches!(self.kind, KindV::Void(_)) {
       // Void has no RC
@@ -204,7 +196,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     }
     Ok(())
   }
-}
 /*
   def ensureRefCount(maybeOwnershipFilter: Option[Set[OwnershipH]], expectedNum: Int): Unit = {
     if (kind == VoidV) {
@@ -229,14 +220,12 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn print_refs
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn print_refs(&self, vivem_dout: &mut PrintStream) {
     if self.get_total_ref_count(None) > 0 {
       let referrers_str = self.referrers.iter().map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
       writeln!(vivem_dout, "o{}: {}", self.reference.alloc_id().num, referrers_str).unwrap();
     }
   }
-}
 /*
   def printRefs() = {
     if (getTotalRefCount(None) > 0) {
@@ -245,7 +234,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn get_total_ref_count
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn get_total_ref_count(&self, maybe_ownership_filter: Option<OwnershipH>) -> i32 {
     if matches!(self.kind, KindV::Void(_)) {
       return 1;
@@ -257,7 +245,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     };
     result
   }
-}
 /*
   def getTotalRefCount(maybeOwnershipFilter: Option[OwnershipH]): Int = {
     if (kind == VoidV) {
@@ -271,7 +258,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   }
 */
 // mig: fn finalize
-impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn finalize(&self) {
     panic!("Unimplemented: finalize");
   }
@@ -510,18 +496,15 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StructHT(self.struct_h.get_ref(interner)), _phantom: PhantomData }
   }
-}
 /*
   override def tyype = RRKind(structH.getRef)
 */
 // mig: fn get_reference_member
-impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
     let members = self.members.get().expect("StructInstance has no members");
     let (_tyype, r#ref) = (self.struct_h.members[index as usize].tyype, members[index as usize]);
     r#ref
   }
-}
 /*
   def getReferenceMember(index: Int) = {
     (structH.members(index).tyype, members.get(index)) match {
@@ -530,20 +513,17 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   }
 */
 // mig: fn set_reference_member
-impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn set_reference_member(&self, vivem_bump: &'v bumpalo::Bump, index: i32, reference: ReferenceV<'v, 'h, 's>) {
     let mut new_members: Vec<ReferenceV<'v, 'h, 's>> = self.members.get().expect("StructInstance has no members").to_vec();
     new_members[index as usize] = reference;
     self.members.set(Some(vivem_bump.alloc_slice_copy(&new_members)));
   }
-}
 /*
   def setReferenceMember(index: Int, reference: ReferenceV) = {
     members = Some(members.get.updated(index, reference))
   }
 */
 // mig: fn zero
-impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn zero(&self) {
     self.members.set(None);
   }
@@ -579,12 +559,10 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: self.type_h.kind, _phantom: PhantomData }
   }
-}
 /*
   override def tyype = RRKind(typeH.kind)
 */
 // mig: fn get_element
-impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
     if index < 0 || index as usize >= elements.len() {
@@ -592,7 +570,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     }
     elements[index as usize]
   }
-}
 /*
   def getElement(index: Long): ReferenceV = {
     if (index < 0 || index >= elements.size) {
@@ -602,7 +579,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   }
 */
 // mig: fn set_element
-impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn set_element(&self, vivem_bump: &'v bumpalo::Bump, index: i64, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
     if index < 0 || index as usize >= elements.len() {
@@ -613,7 +589,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     new_vec[index as usize] = ref_;
     self.elements.set(new_vec.into_bump_slice());
   }
-}
 /*
   def setElement(index: Long, ref: ReferenceV) = {
     if (index < 0 || index >= elements.size) {
@@ -623,7 +598,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   }
 */
 // mig: fn initialize_element
-impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn initialize_element(&self, vivem_bump: &'v bumpalo::Bump, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
     assert!(elements.len() < self.capacity as usize);
@@ -632,7 +606,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     new_vec.push(ref_);
     self.elements.set(new_vec.into_bump_slice());
   }
-}
 /*
   def initializeElement(ref: ReferenceV) = {
     vassert(elements.size < capacity)
@@ -640,7 +613,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   }
 */
 // mig: fn deinitialize_element
-impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
     assert!(!elements.is_empty());
@@ -648,7 +620,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     self.elements.set(&elements[0..elements.len() - 1]);
     r#ref
   }
-}
 /*
   def deinitializeElement() = {
     vassert(elements.nonEmpty)
@@ -658,7 +629,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   }
 */
 // mig: fn get_size
-impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn get_size(&self) -> i64 {
     self.elements.get().len() as i64
   }
@@ -719,9 +689,7 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn alloc_id(&self) -> AllocationIdV<'v, 'h, 's> {
     AllocationIdV { tyype: RRKindV { hamut: self.actual_kind.hamut, _phantom: PhantomData }, num: self.num }
   }
-}
 // mig: fn actual_coord (val actualCoord — Scala synthesized field)
-impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn actual_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
       hamut: CoordH {
@@ -732,9 +700,7 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
       _phantom: PhantomData,
     }
   }
-}
 // mig: fn seen_as_coord (val seenAsCoord — Scala synthesized field)
-impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn seen_as_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
       hamut: CoordH {

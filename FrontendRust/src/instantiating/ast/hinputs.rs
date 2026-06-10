@@ -85,10 +85,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn to_string(&self) -> String {
         panic!("Unimplemented: to_string")
     }
-}
-
 // mig: fn lookup_function (humanName: String overload)
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_function_by_str(&self, human_name: &str) -> &'i FunctionDefinitionI<'s, 'i> {
         let matches: Vec<&&'i FunctionDefinitionI<'s, 'i>> = self.functions.iter().filter(|f| {
             match f.header.id.local_name {
@@ -103,7 +100,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         }
         matches[0]
     }
-}
 /*
   override def toString: String = "HinputsI#()"
 
@@ -132,14 +128,12 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
 */
 // mig: fn lookup_struct
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct(
         &self,
         _struct_id: &IdI<'s, 'i, cI>,
     ) -> &'i StructDefinitionI<'s, 'i, cI> {
         self.structs.iter().find(|s| s.instantiated_citizen.id == *_struct_id).copied().expect("lookup_struct: not found")
     }
-}
 /*
   def lookupStruct(structId: IdI[cI, IStructNameI[cI]]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))
@@ -147,14 +141,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_interface
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface(
         &self,
         _interface_id: &IdI<'s, 'i, cI>,
     ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         self.interfaces.iter().find(|i| i.instantiated_interface.id == *_interface_id).expect("lookup_interface: not found")
     }
-}
 /*
   def lookupInterface(interfaceId: IdI[cI, IInterfaceNameI[cI]]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
@@ -162,14 +154,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_citizen
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_citizen(
         &self,
         _citizen_id: &IdI<'s, 'i, cI>,
     ) -> ICitizenDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_citizen")
     }
-}
 /*
   def lookupCitizen(citizenId: IdI[cI, ICitizenNameI[cI]]): CitizenDefinitionI = {
     vassertOne(
@@ -178,14 +168,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_struct_by_template
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct_by_template(
         &self,
         _struct_template_name: &IStructTemplateNameI<'s, 'i, cI>,
     ) -> &'i StructDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_struct_by_template")
     }
-}
 /*
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameI[cI]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
@@ -193,14 +181,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_interface_by_template
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface_by_template(
         &self,
         _interface_template_name: &IInterfaceTemplateNameI<'s, 'i, cI>,
     ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_interface_by_template")
     }
-}
 /*
   def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameI[cI]): InterfaceDefinitionI = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
@@ -208,14 +194,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_impl_by_template
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_impl_by_template(
         &self,
         _impl_template_name: &IImplTemplateNameI<'s, 'i, cI>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl_by_template")
     }
-}
 /*
   def lookupImplByTemplate(implTemplateName: IImplTemplateNameI[cI]): EdgeI = {
     vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
@@ -223,14 +207,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_edge
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_edge(
         &self,
         _impl_id: &IdI<'s, 'i, cI>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_edge")
     }
-}
 /*
   def lookupEdge(implId: IdI[cI, IImplNameI[cI]]): EdgeI = {
     vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
@@ -273,14 +255,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_function
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_function_by_template(
         &self,
         _func_template_name: &IFunctionTemplateNameI<'s, 'i, cI>,
     ) -> Option<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: lookup_function_by_template")
     }
-}
 /*
   def lookupFunction(funcTemplateName: IFunctionTemplateNameI[cI]): Option[FunctionDefinitionI] = {
     functions.find(_.header.id.localName.template == funcTemplateName).headOption
@@ -288,14 +268,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_function
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_function(
         &self,
         _human_name: &str,
     ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_function")
     }
-}
 /*
   def lookupFunction(humanName: String): FunctionDefinitionI = {
     val matches = functions.filter(f => {
@@ -314,7 +292,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_struct
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_struct_by_name(
         &self,
         human_name: &str,
@@ -332,7 +309,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         }
         matches[0]
     }
-}
 /*
   def lookupStruct(humanName: String): StructDefinitionI = {
     val matches = structs.filter(s => {
@@ -351,7 +327,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_impl
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_impl(
         &self,
         _sub_citizen_it: &IdI<'s, 'i, cI>,
@@ -359,7 +334,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl")
     }
-}
 /*
   def lookupImpl(
     subCitizenIT: IdI[cI, ICitizenNameI[cI]],
@@ -372,14 +346,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_interface
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_interface_by_name(
         &self,
         _human_name: &str,
     ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
         panic!("Unimplemented: lookup_interface_by_name")
     }
-}
 /*
   def lookupInterface(humanName: String): InterfaceDefinitionI = {
     val matches = interfaces.filter(s => {
@@ -398,14 +370,12 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn lookup_user_function
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn lookup_user_function(
         &self,
         _human_name: &str,
     ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_user_function")
     }
-}
 /*
   def lookupUserFunction(humanName: String): FunctionDefinitionI = {
     val matches =
@@ -444,13 +414,11 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn get_all_non_extern_functions
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn get_all_non_extern_functions(
         &self,
     ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_non_extern_functions")
     }
-}
 /*
   def getAllNonExternFunctions: Iterable[FunctionDefinitionI] = {
     functions.filter(!_.header.isExtern)
@@ -458,7 +426,6 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 */
 // mig: fn get_all_user_functions
-impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn get_all_user_functions(
         &self,
     ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {

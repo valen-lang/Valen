@@ -63,7 +63,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         parent_locals.set_next_local_id_number(block_locals.next_local_id_number);
         self.interner.alloc(BlockH { inner: expr_h })
     }
-}
 /*
   def translateBlock(
     hinputs: HinputsI,
@@ -112,9 +111,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mutabilify
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -126,7 +122,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mutabilify");
     }
-}
 /*
   def translateMutabilify(
     hinputs: HinputsI,
@@ -157,9 +152,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_immutabilify
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_immutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,

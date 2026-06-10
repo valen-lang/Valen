@@ -51,7 +51,6 @@ impl CounterI {
     pub fn new() -> Self {
         CounterI { set: HashSet::new() }
     }
-}
 /*
   class Counter {
     // TODO(optimize): Use an array for this, with a minimum index and maximum index (similar to
@@ -60,11 +59,9 @@ impl CounterI {
 
 */
 // mig: fn count
-impl CounterI {
     pub fn count<'s, 'i>(&mut self, region: RegionTemplataI<'s, 'i, sI>) where 's: 'i {
         self.set.insert(region.pure_height);
     }
-}
 /*
     def count(region: RegionTemplataI[sI]): Unit = {
       set.add(region.pureHeight)
@@ -72,7 +69,6 @@ impl CounterI {
 
 */
 // mig: fn assemble_map
-impl CounterI {
     pub fn assemble_map(&self) -> HashMap<i32, i32> {
         let num_regions = self.set.len();
         // Let's say we have a set that contains 3, 5, -2, 0, 4, it becomes...

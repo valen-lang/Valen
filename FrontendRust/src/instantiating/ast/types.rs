@@ -279,14 +279,11 @@ sealed trait KindIT[+R <: IRegionsModeI] {
 // mig: fn is_primitive
 impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   pub fn is_primitive(&self) -> bool { panic!("Unimplemented: is_primitive"); }
-}
 /*
   def isPrimitive: Boolean
 */
 // mig: fn expect_citizen
-impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i, R> { panic!("Unimplemented: expect_citizen"); }
-}
 /*
   def expectCitizen(): ICitizenIT[R] = {
     this match {
@@ -296,14 +293,12 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   }
 */
 // mig: fn expect_interface
-impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i, R> {
     match self {
       KindIT::InterfaceIT(c) => c,
       _ => panic!("expect_interface: not an interface"),
     }
   }
-}
 /*
   def expectInterface(): InterfaceIT[R] = {
     this match {
@@ -313,7 +308,6 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   }
 */
 // mig: fn expect_struct
-impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   pub fn expect_struct(&self) -> &'i StructIT<'s, 'i, R> { panic!("Unimplemented: expect_struct"); }
 }
 /*

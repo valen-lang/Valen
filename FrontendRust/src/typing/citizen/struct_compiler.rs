@@ -191,11 +191,6 @@ where 's: 't,
     })
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn precompile_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -299,11 +294,6 @@ where 's: 't,
     coutputs.declareTypeOuterEnv(structTemplateId, outerEnv)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn precompile_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -429,11 +419,6 @@ where 's: 't,
     coutputs.declareTypeOuterEnv(interfaceTemplateId, outerEnv)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -457,11 +442,6 @@ where 's: 't,
 
   // See SFWPRL for how this is different from resolveInterface.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn predict_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -490,11 +470,6 @@ where 's: 't,
 
   // See SFWPRL for how this is different from resolveStruct.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn predict_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -521,11 +496,6 @@ where 's: 't,
       coutputs, callingEnv, callRange, callLocation, structTemplata, uncoercedTemplateArgs)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -555,11 +525,6 @@ where 's: 't,
     success
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -584,11 +549,6 @@ where 's: 't,
 
   // Makes a struct to back a closure
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_closure_understruct(
         &self,
         containing_function_env: &'t NodeEnvironmentT<'s, 't>,
@@ -631,14 +591,9 @@ where 's: 't,
 
 }
 */
-}
-
 /*
 object StructCompiler {
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_compound_type_mutability(
         &self,
         member_types: &[CoordT<'s, 't>],
@@ -653,10 +608,6 @@ where 's: 't,
         if (allMembersImmutable) ImmutableT else MutableT
       }
     */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn struct_compiler_get_mutability(
         &self,
         sanity_check: bool,

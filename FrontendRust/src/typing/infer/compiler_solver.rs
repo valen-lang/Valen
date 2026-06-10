@@ -676,11 +676,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn advance_infer(
         &self,
         env: InferEnv<'s, 't>,
@@ -799,11 +794,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn continue_solver(
         &self,
         env: InferEnv<'s, 't>,
@@ -1269,7 +1259,6 @@ where 's: 't,
             Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
         }
     }
-}
 /*
   def solve(
     delegate: IInfererDelegate,
@@ -1286,9 +1275,6 @@ where 's: 't,
   }
 
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn solve_rule(
         &self,
         state: &mut CompilerOutputs<'s, 't>,
@@ -1906,7 +1892,6 @@ where 's: 't,
             other => panic!("Unimplemented: solve_rule {:?}", other),
         }
     }
-}
 /*
   private def solveRule(
     delegate: IInfererDelegate,
@@ -2359,9 +2344,6 @@ where 's: 't,
   }
 
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn solve_call_rule(
         &self,
         state: &mut CompilerOutputs<'s, 't>,
@@ -2592,7 +2574,6 @@ where 's: 't,
             }
         }
     }
-}
 /*
   private def solveCallRule(
       delegate: IInfererDelegate,
@@ -2979,9 +2960,6 @@ where 's: 't,
   }
 
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
         match literal {
             ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),

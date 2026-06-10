@@ -90,11 +90,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn drop(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,

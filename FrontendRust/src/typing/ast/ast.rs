@@ -109,8 +109,6 @@ impl<'s, 't> KindExportT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> KindExportT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -138,8 +136,6 @@ impl<'s, 't> FunctionExportT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> FunctionExportT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -165,8 +161,6 @@ impl<'s, 't> KindExternT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> KindExternT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -203,8 +197,6 @@ impl<'s, 't> FunctionExternT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> FunctionExternT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -229,8 +221,6 @@ impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> {
 /*
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> {
     fn equals(&self, obj: &InterfaceEdgeBlueprintT<'s, 't>) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious(); }
@@ -315,8 +305,6 @@ impl<'s, 't> EdgeT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> EdgeT<'s, 't> {
     fn equals(&self, obj: &EdgeT<'s, 't>) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = {
@@ -350,8 +338,6 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> FunctionDefinitionT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -399,8 +385,6 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     // Rust adaptation (SPDMX-B): interner needed to allocate &'t [i32] slice for arena-immutable storage.
     pub fn add(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'s, 't> {
         let mut new_path: Vec<i32> = self.path.to_vec();
@@ -412,8 +396,6 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     LocationInFunctionEnvironmentT(path :+ subLocation)
   }
 */
-}
-impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     fn to_string(&self) -> String { panic!("Unimplemented: to_string"); }
 /*
   override def toString: String = path.mkString(".")
@@ -449,14 +431,10 @@ impl<'s, 't> ParameterT<'s, 't> {
 
   // Use same instead, see EHCFBD for why we dont like equals.
 */
-}
-impl<'s, 't> ParameterT<'s, 't> {
     fn equals(&self, obj: &ParameterT<'s, 't>) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ParameterT<'s, 't> {
     fn same(&self, that: &ParameterT<'s, 't>) -> bool { panic!("Unimplemented: same"); }
 /*
   def same(that: ParameterT): Boolean = {
@@ -608,8 +586,6 @@ impl<'s, 't> SignatureT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> SignatureT<'s, 't> {
     fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
@@ -665,14 +641,10 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 
   // Use same instead, see EHCFBD for why we dont like equals.
 */
-}
-impl<'s, 't> FunctionBannerT<'s, 't> {
     fn equals(&self, obj: &FunctionBannerT<'s, 't>) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> FunctionBannerT<'s, 't> {
     pub fn same(&self, that: &FunctionBannerT<'s, 't>) -> bool {
         let self_func = self.origin_function_templata.map(|t| t.function as *const _);
         let that_func = that.origin_function_templata.map(|t| t.function as *const _);
@@ -691,8 +663,6 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 //  Option[(FullNameT[IFunctionNameT], Vector[ParameterT])] =
 //    Some(templateName, params)
 */
-}
-impl<'s, 't> FunctionBannerT<'s, 't> {
     fn to_string(&self) -> String { panic!("Unimplemented: to_string"); }
 /*
   override def toString: String = {
@@ -790,8 +760,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn new(
         id: IdT<'s, 't>,
         attributes: Vec<IFunctionAttributeT<'s>>,
@@ -857,8 +825,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
   })
 
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn equals(&self, obj: &FunctionHeaderT<'s, 't>) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = {
@@ -877,8 +843,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 
   vassert(id.localName.parameters == paramTypes)
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn is_extern(&self) -> bool { panic!("Unimplemented: is_extern"); }
 /*
   def isExtern = attributes.exists({ case ExternT(_) => true case _ => false })
@@ -886,8 +850,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 /*
   //  def isExport = attributes.exists({ case Export2(_) => true case _ => false })
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn is_user_function(&self) -> bool { self.attributes.contains(&IFunctionAttributeT::UserFunction) }
 /*
   def isUserFunction = attributes.contains(UserFunctionT)
@@ -914,8 +876,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 /*
 //  def paramTypes: Vector[CoordT] = params.map(_.tyype)
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn get_abstract_interface(&self) -> Option<InterfaceTT<'s, 't>> {
         let abstract_interfaces: Vec<InterfaceTT<'s, 't>> =
             self.params.iter().filter_map(|param| {
@@ -937,8 +897,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     abstractInterfaces.headOption
   }
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn get_virtual_index(&self) -> Option<usize> {
         let indices: Vec<usize> = self.params.iter().enumerate()
             .filter_map(|(index, p)| if p.virtuality.is_some() { Some(index) } else { None })
@@ -962,16 +920,12 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 //    }
 //  })
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn to_banner(&self) -> FunctionBannerT<'s, 't> {
         FunctionBannerT { origin_function_templata: self.maybe_origin_function_templata, name: self.id }
     }
 /*
   def toBanner: FunctionBannerT = FunctionBannerT(maybeOriginFunctionTemplata, id)
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn to_prototype(&self) -> PrototypeT<'s, 't> {
         PrototypeT { id: self.id, return_type: self.return_type }
     }
@@ -984,8 +938,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     PrototypeT(id, returnType)
   }
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     pub fn to_signature(&self) -> SignatureT<'s, 't> {
         self.to_prototype().to_signature()
     }
@@ -994,8 +946,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     toPrototype.toSignature
   }
 */
-}
-impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
@@ -1038,8 +988,6 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-}
-impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
     pub fn param_types(&self) -> &'t [CoordT<'s, 't>] {
         IFunctionNameT::try_from(self.id.local_name)
             .unwrap_or_else(|_| panic!("param_types called on non-function name: {:?}", self.id.local_name))
@@ -1048,8 +996,6 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
-}
-impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
     pub fn to_signature(&self) -> SignatureT<'s, 't> {
         SignatureT { id: self.id }
     }

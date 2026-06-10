@@ -204,11 +204,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn predict_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -356,11 +351,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn predict_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -512,11 +502,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -648,11 +633,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -867,11 +847,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1074,11 +1049,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_closure_understruct_layer(
         &self,
         containing_function_env: &'t NodeEnvironmentT<'s, 't>,
@@ -1108,11 +1078,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_struct_name(
         &self,
         template_name: IdT<'s, 't>,
@@ -1142,11 +1107,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_interface_name(
         &self,
         template_name: IdT<'s, 't>,

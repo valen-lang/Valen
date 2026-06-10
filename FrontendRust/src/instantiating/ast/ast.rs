@@ -304,14 +304,12 @@ impl<'i> LocationInFunctionEnvironmentI<'i> {
     pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentI<'i> {
         panic!("Unimplemented: add")
     }
-}
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentI = {
     LocationInFunctionEnvironmentI(path :+ subLocation)
   }
 */
 // mig: fn to_string
-impl<'i> LocationInFunctionEnvironmentI<'i> {
     pub fn to_string(&self) -> String {
         self.path.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(".")
     }
@@ -536,17 +534,14 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_extern(&self) -> bool {
         panic!("Unimplemented: is_extern")
     }
-}
 /*
   def isExtern = attributes.exists({ case ExternI(_) => true case _ => false })
   //  def isExport = attributes.exists({ case Export2(_) => true case _ => false })
 */
 // mig: fn is_user_function
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_user_function(&self) -> bool {
         self.attributes.contains(&IFunctionAttributeI::UserFunctionI)
     }
-}
 /*
   def isUserFunction = attributes.contains(UserFunctionI)
 //  def getAbstractInterface: Option[InterfaceIT] = toBanner.getAbstractInterface
@@ -563,7 +558,6 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 //  def paramTypes: Vector[CoordI[cI]] = params.map(_.tyype)
 */
 // mig: fn get_abstract_interface
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn get_abstract_interface(&self) -> Option<&'i InterfaceIT<'s, 'i, cI>> {
         let abstract_interfaces: Vec<_> = self.params.iter().filter_map(|p| match (p.virtuality, p.tyype.kind) {
             (Some(AbstractI), KindIT::InterfaceIT(ir)) => Some(ir),
@@ -572,7 +566,6 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         assert!(abstract_interfaces.len() <= 1);
         abstract_interfaces.into_iter().next()
     }
-}
 /*
   def getAbstractInterface: Option[InterfaceIT[cI]] = {
     val abstractInterfaces =
@@ -584,11 +577,9 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
   }
 */
 // mig: fn get_virtual_index
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn get_virtual_index(&self) -> Option<i32> {
         panic!("Unimplemented: get_virtual_index")
     }
-}
 /*
   def getVirtualIndex: Option[Int] = {
     val indices =
@@ -606,7 +597,6 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 //  })
 */
 // mig: fn to_prototype
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn to_prototype(&self, interner: &InstantiatingInterner<'s, 'i>) -> PrototypeI<'s, 'i, cI> {
         //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
         //    val paramTypes = params.map(_.tyype).map(substituter.substituteForCoord)
@@ -614,7 +604,6 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         //    val newName = FullNameI(fullName.packageCoord, fullName.initSteps, newLastStep)
         *interner.intern_prototype_ci(PrototypeIValI { id: self.id, return_type: self.return_type })
     }
-}
 /*
   def toPrototype: PrototypeI[cI] = {
 //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
@@ -625,7 +614,6 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
   }
 */
 // mig: fn to_signature
-impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn to_signature(&self) -> SignatureI<'_, '_, ()> {
         panic!("Unimplemented: to_signature")
     }
@@ -727,21 +715,17 @@ impl<'s, 'i> IVariableI<'s, 'i> {
     pub fn name(&self) -> () {
         panic!("Unimplemented: name")
     }
-}
 /*
   def name: IVarNameI[cI]
 */
 // mig: fn variability
-impl<'s, 'i> IVariableI<'s, 'i> {
     pub fn variability(&self) -> () {
         panic!("Unimplemented: variability")
     }
-}
 /*
   def variability: VariabilityI
 */
 // mig: fn collapsed_coord
-impl<'s, 'i> IVariableI<'s, 'i> {
     pub fn collapsed_coord(&self) -> () {
         panic!("Unimplemented: collapsed_coord")
     }
@@ -769,25 +753,21 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.name,
         }
     }
-}
 /*
   def name: IVarNameI[cI]
 */
 // mig: fn collapsed_coord
-impl<'s, 'i> ILocalVariableI<'s, 'i> {
     pub fn collapsed_coord(&self) -> CoordI<'s, 'i, cI> {
         match self {
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.collapsed_coord,
             ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.collapsed_coord,
         }
     }
-}
 /*
   def collapsedCoord: CoordI[cI]
 }
 */
 // mig: fn variability (inherited from IVariableI, no direct ILocalVariableI Scala decl)
-impl<'s, 'i> ILocalVariableI<'s, 'i> {
     pub fn variability(&self) -> VariabilityI {
         match self {
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.variability,

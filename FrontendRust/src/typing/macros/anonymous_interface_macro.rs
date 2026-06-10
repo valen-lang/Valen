@@ -361,11 +361,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn map_runes_anonymous_interface(
         &self,
         rule: IRulexSR<'s>,
@@ -462,11 +457,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn inherited_method_rune_anonymous_interface(
         &self,
         interface_a: &'s InterfaceA<'s>,
@@ -489,11 +479,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_struct_anonymous_interface(
         &self,
         interface_a: &'s InterfaceA<'s>,
@@ -1051,11 +1036,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_forwarder_function_anonymous_interface(
         &self,
         struct_name_s: AnonymousSubstructTemplateNameS<'s>,

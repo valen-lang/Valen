@@ -58,7 +58,6 @@ case class IdI[+R <: IRegionsModeI, +I <: INameI[R]](
 // (was cfg-gated)
 impl<'s, 'i, R> IdI<'s, 'i, R> {
     pub fn package_id(&self) -> IdI<'s, 'i, R> { panic!("Unimplemented: package_id"); }
-}
 /*
   def packageId: IdI[R, PackageTopLevelNameI[R]] = {
     IdI(packageCoord, Vector(), PackageTopLevelNameI())
@@ -67,7 +66,6 @@ impl<'s, 'i, R> IdI<'s, 'i, R> {
 */
 // mig: fn init_id
 // (was cfg-gated)
-impl<'s, 'i, R> IdI<'s, 'i, R> {
     pub fn init_id(&self) -> IdI<'s, 'i, R> { panic!("Unimplemented: init_id"); }
 }
 /*
@@ -564,9 +562,7 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
             IFunctionNameI::AnonymousSubstructConstructor(x) => x.template_args,
         }
     }
-}
 // mig: fn template
-impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
     pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i, R> {
         match self {
             IFunctionNameI::OverrideDispatcher(x) => IFunctionTemplateNameI::OverrideDispatcherTemplate(&x.template),
@@ -578,9 +574,7 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
             IFunctionNameI::AnonymousSubstructConstructor(x) => IFunctionTemplateNameI::AnonymousSubstructConstructorTemplate(&x.template),
         }
     }
-}
 // mig: fn parameters
-impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
     pub fn parameters(&self) -> &'i [CoordI<'s, 'i, R>] {
         match self {
             IFunctionNameI::OverrideDispatcher(f) => f.parameters,
@@ -808,9 +802,7 @@ impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
             ISuperKindNameI::Interface(x) => x.template_args,
         }
     }
-}
 // mig: fn template
-impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
     pub fn template(&self) -> ISuperKindTemplateNameI<'s, 'i, R> {
         match self {
             ISuperKindNameI::Interface(x) => match x.template {
@@ -1105,9 +1097,7 @@ impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
             IInterfaceNameI::Interface(x) => x.template_args,
         }
     }
-}
 // mig: fn template
-impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
     pub fn template(&self) -> &'i InterfaceTemplateNameI<'s, 'i, R> {
         match self {
             IInterfaceNameI::Interface(x) => match x.template {

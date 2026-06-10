@@ -647,14 +647,12 @@ impl<'s> Equivalencies<'s> {
     self.rune_to_kind_equivalent_runes.entry(rune_a).or_default().insert(rune_b);
     self.rune_to_kind_equivalent_runes.entry(rune_b).or_default().insert(rune_a);
   }
-}
 /*
   def markKindEquivalent(runeA: IRuneS, runeB: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElseUpdate(runeA, mutable.HashSet()) += runeB
     runeToKindEquivalentRunes.getOrElseUpdate(runeB, mutable.HashSet()) += runeA
   }
 */
-impl<'s> Equivalencies<'s> {
   fn new(rules_s: &[IRulexSR<'s>]) -> Self {
     let mut this = Self { rune_to_kind_equivalent_runes: HashMap::new() };
     for rule in rules_s {
@@ -683,7 +681,6 @@ impl<'s> Equivalencies<'s> {
     }
     this
   }
-}
 /*
   rules.foreach({
     case CoordComponentsSR(_, resultRune, _, kindRune) => markKindEquivalent(resultRune.rune, kindRune.rune)
@@ -710,7 +707,6 @@ impl<'s> Equivalencies<'s> {
     case other => vimpl(other)
   })
 */
-impl<'s> Equivalencies<'s> {
   fn find_transitively_equivalent_into(
     &self,
     found_so_far: &mut HashSet<IRuneS<'s>>,
@@ -727,7 +723,6 @@ impl<'s> Equivalencies<'s> {
       }
     }
   }
-}
 /*
   private def findTransitivelyEquivalentInto(foundSoFar: mutable.HashSet[IRuneS], rune: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElse(rune, Vector()).foreach(r => {
@@ -738,14 +733,12 @@ impl<'s> Equivalencies<'s> {
     })
   }
 */
-impl<'s> Equivalencies<'s> {
   fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> HashSet<IRuneS<'s>> {
     let mut set = HashSet::new();
     set.insert(rune);
     self.find_transitively_equivalent_into(&mut set, rune);
     set
   }
-}
 /*
   // MIGALLOW: getKindEquivalentRunes -> get_kind_equivalent_runes
   def getKindEquivalentRunes(rune: IRuneS): Set[IRuneS] = {
@@ -755,7 +748,6 @@ impl<'s> Equivalencies<'s> {
     set.toSet
   }
 */
-impl<'s> Equivalencies<'s> {
   fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> HashSet<IRuneS<'s>>
   where
     I: Iterator<Item = IRuneS<'s>>,

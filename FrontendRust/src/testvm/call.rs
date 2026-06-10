@@ -46,7 +46,6 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
       expected_type: tyype,
     });
   }
-}
 /*
   def addLocal(varAddr: VariableAddressV, reference: ReferenceV, tyype: CoordH[KindHT]): Unit = {
     vassert(varAddr.callId == callId)
@@ -57,14 +56,12 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 
 */
 // mig: fn remove_local
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>) {
     assert_eq!(var_addr.call_id, self.call_id);
     let locals = &mut self.locals;
     assert!(locals.contains_key(&var_addr));
     locals.remove(&var_addr);
   }
-}
 /*
   def removeLocal(varAddr: VariableAddressV): Unit = {
     vassert(varAddr.callId == callId)
@@ -74,13 +71,11 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 
 */
 // mig: fn get_local
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn get_local(&self, addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
     let locals = &self.locals;
     let result = locals.get(&addr).expect("get_local: not found").clone();
     result
   }
-}
 /*
   def getLocal(addr: VariableAddressV) = {
     vassertSome(locals.get(addr))
@@ -88,11 +83,9 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 
 */
 // mig: fn mutate_local
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, _expected_type: CoordH<'s, 'h>) {
     self.locals.get_mut(&var_addr).expect("mutate_local: not found").reference = reference;
   }
-}
 /*
   def mutateLocal(varAddr: VariableAddressV, reference: ReferenceV, expectedType: CoordH[KindHT]): Unit = {
     locals(varAddr).reference = reference
@@ -100,7 +93,6 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 
 */
 // mig: fn take_argument
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
     assert!((index as usize) < self.args.len());
     match self.args.get(&index).copied() {
@@ -112,7 +104,6 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
       None => panic!("take_argument: missing argument key {} (assert should have caught this)", index),
     }
   }
-}
 /*
   def takeArgument(index: Int): ReferenceV = {
     vassert(index < args.size)
@@ -129,7 +120,6 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
 
 */
 // mig: fn prepare_to_die
-impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn prepare_to_die(&mut self) {
     let locals = &self.locals;
     assert!(locals.is_empty());

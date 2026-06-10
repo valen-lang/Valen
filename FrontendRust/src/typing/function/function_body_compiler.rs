@@ -485,11 +485,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_lets(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,

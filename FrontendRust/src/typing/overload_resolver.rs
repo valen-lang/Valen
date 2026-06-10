@@ -285,11 +285,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn params_match(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -422,11 +417,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_candidate_banners_inner(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -1037,11 +1027,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_param_environments(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1150,11 +1135,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn find_potential_function(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -1259,11 +1239,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_banner_param_scores(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1334,11 +1309,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn narrow_down_callable_overloads(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1631,11 +1601,6 @@ where 's: 't,
 //  }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_array_generator_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1685,11 +1650,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation: arena-allocated ReferenceExpressionTE — caller needs to keep the value to pass to DestroyStaticSizedArrayIntoFunctionTE, so we take &'t.
     pub fn get_array_consumer_prototype(
         &self,

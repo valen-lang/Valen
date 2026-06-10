@@ -270,11 +270,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn generate_function_body_struct_constructor(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

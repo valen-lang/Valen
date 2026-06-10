@@ -452,11 +452,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_function_prototype_for_call(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -482,11 +477,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_function_prototype_inner_for_call(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -521,11 +511,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn finalize_header(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -569,11 +554,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn finish_function_maybe_deferred(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -672,11 +652,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_attributes(&self, attributes_a: &[&IFunctionAttributeS<'s>]) -> Vec<IFunctionAttributeT<'s>> {
         attributes_a.iter().map(|a| {
             match a {
@@ -698,11 +673,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_extern_function(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -890,11 +860,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_function_attributes(&self, a: &[IFunctionAttributeS<'s>]) -> Vec<IFunctionAttributeT<'s>> {
         a.iter().map(|attr| {
             match attr {

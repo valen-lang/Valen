@@ -244,10 +244,6 @@ where 's: 't,
     }
     /*
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn count_denizens(&self) -> i32 {
         panic!("Unimplemented: Slab 10 — body migration");
     }
@@ -260,10 +256,6 @@ where 's: 't,
           interfaceTemplateNameToDefinition.size
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn peek_next_deferred_function_body_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         self.deferred_function_body_compiles.values().next()
     }
@@ -272,10 +264,6 @@ where 's: 't,
         deferredFunctionBodyCompiles.headOption.map(_._2)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn mark_deferred_function_body_compiled(
         &mut self,
         prototype_t: &'t PrototypeT<'s, 't>,
@@ -295,10 +283,6 @@ where 's: 't,
         deferredFunctionBodyCompiles -= prototypeT
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn peek_next_deferred_function_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         self.deferred_function_compiles.values().next()
     }
@@ -307,10 +291,6 @@ where 's: 't,
         deferredFunctionCompiles.headOption.map(_._2)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn mark_deferred_function_compiled(
         &mut self,
         name: &'t IdT<'s, 't>,
@@ -330,10 +310,6 @@ where 's: 't,
         deferredFunctionCompiles -= name
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_instantiation_name_to_function_bound_to_rune(
         &self,
     ) -> HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>> {
@@ -344,10 +320,6 @@ where 's: 't,
         instantiationNameToInstantiationBounds.toMap
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_function(
         &self,
         signature: &'t SignatureT<'s, 't>,
@@ -360,10 +332,6 @@ where 's: 't,
         signatureToFunction.get(signature)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_instantiation_bounds(
         &self,
         interner: &TypingInterner<'s, 't>,
@@ -383,10 +351,6 @@ where 's: 't,
         instantiationNameToInstantiationBounds.get(instantiationId)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_instantiation_bounds(
         &mut self,
         _sanity_check: bool,
@@ -577,10 +541,6 @@ where 's: 't,
     //    this
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_function_return_type(
         &mut self,
         signature: &'t SignatureT<'s, 't>,
@@ -604,10 +564,6 @@ where 's: 't,
         returnTypesBySignature += (signature -> returnType2)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_function(
         &mut self,
         signature: &'t SignatureT<'s, 't>,
@@ -650,10 +606,6 @@ where 's: 't,
     //    functionsByPrototype.put(function.header.toPrototype, function)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_function(
         &mut self,
         call_ranges: &[RangeS<'s>],
@@ -682,10 +634,6 @@ where 's: 't,
         functionDeclaredNames.put(name, callRanges.head)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_type(
         &mut self,
         template_name: &'t IdT<'s, 't>,
@@ -703,10 +651,6 @@ where 's: 't,
         typeDeclaredNames += templateName
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_type_mutability(
         &mut self,
         template_name: &'t IdT<'s, 't>,
@@ -729,10 +673,6 @@ where 's: 't,
         typeNameToMutability += (templateName -> mutability)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_type_sealed(
         &mut self,
         template_name: IdT<'s, 't>,
@@ -752,10 +692,6 @@ where 's: 't,
         interfaceNameToSealed += (templateName -> seealed)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_function_inner_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
@@ -780,10 +716,6 @@ where 's: 't,
         functionNameToInnerEnv += (nameT -> env)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_function_outer_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
@@ -804,10 +736,6 @@ where 's: 't,
         functionNameToOuterEnv += (nameT -> env)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_type_outer_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
@@ -833,10 +761,6 @@ where 's: 't,
         typeNameToOuterEnv += (nameT -> env)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn declare_type_inner_env(
         &mut self,
         template_id: &'t IdT<'s, 't>,
@@ -866,10 +790,6 @@ where 's: 't,
         typeNameToInnerEnv += (templateId -> env)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_struct(
         &mut self,
         struct_def: &'t StructDefinitionT<'s, 't>,
@@ -917,10 +837,6 @@ where 's: 't,
         structTemplateNameToDefinition += (structDef.templateName -> structDef)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_interface(
         &mut self,
         interface_def: &'t InterfaceDefinitionT<'s, 't>,
@@ -948,10 +864,6 @@ where 's: 't,
     //    runtimeSizedArrayTypes += ((elementType, mutability) -> rsaTT)
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_impl(
         &mut self,
         impl_t: &'t ImplT<'s, 't>,
@@ -979,10 +891,6 @@ where 's: 't,
           superInterfaceTemplateToImpls.getOrElse(impl.superInterfaceTemplateId, Vector()) :+ impl)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_parent_impls_for_sub_citizen_template(
         &self,
         sub_citizen_template: IdT<'s, 't>,
@@ -994,10 +902,6 @@ where 's: 't,
         subCitizenTemplateToImpls.getOrElse(subCitizenTemplate, Vector[ImplT]())
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_child_impls_for_super_interface_template(
         &self,
         super_interface_template: IdT<'s, 't>,
@@ -1012,10 +916,6 @@ where 's: 't,
         superInterfaceTemplateToImpls.getOrElse(superInterfaceTemplate, Vector[ImplT]())
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_kind_export(
         &mut self,
         range: RangeS<'s>,
@@ -1032,10 +932,6 @@ where 's: 't,
         kindExports += KindExportT(range, kind, id, exportedName)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_function_export(
         &mut self,
         range: RangeS<'s>,
@@ -1054,10 +950,6 @@ where 's: 't,
         functionExports += FunctionExportT(range, function, exportId, exportedName)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_kind_extern(
         &mut self,
         kind: KindT<'s, 't>,
@@ -1071,10 +963,6 @@ where 's: 't,
         kindExterns += KindExternT(kind, packageCoord, exportedName)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn add_function_extern(
         &mut self,
         range: RangeS<'s>,
@@ -1099,10 +987,6 @@ where 's: 't,
             range, externPlaceholderedId, function, exportedName, genericParameterInheritance)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn defer_evaluating_function_body(
         &mut self,
         devf: DeferredActionT<'s, 't>,
@@ -1118,10 +1002,6 @@ where 's: 't,
         deferredFunctionBodyCompiles.put(devf.prototypeT, devf)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn defer_evaluating_function(
         &mut self,
         devf: DeferredActionT<'s, 't>,
@@ -1137,10 +1017,6 @@ where 's: 't,
         deferredFunctionCompiles.put(devf.name, devf)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn struct_declared(
         &self,
         template_name: IdT<'s, 't>,
@@ -1166,10 +1042,6 @@ where 's: 't,
     //    }
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_mutability(
         &self,
         template_name: IdT<'s, 't>,
@@ -1188,10 +1060,6 @@ where 's: 't,
         }
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_sealed(
         &self,
         template_name: IdT<'s, 't>,
@@ -1217,10 +1085,6 @@ where 's: 't,
     //    }
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn interface_declared(
         &self,
         template_name: IdT<'s, 't>,
@@ -1233,10 +1097,6 @@ where 's: 't,
         typeDeclaredNames.contains(templateName)
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_struct(
         &self,
         struct_tt: IdT<'s, 't>,
@@ -1250,10 +1110,6 @@ where 's: 't,
         lookupStructTemplate(TemplataCompiler.getStructTemplate(structTT))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_struct_template(
         &self,
         template_name: IdT<'s, 't>,
@@ -1266,10 +1122,6 @@ where 's: 't,
         vassertSome(structTemplateNameToDefinition.get(templateName))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_interface(
         &self,
         interface_tt: InterfaceTT<'s, 't>,
@@ -1283,10 +1135,6 @@ where 's: 't,
         lookupInterface(TemplataCompiler.getInterfaceTemplate(interfaceTT.id))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_interface_by_template_name(
         &self,
         template_name: IdT<'s, 't>,
@@ -1301,10 +1149,6 @@ where 's: 't,
         vassertSome(interfaceTemplateNameToDefinition.get(templateName))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_citizen_by_template_name(
         &self,
         template_name: IdT<'s, 't>,
@@ -1326,10 +1170,6 @@ where 's: 't,
         }
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn lookup_citizen_by_tt(
         &self,
         citizen_tt: ICitizenTT<'s, 't>,
@@ -1348,40 +1188,24 @@ where 's: 't,
         }
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_all_structs(&self) -> Vec<&'t StructDefinitionT<'s, 't>> {
         self.struct_template_name_to_definition.values().copied().collect()
     }
     /*
       def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_all_interfaces(&self) -> Vec<&'t InterfaceDefinitionT<'s, 't>> {
         self.interface_template_name_to_definition.values().copied().collect()
     }
     /*
       def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_all_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
         self.signature_to_function.values().copied().collect()
     }
     /*
       def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_all_impls(&self) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
@@ -1395,10 +1219,6 @@ where 's: 't,
     //    staticSizedArrayTypes.get((size, mutability, variability, elementType))
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_env_for_function_signature(
         &self,
         sig: &'t SignatureT<'s, 't>,
@@ -1410,10 +1230,6 @@ where 's: 't,
         vassertSome(envByFunctionSignature.get(sig))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_outer_env_for_type(
         &self,
         range: &[RangeS<'s>],
@@ -1436,10 +1252,6 @@ where 's: 't,
         }
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_inner_env_for_type(
         &self,
         name: IdT<'s, 't>,
@@ -1451,10 +1263,6 @@ where 's: 't,
         vassertSome(typeNameToInnerEnv.get(name))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_inner_env_for_function(
         &self,
         name: IdT<'s, 't>,
@@ -1466,10 +1274,6 @@ where 's: 't,
         vassertSome(functionNameToInnerEnv.get(name))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_outer_env_for_function(
         &self,
         name: IdT<'s, 't>,
@@ -1482,10 +1286,6 @@ where 's: 't,
         vassertSome(functionNameToOuterEnv.get(name))
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_return_type_for_signature(
         &self,
         sig: &'t SignatureT<'s, 't>,
@@ -1506,10 +1306,6 @@ where 's: 't,
     //    runtimeSizedArrayTypes.get((mutabilityT, elementType))
     //  }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {
         self.kind_exports.clone()
     }
@@ -1518,10 +1314,6 @@ where 's: 't,
         kindExports.toVector
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_function_exports(&self) -> Vec<&'t FunctionExportT<'s, 't>> {
         self.function_exports.clone()
     }
@@ -1530,10 +1322,6 @@ where 's: 't,
         functionExports.toVector
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_kind_externs(&self) -> Vec<&'t KindExternT<'s, 't>> {
         self.kind_externs.clone()
     }
@@ -1542,10 +1330,6 @@ where 's: 't,
         kindExterns.toVector
       }
     */
-}
-impl<'s, 't> CompilerOutputs<'s, 't>
-where 's: 't,
-{
     pub fn get_function_externs(&self) -> Vec<&'t FunctionExternT<'s, 't>> {
         self.function_externs.clone()
     }

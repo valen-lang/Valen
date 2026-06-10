@@ -55,147 +55,118 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn package_coord_to_export_name_to_function(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, &'h PrototypeH<'s, 'h>>> {
         &self.package_coord_to_export_name_to_function
     }
-}
 /*
   def packageCoordToExportNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]] = inner.packageCoordToExportNameToFunction
 */
 
 // mig: fn package_coord_to_export_name_to_kind (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn package_coord_to_export_name_to_kind(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, KindHT<'s, 'h>>> {
         &self.package_coord_to_export_name_to_kind
     }
-}
 /*
   def packageCoordToExportNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]] = inner.packageCoordToExportNameToKind
 */
 
 // mig: fn package_coord_to_prototype_to_extern (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn package_coord_to_prototype_to_extern(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<&'h PrototypeH<'s, 'h>, HamutsFunctionExtern<'s, 'h>>> {
         &self.package_coord_to_prototype_to_extern
     }
-}
 /*
   def packageCoordToPrototypeToExtern: Map[PackageCoordinate, Map[PrototypeH, HamutsFunctionExtern]] = inner.packageCoordToPrototypeToExtern
 */
 
 // mig: fn package_coord_to_kind_to_extern (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn package_coord_to_kind_to_extern(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<&'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>> {
         &self.package_coord_to_kind_to_extern
     }
-}
 /*
   def packageCoordToKindToExtern: Map[PackageCoordinate, Map[OpaqueHT, HamutsKindExtern]] = inner.packageCoordToKindToExtern
 */
 
 // mig: fn struct_t_to_opaque_h (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn struct_t_to_opaque_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, &'h OpaqueHT<'s, 'h>> {
         &self.struct_t_to_opaque_h
     }
-}
 /*
   def structTToOpaqueH: Map[StructIT[cI], OpaqueHT] = inner.structTToOpaqueH
 */
 
 // mig: fn struct_t_to_struct_h (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn struct_t_to_struct_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, &'h StructHT<'s, 'h>> {
         &self.struct_t_to_struct_h
     }
-}
 /*
   def structTToStructH: Map[StructIT[cI], StructHT] = inner.structTToStructH
 */
 
 // mig: fn struct_t_to_struct_def_h (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn struct_t_to_struct_def_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, StructDefinitionH<'s, 'h>> {
         &self.struct_t_to_struct_def_h
     }
-}
 /*
   def structTToStructDefH: Map[StructIT[cI], StructDefinitionH] = inner.structTToStructDefH
 */
 
 // mig: fn struct_defs (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn struct_defs(&self) -> &Vec<StructDefinitionH<'s, 'h>> {
         &self.struct_defs
     }
-}
 /*
   def structDefs: Vector[StructDefinitionH] = inner.structDefs
 */
 
 // mig: fn interface_t_to_interface_h (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn interface_t_to_interface_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i, cI>, &'h InterfaceHT<'s, 'h>> {
         &self.interface_t_to_interface_h
     }
-}
 /*
   def interfaceTToInterfaceH: Map[InterfaceIT[cI], InterfaceHT] = inner.interfaceTToInterfaceH
 */
 
 // mig: fn interface_t_to_interface_def_h (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn interface_t_to_interface_def_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i, cI>, InterfaceDefinitionH<'s, 'h>> {
         &self.interface_t_to_interface_def_h
     }
-}
 /*
   def interfaceTToInterfaceDefH: Map[InterfaceIT[cI], InterfaceDefinitionH] = inner.interfaceTToInterfaceDefH
 */
 
 // mig: fn function_refs (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn function_refs(&self) -> &HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionRefH<'s, 'h>> {
         &self.function_refs
     }
-}
 /*
   def functionRefs: Map[PrototypeI[cI], FunctionRefH] = inner.functionRefs
 */
 
 // mig: fn function_defs (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn function_defs(&self) -> &HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionH<'s, 'h>> {
         &self.function_defs
     }
-}
 /*
   def functionDefs: Map[PrototypeI[cI], FunctionH] = inner.functionDefs
 */
 
 // mig: fn static_sized_arrays (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn static_sized_arrays(&self) -> &HashMap<&'i StaticSizedArrayIT<'s, 'i, cI>, StaticSizedArrayDefinitionHT<'s, 'h>> {
         &self.static_sized_arrays
     }
-}
 /*
   def staticSizedArrays: Map[StaticSizedArrayIT[cI], StaticSizedArrayDefinitionHT] = inner.staticSizedArrays
 */
 
 // mig: fn runtime_sized_arrays (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn runtime_sized_arrays(&self) -> &HashMap<&'i RuntimeSizedArrayIT<'s, 'i, cI>, RuntimeSizedArrayDefinitionHT<'s, 'h>> {
         &self.runtime_sized_arrays
     }
-}
 /*
   def runtimeSizedArrays: Map[RuntimeSizedArrayIT[cI], RuntimeSizedArrayDefinitionHT] = inner.runtimeSizedArrays
 */
 
 // mig: fn forward_declare_struct (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_struct(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_ref_h: &'h StructHT<'s, 'h>) {
         self.struct_t_to_struct_h.insert(struct_it, struct_ref_h);
     }
-}
 /*
   def forwardDeclareStruct(structIT: StructIT[cI], structRefH: StructHT): Unit = {
     inner = inner.forwardDeclareStruct(structIT, structRefH)
@@ -203,13 +174,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_struct_originating_from_typing_pass (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_struct_originating_from_typing_pass(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_def_h: StructDefinitionH<'s, 'h>) {
         assert!(self.struct_t_to_struct_h.contains_key(&struct_it));
         self.struct_t_to_struct_def_h.insert(struct_it, struct_def_h);
         self.struct_defs.push(struct_def_h);
     }
-}
 /*
   def addStructOriginatingFromTypingPass(structIT: StructIT[cI], structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromTypingPass(structIT, structDefH)
@@ -217,12 +186,10 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_opaque (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_opaque(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, opaque_h: &'h OpaqueHT<'s, 'h>) {
         assert!(!self.struct_t_to_opaque_h.contains_key(&struct_it));
         self.struct_t_to_opaque_h.insert(struct_it, opaque_h);
     }
-}
 /*
   def addOpaque(structIT: StructIT[cI], opaqueH: OpaqueHT): Unit = {
     inner = inner.addOpaque(structIT, opaqueH)
@@ -230,12 +197,10 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_struct_originating_from_hammer (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_struct_originating_from_hammer(&mut self, struct_def_h: StructDefinitionH<'s, 'h>) {
         assert!(!self.struct_defs.iter().any(|d| d.id == struct_def_h.id));
         self.struct_defs.push(struct_def_h);
     }
-}
 /*
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromHammer(structDefH)
@@ -243,11 +208,9 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn forward_declare_interface (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_ref_h: &'h InterfaceHT<'s, 'h>) {
         self.interface_t_to_interface_h.insert(interface_it, interface_ref_h);
     }
-}
 /*
   def forwardDeclareInterface(interfaceIT: InterfaceIT[cI], interfaceRefH: InterfaceHT): Unit = {
     inner = inner.forwardDeclareInterface(interfaceIT, interfaceRefH)
@@ -255,11 +218,9 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_interface (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_def_h: InterfaceDefinitionH<'s, 'h>) {
         self.interface_t_to_interface_def_h.insert(interface_it, interface_def_h);
     }
-}
 /*
   def addInterface(interfaceIT: InterfaceIT[cI], interfaceDefH: InterfaceDefinitionH): Unit = {
     inner = inner.addInterface(interfaceIT, interfaceDefH)
@@ -267,11 +228,9 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_static_sized_array (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_static_sized_array(&mut self, ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>, static_sized_array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>) {
         self.static_sized_arrays.insert(ssa_it, static_sized_array_definition_th);
     }
-}
 /*
   def addStaticSizedArray(ssaIT: StaticSizedArrayIT[cI], staticSizedArrayDefinitionTH: StaticSizedArrayDefinitionHT): Unit = {
     inner = inner.addStaticSizedArray(ssaIT, staticSizedArrayDefinitionTH)
@@ -279,11 +238,9 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_runtime_sized_array (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_runtime_sized_array(&mut self, rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>, runtime_sized_array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>) {
         self.runtime_sized_arrays.insert(rsa_it, runtime_sized_array_definition_th);
     }
-}
 /*
   def addRuntimeSizedArray(rsaIT: RuntimeSizedArrayIT[cI], runtimeSizedArrayDefinitionTH: RuntimeSizedArrayDefinitionHT): Unit = {
     inner = inner.addRuntimeSizedArray(rsaIT, runtimeSizedArrayDefinitionTH)
@@ -291,12 +248,10 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn forward_declare_function (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn forward_declare_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_ref_h: FunctionRefH<'s, 'h>) {
         assert!(!self.function_refs.contains_key(&function_ref2));
         self.function_refs.insert(function_ref2, function_ref_h);
     }
-}
 /*
   def forwardDeclareFunction(functionRef2: PrototypeI[cI], functionRefH: FunctionRefH): Unit = {
     inner = inner.forwardDeclareFunction(functionRef2, functionRefH)
@@ -304,7 +259,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_function (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_def_h: FunctionH<'s, 'h>) {
         assert!(self.function_refs.contains_key(&function_ref2));
         if self.function_defs.values().any(|f| f.prototype.id == function_def_h.prototype.id) {
@@ -312,7 +266,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
         }
         self.function_defs.insert(function_ref2, function_def_h);
     }
-}
 /*
   def addFunction(functionRef2: PrototypeI[cI], functionDefH: FunctionH): Unit = {
     inner = inner.addFunction(functionRef2, functionDefH)
@@ -320,7 +273,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_kind_export (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_kind_export(&mut self, kind: KindHT<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
         let export_name_to_kind = self.package_coord_to_export_name_to_kind.entry(package_coordinate).or_insert_with(HashMap::new);
         if let Some(existing) = export_name_to_kind.get(&exported_name) {
@@ -328,7 +280,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
         }
         export_name_to_kind.insert(exported_name, kind);
     }
-}
 /*
   def addKindExport(kind: KindHT, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addKindExport(kind, packageCoordinate, exportedName)
@@ -340,7 +291,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_function_export (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function_export(&mut self, prototype: &'h PrototypeH<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
         let export_name_to_function = self.package_coord_to_export_name_to_function.entry(package_coordinate).or_insert_with(HashMap::new);
         if let Some(existing_full_name) = export_name_to_function.get(&exported_name) {
@@ -348,7 +298,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
         }
         export_name_to_function.insert(exported_name, prototype);
     }
-}
 /*
   def addFunctionExport(prototype: PrototypeH, packageCoordinate: PackageCoordinate, exportedName: StrI): Unit = {
     inner = inner.addFunctionExport(prototype, packageCoordinate, exportedName)
@@ -356,7 +305,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_kind_extern (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_kind_extern(&mut self, scout_arena: &ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
         let package_coordinate = opaque_h.package_coord;
         let kind_to_extern = self.package_coord_to_kind_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
@@ -373,7 +321,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
             }
         }
     }
-}
 /*
   def addKindExtern(opaqueH: OpaqueHT, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addKindExtern(opaqueH, simpleId, exportedName)
@@ -381,7 +328,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_function_extern (HamutsBox mutator)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn add_function_extern(&mut self, prototype: &'h PrototypeH<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: StrI<'s>) {
         let package_coordinate = prototype.id.package_coordinate;
         let prototype_to_extern = self.package_coord_to_prototype_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
@@ -390,7 +336,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
         }
         prototype_to_extern.insert(prototype, HamutsFunctionExtern { maybe_extern_name: exported_name, prototype, simple_id });
     }
-}
 /*
   def addFunctionExtern(prototype: PrototypeH, simpleId: SimpleId, exportedName: String): Unit = {
     inner = inner.addFunctionExtern(prototype, simpleId, exportedName)
@@ -404,11 +349,9 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn get_static_sized_array (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn get_static_sized_array(&self, static_sized_array_th: &'h StaticSizedArrayHT<'s, 'h>) -> StaticSizedArrayDefinitionHT<'s, 'h> {
         *self.static_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, static_sized_array_th.id as *const _)).expect("get_static_sized_array: not found").1
     }
-}
 /*
   def getStaticSizedArray(staticSizedArrayTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
     inner.getStaticSizedArray(staticSizedArrayTH)
@@ -416,7 +359,6 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn get_runtime_sized_array (HamutsBox accessor)
-impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn get_runtime_sized_array(&self, runtime_sized_array_th: &'h RuntimeSizedArrayHT<'s, 'h>) -> RuntimeSizedArrayDefinitionHT<'s, 'h> {
         *self.runtime_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, runtime_sized_array_th.name as *const _)).expect("get_runtime_sized_array: not found").1
     }

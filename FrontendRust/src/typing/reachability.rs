@@ -94,11 +94,6 @@ where 's: 't,
 //    reachables
 //  }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_function(
         &self,
         program: &CompilerOutputs<'s, 't>,
@@ -142,11 +137,6 @@ where 's: 't,
 //  }
 //
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_struct(
         &self,
         program: &CompilerOutputs<'s, 't>,
@@ -199,11 +189,6 @@ where 's: 't,
 //  }
 //
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_interface(
         &self,
         program: &CompilerOutputs<'s, 't>,
@@ -256,11 +241,6 @@ where 's: 't,
 //  }
 //
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_impl(
         &self,
         program: &CompilerOutputs<'s, 't>,
@@ -296,11 +276,6 @@ where 's: 't,
 //  }
 //
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_static_sized_array(
         &self,
         program: &CompilerOutputs<'s, 't>,
@@ -342,11 +317,6 @@ where 's: 't,
 //  }
 //
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn visit_runtime_sized_array(
         &self,
         program: &CompilerOutputs<'s, 't>,

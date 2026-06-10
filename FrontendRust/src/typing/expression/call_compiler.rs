@@ -323,11 +323,6 @@ where 's: 't,
 
   // By "custom call" we mean calling __call.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_custom_call(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
@@ -498,11 +493,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn check_types(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -585,11 +575,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_prefix_call(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

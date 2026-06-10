@@ -79,10 +79,6 @@ where 's: 't,
     (finalExpr)
   }
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_tuple_kind(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -129,10 +125,6 @@ where 's: 't,
       types2.map(CoordTemplataT)).expect().kind
   }
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_tuple_coord(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,

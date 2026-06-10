@@ -78,8 +78,6 @@ pub struct Astrouts<'s> {
 }
 
 // mig: impl Astrouts
-impl<'s> Astrouts<'s> {
-}
 /*
 case class Astrouts(
   codeLocationToMaybeType: mutable.HashMap[CodeLocationS, Option[ITemplataType]],

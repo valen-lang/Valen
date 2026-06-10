@@ -219,11 +219,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_lookup_for_load(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -297,11 +292,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_addressible_lookup_for_mutate(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -446,11 +436,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_addressible_lookup(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -637,11 +622,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_closure_struct_construct_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -770,11 +750,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_and_coerce_to_reference_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -820,11 +795,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn coerce_to_reference_expression(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
@@ -859,11 +829,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_expected_address_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -910,11 +875,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3321,11 +3281,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn check_array(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3369,11 +3324,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_option(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3560,11 +3510,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_result(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3780,11 +3725,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn weak_alias(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3837,11 +3777,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn dot_borrow(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3906,11 +3841,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_closure(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3982,11 +3912,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn new_global_function_group_expression(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -4025,11 +3950,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_block_statements(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -4061,11 +3981,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_pattern_list(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -4104,11 +4019,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn astronomize_lambda(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -4266,11 +4176,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn drop_since(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -4391,11 +4296,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resultify_expressions(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,

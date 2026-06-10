@@ -93,7 +93,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stackify_node, deferreds)
     }
-}
 /*
   def translateLet(
       hinputs: HinputsI,
@@ -133,9 +132,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_restackify
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_restackify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -163,7 +159,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stackify_node, deferreds)
     }
-}
 /*
   def translateRestackify(
     hinputs: HinputsI,
@@ -203,9 +198,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_let_and_point
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_let_and_point(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -229,7 +221,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, borrow_access, deferreds)
     }
-}
 /*
   def translateLetAndPoint(
     hinputs: HinputsI,
@@ -263,9 +254,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_let
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_addressible_let(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -302,7 +290,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             name: Some(self.translate_full_name(hinputs, hamuts, &var_id_full)),
         }))
     }
-}
 /*
   private def translateAddressibleLet(
     hinputs: HinputsI,
@@ -335,9 +322,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_restackify
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_addressible_restackify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -353,7 +337,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_restackify");
     }
-}
 /*
   private def translateAddressibleRestackify(
     hinputs: HinputsI,
@@ -385,9 +368,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_let_and_point
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_addressible_let_and_point(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -405,7 +385,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_let_and_point");
     }
-}
 /*
   private def translateAddressibleLetAndPoint(
     hinputs: HinputsI,
@@ -438,9 +417,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_let
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_mundane_let(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -467,7 +443,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         });
         stack_node
     }
-}
 /*
   private def translateMundaneLet(
     hinputs: HinputsI,
@@ -496,9 +471,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_restackify
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_mundane_restackify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -523,7 +495,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         });
         stack_node
     }
-}
 /*
   private def translateMundaneRestackify(
     hinputs: HinputsI,
@@ -550,9 +521,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_let_and_point
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub(crate) fn translate_mundane_let_and_point(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -576,7 +544,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             exprs: self.interner.bump().alloc_slice_copy(&[ExpressionH::StackifyH(stackify_h), borrow_access]),
         }))
     }
-}
 /*
     private def translateMundaneLetAndPoint(
       hinputs: HinputsI,
@@ -616,9 +583,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_unlet
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_unlet(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -660,7 +624,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateUnlet(
       hinputs: HinputsI,
@@ -710,9 +673,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_destructure_static_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_destructure_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -744,7 +704,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stack_node, source_expr_deferreds)
     }
-}
 /*
   def translateDestructureStaticSizedArray(
     hinputs: HinputsI,
@@ -799,9 +758,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_destroy
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_destroy(
         &self,
         hinputs: &HinputsI<'s, 'i>,

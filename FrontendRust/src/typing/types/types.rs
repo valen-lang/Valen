@@ -214,8 +214,6 @@ impl<'s, 't> KindT<'s, 't> {
   }
   */
   /* Guardian: disable-all */
-}
-impl<'s, 't> KindT<'s, 't> {
   pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
     match self {
       KindT::Interface(c) => c,
@@ -231,8 +229,6 @@ impl<'s, 't> KindT<'s, 't> {
   }
   */
   /* Guardian: disable-all */
-}
-impl<'s, 't> KindT<'s, 't> {
   pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
     match self {
       KindT::Struct(c) => c,
@@ -248,8 +244,6 @@ impl<'s, 't> KindT<'s, 't> {
   }
   */
   /* Guardian: disable-all */
-}
-impl<'s, 't> KindT<'s, 't> {
   pub fn is_primitive(&self) -> bool {
     match self {
       KindT::Never(_) => true,
@@ -385,8 +379,6 @@ impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   /*
   def mutability: ITemplataT[MutabilityTemplataType] = name.localName.arr.mutability
   */
-}
-impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   pub fn element_type(&self) -> CoordT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.arr.element_type,
@@ -396,8 +388,6 @@ impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   /*
   def elementType = name.localName.arr.elementType
   */
-}
-impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   pub fn size(&self) -> ITemplataT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.size,
@@ -407,8 +397,6 @@ impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   /*
   def size = name.localName.size
   */
-}
-impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   pub fn variability(&self) -> ITemplataT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.variability,
@@ -462,8 +450,6 @@ impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
   /*
   def mutability = name.localName.arr.mutability
   */
-}
-impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
   pub fn element_type(&self) -> CoordT<'s, 't> {
     match self.name.local_name {
       INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.element_type,
@@ -524,20 +510,14 @@ impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
         }
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
     pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
         KindT::from(*self).expect_interface()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
     pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
         KindT::from(*self).expect_struct()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
     pub fn is_primitive(&self) -> bool {
         KindT::from(*self).is_primitive()
     }
@@ -567,26 +547,18 @@ impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
     /*
   def id: IdT[ISuperKindNameT]
 */
-}
-impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
     pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
         KindT::from(*self).expect_citizen()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
     pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
         KindT::from(*self).expect_interface()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
     pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
         KindT::from(*self).expect_struct()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
     pub fn is_primitive(&self) -> bool {
         KindT::from(*self).is_primitive()
     }
@@ -615,26 +587,18 @@ impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     /*
   def id: IdT[ICitizenNameT]
 */
-}
-impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
         *self
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
         KindT::from(*self).expect_interface()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
         KindT::from(*self).expect_struct()
     }
     /* Guardian: disable-all */
-}
-impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     pub fn is_primitive(&self) -> bool {
         KindT::from(*self).is_primitive()
     }

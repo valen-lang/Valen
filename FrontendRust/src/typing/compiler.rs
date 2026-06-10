@@ -1346,11 +1346,6 @@ where 's: 't,
       opts, interner, keywords, nameTranslator, overloadResolver, structCompiler, structConstructorMacro, structDropMacro)
 
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate<'p>(
         &self,
         _code_map: &FileCoordinateMap<'p, String>,
@@ -2721,11 +2716,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn preprocess_struct(
         &self,
         name_to_struct_defined_macro: &HashMap<StrI<'s>, OnStructDefinedMacro>,
@@ -2776,10 +2766,6 @@ where 's: 't,
       }
 
     */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn preprocess_interface(
         &self,
         name_to_interface_defined_macro: &HashMap<StrI<'s>, OnInterfaceDefinedMacro>,
@@ -2835,10 +2821,6 @@ where 's: 't,
       }
 
     */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn determine_macros_to_call<T: Clone>(
         &self,
         name_to_macro: &HashMap<StrI<'s>, T>,
@@ -2897,10 +2879,6 @@ where 's: 't,
       }
 
     */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn ensure_deep_exports(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3219,11 +3197,6 @@ where 's: 't,
         })
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_root_function(
         &self,
         function_a: &'s FunctionA<'s>,
@@ -3244,11 +3217,6 @@ where 's: 't,
         })
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_root_struct(
         &self,
         struct_a: &'s StructA<'s>,
@@ -3261,11 +3229,6 @@ where 's: 't,
         structA.attributes.exists({ case ExportS(_) => true case _ => false })
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_root_interface(
         &self,
         interface_a: &'s InterfaceA<'s>,
@@ -3282,11 +3245,6 @@ where 's: 't,
 
     object Compiler {
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn consecutive(
         &self,
         exprs: &[ReferenceExpressionTE<'s, 't>],
@@ -3351,11 +3309,6 @@ where 's: 't,
         }
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn is_primitive(
         &self,
         kind: KindT<'s, 't>,
@@ -3383,11 +3336,6 @@ where 's: 't,
         }
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_mutabilities(
         &self,
         coutputs: &CompilerOutputs<'s, 't>,
@@ -3401,11 +3349,6 @@ where 's: 't,
         concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
       }
     */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_mutability(
         &self,
         coutputs: &CompilerOutputs<'s, 't>,

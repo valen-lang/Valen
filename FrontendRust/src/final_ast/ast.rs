@@ -125,51 +125,41 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: extern_functions");
   }
-}
 /*
   // These are convenience functions for the tests to look up various functions.
   def externFunctions = functions.filter(_.isExtern)
 */
 // mig: fn abstract_functions
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn abstract_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: abstract_functions");
   }
-}
 /*
   def abstractFunctions = functions.filter(_.isAbstract)
 */
 // mig: fn get_all_user_implemented_functions
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn get_all_user_implemented_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: get_all_user_implemented_functions");
   }
-}
 /*
   // Functions that are neither extern nor abstract
   def getAllUserImplementedFunctions = functions.filter(f => f.isUserFunction && !f.isExtern && !f.isAbstract)
 */
 // mig: fn non_extern_functions
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn non_extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: non_extern_functions");
   }
-}
 /*
   // Abstract or implemented
   def nonExternFunctions = functions.filter(!_.isExtern)
 */
 // mig: fn get_all_user_functions
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn get_all_user_functions(&self) -> Vec<&FunctionH<'s, 'h>> {
     self.functions.iter().filter(|f| f.is_user_function()).collect()
   }
-}
 /*
   def getAllUserFunctions = functions.filter(_.isUserFunction)
 */
 // mig: fn lookup_function
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
     let from_exports: Vec<&'h PrototypeH<'s, 'h>> = self.export_name_to_function.iter().filter(|(k, _)| k.0 == readable_name).map(|(_, v)| *v).collect();
     let from_functions: Vec<&'h PrototypeH<'s, 'h>> = self.functions.iter().filter(|f| f.prototype.id.local_name.0 == readable_name).map(|f| f.prototype).collect();
@@ -184,7 +174,6 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     let first = matches[0];
     self.functions.iter().find(|f| eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
-}
 /*
   // Convenience function for the tests to look up a function.
   // Function must be at the top level of the program.
@@ -200,13 +189,11 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_struct
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
     let matches: Vec<&StructDefinitionH<'s, 'h>> = self.structs.iter().filter(|s| s.id.local_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
-}
 /*
   // Convenience function for the tests to look up a struct.
   // Struct must be at the top level of the program.
@@ -217,7 +204,6 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_interface
-impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
     let matches: Vec<&InterfaceDefinitionH<'s, 'h>> = self.interfaces.iter().filter(|i| i.id.shortened_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
@@ -251,21 +237,18 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   pub fn lookup_package(&self, package_coordinate: PackageCoordinate<'s>) -> PackageH<'s, 'h> {
     *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
-}
 /*
   def lookupPackage(packageCoordinate: PackageCoordinate): PackageH = {
     vassertSome(packages.get(packageCoordinate))
   }
 */
 // mig: fn lookup_function
-impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
     pub fn lookup_function(&self, prototype: &PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
         let paackage = self.lookup_package(prototype.id.package_coordinate);
         let result = paackage.functions.iter().find(|f| f.prototype.id == prototype.id).expect("lookup_function: missing");
         assert!(prototype == result.prototype);
         result
     }
-}
 /*
   def lookupFunction(prototype: PrototypeH): FunctionH = {
     val paackage = lookupPackage(prototype.id.packageCoordinate)
@@ -275,12 +258,10 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_struct
-impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
     pub fn lookup_struct(&self, interner: &HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
         paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
     }
-}
 /*
   def lookupStruct(structRefH: StructHT): StructDefinitionH = {
     val paackage = lookupPackage(structRefH.id.packageCoordinate)
@@ -288,12 +269,10 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_interface
-impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
     pub fn lookup_interface(&self, interner: &HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
         paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
     }
-}
 /*
   def lookupInterface(interfaceRefH: InterfaceHT): InterfaceDefinitionH = {
     val paackage = lookupPackage(interfaceRefH.id.packageCoordinate)
@@ -301,12 +280,10 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_static_sized_array
-impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
     pub fn lookup_static_sized_array(&self, ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(ssa_th.id.package_coordinate);
         paackage.static_sized_arrays.iter().find(|s| s.name == ssa_th.id).expect("vassertSome: lookup_static_sized_array")
     }
-}
 /*
   def lookupStaticSizedArray(ssaTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
     val paackage = lookupPackage(ssaTH.id.packageCoordinate)
@@ -314,7 +291,6 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn lookup_runtime_sized_array
-impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
     pub fn lookup_runtime_sized_array(&self, rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(rsa_th.name.package_coordinate);
         paackage.runtime_sized_arrays.iter().find(|s| s.name == rsa_th.name).expect("vassertSome: lookup_runtime_sized_array")

@@ -465,11 +465,9 @@ impl<'s> IStructDeclarationNameS<'s> {
   def range: RangeS
   */
   /* Guardian: disable-all */
-}
 /*
   def packageCoordinate: PackageCoordinate
 */
-impl<'s> IStructDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
       IStructDeclarationNameS::TopLevelStructDeclarationName(n) => {
@@ -589,8 +587,6 @@ impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   def name: StrI
   */
   /* Guardian: disable-all */
-}
-impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   pub fn range(&self) -> RangeS<'s> {
     match self {
       TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.range,
@@ -601,8 +597,6 @@ impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   def range: RangeS
   */
   /* Guardian: disable-all */
-}
-impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   pub fn package_coordinate(&self) -> &'s PackageCoordinate<'s> {
     match self {
       TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.range.begin.file.package_coord,
@@ -613,8 +607,6 @@ impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   override def packageCoordinate: PackageCoordinate = range.file.packageCoordinate
   */
   /* Guardian: disable-all */
-}
-impl<'s> TopLevelCitizenDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
       TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => {

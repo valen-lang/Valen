@@ -74,10 +74,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s, 't>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
         match target_ownership {
             OwnershipT::Borrow => {}
@@ -131,10 +127,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn unlet_local_without_dropping(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, local_var: &ILocalVariableT<'s, 't>) -> UnletTE<'s, 't> {
         nenv.mark_local_unstackified(local_var.name());
         UnletTE { variable: *local_var }
@@ -147,10 +139,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn unlet_and_drop_all(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Result<Vec<ReferenceExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         variables.iter().map(|variable| {
             let unlet = self.unlet_local_without_dropping(nenv, variable);
@@ -178,10 +166,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn unlet_all_without_dropping(&self, _coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, _range: &[RangeS<'s>], variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
         variables.iter().map(|variable| {
             ReferenceExpressionTE::Unlet(self.typing_interner.alloc(self.unlet_local_without_dropping(nenv, variable)))
@@ -198,10 +182,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], local_variable_a: &'s LocalS<'s>, reference_type2: CoordT<'s, 't>) -> ILocalVariableT<'s, 't> {
         let var_id = self.translate_var_name_step(local_variable_a.var_name);
 
@@ -265,11 +245,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn maybe_borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &ExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
         match expr2 {
             ExpressionTE::Reference(e) => *e,
@@ -288,10 +263,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
         match a.result().coord.ownership {
             OwnershipT::Share => {
@@ -425,11 +396,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: AddressExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
         let ownership = self.get_borrow_ownership(coutputs, expr2.result().coord.kind);
         ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: expr2, target_ownership: ownership }))
@@ -442,10 +408,6 @@ where 's: 't,
   }
 
 */
-}
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_borrow_ownership(&self, coutputs: &CompilerOutputs<'s, 't>, kind: KindT<'s, 't>) -> OwnershipT {
         match kind {
             KindT::Int(_) => OwnershipT::Share,
@@ -558,11 +520,6 @@ where 's: 't,
 
 object LocalHelper {
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // See ClosureTests for requirements here
     pub fn determine_if_local_is_addressible(
         mutability: ITemplataT<'s, 't>,
@@ -591,11 +548,6 @@ where 's: 't,
   }
 */
     /* Guardian: disable-all */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn determine_local_variability(
         &self,
         local_a: &'s LocalS<'s>,

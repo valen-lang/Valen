@@ -99,8 +99,6 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 /*
   def defaultRegion: RegionT = RegionT(DefaultRegionT)
 */
-}
-impl<'s, 't> StructDefinitionT<'s, 't> {
     fn generic_param_types(&self, scout_arena: &ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
         IStructNameT::try_from(self.instantiated_citizen.id.local_name).unwrap().template_args().iter().map(|t| t.tyype(scout_arena)).collect()
     }
@@ -109,8 +107,6 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 */
-}
-impl<'s, 't> StructDefinitionT<'s, 't> {
     fn equals(&self, obj: &Self) -> bool {
         panic!("Unimplemented: equals");
     }
@@ -134,8 +130,6 @@ override def hashCode(): Int = vcurious()
 //    }
 //  }
 */
-}
-impl<'s, 't> StructDefinitionT<'s, 't> {
     pub fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
         for (index, member) in self.members.iter().enumerate() {
             match member {
@@ -311,8 +305,6 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
 /*
   def defaultRegion: RegionT = RegionT(DefaultRegionT)
 */
-}
-impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
         panic!("Unimplemented: generic_param_types");
     }
@@ -321,16 +313,12 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 */
-}
-impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
         panic!("Unimplemented: instantiated_citizen");
     }
 /*
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface
 */
-}
-impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn equals(&self, obj: &Self) -> bool {
         panic!("Unimplemented: equals");
     }

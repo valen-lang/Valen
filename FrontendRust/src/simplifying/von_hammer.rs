@@ -120,7 +120,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyProgram(program: ProgramH): IVonData = {
     val ProgramH(packages) = program
@@ -146,9 +145,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_simple_id
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_simple_id(&self, simple_id: SimpleId<'s, 'h>) -> IVonData {
         IVonData::object(
             "Id".to_string(),
@@ -162,7 +158,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         )
     }
-}
 /*
   def vonifySimpleId(simpleId: SimpleId): IVonData = {
     VonObject(
@@ -178,9 +173,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_simple_id_step
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_simple_id_step(&self, step: SimpleIdStep<'s, 'h>) -> IVonData {
         let SimpleIdStep { name, template_args } = step;
         IVonData::object(
@@ -196,7 +188,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         )
     }
-}
 /*
   def vonifySimpleIdStep(step: SimpleIdStep): IVonData = {
     val SimpleIdStep(name, templateArgs) = step
@@ -210,9 +201,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_package
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_package(
         &self,
         package_coord: PackageCoordinate<'s>,
@@ -366,7 +354,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyPackage(packageCoord: PackageCoordinate, paackage: PackageH): IVonData = {
     val PackageH(
@@ -458,13 +445,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_region
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_region(&self, region: RegionH) -> IVonData {
         panic!("Unimplemented: vonify_region");
     }
-}
 /*
   def vonifyRegion(region: RegionH): IVonData = {
     val RegionH() = region
@@ -483,9 +466,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_struct_h
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_struct_h(&self, r#ref: &StructHT<'s, 'h>) -> IVonData {
         let StructHT { id: full_name, .. } = *r#ref;
         IVonData::Object(VonObject {
@@ -496,7 +476,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyStructH(ref: StructHT): IVonData = {
     val StructHT(fullName) = ref
@@ -510,9 +489,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_interface (Scala overload — by InterfaceHT)
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_interface(&self, r#ref: &InterfaceHT<'s, 'h>) -> IVonData {
         let InterfaceHT { id: full_name, .. } = *r#ref;
         IVonData::Object(VonObject {
@@ -523,7 +499,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyInterface(ref: InterfaceHT): IVonData = {
     val InterfaceHT(fullName) = ref
@@ -537,9 +512,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_interface_method
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_interface_method(
         &self,
         interface_method_h: &InterfaceMethodH<'s, 'h>,
@@ -554,7 +526,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyInterfaceMethod(interfaceMethodH: InterfaceMethodH): IVonData = {
     val InterfaceMethodH(prototype, virtualParamIndex) = interfaceMethodH
@@ -570,9 +541,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 
 // mig: fn vonify_interface_def (Scala overload — by InterfaceDefinitionH;
 // disambiguated per overload-suffix pattern.)
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_interface_def(&self, interface: &InterfaceDefinitionH<'s, 'h>) -> IVonData {
         let InterfaceDefinitionH { id: full_name, weakable, mutability, super_interfaces, methods: prototypes } = *interface;
         IVonData::Object(VonObject {
@@ -588,7 +556,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyInterface(interface: InterfaceDefinitionH): IVonData = {
     val InterfaceDefinitionH(fullName, weakable, mutability, superInterfaces, prototypes) = interface
@@ -607,9 +574,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_struct
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_struct(&self, r#struct: &StructDefinitionH<'s, 'h>) -> IVonData {
         let StructDefinitionH { id: full_name, weakable, extern_, mutability, edges, members } = *r#struct;
         IVonData::Object(VonObject {
@@ -626,7 +590,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonfiyStruct(struct: StructDefinitionH): IVonData = {
     val StructDefinitionH(fullName, weakable, extern, mutability, edges, members) = struct
@@ -646,16 +609,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_mutability
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_mutability(&self, mutability: Mutability) -> IVonData {
         match mutability {
             Mutability::Immutable => IVonData::Object(VonObject { tyype: "Immutable".to_string(), id: None, members: vec![] }),
             Mutability::Mutable => IVonData::Object(VonObject { tyype: "Mutable".to_string(), id: None, members: vec![] }),
         }
     }
-}
 /*
   def vonifyMutability(mutability: Mutability): IVonData = {
     mutability match {
@@ -666,16 +625,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_location
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_location(&self, location: LocationH) -> IVonData {
         match location {
             LocationH::InlineH => IVonData::Object(VonObject { tyype: "Inline".to_string(), id: None, members: vec![] }),
             LocationH::YonderH => IVonData::Object(VonObject { tyype: "Yonder".to_string(), id: None, members: vec![] }),
         }
     }
-}
 /*
   def vonifyLocation(location: LocationH): IVonData = {
     location match {
@@ -686,16 +641,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_variability
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_variability(&self, variability: Variability) -> IVonData {
         match variability {
             Variability::Varying => IVonData::Object(VonObject { tyype: "Varying".to_string(), id: None, members: vec![] }),
             Variability::Final => IVonData::Object(VonObject { tyype: "Final".to_string(), id: None, members: vec![] }),
         }
     }
-}
 /*
   def vonifyVariability(variability: Variability): IVonData = {
     variability match {
@@ -706,9 +657,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_prototype
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_prototype(&self, prototype: &PrototypeH<'s, 'h>) -> IVonData {
         let PrototypeH { id: full_name, params, return_type, _must_intern: _ } = prototype;
         IVonData::Object(VonObject {
@@ -733,7 +681,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyPrototype(prototype: PrototypeH): IVonData = {
     val PrototypeH(fullName, params, returnType) = prototype
@@ -749,9 +696,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_coord
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_coord(&self, coord: CoordH<'s, 'h>) -> IVonData {
         let CoordH { ownership, location, kind } = coord;
         IVonData::Object(VonObject {
@@ -773,7 +717,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyCoord(coord: CoordH[KindHT]): IVonData = {
     val CoordH(ownership, location, kind) = coord
@@ -789,9 +732,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_edge
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_edge(&self, edge_h: &EdgeH<'s, 'h>) -> IVonData {
         let EdgeH { struct_, interface, struct_prototypes_by_interface_method } = *edge_h;
         IVonData::Object(VonObject {
@@ -819,7 +759,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyEdge(edgeH: EdgeH): IVonData = {
     val EdgeH(struct, interface, structPrototypesByInterfacePrototype) = edgeH
@@ -846,9 +785,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_ownership
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_ownership(&self, ownership: OwnershipH) -> IVonData {
         match ownership {
             OwnershipH::OwnH => IVonData::Object(VonObject { tyype: "Own".to_string(), id: None, members: vec![] }),
@@ -859,7 +795,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             OwnershipH::WeakH => IVonData::Object(VonObject { tyype: "Weak".to_string(), id: None, members: vec![] }),
         }
     }
-}
 /*
   def vonifyOwnership(ownership: OwnershipH): IVonData = {
     ownership match {
@@ -874,9 +809,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_struct_member
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_struct_member(&self, struct_member_h: &StructMemberH<'s, 'h>) -> IVonData {
         let StructMemberH { name, variability, tyype } = *struct_member_h;
         IVonData::Object(VonObject {
@@ -890,7 +822,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyStructMember(structMemberH: StructMemberH): IVonData = {
     val StructMemberH(name, variability, tyype) = structMemberH
@@ -907,9 +838,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_runtime_sized_array_definition
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_runtime_sized_array_definition(
         &self,
         rsa_def: &RuntimeSizedArrayDefinitionHT<'s, 'h>,
@@ -926,7 +854,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyRuntimeSizedArrayDefinition(rsaDef: RuntimeSizedArrayDefinitionHT): IVonData = {
     val RuntimeSizedArrayDefinitionHT(name, mutability, elementType) = rsaDef
@@ -942,9 +869,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_static_sized_array_definition
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_static_sized_array_definition(
         &self,
         ssa_def: &StaticSizedArrayDefinitionHT<'s, 'h>,
@@ -963,7 +887,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyStaticSizedArrayDefinition(ssaDef: StaticSizedArrayDefinitionHT): IVonData = {
     val StaticSizedArrayDefinitionHT(name, size, mutability, variability, elementType) = ssaDef
@@ -981,9 +904,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_kind
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_kind(&self, kind: KindHT<'s, 'h>) -> IVonData {
         match kind {
             KindHT::NeverHT(_) => IVonData::Object(VonObject { tyype: "Never".to_string(), id: None, members: vec![] }),
@@ -1039,7 +959,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }),
         }
     }
-}
 /*
   def vonifyKind(kind: KindHT): IVonData = {
     kind match {
@@ -1078,9 +997,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_function
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_function(&self, function_h: &FunctionH<'s, 'h>) -> IVonData {
         let FunctionH { prototype, is_abstract: _, is_extern: _, attributes: _, body } = function_h;
         IVonData::Object(VonObject {
@@ -1098,7 +1014,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyFunction(functionH: FunctionH): IVonData = {
     val FunctionH(prototype, _, _, _, body) = functionH
@@ -1114,9 +1029,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_expression
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_expression(&self, node: ExpressionH<'s, 'h>) -> IVonData {
         match node {
             ExpressionH::ConstantVoidH(_) => {
@@ -1800,7 +1712,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ExpressionH::PreCheckBorrowH(_) => panic!("vonify_expression: PreCheckBorrowH"),
         }
     }
-}
 /*
   def vonifyExpression(node: ExpressionH[KindHT]): IVonData = {
     node match {
@@ -2340,13 +2251,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_function_ref
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_function_ref(&self, r#ref: &FunctionRefH<'s, 'h>) -> IVonData {
         panic!("Unimplemented: vonify_function_ref");
     }
-}
 /*
   def vonifyFunctionRef(ref: FunctionRefH): IVonData = {
     val FunctionRefH(prototype) = ref
@@ -2360,9 +2267,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_local
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_local(&self, local: Local<'s, 'h>) -> IVonData {
         let Local { id, variability, type_h: tyype } = local;
         IVonData::Object(VonObject {
@@ -2384,7 +2288,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyLocal(local: Local): IVonData = {
     val Local(id, variability, tyype) = local
@@ -2400,9 +2303,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_variable_id
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_variable_id(&self, id: VariableIdH<'s, 'h>) -> IVonData {
         let VariableIdH { number, height: _, name: maybe_name } = id;
         IVonData::Object(VonObject {
@@ -2424,7 +2324,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ],
         })
     }
-}
 /*
   def vonifyVariableId(id: VariableIdH): IVonData = {
     val VariableIdH(number, height, maybeName) = id
@@ -2442,9 +2341,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_optional
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_optional<I>(&self, opt: Option<I>, func: impl Fn(I) -> IVonData) -> IVonData {
         match opt {
             None => IVonData::Object(VonObject { tyype: "None".to_string(), id: None, members: vec![] }),
@@ -2460,7 +2356,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }),
         }
     }
-}
 /*
   def vonifyOptional[I](opt: Option[I], func: (I) => IVonData): IVonData = {
     opt match {
@@ -2471,13 +2366,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_code_location
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_code_location(&self, code_location: CodeLocation) -> IVonData {
         panic!("Unimplemented: vonify_code_location");
     }
-}
 /*
   def vonifyCodeLocation(codeLocation: CodeLocation): IVonData = {
     val CodeLocation(file, offset) = codeLocation
@@ -2491,13 +2382,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_code_location2
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_code_location2(&self, code_location: &CodeLocationS<'s>) -> IVonData {
         panic!("Unimplemented: vonify_code_location2");
     }
-}
 /*
   def vonifyCodeLocation2(codeLocation: CodeLocationS): IVonData = {
     val CodeLocationS(file, offset) = codeLocation
@@ -2511,13 +2398,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_ranges
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_ranges(&self, ranges: &[RangeS<'s>]) -> IVonData {
         panic!("Unimplemented: vonify_ranges");
     }
-}
 /*
   def vonifyRanges(ranges: List[RangeS]): IVonData = {
     VonArray(
@@ -2527,13 +2410,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_range
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_range(&self, range: RangeS<'s>) -> IVonData {
         panic!("Unimplemented: vonify_range");
     }
-}
 /*
   def vonifyRange(range: RangeS): IVonData = {
     val RangeS(begin, end) = range
@@ -2547,9 +2426,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_name
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn vonify_name(&self, h: &IdH<'s, 'h>) -> IVonData {
         let IdH { local_name, package_coordinate, shortened_name, fully_qualified_name: _, _must_intern: _, _phantom_h: _ } = h;
         IVonData::Object(VonObject {

@@ -158,7 +158,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
     }
     }
-}
 /*
   def resultType: CoordH[T]
 
@@ -166,14 +165,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   // a certain type.
 */
 // mig: fn expect_struct_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_struct_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::StructHT(_) => *self,
             _ => panic!("expect_struct_access: not a struct"),
         }
     }
-}
 /*
   def expectStructAccess(): ExpressionH[StructHT] = {
     resultType match {
@@ -185,11 +182,9 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_interface_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_interface_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_interface_access");
     }
-}
 /*
   def expectInterfaceAccess(): ExpressionH[InterfaceHT] = {
     resultType match {
@@ -200,14 +195,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_runtime_sized_array_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_runtime_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::RuntimeSizedArrayHT(_) => *self,
             _ => panic!("expect_runtime_sized_array_access: not a runtime sized array"),
         }
     }
-}
 /*
   def expectRuntimeSizedArrayAccess(): ExpressionH[RuntimeSizedArrayHT] = {
     resultType match {
@@ -218,14 +211,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_static_sized_array_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_static_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::StaticSizedArrayHT(_) => *self,
             _ => panic!("expect_static_sized_array_access: not a static sized array"),
         }
     }
-}
 /*
   def expectStaticSizedArrayAccess(): ExpressionH[StaticSizedArrayHT] = {
     resultType match {
@@ -236,14 +227,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_int_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_int_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::IntHT(_) => *self,
             _ => panic!("expect_int_access: not an int"),
         }
     }
-}
 /*
   def expectIntAccess(): ExpressionH[IntHT] = {
     resultType match {
@@ -254,11 +243,9 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_i64_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_i64_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_i64_access");
     }
-}
 /*
   def expectI64Access(): ExpressionH[IntHT] = {
     resultType match {
@@ -269,7 +256,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
   }
 */
 // mig: fn expect_bool_access
-impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn expect_bool_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::BoolHT(_) => *self,

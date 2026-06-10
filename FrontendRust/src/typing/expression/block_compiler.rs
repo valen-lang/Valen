@@ -117,11 +117,6 @@ where 's: 't,
     (block2, unstackifiedAncestorLocals, restackifiedAncestorLocals, returnsFromExprs)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_block_statements_block(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

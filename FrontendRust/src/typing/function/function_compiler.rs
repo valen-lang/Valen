@@ -289,11 +289,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_light_function_from_call_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -329,11 +324,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_function_from_call_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -423,11 +413,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_function_from_call_for_prototype_ext(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -477,11 +462,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -512,11 +492,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_light_function_from_call_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -555,11 +530,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_closure_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -616,11 +586,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn determine_closure_variable_member(
         &self,
         env: &'t NodeEnvironmentT<'s, 't>,

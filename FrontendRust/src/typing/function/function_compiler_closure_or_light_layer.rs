@@ -177,11 +177,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_closure_function_from_call_for_prototype(
         &self,
         outer_env: IEnvironmentT,
@@ -227,11 +222,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_light_function_from_call_for_prototype2(
         &self,
         parent_env: IEnvironmentT,
@@ -267,11 +257,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_light_function_from_call_for_prototype2(
         &self,
         parent_env: IEnvironmentT<'s, 't>,
@@ -327,11 +312,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
         &self,
         parent_env: IEnvironmentT<'s, 't>,
@@ -396,11 +376,6 @@ where 's: 't,
 //  }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_light_function_from_non_call(
         &self,
         parent_env: IEnvironmentT<'s, 't>,
@@ -597,11 +572,6 @@ where 's: 't,
   // are a lot of overloads available.
   // This assumes it met any type bound restrictions (or, will; not implemented yet)
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_light_banner_from_call_closure_or_light(
         &self,
         parent_env: IEnvironmentT<'s, 't>,
@@ -645,11 +615,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_function_from_call_for_banner_closure_or_light(
         &self,
         parent_env: IInDenizenEnvironmentT,
@@ -683,11 +648,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn make_env_without_closure_stuff(
         &self,
         outer_env: IEnvironmentT<'s, 't>,
@@ -724,11 +684,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn check_not_closure(&self, function: &'s FunctionA<'s>) {
         match &function.body {
             IBodyS::CodeBody(body1) => assert!(body1.body.closured_names.is_empty()),
@@ -749,11 +704,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn make_closure_variables_and_entries(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

@@ -71,7 +71,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             _phantom_h: PhantomData,
         })
     }
-}
 /*
   def translateFullName(
     hinputs: HinputsI,
@@ -86,9 +85,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn add_step
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn add_step(
         &self,
         _hamuts: &Hamuts<'s, 'i, 'h>,

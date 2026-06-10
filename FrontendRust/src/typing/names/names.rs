@@ -444,14 +444,12 @@ impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
     }
   }
   /* */
-}
 // Proactive dispatch method (TL.md "Proactively Add Inherited Dispatch
 // Methods"): Scala accesses `template.humanName` on IFunctionTemplateNameT
 // at InferCompiler.scala:314 and elsewhere. Most concrete subtypes carry a
 // `humanName: StrI` field; the few that don't (OverrideDispatcher,
 // LambdaCallFunction, Constructor, AnonymousSubstructConstructor) panic
 // until a test path requires them.
-impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
   pub fn human_name(&self) -> StrI<'s> {
     match self {
       IFunctionTemplateNameT::FunctionTemplate(x) => x.human_name,
@@ -541,8 +539,6 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
   def template: ITemplateNameT
 */
     /* Guardian: disable-all */
-}
-impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             IInstantiationNameT::Export(_) => &[],
@@ -1052,8 +1048,6 @@ impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
     /*
   def template: IImplTemplateNameT
 */
-}
-impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             IImplNameT::Impl(x) => x.template_args,
@@ -1370,8 +1364,6 @@ impl<'s, 't> IPlaceholderNameT<'s, 't> {
   def index: Int
   */
     /* Guardian: disable-all */
-}
-impl<'s, 't> IPlaceholderNameT<'s, 't> {
     pub fn rune(&self) -> IRuneS<'s> {
         match self {
             IPlaceholderNameT::KindPlaceholder(x) => x.template.rune,

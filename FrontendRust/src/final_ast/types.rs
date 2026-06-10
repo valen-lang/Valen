@@ -134,27 +134,21 @@ impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
             _ => panic!("expect_static_sized_array_coord: not a static sized array"),
         }
     }
-}
 // mig: fn expect_runtime_sized_array_coord
-impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
     pub fn expect_runtime_sized_array_coord(&self) -> Self {
         match self.kind {
             KindHT::RuntimeSizedArrayHT(_) => *self,
             _ => panic!("expect_runtime_sized_array_coord: not a runtime sized array"),
         }
     }
-}
 // mig: fn expect_struct_coord
-impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
     pub fn expect_struct_coord(&self) -> Self {
         match self.kind {
             KindHT::StructHT(_) => *self,
             _ => panic!("expect_struct_coord: not a struct"),
         }
     }
-}
 // mig: fn expect_interface_coord
-impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
     pub fn expect_interface_coord(&self) -> Self {
         match self.kind {
             KindHT::InterfaceHT(_) => *self,
@@ -170,18 +164,12 @@ impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
             _ => panic!("expect_struct_h: not a struct"),
         }
     }
-}
-
-impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
     pub fn expect_static_sized_array_ht(&self) -> &'h StaticSizedArrayHT<'s, 'h> {
         match *self {
             KindHT::StaticSizedArrayHT(s) => s,
             _ => panic!("expect_static_sized_array_ht: not a static sized array"),
         }
     }
-}
-
-impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
     pub fn expect_runtime_sized_array_ht(&self) -> &'h RuntimeSizedArrayHT<'s, 'h> {
         match *self {
             KindHT::RuntimeSizedArrayHT(s) => s,

@@ -627,10 +627,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
   */
-}
-
-impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
-{
   pub fn eval_pos(file: &'s FileCoordinate<'s>, pos: i32) -> CodeLocationS<'s> {
     CodeLocationS {
       file,
@@ -2874,13 +2870,9 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
   /*
     def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
   */
-}
 /*
 Guardian: disable-all
 */
-
-impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
-{
   // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     if self.scoutput_cache.is_some() {

@@ -174,11 +174,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_or_evaluate_templated_function_for_banner(
         &self,
         outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -286,11 +281,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_or_evaluate_function_for_header(
         &self,
         outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -513,11 +503,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_function_param_types(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -560,11 +545,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_function_params(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -643,11 +623,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_maybe_return_type(
         &self,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
@@ -689,11 +664,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_generic_function_banner_from_call(
         &self,
         rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
@@ -731,11 +701,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_generic_function_prototype_from_call(
         &self,
         rued_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
@@ -866,11 +831,6 @@ where 's: 't,
 //  }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_name(
         &self,
         template_name: &IdT<'s, 't>,
@@ -900,11 +860,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_named_env(
         &self,
         rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,

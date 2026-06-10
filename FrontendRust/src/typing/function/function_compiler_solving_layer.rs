@@ -175,11 +175,6 @@ where 's: 't,
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_function_from_call_for_banner(
         &self,
         declaring_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -352,11 +347,6 @@ where 's: 't,
   // are a lot of overloads available.
   // This assumes it met any type bound restrictions (or, will; not implemented yet)
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_templated_light_banner_from_call(
         &self,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -532,11 +522,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_known_templatas(
         &self,
         function: &FunctionA<'s>,
@@ -566,11 +551,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn check_closure_concerns_handled(
         &self,
         near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -607,11 +587,6 @@ where 's: 't,
   // The reachableBoundsFromParamsAndReturn harvest violates @BDPFWDZ — the bound prototypes
   // are pushed downward from each citizen-typed param's inner env into this near-env.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // IOW, add the necessary data to turn the near env into the runed env.
     // The reachable_bounds_from_params_and_return harvest violates @BDPFWDZ — the bound prototypes
     // are pushed downward from each citizen-typed param's inner env into this near-env.
@@ -704,11 +679,6 @@ where 's: 't,
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_function_from_call_for_prototype(
         &self,
         outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -960,11 +930,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype_solving(
         &self,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
@@ -1178,11 +1143,6 @@ where 's: 't,
   // Preconditions:
   // - either no closured vars, or they were already added to the env.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_generic_function_from_non_call_solving(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1418,11 +1378,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_initial_sends_from_args(
         &self,
         call_range: RangeS<'s>,

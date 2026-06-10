@@ -158,7 +158,6 @@ where 's: 't,
             local_name: last_step,
         })
     }
-}
 /*
   def getTopLevelDenizenId(
     id: IdT[INameT],
@@ -181,9 +180,6 @@ where 's: 't,
     IdT(id.packageCoord, initSteps, lastStep)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_placeholder_templata_id(
         impl_placeholder: ITemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
@@ -200,7 +196,6 @@ where 's: 't,
             other => panic!("vwat: get_placeholder_templata_id unexpected templata: {:?}", other),
         }
     }
-}
 /*
   def getPlaceholderTemplataId(implPlaceholder: ITemplataT[ITemplataType]): IdT[IPlaceholderNameT] = {
     implPlaceholder match {
@@ -211,9 +206,6 @@ where 's: 't,
     }
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules.
     // Safe because prediction has no actual arguments being inferred that could conflict.
     pub fn assemble_predict_rules(
@@ -236,7 +228,6 @@ where 's: 't,
         }
         result
     }
-}
 /*
   // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules.
   // Safe because prediction has no actual arguments being inferred that could conflict.
@@ -253,9 +244,6 @@ where 's: 't,
     })
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Per @DRSINI, default rules are no longer added eagerly here. They're added
     // incrementally by solveForResolving and evaluateGenericFunctionFromCallForPrototype
     // only for runes that remain unsolved after argument inference.
@@ -265,7 +253,6 @@ where 's: 't,
     ) -> Vec<IRulexSR<'s>> {
         rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect()
     }
-}
 /*
   // Per @DRSINI, default rules are no longer added eagerly here. They're added
   // incrementally by solveForResolving and evaluateGenericFunctionFromCallForPrototype
@@ -274,9 +261,6 @@ where 's: 't,
     rules.filter(InferCompiler.includeRuleInCallSiteSolve)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_function_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -290,7 +274,6 @@ where 's: 't,
             local_name: template_local,
         })
     }
-}
 /*
   def getFunctionTemplate(id: IdT[IFunctionNameT]): IdT[IFunctionTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -300,9 +283,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_citizen_template(
         &self,
         id: IdT<'s, 't>,
@@ -326,7 +306,6 @@ where 's: 't,
             local_name,
         })
     }
-}
 /*
   def getCitizenTemplate(id: IdT[ICitizenNameT]): IdT[ICitizenTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -336,9 +315,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getNameTemplate is a companion-object static.
     pub fn get_name_template(
         name: INameT<'s, 't>,
@@ -348,7 +324,6 @@ where 's: 't,
             Err(_) => name,
         }
     }
-}
 /*
   def getNameTemplate(name: INameT): INameT = {
     name match {
@@ -357,9 +332,6 @@ where 's: 't,
     }
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getSuperTemplate is a companion-object static.
     // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_super_template(
@@ -375,7 +347,6 @@ where 's: 't,
             local_name: new_local_name,
         })
     }
-}
 /*
   def getSuperTemplate(id: IdT[INameT]): IdT[INameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -385,9 +356,6 @@ where 's: 't,
       getNameTemplate(last))
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getRootSuperTemplate is a companion-object static.
     // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_root_super_template(
@@ -416,7 +384,6 @@ where 's: 't,
             }
         }
     }
-}
 /*
   // Removes lambda citizens / lambda calls from the end, so we get the root function.
   def getRootSuperTemplate(interner: Interner, id: IdT[INameT]): IdT[INameT] = {
@@ -439,9 +406,6 @@ where 's: 't,
     removeTrailingLambdas(getSuperTemplate(id))
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -453,7 +417,6 @@ where 's: 't,
             local_name: INameT::from(last.template()),
         })
     }
-}
 /*
   def getTemplate(id: IdT[IInstantiationNameT]): IdT[ITemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -463,9 +426,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_sub_kind_template(
         &self,
         id: IdT<'s, 't>,
@@ -479,7 +439,6 @@ where 's: 't,
             local_name: template_name,
         })
     }
-}
 /*
   def getSubKindTemplate(id: IdT[ISubKindNameT]): IdT[ISubKindTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -489,9 +448,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_super_kind_template(
         &self,
         id: IdT<'s, 't>,
@@ -505,7 +461,6 @@ where 's: 't,
             local_name: template_name,
         })
     }
-}
 /*
   def getSuperKindTemplate(id: IdT[ISuperKindNameT]): IdT[ISuperKindTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -515,9 +470,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_struct_template(
         &self,
         id: IdT<'s, 't>,
@@ -540,7 +492,6 @@ where 's: 't,
             local_name,
         })
     }
-}
 /*
   def getStructTemplate(id: IdT[IStructNameT]): IdT[IStructTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -550,9 +501,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_interface_template(
         &self,
         id: IdT<'s, 't>,
@@ -567,7 +515,6 @@ where 's: 't,
             local_name,
         })
     }
-}
 /*
   def getInterfaceTemplate(id: IdT[IInterfaceNameT]): IdT[IInterfaceTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -577,16 +524,12 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_export_template(
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
-}
 /*
   def getExportTemplate(id: IdT[ExportNameT]): IdT[ExportTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -596,16 +539,12 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_extern_template(
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
-}
 /*
   def getExternTemplate(id: IdT[ExternNameT]): IdT[ExternTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -615,9 +554,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_impl_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -627,7 +563,6 @@ where 's: 't,
         let template = INameT::from(impl_name.template());
         *interner.intern_id(crate::typing::names::names::IdValT { package_coord, init_steps, local_name: template })
     }
-}
 /*
   def getImplTemplate(id: IdT[IImplNameT]): IdT[IImplTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -637,9 +572,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_placeholder_template(
         &self,
         id: IdT<'s, 't>,
@@ -656,7 +588,6 @@ where 's: 't,
             local_name: template_name,
         })
     }
-}
 /*
   def getPlaceholderTemplate(id: IdT[KindPlaceholderNameT]): IdT[KindPlaceholderTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
@@ -666,9 +597,6 @@ where 's: 't,
       last.template)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_rune_to_function_bound(
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
@@ -689,7 +617,6 @@ where 's: 't,
         }
         result
     }
-}
 /*
   def assembleRuneToFunctionBound(templatas: TemplatasStore): Map[IRuneS, PrototypeT[FunctionBoundNameT]] = {
     templatas.entriesByNameT.toIterable.flatMap({
@@ -700,9 +627,6 @@ where 's: 't,
     }).toMap
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn assemble_rune_to_impl_bound(
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
@@ -723,7 +647,6 @@ where 's: 't,
         }
         result
     }
-}
 /*
   def assembleRuneToImplBound(templatas: TemplatasStore): Map[IRuneS, IdT[ImplBoundNameT]] = {
     templatas.entriesByNameT.toIterable.flatMap({
@@ -734,9 +657,6 @@ where 's: 't,
     }).toMap
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_coord(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -767,7 +687,6 @@ where 's: 't,
             _ => panic!("Unimplemented: substitute_templatas_in_coord unexpected templata result"),
         }
     }
-}
 /*
   def substituteTemplatasInCoord(
     coutputs: CompilerOutputs,
@@ -801,9 +720,6 @@ where 's: 't,
 
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_kind(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -884,7 +800,6 @@ where 's: 't,
             KindT::OverloadSet(_) => panic!("Unimplemented: substitute_templatas_in_kind OverloadSet"),
         }
     }
-}
 /*
   // This returns an ITemplata because...
   // Let's say we have a parameter that's a Coord(own, $_0).
@@ -953,9 +868,6 @@ where 's: 't,
     }
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_struct(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1001,7 +913,6 @@ where 's: 't,
             translated_bounds);
         new_struct
     }
-}
 /*
   def substituteTemplatasInStruct(
     coutputs: CompilerOutputs,
@@ -1048,9 +959,6 @@ where 's: 't,
     newStruct
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_instantiation_bounds(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1138,7 +1046,6 @@ where 's: 't,
             }
         }
     }
-}
 /*
   private def translateInstantiationBounds(
     coutputs: CompilerOutputs,
@@ -1237,9 +1144,6 @@ where 's: 't,
     }
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_impl_id(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1253,7 +1157,6 @@ where 's: 't,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
-}
 /*
   def substituteTemplatasInImplId[T <: IImplNameT](
     coutputs: CompilerOutputs,
@@ -1298,9 +1201,6 @@ where 's: 't,
     return result
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_bounds(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1335,7 +1235,6 @@ where 's: 't,
             rune_to_bound_impl,
         }
     }
-}
 /*
   def substituteTemplatasInBounds(
     coutputs: CompilerOutputs,
@@ -1369,9 +1268,6 @@ where 's: 't,
       }))
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_interface(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1413,7 +1309,6 @@ where 's: 't,
             translated_bounds);
         new_interface
     }
-}
 /*
   def substituteTemplatasInInterface(
     coutputs: CompilerOutputs,
@@ -1452,9 +1347,6 @@ where 's: 't,
     newInterface
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_templata(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1487,7 +1379,6 @@ where 's: 't,
             _ => panic!("vimpl: substitute_templatas_in_templata unexpected templata"),
         }
     }
-}
 /*
   def substituteTemplatasInTemplata(
     coutputs: CompilerOutputs,
@@ -1523,9 +1414,6 @@ where 's: 't,
     }
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_prototype(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1583,7 +1471,6 @@ where 's: 't,
             return_type: substituted_return_type,
         })
     }
-}
 /*
   def substituteTemplatasInPrototype[T <: IFunctionNameT](
     coutputs: CompilerOutputs,
@@ -1631,9 +1518,6 @@ where 's: 't,
     return result
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn substitute_templatas_in_function_bound_id(
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
@@ -1843,7 +1727,6 @@ where 's: 't,
             bound_arguments_source,
         )
     }
-}
 /*
   def getPlaceholderSubstituter(
     sanityCheck: Boolean, interner: Interner,
@@ -1869,9 +1752,6 @@ where 's: 't,
       boundArgumentsSource)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_placeholder_substituter_ext(
         &self,
         sanity_check: bool,
@@ -1890,7 +1770,6 @@ where 's: 't,
             bound_arguments_source,
         }
     }
-}
 /*
   // Let's say you have the line:
   //   myShip.engine
@@ -1952,9 +1831,6 @@ where 's: 't,
 //  }
 
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_reachable_bounds(
         &self,
         sanity_check: bool,
@@ -1997,7 +1873,6 @@ where 's: 't,
                 citizen_rune_to_reachable_prototype.into_iter()),
         }
     }
-}
 /*
   def getReachableBounds(
     sanityCheck: Boolean, interner: Interner,
@@ -2028,9 +1903,6 @@ where 's: 't,
           .toMap)
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn get_first_unsolved_identifying_rune(
         &self,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
@@ -2042,7 +1914,6 @@ where 's: 't,
             .map(|(generic_param, index, _)| (*generic_param, index))
             .next()
     }
-}
 /*
   def getFirstUnsolvedIdentifyingRune(
     genericParameters: Vector[GenericParameterS],
@@ -2058,9 +1929,6 @@ where 's: 't,
       .headOption
   }
 */
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_rune_type_solver_env(
         &self,
         parent_env: IInDenizenEnvironmentT<'s, 't>,
@@ -2341,11 +2209,6 @@ where 's: 't,
     true
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn pointify_kind(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2466,11 +2329,6 @@ where 's: 't,
 //    (templata)
 //  }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn lookup_templata_by_name(
         &self,
         env: IEnvironmentT<'s, 't>,
@@ -2493,11 +2351,6 @@ where 's: 't,
     vassertOne(env.lookupNearestWithName(name, Set(TemplataLookupContext)))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn lookup_templata_by_rune(
         &self,
         env: IEnvironmentT<'s, 't>,
@@ -2533,11 +2386,6 @@ where 's: 't,
     results.headOption
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn coerce_kind_to_coord(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2567,11 +2415,6 @@ where 's: 't,
       kind)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn coerce_to_coord(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2653,11 +2496,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_struct_template(
         &self,
         struct_templata: &'t StructDefinitionTemplataT<'s, 't>,
@@ -2678,11 +2516,6 @@ where 's: 't,
     declaringEnv.id.addStep(nameTranslator.translateStructName(structA.name))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_interface_template(
         &self,
         interface_templata: &'t InterfaceDefinitionTemplataT<'s, 't>,
@@ -2701,11 +2534,6 @@ where 's: 't,
     declaringEnv.id.addStep(nameTranslator.translateInterfaceName(interfaceA.name))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_citizen_template(
         &self,
         citizen_templata: &'t CitizenDefinitionTemplataT<'s, 't>,
@@ -2720,11 +2548,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn citizen_is_from_template(
         &self,
         actual_citizen_ref: ICitizenTT<'s, 't>,
@@ -2762,11 +2585,6 @@ where 's: 't,
     TemplataCompiler.getCitizenTemplate(actualCitizenRef.id) == citizenTemplateId
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_placeholder(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2860,11 +2678,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_coord_placeholder_inner(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -2916,11 +2729,6 @@ where 's: 't,
     CoordTemplataT(CoordT(kindOwnership, regionPlaceholderTemplata, kindPlaceholderT.kind))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_kind_placeholder_inner(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -3034,11 +2842,6 @@ where 's: 't,
     KindTemplataT(KindPlaceholderT(kindPlaceholderId))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_non_kind_non_region_placeholder_inner(
         &self,
         name_prefix: IdT<'s, 't>,

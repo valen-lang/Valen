@@ -55,7 +55,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }
         previous_functions_h
     }
-}
 /*
   def translateFunctions(
     hinputs: HinputsI,
@@ -72,9 +71,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_function
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_function(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -116,7 +112,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts.add_function(header_prototype, function_h);
         temporary_function_ref_h
     }
-}
 /*
   def translateFunction(
     hinputs: HinputsI,
@@ -173,9 +168,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_function_attributes
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_function_attributes(
         &self,
         attributes: &[IFunctionAttributeI<'s>],
@@ -188,7 +180,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             other => panic!("translate_function_attributes: unimplemented {:?}", other),
         }).collect()
     }
-}
 /*
   def translateFunctionAttributes(attributes: Vector[IFunctionAttributeI]) = {
     attributes.map({
@@ -201,9 +192,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_function_ref
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_function_ref(
         &self,
         hinputs: &HinputsI<'s, 'i>,

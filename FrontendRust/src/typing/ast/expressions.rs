@@ -100,20 +100,14 @@ impl<'s, 't> AddressResultT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> AddressResultT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> AddressResultT<'s, 't> {
     fn underlying_coord(&self) -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
 /*
   override def underlyingCoord: CoordT = coord
 */
-}
-impl<'s, 't> AddressResultT<'s, 't> {
     fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = coord.kind
@@ -131,20 +125,14 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ReferenceResultT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ReferenceResultT<'s, 't> {
     pub fn underlying_coord(&self) -> CoordT<'s, 't> { self.coord }
 /*
   override def underlyingCoord: CoordT = coord
 */
-}
-impl<'s, 't> ReferenceResultT<'s, 't> {
     fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = coord.kind
@@ -400,8 +388,6 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> LetAndLendTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -479,14 +465,10 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> LockWeakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> LockWeakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_opt_borrow_type } }
 /*
   override def result: ReferenceResultT = {
@@ -518,8 +500,6 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> BorrowToWeakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
@@ -528,8 +508,6 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
   }
 
 */
-}
-impl<'s, 't> BorrowToWeakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Weak, region: self.inner_expr.result().coord.region, kind: self.inner_expr.kind() } }
     }
@@ -560,14 +538,10 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> LetNormalTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> LetNormalTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
@@ -614,14 +588,10 @@ impl<'s, 't> UnletTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> UnletTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> UnletTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.variable.coord() }
     }
@@ -658,14 +628,10 @@ impl<'s, 't> DiscardTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DiscardTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> DiscardTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
@@ -719,14 +685,10 @@ impl<'s, 't> DeferTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DeferTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> DeferTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.inner_expr.result().coord }
     }
@@ -781,14 +743,10 @@ impl<'s, 't> IfTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> IfTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> IfTE<'s, 't> {
     // Rust adaptation: Scala's class-body `private val`s and runtime `match`
     // assertions live here in the constructor. Only `common_supertype` escapes
     // as a stored field; the other three intermediates are locals.
@@ -839,8 +797,6 @@ impl<'s, 't> IfTE<'s, 't> {
         case _ => thenResultCoord
       }
     */
-}
-impl<'s, 't> IfTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.common_supertype }
     }
@@ -893,23 +849,17 @@ impl<'s, 't> WhileTE<'s, 't> {
         case _ => vwat()
       }
     */
-}
 /*
 
 */
-impl<'s, 't> WhileTE<'s, 't> {
     fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> WhileTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> WhileTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_coord } }
 /*
   override def result = ReferenceResultT(resultCoord)
@@ -937,14 +887,10 @@ impl<'s, 't> MutateTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> MutateTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> MutateTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.destination_expr.result().coord }
     }
@@ -973,14 +919,10 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> RestackifyTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> RestackifyTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT {
             ownership: OwnershipT::Share,
@@ -1014,14 +956,10 @@ impl<'s, 't> TransmigrateTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> TransmigrateTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> TransmigrateTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result = ReferenceResultT(sourceExpr.result.coord.copy(region = targetRegion))
@@ -1047,14 +985,10 @@ impl<'s, 't> ReturnTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ReturnTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ReturnTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
@@ -1086,14 +1020,10 @@ impl<'s, 't> BreakTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> BreakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> BreakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Never(NeverT { from_break: true }) } }
     }
@@ -1128,14 +1058,10 @@ impl<'s, 't> BlockTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> BlockTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> BlockTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
 /*
   override def result = inner.result
@@ -1176,14 +1102,10 @@ impl<'s, 't> PureTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> PureTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> PureTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result: ReferenceResultT = ReferenceResultT(resultType)
@@ -1206,8 +1128,6 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConsecutorTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -1275,8 +1195,6 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
       case None => exprs.last.result
     }
 */
-}
-impl<'s, 't> ConsecutorTE<'s, 't> {
     fn last_reference_expr(&self) -> &ReferenceExpressionTE<'s, 't> { panic!("Unimplemented: last_reference_expr"); }
 /*
   def lastReferenceExpr = exprs.last
@@ -1302,14 +1220,10 @@ impl<'s, 't> TupleTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> TupleTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> TupleTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result = ReferenceResultT(resultReference)
@@ -1351,14 +1265,10 @@ impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result = ReferenceResultT(resultReference)
@@ -1381,14 +1291,10 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ArraySizeTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ArraySizeTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, array.result.coord.region, IntT.i32))
@@ -1413,8 +1319,6 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> IsSameInstanceTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -1487,14 +1391,10 @@ impl<'s, 't> AsSubtypeTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> AsSubtypeTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> AsSubtypeTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_result_type } }
 /*
   override def result = ReferenceResultT(resultResultType)
@@ -1516,14 +1416,10 @@ impl<'s, 't> VoidLiteralTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> VoidLiteralTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> VoidLiteralTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
@@ -1554,14 +1450,10 @@ impl<'s, 't> ConstantIntTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConstantIntTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ConstantIntTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Int(IntT { bits: self.bits }) } }
     }
@@ -1588,14 +1480,10 @@ impl<'s, 't> ConstantBoolTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConstantBoolTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ConstantBoolTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Bool(BoolT) } }
     }
@@ -1620,14 +1508,10 @@ impl<'s, 't> ConstantStrTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConstantStrTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ConstantStrTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Str(StrT) } }
     }
@@ -1652,14 +1536,10 @@ impl<'s, 't> ConstantFloatTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConstantFloatTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ConstantFloatTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT {
             ownership: OwnershipT::Share,
@@ -1691,22 +1571,16 @@ impl<'s, 't> LocalLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> LocalLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> LocalLookupTE<'s, 't> {
     pub fn result(&self) -> AddressResultT<'s, 't> {
         AddressResultT { coord: self.local_variable.coord() }
     }
 /*
   override def result: AddressResultT = AddressResultT(localVariable.coord)
 */
-}
-impl<'s, 't> LocalLookupTE<'s, 't> {
     pub fn variability(&self) -> VariabilityT { self.local_variable.variability() }
 /*
   override def variability: VariabilityT = localVariable.variability
@@ -1731,14 +1605,10 @@ impl<'s, 't> ArgLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ArgLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ArgLookupTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.coord }
     }
@@ -1777,14 +1647,10 @@ impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
     fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.element_type } }
 /*
   override def result = {
@@ -1821,8 +1687,6 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -1873,14 +1737,10 @@ impl<'s, 't> ArrayLengthTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ArrayLengthTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ArrayLengthTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
@@ -1924,14 +1784,10 @@ impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
     pub fn result(&self) -> AddressResultT<'s, 't> {
         // See RMLRMO why we just return the member type.
         AddressResultT { coord: self.member_reference }
@@ -1968,14 +1824,10 @@ impl<'s, 't> AddressMemberLookupTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> AddressMemberLookupTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> AddressMemberLookupTE<'s, 't> {
     fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.result_type2 } }
 /*
   override def result = AddressResultT(resultType2)
@@ -2005,14 +1857,10 @@ impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(resultReference)
@@ -2069,14 +1917,10 @@ impl<'s, 't> ExternFunctionCallTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ExternFunctionCallTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ExternFunctionCallTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.prototype2.return_type } }
 /*
   // We dont:
@@ -2120,8 +1964,6 @@ impl<'s, 't> FunctionCallTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> FunctionCallTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -2173,8 +2015,6 @@ impl<'s, 't> ReinterpretTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ReinterpretTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -2229,14 +2069,10 @@ impl<'s, 't> ConstructTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> ConstructTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> ConstructTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   vpass()
@@ -2269,14 +2105,10 @@ impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
@@ -2331,14 +2163,10 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
@@ -2390,8 +2218,6 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -2460,14 +2286,10 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT) } }
     }
@@ -2627,14 +2449,10 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   def result: ReferenceResultT = {
@@ -2676,14 +2494,10 @@ impl<'s, 't> UpcastTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> UpcastTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> UpcastTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         let inner_coord = self.inner_expr.result().coord;
         ReferenceResultT {
@@ -2730,8 +2544,6 @@ impl<'s, 't> SoftLoadTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> SoftLoadTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -2792,14 +2604,10 @@ impl<'s, 't> DestroyTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DestroyTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> DestroyTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT {}) } }
     }
@@ -2843,8 +2651,6 @@ impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
@@ -2919,14 +2725,10 @@ impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-}
-impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
 override def hashCode(): Int = vcurious()
 */
-}
-impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,

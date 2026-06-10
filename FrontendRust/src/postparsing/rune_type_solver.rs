@@ -36,8 +36,6 @@ case class RuneTypeSolveError(range: List[RangeS], failedSolve: FailedSolve[IRul
 }
 */
 // mig: impl RuneTypeSolveError
-impl<'s> RuneTypeSolveError<'s> {
-}
 // mig: enum IRuneTypeRuleError
 #[derive(Debug)]
 pub enum IRuneTypeRuleError<'s> {
@@ -90,8 +88,6 @@ case class FoundCitizenDidntMatchExpectedType(
 ) extends IRuneTypeRuleError
 */
 // mig: impl FoundCitizenDidntMatchExpectedType
-impl<'s> FoundCitizenDidntMatchExpectedType<'s> {
-}
 // mig: struct FoundTemplataDidntMatchExpectedType
 #[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedType<'s> {
@@ -109,8 +105,6 @@ case class FoundTemplataDidntMatchExpectedType(
 }
 */
 // mig: impl FoundTemplataDidntMatchExpectedType
-impl<'s> FoundTemplataDidntMatchExpectedType<'s> {
-}
 // mig: struct NotEnoughArgumentsForGenericCall
 #[derive(Debug)]
 pub struct NotEnoughArgumentsForGenericCall<'s> {
@@ -127,8 +121,6 @@ case class NotEnoughArgumentsForGenericCall(
 }
   */
 // mig: impl NotEnoughArgumentsForGenericCall
-impl<'s> NotEnoughArgumentsForGenericCall<'s> {
-}
 // mig: struct GenericCallArgTypeMismatch
 #[derive(Debug)]
 pub struct GenericCallArgTypeMismatch<'s> {
@@ -147,8 +139,6 @@ case class GenericCallArgTypeMismatch(
 ) extends IRuneTypeRuleError
 */
 // mig: impl GenericCallArgTypeMismatch
-impl<'s> GenericCallArgTypeMismatch<'s> {
-}
 // mig: enum IRuneTypingLookupFailedError
 pub enum IRuneTypingLookupFailedError<'s> {
   TooManyMatchingTypes(RuneTypingTooManyMatchingTypes<'s>),
@@ -228,8 +218,6 @@ case class FoundTemplataDidntMatchExpectedTypeA(
 }
 */
 // mig: impl FoundTemplataDidntMatchExpectedTypeA
-impl<'s> FoundTemplataDidntMatchExpectedTypeA<'s> {
-}
 // mig: struct FoundPrimitiveDidntMatchExpectedType
 pub struct FoundPrimitiveDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
@@ -246,8 +234,6 @@ case class FoundPrimitiveDidntMatchExpectedType(
 }
 */
 // mig: impl FoundPrimitiveDidntMatchExpectedType
-impl<'s> FoundPrimitiveDidntMatchExpectedType<'s> {
-}
 // mig: enum IRuneTypeSolverLookupResult
 #[derive(PartialEq)]
 pub enum IRuneTypeSolverLookupResult<'s> {
@@ -267,8 +253,6 @@ pub struct PrimitiveRuneTypeSolverLookupResult<'s> {
 case class PrimitiveRuneTypeSolverLookupResult(tyype: ITemplataType) extends IRuneTypeSolverLookupResult
 */
 // mig: impl PrimitiveRuneTypeSolverLookupResult
-impl<'s> PrimitiveRuneTypeSolverLookupResult<'s> {
-}
 // mig: struct CitizenRuneTypeSolverLookupResult
 #[derive(PartialEq)]
 pub struct CitizenRuneTypeSolverLookupResult<'s> {
@@ -279,8 +263,6 @@ pub struct CitizenRuneTypeSolverLookupResult<'s> {
 case class CitizenRuneTypeSolverLookupResult(tyype: TemplateTemplataType, genericParams: Vector[GenericParameterS]) extends IRuneTypeSolverLookupResult
 */
 // mig: impl CitizenRuneTypeSolverLookupResult
-impl<'s> CitizenRuneTypeSolverLookupResult<'s> {
-}
 // mig: struct TemplataLookupResult
 #[derive(PartialEq)]
 pub struct TemplataLookupResult<'s> {
@@ -290,8 +272,6 @@ pub struct TemplataLookupResult<'s> {
 case class TemplataLookupResult(templata: ITemplataType) extends IRuneTypeSolverLookupResult
 */
 // mig: impl TemplataLookupResult
-impl<'s> TemplataLookupResult<'s> {
-}
 // mig: trait IRuneTypeSolverEnv
 pub trait IRuneTypeSolverEnv<'s> {
   fn lookup(

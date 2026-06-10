@@ -169,102 +169,53 @@ where
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.typing_pass_compilation.get_code_map()
   }
-}
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = typingPassCompilation.getCodeMap()
 */
 // mig: fn get_parseds
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.typing_pass_compilation.get_parseds()
   }
-}
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = typingPassCompilation.getParseds()
 */
 // mig: fn get_vpst_map
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.typing_pass_compilation.get_vpst_map()
   }
-}
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = typingPassCompilation.getVpstMap()
 */
 // mig: fn get_scoutput
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.typing_pass_compilation.get_scoutput()
   }
-}
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = typingPassCompilation.getScoutput()
 */
 // mig: fn get_astrouts
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.typing_pass_compilation.get_astrouts()
   }
-}
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = typingPassCompilation.getAstrouts()
 */
 // mig: fn get_compiler_outputs
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.typing_pass_compilation.get_compiler_outputs()
   }
-}
 /*
   def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = typingPassCompilation.getCompilerOutputs()
 */
 // mig: fn expect_compiler_outputs
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.typing_pass_compilation.expect_compiler_outputs()
   }
-}
 /*
   def expectCompilerOutputs(): HinputsT = typingPassCompilation.expectCompilerOutputs()
 
 */
 // mig: fn get_monouts
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   // Returns HinputsI<'s, 'i>, where 'i is the InstantiatedCompilation's own
   // instantiating-arena lifetime (the `instantiating_interner` field), mirroring
   // how TypingPassCompilation::get_compiler_outputs returns HinputsT<'s, 't>.
@@ -281,7 +232,6 @@ where
     self.monouts_cache = Some(monouts);
     self.monouts_cache.as_ref().unwrap()
   }
-}
 /*
   def getMonouts(): HinputsI = {
     monoutsCache match {
@@ -299,12 +249,6 @@ where
 /*
 }
 */
-impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
-where
-    's: 't,
-    's: 'i,
-    'p: 'ctx,
-{
   /*
   */
   // Rust adaptation: `&self` read of the already-computed monouts so a caller can borrow it

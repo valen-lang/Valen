@@ -90,93 +90,64 @@ where 's: 'i, 'i: 'h,
             next_local_id_number: self.next_local_id_number,
         }
     }
-}
 /*
   def snapshot = inner
 */
 
 // mig: fn typing_pass_locals
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>> {
         panic!("Unimplemented: typing_pass_locals");
     }
-}
 /*
   def typingPassLocals: Map[IVarNameI[cI], VariableIdH] = inner.typingPassLocals
 */
 
 // mig: fn unstackified_vars
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn unstackified_vars(&self) -> &HashSet<VariableIdH<'s, 'h>> {
         panic!("Unimplemented: unstackified_vars");
     }
-}
 /*
   def unstackifiedVars: Set[VariableIdH] = inner.unstackifiedVars
 */
 
 // mig: fn locals
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn locals(&self) -> &HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>> {
         panic!("Unimplemented: locals");
     }
-}
 /*
   def locals: Map[VariableIdH, Local] = inner.locals
 */
 
 // mig: fn next_local_id_number
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn next_local_id_number(&self) -> i32 {
         panic!("Unimplemented: next_local_id_number");
     }
-}
 /*
   def nextLocalIdNumber: Int = inner.nextLocalIdNumber
 */
 
 // mig: fn get_by_var_name (Scala overload `get(IVarNameI[cI])` —
 // disambiguated per instantiating overload-suffix pattern.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn get_by_var_name(&self, id: &IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
         self.typing_pass_locals.get(id).copied().and_then(|var_id| self.locals.get(&var_id).copied())
     }
-}
 /*
   def get(id: IVarNameI[cI]) = inner.get(id)
 */
 
 // mig: fn get (Scala overload `get(VariableIdH)`.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn get(&self, id: VariableIdH<'s, 'h>) -> Option<Local<'s, 'h>> {
         panic!("Unimplemented: get");
     }
-}
 /*
   def get(id: VariableIdH) = inner.get(id)
 */
 
 // mig: fn mark_unstackified_by_var_name (Scala overload disambiguated.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
         let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
         self.mark_unstackified(var_id_h);
     }
-}
 /*
   def markUnstackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markUnstackified(varId2)
@@ -184,14 +155,10 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn mark_restackified_by_var_name (Scala overload disambiguated.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
         let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
         self.mark_restackified(var_id_h);
     }
-}
 /*
   def markRestackified(varId2: IVarNameI[cI]): Unit = {
     inner = inner.markRestackified(varId2)
@@ -199,9 +166,6 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn mark_unstackified
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn mark_unstackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
         assert!(self.locals.contains_key(&var_id_h));
         if self.unstackified_vars.contains(&var_id_h) {
@@ -209,7 +173,6 @@ where 's: 'i, 'i: 'h,
         }
         self.unstackified_vars.insert(var_id_h);
     }
-}
 /*
   def markUnstackified(varIdH: VariableIdH): Unit = {
     inner = inner.markUnstackified(varIdH)
@@ -217,13 +180,9 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn set_next_local_id_number
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
         self.next_local_id_number = next_local_id_number;
     }
-}
 /*
   def setNextLocalIdNumber(nextLocalIdNumber: Int): Unit = {
     inner = inner.copy(nextLocalIdNumber = nextLocalIdNumber)
@@ -231,9 +190,6 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn add_hammer_local
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn add_hammer_local(
         &mut self,
         tyype: CoordH<'s, 'h>,
@@ -247,7 +203,6 @@ where 's: 'i, 'i: 'h,
         self.next_local_id_number = new_local_id_number + 1;
         new_local
     }
-}
 /*
   def addHammerLocal(
     tyype: CoordH[KindHT],
@@ -260,9 +215,6 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn add_typing_pass_local (Scala name; matches Scala `addTypingPassLocal`.)
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn add_typing_pass_local(
         &mut self,
         var_id: &'i IVarNameI<'s, 'i, cI>,
@@ -342,7 +294,6 @@ where 's: 'i, 'i: 'h,
         self.next_local_id_number = new_local_id_number + 1;
         new_local
     }
-}
 /*
   def addCompilerLocal(
     varId2: IVarNameI[cI],
@@ -416,9 +367,6 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn mark_restackified
-impl<'s, 'i, 'h> Locals<'s, 'i, 'h>
-where 's: 'i, 'i: 'h,
-{
     pub fn mark_restackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
         // Make sure it existed and was unstackified
         assert!(self.locals.contains_key(&var_id_h));
@@ -494,7 +442,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     pub fn mangle_func(&self, id: &IdI<'s, 'i, cI>) -> String {
         panic!("Unimplemented: mangle_func");
     }
-}
 /*
   def mangleFunc(id: IdI[cI, IFunctionNameI[cI]]): String = {
     if (id.packageCoord.module.str == "rust") {
@@ -523,13 +470,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_name
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn mangle_name(&self, name: &INameI<'s, 'i, cI>, stuff_after: bool) -> String {
         panic!("Unimplemented: mangle_name");
     }
-}
 /*
   def mangleName(name: INameI[cI], stuffAfter: Boolean): String = {
     ""
@@ -546,13 +489,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_struct
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn mangle_struct(&self, id: &IdI<'s, 'i, cI>) -> String {
         String::new()
     }
-}
 /*
   def mangleStruct(id: IdI[cI, IStructNameI[cI]]): String = {
     ""
@@ -562,13 +501,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_kind
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn mangle_kind(&self, kind: &KindIT<'s, 'i, cI>) -> String {
         panic!("Unimplemented: mangle_kind");
     }
-}
 /*
   def mangleKind(kind: KindIT[cI]): String = {
     ""
@@ -580,13 +515,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_coord
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn mangle_coord(&self, coord: &CoordI<'s, 'i, cI>) -> String {
         panic!("Unimplemented: mangle_coord");
     }
-}
 /*
   def mangleCoord(coord: CoordI[cI]): String = {
     ""
@@ -603,13 +534,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_templata
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i, cI>) -> String {
         panic!("Unimplemented: mangle_templata");
     }
-}
 /*
   def mangleTemplata(templata: ITemplataI[cI]): String = {
     ""
@@ -621,9 +548,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate(&self, hinputs: &HinputsI<'s, 'i>) -> &'h ProgramH<'s, 'h> {
         let HinputsI {
             interfaces,

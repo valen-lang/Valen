@@ -275,11 +275,6 @@ where 's: 't,
   // Implicit drop is one made for closures, arrays, or anything else that's not explicitly
   // defined by the user.
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_implicit_drop_function_struct_drop(
         &self,
         drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
@@ -399,11 +394,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn generate_function_body_struct_drop(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

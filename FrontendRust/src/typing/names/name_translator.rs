@@ -51,11 +51,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_generic_function_name(&self, function_name: IFunctionDeclarationNameS<'s>) -> IFunctionTemplateNameT<'s, 't> {
         match function_name {
             IFunctionDeclarationNameS::LambdaDeclarationName(_) => {
@@ -134,11 +129,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_struct_name(&self, name: IStructDeclarationNameS<'s>) -> IStructTemplateNameT<'s, 't> {
         match name {
             IStructDeclarationNameS::TopLevelStructDeclarationName(top_level) => {
@@ -173,11 +163,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_interface_name(&self, name: TopLevelInterfaceDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
         let interface_template_name = InterfaceTemplateNameT {
             human_namee: name.name,
@@ -196,11 +181,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_citizen_name(&self, name: ICitizenDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
         match name {
             ICitizenDeclarationNameS::TopLevelStructDeclarationName(n) => {
@@ -246,11 +226,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_name_step(&self, name: INameS<'s>) -> INameT<'s, 't> {
         match name {
             INameS::LambdaStructDeclaration(_) => panic!("Unimplemented: translate_name_step LambdaStructDeclaration"),
@@ -374,11 +349,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_code_location(&self, s: CodeLocationS<'s>) -> CodeLocationS<'s> {
         s
     }
@@ -388,11 +358,6 @@ where 's: 't,
     CodeLocationS(line, col)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_var_name_step(&self, name: IVarNameS<'s>) -> IVarNameT<'s, 't> {
         match name {
             IVarNameS::CodeVarName(name_str) => {
@@ -449,11 +414,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_impl_name(&self, n: IImplDeclarationNameS<'s>) -> IImplTemplateNameT<'s, 't> {
         match n {
             IImplDeclarationNameS::ImplDeclarationName(impl_decl) => {

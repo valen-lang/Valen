@@ -317,11 +317,6 @@ where 's: 't,
     expr2
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_runtime_sized_array_from_callable(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -724,11 +719,6 @@ where 's: 't,
     }
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_static_sized_array_from_values(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1004,11 +994,6 @@ where 's: 't,
     (finalExpr)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_destroy_static_sized_array_into_callable(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1061,11 +1046,6 @@ where 's: 't,
       prototype)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn evaluate_destroy_runtime_sized_array_into_callable(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1123,11 +1103,6 @@ where 's: 't,
       prototype)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_static_sized_array(&self, global_env: &'t GlobalEnvironmentT<'s, 't>, coutputs: &mut CompilerOutputs<'s, 't>) {
         // val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
         let builtin_package: &'s PackageCoordinate<'s> =
@@ -1300,11 +1275,6 @@ where 's: 't,
     coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_static_sized_array(
         &self,
         mutability: ITemplataT<'s, 't>,
@@ -1350,11 +1320,6 @@ where 's: 't,
           interner.intern(RawArrayNameT(mutability, type2, region)))))))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_runtime_sized_array(&self, global_env: &'t GlobalEnvironmentT<'s, 't>, coutputs: &mut CompilerOutputs<'s, 't>) {
         // val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
         let builtin_package: &'s PackageCoordinate<'s> =
@@ -1499,11 +1464,6 @@ where 's: 't,
     coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn resolve_runtime_sized_array(
         &self,
         type_2: CoordT<'s, 't>,
@@ -1543,11 +1503,6 @@ where 's: 't,
           interner.intern(RawArrayNameT(mutability, type2, region)))))))
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn get_array_size(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
         panic!("Unimplemented: get_array_size");
     }
@@ -1557,11 +1512,6 @@ where 's: 't,
     m.toInt
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     fn get_array_element_type(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
         let coord_templata = expect_coord_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
         coord_templata.coord
@@ -1572,11 +1522,6 @@ where 's: 't,
     m
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn lookup_in_static_sized_array(
         &self,
         range: RangeS<'s>,
@@ -1616,11 +1561,6 @@ where 's: 't,
     StaticSizedArrayLookupTE(range, containerExpr2, at, indexExpr2, memberType,  variability)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn lookup_in_unknown_sized_array(
         &self,
         parent_ranges: &[RangeS<'s>],

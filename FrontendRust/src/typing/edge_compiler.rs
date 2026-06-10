@@ -230,11 +230,6 @@ where 's: 't,
     (interfaceEdgeBlueprints, itables)
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_interface_edge_blueprints(
         &self,
         coutputs: &CompilerOutputs<'s, 't>,
@@ -366,11 +361,6 @@ where 's: 't,
     interfaceEdgeBlueprints.toVector
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn create_override_placeholder_mimicking(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -520,11 +510,6 @@ where 's: 't,
     result
   }
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn look_for_override(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

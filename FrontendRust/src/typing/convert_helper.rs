@@ -105,11 +105,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn convert(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -233,11 +228,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn convert_with_subkind(
         &self,
         calling_env: IInDenizenEnvironmentT<'s, 't>,

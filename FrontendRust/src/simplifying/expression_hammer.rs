@@ -490,7 +490,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             },
         }
     }
-}
 /*
   // stackHeight is the number of locals that have been declared in ancestor
   // blocks and previously in this block. It's used to figure out the index of
@@ -1096,9 +1095,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_deferreds
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1152,7 +1148,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         assert!(original_expr.result_type() == result.result_type());
         result
     }
-}
 /*
   def translateDeferreds(
     hinputs: HinputsI,
@@ -1208,9 +1203,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_expressions_until_never
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_expressions_until_never(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1242,7 +1234,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             _ => (exprs_he, deferreds),
         }
     }
-}
 /*
   def translateExpressionsUntilNever(
     hinputs: HinputsI, hamuts: HamutsBox,
@@ -1276,9 +1267,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_expressions_and_deferreds
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_expressions_and_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1294,7 +1282,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }).collect();
         consecutive(self.interner, &exprs)
     }
-}
 /*
   def translateExpressionsAndDeferreds(
     hinputs: HinputsI,
@@ -1316,9 +1303,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_extern_function_call
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_extern_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1341,7 +1325,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let call_result_node = ExpressionH::ExternCallH(self.interner.alloc(ExternCallH { function: function_ref_h.prototype, args_expressions: self.interner.bump().alloc_slice_fill_iter(args_he.into_iter()) }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_result_node, args_deferreds)
     }
-}
 /*
   def translateExternFunctionCall(
     hinputs: HinputsI,
@@ -1375,9 +1358,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_function_pointer_call
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_function_pointer_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1408,7 +1388,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let call_result_node = ExpressionH::CallH(self.interner.alloc(CallH { function: prototype_h, args_expressions: self.interner.bump().alloc_slice_fill_iter(args_he.into_iter()) }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_result_node, args_deferreds)
     }
-}
 /*
   def translateFunctionPointerCall(
     hinputs: HinputsI,
@@ -1453,9 +1432,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_new_mut_runtime_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_new_mut_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1479,7 +1455,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, capacity_deferreds)
     }
-}
 /*
   def translateNewMutRuntimeSizedArray(
     hinputs: HinputsI, hamuts: HamutsBox,
@@ -1515,9 +1490,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_new_imm_runtime_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_new_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1551,7 +1523,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         deferreds.extend(size_deferreds);
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, deferreds)
     }
-}
 /*
   def translateNewImmRuntimeSizedArray(
     hinputs: HinputsI, hamuts: HamutsBox,
@@ -1596,9 +1567,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_static_array_from_callable
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_static_array_from_callable(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1624,7 +1592,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, generator_deferreds)
     }
-}
 /*
   def translateStaticArrayFromCallable(
     hinputs: HinputsI,
@@ -1665,9 +1632,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_destroy_static_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_destroy_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1696,7 +1660,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         combined_deferreds.extend(array_expr_deferreds);
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, destroy_static_sized_array_call_node, combined_deferreds)
     }
-}
 /*
   def translateDestroyStaticSizedArray(
     hinputs: HinputsI,
@@ -1740,9 +1703,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_destroy_imm_runtime_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_destroy_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1754,7 +1714,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
     }
-}
 /*
   def translateDestroyImmRuntimeSizedArray(
     hinputs: HinputsI,
@@ -1802,9 +1761,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_if
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_if(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1863,7 +1819,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }
         if_call_node
     }
-}
 /*
   def translateIf(
     hinputs: HinputsI,
@@ -1936,9 +1891,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_while
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_while(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -1954,7 +1906,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let while_call_node = self.interner.alloc(WhileH { body_block: expr });
         while_call_node
     }
-}
 /*
   def translateWhile(
     hinputs: HinputsI, hamuts: HamutsBox,
@@ -1976,9 +1927,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_interface_function_call
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_interface_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,

@@ -160,7 +160,6 @@ sealed trait ITemplataI[+R <: IRegionsModeI] {
 // mig: fn expect_coord_templata
 impl<'s, 'i, R> ITemplataI<'s, 'i, R> {
   pub fn expect_coord_templata(&self) -> CoordTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_coord_templata"); }
-}
 /*
   def expectCoordTemplata(): CoordTemplataI[R] = {
     this match {
@@ -170,7 +169,6 @@ impl<'s, 'i, R> ITemplataI<'s, 'i, R> {
   }
 */
 // mig: fn expect_region_templata
-impl<'s, 'i, R> ITemplataI<'s, 'i, R> {
   pub fn expect_region_templata(&self) -> RegionTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_region_templata"); }
 }
 /*

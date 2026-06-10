@@ -78,7 +78,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             KindIT::RuntimeSizedArrayIT(a) => KindHT::RuntimeSizedArrayHT(self.translate_runtime_sized_array(hinputs, hamuts, a)),
         }
     }
-}
 /*
   def translateKind(hinputs: HinputsI, hamuts: HamutsBox, tyype: KindIT[cI]):
   (KindHT) = {
@@ -118,9 +117,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_region
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_region(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -130,7 +126,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_region");
     }
-}
 /*
   def translateRegion(
     hinputs: HinputsI,
@@ -142,9 +137,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_coord
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_coord(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -165,7 +157,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let inner_h = self.translate_kind(hinputs, hamuts, inner_type);
         CoordH { ownership: evaluate_ownership(ownership), location, kind: inner_h }
     }
-}
 /*
   def translateCoord(
       hinputs: HinputsI,
@@ -192,9 +183,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_coords
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_coords(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -204,7 +192,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         references2.iter().map(|c| self.translate_coord(hinputs, hamuts, *c)).collect()
     }
-}
 /*
   def translateCoords(
       hinputs: HinputsI,
@@ -216,9 +203,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn check_conversion
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn check_conversion(
         &self,
         expected: CoordH<'s, 'h>,
@@ -226,7 +210,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) {
         panic!("Unimplemented: check_conversion");
     }
-}
 /*
   def checkConversion(expected: CoordH[KindHT], actual: CoordH[KindHT]): Unit = {
     if (actual != expected) {
@@ -236,9 +219,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_static_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -272,7 +252,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateStaticSizedArray(
       hinputs: HinputsI,
@@ -302,9 +281,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_runtime_sized_array
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -336,7 +312,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateRuntimeSizedArray(hinputs: HinputsI, hamuts: HamutsBox, rsaIT: RuntimeSizedArrayIT[cI]): RuntimeSizedArrayHT = {
     hamuts.runtimeSizedArrays.get(rsaIT) match {
@@ -361,9 +336,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_prototype
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_prototype(
         &self,
         hinputs: &HinputsI<'s, 'i>,

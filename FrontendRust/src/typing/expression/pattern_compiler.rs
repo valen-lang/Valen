@@ -132,11 +132,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn iterate_translate_list_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -223,11 +218,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn infer_and_translate_pattern(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -471,11 +461,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn inner_translate_sub_pattern_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -743,11 +728,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn destructure_owning(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -915,11 +895,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn destructure_non_owning_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -995,11 +970,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn iterate_destructure_non_owning_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1159,11 +1129,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn translate_destroy_struct_inner_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1311,11 +1276,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     // Rust adaptation (SPDMX-B): the continuation parameter is boxed (Box<dyn FnOnce>)
     // rather than `impl FnOnce`. Scala/JVM erases lambda types so the mutual recursion
     // translate_destroy_struct_inner -> make_lets_for_own -> inner_translate_sub_pattern
@@ -1435,11 +1395,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn load_result_ownership(
         &self,
         member_ownership_in_struct: OwnershipT,
@@ -1462,11 +1417,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn load_from_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1544,11 +1494,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't, 't: 'ctx, 's: 'ctx,
-{
     pub fn load_from_static_sized_array(
         &self,
         range: RangeS<'s>,

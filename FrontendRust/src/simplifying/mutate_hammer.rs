@@ -89,7 +89,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let combined_deferreds: Vec<_> = source_deferreds.into_iter().chain(destination_deferreds.into_iter()).collect();
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, old_value_access, combined_deferreds)
     }
-}
 /*
   def translateMutate(
       hinputs: HinputsI,
@@ -133,9 +132,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_runtime_sized_array_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_runtime_sized_array_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -166,7 +162,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         deferreds.extend(index_deferreds);
         (store_node, deferreds)
     }
-}
 /*
   private def translateMundaneRuntimeSizedArrayMutate(
     hinputs: HinputsI,
@@ -198,9 +193,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_static_sized_array_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_static_sized_array_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -214,7 +206,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
     }
-}
 /*
   private def translateMundaneStaticSizedArrayMutate(
                                                     hinputs: HinputsI,
@@ -246,9 +237,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_member_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_addressible_member_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -300,7 +288,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (store_node, destination_deferreds)
     }
-}
 /*
   private def translateAddressibleMemberMutate(
     hinputs: HinputsI,
@@ -368,9 +355,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_member_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_member_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -400,7 +384,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (store_node, destination_deferreds)
     }
-}
 /*
   private def translateMundaneMemberMutate(
     hinputs: HinputsI,
@@ -439,9 +422,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_addressible_local_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_addressible_local_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -457,7 +437,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_addressible_local_mutate");
     }
-}
 /*
   private def translateAddressibleLocalMutate(
     hinputs: HinputsI,
@@ -496,9 +475,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_mundane_local_mutate
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_mundane_local_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,

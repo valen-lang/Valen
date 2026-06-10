@@ -384,11 +384,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn translate_citizen_attributes(
         &self,
         attrs: &[ICitizenAttributeS<'s>],
@@ -414,11 +409,6 @@ where 's: 't,
 
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn compile_interface_core(
         &self,
         outer_env: IInDenizenEnvironmentT<'s, 't>,
@@ -585,11 +575,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_struct_members(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -608,11 +593,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_struct_member(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -685,11 +665,6 @@ where 's: 't,
   }
 
 */
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
     pub fn make_closure_understruct_core(
         &self,
         containing_function_env: &'t NodeEnvironmentT<'s, 't>,

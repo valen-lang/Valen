@@ -71,7 +71,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             self.translate_interface(hinputs, hamuts, interface.instantiated_interface);
         }
     }
-}
 /*
   def translateInterfaces(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
     hinputs.interfaces.foreach(interface => translateInterface(hinputs, hamuts, interface.instantiatedInterface))
@@ -79,9 +78,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_interface_methods
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_interface_methods(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -95,7 +91,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             InterfaceMethodH { prototype_h, virtual_param_index: *virtual_param_index }
         }).collect()
     }
-}
 /*
   def translateInterfaceMethods(
       hinputs: HinputsI,
@@ -117,9 +112,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_interface
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_interface(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -152,7 +144,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateInterface(
     hinputs: HinputsI,
@@ -202,9 +193,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_structs
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_structs(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -219,7 +207,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateStructs(hinputs: HinputsI, hamuts: HamutsBox): Unit = {
     hinputs.structs.foreach(structDefI => {
@@ -233,9 +220,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_struct_i
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_struct_i(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -273,7 +257,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateStructI(
       hinputs: HinputsI,
@@ -327,9 +310,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_opaque_i
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_opaque_i(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -361,7 +341,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def translateOpaqueI(
       hinputs: HinputsI,
@@ -399,9 +378,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_members
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_members(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -413,7 +389,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         members.iter().map(|m| self.translate_member(hinputs, hamuts, struct_name, struct_mutability_h, m)).collect()
     }
-}
 /*
   def translateMembers(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, members: Vector[StructMemberI]):
   (Vector[StructMemberH]) = {
@@ -422,9 +397,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_member
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_member(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -455,7 +427,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             tyype: member_type,
         }
     }
-}
 /*
   def translateMember(hinputs: HinputsI, hamuts: HamutsBox, structName: IdI[cI, INameI[cI]], structMutabilityH: Mutability, member2: StructMemberI):
   (StructMemberH) = {
@@ -488,9 +459,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn make_box
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn make_box(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -543,7 +511,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
-}
 /*
   def makeBox(
     hinputs: HinputsI,
@@ -592,9 +559,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_edges_for_struct (Scala overload — disambiguated.)
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_edges_for_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -609,7 +573,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             .collect();
         self.translate_edges_for_struct_with_edges(hinputs, hamuts, struct_ref_h, &edges2)
     }
-}
 /*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
@@ -622,9 +585,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_edges_for_struct_with_edges (Scala overload — disambiguated.)
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_edges_for_struct_with_edges(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -635,7 +595,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         edges2.iter().map(|e| self.translate_edge(hinputs, hamuts, struct_ref_h, self.instantiating_interner.intern_interface_it_ci(InterfaceITValI { id: e.super_interface }), e)).collect()
     }
-}
 /*
   private def translateEdgesForStruct(
       hinputs: HinputsI, hamuts: HamutsBox,
@@ -647,9 +606,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn translate_edge
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn translate_edge(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -676,7 +632,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             struct_prototypes_by_interface_method: self.interner.bump().alloc(ArenaIndexMap::from_iter_in(struct_prototypes_by_interface_method.into_iter(), self.interner.bump())),
         }
     }
-}
 /*
   private def translateEdge(hinputs: HinputsI, hamuts: HamutsBox, structRefH: StructHT, interfaceIT: InterfaceIT[cI], edge2: EdgeI):
   (EdgeH) = {
@@ -700,9 +655,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn lookup_struct
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn lookup_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -712,7 +664,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         hinputs.lookup_struct(&struct_tt.id)
     }
-}
 /*
   def lookupStruct(hinputs: HinputsI, hamuts: HamutsBox, structTT: StructIT[cI]): StructDefinitionI = {
     hinputs.lookupStruct(structTT.id)
@@ -720,9 +671,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn lookup_interface
-impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
-where 's: 'h, 's: 'i, 'i: 'h,
-{
     pub fn lookup_interface(
         &self,
         hinputs: &HinputsI<'s, 'i>,

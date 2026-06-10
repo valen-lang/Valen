@@ -986,7 +986,6 @@ impl<'s> FunctionS<'s> {
       tyype, params, maybe_ret_coord_rune, rules, body,
     }
   }
-}
 /*
 // Underlying class for all XYZFunctionS types
 case class FunctionS(
@@ -1044,7 +1043,6 @@ case class FunctionS(
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
 */
-impl<'s> FunctionS<'s> {
   pub fn is_light(&self) -> bool {
     match &self.body {
       IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
