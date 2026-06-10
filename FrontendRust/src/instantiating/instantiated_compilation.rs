@@ -55,14 +55,10 @@ case class InstantiatorCompilationOptions(
   val hash = runtime.ScalaRunTime._hashCode(this);
 */
 // mig: fn hash_code
-impl InstantiatorCompilationOptions {
-}
 /*
 override def hashCode(): Int = hash;
 */
 // mig: fn equals
-impl InstantiatorCompilationOptions {
-}
 /*
 override def equals(obj: Any): Boolean = vcurious(); }
 

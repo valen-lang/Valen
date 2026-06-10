@@ -199,7 +199,6 @@ where 's: 't,
 
         let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
-        // Rust adaptation (SPDMX-B): arena-allocate so .templata()/.id can emit 't-borrowed references; Scala relies on GC.
         let named_env: &'t FunctionEnvironmentT<'s, 't> =
             self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
         let banner = FunctionBannerT {

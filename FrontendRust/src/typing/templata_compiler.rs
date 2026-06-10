@@ -333,7 +333,6 @@ where 's: 't,
   }
 */
     // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getSuperTemplate is a companion-object static.
-    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_super_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -357,7 +356,6 @@ where 's: 't,
   }
 */
     // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getRootSuperTemplate is a companion-object static.
-    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_root_super_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -1953,7 +1951,6 @@ Guardian: disable-all
 // `parentEnv.lookupNearestWithImpreciseName`. Same shape pattern as
 // `HigherTypingRuneTypeSolverEnv` (higher_typing_pass.rs) and `LetExprRuneTypeSolverEnv`
 // (expression_compiler.rs).
-// Rust adaptation (SPDMX-B): typing_interner field added for entry_to_templata.
 pub struct TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,

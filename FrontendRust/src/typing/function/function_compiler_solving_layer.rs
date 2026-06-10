@@ -233,7 +233,6 @@ where 's: 't,
                 })
                 .collect();
 
-        // Rust adaptation (SPDMX-B): arena-allocate so callee can borrow as &'t; Scala relies on GC.
         let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
             self.typing_interner.alloc(self.add_runed_data_to_near_env(
                 declaring_env,
@@ -408,7 +407,6 @@ where 's: 't,
                 .map(|p| PrototypeTemplataT { prototype: self.typing_interner.alloc(p) })
                 .collect();
 
-        // Rust adaptation (SPDMX-B): arena-allocate so callee can borrow as &'t; Scala relies on GC.
         let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
             self.typing_interner.alloc(self.add_runed_data_to_near_env(
                 near_env,
@@ -698,8 +696,6 @@ where 's: 't,
 
         let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
 
-        // Rust adaptation (SPDMX-B): re-allocate call_range into the typing arena to satisfy
-        // InferEnv's `&'t [RangeS<'s>]` field. Scala doesn't need this because GC.
         let call_range_t = self.typing_interner.alloc_slice_copy(call_range);
         let envs = InferEnv {
             original_calling_env: calling_env,

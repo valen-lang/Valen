@@ -537,7 +537,6 @@ where 's: 't,
         exact: bool,
     ) -> Result<Result<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>, ICompileErrorT<'s, 't>> {
         // Scala: anonymous `new IRuneTypeSolverEnv { override def lookup(...) }` inside attemptCandidateBanner
-        // Rust adaptation (SPDMX-B): named struct required since Rust has no anonymous classes
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             calling_env: IInDenizenEnvironmentT<'s, 't>,
             typing_interner: &'a TypingInterner<'s, 't>,
@@ -677,8 +676,6 @@ where 's: 't,
                             combined_rune_to_type.extend(rune_a_to_type.iter());
 
                             // We only want to solve the template arg runes
-                            // Rust adaptation (SPDMX-B): re-allocate call_range into the typing arena to satisfy
-                            // InferEnv's `&'t [RangeS<'s>]` field. Scala doesn't need this because GC.
                             let call_range_t = self.typing_interner.alloc_slice_copy(call_range);
                             match self.solve_for_resolving(
                                 InferEnv {

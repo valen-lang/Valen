@@ -435,9 +435,6 @@ sealed trait IInstantiationNameI[+R <: IRegionsModeI] extends INameI[R] {
 */
 // mig: fn template_args
 impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    // Rust adaptation (SPDMX-B): Scala's templateArgs is GC and interner-free, but the computed arms
-    // (e.g. Export's `Vector(region)`) must arena-allocate their slice, so we take the interner.
-    // Stored-slice arms ignore it.
     pub fn template_args(&self, interner: &InstantiatingInterner<'s, 'i>) -> &'i [ITemplataI<'s, 'i, R>] {
         match self {
             IInstantiationNameI::Export(x) => interner.alloc_slice_from_vec(vec![ITemplataI::Region(x.region)]),

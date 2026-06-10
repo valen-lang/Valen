@@ -89,10 +89,8 @@ pub struct TooManyMatchingTypesA<'s> {
 case class TooManyMatchingTypesA(range: RangeS, name: IImpreciseNameS) extends ILookupFailedErrorA {
 */
 // mig: impl TooManyMatchingTypesA
-impl<'s> TooManyMatchingTypesA<'s> {
 // mig: fn equals
 // mig: fn hash_code
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -110,10 +108,8 @@ pub struct CouldntFindTypeA<'s> {
 case class CouldntFindTypeA(range: RangeS, name: IImpreciseNameS) extends ILookupFailedErrorA {
 */
 // mig: impl CouldntFindTypeA
-impl<'s> CouldntFindTypeA<'s> {
 // mig: fn equals
 // mig: fn hash_code
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -131,10 +127,8 @@ pub struct CouldntSolveRulesA<'s> {
 case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorA {
 */
 // mig: impl CouldntSolveRulesA
-impl<'s> CouldntSolveRulesA<'s> {
 // mig: fn equals
 // mig: fn hash_code
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */

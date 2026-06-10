@@ -99,7 +99,6 @@ where 's: 't,
         let template_id_t = struct_runes_env.template_id;
         let template_name_t = IStructTemplateNameT::try_from(template_id_t.local_name).unwrap();
         let placeholdered_name_t = template_name_t.make_struct_name(self.typing_interner, template_args);
-        // Rust adaptation (SPDMX-B): Scala uses .copy(localName=...) — build new IdT via intern_id.
         let template_id_steps = template_id_t.init_steps.to_vec();
         let placeholdered_id_t = *self.typing_interner.intern_id(IdValT {
             package_coord: template_id_t.package_coord,
@@ -425,7 +424,6 @@ where 's: 't,
         let template_id_t = interface_runes_env.template_id;
         let template_name_t = IInterfaceTemplateNameT::try_from(template_id_t.local_name).unwrap();
         let placeholdered_name_t = template_name_t.make_interface_name(self.typing_interner, template_args);
-        // Rust adaptation (SPDMX-B): Scala uses .copy(localName=...) — build new IdT via intern_id.
         let template_id_steps = template_id_t.init_steps.to_vec();
         let placeholdered_id_t = *self.typing_interner.intern_id(IdValT {
             package_coord: template_id_t.package_coord,

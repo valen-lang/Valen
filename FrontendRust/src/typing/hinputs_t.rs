@@ -44,8 +44,6 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 object InstantiationBoundArgumentsT {
 */
 // mig: fn make
-// Rust adaptation (SPDMX-B): interner threaded so the resulting InstantiationBoundArgumentsT
-// is arena-allocated and shared by &'t reference (no Clone, per AASSNCMCX).
 pub fn make<'s, 't>(
     interner: &TypingInterner<'s, 't>,
     rune_to_bound_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>,

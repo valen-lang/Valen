@@ -84,11 +84,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         patterns_a: &'t [&'s AtomSP<'s>],
         pattern_inputs_te: &'t [ReferenceExpressionTE<'s, 't>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): the `after_*_continuation` receives `&Compiler` as
-        // its first parameter at invocation time, rather than capturing `self`. Without
-        // this, the `+ 't` bound on the continuation would require `'ctx: 't` on every
-        // impl block. Scala's lambda captures `this` implicitly via GC; Rust threads
-        // the receiver explicitly. Functionally equivalent to Scala.
         after_patterns_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -143,7 +138,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         patterns_a: &'t [&'s AtomSP<'s>],
         pattern_inputs_te: &'t [ReferenceExpressionTE<'s, 't>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_patterns_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -230,7 +224,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         pattern: &'s AtomSP<'s>,
         unconverted_input_expr: ReferenceExpressionTE<'s, 't>,
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_patterns_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -472,7 +465,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         previous_live_capture_locals: &'t [ILocalVariableT<'s, 't>],
         input_expr: ReferenceExpressionTE<'s, 't>,
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_sub_pattern_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -739,7 +731,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         input_expr: ReferenceExpressionTE<'s, 't>,
         list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destructure_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -906,7 +897,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         container_te: ReferenceExpressionTE<'s, 't>,
         list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destructure_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -983,7 +973,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         member_index: i32,
         list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destructure_success_continuation: Box<dyn FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -1140,7 +1129,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         inner_patterns: &'t [&'s AtomSP<'s>],
         input_struct_expr: ReferenceExpressionTE<'s, 't>,
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destroy_success_continuation: impl FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
@@ -1276,13 +1264,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
   }
 
 */
-    // Rust adaptation (SPDMX-B): the continuation parameter is boxed (Box<dyn FnOnce>)
-    // rather than `impl FnOnce`. Scala/JVM erases lambda types so the mutual recursion
-    // translate_destroy_struct_inner -> make_lets_for_own -> inner_translate_sub_pattern
-    // -> make_lets_for_own terminates trivially. In Rust, generic `impl FnOnce` forces
-    // monomorphization to nest the closure type at each recursion level, producing an
-    // infinite type and tripping the recursion limit. Boxing erases the type at the
-    // recursion boundary, restoring the JVM shape.
     pub fn make_lets_for_own_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1294,7 +1275,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         member_local_variables: &'t [ILocalVariableT<'s, 't>],
         inner_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
-        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_lets_success_continuation: Box<dyn FnOnce(
             &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,

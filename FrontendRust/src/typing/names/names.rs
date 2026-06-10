@@ -112,7 +112,6 @@ impl<'s, 't> IdT<'s, 't> {
         IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
       }
     */
-    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern.
     pub fn init_id(&self, interner: &TypingInterner<'s, 't>) -> IdT<'s, 't> {
         if self.init_steps.is_empty() {
             let top_level = interner.alloc(PackageTopLevelNameT { _phantom: PhantomData });

@@ -231,9 +231,6 @@ pub enum ITemplataT<'s, 't> {
   Location(LocationTemplataT),
 }
 impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
-  // Rust adaptation (SPDMX-B): takes &ScoutArena because the TemplateTemplataType
-  // arms construct a fresh slice of param ITemplataType values per call;
-  // Scala uses GC-backed Vector and doesn't need an arena parameter.
   pub fn tyype(&self, scout_arena: &ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
       ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),

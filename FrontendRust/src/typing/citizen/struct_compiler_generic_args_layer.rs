@@ -103,7 +103,6 @@ where 's: 't,
             self_env: declaring_env,
             context_region,
         };
-        // Rust adaptation (SPDMX-B): header_rune_to_type is ArenaIndexMap in Rust; convert to HashMap for solve_for_resolving.
         let header_rune_to_type_map: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.header_rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
@@ -534,7 +533,6 @@ where 's: 't,
             self_env: declaring_env,
             context_region,
         };
-        // Rust adaptation (SPDMX-B): rune_to_type is ArenaIndexMap in Rust; convert to HashMap for solve_for_resolving.
         let rune_to_type_map: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 

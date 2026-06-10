@@ -430,7 +430,6 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -739,7 +738,6 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     }
   */
 // mig: fn make_child
-// Rust adaptation (SPDMX-B): NodeEnvironmentT is arena-allocated; Scala used GC.
   pub fn make_child(
     &'t self,
     interner: &TypingInterner<'s, 't>,
@@ -1108,7 +1106,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn lookup_nearest_with_imprecise_name
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -1145,7 +1142,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn lookup_all_with_imprecise_name
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -1203,7 +1199,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn make_child
-// Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentT is arena-allocated.
   pub fn make_child(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -1235,8 +1230,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn add_entries
-  // Rust adaptation (SPDMX-B): scout_arena threaded because TemplatasStoreBuilder.add_entries
-  // needs it to maintain the imprecise-name lookup cache.
   pub fn add_entries(
     &mut self,
     scout_arena: &ScoutArena<'s>,
@@ -1251,8 +1244,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn nearest_block_env
-  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
-  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
   pub fn nearest_block_env(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -1266,8 +1257,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn nearest_loop_env
-  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
-  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
   pub fn nearest_loop_env(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -2015,7 +2004,6 @@ impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't
 }
 
 // mig: fn lookup_with_name_inner
-// Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
 pub fn lookup_with_name_inner<'s, 't>(
   requesting_env: IEnvironmentT<'s, 't>,
   templatas: &TemplatasStoreT<'s, 't>,
@@ -2056,7 +2044,6 @@ where 's: 't,
 
 */
 // mig: fn lookup_with_imprecise_name_inner
-// Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
 pub fn lookup_with_imprecise_name_inner<'s, 't>(
   requesting_env: IEnvironmentT<'s, 't>,
   templatas: &TemplatasStoreT<'s, 't>,

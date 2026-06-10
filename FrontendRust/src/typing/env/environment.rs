@@ -113,7 +113,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     def templatas: TemplatasStore
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -141,7 +140,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     Array[ITemplataT[ITemplataType]]
   */
 // mig: fn lookup_with_name_inner
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
@@ -165,7 +163,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     Array[ITemplataT[ITemplataType]]
   */
 // mig: fn lookup_all_with_imprecise_name
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -203,7 +200,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     }
   */
 // mig: fn lookup_nearest_with_name
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata in inner lookup
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -232,7 +228,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     }
   */
 // mig: fn lookup_nearest_with_imprecise_name
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -347,7 +342,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
   */
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -359,7 +353,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
   /* Guardian: disable-all */
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata in inner lookup
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -381,7 +374,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
   /* Guardian: disable-all */
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -393,7 +385,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
 /* Guardian: disable-all */
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
@@ -406,7 +397,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
   /* Guardian: disable-all */
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -610,8 +600,6 @@ pub fn entry_matches_filter<'s, 't>(
   }
 */
 // mig: fn entry_to_templata
-// Rust adaptation (SPDMX-B): interner threaded because FunctionTemplataT.outer_env
-// needs a IEnvironmentT, which requires arena-allocation of the defining_env value.
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
   entry: IEnvEntryT<'s, 't>,
@@ -1194,7 +1182,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   }
 */
 // mig: fn lookup_with_name_inner
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -1219,7 +1206,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -1256,7 +1242,6 @@ pub fn make_top_level_environment<'s, 't>(
   namespace_name: IdT<'s, 't>,
   interner: &TypingInterner<'s, 't>,
 ) -> &'t PackageEnvironmentT<'s, 't> {
-  // Rust adaptation (SPDMX-B): interner threaded to arena-allocate the global_namespaces slice.
   let global_namespaces: Vec<&'t TemplatasStoreT<'s, 't>> =
     global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
   let global_namespaces = interner.alloc_slice_from_vec(global_namespaces);
@@ -1517,7 +1502,6 @@ override def hashCode(): Int = hash;
     }
   */
 // mig: fn lookup_with_name_inner
-  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1552,7 +1536,6 @@ override def hashCode(): Int = hash;
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1703,7 +1686,6 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1808,7 +1790,6 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1916,7 +1897,6 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     }
   */
 // mig: fn lookup_with_imprecise_name_inner
-  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,

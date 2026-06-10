@@ -358,7 +358,6 @@ where 's: 't,
                 self.get_placeholders_in_templata(accum, ssa.variability());
                 self.get_placeholders_in_kind(accum, ssa.element_type().kind);
             }
-            // Rust adaptation (SPDMX-B): IdT.local_name is type-erased INameT in Rust; narrow via TryFrom<INameT> for IInstantiationNameT to call the dispatch method (per AASSNCMCX-session precedent in templata_compiler.rs).
             KindT::Struct(s) => {
                 let inst_name = IInstantiationNameT::try_from(s.id.local_name).expect(
                     "StructTT id local_name must be an IInstantiationNameT");
@@ -366,7 +365,6 @@ where 's: 't,
                     self.get_placeholders_in_templata(accum, *arg);
                 }
             }
-            // Rust adaptation (SPDMX-B): IdT.local_name is type-erased INameT in Rust; narrow via TryFrom<INameT> for IInstantiationNameT to call the dispatch method (per AASSNCMCX-session precedent in templata_compiler.rs).
             KindT::Interface(i) => {
                 let inst_name = IInstantiationNameT::try_from(i.id.local_name).expect(
                     "InterfaceTT id local_name must be an IInstantiationNameT");
@@ -412,8 +410,6 @@ where 's: 't,
         if !accum.is_empty() {
             let root_denizen_env = envs.original_calling_env.root_compiling_denizen_env();
             let root_id = root_denizen_env.id();
-            // Rust adaptation (SPDMX-B): Scala constructs IdT freely as a case class;
-            // Rust must intern it via typing_interner.
             let original_calling_env_template_name: IdT<'s, 't> =
                 match ITemplateNameT::try_from(root_id.local_name) {
                     Ok(_x) => root_id,

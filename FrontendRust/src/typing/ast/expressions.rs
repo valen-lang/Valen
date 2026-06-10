@@ -792,7 +792,6 @@ pub struct WhileTE<'s, 't>
 where 's: 't,
 {
     pub block: BlockTE<'s, 't>,
-    // Rust adaptation (SPDMX-B): class body `val resultCoord` stored as a field.
     pub result_coord: CoordT<'s, 't>,
 }
 /*

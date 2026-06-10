@@ -370,7 +370,6 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-    // Rust adaptation (SPDMX-B): interner needed to allocate &'t [i32] slice for arena-immutable storage.
     pub fn add(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'s, 't> {
         let mut new_path: Vec<i32> = self.path.to_vec();
         new_path.push(sub_location);

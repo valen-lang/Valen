@@ -1128,7 +1128,6 @@ where 's: 't,
   }
 
 */
-    // Rust adaptation (SPDMX-B): returns &'t reference because GeneralEnvironmentT is arena-allocated.
     pub fn import_reachable_bounds(
         &self,
         original_calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -1709,11 +1708,6 @@ where 's: 't,
   }
 
 */
-    // Rust adaptation (SPDMX-B): Scala's callback was `(SolverState) => Boolean` and
-    // captured `coutputs` from its enclosing scope via JVM shared-reference semantics.
-    // Rust's borrow checker forbids capturing `&mut coutputs` while
-    // `incrementally_solve` itself holds it, so coutputs is threaded through the
-    // callback as an explicit parameter.
     pub fn incrementally_solve(
         &self,
         envs: InferEnv<'s, 't>,

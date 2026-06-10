@@ -4344,7 +4344,6 @@ where 's: 't,
 // delegates to lookupNearestWithImpreciseName. This struct captures that field.
 // Same shape as `HigherTypingRuneTypeSolverEnv` in higher_typing_pass.rs (which
 // collapses 6 anonymous Scala impls into one named struct).
-// Rust adaptation (SPDMX-B): interner field added for entry_to_templata
 struct LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
