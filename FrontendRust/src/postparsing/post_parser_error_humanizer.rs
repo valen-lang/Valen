@@ -425,11 +425,11 @@ pub fn humanize_rule<'s>(
     IRulexSR::CallSiteCoordIsa(_) => panic!("implement: humanize_rule CallSiteCoordIsa"),
     IRulexSR::CoordSend(_) => panic!("implement: humanize_rule CoordSend"),
     IRulexSR::CoerceToCoord(_) => panic!("implement: humanize_rule CoerceToCoord"),
-    IRulexSR::MaybeCoercingCall(_) => panic!("implement: humanize_rule MaybeCoercingCall"),
+    IRulexSR::MaybeCoercingCall(r) => humanize_rune(r.result_rune.rune) + " = " + &humanize_rune(r.template_rune.rune) + "<" + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ">",
     IRulexSR::MaybeCoercingLookup(r) => humanize_rune(r.rune.rune) + " = \"" + &humanize_imprecise_name(r.name) + "\"",
     IRulexSR::Call(_) => panic!("implement: humanize_rule Call"),
     IRulexSR::Lookup(_) => panic!("implement: humanize_rule Lookup"),
-    IRulexSR::Literal(_) => panic!("implement: humanize_rule Literal"),
+    IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),
     IRulexSR::Augment(_) => panic!("implement: humanize_rule Augment"),
     IRulexSR::Equals(_) => panic!("implement: humanize_rule Equals"),
     IRulexSR::RuneParentEnvLookup(_) => panic!("implement: humanize_rule RuneParentEnvLookup"),
@@ -491,9 +491,16 @@ pub fn humanize_rule<'s>(
   }
 */
 fn humanize_literal(
-  _literal: &ILiteralSL,
+  literal: &ILiteralSL,
 ) -> String {
-  panic!("Unimplemented humanize_literal");
+  match literal {
+    ILiteralSL::OwnershipLiteral(_) => panic!("Unimplemented: humanize_literal OwnershipLiteral"),
+    ILiteralSL::MutabilityLiteral(_) => panic!("Unimplemented: humanize_literal MutabilityLiteral"),
+    ILiteralSL::VariabilityLiteral(_) => panic!("Unimplemented: humanize_literal VariabilityLiteral"),
+    ILiteralSL::IntLiteral(x) => x.value.to_string(),
+    ILiteralSL::StringLiteral(_) => panic!("Unimplemented: humanize_literal StringLiteral"),
+    other => panic!("vimpl humanize_literal: {:?}", other),
+  }
 }
 /*
   def humanizeLiteral(literal: ILiteralSL): String = {
