@@ -17,6 +17,8 @@ use std::sync::Arc;
 use crate::parsing::vonifier::ParserVonifier;
 use crate::von::printer::VonPrinter;
 use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::final_ast::ast::PackageH;
+use crate::simplifying::hammer::Hammer;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use std::collections::HashSet;
@@ -863,8 +865,7 @@ where
       let filename = parts.last().unwrap().replace(".vale", ".vpst");
       let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
       // From PassManager.scala line 277
-      write(&vpst_filepath, vpst_json)
-        .unwrap_or_else(|e| panic!("Failed to write VPST file {}: {}", vpst_filepath, e));
+      write_file(&vpst_filepath, &vpst_json);
     }
   }
 
@@ -877,10 +878,85 @@ where
     );
   }
 
-  // From PassManager.scala lines 286-341: Full compilation (scout, typing, hammer) - only if outputVAST
+  // From PassManager.scala lines 395-447: Full compilation (scout, typing, hammer) - only if outputVAST
   if opts.output_vast {
-    // From PassManager.scala lines 287-290: Scout phase
-    panic!("Scout phase not yet implemented - see PassManager.scala lines 287-341. Need getScoutput, getAstrouts, getCompilerOutputs, getHamuts");
+    // From PassManager.scala lines 396-398
+    match compilation.get_scoutput() {
+      Err(e) => panic!("PostParserErrorHumanizer.humanize not yet implemented: {:?}", e),
+      Ok(_) => {}
+    }
+
+    // From PassManager.scala lines 401-404
+    let _start_higher_typing_time = Instant::now();
+    if opts.benchmark {
+      println!(
+        "Scout phase duration: {:?}",
+        _start_higher_typing_time.duration_since(_start_scout_time)
+      );
+    }
+
+    // From PassManager.scala lines 406-409
+    match compilation.get_astrouts() {
+      Err(e) => panic!("HigherTypingErrorHumanizer.humanize not yet implemented: {:?}", e),
+      Ok(_) => {}
+    }
+
+    // From PassManager.scala lines 411-414
+    let _start_typing_pass_time = Instant::now();
+    if opts.benchmark {
+      println!(
+        "Higher typing phase duration: {:?}",
+        _start_typing_pass_time.duration_since(_start_higher_typing_time)
+      );
+    }
+
+    // From PassManager.scala lines 416-419
+    match compilation.get_compiler_outputs() {
+      Err(e) => panic!("CompilerErrorHumanizer.humanize not yet implemented: {:?}", e),
+      Ok(_) => {}
+    }
+
+    // From PassManager.scala lines 421-424
+    let _start_hammer_time = Instant::now();
+    if opts.benchmark {
+      println!(
+        "Compiler phase duration: {:?}",
+        _start_hammer_time.duration_since(_start_typing_pass_time)
+      );
+    }
+
+    // From PassManager.scala line 426
+    let program_h = compilation.get_hamuts();
+
+    // From PassManager.scala lines 428-431
+    let _finish_time = Instant::now();
+    if opts.benchmark {
+      println!(
+        "Hammer phase duration: {:?}",
+        _finish_time.duration_since(_start_hammer_time)
+      );
+    }
+
+    // From PassManager.scala lines 433-446
+    let von_hammer = compilation.get_von_hammer();
+    program_h.packages.flat_map(|package_coord, paackage| {
+      let output_vast_filepath = format!(
+        "{}/vast/{}.vast",
+        output_dir_path,
+        if package_coord.is_internal() {
+          "__vale".to_string()
+        } else {
+          format!(
+            "{}{}",
+            package_coord.module,
+            package_coord.packages.iter().map(|p| format!(".{}", p)).collect::<String>()
+          )
+        }
+      );
+      let json = jsonify_package(&von_hammer, *package_coord, paackage);
+      write_file(&output_vast_filepath, &json);
+      // println!("Wrote VAST to file {}", output_vast_filepath);
+    });
   }
 
   Ok(())
@@ -1031,6 +1107,18 @@ where
 */
 
 
+// From PassManager.scala lines 1028-1032: jsonifyPackage
+fn jsonify_package<'s, 'i, 'h, 'ctx>(
+  von_hammer: &Hammer<'s, 'i, 'h, 'ctx>,
+  package_coord: PackageCoordinate<'s>,
+  package_h: &PackageH<'s, 'h>,
+) -> String
+where 's: 'h, 's: 'i, 'i: 'h,
+{
+  let program_v = von_hammer.vonify_package(package_coord, package_h);
+  let json = VonPrinter::new().print(&program_v);
+  json
+}
 /*
   def jsonifyPackage(vonHammer: VonHammer, packageCoord: PackageCoordinate, packageH: PackageH): String = {
     val programV = vonHammer.vonifyPackage(packageCoord, packageH)
@@ -1202,6 +1290,16 @@ pub fn main(args: Vec<String>) {
   }
 */
 
+// From PassManager.scala lines 551-560: writeFile
+fn write_file(filepath: &str, s: &str) {
+  if filepath == "stdout:" {
+    println!("{}", s);
+  } else {
+    let bytes = s.as_bytes();
+    write(filepath, bytes)
+      .unwrap_or_else(|e| panic!("Failed to write file {}: {}", filepath, e));
+  }
+}
 /*
   def writeFile(filepath: String, s: String): Unit = {
     if (filepath == "stdout:") {
