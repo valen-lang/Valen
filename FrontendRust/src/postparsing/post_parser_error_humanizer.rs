@@ -495,7 +495,7 @@ fn humanize_literal(
 ) -> String {
   match literal {
     ILiteralSL::OwnershipLiteral(_) => panic!("Unimplemented: humanize_literal OwnershipLiteral"),
-    ILiteralSL::MutabilityLiteral(_) => panic!("Unimplemented: humanize_literal MutabilityLiteral"),
+    ILiteralSL::MutabilityLiteral(x) => humanize_mutability(x.mutability),
     ILiteralSL::VariabilityLiteral(_) => panic!("Unimplemented: humanize_literal VariabilityLiteral"),
     ILiteralSL::IntLiteral(x) => x.value.to_string(),
     ILiteralSL::StringLiteral(_) => panic!("Unimplemented: humanize_literal StringLiteral"),
@@ -515,9 +515,12 @@ fn humanize_literal(
   }
 */
 fn humanize_mutability(
-  _p: MutabilityP,
+  p: MutabilityP,
 ) -> String {
-  panic!("Unimplemented humanize_mutability");
+  match p {
+    MutabilityP::Mutable => "mut".to_string(),
+    MutabilityP::Immutable => "imm".to_string(),
+  }
 }
 /*
   def humanizeMutability(p: MutabilityP) = {
