@@ -98,25 +98,33 @@ Eliminate all compiler warnings (unused imports, unused variables, dead code) be
 
 `sed` and `perl -pi` are outlawed. For bulk transforms, **prefer the Edit tool** — ~40 distinct invocations is the threshold before Python becomes worth it.
 
-### Read-only scripts in `./tmp/scripts/`
+### Bulk-edit workflow: `safe-script-runner`
 
-`python3 ./tmp/scripts/<NAME>.py` auto-allows when the script is a pure stdin → stdout transform (no file I/O, no subprocess, no exec/eval). VRBX explains the exact shape constraints when something doesn't fit.
-
-### Transform-then-apply bulk-edit sequence
+The canonical path for any `./tmp/scripts/<NAME>.py` transform is the `safe-script-runner` CLI (`Luz/safe-script-runner/`). It splits the flow into three subcommands and enforces strict iteration via a single-marker invariant on disk — you cannot batch reviews, and you cannot apply cold without a prior review of the exact same content. Built binary: `Luz/safe-script-runner/target/release/safe-script-runner`.
 
 One file at a time:
 
-1. Write the script to `./tmp/scripts/<name>.py`.
-2. Transform + review: `python3 ./tmp/scripts/<name>.py < <SRC> > ./tmp/working/<BASENAME> && diff -u <SRC> ./tmp/working/<BASENAME>`.
-3. Iterate (edit script, re-run step 2) until the diff is right.
-4. Apply: `TS=$(date +%Y%m%d-%H%M%S) && mkdir -p ./tmp/backup/$TS && cp <SRC> ./tmp/backup/$TS/<BASENAME> && mv ./tmp/working/<BASENAME> <SRC>`.
+1. Write the script to `./tmp/scripts/<name>.py` (pure stdin → stdout transform; no file I/O, no subprocess, no `exec`/`eval`).
+2. **Review:** `safe-script-runner review ./tmp/scripts/<name>.py <SRC>`. The tool runs the script, prints the full `=== STDERR (<SRC>) ===` and `=== DIFF (<SRC>) ===` to stdout, and writes the marker `./tmp/working/.current-review` (script + src + SHA-256 of working/stderr).
+3. Iterate: edit the script and re-run step 2 on the SAME `<SRC>` — the marker refreshes in place. Switching to a different `<SRC>` while the marker is unapplied is **refused** (`ReviewPending`).
+4. **Apply:** `safe-script-runner apply ./tmp/scripts/<name>.py <SRC>`. The tool re-runs the script, verifies the marker exists and its `(script, src)` and hashes match the new run, then backs up `<SRC>` to `./tmp/backup/<ts>/<src-with-dirs>` and `mv`'s working over src. Marker is deleted. If anything drifted between review and apply (src or script was edited), apply refuses with a hash-mismatch error and the JR must re-review.
 5. Next file: back to step 2.
 
-Loops over read-only scripts (analysis, transforms-to-tmp) auto-allow; loops including the cp+mv apply step reject. Recover from a failed apply: `mv ./tmp/backup/<TS>/<BASENAME> <SRC>`.
+To discard a pending review without applying: `safe-script-runner abandon` (no args, no-op if no marker).
+
+### Single-marker invariant (enforced)
+
+Only ONE review may be pending at a time — by design. Trying to `review` a second `<SRC>` while another is unapplied is refused. This makes batch-review-then-batch-apply impossible: the only physically possible sequence is `review A → apply A → review B → apply B → …`. Combined with the marker's SHA-256 binding of review to apply, the architect's "go" is always against the diff the apply will actually land.
 
 ### Reviewing diffs
 
-You **MUST** look at the **ENTIRE** diff every time before applying. **NO `head`, `tail`, or `grep` on the diff output** — those truncate and hide the changes you need to judge. Run `diff -u <SRC> ./tmp/working/<BASENAME>` unpiped and read every line. Cargo will catch naming/syntax errors but not script-introduced semantic renames to a wrong-but-compatible symbol; the only defense is reading the full diff.
+`safe-script-runner` mechanically enforces full-diff review: `review` always emits the entire diff and stderr, BESWX denies any pipe/filter/redirect/chain on the command, and the marker hash binds review to apply (drift refuses with a re-review prompt). The architect should still actually look at the diff — the tool guarantees evidence exists in the transcript, not that the human reads it.
+
+### Legacy raw-`python3` form (discouraged)
+
+Bare `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN> 2>./tmp/working/<BN>.stderr` followed (in any of `\n`, `;`, `&&`) by `cat ./tmp/working/<BN>.stderr` then `diff -u <SRC> ./tmp/working/<BN>` is still allowed via BESWX's strict-chain backstop. The order is fixed (cat, then diff), and the diff segment must be unfiltered (no `| head`, `| tail`, `| wc`, `| grep`, no redirect). Prefer `safe-script-runner` — only it gets marker-bound iteration enforcement; the raw form has no protection against batched reviews or basename collisions across colliding sibling files.
+
+A failed apply via either form is recoverable from the backup at `./tmp/backup/<ts>/...`.
 
 ## Build & Run Convention
 
