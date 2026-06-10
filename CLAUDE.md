@@ -176,6 +176,7 @@ Instead, use the same file.
 - **Read when writing tests that touch shared state, temp dirs, or global state.** → Luz/arcana/TestsMustBeFullyIsolated-TMBFIZ.md
 - **Read when writing tests that use if matches!(...).** → Luz/shields/AvoidIfMatchesInTestsIfPossible-AIMITIPX.md
 - **Read when doing file I/O or handling paths.** → Luz/shields/BaseDirPathDiscipline-BDPDX.md
+- **Read when composing a bulk-edit apply command (`cp` to `./tmp/backup/` then `mv` from `./tmp/working/`) or designing the surrounding workflow.** → Luz/shields/BulkEditScriptWorkflow-BESWX.md
 - **Read when declaring public functions or types.** → Luz/shields/DocumentPublicAPIs-DPAPIX.md
 - **Read when a test fails and you're considering loosening assertions or requirements.** → Luz/shields/DontConvenientlyChangeRequirements-DCCRX.md
 - **Read when seeing compiler warnings in Rust code.** → Luz/shields/EliminateAllWarnings-EAWX.md
@@ -195,7 +196,7 @@ Instead, use the same file.
 - **Read when writing test setup or assertion helpers.** → Luz/shields/NeverRepeatImplementationCodeInTests-NRICITX.md
 - **Read when writing code that aggregates, reports, or prints errors to the user.** → Luz/shields/NeverSummarizeAwayErrorContent-NSAECX.md
 - **Read when writing Rust code that uses or references 'static lifetime.** → Luz/shields/NeverUseStaticLifetime-NUSLX.md
-- **Read when writing comments that might accidentally resemble Guardian directives.** → Luz/shields/NoAddingGuardianDirectives-NAGDX.md
+- **Read when writing comments that might accidentally resemble Guardian directives, or when deleting lines that contain them.** → Luz/shields/NoAddingGuardianDirectives-NAGDX.md
 - **Read when adding Rust code during Scala-to-Rust migration.** → Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md
 - **Read when writing test code that must branch on match or conditional.** → Luz/shields/NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md
 - **Read when introducing local bindings or closures.** → Luz/shields/NoDroppedLocalVariablesOrCaptures-NDLVOCX.md
@@ -218,10 +219,11 @@ Instead, use the same file.
 - **Read when writing tests that use expect() or unwrap().** → Luz/shields/TestsPreferUnwrapToExpectForConciseness-TPUTEFCX.md
 - **Read when writing todo!() or unimplemented!() placeholders.** → Luz/shields/TodosAndUnimplementedCodeMustPanic-TUCMPX.md
 - **Read when asserting on collection size followed by indexed access.** → Luz/shields/UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md
-- **Read when writing Rust code that imports or references paths via crate::.** → Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
+- **Read when writing Rust code that imports or references paths via crate::, std::, core::, alloc::, or proc_macro::, or considering placing a `use` statement inside a function/impl body.** → Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
 - **Read when composing a Bash command to understand which shapes are auto-allowed.** → Luz/shields/ValidateReadonlyBash-VRBX.md
 - **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → Luz/skills/CollapsedCallTree.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → Luz/skills/feature-development-flow.md
+- **Read when the architect says the literal phrase "fire commit" (or you're about to commit + sync as a TL).** → Luz/skills/fire-commit.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → Luz/skills/good-testing.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → Luz/skills/tdd.md
 - **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
