@@ -646,7 +646,6 @@ fn test_interface_default_generic_argument_in_type() {
     }
 }
 /*
-Guardian: temp-disable: SPDMX — Rust enum decision: ITemplataT::Integer holds i64 directly (templata.rs:212), not a wrapping IntegerTemplataT struct. Strong in-file precedent: compiler_solver_tests.rs:320, compiler_mutate_tests.rs:92, compiler_mutate_tests.rs:426 all use ITemplataT::Integer(N) literal form. The struct-wrapped form never compiled. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1165-1781021715924/hook-1165/test_interface_default_generic_argument_in_type--586.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   test("Test interface default generic argument in type") {
     val compile = CompilerTestCompilation.test(
       """

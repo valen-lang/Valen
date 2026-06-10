@@ -551,7 +551,6 @@ where 's: 't,
         Ok(())
     }
 /*
-Guardian: temp-disable: SPDMX — Multi-edit refactor in progress: changing compile_impl from single Result<(), ICompileErrorT> to nested Result<Result<(), WeakableImplingMismatch>, ICompileErrorT> per TL recall (architect ruling B for separate Scala Throwable). Three edits needed: sig at line 375, inner Err at 481, final Ok at 557. Guardian rejects each individually since intermediate state is type-inconsistent. Will be consistent after subsequent edits land in the same diff. — /Volumes/V/Vale/FrontendRust/guardian-logs/request-1966-1781037498527/hook-1966/compile_impl--370.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // This will just figure out the struct template and interface template,
   // so we can add it to the temputs.
   def compileImpl(coutputs: CompilerOutputs, callLocation: LocationInDenizen, implTemplata: ImplDefinitionTemplataT): Unit = {

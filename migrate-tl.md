@@ -115,6 +115,8 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver. Phase-3/4 gate has lifted; eligible to land as a standalone slab.
 
+**`ITemplataT::Integer` is noncompliant — pre-existing latent debt.** Scala has `case class IntegerTemplataT(value: Int) extends ITemplataT`; per SPDMX exception C that should map to `enum ITemplataT { Integer(IntegerTemplataT), ... }` with a real wrapper struct. Current Rust at `templata.rs:218` is `Integer(i64)` — the wrapper was collapsed unilaterally. Every test site using `ITemplataT::Integer(N)` (compiler_solver_tests.rs:326,819,856,893; compiler_mutate_tests.rs:95,429; after_regions_tests.rs) is propagating the divergence, not establishing precedent. Fix: restore the wrapper struct, ripple to call sites. Surfaced via a stale SPDMX temp-disable at `after_regions_tests.rs:649` during a curate session.
+
 Body migration stays test-driven: the active test drives which panic stubs get implemented (see "How To Continue").
 
 ---
