@@ -1732,28 +1732,20 @@ where
     }
 
     // => is lambda arrow, not a closer
-    if iter.position > 0 && iter.code.chars().nth(iter.position - 1) == Some('=') && c == '>' {
+    if iter.code[..iter.position].chars().next_back() == Some('=') && c == '>' {
       return false;
     }
 
     // If whitespace on both sides, it's a comparison operator
-    let whitespace_before = if iter.position > 0 {
-      matches!(
-        iter.code.chars().nth(iter.position - 1),
-        Some(' ' | '\t' | '\n' | '\r')
-      )
-    } else {
-      false
-    };
+    let whitespace_before = matches!(
+      iter.code[..iter.position].chars().next_back(),
+      Some(' ' | '\t' | '\n' | '\r')
+    );
 
-    let whitespace_after = if iter.position + 1 < iter.code.len() {
-      matches!(
-        iter.code.chars().nth(iter.position + 1),
-        Some(' ' | '\t' | '\n' | '\r')
-      )
-    } else {
-      false
-    };
+    let whitespace_after = matches!(
+      iter.code[iter.position..].chars().nth(1),
+      Some(' ' | '\t' | '\n' | '\r')
+    );
 
     let whitespace_on_both_sides = whitespace_before && whitespace_after;
     !whitespace_on_both_sides
