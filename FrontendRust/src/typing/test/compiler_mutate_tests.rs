@@ -599,6 +599,25 @@ fn can_restackify_in_destructure_pattern() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
 }
+#[test]
+fn if_branches_must_move_same_variables() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nstruct S { x int; }\nfunc consume(s S) int { return s.x; }\nexported func main() int {\n  s = S(7);\n  result = 0;\n  if true {\n    set result = consume(s);\n  } else {\n    set result = 5;\n  }\n  return result;\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs() {
+        Err(crate::typing::compiler_error_reporter::ICompileErrorT::RangedInternalErrorT { .. }) => {},
+        other => panic!("expected RangedInternalErrorT for if-branch-move-mismatch, got: {:?}", other.map(|_| "Ok(_)")),
+    }
+}
 /*
   test("Can restackify in destructure pattern") {
     val compile = CompilerTestCompilation.test(

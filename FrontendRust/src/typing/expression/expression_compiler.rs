@@ -1475,7 +1475,12 @@ where 's: 't,
                 if then_continues == else_continues { // Both continue, or both don't
                     // Each branch might have moved some things. Make sure they moved the same things.
                     if then_unstackified_ancestor_locals != else_unstackified_ancestor_locals {
-                        panic!("implement: evaluate_expression If — must move same variables from inside branches");
+                        return Err(ICompileErrorT::RangedInternalErrorT {
+                            range: self.typing_interner.alloc_slice_copy(&range_with_parent),
+                            message: self.scout_arena.intern_str(&format!(
+                                "Must move same variables from inside branches!\nFrom then branch: {:?}\nFrom else branch: {:?}",
+                                then_unstackified_ancestor_locals, else_unstackified_ancestor_locals)).0,
+                        });
                     }
                     if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
                         panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (1)");
