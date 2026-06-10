@@ -839,7 +839,6 @@ where
   // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
   // Keep this before get_parseds so mutable borrows don't overlap.
   let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
-  let _ = vale_code_map; // Suppress unused warning
 
   // From PassManager.scala lines 257-263: Get parsed files
   let parseds = match compilation.get_parseds() {
@@ -912,7 +911,13 @@ where
 
     // From PassManager.scala lines 416-419
     match compilation.get_compiler_outputs() {
-      Err(e) => panic!("CompilerErrorHumanizer.humanize not yet implemented: {:?}", e),
+      Err(e) => return Err(crate::typing::compiler_error_humanizer::humanize(
+        &scout_arena, &typing_interner, opts.verbose_errors,
+        &|x| crate::utils::source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
+        &|a, b| crate::utils::source_code_utils::lines_between(&vale_code_map, &a, &b),
+        &|x| crate::utils::source_code_utils::line_range_containing(&vale_code_map, &x),
+        &|x| crate::utils::source_code_utils::line_containing(&vale_code_map, &x),
+        e)),
       Ok(_) => {}
     }
 

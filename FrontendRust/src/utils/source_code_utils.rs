@@ -64,9 +64,9 @@ pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
   }
 */
 // mig: fn humanize_pos
-pub fn humanize_pos_code_map<'a>(
+pub fn humanize_pos_code_map<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
-  code_location_s: &CodeLocationS<'a>,
+  code_location_s: &CodeLocationS<'b>,
 ) -> String {
   let file = code_location_s.file;
   if code_location_s.offset < 0 {
@@ -169,10 +169,10 @@ fn line_begin<'a>(
   }
 */
 // mig: fn line_range_containing
-pub fn line_range_containing<'a>(
+pub fn line_range_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
-  code_location_s: &CodeLocationS<'a>,
-) -> RangeS<'a> {
+  code_location_s: &CodeLocationS<'b>,
+) -> RangeS<'b> {
   let file = code_location_s.file;
   let offset = code_location_s.offset;
   if offset < 0 {
@@ -237,11 +237,11 @@ pub fn line_range_containing<'a>(
   }
 */
 // mig: fn lines_between
-pub fn lines_between<'a>(
+pub fn lines_between<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
-  begin_code_loc: &CodeLocationS<'a>,
-  end_code_loc: &CodeLocationS<'a>,
-) -> Vec<RangeS<'a>> {
+  begin_code_loc: &CodeLocationS<'b>,
+  end_code_loc: &CodeLocationS<'b>,
+) -> Vec<RangeS<'b>> {
   assert!(begin_code_loc.file == end_code_loc.file);
   assert!(begin_code_loc.offset <= end_code_loc.offset);
 
@@ -308,9 +308,9 @@ pub fn lines_between<'a>(
   }
 */
 // mig: fn line_containing
-pub fn line_containing<'a>(
+pub fn line_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
-  code_location_s: &CodeLocationS<'a>,
+  code_location_s: &CodeLocationS<'b>,
 ) -> String {
   if code_location_s.file.is_internal() {
     return humanize_file(code_location_s.file);

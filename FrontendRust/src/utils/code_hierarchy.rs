@@ -77,6 +77,11 @@ object FileCoordinate {// extends Ordering[FileCoordinate] {
     self.package_coord.is_test() && self.filepath == "test.vale"
   }
 
+  pub fn eq_by_value<'b>(&self, other: &FileCoordinate<'b>) -> bool {
+    self.filepath.as_str() == other.filepath.as_str()
+      && self.package_coord.eq_by_value(other.package_coord)
+  }
+
 // mig: fn test
   pub fn test(scout_arena: &ScoutArena<'a>) -> FileCoordinate<'a> {
     let test_module = scout_arena.intern_str(TEST_MODULE);
@@ -126,6 +131,13 @@ case class PackageCoordinate(module: StrI, packages: Vector[StrI]) extends IInte
 
   pub fn is_test(&self) -> bool {
     self.module == TEST_MODULE && self.packages.is_empty()
+  }
+
+  pub fn eq_by_value<'b>(&self, other: &PackageCoordinate<'b>) -> bool {
+    self.module.as_str() == other.module.as_str()
+      && self.packages.as_slice().len() == other.packages.as_slice().len()
+      && self.packages.as_slice().iter().zip(other.packages.as_slice().iter())
+          .all(|(a, b)| a.as_str() == b.as_str())
   }
 
 // mig: fn parent
@@ -369,8 +381,10 @@ override def hashCode(): Int = vcurious()
   // This is different from put in that we can hand in an empty map here.
   // It's the only way to have an empty package in the FileCoordinateMap.
 */
-  pub fn get_by_value(&self, coord: &'a FileCoordinate<'a>) -> Option<&Contents> {
-    self.file_coord_to_contents.get(coord)
+  pub fn get_by_value(&self, coord: &FileCoordinate<'_>) -> Option<&Contents> {
+    self.file_coord_to_contents.iter()
+      .find(|(k, _)| k.eq_by_value(coord))
+      .map(|(_, v)| v)
   }
 
 // mig: fn put_package
