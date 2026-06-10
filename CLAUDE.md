@@ -120,11 +120,13 @@ Only ONE review may be pending at a time — by design. Trying to `review` a sec
 
 `safe-script-runner` mechanically enforces full-diff review: `review` always emits the entire diff and stderr, BESWX denies any pipe/filter/redirect/chain on the command, and the marker hash binds review to apply (drift refuses with a re-review prompt). The architect should still actually look at the diff — the tool guarantees evidence exists in the transcript, not that the human reads it.
 
-### Legacy raw-`python3` form (discouraged)
+### Raw `python3 ./tmp/scripts/*.py` for bulk-edit is retired
 
-Bare `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN> 2>./tmp/working/<BN>.stderr` followed (in any of `\n`, `;`, `&&`) by `cat ./tmp/working/<BN>.stderr` then `diff -u <SRC> ./tmp/working/<BN>` is still allowed via BESWX's strict-chain backstop. The order is fixed (cat, then diff), and the diff segment must be unfiltered (no `| head`, `| tail`, `| wc`, `| grep`, no redirect). Prefer `safe-script-runner` — only it gets marker-bound iteration enforcement; the raw form has no protection against batched reviews or basename collisions across colliding sibling files.
+Bulk-edit transforms — `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN>` — are no longer auto-allowed by VRBX. The only canonical bulk-edit path is `safe-script-runner`. If you invoke the raw form against `./tmp/working/`, Claude Code falls through to the normal Bash confirmation dialog (no auto-allow); using `safe-script-runner` is the friction-free path.
 
-A failed apply via either form is recoverable from the backup at `./tmp/backup/<ts>/...`.
+Read-only / info / analysis scripts under `./tmp/scripts/` are unaffected — `python3 ./tmp/scripts/analyze.py < log.txt | head` still auto-allows. The retirement is narrowly targeted at the `> ./tmp/working/` stdout shape.
+
+A failed apply via `safe-script-runner` is recoverable from the backup at `./tmp/backup/<ts>/...`.
 
 ## Build & Run Convention
 
