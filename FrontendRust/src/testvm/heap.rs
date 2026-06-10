@@ -14,6 +14,27 @@ use crate::testvm::call::CallV;
 use crate::final_ast::types::OpaqueHT;
 use crate::von::ast::IVonData;
 use crate::testvm::vivem::PrintStream;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::testvm::values::ArgumentIdV;
+use crate::testvm::values::ArgumentToObjectReferrerV;
+use crate::testvm::values::BoolV;
+use crate::testvm::values::ElementToObjectReferrerV;
+use crate::testvm::values::MemberToObjectReferrerV;
+use crate::testvm::values::OpaqueV;
+use crate::testvm::values::RRKindV;
+use crate::testvm::values::RegisterToObjectReferrerV;
+use crate::testvm::values::VariableToObjectReferrerV;
+use crate::testvm::vivem::ConstraintViolatedExceptionV;
+use crate::testvm::vivem::VmRuntimeErrorV;
+use crate::von::ast::VonArray;
+use crate::von::ast::VonBool;
+use crate::von::ast::VonFloat;
+use crate::von::ast::VonInt;
+use crate::von::ast::VonMember;
+use crate::von::ast::VonObject;
+use crate::von::ast::VonStr;
+use std::io::Write;
 
 /*
 package dev.vale.testvm
@@ -33,8 +54,8 @@ pub struct AdapterForExternsV<'a, 'v, 'h, 's>
 where 's: 'h, 'h: 'v, 'v: 'a,
 {
     pub program_h: &'h ProgramH<'s, 'h>,
-    pub interner: &'a crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
-    pub scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
+    pub interner: &'a HammerInterner<'s, 'h>,
+    pub scout_arena: &'a ScoutArena<'s>,
     pub heap: &'a mut HeapV<'v, 'h, 's>,
     pub call_id: CallIdV<'v, 'h, 's>,
     pub stdin: &'v dyn Fn() -> StrI<'s>,
@@ -149,7 +170,7 @@ object AllocationMap {
 fn allocation_map_add_impl<'v, 'h, 's>(
     objects_by_id: &mut HashMap<AllocationIdV<'v, 'h, 's>, AllocationV<'v, 'h, 's>>,
     next_id: &mut i32,
-    interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>,
+    interner: &HammerInterner<'s, 'h>,
     ownership: OwnershipH,
     location: LocationH,
     kind: KindV<'v, 'h, 's>,
@@ -189,7 +210,7 @@ class AllocationMap(vivemDout: PrintStream) {
 // audit block above: initializes objectsById/STARTING_ID/nextId, then
 // `val void = add(MutableShareH, InlineH, VoidV)`.
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn new(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> AllocationMapV<'v, 'h, 's> {
+    pub fn new(interner: &HammerInterner<'s, 'h>) -> AllocationMapV<'v, 'h, 's> {
         let mut objects_by_id = HashMap::new();
         let mut next_id = STARTING_ID;
         let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Void(VoidV));
@@ -223,7 +244,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn get
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn get(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, alloc_id: AllocationIdV<'v, 'h, 's>) -> &AllocationV<'v, 'h, 's> {
+    pub fn get(&self, interner: &HammerInterner<'s, 'h>, alloc_id: AllocationIdV<'v, 'h, 's>) -> &AllocationV<'v, 'h, 's> {
         let allocation = self.objects_by_id.get(&alloc_id).expect("get: not found");
         assert!(allocation.kind.tyype(interner) == alloc_id.tyype);
         allocation
@@ -268,7 +289,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
-    pub fn add(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+    pub fn add(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         allocation_map_add_impl(&mut self.objects_by_id, &mut self.next_id, interner, ownership, location, kind)
     }
 }
@@ -297,7 +318,6 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         if !non_interned_objects.is_empty() {
             let mut ids: Vec<i32> = non_interned_objects.iter().map(|a| a.reference.alloc_id().num).collect();
             ids.sort();
-            use std::io::Write;
             for obj_id in &ids {
                 write!(vivem_dout, "o{} ", obj_id).unwrap();
             }
@@ -355,7 +375,7 @@ class Heap(in_vivemDout: PrintStream) {
 // block above: stores vivemDout, builds objectsById = new AllocationMap(vivemDout),
 // initializes callIdStack/callsById, sets void = objectsById.void.
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new(interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump) -> HeapV<'v, 'h, 's> {
+    pub fn new(interner: &HammerInterner<'s, 'h>, vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump) -> HeapV<'v, 'h, 's> {
         HeapV {
             objects_by_id: AllocationMapV::new(interner),
             call_id_stack: Vec::new(),
@@ -375,13 +395,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 
 // mig: fn add_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_local(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
+    pub fn add_local(&mut self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         self.check_reference(interner, expected_type, reference);
         self.get_current_call(var_addr.call_id, |call| {
             call.add_local(var_addr, reference, expected_type);
         });
         self.increment_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
             reference,
         );
     }
@@ -407,12 +427,12 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn remove_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn remove_local(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
+    pub fn remove_local(&mut self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         let variable = self.get_local(var_addr);
         let actual_reference = variable.reference;
         self.check_reference(interner, expected_type, actual_reference);
         self.decrement_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
             actual_reference,
         );
         self.get_current_call(var_addr.call_id, |call| {
@@ -432,7 +452,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_local
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_local(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn get_reference_from_local(&self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.get_local(var_addr);
         if variable.expected_type != expected_type {
             panic!("blort");
@@ -471,16 +491,16 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn mutate_variable
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn mutate_variable(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn mutate_variable(&mut self, interner: &HammerInterner<'s, 'h>, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
         self.check_reference(interner, expected_type, reference);
         self.check_reference(interner, variable.expected_type, reference);
         let old_reference = variable.reference;
         self.decrement_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
             old_reference);
         self.increment_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(crate::testvm::values::VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
             reference);
         self.get_current_call(var_address.call_id, |c| c.mutate_local(var_address, reference, expected_type));
         old_reference
@@ -507,9 +527,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         match allocation.kind {
             KindV::ArrayInstance(ai) => {
                 let old_reference = ai.get_element(element_index);
-                self.decrement_reference_ref_count(crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), old_reference);
+                self.decrement_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), old_reference);
                 ai.set_element(self.vivem_bump, element_index, reference);
-                self.increment_reference_ref_count(crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), reference);
+                self.increment_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), reference);
                 old_reference
             }
             _ => panic!("mutate_array: not an ArrayInstance"),
@@ -540,11 +560,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             KindV::StructInstance(si) => {
                 let members = si.members.get().expect("StructInstance has no members");
                 let old_member_reference = members[field_index as usize];
-                self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), old_member_reference);
+                self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), old_member_reference);
                 assert!(si.struct_h.members[field_index as usize].tyype == expected_type);
                 si.get_reference_member(field_index);
                 si.set_reference_member(self.vivem_bump, field_index, reference);
-                self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), reference);
+                self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), reference);
                 old_member_reference
             }
             _ => panic!("mutate_struct: not a StructInstance"),
@@ -572,7 +592,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_struct(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn get_reference_from_struct(&self, interner: &HammerInterner<'s, 'h>, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let MemberAddressV { struct_id: object_id, field_index } = address;
         let allocation = self.objects_by_id.objects_by_id.get(&object_id).expect("get: not found");
         match allocation.kind {
@@ -604,7 +624,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn get_reference_from_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn get_reference_from_array(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn get_reference_from_array(&self, interner: &HammerInterner<'s, 'h>, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let ElementAddressV { array_id: object_id, element_index } = address;
         match self.objects_by_id.objects_by_id.get(&object_id).expect("get_reference_from_array: not found").kind {
             KindV::ArrayInstance(ai) => {
@@ -710,9 +730,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn is_same_instance
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn is_same_instance(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, left: ReferenceV<'v, 'h, 's>, right: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        let r#ref = self.allocate_transient(interner, crate::final_ast::types::OwnershipH::MutableShareH, crate::final_ast::types::LocationH::InlineH, crate::testvm::values::KindV::Bool(crate::testvm::values::BoolV { value: left.alloc_id() == right.alloc_id(), _phantom: std::marker::PhantomData }));
-        self.increment_reference_ref_count(crate::testvm::values::IObjectReferrerV::RegisterToObjectReferrer(crate::testvm::values::RegisterToObjectReferrerV { call_id, ownership: crate::final_ast::types::OwnershipH::MutableShareH }), r#ref);
+    pub fn is_same_instance(&mut self, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, left: ReferenceV<'v, 'h, 's>, right: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+        let r#ref = self.allocate_transient(interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: left.alloc_id() == right.alloc_id(), _phantom: PhantomData }));
+        self.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: OwnershipH::MutableShareH }), r#ref);
         r#ref
     }
 }
@@ -800,15 +820,15 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn destructure
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<&'v [ReferenceV<'v, 'h, 's>], crate::testvm::vivem::VmRuntimeErrorV<'s>> {
+    pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<&'v [ReferenceV<'v, 'h, 's>], VmRuntimeErrorV<'s>> {
         let allocation = self.dereference(reference, false);
         match allocation {
             KindV::StructInstance(s) => {
                 let member_refs = s.members.get().expect("destructure: members None");
                 for (index, member_ref) in member_refs.iter().enumerate() {
                     self.decrement_reference_ref_count(
-                        crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV {
-                            member_addr: crate::testvm::values::MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
+                        IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV {
+                            member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
                             ownership: member_ref.ownership,
                         }),
                         *member_ref);
@@ -853,7 +873,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             _ => {}
         }
         {
-            use std::io::Write;
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}zero", reference.alloc_id().num).unwrap();
         }
@@ -877,19 +896,18 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn deallocate_if_no_weak_refs
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn deallocate_if_no_weak_refs(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
+    pub fn deallocate_if_no_weak_refs(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
         let m = &mut self.objects_by_id.objects_by_id;
         let allocation = m.get(&reference.alloc_id()).expect("deallocate_if_no_weak_refs: not in objects_by_id");
         if reference.ownership == OwnershipH::OwnH &&
             (allocation.get_total_ref_count(Some(OwnershipH::MutableBorrowH)) + allocation.get_total_ref_count(Some(OwnershipH::ImmutableBorrowH))) > 0 {
-            return Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(crate::testvm::vivem::ConstraintViolatedExceptionV {
-                msg: crate::interner::StrI("Constraint violated!"),
+            return Err(VmRuntimeErrorV::ConstraintViolatedException(ConstraintViolatedExceptionV {
+                msg: StrI("Constraint violated!"),
             }));
         }
         if allocation.get_total_ref_count(None) == 0 {
             m.remove(&reference.alloc_id());
             {
-                use std::io::Write;
                 let handle = &mut *self.vivem_dout;
                 write!(handle, " o{}dealloc", reference.alloc_id().num).unwrap();
             }
@@ -924,7 +942,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         obj.increment_ref_count(pointing_from);
         let new_ref_count = obj.get_total_ref_count(None);
         {
-            use std::io::Write;
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}rc{}->{}", alloc_id.num, new_ref_count - 1, new_ref_count).unwrap();
         }
@@ -959,7 +976,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         obj.decrement_ref_count(pointed_from);
         let new_ref_count = obj.get_total_ref_count(None);
         {
-            use std::io::Write;
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}rc{}->{}", alloc_id.num, new_ref_count + 1, new_ref_count).unwrap();
         }
@@ -1035,7 +1051,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn ensure_ref_count(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, scout_arena: &crate::scout_arena::ScoutArena<'s>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
+    pub fn ensure_ref_count(&self, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
         assert!(self.contains_live_object_alloc_id(reference.alloc_id()));
         let allocation = self.objects_by_id.get(interner, reference.alloc_id());
         allocation.ensure_ref_count(scout_arena, ownership_filter, expected_num)
@@ -1050,7 +1066,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+    pub fn add(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         self.objects_by_id.add(interner, ownership, location, kind)
     }
 }
@@ -1075,7 +1091,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
         ReferenceV {
             actual_kind,
-            seen_as_kind: crate::testvm::values::RRKindV { hamut: target_type.kind, _phantom: std::marker::PhantomData },
+            seen_as_kind: RRKindV { hamut: target_type.kind, _phantom: PhantomData },
             ownership: target_type.ownership,
             location: target_type.location,
             num: object_id,
@@ -1170,7 +1186,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn count_unreachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn count_unreachable_allocations(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
+    pub fn count_unreachable_allocations(&self, interner: &HammerInterner<'s, 'h>, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
         let num_reachables = self.find_reachable_allocations(interner, roots).len();
         assert!(num_reachables <= self.objects_by_id.size());
         self.objects_by_id.size() - num_reachables
@@ -1185,7 +1201,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn find_reachable_allocations<'a>(&'a self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> {
+    pub fn find_reachable_allocations<'a>(&'a self, interner: &HammerInterner<'s, 'h>, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> {
         let mut destination_map: HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> = HashMap::new();
         for input_reachable in input_reachables {
             self.inner_find_reachable_allocations(interner, &mut destination_map, *input_reachable);
@@ -1207,7 +1223,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn inner_find_reachable_allocations
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn inner_find_reachable_allocations<'a>(&'a self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
+    pub fn inner_find_reachable_allocations<'a>(&'a self, interner: &HammerInterner<'s, 'h>, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
         // Doublecheck that all the inputReachables are actually in this ..
         assert!(self.contains_live_object(input_reachable));
         assert!(self.objects_by_id.get(interner, input_reachable.alloc_id()).kind.tyype(interner).hamut == input_reachable.actual_kind.hamut);
@@ -1294,12 +1310,12 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn take_argument
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn take_argument(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn take_argument(&mut self, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let reference = self.get_current_call(call_id, |c| c.take_argument(argument_index));
         self.check_reference(interner, expected_type, reference);
         self.decrement_reference_ref_count(
-            crate::testvm::values::IObjectReferrerV::ArgumentToObjectReferrer(crate::testvm::values::ArgumentToObjectReferrerV {
-                argument_id: crate::testvm::values::ArgumentIdV { call_id, index: argument_index },
+            IObjectReferrerV::ArgumentToObjectReferrer(ArgumentToObjectReferrerV {
+                argument_id: ArgumentIdV { call_id, index: argument_index },
                 ownership: expected_type.ownership,
             }),
             reference); // decrementing because taking it out of arg
@@ -1320,10 +1336,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn allocate_transient
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn allocate_transient(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+    pub fn allocate_transient(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         let r#ref = self.add(interner, ownership, location, kind);
         {
-            use std::io::Write;
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}=", r#ref.alloc_id().num).unwrap();
         }
@@ -1343,7 +1358,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn print_kind
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn print_kind(&mut self, kind: KindV<'v, 'h, 's>) {
-        use std::io::Write;
         let handle = &mut *self.vivem_dout;
         match kind {
             KindV::Void(_) => write!(handle, "void").unwrap(),
@@ -1387,8 +1401,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         match self.dereference(array_reference, false) {
             KindV::ArrayInstance(a) => {
                 self.increment_reference_ref_count(
-                    crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
-                        element_addr: crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: a.get_size() },
+                    IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
+                        element_addr: ElementAddressV { array_id: array_reference.alloc_id(), element_index: a.get_size() },
                         ownership: a.element_type_h.ownership,
                     }),
                     ret);
@@ -1415,22 +1429,21 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_struct
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_struct(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
-        let instance: &'v crate::testvm::values::StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(crate::testvm::values::StructInstanceV {
+    pub fn new_struct(&mut self, interner: &HammerInterner<'s, 'h>, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
+        let instance: &'v StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(StructInstanceV {
             struct_h: struct_def_h,
-            members: std::cell::Cell::new(Some(member_references)),
+            members: Cell::new(Some(member_references)),
         });
-        let reference = self.add(interner, struct_ref_h.ownership, struct_ref_h.location, crate::testvm::values::KindV::StructInstance(instance));
+        let reference = self.add(interner, struct_ref_h.ownership, struct_ref_h.location, KindV::StructInstance(instance));
         for (index, member_reference) in member_references.iter().enumerate() {
             self.increment_reference_ref_count(
-                crate::testvm::values::IObjectReferrerV::MemberToObjectReferrer(crate::testvm::values::MemberToObjectReferrerV {
-                    member_addr: crate::testvm::values::MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
+                IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV {
+                    member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
                     ownership: member_reference.ownership,
                 }),
                 *member_reference);
         }
         {
-            use std::io::Write;
             write!(self.vivem_dout, " o{}=", reference.num).unwrap();
         }
         self.print_kind(KindV::StructInstance(instance));
@@ -1459,15 +1472,14 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn new_opaque
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn new_opaque(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
+    pub fn new_opaque(&mut self, interner: &HammerInterner<'s, 'h>, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let opaque_ht = match opaque_coord_ht.kind {
-            crate::final_ast::types::KindHT::OpaqueHT(o) => o,
+            KindHT::OpaqueHT(o) => o,
             _ => panic!(),
         };
-        let instance = crate::testvm::values::KindV::Opaque(crate::testvm::values::OpaqueV { opaque_ht: *opaque_ht, _phantom: std::marker::PhantomData });
+        let instance = KindV::Opaque(OpaqueV { opaque_ht: *opaque_ht, _phantom: PhantomData });
         let reference = self.add(interner, opaque_coord_ht.ownership, opaque_coord_ht.location, instance);
         {
-            use std::io::Write;
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}=", reference.num).unwrap();
         }
@@ -1494,8 +1506,8 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         };
         let element_reference = array_instance.deinitialize_element();
         self.decrement_reference_ref_count(
-            crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
-                element_addr: crate::testvm::values::ElementAddressV { array_id: array_reference.alloc_id(), element_index: array_instance.get_size() },
+            IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
+                element_addr: ElementAddressV { array_id: array_reference.alloc_id(), element_index: array_instance.get_size() },
                 ownership: element_reference.ownership,
             }),
             element_reference);
@@ -1525,7 +1537,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_uninitialized_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_uninitialized_array(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
+    pub fn add_uninitialized_array(&mut self, interner: &HammerInterner<'s, 'h>, array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
         let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity, elements: Cell::new(&[]) });
         let reference = self.add(interner, array_ref_type.ownership, array_ref_type.location, KindV::ArrayInstance(instance));
         (reference, instance)
@@ -1544,13 +1556,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn add_array
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn add_array(&mut self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
+    pub fn add_array(&mut self, interner: &HammerInterner<'s, 'h>, array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
         let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity: member_refs.len() as i32, elements: Cell::new(member_refs) });
         let reference = self.add(interner, array_ref_type.ownership, array_ref_type.location, KindV::ArrayInstance(instance));
         for (index, member_ref) in member_refs.iter().enumerate() {
             self.increment_reference_ref_count(
-                crate::testvm::values::IObjectReferrerV::ElementToObjectReferrer(crate::testvm::values::ElementToObjectReferrerV {
-                    element_addr: crate::testvm::values::ElementAddressV { array_id: reference.alloc_id(), element_index: index as i64 },
+                IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
+                    element_addr: ElementAddressV { array_id: reference.alloc_id(), element_index: index as i64 },
                     ownership: member_ref.ownership,
                 }),
                 *member_ref);
@@ -1576,7 +1588,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_reference
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_reference(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
+    pub fn check_reference(&self, interner: &HammerInterner<'s, 'h>, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
         if actual_reference.ownership == OwnershipH::WeakH {
             assert!(self.contains_live_or_undead_object(actual_reference.alloc_id()));
         } else {
@@ -1647,7 +1659,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 */
 // mig: fn check_kind
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
-    pub fn check_kind(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
+    pub fn check_kind(&self, interner: &HammerInterner<'s, 'h>, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
         match (actual_kind, expected_type) {
             (KindV::Int(actual), KindHT::IntHT(expected)) => {
                 if actual.bits != expected.bits {
@@ -1801,9 +1813,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         let call_id = CallIdV {
             call_depth: if !call_id_stack.is_empty() { call_id_stack.last().unwrap().call_depth + 1 } else { 0 },
             function: function_h,
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         };
-        let call = crate::testvm::call::CallV {
+        let call = CallV {
             call_id,
             in_args: args,
             args: args.iter().enumerate().map(|(i, r)| (i as i32, Some(*r))).collect(),
@@ -1861,28 +1873,28 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn to_von(&self, reference: ReferenceV<'v, 'h, 's>) -> IVonData {
         match self.dereference(reference, false) {
-            KindV::Void(_) => crate::von::ast::IVonData::Object(crate::von::ast::VonObject { tyype: "void".to_string(), id: None, members: vec![] }),
-            KindV::Int(v) => crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: v.value }),
-            KindV::Float(v) => crate::von::ast::IVonData::Float(crate::von::ast::VonFloat { value: v.value }),
-            KindV::Bool(v) => crate::von::ast::IVonData::Bool(crate::von::ast::VonBool { value: v.value }),
-            KindV::Str(v) => crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value: v.value.0.to_string() }),
+            KindV::Void(_) => IVonData::Object(VonObject { tyype: "void".to_string(), id: None, members: vec![] }),
+            KindV::Int(v) => IVonData::Int(VonInt { value: v.value }),
+            KindV::Float(v) => IVonData::Float(VonFloat { value: v.value }),
+            KindV::Bool(v) => IVonData::Bool(VonBool { value: v.value }),
+            KindV::Str(v) => IVonData::Str(VonStr { value: v.value.0.to_string() }),
             KindV::ArrayInstance(ai) => {
-                let elements_von: Vec<crate::von::ast::IVonData> =
+                let elements_von: Vec<IVonData> =
                     ai.elements.get().iter().map(|e| self.to_von(*e)).collect();
-                crate::von::ast::IVonData::Array(crate::von::ast::VonArray { id: None, members: elements_von })
+                IVonData::Array(VonArray { id: None, members: elements_von })
             }
             KindV::StructInstance(si) => {
                 let members = si.members.get().expect("vassertSome StructInstance members");
                 assert_eq!(members.len(), si.struct_h.members.len());
-                let von_members: Vec<crate::von::ast::VonMember> =
+                let von_members: Vec<VonMember> =
                     si.struct_h.members.iter().zip(members.iter()).enumerate().map(|(_index, (member_h, member_v))| {
                         let _ = member_h;
-                        crate::von::ast::VonMember {
+                        VonMember {
                             field_name: panic!("vimpl: memberH.name.toString"),
                             value: self.to_von(*member_v),
                         }
                     }).collect();
-                crate::von::ast::IVonData::Object(crate::von::ast::VonObject {
+                IVonData::Object(VonObject {
                     tyype: si.struct_h.id.to_string(),
                     id: None,
                     members: von_members,

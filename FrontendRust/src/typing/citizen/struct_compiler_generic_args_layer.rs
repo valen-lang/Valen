@@ -32,6 +32,8 @@ use crate::typing::types::types::InterfaceTTValT;
 use crate::typing::infer_compiler::include_rule_in_definition_solve;
 use crate::postparsing::ast::GenericParameterS;
 use crate::typing::names::names::IdValT;
+use crate::typing::templata::templata::expect_mutability;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.citizen
@@ -230,16 +232,16 @@ where 's: 't,
 
         let call_site_rules = self.assemble_predict_rules(interface_a.generic_parameters, template_args.len() as i32);
         let call_site_rule_runes: Vec<IRuneS<'s>> = call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
-        let runes_for_prediction: std::collections::HashSet<IRuneS<'s>> =
+        let runes_for_prediction: HashSet<IRuneS<'s>> =
             interface_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
-        let defaults_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let defaults_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.generic_parameters.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
-        let rune_to_type_for_prediction: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type_for_prediction: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
                  interface_a.rune_to_type.get(r).copied()
@@ -382,16 +384,16 @@ where 's: 't,
 
         let call_site_rules = self.assemble_predict_rules(struct_a.generic_parameters, template_args.len() as i32);
         let call_site_rule_runes: Vec<IRuneS<'s>> = call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
-        let runes_for_prediction: std::collections::HashSet<IRuneS<'s>> =
+        let runes_for_prediction: HashSet<IRuneS<'s>> =
             struct_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
-        let defaults_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let defaults_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.generic_parameters.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
-        let rune_to_type_for_prediction: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type_for_prediction: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
                  struct_a.header_rune_to_type.get(r).copied()
@@ -706,7 +708,7 @@ where 's: 't,
                             let mut m = HashMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], std::collections::HashSet::new()).unwrap();
+                        }, vec![], HashSet::new()).unwrap();
                     true
                 }
             }
@@ -727,7 +729,7 @@ where 's: 't,
         };
         match struct_a.maybe_predicted_mutability {
             None => {
-                let mutability = crate::typing::templata::templata::expect_mutability(inferences[&struct_a.mutability_rune.rune]);
+                let mutability = expect_mutability(inferences[&struct_a.mutability_rune.rune]);
                 coutputs.declare_type_mutability(struct_template_id, mutability);
             }
             Some(_) => {}
@@ -920,7 +922,7 @@ where 's: 't,
                             let mut m = HashMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], std::collections::HashSet::new()).unwrap();
+                        }, vec![], HashSet::new()).unwrap();
                     true
                 }
             }
@@ -941,7 +943,7 @@ where 's: 't,
         };
         match interface_a.maybe_predicted_mutability {
             None => {
-                let mutability = crate::typing::templata::templata::expect_mutability(inferences[&interface_a.mutability_rune.rune]);
+                let mutability = expect_mutability(inferences[&interface_a.mutability_rune.rune]);
                 coutputs.declare_type_mutability(interface_template_id, mutability);
             }
             Some(_) => {}

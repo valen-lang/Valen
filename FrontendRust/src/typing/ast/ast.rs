@@ -14,6 +14,11 @@ use crate::typing::hinputs_t::*;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValQuery;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::marker::PhantomData;
+use std::ptr::eq;
+use std::ptr::hash;
 
 /*
 package dev.vale.typing.ast
@@ -382,7 +387,7 @@ fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) ->
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LocationInFunctionEnvironmentT<'s, 't> {
     pub path: &'t [i32],
-    pub _phantom: std::marker::PhantomData<&'s ()>,
+    pub _phantom: PhantomData<&'s ()>,
 }
 /*
 // A unique location in a function. Environment is in the name so it spells LIFE!
@@ -400,7 +405,7 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
     pub fn add(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'s, 't> {
         let mut new_path: Vec<i32> = self.path.to_vec();
         new_path.push(sub_location);
-        LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path), _phantom: std::marker::PhantomData }
+        LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path), _phantom: PhantomData }
     }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {
@@ -627,10 +632,10 @@ where 's: 't, 't: 'tmp,
 pub struct SignatureValQuery<'a, 's, 't, 'tmp>(pub &'a SignatureValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
 
-impl<'a, 's, 't, 'tmp> std::hash::Hash for SignatureValQuery<'a, 's, 't, 'tmp>
+impl<'a, 's, 't, 'tmp> Hash for SignatureValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
     /* Guardian: disable-all */
 }
 
@@ -771,12 +776,12 @@ case class FunctionHeaderT(
 
 // Identity equality per @IEOIBZ — `FunctionHeaderT` is arena-allocated.
 impl<'s, 't> PartialEq for FunctionHeaderT<'s, 't> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    fn eq(&self, other: &Self) -> bool { eq(self, other) }
     /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for FunctionHeaderT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for FunctionHeaderT<'s, 't> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+impl<'s, 't> Hash for FunctionHeaderT<'s, 't> {
+    fn hash<H: Hasher>(&self, state: &mut H) { hash(self, state) }
     /* Guardian: disable-all */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
@@ -1070,10 +1075,10 @@ where 's: 't, 't: 'tmp,
 pub struct PrototypeValQuery<'a, 's, 't, 'tmp>(pub &'a PrototypeValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
 
-impl<'a, 's, 't, 'tmp> std::hash::Hash for PrototypeValQuery<'a, 's, 't, 'tmp>
+impl<'a, 's, 't, 'tmp> Hash for PrototypeValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
     /* Guardian: disable-all */
 }
 

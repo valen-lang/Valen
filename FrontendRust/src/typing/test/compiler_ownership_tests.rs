@@ -15,6 +15,10 @@ use std::collections::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::typing::typing_interner::TypingInterner;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use std::fs::read_to_string;
+use std::path::PathBuf;
 
 /*
 package dev.vale.typing
@@ -38,10 +42,10 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
 */
 // mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("src/tests")
         .join(resource_filename);
-    std::fs::read_to_string(&path).expect("readCodeFromResource: file not found")
+    read_to_string(&path).expect("readCodeFromResource: file not found")
 }
 /*
   def readCodeFromResource(resourceFilename: String): String = {
@@ -334,7 +338,7 @@ fn opt_with_undroppable_mutable_ref_contents() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\n#!DeriveInterfaceDrop\nsealed interface Opt<T Ref> { }\n\n#!DeriveStructDrop\nstruct Some<T Ref> { value T; }\n\nimpl<T> Opt<T> for Some<T>;\n\nabstract func drop<T>(virtual opt Opt<T>)\nwhere func drop(T)void;\n\nfunc drop<T>(opt Some<T>)\nwhere func drop(T)void\n{\n  [x] = opt;\n}\n\n#!DeriveStructDrop\nstruct Spaceship { }\n\nstruct ContainerWithDerivedDrop {\n  maybeThing Opt<&Spaceship>;\n}\n\nexported func main() {\n  ship = Spaceship();\n  c = ContainerWithDerivedDrop(Some<&Spaceship>(&ship));\n  [ ] = ship;\n}\n\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -400,14 +404,14 @@ fn restackify() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/restackify.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
@@ -441,14 +445,14 @@ fn loop_restackify() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/loop_restackify.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
@@ -482,14 +486,14 @@ fn destructure_restackify() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = read_code_from_resource("programs/destructure_restackify.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Restackify(RestackifyTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {

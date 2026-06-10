@@ -12,6 +12,11 @@ use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::types::cI;
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
+use crate::final_ast::ast::FunctionH;
+use crate::final_ast::types::KindHT;
+use crate::instantiating::ast::ast::PrototypeIValI;
+use crate::instantiating::ast::expressions::ExpressionIE;
+use crate::simplifying::hammer::Locals;
 
 /*
 package dev.vale.simplifying
@@ -77,7 +82,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         function2: &'i FunctionDefinitionI<'s, 'i>,
     ) -> FunctionRefH<'s, 'h>
     {
-        let header_prototype = self.instantiating_interner.intern_prototype_ci(crate::instantiating::ast::ast::PrototypeIValI { id: function2.header.id, return_type: function2.header.return_type });
+        let header_prototype = self.instantiating_interner.intern_prototype_ci(PrototypeIValI { id: function2.header.id, return_type: function2.header.return_type });
         if let Some(function_ref_h) = hamuts.function_refs.get(header_prototype) {
             return *function_ref_h;
         }
@@ -87,27 +92,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let prototype_h = self.translate_prototype(hinputs, hamuts, header_prototype);
         let temporary_function_ref_h = FunctionRefH { prototype: prototype_h };
         hamuts.forward_declare_function(header_prototype, temporary_function_ref_h);
-        let mut locals = crate::simplifying::hammer::Locals {
+        let mut locals = Locals {
             typing_pass_locals: HashMap::new(),
             unstackified_vars: HashSet::new(),
             locals: HashMap::new(),
             next_local_id_number: 1,
         };
-        let (body_h, deferreds) = self.translate_expression(hinputs, hamuts, header, &mut locals, crate::instantiating::ast::expressions::ExpressionIE::Reference(*body));
+        let (body_h, deferreds) = self.translate_expression(hinputs, hamuts, header, &mut locals, ExpressionIE::Reference(*body));
         assert!(deferreds.is_empty());
         assert_eq!(locals.unstackified_vars.len(), locals.locals.len());
         let result_coord = body_h.result_type();
         if result_coord != prototype_h.return_type {
             match result_coord.kind {
-                crate::final_ast::types::KindHT::NeverHT(_) => {}
+                KindHT::NeverHT(_) => {}
                 _ => panic!("Result of body's instructions didnt match return type!\nReturn type:   {:?}\nBody's result: {:?}", prototype_h.return_type, result_coord),
             }
         }
         let is_abstract = header.get_abstract_interface().is_some();
-        let is_extern = header.attributes.iter().any(|a| matches!(a, crate::instantiating::ast::ast::IFunctionAttributeI::ExternI(_)));
-        let attrs_h: Vec<_> = attrs2.iter().filter(|a| !matches!(a, crate::instantiating::ast::ast::IFunctionAttributeI::ExternI(_))).cloned().collect();
+        let is_extern = header.attributes.iter().any(|a| matches!(a, IFunctionAttributeI::ExternI(_)));
+        let attrs_h: Vec<_> = attrs2.iter().filter(|a| !matches!(a, IFunctionAttributeI::ExternI(_))).cloned().collect();
         let attrs_h_translated = self.translate_function_attributes(&attrs_h);
-        let function_h = crate::final_ast::ast::FunctionH { prototype: prototype_h, is_abstract, is_extern, attributes: self.interner.alloc_slice_from_vec(attrs_h_translated), body: body_h };
+        let function_h = FunctionH { prototype: prototype_h, is_abstract, is_extern, attributes: self.interner.alloc_slice_from_vec(attrs_h_translated), body: body_h };
         hamuts.add_function(header_prototype, function_h);
         temporary_function_ref_h
     }

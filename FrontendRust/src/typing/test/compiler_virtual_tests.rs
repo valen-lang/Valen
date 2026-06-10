@@ -8,6 +8,9 @@ use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use crate::typing::typing_interner::TypingInterner;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::tests::tests::load_expected;
 
 /*
 package dev.vale.typing
@@ -330,10 +333,10 @@ fn test_complex_interface() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/genericvirtuals/templatedinterface.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/genericvirtuals/templatedinterface.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
@@ -355,10 +358,10 @@ fn test_specializing_interface() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/genericvirtuals/specializeinterface.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/genericvirtuals/specializeinterface.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     compile.expect_compiler_outputs();
@@ -611,7 +614,7 @@ fn integer_is_compatible_with_interface_anonymous_substruct() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\ninterface AFunction2<R Ref, P1 Ref> {\n  func doCall(virtual this &AFunction2<R, P1>, a P1) R;\n}\nfunc __call(x6 int, x42 int)str { \"hi\" }\nexported func main() str {\n  func = AFunction2<str, int>(6);\n  return func.doCall(42);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -654,7 +657,7 @@ fn lambda_is_compatible_with_interface_anonymous_substruct() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.str.*;\n\ninterface AFunction2<R Ref, P1 Ref> {\n  func __call(virtual this &AFunction2<R, P1>, a P1) R;\n}\nexported func main() str {\n  func = AFunction2<str, int>((i) => { str(i) });\n  return func(42);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -722,7 +725,7 @@ fn anonymous_substruct_8() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.arrays.*;\n//import array.make.*;\n\ninterface IThing {\n  func __call(virtual self &IThing, i int) int;\n}\n\nstruct MyThing { }\nfunc __call(self &MyThing, i int) int { i }\n\nimpl IThing for MyThing;\n\nexported func main() int {\n  i IThing = MyThing();\n  a = Array<imm, int>(10, &i);\n  return a.3;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);

@@ -85,6 +85,13 @@ use crate::typing::ast::expressions::AddressExpressionTE;
 use crate::typing::ast::expressions::LetAndLendTE;
 use crate::typing::ast::citizens::StructDefinitionT;
 use crate::typing::ast::ast::FunctionHeaderT;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use crate::collect_where_tnode;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::tests::tests::load_expected;
+use std::iter::empty;
+use std::marker::PhantomData;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -161,7 +168,7 @@ fn hardcoding_negative_numbers() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(
             ConstantIntTE {
@@ -228,7 +235,7 @@ fn tests_panic_return_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.panic.*;\nexported func main() int {\n  x = { __vbi_panic() }();\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -237,7 +244,7 @@ fn tests_panic_return_type() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
@@ -286,13 +293,13 @@ fn taking_an_argument_and_returning_it() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    let param: &ParameterT = crate::collect_only_tnode!(
+    let param: &ParameterT = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Parameter(p) => Some(p)
     );
     assert!(param.tyype == CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT { bits: 32 }) });
 
-    let lookup: &LocalLookupTE = crate::collect_only_tnode!(
+    let lookup: &LocalLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LocalLookup(l) => Some(l)
     );
@@ -330,7 +337,7 @@ fn tests_adding_two_numbers() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.arith.*;\nexported func main() int { return +(2, 3); }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -340,7 +347,7 @@ fn tests_adding_two_numbers() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(
             ConstantIntTE {
@@ -350,7 +357,7 @@ fn tests_adding_two_numbers() {
         ) => Some(())
     );
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(
             ConstantIntTE {
@@ -360,7 +367,7 @@ fn tests_adding_two_numbers() {
         ) => Some(())
     );
 
-    let func_call: &FunctionCallTE = crate::collect_only_tnode!(
+    let func_call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(call) => Some(call)
     );
@@ -550,7 +557,7 @@ exported func main() int {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let _drop_call: &FunctionCallTE = crate::collect_only_tnode!(
+    let _drop_call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(call @ FunctionCallTE {
             callable: PrototypeT {
@@ -612,7 +619,7 @@ fn custom_destructor() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(
             FunctionCallTE {
@@ -677,7 +684,7 @@ exported func main() void {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let let_normal: &LetNormalTE = crate::collect_only_tnode!(
+    let let_normal: &LetNormalTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(ln @ LetNormalTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
@@ -756,8 +763,8 @@ fn test_overloads() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/functions/overloads.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/functions/overloads.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -789,10 +796,10 @@ fn test_readonly_ufcs() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/ufcs.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/ufcs.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -816,10 +823,10 @@ fn test_readwrite_ufcs() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/readwriteufcs.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/readwriteufcs.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -890,9 +897,9 @@ fn test_taking_a_callable_param() {
         "}\n",
         "exported func main() int { return do({ return 3; }); }\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -979,7 +986,7 @@ fn simple_struct() {
         }
     )).unwrap();
     // Check there's a constructor
-    let _ = crate::collect_where_tnode!(
+    let _ = collect_where_tnode!(
         NodeRefT::FunctionDefinition(coutputs.lookup_function_by_str("MyStruct")),
         NodeRefT::FunctionHeader(h @ FunctionHeaderT {
             id: IdT {
@@ -1016,7 +1023,7 @@ fn simple_struct() {
     );
     let main = coutputs.lookup_function_by_str("main");
     // Check that we call the constructor
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(
             FunctionCallTE {
@@ -1113,7 +1120,7 @@ fn calls_destructor_on_local_var() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(
             FunctionCallTE {
@@ -1131,7 +1138,7 @@ fn calls_destructor_on_local_var() {
             }
         ) => Some(())
     );
-    let all_calls = crate::collect_where_tnode!(
+    let all_calls = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(_fpc) => Some(())
     );
@@ -1348,7 +1355,7 @@ fn stamps_an_interface_template_via_a_function_return() {
         "  doAThing(4);\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1423,7 +1430,7 @@ fn reads_a_struct_member() {
 
     let main = coutputs.lookup_function_by_str("main");
     // check for the member access
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(
             ReferenceMemberLookupTE {
@@ -1491,7 +1498,7 @@ fn automatically_drops_struct() {
 
     let main = coutputs.lookup_function_by_str("main");
     // check for the call to drop
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(
             FunctionCallTE {
@@ -1578,7 +1585,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         });
     let template_args_vec = vec![
         ITemplataT::Coord(
@@ -1652,9 +1659,9 @@ fn reports_mismatched_return_type_when_expecting_void() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported func main() { 73 }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -1703,7 +1710,7 @@ fn tests_exporting_function() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported func moo() { }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1739,7 +1746,7 @@ fn tests_exporting_struct() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported struct Moo { a int; }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1775,7 +1782,7 @@ fn tests_exporting_interface() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported sealed interface IMoo { func hi(virtual this &IMoo) void; }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1885,7 +1892,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
         "  return MySome<int>(4).value;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1897,7 +1904,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
     coutputs.lookup_struct_by_template_name(
         StructTemplateNameT {
             human_name: scout_arena.intern_str("MySome"),
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         });
 
     let constructor = coutputs.lookup_function_by_str("MySome");
@@ -1993,7 +2000,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
     }
 
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(
             FunctionCallTE {
@@ -2087,7 +2094,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetNormal(LetNormalTE {
             variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
@@ -2112,7 +2119,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
         }) => Some(())
     );
 
-    let upcast: &UpcastTE = crate::collect_only_tnode!(
+    let upcast: &UpcastTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(u) => Some(u)
     );
@@ -2194,7 +2201,7 @@ fn tests_calling_a_virtual_function() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(u @ UpcastTE {
             target_super_kind: ISuperKindTT::Interface(InterfaceTT {
@@ -2282,7 +2289,7 @@ fn tests_upcasting_has_the_right_stuff() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    let upcast: &UpcastTE = crate::collect_only_tnode!(
+    let upcast: &UpcastTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(u @ UpcastTE {
             target_super_kind: ISuperKindTT::Interface(InterfaceTT {
@@ -2378,7 +2385,7 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -2481,21 +2488,21 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
         "  return y;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let destroys = crate::collect_where_tnode!(
+    let destroys = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Destroy(_) => Some(())
     );
     assert_eq!(destroys.len(), 0);
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(
             ReferenceMemberLookupTE {
@@ -2586,9 +2593,9 @@ fn tests_making_a_variable_with_a_pattern() {
         "\treturn doSomething(x);\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -2629,10 +2636,10 @@ fn tests_a_linked_list() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/virtuals/ordinarylinkedlist.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/virtuals/ordinarylinkedlist.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -2657,8 +2664,8 @@ fn test_borrow_ref() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/borrowRef.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/borrowRef.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -2703,7 +2710,7 @@ fn tests_calling_a_function_with_an_upcast() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(UpcastTE {
             target_super_kind: ISuperKindTT::Interface(InterfaceTT {
@@ -2772,7 +2779,7 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(UpcastTE {
             target_super_kind: ISuperKindTT::Interface(InterfaceTT {
@@ -2842,7 +2849,7 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
 
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(UpcastTE {
             target_super_kind: ISuperKindTT::Interface(InterfaceTT {
@@ -2892,10 +2899,10 @@ fn tests_a_templated_linked_list() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/genericvirtuals/templatedlinkedlist.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/genericvirtuals/templatedlinkedlist.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -2920,10 +2927,10 @@ fn tests_a_foreach_for_a_linked_list() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = crate::tests::tests::load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let code = load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -2974,7 +2981,7 @@ fn test_return_from_inside_if_destroys_locals() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let destructor_calls = crate::collect_where_tnode!(
+    let destructor_calls = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(fpc @ FunctionCallTE {
             callable: PrototypeT {
@@ -3090,7 +3097,7 @@ fn recursive_struct_with_opt() {
         "}\n",
         "func main(a ListNode) {}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3226,7 +3233,7 @@ fn test_vector_of_struct_templata() {
         "  patternTiles []<imm>Vec2;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3276,7 +3283,7 @@ fn if_branches_returns_never_and_struct() {
         "  }\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3325,7 +3332,7 @@ fn test_return() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Return(_) => Some(())
     );
@@ -3355,7 +3362,7 @@ fn test_return_from_inside_if() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.panic.*;\nexported func main() int {\n  if (true) {\n    return 7;\n  } else {\n    return 9;\n  }\n  __vbi_panic();\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3364,12 +3371,12 @@ fn test_return_from_inside_if() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let returns = crate::collect_where_tnode!(
+    let returns = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Return(_) => Some(())
     );
     assert_eq!(returns.len(), 2);
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(
             ConstantIntTE {
@@ -3378,7 +3385,7 @@ fn test_return_from_inside_if() {
             }
         ) => Some(())
     );
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(
             ConstantIntTE {
@@ -3458,9 +3465,9 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct Firefly { }\nexported func moo(firefly &Firefly) { }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3492,9 +3499,9 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import panicutils.*;\nstruct Firefly { }\nexported func moo() &Firefly { __pretend<&Firefly>() }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3528,9 +3535,9 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct Firefly { }\nextern func moo(firefly &Firefly);";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3562,9 +3569,9 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct Firefly imm { }\nextern func moo() &Firefly;";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3596,9 +3603,9 @@ fn reports_when_exported_struct_depends_on_non_exported_member() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported struct Firefly imm {\n  raza Raza;\n}\nstruct Raza imm { }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3691,16 +3698,16 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
         "  doSomething(&Muta(), 1)\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LetAndLend(
             LetAndLendTE {
@@ -3770,9 +3777,9 @@ fn reports_when_mutating_after_moving() {
         "  return 42;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3819,7 +3826,7 @@ fn tests_export_struct_twice() {
         "exported struct Moo { }\n",
         "export Moo as Bork;\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3868,9 +3875,9 @@ fn reports_when_reading_after_moving() {
         "  return 42;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3923,9 +3930,9 @@ fn reports_when_moving_from_inside_a_while() {
         "  return 42;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -3972,9 +3979,9 @@ fn cant_subscript_non_subscriptable_type() {
         "  return weapon[42];\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4038,7 +4045,7 @@ fn humanize_errors() {
     let line_containing = |x| line_containing(&filenames_and_sources, &x);
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: PhantomData });
     let firefly_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
     let firefly_id = typing_interner.intern_id(IdValT {
@@ -4049,7 +4056,7 @@ fn humanize_errors() {
     let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: PhantomData });
     let serenity_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
     let serenity_id = typing_interner.intern_id(IdValT {
@@ -4060,7 +4067,7 @@ fn humanize_errors() {
     let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: serenity_kind };
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
-        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: std::marker::PhantomData });
+        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: PhantomData });
     let ispaceship_interface_name = typing_interner.intern_interface_name(
         InterfaceNameValT { template: ispaceship_interface_template_name, template_args: &[] });
     let ispaceship_id = typing_interner.intern_id(IdValT {
@@ -4070,7 +4077,7 @@ fn humanize_errors() {
     let ispaceship_kind = KindT::Interface(ispaceship_tt);
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: PhantomData });
     let unrelated_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(unrelated_struct_template_name), template_args: &[] });
     let unrelated_id = typing_interner.intern_id(IdValT {
@@ -4080,7 +4087,7 @@ fn humanize_errors() {
     let unrelated_kind = KindT::Struct(unrelated_tt);
 
     let myfunc_template_name = typing_interner.intern_function_template_name(
-        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
+        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: PhantomData });
     let firefly_func_name = typing_interner.intern_function_name(
         FunctionNameValT { template: myfunc_template_name, template_args: &[], parameters: &[firefly_coord] });
     let firefly_signature_id = typing_interner.intern_id(IdValT {
@@ -4090,7 +4097,7 @@ fn humanize_errors() {
         SignatureValT { id: IdValT { package_coord: test_tld, init_steps: &[], local_name: INameT::Function(firefly_func_name) } });
 
     let export_template_name = typing_interner.intern_export_template_name(
-        ExportTemplateNameT { code_loc: tz_code_loc, _phantom: std::marker::PhantomData });
+        ExportTemplateNameT { code_loc: tz_code_loc, _phantom: PhantomData });
     let export_name = typing_interner.intern_export_name(
         ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT {
@@ -4137,17 +4144,17 @@ fn humanize_errors() {
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
-    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: std::marker::PhantomData });
+    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }).is_empty());
-    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: std::marker::PhantomData });
+    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantUseUnstackifiedLocal { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::FunctionAlreadyExists { old_function_range: tz, new_function_range: tz, signature: *firefly_signature_id }).is_empty());
-    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: std::marker::PhantomData });
+    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMutateFinalMember { range: tz_slice, struct_: *serenity_tt, member_name: IVarNameT::CodeVar(bork_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
@@ -4162,7 +4169,7 @@ fn humanize_errors() {
         TopLevelStructDeclarationNameS { name: scout_arena.intern_str("SpaceshipSnapshot"), range: tz });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::ImmStructCantHaveVaryingMember { range: tz_slice, struct_name: INameS::TopLevelStructDeclaration(spaceship_snapshot_name_s), member_name: "fuel" }).is_empty());
-    let candidates_slice: &[FailedSolve<_, _, _, _>] = typing_bump.alloc_slice_fill_iter(std::iter::empty());
+    let candidates_slice: &[FailedSolve<_, _, _, _>] = typing_bump.alloc_slice_fill_iter(empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantDowncastUnrelatedTypes { range: tz_slice, source_kind: ispaceship_kind, target_kind: unrelated_kind, candidates: candidates_slice }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
@@ -4176,15 +4183,15 @@ fn humanize_errors() {
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::TypeExportedMultipleTimes { range: tz_slice, paackage: *test_tld, exports: exports_slice }).is_empty());
     let x_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("X") }));
-    let mut step_conclusions = std::collections::HashMap::new();
+    let mut step_conclusions = HashMap::new();
     step_conclusions.insert(x_rune, ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })));
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::TypingPassSolverError { range: tz_slice, failed_solve: FailedSolve {
             steps: vec![Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions: step_conclusions }],
-            conclusions: std::collections::HashMap::new(),
+            conclusions: HashMap::new(),
             unsolved_rules: vec![],
             unsolved_runes: vec![],
-            error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::KindIsNotConcrete { kind: ispaceship_kind }, _phantom: std::marker::PhantomData }),
+            error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::KindIsNotConcrete { kind: ispaceship_kind }, _phantom: PhantomData }),
         } }).is_empty());
 }
 /*
@@ -4376,9 +4383,9 @@ fn report_when_multiple_types_in_array() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "exported func main() int {\n  arr = [#](true, 42);\n  return arr.1;\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4420,9 +4427,9 @@ fn report_when_abstract_method_defined_outside_open_interface() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.panic.*;\ninterface IBlah { }\nabstract func bork(virtual moo &IBlah);\nexported func main() {\n  bork(__vbi_panic());\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4458,9 +4465,9 @@ fn report_when_imm_struct_has_varying_member() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}\nexported func main() {\n  ship = Spaceship(\"Serenity\", 2);\n  println(ship.name);\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4499,9 +4506,9 @@ fn report_imm_mut_mismatch_for_generic_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct MyImmContainer<T Ref> imm\nwhere func drop(T)void { value T; }\nstruct MyMutStruct { }\nexported func main() { x = MyImmContainer<MyMutStruct>(MyMutStruct()); }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4544,9 +4551,9 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
         "func moo(a MySome<int>) { }\n",
         "exported func main() { moo(__pretend<MySome<int>>()); }\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -4554,11 +4561,11 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         });
     let struct_template_name = StructTemplateNameT {
         human_name: scout_arena.intern_str("MySome"),
-        _phantom: std::marker::PhantomData,
+        _phantom: PhantomData,
     };
 
     let coutputs = compile.expect_compiler_outputs();
@@ -4608,9 +4615,9 @@ fn report_when_imm_contains_varying_member() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -4651,7 +4658,7 @@ fn test_imm_array() {
         "  __vbi_panic();\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -4749,16 +4756,16 @@ fn test_struct_default_generic_argument_in_type() {
         "  x MyHashSet<bool>();\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("MyStruct");
-    let tyype = crate::collect_only_tnode!(
+    let tyype = collect_only_tnode!(
         NodeRefT::StructDefinition(moo),
         NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
     );
@@ -4862,9 +4869,9 @@ fn lock_weak_member() {
         "  printShipBase(&ship);\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -4935,16 +4942,16 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
         "  return y;\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let destroys = crate::collect_where_tnode!(
+    let destroys = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Destroy(_) => Some(())
     );
@@ -5002,7 +5009,7 @@ fn generates_free_function_for_imm_struct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -5044,9 +5051,9 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "export [#5]<imm>Raza as RazaArray;\nstruct Raza imm { }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -5078,9 +5085,9 @@ fn reports_when_exported_rsa_depends_on_non_exported_element() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "export []<imm>Raza as RazaArray;\nstruct Raza imm { }";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
@@ -5136,9 +5143,9 @@ exported func main() int {
   return len(&a);
 }
 "#;
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -5187,7 +5194,7 @@ fn test_array_push_pop_len_capacity_drop() {
         "  // implicit drop with pops\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -5245,7 +5252,7 @@ fn upcast_generic() {
         "  doUpcast(Raza(42));\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -5256,7 +5263,7 @@ fn upcast_generic() {
 
     let do_upcast = coutputs.lookup_function_by_str("doUpcast");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(do_upcast),
         NodeRefT::Upcast(u) => {
             match u.inner_expr.result().coord.kind {
@@ -5356,9 +5363,9 @@ fn downcast_function_rrbfs() {
         "func as<SubType Ref, SuperType Ref>(left &SuperType) Result<&SubType, &SuperType>\n",
         "where implements(SubType, SuperType);\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
@@ -5373,7 +5380,7 @@ fn downcast_function_rrbfs() {
             }))
         }).copied().collect();
         let as_func = expect_1(&as_funcs);
-        let as_ = crate::collect_only_tnode!(
+        let as_ = collect_only_tnode!(
             NodeRefT::FunctionDefinition(as_func),
             NodeRefT::AsSubtype(as_) => Some(as_)
         );
@@ -5595,9 +5602,9 @@ fn downcast_with_as() {
         "  ship.as<Raza>();\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
@@ -5605,7 +5612,7 @@ fn downcast_with_as() {
     {
 
         let main_func = coutputs.lookup_function_by_str("main");
-        let (as_prototype, as_arg) = crate::collect_only_tnode!(
+        let (as_prototype, as_arg) = collect_only_tnode!(
             NodeRefT::FunctionDefinition(main_func),
             NodeRefT::FunctionCall(c @ FunctionCallTE {
                 callable: PrototypeT {
@@ -5769,7 +5776,7 @@ fn downcast_with_as() {
             }))
         }).copied().collect();
         let as_func = expect_1(&as_funcs);
-        let as_ = crate::collect_only_tnode!(
+        let as_ = collect_only_tnode!(
             NodeRefT::FunctionDefinition(as_func),
             NodeRefT::AsSubtype(as_) => Some(as_)
         );
@@ -6010,9 +6017,9 @@ fn closure_using_parent_function_s_bound() {
         "  genFunc(7)\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -6053,16 +6060,16 @@ fn test_struct_default_generic_argument_in_call() {
         "  x = MyHashSet<bool>();\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_function_by_str("moo");
-    let variable = crate::collect_only_tnode!(
+    let variable = collect_only_tnode!(
         NodeRefT::FunctionDefinition(moo),
         NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
     );
@@ -6154,9 +6161,9 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
         "  m = Marine(XNone<int>());\n",
         "}\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,

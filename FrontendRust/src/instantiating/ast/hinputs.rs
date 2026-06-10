@@ -9,6 +9,8 @@ use crate::instantiating::ast::ast::{
     KindExportI, KindExternI, PrototypeI,
 };
 use crate::instantiating::ast::citizens::{ICitizenDefinitionI, InterfaceDefinitionI, StructDefinitionI};
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::StructNameI;
 
 /*
 package dev.vale.instantiating.ast
@@ -87,10 +89,10 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
 
 // mig: fn lookup_function (humanName: String overload)
 impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
-    pub fn lookup_function_by_str(&self, human_name: &str) -> &'i crate::instantiating::ast::ast::FunctionDefinitionI<'s, 'i> {
-        let matches: Vec<&&'i crate::instantiating::ast::ast::FunctionDefinitionI<'s, 'i>> = self.functions.iter().filter(|f| {
+    pub fn lookup_function_by_str(&self, human_name: &str) -> &'i FunctionDefinitionI<'s, 'i> {
+        let matches: Vec<&&'i FunctionDefinitionI<'s, 'i>> = self.functions.iter().filter(|f| {
             match f.header.id.local_name {
-                crate::instantiating::ast::names::INameI::FunctionNameIX(n) => n.template.human_name.0 == human_name,
+                INameI::FunctionNameIX(n) => n.template.human_name.0 == human_name,
                 _ => false,
             }
         }).collect();
@@ -319,7 +321,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     ) -> &'i StructDefinitionI<'s, 'i, cI> {
         let matches: Vec<&&'i StructDefinitionI<'s, 'i, cI>> = self.structs.iter().filter(|s| {
             match s.instantiated_citizen.id.local_name {
-                crate::instantiating::ast::names::INameI::StructName(crate::instantiating::ast::names::StructNameI { template: crate::instantiating::ast::names::IStructTemplateNameI::StructTemplate(t), .. }) if t.human_name.0 == human_name => true,
+                INameI::StructName(StructNameI { template: IStructTemplateNameI::StructTemplate(t), .. }) if t.human_name.0 == human_name => true,
                 _ => false,
             }
         }).collect();

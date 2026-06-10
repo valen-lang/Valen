@@ -24,6 +24,9 @@ use crate::postparsing::names::ImplImpreciseNameValS;
 use crate::postparsing::names::ImplSubCitizenImpreciseNameValS;
 use crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS;
 use crate::typing::types::types::KindT;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::mem::discriminant;
 
 /*
 package dev.vale.typing.env
@@ -159,7 +162,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
       IEnvironmentT::Node(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
       IEnvironmentT::Function(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
       IEnvironmentT::Package(p) => p.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
-      _ => panic!("implement: lookup_with_name_inner for {:?}", std::mem::discriminant(self)),
+      _ => panic!("implement: lookup_with_name_inner for {:?}", discriminant(self)),
     }
   }
   /*
@@ -844,8 +847,8 @@ impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for TemplatasStoreT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for TemplatasStoreT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+impl<'s, 't> Hash for TemplatasStoreT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, _state: &mut H) {
     panic!("vcurious: TemplatasStoreT.hash")
   }
   /* Guardian: disable-all */
@@ -1462,8 +1465,8 @@ impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for PackageEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /// Arena-allocated (see @TFITCX)
@@ -1649,8 +1652,8 @@ impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 pub fn child_of<'s, 't>(
@@ -1803,8 +1806,8 @@ impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for ExportEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /// Arena-allocated (see @TFITCX)
@@ -1907,8 +1910,8 @@ impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for ExternEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /// Arena-allocated (see @TFITCX)
@@ -2025,8 +2028,8 @@ impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+impl<'s, 't> Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, _state: &mut H) {
     panic!("vcurious: GeneralEnvironmentT.hash")
   }
   /* Guardian: disable-all */

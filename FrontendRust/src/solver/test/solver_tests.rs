@@ -843,23 +843,23 @@ fn advance(
             Box::new(super::test_rule_solver::rule_to_puzzles),
             &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
-            std::collections::HashMap::new(),
+            HashMap::new(),
             all_runes,
         );
 
         while advance(&mut solver_state, &test_solver).expect("advance") {}
-        let first_conclusions: std::collections::HashMap<i64, String> =
+        let first_conclusions: HashMap<i64, String> =
             solver_state.userify_conclusions().into_iter().collect();
         assert_eq!(first_conclusions.get(&-2), Some(&"A".to_string()));
 
-        let mut new_conclusions = std::collections::HashMap::new();
+        let mut new_conclusions = HashMap::new();
         new_conclusions.insert(-1i64, "Firefly".to_string());
         solver_state
-            .commit_step::<String>(false, vec![], new_conclusions, vec![], std::collections::HashSet::new())
+            .commit_step::<String>(false, vec![], new_conclusions, vec![], HashSet::new())
             .expect("commit_step");
 
         while advance(&mut solver_state, &test_solver).expect("advance") {}
-        let second_conclusions: std::collections::HashMap<i64, String> =
+        let second_conclusions: HashMap<i64, String> =
             solver_state.userify_conclusions().into_iter().collect();
         assert_eq!(second_conclusions.get(&-1), Some(&"Firefly".to_string()));
         assert_eq!(second_conclusions.get(&-2), Some(&"A".to_string()));
@@ -963,7 +963,7 @@ fn advance(
 // mig: fn solve_with_puzzler
     fn solve_with_puzzler(
         puzzler: Box<dyn Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>>,
-    ) -> std::collections::HashMap<i64, String> {
+    ) -> HashMap<i64, String> {
 
 
         let scout_bump = Bump::new();
@@ -996,7 +996,7 @@ fn advance(
             puzzler,
             &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
-            std::collections::HashMap::new(),
+            HashMap::new(),
             all_runes,
         );
         while advance(&mut solver_state, &test_solver).expect("advance") {}
@@ -1156,13 +1156,13 @@ fn advance(
     fn get_conclusions(
         rules: Vec<super::test_rules::TestRule>,
         expect_complete_solve: bool,
-        initially_known_runes: std::collections::HashMap<i64, String>,
-    ) -> std::collections::HashMap<i64, String> {
+        initially_known_runes: HashMap<i64, String>,
+    ) -> HashMap<i64, String> {
 
 
         let scout_bump = Bump::new();
         let scout_arena = ScoutArena::new(&scout_bump);
-        let all_runes_from_rules: std::collections::HashSet<i64> =
+        let all_runes_from_rules: HashSet<i64> =
             rules.iter().flat_map(|r| r.all_runes()).collect();
         let all_runes: Vec<i64> = {
             let mut v: Vec<i64> = rules
@@ -1189,9 +1189,9 @@ fn advance(
 
         while advance(&mut solver_state, &test_solver).expect("advance") {}
 
-        let conclusions: std::collections::HashMap<i64, String> =
+        let conclusions: HashMap<i64, String> =
             solver_state.userify_conclusions().into_iter().collect();
-        let conclusions_keys: std::collections::HashSet<i64> =
+        let conclusions_keys: HashSet<i64> =
             conclusions.keys().cloned().collect();
         assert_eq!(expect_complete_solve, conclusions_keys == all_runes_from_rules);
 

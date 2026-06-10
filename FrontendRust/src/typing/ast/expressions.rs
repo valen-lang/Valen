@@ -13,6 +13,8 @@ use crate::typing::types::types::MutabilityT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::BoolT;
 use crate::typing::types::types::FloatT;
+use std::any::Any;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.ast
@@ -94,7 +96,7 @@ pub struct AddressResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 case class AddressResultT(coord: CoordT) extends IExpressionResultT {
 */
 impl<'s, 't> AddressResultT<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -125,7 +127,7 @@ pub struct ReferenceResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 case class ReferenceResultT(coord: CoordT) extends IExpressionResultT {
 */
 impl<'s, 't> ReferenceResultT<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -394,7 +396,7 @@ case class LetAndLendTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> LetAndLendTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -473,7 +475,7 @@ case class LockWeakTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> LockWeakTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -512,7 +514,7 @@ case class BorrowToWeakTE(
 
 */
 impl<'s, 't> BorrowToWeakTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -554,7 +556,7 @@ case class LetNormalTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> LetNormalTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -608,7 +610,7 @@ pub struct UnletTE<'s, 't> {
 case class UnletTE(variable: ILocalVariableT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> UnletTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -652,7 +654,7 @@ case class DiscardTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DiscardTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -713,7 +715,7 @@ case class DeferTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DeferTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -775,7 +777,7 @@ case class IfTE(
     elseCall: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
 impl<'s, 't> IfTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -896,7 +898,7 @@ impl<'s, 't> WhileTE<'s, 't> {
 
 */
 impl<'s, 't> WhileTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -931,7 +933,7 @@ case class MutateTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> MutateTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -967,7 +969,7 @@ case class RestackifyTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> RestackifyTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1008,7 +1010,7 @@ case class TransmigrateTE(
   vassert(sourceExpr.kind.isPrimitive)
 */
 impl<'s, 't> TransmigrateTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1041,7 +1043,7 @@ case class ReturnTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ReturnTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1074,13 +1076,13 @@ impl<'s, 't> ReturnTE<'s, 't> {
 #[derive(Debug)]
 pub struct BreakTE<'s, 't> {
     pub region: RegionT,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class BreakTE(region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> BreakTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1122,7 +1124,7 @@ case class BlockTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> BlockTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1170,7 +1172,7 @@ case class PureTE(
 
 */
 impl<'s, 't> PureTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1200,7 +1202,7 @@ where 's: 't,
 case class ConsecutorTE(exprs: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConsecutorTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1296,7 +1298,7 @@ case class TupleTE(
     resultReference: CoordT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> TupleTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1345,7 +1347,7 @@ case class StaticArrayFromValuesTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1375,7 +1377,7 @@ where 's: 't,
 case class ArraySizeTE(array: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ArraySizeTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1407,7 +1409,7 @@ where 's: 't,
 case class IsSameInstanceTE(left: ReferenceExpressionTE, right: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1481,7 +1483,7 @@ case class AsSubtypeTE(
 
 */
 impl<'s, 't> AsSubtypeTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1504,13 +1506,13 @@ impl<'s, 't> AsSubtypeTE<'s, 't> {
 #[derive(Debug)]
 pub struct VoidLiteralTE<'s, 't> {
     pub region: RegionT,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class VoidLiteralTE(region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> VoidLiteralTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1548,7 +1550,7 @@ pub struct ConstantIntTE<'s, 't> {
 case class ConstantIntTE(value: ITemplataT[IntegerTemplataType], bits: Int, region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConstantIntTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1576,13 +1578,13 @@ impl<'s, 't> ConstantIntTE<'s, 't> {
 pub struct ConstantBoolTE<'s, 't> {
     pub value: bool,
     pub region: RegionT,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ConstantBoolTE(value: Boolean, region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConstantBoolTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1608,13 +1610,13 @@ impl<'s, 't> ConstantBoolTE<'s, 't> {
 pub struct ConstantStrTE<'s, 't> {
     pub value: StrI<'s>,
     pub region: RegionT,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ConstantStrTE(value: String, region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConstantStrTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1640,13 +1642,13 @@ impl<'s, 't> ConstantStrTE<'s, 't> {
 pub struct ConstantFloatTE<'s, 't> {
     pub value: f64,
     pub region: RegionT,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ConstantFloatTE(value: Double, region: RegionT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConstantFloatTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1685,7 +1687,7 @@ case class LocalLookupTE(
 ) extends AddressExpressionTE {
 */
 impl<'s, 't> LocalLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1725,7 +1727,7 @@ case class ArgLookupTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ArgLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1771,7 +1773,7 @@ case class StaticSizedArrayLookupTE(
 ) extends AddressExpressionTE {
 */
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1815,7 +1817,7 @@ case class RuntimeSizedArrayLookupTE(
 ) extends AddressExpressionTE {
 */
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1867,7 +1869,7 @@ where 's: 't,
 case class ArrayLengthTE(arrayExpr: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ArrayLengthTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1918,7 +1920,7 @@ case class ReferenceMemberLookupTE(
     variability: VariabilityT) extends AddressExpressionTE {
 */
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1962,7 +1964,7 @@ case class AddressMemberLookupTE(
     variability: VariabilityT) extends AddressExpressionTE {
 */
 impl<'s, 't> AddressMemberLookupTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -1999,7 +2001,7 @@ case class InterfaceFunctionCallTE(
     args: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2063,7 +2065,7 @@ case class ExternFunctionCallTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ExternFunctionCallTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2114,7 +2116,7 @@ case class FunctionCallTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> FunctionCallTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2167,7 +2169,7 @@ case class ReinterpretTE(
     resultReference: CoordT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ReinterpretTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2223,7 +2225,7 @@ case class ConstructTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> ConstructTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2263,7 +2265,7 @@ case class NewMutRuntimeSizedArrayTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2325,7 +2327,7 @@ case class StaticArrayFromCallableTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2384,7 +2386,7 @@ case class DestroyStaticSizedArrayIntoFunctionTE(
     consumerMethod: PrototypeT[IFunctionNameT]) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2454,7 +2456,7 @@ case class DestroyStaticSizedArrayIntoLocalsTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2621,7 +2623,7 @@ case class InterfaceToInterfaceUpcastTE(
     targetInterface: InterfaceTT) extends ReferenceExpressionTE {
 */
 impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2670,7 +2672,7 @@ case class UpcastTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> UpcastTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2724,7 +2726,7 @@ case class SoftLoadTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> SoftLoadTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2786,7 +2788,7 @@ case class DestroyTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DestroyTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2837,7 +2839,7 @@ case class DestroyImmRuntimeSizedArrayTE(
 
 */
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
@@ -2913,7 +2915,7 @@ case class NewImmRuntimeSizedArrayTE(
 
 */
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
-    fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
+    fn equals(&self, obj: &dyn Any) -> bool { panic!("Unimplemented: equals"); }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */

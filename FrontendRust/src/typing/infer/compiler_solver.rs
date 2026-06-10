@@ -37,6 +37,13 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::typing::templata::templata::MutabilityTemplataT;
 use crate::typing::templata::templata::OwnershipTemplataT;
 use crate::typing::templata::templata::VariabilityTemplataT;
+use crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter;
+use crate::solver::solver::make_solver_state;
+use crate::typing::templata::templata::expect_integer;
+use crate::typing::templata::templata::expect_mutability;
+use crate::typing::templata::templata::expect_variability;
+use std::iter::once;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.infer
@@ -613,7 +620,7 @@ where 's: 't,
         let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> =
             &|rule| self.get_runes(*rule);
 
-        crate::solver::solver::make_solver_state(
+        make_solver_state(
             self.opts.global_options.sanity_check,
             self.opts.global_options.use_optimized_solver,
             rule_to_puzzles,
@@ -899,13 +906,13 @@ where 's: 't,
         }
     }).collect();
 
-    let receiver_runes = crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter(
+    let receiver_runes = get_kind_equivalent_runes_iter(
         &unsolved_rules,
         unsolved_receiver_runes.into_iter(),
     );
 
     let new_conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = receiver_runes.iter().filter_map(|receiver| {
-        let runes_sending_to_this_receiver = crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter(
+        let runes_sending_to_this_receiver = get_kind_equivalent_runes_iter(
             &unsolved_rules,
             unsolved_rules.iter().filter_map(|rule| match rule {
                 IRulexSR::CoordSend(r) if r.receiver_rune.rune == *receiver => Some(r.sender_rune.rune),
@@ -926,15 +933,15 @@ where 's: 't,
                 })
             }).collect();
         let call_templates: Vec<ITemplataT<'s, 't>> =
-            crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter(
+            get_kind_equivalent_runes_iter(
                 &unsolved_rules,
                 call_rules_template_runes.iter().copied(),
             ).iter().filter_map(|rune| solver_state.get_conclusion(rune)).collect();
-        assert!(call_templates.iter().map(|t| *t).collect::<std::collections::HashSet<_>>().len() <= 1);
+        assert!(call_templates.iter().map(|t| *t).collect::<HashSet<_>>().len() <= 1);
         let all_senders_known = sender_conclusions.len() == runes_sending_to_this_receiver.len();
         let all_calls_known = call_rules_template_runes.len() == call_templates.len();
         match solve_receives(compiler, typing_interner, state, _env, sender_conclusions.clone(), call_templates, all_senders_known, all_calls_known) {
-            Err(e) => return Some(Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData }))),
+            Err(e) => return Some(Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData }))),
             Ok(None) => return None,
             Ok(Some(receiver_instantiation_kind)) => {
                 let possible_coords: Vec<CoordT<'s, 't>> = {
@@ -953,13 +960,13 @@ where 's: 't,
                 if possible_coords.is_empty() {
                     Some(Ok((*receiver, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: receiver_instantiation_kind })))))
                 } else {
-                    let ownerships: std::collections::HashSet<OwnershipT> = possible_coords.iter().map(|c| c.ownership).collect();
+                    let ownerships: HashSet<OwnershipT> = possible_coords.iter().map(|c| c.ownership).collect();
                     let ownership = match ownerships.len() {
                         0 => panic!("vwat: no ownerships in possible_coords"),
                         1 => *ownerships.iter().next().unwrap(),
                         _ => {
                             let params = typing_interner.alloc_slice_from_vec(sender_conclusions);
-                            return Some(Err(ISolverError::RuleError(RuleError { err: ITypingPassSolverError::ReceivingDifferentOwnerships { params }, _phantom: std::marker::PhantomData })));
+                            return Some(Err(ISolverError::RuleError(RuleError { err: ITypingPassSolverError::ReceivingDifferentOwnerships { params }, _phantom: PhantomData })));
                         }
                     };
                     Some(Ok((*receiver, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT {
@@ -971,7 +978,7 @@ where 's: 't,
     }).collect::<Result<HashMap<_, _>, _>>().map_err(|e| e)?;
 
     // Per @CSCDSRZ, complex solve only produces conclusions — empty solvedRules and newRules is correct.
-    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![], std::collections::HashSet::new()) {
+    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![], HashSet::new()) {
         Ok(_) => {}
         Err(e) => return Err(e),
     }
@@ -1094,16 +1101,16 @@ where 's: 't,
     if sender_kinds.is_empty() {
         return Ok(None);
     }
-    let sender_ancestor_lists: Vec<std::collections::HashSet<KindT<'s, 't>>> =
+    let sender_ancestor_lists: Vec<HashSet<KindT<'s, 't>>> =
         sender_kinds.iter().map(|kind| compiler.get_ancestors(env, state, *kind, true)).collect();
-    let common_ancestors: std::collections::HashSet<KindT<'s, 't>> =
+    let common_ancestors: HashSet<KindT<'s, 't>> =
         sender_ancestor_lists.into_iter().reduce(|a, b| a.intersection(&b).copied().collect())
             .unwrap_or_default();
     if common_ancestors.is_empty() {
         let params = typing_interner.alloc_slice_from_vec(senders);
         return Err(ITypingPassSolverError::NoCommonAncestors { params });
     }
-    let common_ancestors_call_constrained: std::collections::HashSet<KindT<'s, 't>> =
+    let common_ancestors_call_constrained: HashSet<KindT<'s, 't>> =
         if call_templates.is_empty() {
             common_ancestors
         } else {
@@ -1259,7 +1266,7 @@ where 's: 't,
         //   }
         match self.solve_rule(state, env, rule_index, rule, solver_state) {
             Ok(x) => Ok(x),
-            Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+            Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
         }
     }
 }
@@ -1302,10 +1309,10 @@ where 's: 't,
                 let mutability = self.get_mutability(state, kind);
                 let mut conclusions = HashMap::new();
                 conclusions.insert(kc.mutability_rune.rune, mutability);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        let ranges = std::iter::once(kc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges = once(kc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let error = self.typing_interner.alloc(e);
                         Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1336,10 +1343,10 @@ where 's: 't,
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         let mut conclusions = HashMap::new();
                         conclusions.insert(cc.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1354,10 +1361,10 @@ where 's: 't,
                         let mut conclusions = HashMap::new();
                         conclusions.insert(cc.ownership_rune.rune, ITemplataT::Ownership(OwnershipTemplataT { ownership: coord.ownership }));
                         conclusions.insert(cc.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1390,10 +1397,10 @@ where 's: 't,
                         let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(prototype_templata));
                         let mut conclusions = HashMap::new();
                         conclusions.insert(resolve.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1416,7 +1423,7 @@ where 's: 't,
                         //   - All state read by the call chain is frozen env + settled
                         //     CompilerOutputs; the outer solver's in-flight state is never
                         //     consulted.
-                        let ranges = std::iter::once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         match self.resolve_function_from_infer_env(
                             env,
@@ -1430,7 +1437,7 @@ where 's: 't,
                                 let mut conclusions = HashMap::new();
                                 conclusions.insert(resolve.result_rune.rune, ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: stamp_result.prototype })));
                                 conclusions.insert(resolve.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: return_type })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1454,10 +1461,10 @@ where 's: 't,
                         let mut conclusions = HashMap::new();
                         conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(CoordListTemplataT { coords: prototype.param_types() })));
                         conclusions.insert(csf.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: prototype.return_type })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1465,7 +1472,7 @@ where 's: 't,
                         }
                     }
                     _ => {
-                        let ranges = std::iter::once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges = once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         Err(ITypingPassSolverError::CantCheckPlaceholder { range: ranges_slice })
                     }
@@ -1485,7 +1492,7 @@ where 's: 't,
                 let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: new_prototype }));
                 let mut conclusions = HashMap::new();
                 conclusions.insert(def_func.result_rune.rune, new_templata);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(_e) => { panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping"); }
                 }
@@ -1528,10 +1535,10 @@ where 's: 't,
                 if let Some(result_rune) = csia.result_rune {
                     conclusions.insert(result_rune.rune, resulting_isa_templata);
                 }
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        let ranges = std::iter::once(csia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges = once(csia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let error = self.typing_interner.alloc(e);
                         Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1566,10 +1573,10 @@ where 's: 't,
                 let new_impl = self.assemble_impl(env, dcia.range, sub_kind.into(), super_kind.into());
                 let mut conclusions = HashMap::new();
                 conclusions.insert(dcia.result_rune.rune, ITemplataT::Isa(self.typing_interner.alloc(new_impl)));
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        let ranges = std::iter::once(dcia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges = once(dcia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let error = self.typing_interner.alloc(e);
                         Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1583,10 +1590,10 @@ where 's: 't,
                         let right = solver_state.get_conclusion(&equals.right.rune).expect("Neither left nor right rune solved in EqualsSR");
                         let mut conclusions = HashMap::new();
                         conclusions.insert(equals.left.rune, right.clone());
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1597,10 +1604,10 @@ where 's: 't,
                         let left = left.clone();
                         let mut conclusions = HashMap::new();
                         conclusions.insert(equals.right.rune, left);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1626,10 +1633,10 @@ where 's: 't,
                                 sub_rune: coord_send.sender_rune,
                                 super_rune: coord_send.receiver_rune,
                             });
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule], std::collections::HashSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule], HashSet::new()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
-                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                     let error = self.typing_interner.alloc(e);
                                     Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1638,10 +1645,10 @@ where 's: 't,
                         } else {
                             let mut conclusions = HashMap::new();
                             conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
-                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                     let error = self.typing_interner.alloc(e);
                                     Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1658,10 +1665,10 @@ where 's: 't,
                                 sub_rune: coord_send.sender_rune,
                                 super_rune: coord_send.receiver_rune,
                             });
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule], std::collections::HashSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule], HashSet::new()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
-                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                     let error = self.typing_interner.alloc(e);
                                     Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1670,10 +1677,10 @@ where 's: 't,
                         } else {
                             let mut conclusions = HashMap::new();
                             conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
-                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                     let error = self.typing_interner.alloc(e);
                                     Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -1689,9 +1696,9 @@ where 's: 't,
                 let result = solver_state.get_conclusion(&r.rune.rune).unwrap();
                 let templatas: Vec<ITemplataT<'s, 't>> = r.literals.iter().map(|l| self.literal_to_templata(*l)).collect();
                 if templatas.contains(&result) {
-                    let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                    let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], std::collections::HashMap::new(), vec![], std::collections::HashSet::new()) {
+                    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![], HashSet::new()) {
                         Ok(_) => Ok(()),
                         Err(e) => {
                             let error = self.typing_interner.alloc(e);
@@ -1716,11 +1723,11 @@ where 's: 't,
                         let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => panic!("implement: solve_rule CoerceToCoord coord conclusion not CoordTemplataT") };
                         match coord.ownership {
                             OwnershipT::Own | OwnershipT::Share => {
-                                let mut conclusions = std::collections::HashMap::new();
+                                let mut conclusions = HashMap::new();
                                 conclusions.insert(r.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
-                                let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                                let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1732,11 +1739,11 @@ where 's: 't,
                         }
                     }
                     Some(kind) => {
-                        let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                         let coerced = self.coerce_to_coord(state, env.original_calling_env, &ranges, kind, RegionT { region: IRegionT::Default });
-                        let mut conclusions = std::collections::HashMap::new();
+                        let mut conclusions = HashMap::new();
                         conclusions.insert(r.coord_rune.rune, coerced);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(_e) => { panic!("Unimplemented: solve_rule CoerceToCoord InternalSolverError wrapping"); }
                         }
@@ -1746,23 +1753,23 @@ where 's: 't,
             //     case LiteralSR(range, rune, literal) =>
             IRulexSR::Literal(r) => {
                 let templata = self.literal_to_templata(r.literal);
-                let mut conclusions = std::collections::HashMap::new();
+                let mut conclusions = HashMap::new();
                 conclusions.insert(r.rune.rune, templata);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(_e) => { panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping"); }
                 }
             }
             //     case LookupSR(...) =>
             IRulexSR::Lookup(r) => {
-                let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                 let result = match self.lookup_templata_imprecise(env, state, &ranges, r.name) {
                     None => return Err(ITypingPassSolverError::LookupFailed { name: r.name }),
                     Some(x) => x,
                 };
-                let mut conclusions = std::collections::HashMap::new();
+                let mut conclusions = HashMap::new();
                 conclusions.insert(r.rune.rune, result);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
                     Err(_e) => { panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping"); }
                 }
@@ -1799,11 +1806,11 @@ where 's: 't,
                             }
                         };
                         let inner_coord = CoordT { ownership: inner_ownership, region: outer_coord.region, kind: outer_coord.kind };
-                        let ranges: Vec<RangeS<'s>> = std::iter::once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges: Vec<RangeS<'s>> = once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let mut conclusions = HashMap::new();
                         conclusions.insert(augment.inner_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: inner_coord })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let error = self.typing_interner.alloc(e);
@@ -1846,7 +1853,7 @@ where 's: 't,
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         let mut conclusions = HashMap::new();
                         conclusions.insert(augment.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 panic!("implement: solve_rule Augment InternalSolverError wrapping");
@@ -1869,7 +1876,7 @@ where 's: 't,
                         let coord_list = self.typing_interner.alloc(CoordListTemplataT { coords: members_slice });
                         let mut conclusions = HashMap::new();
                         conclusions.insert(pack.result_rune.rune, ITemplataT::CoordList(coord_list));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(_e) => { panic!("implement: solve_rule Pack None InternalSolverError wrapping"); }
                         }
@@ -1880,7 +1887,7 @@ where 's: 't,
                         let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = pack.members.iter().zip(members.iter()).map(|(rune, coord)| {
                             (rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *coord })))
                         }).collect();
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(_e) => { panic!("implement: solve_rule Pack Some InternalSolverError wrapping"); }
                         }
@@ -2368,7 +2375,7 @@ where 's: 't,
     ) -> Result<(), ITypingPassSolverError<'s, 't>> {
         match solver_state.get_conclusion(&result_rune.rune) {
             Some(result) => {
-                let ranges: Vec<RangeS<'s>> = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect();
+                let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                 match result {
                     ITemplataT::Kind(kt) => {
@@ -2385,7 +2392,7 @@ where 's: 't,
                                             struct_name.template_args().iter().zip(arg_runes.iter())
                                                 .map(|(template_arg, arg_rune)| (arg_rune.rune, *template_arg))
                                                 .collect();
-                                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                             Ok(_) => return Ok(()),
                                             Err(e) => {
                                                 let error = self.typing_interner.alloc(e);
@@ -2418,7 +2425,7 @@ where 's: 't,
                                     arg_runes.iter().zip(interface_inner_name.template_args.iter())
                                         .map(|(arg_rune, template_arg)| (arg_rune.rune, *template_arg))
                                         .collect();
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -2444,7 +2451,7 @@ where 's: 't,
                                 let mut conclusions = HashMap::new();
                                 conclusions.insert(mutability_rune.rune, rsa_tt.mutability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: rsa_tt.element_type() })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -2475,7 +2482,7 @@ where 's: 't,
                                 conclusions.insert(mutability_rune.rune, ssa_tt.mutability());
                                 conclusions.insert(variability_rune.rune, ssa_tt.variability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: ssa_tt.element_type() })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -2502,14 +2509,14 @@ where 's: 't,
                             _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
                         let context_region = RegionT { region: IRegionT::Default };
-                        let mutability = crate::typing::templata::templata::expect_mutability(m);
+                        let mutability = expect_mutability(m);
                         let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, mutability, context_region);
                         let mut conclusions = HashMap::new();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -2528,15 +2535,15 @@ where 's: 't,
                             _ => panic!("Expected CoordTemplataT as fourth arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
                         let context_region = RegionT { region: IRegionT::Default };
-                        let size = crate::typing::templata::templata::expect_integer(s);
-                        let mutability = crate::typing::templata::templata::expect_mutability(m);
-                        let variability = crate::typing::templata::templata::expect_variability(v);
+                        let size = expect_integer(s);
+                        let mutability = expect_mutability(m);
+                        let variability = expect_variability(v);
                         let ssa_kind = self.predict_static_sized_array_kind(*env, state, mutability, variability, size, coord, context_region);
                         let mut conclusions = HashMap::new();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: ssa_kind.name })) })));
-                        let ranges: Vec<RangeS<'s>> = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let error = self.typing_interner.alloc(e);
@@ -2551,10 +2558,10 @@ where 's: 't,
                         let kind = self.predict_struct(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
                         let mut conclusions = HashMap::new();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
@@ -2569,10 +2576,10 @@ where 's: 't,
                         let kind = self.predict_interface(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
                         let mut conclusions = HashMap::new();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], std::collections::HashSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                                 let error = self.typing_interner.alloc(e);
                                 Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })

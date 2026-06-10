@@ -4,6 +4,10 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::utils::code_hierarchy::test_from_vec;
+use std::collections::HashMap;
+use crate::utils::code_hierarchy::IPackageResolver;
 
 /*
 package dev.vale.highertyping
@@ -22,13 +26,12 @@ pub fn test<'s, 'ctx, 'p>(
     parse_arena: &'ctx ParseArena<'p>,
     code: &str,
 ) -> HigherTypingCompilation<'s, 'ctx, 'p> {
-    use crate::utils::code_hierarchy::IPackageResolver;
     let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
         vec![PackageCoordinate::test_tld(parse_arena, parser_keywords)];
     let resolver_concrete =
-        crate::utils::code_hierarchy::test_from_vec(parse_arena, vec![code.to_string()])
-            .or(crate::tests::tests::get_package_to_resource_resolver());
-    let resolver: &'ctx dyn crate::utils::code_hierarchy::IPackageResolver<'p, std::collections::HashMap<String, String>> =
+        test_from_vec(parse_arena, vec![code.to_string()])
+            .or(get_package_to_resource_resolver());
+    let resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>> =
         compilation_bump.alloc(resolver_concrete);
     HigherTypingCompilation::new(
         scout_arena,

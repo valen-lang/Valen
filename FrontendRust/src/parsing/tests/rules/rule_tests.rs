@@ -24,6 +24,7 @@ use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::traverse::NodeRefP;
 use crate::parsing::tests::utils::*;
+use crate::collect_only_rulex;
 
 fn compile<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -43,7 +44,7 @@ fn relations() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   {
     let rule = compile(&parse_arena, &keywords, "implements(MyObject, IObject)");
-    let builtin = crate::collect_only_rulex!(
+    let builtin = collect_only_rulex!(
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
@@ -55,7 +56,7 @@ fn relations() {
 
   {
     let rule = compile(&parse_arena, &keywords, "implements(R, IObject)");
-    let builtin = crate::collect_only_rulex!(
+    let builtin = collect_only_rulex!(
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
@@ -67,7 +68,7 @@ fn relations() {
 
   {
     let rule = compile(&parse_arena, &keywords, "implements(MyObject, T)");
-    let builtin = crate::collect_only_rulex!(
+    let builtin = collect_only_rulex!(
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
@@ -79,7 +80,7 @@ fn relations() {
 
   {
     let rule = compile(&parse_arena, &keywords, "exists(func +(T)int)");
-    let builtin = crate::collect_only_rulex!(
+    let builtin = collect_only_rulex!(
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
@@ -126,7 +127,7 @@ fn destructure_prototype() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let rule = compile(&parse_arena, &keywords, "Prot[_, _, T] = moo");
-  let equals = crate::collect_only_rulex!(&rule, NodeRefP::Rulex(IRulexPR::Equals(equals)) => Some(equals));
+  let equals = collect_only_rulex!(&rule, NodeRefP::Rulex(IRulexPR::Equals(equals)) => Some(equals));
   let left = cast!(equals.left, IRulexPR::Components);
   assert_eq!(left.container, ITypePR::PrototypeType);
   let (first_, second_, t_) = expect_3(&left.components);
@@ -153,7 +154,7 @@ fn func() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let rule = compile(&parse_arena, &keywords, "func moo()T");
-  let func = crate::collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
+  let func = collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
   assert_eq!(func.name.as_str(), "moo");
   assert!(func.parameters.is_empty());
   assert_templex_name(func.return_type, "T");
@@ -177,7 +178,7 @@ fn prototype_with_coords() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let rule = compile(&parse_arena, &keywords, "Prot[_, pack(int, bool), _]");
-  let components = crate::collect_only_rulex!(
+  let components = collect_only_rulex!(
     &rule,
     NodeRefP::Rulex(IRulexPR::Components(components)) => Some(components)
   );

@@ -7,6 +7,12 @@ use crate::postparsing::ast::ProgramS;
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::test::post_parser_test_compilation;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use crate::collect_only_snode;
+use crate::postparsing::expressions::FunctionSE;
+use crate::postparsing::expressions::IExpressionSE;
+use crate::postparsing::itemplatatype::CoordTemplataType;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::test::traverse::NodeRefS;
 
 /*
 package dev.vale.postparsing
@@ -227,9 +233,9 @@ fn test_one_anonymous_param_lambda_identifying_runes() {
   let main = bork.lookup_function("main");
   // We dont support regions yet, so scout should filter them out.
   assert_eq!(main.generic_params.len(), 0);
-  let lambda: &crate::postparsing::expressions::FunctionSE = crate::collect_only_snode!(
-    crate::postparsing::test::traverse::NodeRefS::Function(main),
-    crate::postparsing::test::traverse::NodeRefS::Expression(crate::postparsing::expressions::IExpressionSE::Function(
+  let lambda: &FunctionSE = collect_only_snode!(
+    NodeRefS::Function(main),
+    NodeRefS::Expression(IExpressionSE::Function(
       function_se
     )) => Some(function_se)
   );
@@ -242,7 +248,7 @@ fn test_one_anonymous_param_lambda_identifying_runes() {
   let underscore_rune = underscore_param.pattern.coord_rune.unwrap().rune;
   assert_eq!(
     *lambda.function.rune_to_predicted_type.get(&underscore_rune).unwrap(),
-    crate::postparsing::itemplatatype::ITemplataType::CoordTemplataType(crate::postparsing::itemplatatype::CoordTemplataType {})
+    ITemplataType::CoordTemplataType(CoordTemplataType {})
   );
   assert!(lambda.function.generic_params.iter().any(|p| p.rune.rune == underscore_rune));
 }

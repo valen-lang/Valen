@@ -41,6 +41,7 @@ use crate::postparsing::ast::MacroCallS;
 use crate::typing::templata::templata::MutabilityTemplataT;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::typing::ast::ast::PrototypeT;
+use std::iter::once;
 
 /*
 package dev.vale.typing.citizen
@@ -180,7 +181,7 @@ where 's: 't,
                     IStructMemberS::VariadicStructMember(_) => "(unnamed)",
                 };
                 let member_range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(member_range).chain(parent_ranges.iter().copied()).collect();
+                    once(member_range).chain(parent_ranges.iter().copied()).collect();
                 let member_range_t = self.typing_interner.alloc_slice_copy(&member_range_with_parent);
                 let struct_name_s = match &struct_a.name {
                     IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
@@ -720,7 +721,7 @@ where 's: 't,
         let understruct_template_name_t =
             self.typing_interner.intern_lambda_citizen_template_name(LambdaCitizenTemplateNameT {
                 code_location: self.translate_code_location(function_a.range.begin),
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             });
         let understruct_templated_id =
             containing_function_env.id().add_step(
@@ -754,7 +755,7 @@ where 's: 't,
             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                 human_name: self.keywords.drop,
                 code_location: function_a.range.begin,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             }));
 
         // We declare the function into the environment that we use to compile the
@@ -765,7 +766,7 @@ where 's: 't,
             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                 human_name: self.keywords.underscores_call,
                 code_location: function_a.range.begin,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             }));
 
 
@@ -792,7 +793,7 @@ where 's: 't,
                 (drop_func_name_t, IEnvEntryT::Function(drop_function_a_ref)),
                 (understruct_instantiated_name_t, IEnvEntryT::Templata(
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
-                (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { _phantom: std::marker::PhantomData })),
+                (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { _phantom: PhantomData })),
                  IEnvEntryT::Templata(
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
             ]);

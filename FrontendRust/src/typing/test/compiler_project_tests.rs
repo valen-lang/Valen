@@ -29,6 +29,8 @@ use crate::typing::names::names::LambdaCallFunctionNameValT;
 use crate::typing::names::names::StructTemplateNameT;
 use crate::interner::StrI;
 use crate::typing::typing_interner::TypingInterner;
+use std::fs::read_to_string;
+use std::marker::PhantomData;
 /*
 package dev.vale.typing
 
@@ -76,7 +78,7 @@ fn function_has_correct_name() {
             FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
             FunctionNameValT {
@@ -138,7 +140,7 @@ fn lambda_has_correct_name() {
             FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
             FunctionNameValT {
@@ -150,7 +152,7 @@ fn lambda_has_correct_name() {
         let lambda_citizen_template_name = typing_interner.intern_lambda_citizen_template_name(
             LambdaCitizenTemplateNameT {
                 code_location: lambda_loc,
-                _phantom: std::marker::PhantomData,
+                _phantom: PhantomData,
             });
         let lambda_citizen_name = typing_interner.intern_lambda_citizen_name(
             LambdaCitizenNameT { template: lambda_citizen_template_name });
@@ -600,7 +602,7 @@ fn typing_pass_on_roguelike() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source = std::fs::read_to_string("src/tests/programs/roguelike.vale")
+    let source = read_to_string("src/tests/programs/roguelike.vale")
             .expect("could not read src/tests/programs/roguelike.vale");
 
     // Scala-parity: mirror Benchmark.scala — instantiate TypingPassCompilation

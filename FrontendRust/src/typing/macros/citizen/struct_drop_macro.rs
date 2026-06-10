@@ -27,6 +27,7 @@ use crate::postparsing::itemplatatype::*;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
 use crate::higher_typing::ast::FunctionA;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.macros.citizen
@@ -499,7 +500,7 @@ where 's: 't,
 
         let return_expr =
             ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }, _phantom: std::marker::PhantomData })),
+                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }, _phantom: PhantomData })),
             }));
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),

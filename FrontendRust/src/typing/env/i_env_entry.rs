@@ -1,5 +1,9 @@
 use crate::higher_typing::ast::{FunctionA, ImplA, InterfaceA, StructA};
 use crate::typing::templata::templata::ITemplataT;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::mem::discriminant;
+use std::ptr::eq;
 
 /*
 package dev.vale.typing.env
@@ -37,10 +41,10 @@ where 's: 't,
 {
   fn eq(&self, other: &Self) -> bool {
     match (self, other) {
-      (IEnvEntryT::Function(a), IEnvEntryT::Function(b)) => std::ptr::eq(*a, *b),
-      (IEnvEntryT::Struct(a), IEnvEntryT::Struct(b)) => std::ptr::eq(*a, *b),
-      (IEnvEntryT::Interface(a), IEnvEntryT::Interface(b)) => std::ptr::eq(*a, *b),
-      (IEnvEntryT::Impl(a), IEnvEntryT::Impl(b)) => std::ptr::eq(*a, *b),
+      (IEnvEntryT::Function(a), IEnvEntryT::Function(b)) => eq(*a, *b),
+      (IEnvEntryT::Struct(a), IEnvEntryT::Struct(b)) => eq(*a, *b),
+      (IEnvEntryT::Interface(a), IEnvEntryT::Interface(b)) => eq(*a, *b),
+      (IEnvEntryT::Impl(a), IEnvEntryT::Impl(b)) => eq(*a, *b),
       (IEnvEntryT::Templata(a), IEnvEntryT::Templata(b)) => a == b,
       _ => false,
     }
@@ -49,11 +53,11 @@ where 's: 't,
 }
 
 impl<'s, 't> Eq for IEnvEntryT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for IEnvEntryT<'s, 't>
+impl<'s, 't> Hash for IEnvEntryT<'s, 't>
 where 's: 't,
 {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::mem::discriminant(self).hash(state);
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    discriminant(self).hash(state);
     match self {
       IEnvEntryT::Function(a) => (*a as *const FunctionA<'s>).hash(state),
       IEnvEntryT::Struct(a) => (*a as *const StructA<'s>).hash(state),

@@ -1,3 +1,15 @@
+use crate::collect_where_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::TupleTE;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
 /*
 package dev.vale
 //import dev.vale.typingpass.types.{IntT, PackTT}
@@ -19,13 +31,13 @@ fn extract_seq() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -34,14 +46,14 @@ fn extract_seq() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        let matches = crate::collect_where_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::Tuple(crate::typing::ast::expressions::TupleTE { elements: &[_, _], .. }) => Some(())
+        let matches = collect_where_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::Tuple(TupleTE { elements: &[_, _], .. }) => Some(())
         );
         assert_eq!(matches.len(), 1);
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("Expected VonInt(5), got {:?}", other),
     }
 }
@@ -71,13 +83,13 @@ fn nested_seqs() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -86,12 +98,12 @@ fn nested_seqs() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        let matches = crate::collect_where_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::Tuple(crate::typing::ast::expressions::TupleTE {
+        let matches = collect_where_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::Tuple(TupleTE {
                 elements: &[
-                    crate::typing::ast::expressions::ReferenceExpressionTE::Tuple(crate::typing::ast::expressions::TupleTE { elements: &[_, _], .. }),
-                    crate::typing::ast::expressions::ReferenceExpressionTE::Tuple(crate::typing::ast::expressions::TupleTE { elements: &[_, _], .. }),
+                    ReferenceExpressionTE::Tuple(TupleTE { elements: &[_, _], .. }),
+                    ReferenceExpressionTE::Tuple(TupleTE { elements: &[_, _], .. }),
                 ],
                 ..
             }) => Some(())
@@ -99,7 +111,7 @@ fn nested_seqs() {
         assert_eq!(matches.len(), 1);
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 6 }) => {}
+        IVonData::Int(VonInt { value: 6 }) => {}
         other => panic!("Expected VonInt(6), got {:?}", other),
     }
 }
@@ -135,13 +147,13 @@ fn nested_tuples() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -150,12 +162,12 @@ fn nested_tuples() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        let matches = crate::collect_where_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::Tuple(crate::typing::ast::expressions::TupleTE {
+        let matches = collect_where_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::Tuple(TupleTE {
                 elements: &[
                     _,
-                    crate::typing::ast::expressions::ReferenceExpressionTE::Tuple(crate::typing::ast::expressions::TupleTE { elements: &[_, _], .. }),
+                    ReferenceExpressionTE::Tuple(TupleTE { elements: &[_, _], .. }),
                 ],
                 ..
             }) => Some(())
@@ -163,7 +175,7 @@ fn nested_tuples() {
         assert_eq!(matches.len(), 1);
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("Expected VonInt(5), got {:?}", other),
     }
 }

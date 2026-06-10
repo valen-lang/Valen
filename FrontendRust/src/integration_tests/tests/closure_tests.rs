@@ -1,3 +1,62 @@
+use crate::collect_only_tnode;
+use crate::collect_where_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::postparsing::expressions::LocalS;
+use crate::postparsing::names::IVarNameS;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::tests::tests::load_expected;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::ast::citizens::AddressMemberTypeT;
+use crate::typing::ast::citizens::IMemberTypeT;
+use crate::typing::ast::citizens::IStructMemberT;
+use crate::typing::ast::citizens::NormalStructMemberT;
+use crate::typing::ast::citizens::ReferenceMemberTypeT;
+use crate::typing::ast::expressions::AddressExpressionTE;
+use crate::typing::ast::expressions::AddressMemberLookupTE;
+use crate::typing::ast::expressions::ConstructTE;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::ast::expressions::LetNormalTE;
+use crate::typing::ast::expressions::LocalLookupTE;
+use crate::typing::ast::expressions::MutateTE;
+use crate::typing::ast::expressions::ReferenceMemberLookupTE;
+use crate::typing::compiler::Compiler;
+use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
+use crate::typing::env::function_environment_t::ILocalVariableT;
+use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
+use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::LambdaCallFunctionNameT;
+use crate::typing::names::names::LambdaCitizenNameT;
+use crate::typing::names::names::LambdaCitizenTemplateNameT;
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::IRegionT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::MutabilityT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::RegionT;
+use crate::typing::types::types::StructTT;
+use crate::typing::types::types::VariabilityT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::FileCoordinate;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::CodeLocationS;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
+use std::marker::PhantomData;
+use crate::postparsing::expressions::IVariableUseCertainty::NotUsed;
+use crate::postparsing::expressions::IVariableUseCertainty::Used;
 // mig: struct ClosureTests
 pub struct ClosureTests;
 /*
@@ -24,10 +83,10 @@ class ClosureTests extends FunSuite with Matchers {
 #[test]
 pub fn addressibility() {
     let scout_bump = bumpalo::Bump::new();
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
     let calc = |self_borrowed, self_moved, self_mutated, child_borrowed, child_moved, child_mutated| {
-        let local_s = crate::postparsing::expressions::LocalS {
-            var_name: crate::postparsing::names::IVarNameS::CodeVarName(scout_arena.intern_str("x")),
+        let local_s = LocalS {
+            var_name: IVarNameS::CodeVarName(scout_arena.intern_str("x")),
             self_borrowed,
             self_moved,
             self_mutated,
@@ -35,16 +94,15 @@ pub fn addressibility() {
             child_moved,
             child_mutated,
         };
-        let local_a: &crate::postparsing::expressions::LocalS = scout_arena.alloc(local_s);
-        let addressible_if_mutable = crate::typing::compiler::Compiler::determine_if_local_is_addressible(
-            crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable }),
+        let local_a: &LocalS = scout_arena.alloc(local_s);
+        let addressible_if_mutable = Compiler::determine_if_local_is_addressible(
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }),
             local_a);
-        let addressible_if_immutable = crate::typing::compiler::Compiler::determine_if_local_is_addressible(
-            crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }),
+        let addressible_if_immutable = Compiler::determine_if_local_is_addressible(
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
             local_a);
         (addressible_if_mutable, addressible_if_immutable)
     };
-    use crate::postparsing::expressions::IVariableUseCertainty::{NotUsed, Used};
     // If we don't do anything with the variable, it can be just a reference.
     assert_eq!(calc(NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed), (false, false));
     // If we or our children only ever read, it can be just a reference.
@@ -133,12 +191,12 @@ pub fn captured_own_is_borrow() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
     // Here, the scout determined that the closure is only ever borrowing
     // it (during the dereference to get its member) so typingpass doesn't put
     // an address into the closure, it instead puts a reference. Specifically,
@@ -147,14 +205,14 @@ pub fn captured_own_is_borrow() {
     // This means the closure struct contains a borrow reference. This means
     // the environment in the closure has to match this; the environment has
     // to have a borrow reference instead of an owning reference.
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(9);\n  return { m.hp }();\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 9 }) => {}
+        IVonData::Int(VonInt { value: 9 }) => {}
         other => panic!("expected VonInt(9), got {:?}", other),
     }
 }
@@ -192,13 +250,13 @@ fn test_closure_s_local_variables() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -206,26 +264,26 @@ fn test_closure_s_local_variables() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_lambda_in("main");
-    crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
-            variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
-                name: crate::typing::names::names::IVarNameT::ClosureParam(_),
-                variability: crate::typing::types::types::VariabilityT::Final,
-                coord: crate::typing::types::types::CoordT {
-                    ownership: crate::typing::types::types::OwnershipT::Share,
-                    kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT {
-                        id: crate::typing::names::names::IdT {
-                            init_steps: &[crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
-                                template: crate::typing::names::names::FunctionTemplateNameT {
-                                    human_name: crate::interner::StrI("main"), ..
+    collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: IVarNameT::ClosureParam(_),
+                variability: VariabilityT::Final,
+                coord: CoordT {
+                    ownership: OwnershipT::Share,
+                    kind: KindT::Struct(StructTT {
+                        id: IdT {
+                            init_steps: &[INameT::Function(FunctionNameT {
+                                template: FunctionTemplateNameT {
+                                    human_name: StrI("main"), ..
                                 },
                                 template_args: &[],
                                 parameters: &[],
                                 ..
                             })],
-                            local_name: crate::typing::names::names::INameT::LambdaCitizen(crate::typing::names::names::LambdaCitizenNameT {
-                                template: crate::typing::names::names::LambdaCitizenTemplateNameT { .. },
+                            local_name: INameT::LambdaCitizen(LambdaCitizenNameT {
+                                template: LambdaCitizenTemplateNameT { .. },
                             }),
                             ..
                         },
@@ -237,15 +295,15 @@ fn test_closure_s_local_variables() {
             ..
         }) => Some(())
     );
-    crate::collect_only_tnode!(
-        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-        crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
-            variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
-                name: crate::typing::names::names::IVarNameT::TypingPassBlockResultVar(_),
-                variability: crate::typing::types::types::VariabilityT::Final,
-                coord: crate::typing::types::types::CoordT {
-                    ownership: crate::typing::types::types::OwnershipT::Share,
-                    kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+    collect_only_tnode!(
+        NodeRefT::FunctionDefinition(main),
+        NodeRefT::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: IVarNameT::TypingPassBlockResultVar(_),
+                variability: VariabilityT::Final,
+                coord: CoordT {
+                    ownership: OwnershipT::Share,
+                    kind: KindT::Int(IntT { bits: 32 }),
                     ..
                 },
             }),
@@ -293,13 +351,13 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -322,14 +380,14 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
             }).expect("closured_vars_struct_def not found");
 
         let expected_members = vec![
-            crate::typing::ast::citizens::IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
-                name: crate::typing::names::names::IVarNameT::CodeVar(interner.intern_code_var_name(crate::typing::names::names::CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: std::marker::PhantomData })),
-                variability: crate::typing::types::types::VariabilityT::Final,
-                tyype: crate::typing::ast::citizens::IMemberTypeT::Reference(crate::typing::ast::citizens::ReferenceMemberTypeT {
-                    reference: crate::typing::types::types::CoordT {
-                        ownership: crate::typing::types::types::OwnershipT::Share,
-                        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+            IStructMemberT::Normal(NormalStructMemberT {
+                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: PhantomData })),
+                variability: VariabilityT::Final,
+                tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
+                    reference: CoordT {
+                        ownership: OwnershipT::Share,
+                        region: RegionT { region: IRegionT::Default },
+                        kind: KindT::Int(IntT { bits: 32 }),
                     },
                 }),
             }),
@@ -339,42 +397,42 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         let lambda = coutputs.lookup_lambda_in("main");
         // Make sure we're doing a referencememberlookup, since it's a reference member
         // in the closure struct.
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
-            crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(crate::typing::ast::expressions::ReferenceMemberLookupTE {
-                member_name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }),
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
                 ..
             }) => Some(())
         );
 
         // Make sure there's a function that takes in the closured vars struct, and returns an int
-        let function_calls = crate::collect_where_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(coutputs.lookup_function_by_str("main")),
-            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE {
-                callable: p @ crate::typing::ast::ast::PrototypeT { id: crate::typing::names::names::IdT { local_name: crate::typing::names::names::INameT::LambdaCallFunction(_), .. }, .. },
+        let function_calls = collect_where_tnode!(
+            NodeRefT::FunctionDefinition(coutputs.lookup_function_by_str("main")),
+            NodeRefT::FunctionCall(FunctionCallTE {
+                callable: p @ PrototypeT { id: IdT { local_name: INameT::LambdaCallFunction(_), .. }, .. },
                 ..
             }) => Some(*p)
         );
         assert_eq!(function_calls.len(), 1);
-        let prototype: crate::typing::ast::ast::PrototypeT<'_, '_> = function_calls[0];
-        let lambda_call_name: &crate::typing::names::names::LambdaCallFunctionNameT = match prototype.id.local_name {
-            crate::typing::names::names::INameT::LambdaCallFunction(n) => n,
+        let prototype: PrototypeT<'_, '_> = function_calls[0];
+        let lambda_call_name: &LambdaCallFunctionNameT = match prototype.id.local_name {
+            INameT::LambdaCallFunction(n) => n,
             _ => panic!("expected LambdaCallFunction local_name"),
         };
         let params = lambda_call_name.parameters;
         let return_type = prototype.return_type;
         match params.first().unwrap() {
-            crate::typing::types::types::CoordT {
-                ownership: crate::typing::types::types::OwnershipT::Share,
-                kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT {
-                    id: crate::typing::names::names::IdT {
-                        init_steps: &[crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
-                            template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("main"), .. },
+            CoordT {
+                ownership: OwnershipT::Share,
+                kind: KindT::Struct(StructTT {
+                    id: IdT {
+                        init_steps: &[INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("main"), .. },
                             template_args: &[],
                             parameters: &[],
                             ..
                         })],
-                        local_name: crate::typing::names::names::INameT::LambdaCitizen(_),
+                        local_name: INameT::LambdaCitizen(_),
                         ..
                     },
                     ..
@@ -383,26 +441,26 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
             } => {}
             other => panic!("expected lambda struct param, got {:?}", other),
         }
-        assert_eq!(return_type, crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
-            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+        assert_eq!(return_type, CoordT {
+            ownership: OwnershipT::Share,
+            region: RegionT { region: IRegionT::Default },
+            kind: KindT::Int(IntT { bits: 32 }),
         });
 
         // Make sure we make it with a function pointer and a constructed vars struct
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::Construct(crate::typing::ast::expressions::ConstructTE {
-                struct_tt: crate::typing::types::types::StructTT {
-                    id: crate::typing::names::names::IdT {
-                        init_steps: &[crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
-                            template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("main"), .. },
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::Construct(ConstructTE {
+                struct_tt: StructTT {
+                    id: IdT {
+                        init_steps: &[INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("main"), .. },
                             template_args: &[],
                             parameters: &[],
                             ..
                         })],
-                        local_name: crate::typing::names::names::INameT::LambdaCitizen(_),
+                        local_name: INameT::LambdaCitizen(_),
                         ..
                     },
                     ..
@@ -412,17 +470,17 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
         );
 
         // Make sure we call the function somewhere
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::FunctionCall(_) => Some(())
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::FunctionCall(_) => Some(())
         );
 
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
-            crate::typing::test::traverse::NodeRefT::LocalLookup(crate::typing::ast::expressions::LocalLookupTE {
-                local_variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(crate::typing::env::function_environment_t::ReferenceLocalVariableT {
-                    name: crate::typing::names::names::IVarNameT::ClosureParam(_),
-                    variability: crate::typing::types::types::VariabilityT::Final,
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::LocalLookup(LocalLookupTE {
+                local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                    name: IVarNameT::ClosureParam(_),
+                    variability: VariabilityT::Final,
                     ..
                 }),
                 ..
@@ -431,7 +489,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
     }
 
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
 }
@@ -504,13 +562,13 @@ fn mutates_from_inside_a_closure() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -525,14 +583,14 @@ fn mutates_from_inside_a_closure() {
         let closure_struct = closure.header.params.first().unwrap().tyype.kind.expect_struct();
         let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
         let expected_members = vec![
-            crate::typing::ast::citizens::IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
-                name: crate::typing::names::names::IVarNameT::CodeVar(interner.intern_code_var_name(crate::typing::names::names::CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: std::marker::PhantomData })),
-                variability: crate::typing::types::types::VariabilityT::Varying,
-                tyype: crate::typing::ast::citizens::IMemberTypeT::Address(crate::typing::ast::citizens::AddressMemberTypeT {
-                    reference: crate::typing::types::types::CoordT {
-                        ownership: crate::typing::types::types::OwnershipT::Share,
-                        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+            IStructMemberT::Normal(NormalStructMemberT {
+                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: PhantomData })),
+                variability: VariabilityT::Varying,
+                tyype: IMemberTypeT::Address(AddressMemberTypeT {
+                    reference: CoordT {
+                        ownership: OwnershipT::Share,
+                        region: RegionT { region: IRegionT::Default },
+                        kind: KindT::Int(IntT { bits: 32 }),
                     },
                 }),
             }),
@@ -540,14 +598,14 @@ fn mutates_from_inside_a_closure() {
         assert_eq!(closure_struct_def.members, expected_members.as_slice());
 
         let lambda = coutputs.lookup_lambda_in("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(lambda),
-            crate::typing::test::traverse::NodeRefT::Mutate(crate::typing::ast::expressions::MutateTE {
-                destination_expr: crate::typing::ast::expressions::AddressExpressionTE::AddressMemberLookup(crate::typing::ast::expressions::AddressMemberLookupTE {
-                    member_name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }),
-                    result_type2: crate::typing::types::types::CoordT {
-                        ownership: crate::typing::types::types::OwnershipT::Share,
-                        kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32 }),
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(lambda),
+            NodeRefT::Mutate(MutateTE {
+                destination_expr: AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                    member_name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("x"), .. }),
+                    result_type2: CoordT {
+                        ownership: OwnershipT::Share,
+                        kind: KindT::Int(IntT { bits: 32 }),
                         ..
                     },
                     ..
@@ -557,11 +615,11 @@ fn mutates_from_inside_a_closure() {
         );
 
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
-                variable: crate::typing::env::function_environment_t::ILocalVariableT::Addressible(crate::typing::env::function_environment_t::AddressibleLocalVariableT {
-                    variability: crate::typing::types::types::VariabilityT::Varying,
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::LetNormal(LetNormalTE {
+                variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
+                    variability: VariabilityT::Varying,
                     ..
                 }),
                 ..
@@ -570,7 +628,7 @@ fn mutates_from_inside_a_closure() {
     }
 
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
 }
@@ -618,20 +676,20 @@ pub fn mutates_from_inside_a_closure_inside_a_closure() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "exported func main() int { x = 4; { { set x = x + 1; }(); }(); return x; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 5 }) => {}
+        IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
     }
 }
@@ -651,20 +709,20 @@ fn read_from_inside_a_closure_inside_a_closure() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
@@ -690,14 +748,14 @@ pub fn mutable_lambda() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/lambdas/lambdamut.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/lambdas/lambdamut.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -707,12 +765,12 @@ pub fn mutable_lambda() {
         let coutputs = compile.expect_compiler_outputs();
         let closure_structs: Vec<_> = coutputs.structs.iter().filter(|s| matches!(
             s.instantiated_citizen.id.local_name,
-            crate::typing::names::names::INameT::LambdaCitizen(crate::typing::names::names::LambdaCitizenNameT {
-                template: crate::typing::names::names::LambdaCitizenTemplateNameT {
-                    code_location: crate::utils::range::CodeLocationS {
-                        file: crate::utils::code_hierarchy::FileCoordinate {
-                            package_coord: crate::utils::code_hierarchy::PackageCoordinate {
-                                module: crate::interner::StrI("test"),
+            INameT::LambdaCitizen(LambdaCitizenNameT {
+                template: LambdaCitizenTemplateNameT {
+                    code_location: CodeLocationS {
+                        file: FileCoordinate {
+                            package_coord: PackageCoordinate {
+                                module: StrI("test"),
                                 packages,
                             },
                             ..
@@ -726,10 +784,10 @@ pub fn mutable_lambda() {
         )).collect();
         assert_eq!(closure_structs.len(), 1);
         let closure_struct = closure_structs[0];
-        assert!(matches!(closure_struct.mutability, crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable })));
+        assert!(matches!(closure_struct.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })));
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }

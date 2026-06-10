@@ -6,6 +6,19 @@ use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::code_hierarchy::{self, IPackageResolver};
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::solver::solver::FailedSolve;
+use crate::solver::solver::ISolverError;
+use crate::solver::solver::RuleError;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::infer_compiler::IConclusionResolveError;
+use crate::typing::infer_compiler::IResolvingError;
+use crate::typing::overload_resolver::IFindFunctionFailureReason;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::OwnershipT;
 
 // mig: struct AfterRegionsErrorTests
 pub struct AfterRegionsErrorTests {}
@@ -205,9 +218,9 @@ fn report_when_downcasting_between_unrelated_types() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.as.*;\nimport panicutils.*;\n\ninterface ISpaceship { }\nstruct Spoon { }\n\nexported func main() {\n  ship = __pretend<ISpaceship>();\n  ship.as<Spoon>();\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -250,9 +263,9 @@ fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\ninterface AFunction1<P Ref> {\n  func __call(virtual this &AFunction1<P>, a P) int;\n}\nexported func main() {\n  arr = AFunction1<int>((_) => { true });\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -264,26 +277,26 @@ fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     // investigations/family1_4_body_result_doesnt_match_unreachable.md.
     match compile.get_compiler_outputs() {
         Err(ICompileErrorT::CouldntFindFunctionToCallT { fff, .. }) => {
-            let rejection_reasons: Vec<&crate::typing::overload_resolver::IFindFunctionFailureReason<'_, '_>> =
+            let rejection_reasons: Vec<&IFindFunctionFailureReason<'_, '_>> =
                 fff.rejected_callee_to_reason.iter().map(|p| &p.1).collect();
             match rejection_reasons.as_slice() {
-                [crate::typing::overload_resolver::IFindFunctionFailureReason::FindFunctionResolveFailure {
-                    reason: crate::typing::infer_compiler::IResolvingError::ResolvingResolveConclusionError(boxed),
+                [IFindFunctionFailureReason::FindFunctionResolveFailure {
+                    reason: IResolvingError::ResolvingResolveConclusionError(boxed),
                 }] => {
                     match boxed.as_ref() {
-                        crate::typing::infer_compiler::IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
-                            expected_return_type: crate::typing::types::types::CoordT {
-                                ownership: crate::typing::types::types::OwnershipT::Share,
-                                kind: crate::typing::types::types::KindT::Int(_),
+                        IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
+                            expected_return_type: CoordT {
+                                ownership: OwnershipT::Share,
+                                kind: KindT::Int(_),
                                 ..
                             },
                             actual: actual_prototype,
                             ..
                         } => {
                             match actual_prototype.return_type {
-                                crate::typing::types::types::CoordT {
-                                    ownership: crate::typing::types::types::OwnershipT::Share,
-                                    kind: crate::typing::types::types::KindT::Bool(_),
+                                CoordT {
+                                    ownership: OwnershipT::Share,
+                                    kind: KindT::Bool(_),
                                     ..
                                 } => {}
                                 other => panic!("expected CoordT(Share,_,Bool), got {:?}", other),
@@ -361,9 +374,9 @@ fn detects_sending_non_citizen_to_citizen() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\n\ninterface MyInterface {}\nfunc moo<T>(a T)\nwhere implements(T, MyInterface), func drop(T)void\n{ }\nexported func main() {\n  moo(7);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -371,19 +384,19 @@ fn detects_sending_non_citizen_to_citizen() {
     match compile.get_compiler_outputs() {
         Err(ICompileErrorT::CouldntFindFunctionToCallT { fff, .. }) => {
             match &fff.rejected_callee_to_reason[0].1 {
-                crate::typing::overload_resolver::IFindFunctionFailureReason::FindFunctionResolveFailure {
-                    reason: crate::typing::infer_compiler::IResolvingError::ResolvingSolveFailedOrIncomplete(crate::solver::solver::FailedSolve {
-                        error: crate::solver::solver::ISolverError::RuleError(crate::solver::solver::RuleError {
-                            err: crate::typing::infer::compiler_solver::ITypingPassSolverError::BadIsaSubKind { kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32, .. }) },
+                IFindFunctionFailureReason::FindFunctionResolveFailure {
+                    reason: IResolvingError::ResolvingSolveFailedOrIncomplete(FailedSolve {
+                        error: ISolverError::RuleError(RuleError {
+                            err: ITypingPassSolverError::BadIsaSubKind { kind: KindT::Int(IntT { bits: 32, .. }) },
                             ..
                         }),
                         ..
                     }),
                 } => {}
-                crate::typing::overload_resolver::IFindFunctionFailureReason::InferFailure {
-                    reason: crate::solver::solver::FailedSolve {
-                        error: crate::solver::solver::ISolverError::RuleError(crate::solver::solver::RuleError {
-                            err: crate::typing::infer::compiler_solver::ITypingPassSolverError::SendingNonCitizen { kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT { bits: 32, .. }) },
+                IFindFunctionFailureReason::InferFailure {
+                    reason: FailedSolve {
+                        error: ISolverError::RuleError(RuleError {
+                            err: ITypingPassSolverError::SendingNonCitizen { kind: KindT::Int(IntT { bits: 32, .. }) },
                             ..
                         }),
                         ..
@@ -434,9 +447,9 @@ fn accidentally_mention_type_rune() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc moo<Z>(z &Z) {\n  drop(Z);\n}\n\nexported func main() void {\n  moo(4);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -480,9 +493,9 @@ fn call_bound_with_wrong_arguments() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc add<X>(i int, x &X) where func str(&X)str {\n  str(true);\n}\n\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -491,11 +504,11 @@ fn call_bound_with_wrong_arguments() {
         Err(ICompileErrorT::CouldntFindFunctionToCallT { fff, .. }) => {
             assert!(fff.rejected_callee_to_reason.len() >= 1);
             match &fff.rejected_callee_to_reason[0].1 {
-                crate::typing::overload_resolver::IFindFunctionFailureReason::SpecificParamDoesntSend {
+                IFindFunctionFailureReason::SpecificParamDoesntSend {
                     index: 0,
-                    argument: crate::typing::types::types::CoordT {
-                        ownership: crate::typing::types::types::OwnershipT::Share,
-                        kind: crate::typing::types::types::KindT::Bool(_),
+                    argument: CoordT {
+                        ownership: OwnershipT::Share,
+                        kind: KindT::Bool(_),
                         ..
                     },
                     ..
@@ -572,9 +585,9 @@ fn ambiguous_call() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc add<X>(i int, x &X) { }\nfunc add<X>(x &X, i int) { }\n\nexported func main() void {\n  add(3, 4);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -621,9 +634,9 @@ fn cant_make_non_weakable_extend_a_weakable() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nweakable interface IUnit {}\nstruct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -664,9 +677,9 @@ fn cant_make_weakable_extend_a_non_weakable() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\ninterface IUnit {}\nweakable struct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -708,9 +721,9 @@ fn cant_make_weak_ref_to_non_weakable() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nstruct Muta { hp int; }\nexported func main() int {\n  m = Muta(7);\n  w = &&m;\n  return m.hp;\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -758,9 +771,9 @@ fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nstruct MyStruct<K, V, H> { }\n\nfunc make<K, V, H>(h H) MyStruct<K, V, H>\nwhere func drop(H)void {\n  return MyStruct<K, V, H>();\n}\n\nexported func main() int {\n  m = make(7);\n  return 0;\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,

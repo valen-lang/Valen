@@ -13,6 +13,12 @@ use crate::typing::types::types::*;
 use crate::utils::range::RangeS;
 use crate::scout_arena::ScoutArena;
 use crate::higher_typing::ast::CitizenA;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Result;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.templata
@@ -326,7 +332,7 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't> {
-  pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+  pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
@@ -338,7 +344,7 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTemplateTemplataT<'s, 't> {
-  pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+  pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
@@ -364,8 +370,8 @@ impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
   /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<'s, 't> Hash for FunctionTemplataT<'s, 't> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
     self.function.range.hash(state);
     self.function.name.hash(state);
   }
@@ -852,8 +858,8 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
 */
 // FunctionHeaderT doesn't derive Debug yet; render by content (id) for @IIIOZ
 // cross-run determinism — pointer addresses vary across runs due to ASLR.
-impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'s, 't> Debug for ExternFunctionTemplataT<'s, 't> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     f.debug_struct("ExternFunctionTemplataT")
       .field("header_id", &self.header.id)
       .finish()

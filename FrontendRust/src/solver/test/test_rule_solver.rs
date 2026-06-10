@@ -9,6 +9,9 @@ import scala.collection.immutable.Map
 use super::test_rules::*;
 use crate::solver::{ISolverError, RuleError, SimpleSolverState};
 use crate::scout_arena::ScoutArena;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 
 // mig: struct TestRuleSolver
 pub struct TestRuleSolver<'ctx, 's> {
@@ -49,7 +52,7 @@ pub fn complex_solve_impl(
         v.dedup();
         v
     };
-    let mut new_conclusions: std::collections::HashMap<i64, String> = std::collections::HashMap::new();
+    let mut new_conclusions: HashMap<i64, String> = HashMap::new();
     for receiver in receiver_runes {
         let receive_rules: Vec<&TestRule> = unsolved_rules
             .iter()
@@ -103,7 +106,7 @@ pub fn complex_solve_impl(
         }
     }
     // Complex solve only produces conclusions, not solved/new rules.
-    solver_state.commit_step::<String>(true, vec![], new_conclusions, vec![], std::collections::HashSet::new())?;
+    solver_state.commit_step::<String>(true, vec![], new_conclusions, vec![], HashSet::new())?;
     Ok(())
 }
 /*
@@ -145,21 +148,21 @@ pub fn solve_impl(
         TestRule::Equals(Equals { left_rune, right_rune }) => {
             match solver_state.get_conclusion(left_rune) {
                 Some(left) => {
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*right_rune, left)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*right_rune, left)].into_iter().collect(), vec![], HashSet::new())
                 }
                 None => {
                     let right = solver_state
                         .get_conclusion(right_rune)
                         .expect("right rune must have conclusion");
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*left_rune, right)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*left_rune, right)].into_iter().collect(), vec![], HashSet::new())
                 }
             }
         }
         TestRule::Lookup(Lookup { rune, name }) => {
-            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, name.clone())].into_iter().collect(), vec![], std::collections::HashSet::new())
+            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, name.clone())].into_iter().collect(), vec![], HashSet::new())
         }
         TestRule::Literal(Literal { rune, value }) => {
-            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, value.clone())].into_iter().collect(), vec![], std::collections::HashSet::new())
+            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, value.clone())].into_iter().collect(), vec![], HashSet::new())
         }
         TestRule::OneOf(OneOf { coord_rune, possible_values }) => {
             let literal = solver_state
@@ -168,10 +171,10 @@ pub fn solve_impl(
             if !possible_values.contains(&literal) {
                 return Err(ISolverError::RuleError(RuleError {
                     err: "conflict!".to_string(),
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 }));
             }
-            solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![], std::collections::HashSet::new())
+            solver_state.commit_step::<String>(false, vec![rule_index],HashMap::new(), vec![], HashSet::new())
         }
         TestRule::CoordComponents(CoordComponents {
             coord_rune,
@@ -182,7 +185,7 @@ pub fn solve_impl(
                 Some(combined) => {
                     let parts: Vec<&str> = combined.split('/').collect();
                     let (ownership, kind) = (parts[0].to_string(), parts[1].to_string());
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*ownership_rune, ownership), (*kind_rune, kind)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*ownership_rune, ownership), (*kind_rune, kind)].into_iter().collect(), vec![], HashSet::new())
                 }
                 None => {
                     let ownership = solver_state
@@ -192,7 +195,7 @@ pub fn solve_impl(
                         .get_conclusion(kind_rune)
                         .expect("kind required");
                     let combined = format!("{}/{}", ownership, kind);
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*coord_rune, combined)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*coord_rune, combined)].into_iter().collect(), vec![], HashSet::new())
                 }
             }
         }
@@ -203,10 +206,10 @@ pub fn solve_impl(
             match solver_state.get_conclusion(result_rune) {
                 Some(result) => {
                     let parts: Vec<&str> = result.split(',').collect();
-                    let conclusions: std::collections::HashMap<i64, String> = member_runes.iter().zip(parts.iter())
+                    let conclusions: HashMap<i64, String> = member_runes.iter().zip(parts.iter())
                         .map(|(rune, part)| (*rune, (*part).to_string()))
                         .collect();
-                    solver_state.commit_step::<String>(false, vec![rule_index],conclusions, vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],conclusions, vec![], HashSet::new())
                 }
                 None => {
                     let result: String = member_runes
@@ -218,7 +221,7 @@ pub fn solve_impl(
                         })
                         .collect::<Vec<_>>()
                         .join(",");
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![], HashSet::new())
                 }
             }
         }
@@ -235,11 +238,11 @@ pub fn solve_impl(
                     let prefix = format!("{}:", template_name);
                     assert!(result.starts_with(&prefix));
                     let arg = result[prefix.len()..].to_string();
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*arg_rune, arg)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*arg_rune, arg)].into_iter().collect(), vec![], HashSet::new())
                 }
                 (_, Some(template_name), Some(arg)) => {
                     let result = format!("{}:{}", template_name, arg);
-                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![], HashSet::new())
                 }
                 _ => panic!("Call rule needs name+arg or result+name"),
             }
@@ -256,9 +259,9 @@ pub fn solve_impl(
                     sub_rune: *sender_rune,
                     super_rune: *receiver_rune,
                 });
-                solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![new_rule], std::collections::HashSet::new())
+                solver_state.commit_step::<String>(false, vec![rule_index],HashMap::new(), vec![new_rule], HashSet::new())
             } else {
-                solver_state.commit_step::<String>(false, vec![rule_index],[(*sender_rune, receiver)].into_iter().collect(), vec![], std::collections::HashSet::new())
+                solver_state.commit_step::<String>(false, vec![rule_index],[(*sender_rune, receiver)].into_iter().collect(), vec![], HashSet::new())
             }
         }
         TestRule::Implements(Implements { sub_rune, super_rune }) => {
@@ -275,7 +278,7 @@ pub fn solve_impl(
                 ("Flamethrower:int", "IWeapon:int") => {},
                 _ => panic!("Unimplemented Implements case: {} -> {}", sub, suuper),
             }
-            solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![], std::collections::HashSet::new())
+            solver_state.commit_step::<String>(false, vec![rule_index],HashMap::new(), vec![], HashSet::new())
         }
     }
 }
@@ -459,22 +462,22 @@ fn solve_receives(
     any_unknown_constraints: bool,
 ) -> Option<String> {
     let sender_templates: Vec<String> = senders.iter().map(|s| self.get_template(s)).collect();
-    assert!(call_templates.iter().collect::<std::collections::HashSet<_>>().len() <= 1);
+    assert!(call_templates.iter().collect::<HashSet<_>>().len() <= 1);
     let sender_ancestor_lists: Vec<Vec<String>> = sender_templates
         .iter()
         .map(|s| self.get_ancestors(s, true))
         .collect();
-    let common_ancestors: std::collections::HashSet<String> = sender_ancestor_lists
+    let common_ancestors: HashSet<String> = sender_ancestor_lists
         .iter()
-        .fold(None, |acc: Option<std::collections::HashSet<String>>, list| {
-            let set: std::collections::HashSet<String> = list.iter().cloned().collect();
+        .fold(None, |acc: Option<HashSet<String>>, list| {
+            let set: HashSet<String> = list.iter().cloned().collect();
             Some(match acc {
                 None => set,
                 Some(a) => a.intersection(&set).cloned().collect(),
             })
         })
         .unwrap_or_default();
-    let call_templates_set: std::collections::HashSet<String> =
+    let call_templates_set: HashSet<String> =
         call_templates.iter().cloned().collect();
     let common_ancestors_call_constrained = if call_templates_set.is_empty() {
         common_ancestors
@@ -527,9 +530,9 @@ fn solve_receives(
 // mig: fn narrow
 fn narrow(
     &self,
-    ancestor_template_unnarrowed: std::collections::HashSet<String>,
+    ancestor_template_unnarrowed: HashSet<String>,
     any_unknown_constraints: bool,
-) -> std::collections::HashSet<String> {
+) -> HashSet<String> {
     let ancestor_template = if ancestor_template_unnarrowed.len() > 1 {
         if any_unknown_constraints {
             panic!("narrow: any_unknown_constraints with multiple ancestors");

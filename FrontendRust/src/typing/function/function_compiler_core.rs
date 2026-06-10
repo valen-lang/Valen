@@ -14,6 +14,7 @@ use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::utils::range::RangeS;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.function
@@ -107,12 +108,11 @@ where 's: 't,
         params2: &[ParameterT<'s, 't>],
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // fullEnv.id match { case IdT(...drop...) => vpass(); case _ => }
         // (debug pattern match, not functionally needed)
 
         // val life = LocationInFunctionEnvironmentT(Vector())
-        let life = LocationInFunctionEnvironmentT { path: self.typing_interner.alloc_slice_from_vec(Vec::new()), _phantom: std::marker::PhantomData };
+        let life = LocationInFunctionEnvironmentT { path: self.typing_interner.alloc_slice_from_vec(Vec::new()), _phantom: PhantomData };
 
         // val isDestructor = params2.nonEmpty && params2.head.tyype.ownership == OwnT && ...
         let is_destructor =
@@ -587,7 +587,6 @@ where 's: 't,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // val (maybeEvaluatedRetCoord, body2) =
         //   bodyCompiler.declareAndEvaluateFunctionBody(
         //     fullEnvSnapshot, coutputs, life, callRange, callLocation,
@@ -781,7 +780,7 @@ where 's: 't,
                 // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
                 let extern_template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
                     code_loc: range.begin,
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 });
                 let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
                     template: extern_template_name,

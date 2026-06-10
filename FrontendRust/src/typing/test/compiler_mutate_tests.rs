@@ -20,6 +20,9 @@ use std::collections::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::StructNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing
@@ -77,7 +80,7 @@ fn test_mutating_a_local_var() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Mutate(MutateTE {
             destination_expr: AddressExpressionTE::LocalLookup(LocalLookupTE {
@@ -95,7 +98,7 @@ fn test_mutating_a_local_var() {
         }) => Some(())
     );
 
-    let lookup: &LocalLookupTE = crate::collect_only_tnode!(
+    let lookup: &LocalLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::LocalLookup(l) => Some(l)
     );
@@ -139,7 +142,7 @@ fn test_mutable_member_permission() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    let lookup: &ReferenceMemberLookupTE = crate::collect_only_tnode!(
+    let lookup: &ReferenceMemberLookupTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ReferenceMemberLookup(l) => Some(l)
     );
@@ -187,7 +190,7 @@ fn local_set_upcasts() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\ninterface IXOption<T Ref> where func drop(T)void { }\nstruct XSome<T Ref> where func drop(T)void { value T; }\nimpl<T Ref> IXOption<T> for XSome<T> where func drop(T)void;\nstruct XNone<T Ref> where func drop(T)void { }\nimpl<T Ref> IXOption<T> for XNone<T> where func drop(T)void;\n\nexported func main() {\n  m IXOption<int> = XNone<int>();\n  set m = XSome(6);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -196,7 +199,7 @@ fn local_set_upcasts() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Mutate(MutateTE {
             source_expr: ReferenceExpressionTE::Upcast(_),
@@ -241,7 +244,7 @@ fn expr_set_upcasts() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\ninterface IXOption<T Ref> where func drop(T)void { }\nstruct XSome<T Ref> where func drop(T)void { value T; }\nimpl<T Ref> IXOption<T> for XSome<T>;\nstruct XNone<T Ref> where func drop(T)void { }\nimpl<T Ref> IXOption<T> for XNone<T>;\n\nstruct Marine {\n  weapon! IXOption<int>;\n}\nexported func main() {\n  m = Marine(XNone<int>());\n  set m.weapon = XSome(6);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -250,7 +253,7 @@ fn expr_set_upcasts() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Mutate(MutateTE {
             source_expr: ReferenceExpressionTE::Upcast(_),
@@ -412,7 +415,7 @@ fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nexported func main() int {\n  arr = #[#10]({_});\n  set arr[4] = 10;\n  return 73;\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -552,7 +555,7 @@ fn can_mutate_an_element_in_a_runtime_sized_array() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nexported func main() int {\n  arr = Array<mut, int>(3);\n  arr.push(0);\n  arr.push(1);\n  arr.push(2);\n  set arr[1] = 10;\n  return 73;\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -643,7 +646,7 @@ fn humanize_errors() {
     let line_containing = |x| line_containing(&filenames_and_sources, &x);
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: PhantomData });
     let firefly_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
     let firefly_id = typing_interner.intern_id(IdValT {
@@ -654,7 +657,7 @@ fn humanize_errors() {
     let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: PhantomData });
     let serenity_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
     let serenity_id = typing_interner.intern_id(IdValT {
@@ -665,7 +668,7 @@ fn humanize_errors() {
     let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: serenity_kind };
 
     let myfunc_template_name = typing_interner.intern_function_template_name(
-        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
+        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: PhantomData });
     let myfunc_func_name = typing_interner.intern_function_name(
         FunctionNameValT { template: myfunc_template_name, template_args: &[], parameters: &[] });
     let myfunc_id = typing_interner.intern_id(IdValT {
@@ -701,17 +704,17 @@ fn humanize_errors() {
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
-    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: std::marker::PhantomData });
+    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantReconcileBranchesResults { range: tz_slice, then_result: firefly_coord, else_result: serenity_coord }).is_empty());
-    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: std::marker::PhantomData });
+    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantUseUnstackifiedLocal { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::FunctionAlreadyExists { old_function_range: tz, new_function_range: tz, signature: *myfunc_id }).is_empty());
-    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: std::marker::PhantomData });
+    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: PhantomData });
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMutateFinalMember { range: tz_slice, struct_: *serenity_tt, member_name: IVarNameT::CodeVar(bork_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,

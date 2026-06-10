@@ -14,6 +14,20 @@ use crate::instantiating::ast::names::IVarNameI;
 use crate::instantiating::ast::types::{cI, CoordI, OwnershipI, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
+use crate::final_ast::instructions::LocalLoadH;
+use crate::final_ast::instructions::MemberLoadH;
+use crate::final_ast::instructions::RuntimeSizedArrayLoadH;
+use crate::final_ast::instructions::StaticSizedArrayLoadH;
+use crate::final_ast::types::KindHT;
+use crate::final_ast::types::LocationH;
+use crate::final_ast::types::OwnershipH;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::add_step;
+use crate::instantiating::ast::types::KindIT;
+use crate::simplifying::conversions::evaluate_ownership;
+use crate::simplifying::let_hammer::BOX_MEMBER_INDEX;
+use crate::instantiating::ast::ast::ILocalVariableI;
+use crate::instantiating::ast::expressions::AddressExpressionIE;
 
 /*
 package dev.vale.simplifying
@@ -45,8 +59,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         load2: &SoftLoadIE<'s, 'i, cI>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        use crate::instantiating::ast::expressions::{AddressExpressionIE, LocalLookupIE};
-        use crate::instantiating::ast::ast::ILocalVariableI;
         let SoftLoadIE { expr: source_expr2, target_ownership, .. } = *load2;
         let (loaded_access_h, source_deferreds) = match source_expr2 {
             AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::ReferenceLocalVariableI(r), .. }) => {
@@ -195,24 +207,24 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
         let _ = result_type2;
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let target_ownership = evaluate_ownership(target_ownership_i);
         let (array_result_line, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
         let array_access = array_result_line.expect_runtime_sized_array_access();
         let (index_expr_result_line, index_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
         let index_access = index_expr_result_line.expect_int_access();
-        assert!(target_ownership == crate::final_ast::types::OwnershipH::MutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableShareH || target_ownership == crate::final_ast::types::OwnershipH::MutableShareH);
+        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::ImmutableBorrowH || target_ownership == OwnershipH::ImmutableShareH || target_ownership == OwnershipH::MutableShareH);
         let rsa = hamuts.get_runtime_sized_array(array_access.result_type().kind.expect_runtime_sized_array_ht());
         let expected_element_type = rsa.element_type;
         let location = match (target_ownership, expected_element_type.location) {
-            (crate::final_ast::types::OwnershipH::ImmutableBorrowH, _) => crate::final_ast::types::LocationH::YonderH,
-            (crate::final_ast::types::OwnershipH::MutableBorrowH, _) => crate::final_ast::types::LocationH::YonderH,
-            (crate::final_ast::types::OwnershipH::OwnH, location) => location,
-            (crate::final_ast::types::OwnershipH::MutableShareH, location) => location,
-            (crate::final_ast::types::OwnershipH::ImmutableShareH, location) => location,
+            (OwnershipH::ImmutableBorrowH, _) => LocationH::YonderH,
+            (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
+            (OwnershipH::OwnH, location) => location,
+            (OwnershipH::MutableShareH, location) => location,
+            (OwnershipH::ImmutableShareH, location) => location,
             _ => panic!("translate_mundane_runtime_sized_array_load: unexpected ownership"),
         };
-        let result_type = crate::final_ast::types::CoordH { ownership: target_ownership, location, kind: expected_element_type.kind };
-        let loaded_node_h = ExpressionH::RuntimeSizedArrayLoadH(self.interner.alloc(crate::final_ast::instructions::RuntimeSizedArrayLoadH {
+        let result_type = CoordH { ownership: target_ownership, location, kind: expected_element_type.kind };
+        let loaded_node_h = ExpressionH::RuntimeSizedArrayLoadH(self.interner.alloc(RuntimeSizedArrayLoadH {
             array_expression: array_access,
             index_expression: index_access,
             target_ownership,
@@ -292,22 +304,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         target_ownership_i: OwnershipI,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let target_ownership = evaluate_ownership(target_ownership_i);
         let (array_result_line, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
         let array_access = array_result_line.expect_static_sized_array_access();
         let (index_expr_result_line, index_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(index_expr2));
         let index_access = index_expr_result_line.expect_int_access();
-        assert!(target_ownership == crate::final_ast::types::OwnershipH::MutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableBorrowH || target_ownership == crate::final_ast::types::OwnershipH::MutableShareH || target_ownership == crate::final_ast::types::OwnershipH::ImmutableShareH);
+        assert!(target_ownership == OwnershipH::MutableBorrowH || target_ownership == OwnershipH::ImmutableBorrowH || target_ownership == OwnershipH::MutableShareH || target_ownership == OwnershipH::ImmutableShareH);
         let ssa = hamuts.get_static_sized_array(array_access.result_type().kind.expect_static_sized_array_ht());
         let expected_element_type = ssa.element_type;
         let location = match (target_ownership, expected_element_type.location) {
-            (crate::final_ast::types::OwnershipH::MutableBorrowH, _) | (crate::final_ast::types::OwnershipH::ImmutableBorrowH, _) => crate::final_ast::types::LocationH::YonderH,
-            (crate::final_ast::types::OwnershipH::OwnH, location) => location,
-            (crate::final_ast::types::OwnershipH::ImmutableShareH, location) | (crate::final_ast::types::OwnershipH::MutableShareH, location) => location,
+            (OwnershipH::MutableBorrowH, _) | (OwnershipH::ImmutableBorrowH, _) => LocationH::YonderH,
+            (OwnershipH::OwnH, location) => location,
+            (OwnershipH::ImmutableShareH, location) | (OwnershipH::MutableShareH, location) => location,
             _ => panic!("translate_mundane_static_sized_array_load: unexpected ownership"),
         };
-        let result_type = crate::final_ast::types::CoordH { ownership: target_ownership, location, kind: expected_element_type.kind };
-        let loaded_node_h = ExpressionH::StaticSizedArrayLoadH(self.interner.alloc(crate::final_ast::instructions::StaticSizedArrayLoadH {
+        let result_type = CoordH { ownership: target_ownership, location, kind: expected_element_type.kind };
+        let loaded_node_h = ExpressionH::StaticSizedArrayLoadH(self.interner.alloc(StaticSizedArrayLoadH {
             array_expression: array_access,
             index_expression: index_access,
             target_ownership,
@@ -390,7 +402,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         let (struct_result_line, struct_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
-            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            KindIT::StructIT(sr) => sr,
             _ => panic!("translate_addressible_member_load: non-struct kind"),
         };
         let struct_def_i = self.lookup_struct(hinputs, hamuts, *struct_it);
@@ -401,28 +413,28 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let boxed_type2 = member2.tyype.expect_address_member().reference;
         let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
         let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
-        let box_in_struct_coord = crate::final_ast::types::CoordH {
-            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
-            location: crate::final_ast::types::LocationH::YonderH,
-            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        let box_in_struct_coord = CoordH {
+            ownership: OwnershipH::MutableBorrowH,
+            location: LocationH::YonderH,
+            kind: KindHT::StructHT(box_struct_ref_h),
         };
-        let var_full_name_h = self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*member_name)));
-        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let var_full_name_h = self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, INameI::from(*member_name)));
+        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: struct_result_line.expect_struct_access(),
             member_index,
             expected_member_type: box_in_struct_coord,
             result_type: box_in_struct_coord,
             member_name: var_full_name_h,
         }));
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
-        let load_result_type = crate::final_ast::types::CoordH {
+        let target_ownership = evaluate_ownership(target_ownership_i);
+        let load_result_type = CoordH {
             ownership: target_ownership,
             location: boxed_type_h.location,
             kind: boxed_type_h.kind,
         };
-        let loaded_node_h = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let loaded_node_h = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: load_box_node.expect_struct_access(),
-            member_index: crate::simplifying::let_hammer::BOX_MEMBER_INDEX,
+            member_index: BOX_MEMBER_INDEX,
             expected_member_type: boxed_type_h,
             result_type: load_result_type,
             member_name: self.add_step(hamuts, box_struct_ref_h.id, self.keywords.box_member_name),
@@ -520,19 +532,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
             self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let expected_member_type_h = self.translate_coord(hinputs, hamuts, expected_member_coord);
         let struct_it = match struct_expr2.result().kind {
-            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            KindIT::StructIT(sr) => sr,
             _ => panic!("translate_mundane_member_load: struct_expr2.result.kind not StructIT"),
         };
         let struct_def_i = self.lookup_struct(hinputs, hamuts, *struct_it);
         let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("memberIndex >= 0") as i32;
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
-        let load_result_type = crate::final_ast::types::CoordH { ownership: target_ownership, location: expected_member_type_h.location, kind: expected_member_type_h.kind };
-        let loaded_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let target_ownership = evaluate_ownership(target_ownership_i);
+        let load_result_type = CoordH { ownership: target_ownership, location: expected_member_type_h.location, kind: expected_member_type_h.kind };
+        let loaded_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: struct_result_line.expect_struct_access(),
             member_index,
             expected_member_type: expected_member_type_h,
             result_type: load_result_type,
-            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*member_name).into())),
+            member_name: self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, (*member_name).into())),
         }));
         (loaded_node, struct_deferreds)
     }
@@ -602,22 +614,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         assert!(!locals.unstackified_vars.contains(&local.id));
         let local_type_h = self.translate_coord(hinputs, hamuts, local_reference2);
         let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, local_reference2, local_type_h);
-        assert!(local.type_h.kind == crate::final_ast::types::KindHT::StructHT(box_struct_ref_h));
-        let var_name_h = self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(*var_id)));
-        let load_box_node = ExpressionH::LocalLoadH(self.interner.alloc(crate::final_ast::instructions::LocalLoadH {
+        assert!(local.type_h.kind == KindHT::StructHT(box_struct_ref_h));
+        let var_name_h = self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, INameI::from(*var_id)));
+        let load_box_node = ExpressionH::LocalLoadH(self.interner.alloc(LocalLoadH {
             local,
-            target_ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            target_ownership: OwnershipH::MutableBorrowH,
             local_name: var_name_h,
         }));
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
-        let load_result_type = crate::final_ast::types::CoordH {
+        let target_ownership = evaluate_ownership(target_ownership_i);
+        let load_result_type = CoordH {
             ownership: target_ownership,
             location: local_type_h.location,
             kind: local_type_h.kind,
         };
-        let loaded_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let loaded_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: load_box_node.expect_struct_access(),
-            member_index: crate::simplifying::let_hammer::BOX_MEMBER_INDEX,
+            member_index: BOX_MEMBER_INDEX,
             expected_member_type: local_type_h,
             result_type: load_result_type,
             member_name: self.add_step(hamuts, box_struct_ref_h.id, self.keywords.box_member_name),
@@ -685,13 +697,13 @@ where 's: 'h, 's: 'i, 'i: 'h,
         target_ownership_i: OwnershipI,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
     {
-        let target_ownership = crate::simplifying::conversions::evaluate_ownership(target_ownership_i);
+        let target_ownership = evaluate_ownership(target_ownership_i);
         let local = locals.get_by_var_name(var_id).expect("wot");
         assert!(!locals.unstackified_vars.contains(&local.id));
-        let loaded_node = ExpressionH::LocalLoadH(self.interner.alloc(crate::final_ast::instructions::LocalLoadH {
+        let loaded_node = ExpressionH::LocalLoadH(self.interner.alloc(LocalLoadH {
             local,
             target_ownership,
-            local_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, (*var_id).into())),
+            local_name: self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, (*var_id).into())),
         }));
         (loaded_node, Vec::new())
     }
@@ -747,10 +759,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let local = locals.get_by_var_name(&local_var.name()).unwrap();
         assert!(!locals.unstackified_vars.contains(&local.id));
         let _box_struct_ref_h = self.make_box(hinputs, hamuts, local_var.variability(), local_var.collapsed_coord(), local.type_h);
-        let var_id_full = crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(local_var.name()));
-        ExpressionH::LocalLoadH(self.interner.alloc(crate::final_ast::instructions::LocalLoadH {
+        let var_id_full = add_step(&current_function_header.id, INameI::from(local_var.name()));
+        ExpressionH::LocalLoadH(self.interner.alloc(LocalLoadH {
             local,
-            target_ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
+            target_ownership: OwnershipH::MutableBorrowH,
             local_name: self.translate_full_name(hinputs, hamuts, &var_id_full),
         }))
     }
@@ -799,7 +811,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let member_name = lookup2.member_name;
         let (struct_result_line, struct_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
-            crate::instantiating::ast::types::KindIT::StructIT(sr) => sr,
+            KindIT::StructIT(sr) => sr,
             _ => panic!("translate_member_address: non-struct kind"),
         };
         let struct_def_i = self.lookup_struct(hinputs, hamuts, *struct_it);
@@ -807,26 +819,26 @@ where 's: 'h, 's: 'i, 'i: 'h,
         assert!(member_index >= 0);
         let member2 = &struct_def_i.members[member_index as usize];
         let variability = member2.variability;
-        assert!(variability == crate::instantiating::ast::types::VariabilityI::Varying, "Expected varying for member {:?}", member_name);
+        assert!(variability == VariabilityI::Varying, "Expected varying for member {:?}", member_name);
         let boxed_type2 = member2.tyype.expect_address_member().reference;
         let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
         let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
-        let expected_struct_box_member_type = crate::final_ast::types::CoordH {
-            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
-            location: crate::final_ast::types::LocationH::YonderH,
-            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        let expected_struct_box_member_type = CoordH {
+            ownership: OwnershipH::MutableBorrowH,
+            location: LocationH::YonderH,
+            kind: KindHT::StructHT(box_struct_ref_h),
         };
-        let load_result_type = crate::final_ast::types::CoordH {
-            ownership: crate::final_ast::types::OwnershipH::MutableBorrowH,
-            location: crate::final_ast::types::LocationH::YonderH,
-            kind: crate::final_ast::types::KindHT::StructHT(box_struct_ref_h),
+        let load_result_type = CoordH {
+            ownership: OwnershipH::MutableBorrowH,
+            location: LocationH::YonderH,
+            kind: KindHT::StructHT(box_struct_ref_h),
         };
-        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(crate::final_ast::instructions::MemberLoadH {
+        let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: struct_result_line.expect_struct_access(),
             member_index,
             expected_member_type: expected_struct_box_member_type,
             result_type: load_result_type,
-            member_name: self.translate_full_name(hinputs, hamuts, &crate::instantiating::ast::names::add_step(&current_function_header.id, crate::instantiating::ast::names::INameI::from(member_name))),
+            member_name: self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, INameI::from(member_name))),
         }));
         (load_box_node, struct_deferreds)
     }
@@ -898,7 +910,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn get_borrowed_location (free helper — no &self needed)
-pub fn get_borrowed_location<'s, 'h>(member_type: CoordH<'s, 'h>) -> crate::final_ast::types::LocationH
+pub fn get_borrowed_location<'s, 'h>(member_type: CoordH<'s, 'h>) -> LocationH
 where 's: 'h,
 {
     panic!("Unimplemented: get_borrowed_location");

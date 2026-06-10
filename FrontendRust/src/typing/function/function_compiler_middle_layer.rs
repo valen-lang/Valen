@@ -19,6 +19,9 @@ use crate::typing::compiler::Compiler;
 use crate::typing::typing_interner::MustIntern;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::ast::AbstractT;
+use crate::typing::names::names::TypingIgnoredParamNameT;
+use std::iter::once;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.function
@@ -112,7 +115,7 @@ where 's: 't,
                     if !coutputs.lookup_sealed(interface_template) {
                         if env.id().init_steps != &interface_template.steps()[..] {
                             let ranges: Vec<RangeS<'s>> =
-                                std::iter::once(abstract_sp.range).chain(parent_ranges.iter().copied()).collect();
+                                once(abstract_sp.range).chain(parent_ranges.iter().copied()).collect();
                             let ranges_t = self.typing_interner.alloc_slice_copy(&ranges);
                             return Err(ICompileErrorT::AbstractMethodOutsideOpenInterface { range: ranges_t });
                         }
@@ -595,7 +598,7 @@ where 's: 't,
             //   }
             let name_t: IVarNameT<'s, 't> = match &param1.pattern.name {
                 None => {
-                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(crate::typing::names::names::TypingIgnoredParamNameT { num: index as i32, _phantom: std::marker::PhantomData }))
+                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(TypingIgnoredParamNameT { num: index as i32, _phantom: PhantomData }))
                 }
                 Some(x) => {
                     self.translate_var_name_step(x.name)

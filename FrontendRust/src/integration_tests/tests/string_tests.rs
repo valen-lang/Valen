@@ -1,3 +1,17 @@
+use crate::collect_only_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::tests::tests::load_expected;
+use crate::typing::ast::expressions::ConstantStrTE;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
+use crate::von::ast::VonStr;
 /*
 package dev.vale
 
@@ -21,13 +35,13 @@ fn simple_string() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -36,13 +50,13 @@ fn simple_string() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprogwoggle"), .. }) => Some(())
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::ConstantStr(ConstantStrTE { value: StrI("sprogwoggle"), .. }) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprogwoggle" => {}
+        IVonData::Str(VonStr { value }) if value == "sprogwoggle" => {}
         other => panic!("expected VonStr(\"sprogwoggle\"), got {:?}", other),
     }
 }
@@ -70,13 +84,13 @@ fn empty_string() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -85,13 +99,13 @@ fn empty_string() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI(""), .. }) => Some(())
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::ConstantStr(ConstantStrTE { value: StrI(""), .. }) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "" => {}
+        IVonData::Str(VonStr { value }) if value == "" => {}
         other => panic!("expected VonStr(\"\"), got {:?}", other),
     }
 }
@@ -119,13 +133,13 @@ fn string_with_escapes() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -134,13 +148,13 @@ fn string_with_escapes() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI("sprog\nwoggle"), .. }) => Some(())
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::ConstantStr(ConstantStrTE { value: StrI("sprog\nwoggle"), .. }) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "sprog\nwoggle" => {}
+        IVonData::Str(VonStr { value }) if value == "sprog\nwoggle" => {}
         other => panic!("expected VonStr(\"sprog\\nwoggle\"), got {:?}", other),
     }
 }
@@ -173,13 +187,13 @@ fn string_with_hex_escape() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -188,16 +202,16 @@ fn string_with_hex_escape() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::ConstantStr(crate::typing::ast::expressions::ConstantStrTE { value: crate::interner::StrI(x), .. }) => {
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::ConstantStr(ConstantStrTE { value: StrI(x), .. }) => {
                 assert_eq!(*x, "sprog\u{001b}woggle");
                 Some(())
             }
         );
     }
     let result = match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) => value,
+        IVonData::Str(VonStr { value }) => value,
         other => panic!("expected VonStr, got {:?}", other),
     };
     assert_eq!(result.len(), 12);
@@ -235,21 +249,21 @@ fn int_to_string() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/strings/inttostr.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/strings/inttostr.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
 }
@@ -268,21 +282,21 @@ fn i64_to_string() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/strings/i64tostr.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/strings/i64tostr.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 4 }) => {}
+        IVonData::Int(VonInt { value: 4 }) => {}
         other => panic!("expected VonInt(4), got {:?}", other),
     }
 }
@@ -301,21 +315,21 @@ fn string_length() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/strings/strlen.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/strings/strlen.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 12 }) => {}
+        IVonData::Int(VonInt { value: 12 }) => {}
         other => panic!("expected VonInt(12), got {:?}", other),
     }
 }
@@ -335,21 +349,21 @@ fn strings_equal() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/strings/strneq.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/strings/strneq.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         &source,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
@@ -369,20 +383,20 @@ fn string_interpolate() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "func +(s str, i int) str { return s + str(i); }\nfunc ns(i int) int { return i; }\nexported func main() str { return \"\"\"bl\"{ns(4)}rg\"\"\"; }",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "bl\"4rg" => {}
+        IVonData::Str(VonStr { value }) if value == "bl\"4rg" => {}
         other => panic!("expected VonStr(\"bl\\\"4rg\"), got {:?}", other),
     }
 }
@@ -405,20 +419,20 @@ fn slice_a_slice() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "import panicutils.*;\nimport printutils.*;\n\nstruct StrSlice imm {\n  string str;\n  begin int;\n  end int;\n}\nfunc newStrSlice(string str, begin int, end int) StrSlice {\n  vassert(begin >= 0, \"slice begin was negative!\");\n  vassert(end >= 0, \"slice end was negative!\");\n  vassert(begin <= string.len(), \"slice begin was more than length!\");\n  vassert(end <= string.len(), \"slice end was more than length!\");\n  vassert(end >= begin, \"slice end was before begin!\");\n  return StrSlice(string, begin, end);\n}\n\nfunc slice(s str) StrSlice {\n  return newStrSlice(s, 0, s.len());\n}\n\nfunc slice(s str, begin int) StrSlice { return s.slice().slice(begin); }\nfunc slice(s StrSlice, begin int) StrSlice {\n  newBegin = s.begin + begin;\n  vassert(newBegin <= s.string.len(), \"slice begin is more than string length!\");\n  return newStrSlice(s.string, newBegin, s.end);\n}\n\nfunc len(s StrSlice) int {\n  return s.end - s.begin;\n}\n\nfunc slice(s str, begin int, end int) StrSlice {\n  return newStrSlice(s, begin, end);\n}\n\nfunc slice(s StrSlice, begin int, end int) StrSlice {\n  newGlyphBeginOffset = s.begin + begin;\n  newGlyphEndOffset = s.begin + end;\n  return newStrSlice(s.string, newGlyphBeginOffset, newGlyphEndOffset);\n}\n\nexported func main() int {\n  return \"hello\".slice().slice(1, 4).len();\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("expected VonInt(3), got {:?}", other),
     }
 }

@@ -24,6 +24,8 @@ use crate::typing::infer_compiler::InitialKnown;
 use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
+use std::collections::HashMap;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.function
@@ -111,7 +113,7 @@ trait IEvaluateFunctionResult
 */
 pub struct EvaluateFunctionSuccess<'s, 't> {
     pub prototype: &'t PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub inferences: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
@@ -141,7 +143,7 @@ trait IDefineFunctionResult
 */
 pub struct DefineFunctionSuccess<'s, 't> {
     pub prototype: &'t PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub inferences: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
@@ -172,7 +174,7 @@ trait IResolveFunctionResult
 */
 pub struct ResolveFunctionSuccess<'s, 't> {
     pub prototype: &'t PrototypeTemplataT<'s, 't>,
-    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub inferences: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 /*
 case class ResolveFunctionSuccess(
@@ -201,7 +203,7 @@ trait IStampFunctionResult
 */
 pub struct StampFunctionSuccess<'s, 't> {
     pub prototype: &'t PrototypeT<'s, 't>,
-    pub inferences: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub inferences: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 /*
 case class StampFunctionSuccess(
@@ -355,7 +357,7 @@ where 's: 't,
                         INameT::LambdaCitizen(self.typing_interner.alloc(LambdaCitizenNameT {
                             template: self.typing_interner.alloc(LambdaCitizenTemplateNameT {
                                 code_location: lambda_name.code_location,
-                                _phantom: std::marker::PhantomData,
+                                _phantom: PhantomData,
                             }),
                         }))
                     }

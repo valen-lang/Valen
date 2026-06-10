@@ -28,6 +28,8 @@ use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use crate::builtins::builtins::get_code_map;
 use crate::tests::tests::get_package_to_resource_resolver;
 use std::collections::HashMap;
+use crate::collect_where_hnode;
+use crate::typing::typing_interner::TypingInterner;
 // mig: struct HammerTest
 pub struct HammerTest {
 }
@@ -52,7 +54,7 @@ fn local_ids_unique() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
     // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
     let code = "
 exported func main() {
   a = 6;
@@ -81,7 +83,7 @@ exported func main() {
 
     assert!(paackage.export_name_to_function.iter().any(|(_, proto)| *proto == main.prototype));
 
-    let stackifies: Vec<&StackifyH> = crate::collect_where_hnode!(NodeRefH::Function(main), NodeRefH::StackifyH(s) => Some(s));
+    let stackifies: Vec<&StackifyH> = collect_where_hnode!(NodeRefH::Function(main), NodeRefH::StackifyH(s) => Some(s));
     let mut local_ids = stackifies.iter().map(|s| s.local.id.number).collect::<Vec<_>>();
     local_ids.sort();
     let mut distinct = local_ids.clone();
@@ -142,7 +144,7 @@ fn returns_int() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
     // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 7; }\n";
     let resolver = get_code_map(&parse_arena, &parser_keywords)
         .expect("get_code_map failed to load builtins")

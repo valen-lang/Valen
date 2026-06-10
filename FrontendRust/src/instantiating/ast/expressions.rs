@@ -15,6 +15,11 @@ use crate::instantiating::ast::names::{IdI, IVarNameI};
 use crate::instantiating::ast::ast::{
     IVariableI, ILocalVariableI, PrototypeI, ReferenceLocalVariableI,
 };
+use crate::instantiating::ast::types::FloatIT;
+use crate::instantiating::ast::types::IntIT;
+use crate::instantiating::ast::types::StrIT;
+use crate::instantiating::ast::types::VoidIT;
+use std::marker::PhantomData;
 
 // mig: trait ExpressionIE — realized as enum per @ATDCX (no dyn, mirrors typing-pass ExpressionTE).
 /// Arena-allocated (see @TFITCX)
@@ -81,9 +86,9 @@ impl<'s, 'i, R: Copy> ReferenceExpressionIE<'s, 'i, R> {
             ReferenceExpressionIE::StaticArrayFromCallable(s) => s.result,
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
-            ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) },
+            ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) },
             ReferenceExpressionIE::RuntimeSizedArrayCapacity(r) => r.result(),
-            ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) },
+            ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) },
             ReferenceExpressionIE::PopRuntimeSizedArray(p) => p.result,
             ReferenceExpressionIE::InterfaceToInterfaceUpcast(_) => panic!("RE::result: InterfaceToInterfaceUpcast"),
             ReferenceExpressionIE::Upcast(u) => u.result,
@@ -647,7 +652,7 @@ impl<'s, 'i, R> ReturnIE<'s, 'i, R> {
 // mig: struct BreakIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct BreakIE<'s, 'i, R>(pub std::marker::PhantomData<(&'s (), &'i (), R)>);
+pub struct BreakIE<'s, 'i, R>(pub PhantomData<(&'s (), &'i (), R)>);
 // mig: impl BreakIE
 /*
 case class BreakIE() extends ReferenceExpressionIE {
@@ -965,7 +970,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> IsSameInstanceIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::BoolIT(crate::instantiating::ast::types::BoolIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1027,7 +1032,7 @@ override def hashCode(): Int = vcurious()
 // mig: struct VoidLiteralIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct VoidLiteralIE<'s, 'i, R>(pub std::marker::PhantomData<(&'s (), &'i (), R)>);
+pub struct VoidLiteralIE<'s, 'i, R>(pub PhantomData<(&'s (), &'i (), R)>);
 // mig: impl VoidLiteralIE
 /*
 case class VoidLiteralIE() extends ReferenceExpressionIE {
@@ -1045,7 +1050,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> VoidLiteralIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1058,7 +1063,7 @@ impl<'s, 'i, R> VoidLiteralIE<'s, 'i, R> {
 pub struct ConstantIntIE<'s, 'i, R> {
 	pub value: i64,
 	pub bits: i32,
-	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
+	pub _marker: PhantomData<(&'s (), &'i (), R)>,
 }
 // mig: impl ConstantIntIE
 /*
@@ -1078,8 +1083,8 @@ override def hashCode(): Int = vcurious()
 impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
 		CoordI {
-			ownership: crate::instantiating::ast::types::OwnershipI::MutableShare,
-			kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: self.bits, _marker: std::marker::PhantomData }),
+			ownership: OwnershipI::MutableShare,
+			kind: KindIT::IntIT(IntIT { bits: self.bits, _marker: PhantomData }),
 		}
 	}
 }
@@ -1091,7 +1096,7 @@ impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantBoolIE<'s, 'i, R> {
-	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
+	pub _marker: PhantomData<(&'s (), &'i (), R)>,
 	pub value: bool,
 }
 // mig: impl ConstantBoolIE
@@ -1111,7 +1116,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1122,7 +1127,7 @@ impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrIE<'s, 'i, R> {
-	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
+	pub _marker: PhantomData<(&'s (), &'i (), R)>,
 	pub value: &'s str,
 }
 // mig: impl ConstantStrIE
@@ -1142,7 +1147,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> ConstantStrIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::StrIT(crate::instantiating::ast::types::StrIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(StrIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1153,7 +1158,7 @@ impl<'s, 'i, R> ConstantStrIE<'s, 'i, R> {
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantFloatIE<'s, 'i, R> {
-	pub _marker: std::marker::PhantomData<(&'s (), &'i (), R)>,
+	pub _marker: PhantomData<(&'s (), &'i (), R)>,
 	pub value: f64,
 }
 // mig: impl ConstantFloatIE
@@ -1173,7 +1178,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> ConstantFloatIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::FloatIT(crate::instantiating::ast::types::FloatIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1354,8 +1359,8 @@ override def hashCode(): Int = vcurious()
 impl<'s, 'i, R> ArrayLengthIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
 		CoordI {
-			ownership: crate::instantiating::ast::types::OwnershipI::MutableShare,
-			kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }),
+			ownership: OwnershipI::MutableShare,
+			kind: KindIT::IntIT(IntIT { bits: 32, _marker: PhantomData }),
 		}
 	}
 }
@@ -1750,7 +1755,7 @@ override def hashCode(): Int = vcurious()
 // mig: fn result
 impl<'s, 'i, R> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: KindIT::VoidIT(crate::instantiating::ast::types::VoidIT { _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }
 	}
 }
 /*
@@ -1831,7 +1836,7 @@ case class RuntimeSizedArrayCapacityIE(
 // mig: fn result
 impl<'s, 'i, R> RuntimeSizedArrayCapacityIE<'s, 'i, R> {
 	pub fn result(&self) -> CoordI<'s, 'i, R> {
-		CoordI { ownership: crate::instantiating::ast::types::OwnershipI::MutableShare, kind: crate::instantiating::ast::types::KindIT::IntIT(crate::instantiating::ast::types::IntIT { bits: 32, _marker: std::marker::PhantomData }) }
+		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: 32, _marker: PhantomData }) }
 	}
 }
 /*

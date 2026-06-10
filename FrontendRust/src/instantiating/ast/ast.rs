@@ -12,6 +12,8 @@ use crate::instantiating::ast::names::{
 use crate::instantiating::instantiating_interner::MustIntern;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::expressions::ReferenceExpressionIE;
+use crate::instantiating::ast::types::InterfaceIT;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 /*
 package dev.vale.instantiating.ast
@@ -441,7 +443,7 @@ sealed trait ICitizenAttributeI
 // mig: struct ExternI
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternI<'s> {
-    pub package_coord: crate::utils::code_hierarchy::PackageCoordinate<'s>,
+    pub package_coord: PackageCoordinate<'s>,
 }
 // mig: impl ExternI
 /*
@@ -562,9 +564,9 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 */
 // mig: fn get_abstract_interface
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
-    pub fn get_abstract_interface(&self) -> Option<&'i crate::instantiating::ast::types::InterfaceIT<'s, 'i, cI>> {
+    pub fn get_abstract_interface(&self) -> Option<&'i InterfaceIT<'s, 'i, cI>> {
         let abstract_interfaces: Vec<_> = self.params.iter().filter_map(|p| match (p.virtuality, p.tyype.kind) {
-            (Some(AbstractI), crate::instantiating::ast::types::KindIT::InterfaceIT(ir)) => Some(ir),
+            (Some(AbstractI), KindIT::InterfaceIT(ir)) => Some(ir),
             _ => None,
         }).collect();
         assert!(abstract_interfaces.len() <= 1);

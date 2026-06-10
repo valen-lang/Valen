@@ -13,6 +13,9 @@ use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::interner::StrI;
 use crate::typing::typing_interner::TypingInterner;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use crate::tests::tests::get_package_to_resource_resolver;
 
 // mig: struct CompilerLambdaTests
 pub struct CompilerLambdaTests;
@@ -111,7 +114,7 @@ fn lambda_with_one_magic_arg() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(lambda),
         NodeRefT::Parameter(
             ParameterT {
@@ -289,7 +292,7 @@ fn lambda_with_a_type_specified_param() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.arith.*;\nexported func main() int {\n  return (a int) => {+(a,a)}(3);\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -298,7 +301,7 @@ fn lambda_with_a_type_specified_param() {
     );
     let coutputs = compile.expect_compiler_outputs();
     let lambda = coutputs.lookup_lambda_in("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(lambda),
         NodeRefT::Parameter(
             ParameterT {
@@ -315,7 +318,7 @@ fn lambda_with_a_type_specified_param() {
     );
     assert!(coutputs.name_is_lambda_in(lambda.header.id, "main"));
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(FunctionCallTE { callable, .. }) => {
             assert!(coutputs.name_is_lambda_in(callable.id, "main"));
@@ -357,7 +360,7 @@ fn tests_lambda_and_concept_function() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.print.*;\nimport v.builtins.drop.*;\nimport v.builtins.str.*;\n\nfunc moo<X, F>(x X, f F)\nwhere func(&F, &X)void, func drop(X)void, func drop(F)void {\n  f(&x);\n}\nexported func main() {\n  moo(\"hello\", { print(_); });\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -397,9 +400,9 @@ fn lambda_inside_different_function_with_same_name() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport printutils.*;\n\nfunc helperFunc(x int) {\n  { print(x); }();\n}\nfunc helperFunc(x str) {\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -442,9 +445,9 @@ fn lambda_inside_template() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\nimport printutils.*;\n\nfunc helperFunc<T>(x T)\nwhere func print(&T)void, func drop(T)void\n{\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
@@ -487,7 +490,7 @@ fn curried_lambda_inside_template() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(4);\n  helper(\"bork\");\n}\n";
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);

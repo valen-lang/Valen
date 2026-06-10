@@ -1,3 +1,32 @@
+use crate::collect_only_tnode;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::typing::ast::ast::ParameterT;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::names::names::CodeVarNameT;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IStructTemplateNameT;
+use crate::typing::names::names::IVarNameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::StructNameT;
+use crate::typing::names::names::StructTemplateNameT;
+use crate::typing::templata::templata::CoordTemplataT;
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::StructTT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
 /*
 package dev.vale
 
@@ -24,13 +53,13 @@ pub fn test_inferring_a_borrowed_argument() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -40,30 +69,30 @@ pub fn test_inferring_a_borrowed_argument() {
         let coutputs = compile.expect_compiler_outputs();
         let moo = coutputs.lookup_function_by_str("moo");
         match moo.header.params {
-            [crate::typing::ast::ast::ParameterT {
-                name: crate::typing::names::names::IVarNameT::CodeVar(crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("m"), .. }),
-                tyype: crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Borrow, .. },
+            [ParameterT {
+                name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
+                tyype: CoordT { ownership: OwnershipT::Borrow, .. },
                 ..
             }] => {}
             _ => panic!("moo.header.params didn't match expected pattern"),
         }
         let main = coutputs.lookup_function_by_str("main");
-        crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
-            crate::typing::test::traverse::NodeRefT::FunctionCall(crate::typing::ast::expressions::FunctionCallTE {
-                callable: crate::typing::ast::ast::PrototypeT {
-                    id: crate::typing::names::names::IdT {
-                        local_name: crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
-                            template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("moo"), .. },
-                            template_args: &[crate::typing::templata::templata::ITemplataT::Coord(crate::typing::templata::templata::CoordTemplataT {
-                                coord: crate::typing::types::types::CoordT {
-                                    ownership: crate::typing::types::types::OwnershipT::Own,
-                                    kind: crate::typing::types::types::KindT::Struct(crate::typing::types::types::StructTT {
-                                        id: crate::typing::names::names::IdT {
+        collect_only_tnode!(
+            NodeRefT::FunctionDefinition(main),
+            NodeRefT::FunctionCall(FunctionCallTE {
+                callable: PrototypeT {
+                    id: IdT {
+                        local_name: INameT::Function(FunctionNameT {
+                            template: FunctionTemplateNameT { human_name: StrI("moo"), .. },
+                            template_args: &[ITemplataT::Coord(CoordTemplataT {
+                                coord: CoordT {
+                                    ownership: OwnershipT::Own,
+                                    kind: KindT::Struct(StructTT {
+                                        id: IdT {
                                             package_coord: x_package_coord,
                                             init_steps: &[],
-                                            local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
-                                                template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(crate::typing::names::names::StructTemplateNameT { human_name: crate::interner::StrI("Muta"), .. }),
+                                            local_name: INameT::Struct(StructNameT {
+                                                template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("Muta"), .. }),
                                                 template_args: &[],
                                                 ..
                                             }),
@@ -86,7 +115,7 @@ pub fn test_inferring_a_borrowed_argument() {
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
+        IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
 }
@@ -129,20 +158,20 @@ pub fn test_inferring_a_borrowed_static_sized_array() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nstruct Muta { hp int; }\nfunc moo<N Int>(m &[#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(&x);\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
+        IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
 }
@@ -170,20 +199,20 @@ pub fn test_inferring_an_owning_static_sized_array() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nstruct Muta { hp int; }\nfunc moo<N Int>(m [#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(x);\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 10 }) => {}
+        IVonData::Int(VonInt { value: 10 }) => {}
         other => panic!("expected VonInt(10), got {:?}", other),
     }
 }

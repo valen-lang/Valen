@@ -23,6 +23,9 @@ use crate::postparsing::expressions::IExpressionSE;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use crate::postparsing::names::IRuneValS;
+use crate::higher_typing::higher_typing_pass::explicify_lookups;
+use std::iter::once;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.expression
@@ -263,7 +266,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 let snapshot = nenv.snapshot(self.typing_interner);
                 let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
                 let rune_type_solve_env = self.create_rune_type_solver_env(snapshot_env);
-                match crate::higher_typing::higher_typing_pass::explicify_lookups(
+                match explicify_lookups(
                     &rune_type_solve_env,
                     self.scout_arena,
                     &mut rune_a_to_type,
@@ -284,7 +287,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                                 IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                                     let name = self.scout_arena.intern_imprecise_name(
                                         IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                                    let mut filter = std::collections::HashSet::new();
+                                    let mut filter = HashSet::new();
                                     filter.insert(ILookupContext::TemplataLookupContext);
                                     let templata = snapshot_env.lookup_nearest_with_imprecise_name(
                                         name, filter, self.typing_interner).unwrap();
@@ -300,7 +303,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     );
 
                 let invocation_range: Vec<RangeS<'s>> =
-                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                    once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 let complete_define_solve =
                     // We could probably just solveForResolving (see DBDAR) but seems right to solveForDefining since we're
                     // declaring a bunch of things.
@@ -341,7 +344,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     self.typing_interner,
                     &complete_define_solve.conclusions.iter()
                         .map(|(key, value)| {
-                            let name: INameT<'s, 't> = self.typing_interner.intern_rune_name(RuneNameT { rune: *key, _phantom: std::marker::PhantomData }).into();
+                            let name: INameT<'s, 't> = self.typing_interner.intern_rune_name(RuneNameT { rune: *key, _phantom: PhantomData }).into();
                             let entry = IEnvEntryT::Templata(*value);
                             (name, entry)
                         })
@@ -352,7 +355,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 };
 
                 let range_list: Vec<RangeS<'s>> =
-                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                    once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 self.convert(
                     snapshot_env, coutputs, &range_list, call_location,
                     unconverted_input_expr, expected_coord)
@@ -515,7 +518,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 Some(capture_s) => {
                     let local_name_t = self.translate_var_name_step(capture_s.name);
                     let range_list: Vec<RangeS<'s>> =
-                        std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                        once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                     let local_t = if capture_s.mutate {
                         let local_t = match nenv.declared_locals().iter().find(|v| v.name() == local_name_t) {
                             Some(IVariableT::ReferenceLocal(rlv)) => ILocalVariableT::Reference(*rlv),
@@ -586,7 +589,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         // If we didn't store it, and we aren't destructuring it, then we're just ignoring it. Let's drop it.
                         let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                         let ranges: Vec<RangeS<'s>> =
-                            std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                            once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                         // Until a test path forces Result conversion through this pattern_compiler site.
                         result.push(self.drop(snap, coutputs, &ranges, call_location, region, expr_to_destructure_or_drop_or_pass_te)
                             .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through pattern_compiler drop")));
@@ -601,7 +604,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             }
             Some(list_of_maybe_destructure_member_patterns) => {
                 let ranges: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                    &std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                    &once(pattern.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let list_refs: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
                     &list_of_maybe_destructure_member_patterns.iter().collect::<Vec<_>>());
                 let live_capture_locals_t: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(&live_capture_locals);
@@ -1364,7 +1367,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 assert!(live_capture_locals.len() == initial_live_capture_locals.len() - 1);
                 let head_inner_pattern_range = head_inner_pattern.range;
                 let ranges: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                    &std::iter::once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                    &once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let tail_member_local_variables: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(tail_member_local_variables);
                 let tail_inner_pattern_maybes: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(tail_inner_pattern_maybes);
                 self.inner_translate_sub_pattern_and_maybe_continue(

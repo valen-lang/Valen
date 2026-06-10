@@ -13,6 +13,9 @@ use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
 use crate::Keywords;
 use INameValT::*;
+use std::marker::PhantomData;
+use std::ptr::eq;
+use std::ptr::hash;
 
 /*
 package dev.vale.typing.names
@@ -112,7 +115,7 @@ impl<'s, 't> IdT<'s, 't> {
     // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern.
     pub fn init_id(&self, interner: &TypingInterner<'s, 't>) -> IdT<'s, 't> {
         if self.init_steps.is_empty() {
-            let top_level = interner.alloc(PackageTopLevelNameT { _phantom: std::marker::PhantomData });
+            let top_level = interner.alloc(PackageTopLevelNameT { _phantom: PhantomData });
             *interner.intern_id(IdValT {
                 package_coord: self.package_coord,
                 init_steps: &[],
@@ -199,8 +202,8 @@ impl<'s, 't> Hash for IdT<'s, 't>
 where 's: 't,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self.package_coord, state);
-        std::ptr::hash(self.init_steps.as_ptr(), state);
+        hash(self.package_coord, state);
+        hash(self.init_steps.as_ptr(), state);
         self.init_steps.len().hash(state);
         self.local_name.hash(state);
     }
@@ -212,8 +215,8 @@ impl<'s, 't> PartialEq for IdT<'s, 't>
 where 's: 't,
 {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.package_coord, other.package_coord)
-            && std::ptr::eq(self.init_steps.as_ptr(), other.init_steps.as_ptr())
+        eq(self.package_coord, other.package_coord)
+            && eq(self.init_steps.as_ptr(), other.init_steps.as_ptr())
             && self.init_steps.len() == other.init_steps.len()
             && self.local_name == other.local_name
     }
@@ -1067,7 +1070,7 @@ impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IRegionNameT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
+pub enum IRegionNameT<'s, 't> { _Phantom(PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait IRegionNameT extends INameT
 */
@@ -1075,7 +1078,7 @@ sealed trait IRegionNameT extends INameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportTemplateNameT<'s, 't> {
     pub code_loc: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ExportTemplateNameT(codeLoc: CodeLocationS) extends ITemplateNameT
@@ -1096,7 +1099,7 @@ case class ExportNameT(template: ExportTemplateNameT, region: RegionT) extends I
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplTemplateNameT<'s, 't> {
     pub code_location_s: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ImplTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {
@@ -1130,7 +1133,7 @@ case class ImplNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplBoundTemplateNameT<'s, 't> {
     pub code_location_s: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ImplBoundTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {
@@ -1170,7 +1173,7 @@ case class ImplBoundNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LetNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class LetNameT(codeLocation: CodeLocationS) extends INameT
@@ -1179,7 +1182,7 @@ case class LetNameT(codeLocation: CodeLocationS) extends INameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportAsNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ExportAsNameT(codeLocation: CodeLocationS) extends INameT
@@ -1204,7 +1207,7 @@ case class RawArrayNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReachablePrototypeNameT<'s, 't> {
     pub num: i32,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ReachablePrototypeNameT(num: Int) extends INameT
@@ -1212,7 +1215,7 @@ case class ReachablePrototypeNameT(num: Int) extends INameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTemplateNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
@@ -1288,7 +1291,7 @@ case class StaticSizedArrayNameT(
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTemplateNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
@@ -1392,7 +1395,7 @@ impl<'s, 't> IPlaceholderNameT<'s, 't> {
 pub struct KindPlaceholderTemplateNameT<'s, 't> {
     pub index: i32,
     pub rune: IRuneS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class KindPlaceholderTemplateNameT(index: Int, rune: IRuneS) extends ISubKindTemplateNameT with ISuperKindTemplateNameT
@@ -1417,7 +1420,7 @@ case class KindPlaceholderNameT(template: KindPlaceholderTemplateNameT) extends 
 pub struct NonKindNonRegionPlaceholderNameT<'s, 't> {
     pub index: i32,
     pub rune: IRuneS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IPlaceholderNameT
@@ -1515,7 +1518,7 @@ case class TypingPassBlockResultVarNameT(life: LocationInFunctionEnvironmentT) e
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassFunctionResultVarNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class TypingPassFunctionResultVarNameT() extends IVarNameT
@@ -1540,7 +1543,7 @@ case class TypingPassPatternMemberNameT(life: LocationInFunctionEnvironmentT) ex
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingIgnoredParamNameT<'s, 't> {
     pub num: i32,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class TypingIgnoredParamNameT(num: Int) extends IVarNameT
@@ -1557,7 +1560,7 @@ case class TypingPassPatternDestructureeNameT(life: LocationInFunctionEnvironmen
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct UnnamedLocalNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class UnnamedLocalNameT(codeLocation: CodeLocationS) extends IVarNameT
@@ -1566,7 +1569,7 @@ case class UnnamedLocalNameT(codeLocation: CodeLocationS) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ClosureParamNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ClosureParamNameT(codeLocation: CodeLocationS) extends IVarNameT
@@ -1575,7 +1578,7 @@ case class ClosureParamNameT(codeLocation: CodeLocationS) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructingMemberNameT<'s, 't> {
     pub name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ConstructingMemberNameT(name: StrI) extends IVarNameT
@@ -1584,7 +1587,7 @@ case class ConstructingMemberNameT(name: StrI) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct WhileCondResultNameT<'s, 't> {
     pub range: RangeS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class WhileCondResultNameT(range: RangeS) extends IVarNameT
@@ -1593,7 +1596,7 @@ case class WhileCondResultNameT(range: RangeS) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterableNameT<'s, 't> {
     pub range: RangeS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class IterableNameT(range: RangeS) extends IVarNameT {  }
@@ -1602,7 +1605,7 @@ case class IterableNameT(range: RangeS) extends IVarNameT {  }
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IteratorNameT<'s, 't> {
     pub range: RangeS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class IteratorNameT(range: RangeS) extends IVarNameT {  }
@@ -1611,7 +1614,7 @@ case class IteratorNameT(range: RangeS) extends IVarNameT {  }
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterationOptionNameT<'s, 't> {
     pub range: RangeS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class IterationOptionNameT(range: RangeS) extends IVarNameT {  }
@@ -1620,7 +1623,7 @@ case class IterationOptionNameT(range: RangeS) extends IVarNameT {  }
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct MagicParamNameT<'s, 't> {
     pub code_location2: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class MagicParamNameT(codeLocation2: CodeLocationS) extends IVarNameT
@@ -1629,7 +1632,7 @@ case class MagicParamNameT(codeLocation2: CodeLocationS) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CodeVarNameT<'s, 't> {
     pub name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class CodeVarNameT(name: StrI) extends IVarNameT
@@ -1639,7 +1642,7 @@ case class CodeVarNameT(name: StrI) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructMemberNameT<'s, 't> {
     pub index: i32,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class AnonymousSubstructMemberNameT(index: Int) extends IVarNameT
@@ -1648,7 +1651,7 @@ case class AnonymousSubstructMemberNameT(index: Int) extends IVarNameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrimitiveNameT<'s, 't> {
     pub human_name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class PrimitiveNameT(humanName: StrI) extends INameT
@@ -1657,7 +1660,7 @@ case class PrimitiveNameT(humanName: StrI) extends INameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PackageTopLevelNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class PackageTopLevelNameT() extends INameT
@@ -1666,7 +1669,7 @@ case class PackageTopLevelNameT() extends INameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ProjectNameT<'s, 't> {
     pub name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ProjectNameT(name: StrI) extends INameT
@@ -1675,7 +1678,7 @@ case class ProjectNameT(name: StrI) extends INameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PackageNameT<'s, 't> {
     pub name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class PackageNameT(name: StrI) extends INameT
@@ -1684,7 +1687,7 @@ case class PackageNameT(name: StrI) extends INameT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuneNameT<'s, 't> {
     pub rune: IRuneS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class RuneNameT(rune: IRuneS) extends INameT
@@ -1711,7 +1714,7 @@ case class BuildingFunctionNameWithClosuredsT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternTemplateNameT<'s, 't> {
     pub code_loc: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ExternTemplateNameT(
@@ -1794,7 +1797,7 @@ case class ForwarderFunctionNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionBoundTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class FunctionBoundTemplateNameT(
@@ -1839,7 +1842,7 @@ case class FunctionBoundNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PredictedFunctionTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class PredictedFunctionTemplateNameT(
@@ -1872,7 +1875,7 @@ case class PredictedFunctionNameT(
 pub struct FunctionTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class FunctionTemplateNameT(
@@ -1993,7 +1996,7 @@ case class ForwarderFunctionTemplateNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructorTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ConstructorTemplateNameT(
@@ -2063,7 +2066,7 @@ case class ConstructorTemplateNameT(
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SelfNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class SelfNameT() extends IVarNameT
@@ -2071,7 +2074,7 @@ case class SelfNameT() extends IVarNameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ArbitraryNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ArbitraryNameT() extends INameT
@@ -2137,7 +2140,7 @@ case class InterfaceNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCitizenTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 // Per @LAGTNGZ, the closure struct doesnt have its own generic parameters, but its associated LambdaCallFunctionTemplateNameT does.
@@ -2213,7 +2216,7 @@ object CitizenTemplateNameT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class StructTemplateNameT(
@@ -2237,7 +2240,7 @@ case class StructTemplateNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTemplateNameT<'s, 't> {
     pub human_namee: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class InterfaceTemplateNameT(
@@ -2363,7 +2366,7 @@ case class AnonymousSubstructNameT(
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ResolvingEnvNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ResolvingEnvNameT() extends INameT {
@@ -2374,7 +2377,7 @@ case class ResolvingEnvNameT() extends INameT {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CallEnvNameT<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class CallEnvNameT() extends INameT {

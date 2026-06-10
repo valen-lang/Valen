@@ -9,6 +9,7 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::typing::typing_interner::TypingInterner;
 /*
 package dev.vale.simplifying
 
@@ -22,7 +23,7 @@ object HammerTestCompilation {
 // mig: fn test
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
   interner: &'ctx HammerInterner<'s, 'h>,
-  typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
+  typing_interner: &'ctx TypingInterner<'s, 't>,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   parser_keywords: &'ctx Keywords<'p>,

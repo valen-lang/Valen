@@ -5,6 +5,8 @@ use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver};
 use super::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::tests::tests::get_package_to_resource_resolver;
 /*
 package dev.vale.typing
 
@@ -76,9 +78,9 @@ fn upcasting_with_generic_bounds() {
         "}\n",
         "\n",
     );
-    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,

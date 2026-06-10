@@ -12,6 +12,7 @@ use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::tests::traverse::NodeRefP;
+use crate::collect_only;
 
 /// AFTERM: Remove this function and use the one in ParserTestCompilation.scala instead
 /// so that it does a round-trip through vonprinter and parsedloader.
@@ -364,7 +365,7 @@ where
 /// Returns the function with the given name.
 /// See test_find_func_named_returns_function for an example.
 pub fn find_func_named<'p>(file: &'p FileP<'p>, name: &str) -> &'p FunctionP<'p> {
-  crate::collect_only!(
+  collect_only!(
       file,
       NodeRefP::Function(function @ FunctionP {
           header: FunctionHeaderP {
@@ -390,7 +391,7 @@ fn test_find_func_named_returns_function() {
   where
     'f: 'p,
   {
-  crate::collect_only!(
+  collect_only!(
       file,
       NodeRefP::Struct(struct_ @ StructP {
           name: NameP(_, s),

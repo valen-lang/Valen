@@ -21,6 +21,8 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
 use std::marker::PhantomData;
 use crate::postparsing::ast::ICitizenAttributeS;
+use crate::typing::templata::conversions::evaluate_mutability;
+use std::collections::HashMap;
 
 /*
 package dev.vale.typing.citizen
@@ -58,7 +60,7 @@ pub struct UncheckedDefiningConclusions<'s, 't> {
     pub ranges: Vec<RangeS<'s>>,
     pub call_location: LocationInDenizen<'s>,
     pub definition_rules: Vec<IRulexSR<'s>>,
-    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 /*
 case class UncheckedDefiningConclusions(
@@ -113,7 +115,7 @@ fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> Resolv
 
 pub struct ResolveSuccess<'s, 't, T> {
     pub kind: T,
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 impl<'s, 't, T> ResolveSuccess<'s, 't, T> {
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
@@ -131,7 +133,7 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
 pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
     pub x: IResolvingError<'s, 't>,
-    pub _phantom: std::marker::PhantomData<T>,
+    pub _phantom: PhantomData<T>,
 }
 impl<'s, 't, T> ResolveFailure<'s, 't, T> {
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
@@ -211,7 +213,7 @@ where 's: 't,
                 coutputs.declare_type_mutability(
                     struct_template_id,
                     ITemplataT::Mutability(MutabilityTemplataT {
-                        mutability: crate::typing::templata::conversions::evaluate_mutability(predicted_mutability),
+                        mutability: evaluate_mutability(predicted_mutability),
                     }),
                 );
             }
@@ -319,7 +321,7 @@ where 's: 't,
                 coutputs.declare_type_mutability(
                     interface_template_id,
                     ITemplataT::Mutability(MutabilityTemplataT {
-                        mutability: crate::typing::templata::conversions::evaluate_mutability(predicted_mutability),
+                        mutability: evaluate_mutability(predicted_mutability),
                     }),
                 );
             }

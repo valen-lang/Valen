@@ -1,3 +1,39 @@
+use crate::testvm::vivem::empty_stdin;
+use crate::testvm::vivem::execute_with_primitive_args;
+use crate::testvm::vivem::null_stdout;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
+use std::io::stdout;
+use std::iter::once;
+use std::marker::PhantomData;
+use bumpalo::Bump;
+use crate::final_ast::ast::FunctionH;
+use crate::final_ast::ast::IFunctionAttributeH;
+use crate::final_ast::ast::IdHValH;
+use crate::final_ast::ast::PackageH;
+use crate::final_ast::ast::ProgramH;
+use crate::final_ast::ast::PrototypeHValH;
+use crate::final_ast::instructions::ArgumentH;
+use crate::final_ast::instructions::BlockH;
+use crate::final_ast::instructions::CallH;
+use crate::final_ast::instructions::ConstantIntH;
+use crate::final_ast::instructions::ExpressionH;
+use crate::final_ast::instructions::ExternCallH;
+use crate::final_ast::types::CoordH;
+use crate::final_ast::types::HamutsFunctionExtern;
+use crate::final_ast::types::IntHT;
+use crate::final_ast::types::KindHT;
+use crate::final_ast::types::LocationH;
+use crate::final_ast::types::OwnershipH;
+use crate::final_ast::types::SimpleId;
+use crate::final_ast::types::SimpleIdStep;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::code_hierarchy::PackageCoordinateMap;
 /*
 package dev.vale.testvm
 
@@ -15,16 +51,6 @@ class VivemTests extends FunSuite with Matchers {
 // mig: fn return_7
 #[test]
 fn return_7() {
-    use bumpalo::Bump;
-    use crate::interner::StrI;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::simplifying::hammer_interner::HammerInterner;
-    use crate::final_ast::ast::{FunctionH, IdHValH, IFunctionAttributeH, PackageH, PrototypeHValH, ProgramH};
-    use crate::final_ast::types::{CoordH, IntHT, KindHT, LocationH, OwnershipH};
-    use crate::final_ast::instructions::{BlockH, ConstantIntH, ExpressionH};
-    use crate::utils::code_hierarchy::{PackageCoordinate, PackageCoordinateMap};
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -43,7 +69,7 @@ fn return_7() {
         package_coordinate: test_tld,
         shortened_name: main_str,
         fully_qualified_name: main_str,
-        _phantom_h: std::marker::PhantomData,
+        _phantom_h: PhantomData,
     });
     let i32_return = CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) };
     let main_proto = interner.intern_prototype(PrototypeHValH {
@@ -60,7 +86,7 @@ fn return_7() {
         attributes: interner.alloc_slice_copy(&[IFunctionAttributeH::UserFunctionH]),
         body: ExpressionH::BlockH(block),
     };
-    let export_name_to_function = interner.alloc_index_map_from_iter(std::iter::once((main_str, main_proto)));
+    let export_name_to_function = interner.alloc_index_map_from_iter(once((main_str, main_proto)));
     let package = PackageH {
         interfaces: &[],
         structs: &[],
@@ -77,19 +103,19 @@ fn return_7() {
     packages.put(test_tld_ref, package);
     let program_h: &ProgramH = hammer_bump.alloc(ProgramH { packages });
 
-    let mut stdout = std::io::stdout();
-    let result = crate::testvm::vivem::execute_with_primitive_args(
+    let mut stdout = stdout();
+    let result = execute_with_primitive_args(
         program_h,
         &interner,
         &scout_arena,
         &[],
         &mut stdout,
         &vivem_bump,
-        &crate::testvm::vivem::empty_stdin,
-        &crate::testvm::vivem::null_stdout,
+        &empty_stdin,
+        &null_stdout,
     );
     match result {
-        Ok(crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 })) => {}
+        Ok(IVonData::Int(VonInt { value: 7 })) => {}
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
@@ -121,16 +147,6 @@ fn return_7() {
 // mig: fn adding
 #[test]
 fn adding() {
-    use bumpalo::Bump;
-    use crate::interner::StrI;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::simplifying::hammer_interner::HammerInterner;
-    use crate::final_ast::ast::{FunctionH, IdHValH, IFunctionAttributeH, PackageH, PrototypeHValH, ProgramH};
-    use crate::final_ast::types::{CoordH, HamutsFunctionExtern, IntHT, KindHT, LocationH, OwnershipH, SimpleId, SimpleIdStep};
-    use crate::final_ast::instructions::{ArgumentH, BlockH, CallH, ConstantIntH, ExpressionH, ExternCallH};
-    use crate::utils::code_hierarchy::{PackageCoordinate, PackageCoordinateMap};
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -153,7 +169,7 @@ fn adding() {
         package_coordinate: *builtin_pkg_ref,
         shortened_name: add_str,
         fully_qualified_name: add_str,
-        _phantom_h: std::marker::PhantomData,
+        _phantom_h: PhantomData,
     });
     let add_prototype = interner.intern_prototype(PrototypeHValH {
         id: add_id,
@@ -167,7 +183,7 @@ fn adding() {
         package_coordinate: *test_tld_ref,
         shortened_name: main_str,
         fully_qualified_name: main_str,
-        _phantom_h: std::marker::PhantomData,
+        _phantom_h: PhantomData,
     });
     let main_prototype = interner.intern_prototype(PrototypeHValH {
         id: main_id,
@@ -232,7 +248,7 @@ fn adding() {
         kind_to_extern: interner.alloc(interner.alloc_index_map()),
     };
 
-    let test_export_name_to_function = interner.alloc_index_map_from_iter(std::iter::once((main_str, main_prototype)));
+    let test_export_name_to_function = interner.alloc_index_map_from_iter(once((main_str, main_prototype)));
     let test_package = PackageH {
         interfaces: &[],
         structs: &[],
@@ -250,19 +266,19 @@ fn adding() {
     packages.put(test_tld_ref, test_package);
     let program_h: &ProgramH = hammer_bump.alloc(ProgramH { packages });
 
-    let mut stdout = std::io::stdout();
-    let result = crate::testvm::vivem::execute_with_primitive_args(
+    let mut stdout = stdout();
+    let result = execute_with_primitive_args(
         program_h,
         &interner,
         &scout_arena,
         &[],
         &mut stdout,
         &vivem_bump,
-        &crate::testvm::vivem::empty_stdin,
-        &crate::testvm::vivem::null_stdout,
+        &empty_stdin,
+        &null_stdout,
     );
     match result {
-        Ok(crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 159 })) => {}
+        Ok(IVonData::Int(VonInt { value: 159 })) => {}
         other => panic!("expected VonInt(159), got {:?}", other),
     }
 }

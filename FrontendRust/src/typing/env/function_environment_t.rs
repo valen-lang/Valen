@@ -12,6 +12,9 @@ use crate::typing::names::names::{IdT, INameT, IVarNameT};
 use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
 use crate::typing::types::types::{CoordT, RegionT, StructTT, VariabilityT};
 use crate::typing::typing_interner::TypingInterner;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ptr::eq;
 
 /*
 package dev.vale.typing.env
@@ -69,8 +72,8 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   */
 }
 // mig: override fn hashCode
-impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /*
@@ -198,8 +201,8 @@ case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
 ) extends IInDenizenEnvironmentT {
 */
 // mig: override fn hashCode
-impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /*
@@ -342,8 +345,8 @@ case class NodeEnvironmentT(
 // mig: override fn hashCode
 // Scala hashes `id.hashCode ^ life.hashCode` and compares `(id, life)`. The id
 // delegates to parent_function_env.id.
-impl<'s, 't> std::hash::Hash for NodeEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<'s, 't> Hash for NodeEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) {
     self.parent_function_env.id.hash(state);
     self.life.hash(state);
   }
@@ -677,14 +680,14 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     &self,
     earlier_node_env: &NodeEnvironmentT<'s, 't>,
   ) -> (Vec<IVarNameT<'s, 't>>, Vec<IVarNameT<'s, 't>>) {
-    assert!(std::ptr::eq(self.parent_function_env, earlier_node_env.parent_function_env));
-    let earlier_node_env_declared_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+    assert!(eq(self.parent_function_env, earlier_node_env.parent_function_env));
+    let earlier_node_env_declared_locals: HashSet<IVarNameT<'s, 't>> =
         earlier_node_env.declared_locals.iter().map(|v| v.name()).collect();
-    let earlier_node_env_unstackified: std::collections::HashSet<IVarNameT<'s, 't>> =
+    let earlier_node_env_unstackified: HashSet<IVarNameT<'s, 't>> =
         earlier_node_env.unstackified_locals.iter().copied().collect();
-    let earlier_node_env_live_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+    let earlier_node_env_live_locals: HashSet<IVarNameT<'s, 't>> =
         earlier_node_env_declared_locals.difference(&earlier_node_env_unstackified).copied().collect();
-    let live_locals_introduced_since_earlier: std::collections::HashSet<IVarNameT<'s, 't>> =
+    let live_locals_introduced_since_earlier: HashSet<IVarNameT<'s, 't>> =
         self.declared_locals.iter().map(|v| v.name()).filter(|x| !earlier_node_env_live_locals.contains(x)).collect();
     let unstackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
         self.unstackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
@@ -840,7 +843,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn add_entries(
     &self,
     interner: &TypingInterner<'s, 't>,
-    scout_arena: &crate::scout_arena::ScoutArena<'s>,
+    scout_arena: &ScoutArena<'s>,
     new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
   ) -> &'t NodeEnvironmentT<'s, 't> {
     interner.alloc(NodeEnvironmentT {
@@ -1187,7 +1190,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
-    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    lookup_filter: &HashSet<ILookupContext>,
     interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
     let node_env = self.snapshot(interner);
@@ -1208,7 +1211,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_nearest_with_name(
     &self,
     _name_s: INameT<'s, 't>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _lookup_filter: &HashSet<ILookupContext>,
   ) -> Option<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_nearest_with_name");
   }
@@ -1228,7 +1231,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
-    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    lookup_filter: &HashSet<ILookupContext>,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let node_env = self.snapshot(interner);
@@ -1245,7 +1248,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_all_with_name(
     &self,
     _name_s: INameT<'s, 't>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _lookup_filter: &HashSet<ILookupContext>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_all_with_name");
   }
@@ -1260,7 +1263,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
     &self,
     _name_s: IImpreciseNameS<'s>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _lookup_filter: &HashSet<ILookupContext>,
     _get_only_nearest: bool,
     _interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
@@ -1277,7 +1280,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
     &self,
     _name_s: INameT<'s, 't>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _lookup_filter: &HashSet<ILookupContext>,
     _get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
@@ -1421,8 +1424,8 @@ case class FunctionEnvironmentT(
 ) extends IInDenizenEnvironmentT {
 */
 // mig: override fn hashCode
-impl<'s, 't> std::hash::Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+impl<'s, 't> Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: Hasher>(&self, state: &mut H) { self.id.hash(state); }
   /* Guardian: disable-all */
 }
 /*

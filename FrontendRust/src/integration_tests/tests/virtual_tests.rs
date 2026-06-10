@@ -1,3 +1,56 @@
+use crate::collect_only_tnode;
+use crate::instantiating::ast::ast::PrototypeI;
+use crate::instantiating::ast::expressions::FunctionCallIE;
+use crate::instantiating::ast::expressions::LetNormalIE;
+use crate::instantiating::ast::expressions::ReferenceExpressionIE;
+use crate::instantiating::ast::names::FunctionNameIX;
+use crate::instantiating::ast::names::FunctionTemplateNameI;
+use crate::instantiating::ast::names::IInterfaceNameI;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::IdI;
+use crate::instantiating::ast::templata::expect_coord_templata as expect_coord_templata_i;
+use crate::instantiating::ast::types::OwnershipI;
+use crate::instantiating::collector::NodeRefI;
+use crate::instantiating::collector::only_in_function;
+use crate::integration_tests::tests::run_compilation::test;
+use crate::integration_tests::tests::run_compilation::test_no_builtins;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::tests::tests::load_expected;
+use crate::typing::ast::ast::AbstractT;
+use crate::typing::ast::ast::PrototypeT;
+use crate::typing::ast::ast::SignatureT;
+use crate::typing::ast::expressions::FunctionCallTE;
+use crate::typing::ast::expressions::LetNormalTE;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::names::names::FunctionNameT;
+use crate::typing::names::names::FunctionNameValT;
+use crate::typing::names::names::FunctionTemplateNameT;
+use crate::typing::names::names::ICitizenNameT;
+use crate::typing::names::names::INameT;
+use crate::typing::names::names::IdT;
+use crate::typing::names::names::IdValT;
+use crate::typing::names::names::InterfaceNameValT;
+use crate::typing::names::names::InterfaceTemplateNameT;
+use crate::typing::templata::templata::expect_coord_templata as expect_coord_templata_t;
+use crate::typing::test::traverse::NodeRefT;
+use crate::typing::types::types::CoordT;
+use crate::typing::types::types::IRegionT;
+use crate::typing::types::types::IntT;
+use crate::typing::types::types::InterfaceTTValT;
+use crate::typing::types::types::KindT;
+use crate::typing::types::types::OwnershipT;
+use crate::typing::types::types::RegionT;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::CodeLocationS;
+use crate::von::ast::IVonData;
+use crate::von::ast::VonInt;
+use crate::von::ast::VonStr;
+use std::marker::PhantomData;
 /*
 package dev.vale
 
@@ -27,13 +80,13 @@ fn simple_program_containing_a_virtual_function() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -45,51 +98,51 @@ fn simple_program_containing_a_virtual_function() {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 2);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
-            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        CoordT {
+            ownership: OwnershipT::Share,
+            region: RegionT { region: IRegionT::Default },
+            kind: KindT::Int(IntT::I32),
         });
 
-    let test_tld = crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
-    let interface_template = interner.intern_interface_template_name(crate::typing::names::names::InterfaceTemplateNameT {
+    let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
+    let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
         human_namee: scout_arena.intern_str("I"),
-        _phantom: std::marker::PhantomData,
+        _phantom: PhantomData,
     });
-    let interface_name = interner.intern_interface_name(crate::typing::names::names::InterfaceNameValT {
+    let interface_name = interner.intern_interface_name(InterfaceNameValT {
         template: interface_template,
         template_args: &[],
     });
-    let interface_id = interner.intern_id(crate::typing::names::names::IdValT {
-        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Interface(interface_name),
+    let interface_id = interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Interface(interface_name),
     });
-    let interface_tt = interner.intern_interface_tt(crate::typing::types::types::InterfaceTTValT { id: *interface_id });
-    let i_coord = crate::typing::types::types::CoordT {
-        ownership: crate::typing::types::types::OwnershipT::Own,
-        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-        kind: crate::typing::types::types::KindT::Interface(interface_tt),
+    let interface_tt = interner.intern_interface_tt(InterfaceTTValT { id: *interface_id });
+    let i_coord = CoordT {
+        ownership: OwnershipT::Own,
+        region: RegionT { region: IRegionT::Default },
+        kind: KindT::Interface(interface_tt),
     };
-    let do_thing_template = interner.intern_function_template_name(crate::typing::names::names::FunctionTemplateNameT {
+    let do_thing_template = interner.intern_function_template_name(FunctionTemplateNameT {
         human_name: scout_arena.intern_str("doThing"),
-        code_location: crate::utils::range::CodeLocationS {
+        code_location: CodeLocationS {
             file: scout_arena.intern_file_coordinate(
                 scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]),
                 "0.vale"),
             offset: 24,
         },
-        _phantom: std::marker::PhantomData,
+        _phantom: PhantomData,
     });
-    let do_thing_name = interner.intern_function_name(crate::typing::names::names::FunctionNameValT {
+    let do_thing_name = interner.intern_function_name(FunctionNameValT {
         template: do_thing_template,
         template_args: &[],
         parameters: &[i_coord],
     });
-    let do_thing_id = interner.intern_id(crate::typing::names::names::IdValT {
-        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Function(do_thing_name),
+    let do_thing_id = interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Function(do_thing_name),
     });
     let do_thing = coutputs.lookup_function_by_signature(
-        crate::typing::ast::ast::SignatureT { id: *do_thing_id }).expect("vassertSome");
-    assert_eq!(do_thing.header.params[0].virtuality, Some(crate::typing::ast::ast::AbstractT));
+        SignatureT { id: *do_thing_id }).expect("vassertSome");
+    assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 /*
     test("Simple program containing a virtual function") {
@@ -142,13 +195,13 @@ fn can_call_virtual_function() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -160,51 +213,51 @@ fn can_call_virtual_function() {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 2);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
-            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        CoordT {
+            ownership: OwnershipT::Share,
+            region: RegionT { region: IRegionT::Default },
+            kind: KindT::Int(IntT::I32),
         });
 
-    let test_tld = crate::utils::code_hierarchy::PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
-    let interface_template = interner.intern_interface_template_name(crate::typing::names::names::InterfaceTemplateNameT {
+    let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
+    let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
         human_namee: scout_arena.intern_str("I"),
-        _phantom: std::marker::PhantomData,
+        _phantom: PhantomData,
     });
-    let interface_name = interner.intern_interface_name(crate::typing::names::names::InterfaceNameValT {
+    let interface_name = interner.intern_interface_name(InterfaceNameValT {
         template: interface_template,
         template_args: &[],
     });
-    let interface_id = interner.intern_id(crate::typing::names::names::IdValT {
-        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Interface(interface_name),
+    let interface_id = interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Interface(interface_name),
     });
-    let interface_tt = interner.intern_interface_tt(crate::typing::types::types::InterfaceTTValT { id: *interface_id });
-    let i_coord = crate::typing::types::types::CoordT {
-        ownership: crate::typing::types::types::OwnershipT::Own,
-        region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-        kind: crate::typing::types::types::KindT::Interface(interface_tt),
+    let interface_tt = interner.intern_interface_tt(InterfaceTTValT { id: *interface_id });
+    let i_coord = CoordT {
+        ownership: OwnershipT::Own,
+        region: RegionT { region: IRegionT::Default },
+        kind: KindT::Interface(interface_tt),
     };
-    let do_thing_template = interner.intern_function_template_name(crate::typing::names::names::FunctionTemplateNameT {
+    let do_thing_template = interner.intern_function_template_name(FunctionTemplateNameT {
         human_name: scout_arena.intern_str("doThing"),
-        code_location: crate::utils::range::CodeLocationS {
+        code_location: CodeLocationS {
             file: scout_arena.intern_file_coordinate(
                 scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]),
                 "0.vale"),
             offset: 24,
         },
-        _phantom: std::marker::PhantomData,
+        _phantom: PhantomData,
     });
-    let do_thing_name = interner.intern_function_name(crate::typing::names::names::FunctionNameValT {
+    let do_thing_name = interner.intern_function_name(FunctionNameValT {
         template: do_thing_template,
         template_args: &[],
         parameters: &[i_coord],
     });
-    let do_thing_id = interner.intern_id(crate::typing::names::names::IdValT {
-        package_coord: test_tld, init_steps: &[], local_name: crate::typing::names::names::INameT::Function(do_thing_name),
+    let do_thing_id = interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Function(do_thing_name),
     });
     let do_thing = coutputs.lookup_function_by_signature(
-        crate::typing::ast::ast::SignatureT { id: *do_thing_id }).expect("vassertSome");
-    assert_eq!(do_thing.header.params[0].virtuality, Some(crate::typing::ast::ast::AbstractT));
+        SignatureT { id: *do_thing_id }).expect("vassertSome");
+    assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 /*
   test("Can call virtual function") {
@@ -259,20 +312,20 @@ fn owning_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nimport v.builtins.opt.*;\nexported func main() int {\n  x Opt<int> = Some(7);\n  return 7;\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 7 }) => {}
+        IVonData::Int(VonInt { value: 7 }) => {}
         other => panic!("Expected VonInt(7), got {:?}", other),
     }
 }
@@ -299,13 +352,13 @@ fn simple_override_with_param_and_bound() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -347,13 +400,13 @@ fn struct_with_different_ordered_runes() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -395,13 +448,13 @@ fn struct_with_less_generic_params_than_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -442,13 +495,13 @@ fn struct_with_more_generic_params_than_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -489,13 +542,13 @@ fn struct_repeating_generic_params_for_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -535,21 +588,21 @@ fn imm_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/virtuals/interfaceimm.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/virtuals/interfaceimm.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
@@ -569,13 +622,13 @@ fn can_call_interface_envs_function_from_outside() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -586,14 +639,14 @@ fn can_call_interface_envs_function_from_outside() {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 1);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        crate::typing::types::types::CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Share,
-            region: crate::typing::types::types::RegionT { region: crate::typing::types::types::IRegionT::Default },
-            kind: crate::typing::types::types::KindT::Int(crate::typing::types::types::IntT::I32),
+        CoordT {
+            ownership: OwnershipT::Share,
+            region: RegionT { region: IRegionT::Default },
+            kind: KindT::Int(IntT::I32),
         });
 
     let do_thing = coutputs.lookup_function_by_str("doThing");
-    assert_eq!(do_thing.header.params[0].virtuality, Some(crate::typing::ast::ast::AbstractT));
+    assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 /*
   test("Can call interface env's function from outside") {
@@ -627,13 +680,13 @@ fn interface_with_method_with_param_of_substruct() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -665,13 +718,13 @@ fn feeding_instantiation_bounds_for_something_created_in_same_function() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -714,13 +767,13 @@ fn generic_interface_forwarder_with_bound() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -771,13 +824,13 @@ fn generic_interface_forwarder_with_drop_bound() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -824,13 +877,13 @@ fn open_interface_constructor() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test_no_builtins(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test_no_builtins(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -838,7 +891,7 @@ fn open_interface_constructor() {
     );
     let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
 }
@@ -875,13 +928,13 @@ fn open_interface_constructor_multiple_methods() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -889,7 +942,7 @@ fn open_interface_constructor_multiple_methods() {
     );
     let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 3 }) => {}
+        IVonData::Int(VonInt { value: 3 }) => {}
         other => panic!("Expected VonInt(3), got {:?}", other),
     }
 }
@@ -946,21 +999,21 @@ fn successful_pointer_downcast_with_as() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/downcast/downcastPointerSuccess.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/downcast/downcastPointerSuccess.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
@@ -980,14 +1033,14 @@ fn failed_pointer_downcast_with_as() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/downcast/downcastPointerFailed.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/downcast/downcastPointerFailed.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -996,15 +1049,15 @@ fn failed_pointer_downcast_with_as() {
     {
         let coutputs = compile.expect_compiler_outputs();
         let moo = coutputs.lookup_function_by_str("moo");
-        let (dest_var, return_type) = crate::collect_only_tnode!(
-            crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
-            crate::typing::test::traverse::NodeRefT::LetNormal(crate::typing::ast::expressions::LetNormalTE {
+        let (dest_var, return_type) = collect_only_tnode!(
+            NodeRefT::FunctionDefinition(moo),
+            NodeRefT::LetNormal(LetNormalTE {
                 variable: dest_var,
-                expr: crate::typing::ast::expressions::ReferenceExpressionTE::FunctionCall(crate::typing::ast::expressions::FunctionCallTE {
-                    callable: crate::typing::ast::ast::PrototypeT {
-                        id: crate::typing::names::names::IdT {
-                            local_name: crate::typing::names::names::INameT::Function(crate::typing::names::names::FunctionNameT {
-                                template: crate::typing::names::names::FunctionTemplateNameT { human_name: crate::interner::StrI("as"), .. },
+                expr: ReferenceExpressionTE::FunctionCall(FunctionCallTE {
+                    callable: PrototypeT {
+                        id: IdT {
+                            local_name: INameT::Function(FunctionNameT {
+                                template: FunctionTemplateNameT { human_name: StrI("as"), .. },
                                 ..
                             }),
                             ..
@@ -1017,22 +1070,22 @@ fn failed_pointer_downcast_with_as() {
             }) => Some((*dest_var, *return_type))
         );
         assert!(dest_var.coord() == return_type);
-        let citizen_name = crate::typing::names::names::ICitizenNameT::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
+        let citizen_name = ICitizenNameT::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
         let &[success_type, fail_type] = citizen_name.template_args() else { panic!("expected 2 template args") };
-        assert!(crate::typing::templata::templata::expect_coord_templata(success_type).coord.ownership == crate::typing::types::types::OwnershipT::Borrow);
-        assert!(crate::typing::templata::templata::expect_coord_templata(fail_type).coord.ownership == crate::typing::types::types::OwnershipT::Borrow);
+        assert!(expect_coord_templata_t(success_type).coord.ownership == OwnershipT::Borrow);
+        assert!(expect_coord_templata_t(fail_type).coord.ownership == OwnershipT::Borrow);
     }
     {
         let monouts = compile.get_monouts();
         let moo = monouts.lookup_function_by_str("moo");
-        let (dest_var, return_type) = crate::instantiating::collector::only_in_function(moo, &|node| match node {
-            crate::instantiating::collector::NodeRefI::LetNormal(crate::instantiating::ast::expressions::LetNormalIE {
+        let (dest_var, return_type) = only_in_function(moo, &|node| match node {
+            NodeRefI::LetNormal(LetNormalIE {
                 variable: dest_var,
-                expr: crate::instantiating::ast::expressions::ReferenceExpressionIE::FunctionCall(crate::instantiating::ast::expressions::FunctionCallIE {
-                    callable: crate::instantiating::ast::ast::PrototypeI {
-                        id: crate::instantiating::ast::names::IdI {
-                            local_name: crate::instantiating::ast::names::INameI::FunctionNameIX(crate::instantiating::ast::names::FunctionNameIX {
-                                template: crate::instantiating::ast::names::FunctionTemplateNameI { human_name: crate::interner::StrI("as"), .. },
+                expr: ReferenceExpressionIE::FunctionCall(FunctionCallIE {
+                    callable: PrototypeI {
+                        id: IdI {
+                            local_name: INameI::FunctionNameIX(FunctionNameIX {
+                                template: FunctionTemplateNameI { human_name: StrI("as"), .. },
                                 ..
                             }),
                             ..
@@ -1047,13 +1100,13 @@ fn failed_pointer_downcast_with_as() {
             _ => None,
         });
         assert!(dest_var.collapsed_coord() == return_type);
-        let interface_id_local_name = crate::instantiating::ast::names::IInterfaceNameI::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
+        let interface_id_local_name = IInterfaceNameI::try_from(return_type.kind.expect_interface().id.local_name).unwrap();
         let &[success_type, fail_type] = interface_id_local_name.template_args() else { panic!("expected 2 template args") };
-        assert!(crate::instantiating::ast::templata::expect_coord_templata(success_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
-        assert!(crate::instantiating::ast::templata::expect_coord_templata(fail_type).coord.ownership == crate::instantiating::ast::types::OwnershipI::MutableBorrow);
+        assert!(expect_coord_templata_i(success_type).coord.ownership == OwnershipI::MutableBorrow);
+        assert!(expect_coord_templata_i(fail_type).coord.ownership == OwnershipI::MutableBorrow);
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
@@ -1102,21 +1155,21 @@ fn successful_owning_downcast_with_as() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/downcast/downcastOwningSuccessful.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/downcast/downcastOwningSuccessful.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
@@ -1136,21 +1189,21 @@ fn failed_owning_downcast_with_as() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let source = crate::tests::tests::load_expected("programs/downcast/downcastOwningFailed.vale");
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let source = load_expected("programs/downcast/downcastOwningFailed.vale");
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         source.as_str(),
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Int(crate::von::ast::VonInt { value: 42 }) => {}
+        IVonData::Int(VonInt { value: 42 }) => {}
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
@@ -1170,20 +1223,20 @@ fn lambda_is_compatible_anonymous_interface() {
     let typing_bump = bumpalo::Bump::new();
     let instantiating_bump = bumpalo::Bump::new();
     let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = crate::parse_arena::ParseArena::new(&parse_bump);
-    let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
-    let keywords = crate::keywords::Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = crate::keywords::Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = crate::simplifying::hammer_interner::HammerInterner::new(&hammer_bump);
-    let typing_interner = crate::typing::typing_interner::TypingInterner::new(&typing_bump);
-    let mut compile = crate::integration_tests::tests::run_compilation::test(
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
         "\nimport castutils.*;\n\ninterface AFunction2<R Ref, P1 Ref, P2 Ref> {\n  func __call(virtual this &AFunction2<R, P1, P2>, a P1, b P2) R;\n}\nexported func main() str {\n  func = AFunction2<str, int, bool>((i, b) => { str(i) + str(b) });\n  return func(42, true);\n}\n",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        crate::von::ast::IVonData::Str(crate::von::ast::VonStr { value }) if value == "42true" => {}
+        IVonData::Str(VonStr { value }) if value == "42true" => {}
         other => panic!("Expected VonStr(\"42true\"), got {:?}", other),
     }
 }

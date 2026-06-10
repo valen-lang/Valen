@@ -11,6 +11,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
 use std::collections::HashSet;
+use std::iter::once;
 
 /*
 package dev.vale.typing.expression
@@ -142,7 +143,7 @@ where 's: 't,
 
         let drop_range = RangeS { begin: block_se.range.end, end: block_se.range.end };
         let drop_ranges: Vec<RangeS<'s>> =
-            std::iter::once(drop_range).chain(parent_ranges.iter().copied()).collect();
+            once(drop_range).chain(parent_ranges.iter().copied()).collect();
         let new_expr =
             self.drop_since(
                 coutputs, starting_nenv, nenv,

@@ -43,6 +43,16 @@ use crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError;
 use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
 use crate::postparsing::rune_type_solver::TemplataLookupResult;
 use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
+use crate::higher_typing::higher_typing_pass::explicify_lookups;
+use crate::higher_typing::patterns::get_rune_types_from_pattern;
+use crate::postparsing::names::IRuneValS;
+use crate::postparsing::names::SelfRuneS;
+use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
+use crate::postparsing::rules::rules::RuneUsage;
+use crate::postparsing::rune_type_solver::solve_rune_type;
+use crate::typing::names::names::RuneNameT;
+use std::iter::once;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.expression
@@ -245,7 +255,7 @@ where 's: 't,
                         Ok(Some(ExpressionTE::Reference(ReferenceExpressionTE::ConstantBool(self.typing_interner.alloc(ConstantBoolTE {
                             value: b,
                             region,
-                            _phantom: std::marker::PhantomData,
+                            _phantom: PhantomData,
                         })))))
                     }
                     None => Ok(None),
@@ -330,7 +340,7 @@ where 's: 't,
                     _ => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — unexpected mutability"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
-                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
+                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
@@ -484,7 +494,7 @@ where 's: 't,
                     _ => panic!("implement: evaluate_addressible_lookup AddressibleClosure — unexpected mutability"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
-                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
+                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: PhantomData }));
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
@@ -519,7 +529,7 @@ where 's: 't,
                 let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
-                        name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData })),
+                        name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: PhantomData })),
                         variability: VariabilityT::Final,
                         coord: closured_vars_struct_ref_coord,
                     }),
@@ -826,7 +836,7 @@ where 's: 't,
             ExpressionTE::Reference(r) => r,
             ExpressionTE::Address(a) => {
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(a.range()).chain(parent_ranges.iter().copied()).collect();
+                    once(a.range()).chain(parent_ranges.iter().copied()).collect();
                 let soft_loaded = self.soft_load(nenv, &range_with_parent, a, LoadAsP::Use, region);
                 soft_loaded
             }
@@ -867,7 +877,7 @@ where 's: 't,
         let (expr_2, returns) =
             self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
         let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-            &std::iter::once(expr_1.range()).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+            &once(expr_1.range()).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
         match expr_2 {
             ExpressionTE::Address(a) => Ok((a, returns)),
             ExpressionTE::Reference(_) => {
@@ -920,7 +930,7 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(
                     ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE {
                         region,
-                        _phantom: std::marker::PhantomData,
+                        _phantom: PhantomData,
                     }))), HashSet::new()))
             }
             IExpressionSE::ConstantInt(c) => {
@@ -943,7 +953,7 @@ where 's: 't,
                         let snapshot = nenv.snapshot(self.typing_interner);
                         let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
                         let range_list: Vec<RangeS<'s>> =
-                            std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                            once(ret.range).chain(parent_ranges.iter().copied()).collect();
                         match self.is_type_convertible(
                             coutputs, snapshot_env, &range_list, outer_call_location,
                             uncasted_inner_expr_2.result().coord, return_type) {
@@ -971,7 +981,7 @@ where 's: 't,
                 returns.insert(inner_expr_2.result().coord);
 
                 let result_var_name = self.typing_interner.intern_typing_pass_function_result_var_name(
-                    TypingPassFunctionResultVarNameT { _phantom: std::marker::PhantomData });
+                    TypingPassFunctionResultVarNameT { _phantom: PhantomData });
                 let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
                 let result_variable = ReferenceLocalVariableT {
                     name: result_var_id,
@@ -986,7 +996,7 @@ where 's: 't,
                 nenv.add_variable(IVariableT::ReferenceLocal(result_variable));
 
                 let range_list: Vec<RangeS<'s>> =
-                    std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                    once(ret.range).chain(parent_ranges.iter().copied()).collect();
                 let destruct_exprs_refs =
                     self.unlet_and_drop_all(
                         coutputs, nenv, &range_list, outer_call_location, region,
@@ -1018,12 +1028,12 @@ where 's: 't,
 
                 let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
                 let rune_to_initially_known_type: HashMap<_, _> =
-                    crate::higher_typing::patterns::get_rune_types_from_pattern(&let_se.pattern)
+                    get_rune_types_from_pattern(&let_se.pattern)
                         .into_iter().collect();
                 let range_list: Vec<RangeS<'s>> =
-                    std::iter::once(let_se.range).chain(parent_ranges.iter().copied()).collect();
+                    once(let_se.range).chain(parent_ranges.iter().copied()).collect();
                 let rune_to_type =
-                    crate::postparsing::rune_type_solver::solve_rune_type(
+                    solve_rune_type(
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
                         &rune_type_solve_env,
@@ -1051,7 +1061,7 @@ where 's: 't,
                     |compiler, _coutputs, nenv, _life, _live_capture_locals| {
                         ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE {
                             region: nenv.default_region(),
-                            _phantom: std::marker::PhantomData,
+                            _phantom: PhantomData,
                         }))
                     },
                 );
@@ -1073,7 +1083,7 @@ where 's: 't,
                         _ => {
                             let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                             let range_with_parent: Vec<RangeS<'s>> =
-                                std::iter::once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
+                                once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
                             self.drop(snap, coutputs, &range_with_parent, outer_call_location, region, undropped_expr_te)?
                         }
                     };
@@ -1119,16 +1129,16 @@ where 's: 't,
                                 fc.arg_exprs)?;
                         let mut range_list = vec![fc.range];
                         range_list.extend_from_slice(parent_ranges);
-                        let initial_container_receiving: Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)> = Vec::new();
+                        let initial_container_receiving: Vec<(RuneUsage<'s>, RuneUsage<'s>)> = Vec::new();
                         let initial_look_in_env: IInDenizenEnvironmentT<'s, 't> = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                         let parts = overload_set.lookup.parts;
                         let (final_look_in_env, container_receiving_rune_to_explicit_template_arg_rune) =
                             parts[..parts.len() - 1].iter().try_fold(
                                 (initial_look_in_env, initial_container_receiving),
-                                |(previous_look_in_env, previous_container_receiving), part| -> Result<(IInDenizenEnvironmentT<'s, 't>, Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)>), ICompileErrorT<'s, 't>> {
+                                |(previous_look_in_env, previous_container_receiving), part| -> Result<(IInDenizenEnvironmentT<'s, 't>, Vec<(RuneUsage<'s>, RuneUsage<'s>)>), ICompileErrorT<'s, 't>> {
                                     let struct_templata = match previous_look_in_env.lookup_nearest_with_imprecise_name(
                                         part.name,
-                                        std::iter::once(crate::typing::env::environment::ILookupContext::TemplataLookupContext).collect(),
+                                        once(ILookupContext::TemplataLookupContext).collect(),
                                         self.typing_interner,
                                     ) {
                                         Some(ITemplataT::StructDefinition(s)) => s,
@@ -1139,7 +1149,7 @@ where 's: 't,
                                     };
                                     let struct_template_id = self.resolve_struct_template(struct_templata);
                                     let look_in_env = coutputs.get_outer_env_for_type(&range_list, *struct_template_id);
-                                    let part_rune_to_template_arg: Vec<(crate::postparsing::rules::rules::RuneUsage<'s>, crate::postparsing::rules::rules::RuneUsage<'s>)> =
+                                    let part_rune_to_template_arg: Vec<(RuneUsage<'s>, RuneUsage<'s>)> =
                                         struct_templata.origin_struct.generic_parameters.iter()
                                             .zip(part.explicit_template_args.iter())
                                             .map(|(gp, arg_rune)| (gp.rune, *arg_rune))
@@ -1211,7 +1221,7 @@ where 's: 't,
             IExpressionSE::Function(function_se) => {
                 let function_s = function_se.function;
                 let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                    &std::iter::once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                    &once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
                     coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s)?;
                 Ok((ExpressionTE::Reference(call_expr_2), HashSet::new()))
@@ -1230,7 +1240,7 @@ where 's: 't,
                                 }
                                 LoadAsP::LoadAsBorrow => {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
                                     let defer_te = self.make_temporary_local_defer(
                                         coutputs, nenv, &range_with_parent, outer_call_location,
                                         life.add(self.typing_interner, 1), region,
@@ -1239,7 +1249,7 @@ where 's: 't,
                                 }
                                 LoadAsP::LoadAsWeak => {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
                                     let defer_te = self.make_temporary_local_defer(
                                         coutputs, nenv, &range_with_parent, outer_call_location,
                                         life.add(self.typing_interner, 3), region,
@@ -1258,7 +1268,7 @@ where 's: 't,
                                 LoadAsP::LoadAsBorrow => source_te,
                                 LoadAsP::LoadAsWeak => {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
                                     self.weak_alias(coutputs, self.typing_interner.alloc_slice_copy(&range_with_parent), source_te)?
                                 }
                                 LoadAsP::Use => source_te,
@@ -1289,12 +1299,12 @@ where 's: 't,
             IExpressionSE::Dot(dot) => {
                 let member_name: IVarNameT<'s, 't> =
                     IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(
-                        CodeVarNameT { name: dot.member, _phantom: std::marker::PhantomData }));
+                        CodeVarNameT { name: dot.member, _phantom: PhantomData }));
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
                     self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, dot.left)?;
                 let container_expr_2 = {
                     let range_with_parent: Vec<RangeS<'s>> =
-                        std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                        once(dot.range).chain(parent_ranges.iter().copied()).collect();
                     self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2)
                 };
                 let expr_2 = match container_expr_2.result().coord.kind {
@@ -1350,7 +1360,7 @@ where 's: 't,
                                 region,
                             }));
                             let range_with_parent: Vec<RangeS<'s>> =
-                                std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                                once(dot.range).chain(parent_ranges.iter().copied()).collect();
                             AddressExpressionTE::RuntimeSizedArrayLookup(
                                 self.typing_interner.alloc(self.lookup_in_unknown_sized_array(
                                     &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa))
@@ -1449,15 +1459,15 @@ where 's: 't,
                         match (a_citizen, b_citizen) {
                             (Ok(a_c), Ok(b_c)) => {
                                 let nenv_snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
-                                let a_ancestors: std::collections::HashSet<ISuperKindTT<'s, 't>> =
+                                let a_ancestors: HashSet<ISuperKindTT<'s, 't>> =
                                     self.get_parents(coutputs, parent_ranges, outer_call_location, nenv_snap, ISubKindTT::try_from(a).unwrap()).into_iter().collect();
-                                let b_ancestors: std::collections::HashSet<ISuperKindTT<'s, 't>> =
+                                let b_ancestors: HashSet<ISuperKindTT<'s, 't>> =
                                     self.get_parents(coutputs, parent_ranges, outer_call_location, nenv_snap, ISubKindTT::try_from(b).unwrap()).into_iter().collect();
                                 let common_ancestors: Vec<ISuperKindTT<'s, 't>> = a_ancestors.intersection(&b_ancestors).copied().collect();
 
                                 if uncoerced_else_block_2.result().coord.ownership != uncoerced_else_block_2.result().coord.ownership {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                                     let _ = range_with_parent;
                                     panic!("CompileErrorExceptionT RangedInternalErrorT: Two branches of if have different ownerships!\n{:?}\n{:?}", a_c, b_c);
                                 }
@@ -1465,12 +1475,12 @@ where 's: 't,
 
                                 if common_ancestors.is_empty() {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                                     let _ = range_with_parent;
                                     panic!("CompileErrorExceptionT RangedInternalErrorT: No common ancestors of two branches of if:\n{:?}\n{:?}", a_c, b_c);
                                 } else if common_ancestors.len() > 1 {
                                     let range_with_parent: Vec<RangeS<'s>> =
-                                        std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                        once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                                     let _ = range_with_parent;
                                     panic!("CompileErrorExceptionT RangedInternalErrorT: More than one common ancestor of two branches of if:\n{:?}\n{:?}", a_c, b_c);
                                 } else {
@@ -1479,7 +1489,7 @@ where 's: 't,
                             }
                             _ => {
                                 let range_with_parent: Vec<RangeS<'s>> =
-                                    std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                                    once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                                 let _ = range_with_parent;
                                 panic!("CantReconcileBranchesResults: {:?} vs {:?}", a, b);
                             }
@@ -1489,7 +1499,7 @@ where 's: 't,
 
                 let then_fate_snap = IInDenizenEnvironmentT::Node(then_fate.snapshot(self.typing_interner));
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                    once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                 let then_expr_2 = self.convert(then_fate_snap, coutputs, &range_with_parent, outer_call_location,
                     ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_then_block_2)), common_type);
                 let else_fate_snap = IInDenizenEnvironmentT::Node(else_fate.snapshot(self.typing_interner));
@@ -1558,16 +1568,16 @@ where 's: 't,
             IExpressionSE::Break(b) => {
                 // See BEAFB, we need to find the nearest while to see local since then.
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(b.range).chain(parent_ranges.iter().copied()).collect();
+                    once(b.range).chain(parent_ranges.iter().copied()).collect();
                 match nenv.nearest_loop_env(self.typing_interner) {
                     None => {
                         panic!("RangedInternalErrorT: Using break while not inside loop!");
                     }
                     Some((while_nenv, _)) => {
                         assert!(region == nenv.default_region()); // vcurious
-                        let void_literal = ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+                        let void_literal = ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: PhantomData }));
                         let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal)?;
-                        let break_te = ReferenceExpressionTE::Break(self.typing_interner.alloc(BreakTE { region, _phantom: std::marker::PhantomData }));
+                        let break_te = ReferenceExpressionTE::Break(self.typing_interner.alloc(BreakTE { region, _phantom: PhantomData }));
                         let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
                         Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::new()))
                     }
@@ -1604,7 +1614,7 @@ where 's: 't,
 
                         if !body_unstackified_ancestor_locals.is_empty() {
                             let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                                &once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                             return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
                                 range: range_with_parent,
                                 local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
@@ -1612,7 +1622,7 @@ where 's: 't,
                         }
                         if !body_restackified_ancestor_locals.is_empty() {
                             let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                                &once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                             return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
                                 range: range_with_parent,
                                 local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
@@ -1621,7 +1631,7 @@ where 's: 't,
                         // BUG: Scala checks bodyRestackifiedAncestorLocals twice (same condition, same error) — mirroring as-is
                         if !body_restackified_ancestor_locals.is_empty() {
                             let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                                &once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                             return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
                                 range: range_with_parent,
                                 local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
@@ -1660,8 +1670,8 @@ where 's: 't,
 
                 // Now that we know the result type, let's make a temporary list.
 
-                let self_rune_irune = self.scout_arena.intern_rune(crate::postparsing::names::IRuneValS::SelfRune(crate::postparsing::names::SelfRuneS {}));
-                let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(crate::typing::names::names::RuneNameT { rune: self_rune_irune, _phantom: std::marker::PhantomData }));
+                let self_rune_irune = self.scout_arena.intern_rune(IRuneValS::SelfRune(SelfRuneS {}));
+                let self_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: self_rune_irune, _phantom: PhantomData }));
                 let element_coord_templata: &'t CoordTemplataT<'s, 't> = self.typing_interner.alloc(CoordTemplataT { coord: element_ref_t });
                 let snap = nenv.snapshot(self.typing_interner);
                 let call_env_node = snap.add_entries(
@@ -1673,10 +1683,10 @@ where 's: 't,
                     call_env, coutputs, RegionT { region: IRegionT::Default },
                     self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.list })));
                 let range_with_parent_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                    &std::iter::once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
-                let rune_parent_env_lookup_rule = crate::postparsing::rules::rules::IRulexSR::RuneParentEnvLookup(crate::postparsing::rules::rules::RuneParentEnvLookupSR {
+                    &once(m.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                let rune_parent_env_lookup_rule = IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
                     range: m.range,
-                    rune: crate::postparsing::rules::rules::RuneUsage { range: m.range, rune: self_rune_irune },
+                    rune: RuneUsage { range: m.range, rune: self_rune_irune },
                 });
                 let make_list_te = self.evaluate_prefix_call(
                     coutputs,
@@ -1787,7 +1797,7 @@ where 's: 't,
                                 KindT::Struct(s) => {
                                     return Err(ICompileErrorT::CantMutateFinalMember {
                                         range: self.typing_interner.alloc_slice_copy(
-                                            &std::iter::once(rml.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                            &once(rml.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
                                         struct_: *s,
                                         member_name: rml.member_name,
                                     });
@@ -1798,14 +1808,14 @@ where 's: 't,
                         AddressExpressionTE::RuntimeSizedArrayLookup(rsal) => {
                             return Err(ICompileErrorT::CantMutateFinalElement {
                                 range: self.typing_interner.alloc_slice_copy(
-                                    &std::iter::once(rsal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                    &once(rsal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
                                 coord: rsal.array_expr.result().coord,
                             });
                         }
                         AddressExpressionTE::StaticSizedArrayLookup(ssal) => {
                             return Err(ICompileErrorT::CantMutateFinalElement {
                                 range: self.typing_interner.alloc_slice_copy(
-                                    &std::iter::once(ssal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                    &once(ssal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
                                 coord: ssal.array_expr.result().coord,
                             });
                         }
@@ -1813,7 +1823,7 @@ where 's: 't,
                     }
                 }
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(em.range).chain(parent_ranges.iter().copied()).collect();
+                    once(em.range).chain(parent_ranges.iter().copied()).collect();
                 let is_convertible =
                     self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
                         unconverted_source_expr_2.result().coord, destination_expr_2.result().coord);
@@ -1844,7 +1854,7 @@ where 's: 't,
                 //   set ship = foo(ship);
                 // which move the thing on the right and then restackify it on the left.
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(lm.range).chain(parent_ranges.iter().copied()).collect();
+                    once(lm.range).chain(parent_ranges.iter().copied()).collect();
                 let destination_expr_2 =
                     self.evaluate_addressible_lookup_for_mutate(coutputs, nenv, parent_ranges, region, lm.range, lm.name)
                         .unwrap_or_else(|| panic!("Couldnt find {:?}", lm.name));
@@ -1902,7 +1912,7 @@ where 's: 't,
                     self.evaluate_and_coerce_to_reference_expressions(
                         coutputs, nenv, life, parent_ranges, outer_call_location, nenv.default_region(), sav.elements)?;
                 let new_parent_ranges: Vec<RangeS<'s>> =
-                    std::iter::once(sav.range).chain(parent_ranges.iter().copied()).collect();
+                    once(sav.range).chain(parent_ranges.iter().copied()).collect();
                 let expr_2 = self.evaluate_static_sized_array_from_values(
                     coutputs,
                     IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
@@ -1923,7 +1933,7 @@ where 's: 't,
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), sa.callable)?;
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(sa.range).chain(parent_ranges.iter().copied()).collect();
+                    once(sa.range).chain(parent_ranges.iter().copied()).collect();
                 let expr_2 = self.evaluate_static_sized_array_from_callable(
                     coutputs,
                     IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
@@ -1943,7 +1953,7 @@ where 's: 't,
                 let (size_te, returns_from_size) = self.evaluate_and_coerce_to_reference_expression(
                     coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, nrsa.size)?;
                 let (maybe_callable_te, returns_from_callable) = match nrsa.callable {
-                    None => (None, std::collections::HashSet::new()),
+                    None => (None, HashSet::new()),
                     Some(callable_ae) => {
                         let (callable_te, rets) = self.evaluate_and_coerce_to_reference_expression(
                             coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), callable_ae)?;
@@ -1951,7 +1961,7 @@ where 's: 't,
                     }
                 };
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(nrsa.range).chain(parent_ranges.iter().copied()).collect();
+                    once(nrsa.range).chain(parent_ranges.iter().copied()).collect();
                 let expr_2 = self.evaluate_runtime_sized_array_from_callable(
                     coutputs,
                     nenv.snapshot(self.typing_interner),
@@ -1999,7 +2009,7 @@ where 's: 't,
                 let result = ReferenceExpressionTE::ConstantStr(self.typing_interner.alloc(ConstantStrTE {
                     value: c.value,
                     region,
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
@@ -2007,7 +2017,7 @@ where 's: 't,
                 let result = ReferenceExpressionTE::ConstantFloat(self.typing_interner.alloc(ConstantFloatTE {
                     value: c.value,
                     region,
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
@@ -2064,7 +2074,7 @@ where 's: 't,
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
                     self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), index_se.left)?;
                 let range_with_parent: Vec<RangeS<'s>> =
-                    std::iter::once(index_se.range).chain(parent_ranges.iter().copied()).collect();
+                    once(index_se.range).chain(parent_ranges.iter().copied()).collect();
                 let container_expr_2 =
                     self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2);
                 let (index_expr_2, returns_from_index_expr) =
@@ -2094,7 +2104,7 @@ where 's: 't,
                 let rune_name_s = self.scout_arena.intern_imprecise_name(
                     IImpreciseNameValS::RuneName(RuneNameValS { rune: r.rune }));
                 let templata = nenv.lookup_nearest_with_imprecise_name(rune_name_s, &{
-                    let mut s = std::collections::HashSet::new();
+                    let mut s = HashSet::new();
                     s.insert(ILookupContext::TemplataLookupContext);
                     s
                 }, self.typing_interner).unwrap();
@@ -2119,7 +2129,7 @@ where 's: 't,
                         let mut tiny_env = nenv.function_environment().make_child_node_environment(
                             expr_1, life);
                         let arbitrary_name_t = INameT::Arbitrary(self.typing_interner.intern_arbitrary_name(
-                            ArbitraryNameT { _phantom: std::marker::PhantomData }));
+                            ArbitraryNameT { _phantom: PhantomData }));
                         tiny_env.add_entries(self.scout_arena, self.typing_interner,
                             &[(arbitrary_name_t, IEnvEntryT::Templata(templata))]);
                         let arbitrary_imprecise = self.scout_arena.intern_imprecise_name(
@@ -2144,7 +2154,7 @@ where 's: 't,
                 let result = ReferenceExpressionTE::ConstantBool(self.typing_interner.alloc(ConstantBoolTE {
                     value: c.value,
                     region,
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
@@ -2152,10 +2162,10 @@ where 's: 't,
                 // Per canonical: vassert(rules.isEmpty); val name = parts.head.name
                 assert!(overload_set.lookup.rules.is_empty()); // implement
                 let name = overload_set.lookup.parts.first().expect("OverloadSet parts must be non-empty").name;
-                let mut lookup_filter = std::collections::HashSet::new();
+                let mut lookup_filter = HashSet::new();
                 lookup_filter.insert(ILookupContext::ExpressionLookupContext);
                 let templatas_from_env = nenv.lookup_all_with_imprecise_name(name, &lookup_filter, self.typing_interner);
-                let range_list: Vec<RangeS<'s>> = std::iter::once(overload_set.lookup.range).chain(parent_ranges.iter().copied()).collect();
+                let range_list: Vec<RangeS<'s>> = once(overload_set.lookup.range).chain(parent_ranges.iter().copied()).collect();
                 let range_list_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_from_vec(range_list);
                 let templata_from_env = match templatas_from_env.as_slice() {
                     [ITemplataT::Boolean(_value)] => {
@@ -3988,7 +3998,7 @@ where 's: 't,
         let overload_set = self.typing_interner.intern_overload_set(
             OverloadSetTValT { env, name: name_ref });
         let void_expr: ReferenceExpressionTE<'s, 't> =
-            ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+            ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: PhantomData }));
         ReferenceExpressionTE::Reinterpret(self.typing_interner.alloc(ReinterpretTE {
             expr: void_expr,
             result_reference: CoordT {
@@ -4073,7 +4083,7 @@ where 's: 't,
             |compiler, _coutputs, nenv, _live_capture_locals| {
                 ReferenceExpressionTE::VoidLiteral(compiler.typing_interner.alloc(VoidLiteralTE {
                     region: nenv.default_region(),
-                    _phantom: std::marker::PhantomData,
+                    _phantom: PhantomData,
                 }))
             })
     }
@@ -4157,7 +4167,7 @@ where 's: 't,
         // what types we *expect* them to be, so we could coerce.
         // That coercion is good, but lets make it more explicit.
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+        match explicify_lookups(
             &rune_type_solve_env,
             self.scout_arena,
             &mut rune_a_to_type,
@@ -4286,7 +4296,7 @@ where 's: 't,
                     let mut exprs: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(expr_te);
                     exprs.extend(destroy_expressions);
-                    exprs.push(ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData })));
+                    exprs.push(ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: PhantomData })));
                     Ok(self.consecutive(&exprs))
                 }
                 KindT::Never(_) => {
@@ -4460,7 +4470,7 @@ where
         IRuneTypeSolverLookupResult<'s>,
         IRuneTypingLookupFailedError<'s>,
     > {
-        let mut filter = std::collections::HashSet::new();
+        let mut filter = HashSet::new();
         filter.insert(ILookupContext::TemplataLookupContext);
         match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter, self.typing_interner) {
             Some(ITemplataT::StructDefinition(t)) => {

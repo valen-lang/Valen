@@ -5,6 +5,7 @@ use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::postparsing::itemplatatype::TemplateTemplataType;
 use crate::typing::types::types::KindT;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.instantiating.ast
@@ -247,7 +248,7 @@ case class KindTemplataI[+R <: IRegionsModeI](kind: KindIT[R]) extends ITemplata
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct RuntimeSizedArrayTemplateTemplataI<'s, 'i, R> {
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl RuntimeSizedArrayTemplateTemplataI
 /*
@@ -261,7 +262,7 @@ case class RuntimeSizedArrayTemplateTemplataI[+R <: IRegionsModeI]() extends ITe
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct StaticSizedArrayTemplateTemplataI<'s, 'i, R> {
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl StaticSizedArrayTemplateTemplataI
 /*
@@ -382,7 +383,7 @@ case class ImplDefinitionTemplataI[+R <: IRegionsModeI](
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct OwnershipTemplataI<'s, 'i, R> {
   pub ownership: OwnershipI,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl OwnershipTemplataI
 /*
@@ -397,7 +398,7 @@ case class OwnershipTemplataI[+R <: IRegionsModeI](ownership: OwnershipI) extend
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct VariabilityTemplataI<'s, 'i, R> {
   pub variability: VariabilityI,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl VariabilityTemplataI
 /*
@@ -412,7 +413,7 @@ case class VariabilityTemplataI[+R <: IRegionsModeI](variability: VariabilityI) 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct MutabilityTemplataI<'s, 'i, R> {
   pub mutability: MutabilityI,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl MutabilityTemplataI
 /*
@@ -427,7 +428,7 @@ case class MutabilityTemplataI[+R <: IRegionsModeI](mutability: MutabilityI) ext
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct LocationTemplataI<'s, 'i, R> {
   pub location: LocationI,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl LocationTemplataI
 /*
@@ -443,7 +444,7 @@ case class LocationTemplataI[+R <: IRegionsModeI](location: LocationI) extends I
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct BooleanTemplataI<'s, 'i, R> {
   pub value: bool,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl BooleanTemplataI
 /*
@@ -458,7 +459,7 @@ case class BooleanTemplataI[+R <: IRegionsModeI](value: Boolean) extends ITempla
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct IntegerTemplataI<'s, 'i, R> {
   pub value: i64,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl IntegerTemplataI
 /*
@@ -473,7 +474,7 @@ case class IntegerTemplataI[+R <: IRegionsModeI](value: Long) extends ITemplataI
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct StringTemplataI<'s, 'i, R> {
   pub value: StrI<'s>,
-  pub _marker: std::marker::PhantomData<&'i R>,
+  pub _marker: PhantomData<&'i R>,
 }
 // mig: impl StringTemplataI
 /*
@@ -533,7 +534,7 @@ case class CoordListTemplataI[+R <: IRegionsModeI](coords: Vector[CoordI[R]]) ex
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct RegionTemplataI<'s, 'i, R> {
   pub pure_height: i32,
-  pub _marker: std::marker::PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<&'s &'i R>,
 }
 // mig: impl RegionTemplataI
 /*
@@ -555,7 +556,7 @@ case class RegionTemplataI[+R <: IRegionsModeI](pureHeight: Int) extends ITempla
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternFunctionTemplataI<'s, 'i, R> {
   pub header: &'i FunctionHeaderI<'s, 'i>,
-  pub _marker: std::marker::PhantomData<R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl ExternFunctionTemplataI
 /*

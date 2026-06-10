@@ -29,6 +29,10 @@ use crate::postparsing::rules::RuneUsage;
 use crate::postparsing::expressions::ConsecutorSE;
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
 use crate::postparsing::post_parser::RuneExplicitTypeConflictS;
+use crate::collect_only_snode;
+use crate::collect_only_snodes;
+use crate::collect_where_snode;
+use crate::collect_where_snodes;
 
 /*
 package dev.vale.postparsing
@@ -231,7 +235,7 @@ fn test_struct() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Struct(imoo),
     NodeRefS::LiteralRule(
       literal_rule @ LiteralSR {
@@ -243,7 +247,7 @@ fn test_struct() {
   );
   
   let only_member = expect_1(&imoo.members);
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Struct(imoo),
     NodeRefS::MaybeCoercingLookupRule(
       MaybeCoercingLookupSR {
@@ -283,7 +287,7 @@ fn linear_struct() {
   let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(&scout_arena, &keywords, &parse_arena, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Struct(moo_struct),
     NodeRefS::MacroCallAttribute(macro_call)
       if macro_call.include == IMacroInclusionP::DontCallMacro
@@ -474,7 +478,7 @@ fn impl_() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "impl IMoo for Moo;");
   let impl_ = expect_1(program.impls);
 
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS {
@@ -485,7 +489,7 @@ fn impl_() {
       ..
     }) if *rune == impl_.struct_kind_rune => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Impl(impl_),
     NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS {
@@ -524,7 +528,7 @@ fn method_call() {
   );
   let main = program.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
@@ -573,7 +577,7 @@ fn moving_method_call() {
   );
   let main = program.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
@@ -678,7 +682,7 @@ fn function_with_magic_lambda_and_regular_lambda() {
     .iter()
     .map(|thing| NodeRefS::Expression(*thing))
     .collect::<Vec<_>>();
-  let lambdas = crate::collect_where_snodes!(
+  let lambdas = collect_where_snodes!(
     &thing_nodes,
     NodeRefS::Expression(IExpressionSE::Function(function)) => Some(function)
   );
@@ -809,7 +813,7 @@ fn constructing_members() {
     .map(|expr| NodeRefS::Expression(*expr))
     .collect::<Vec<_>>();
 
-  let _ = crate::collect_only_snodes!(
+  let _ = collect_only_snodes!(
     &expr_nodes,
     NodeRefS::Expression(
       IExpressionSE::Let(LetSE {
@@ -829,7 +833,7 @@ fn constructing_members() {
     ) => Some(())
   );
 
-  let _ = crate::collect_only_snodes!(
+  let _ = collect_only_snodes!(
     &expr_nodes,
     NodeRefS::Expression(
       IExpressionSE::Let(LetSE {
@@ -849,7 +853,7 @@ fn constructing_members() {
     ) => Some(())
   );
 
-  let _ = crate::collect_only_snodes!(
+  let _ = collect_only_snodes!(
     &expr_nodes,
     NodeRefS::Expression(
       IExpressionSE::FunctionCall(FunctionCallSE {
@@ -1068,7 +1072,7 @@ fn test_loading_from_member() {
   );
   let main = program.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
@@ -1121,7 +1125,7 @@ fn test_loading_from_member_2() {
   );
   let main = program.lookup_function("main");
   let code_body = cast!(&main.body, IBodyS::CodeBody);
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Expression(IExpressionSE::Return(ReturnSE {
       inner:
@@ -1204,7 +1208,7 @@ fn constructing_members_borrowing_another_member() {
     other => panic!("unexpected locals: {:?}", other),
   }
 
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(block.expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1219,7 +1223,7 @@ fn constructing_members_borrowing_another_member() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(block.expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1238,7 +1242,7 @@ fn constructing_members_borrowing_another_member() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(block.expr),
     NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
       callable_expr: IExpressionSE::OverloadSet(OverloadSetSE {
@@ -1321,7 +1325,7 @@ fn foreach() {
   let code_body = cast!(&main.body, IBodyS::CodeBody);
   let root_expr = code_body.body.block.expr;
 
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
       var_name: IVarNameS::IterableName(_),
@@ -1333,7 +1337,7 @@ fn foreach() {
       child_mutated: IVariableUseCertainty::NotUsed,
     }) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
       var_name: IVarNameS::IteratorName(_),
@@ -1345,7 +1349,7 @@ fn foreach() {
       child_mutated: IVariableUseCertainty::NotUsed,
     }) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
       var_name: IVarNameS::IterationOptionName(_),
@@ -1357,7 +1361,7 @@ fn foreach() {
       child_mutated: IVariableUseCertainty::NotUsed,
     }) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Local(LocalS {
       var_name: IVarNameS::CodeVarName(StrI("i")),
@@ -1370,7 +1374,7 @@ fn foreach() {
     }) => Some(())
   );
 
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1392,7 +1396,7 @@ fn foreach() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1430,11 +1434,11 @@ fn foreach() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::While(_)) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1472,7 +1476,7 @@ fn foreach() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
       callable_expr:
@@ -1496,11 +1500,11 @@ fn foreach() {
       ..
     })) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Break(_)) => Some(())
   );
-  crate::collect_only_snode!(
+  collect_only_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Let(LetSE {
       pattern: AtomSP {
@@ -1538,7 +1542,7 @@ fn foreach() {
       ..
     })) => Some(())
   );
-  let iteration_option_uses = crate::collect_where_snode!(
+  let iteration_option_uses = collect_where_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::LocalLoad(LocalLoadSE {
       name: IVarNameS::IterationOptionName(_),
@@ -1632,7 +1636,7 @@ fn this_isnt_special_if_was_explicit_param() {
   );
   let moo = program.lookup_function("moo");
   let code_body = cast!(&moo.body, IBodyS::CodeBody);
-  let function_call = crate::collect_only_snode!(
+  let function_call = collect_only_snode!(
     NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
   );
@@ -1648,7 +1652,7 @@ fn this_isnt_special_if_was_explicit_param() {
   assert_eq!(code_var_name.as_str(), "self");
   assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);
 
-  let function_calls = crate::collect_where_snode!(
+  let function_calls = collect_where_snode!(
     NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(_)) => Some(())
   );
@@ -2062,13 +2066,13 @@ fn foreach_expr() {
   let code_body = cast!(&main.body, IBodyS::CodeBody);
   let root_expr = code_body.body.block.expr;
 
-  let map_exprs = crate::collect_where_snode!(
+  let map_exprs = collect_where_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::Map(_)) => Some(())
   );
   assert_eq!(map_exprs.len(), 1);
 
-  let while_exprs = crate::collect_where_snode!(
+  let while_exprs = collect_where_snode!(
     NodeRefS::Expression(root_expr),
     NodeRefS::Expression(IExpressionSE::While(_)) => Some(())
   );

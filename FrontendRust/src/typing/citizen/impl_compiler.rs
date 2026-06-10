@@ -36,6 +36,9 @@ use crate::typing::templata::templata::{ImplDefinitionTemplataT, IsaTemplataT};
 use crate::typing::types::types::ICitizenTT;
 use crate::postparsing::names::ImplImpreciseNameValS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::ast::citizens::CitizenDefinitionT;
+use crate::typing::hinputs_t::make;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.citizen
@@ -72,7 +75,7 @@ sealed trait IsParentResult
 */
 pub struct IsParent<'s, 't> {
     pub templata: ITemplataT<'s, 't>,
-    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub impl_id: IdT<'s, 't>,
 }
 /*
@@ -473,8 +476,8 @@ where 's: 't,
         let super_interface_template_id = self.get_interface_template(super_interface.id);
 
         let sub_citizen_weakable = match coutputs.lookup_citizen_by_tt(sub_citizen, self) {
-            crate::typing::ast::citizens::CitizenDefinitionT::Struct(s) => s.weakable,
-            crate::typing::ast::citizens::CitizenDefinitionT::Interface(i) => i.weakable,
+            CitizenDefinitionT::Struct(s) => s.weakable,
+            CitizenDefinitionT::Interface(i) => i.weakable,
         };
         let super_interface_weakable = coutputs.lookup_interface(*super_interface, self).weakable;
         if sub_citizen_weakable != super_interface_weakable {
@@ -1112,7 +1115,7 @@ where 's: 't,
         };
         let impl_imprecise_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_kind_imprecise_name }));
-        let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<std::collections::HashSet<_>>();
+        let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<HashSet<_>>();
         let mut matching: Vec<ITemplataT<'s, 't>> = Vec::new();
         matching.extend(sub_kind_env.lookup_all_with_imprecise_name(impl_imprecise_name, lookup_filter.clone(), self.typing_interner));
         matching.extend(calling_env.lookup_all_with_imprecise_name(impl_imprecise_name, lookup_filter, self.typing_interner));
@@ -1125,7 +1128,7 @@ where 's: 't,
                 _ => panic!("vwat: unexpected templata in getParents matching"),
             }
         }
-        let mut seen_ranges: std::collections::HashSet<RangeS<'s>> = std::collections::HashSet::new();
+        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::new();
         let impl_defs: Vec<ImplDefinitionTemplataT<'s, 't>> = impl_defs_with_duplicates.into_iter()
             .filter(|d| seen_ranges.insert(d.impl_.range))
             .collect();
@@ -1144,7 +1147,7 @@ where 's: 't,
             }
         }).collect();
         let kind_as_kind_t = KindT::from(sub_kind);
-        let mut seen_super: std::collections::HashSet<ISuperKindTT<'s, 't>> = std::collections::HashSet::new();
+        let mut seen_super: HashSet<ISuperKindTT<'s, 't>> = HashSet::new();
         let parents_from_impl_templatas: Vec<ISuperKindTT<'s, 't>> =
             impl_templatas_with_duplicates.iter()
                 .filter(|it| it.sub_kind == kind_as_kind_t)
@@ -1246,7 +1249,7 @@ where 's: 't,
         let sub_kind_env = coutputs.get_outer_env_for_type(parent_ranges, self.get_sub_kind_template(sub_kind_tt.id()));
         let super_kind_env = coutputs.get_outer_env_for_type(parent_ranges, self.get_super_kind_template(super_kind_tt.id()));
 
-        let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<std::collections::HashSet<_>>();
+        let lookup_filter = [ILookupContext::TemplataLookupContext].into_iter().collect::<HashSet<_>>();
         let mut matching: Vec<ITemplataT<'s, 't>> = Vec::new();
         matching.extend(calling_env.lookup_all_with_imprecise_name(impl_imprecise_name, lookup_filter.clone(), self.typing_interner));
         matching.extend(sub_kind_env.lookup_all_with_imprecise_name(impl_imprecise_name, lookup_filter.clone(), self.typing_interner));
@@ -1269,15 +1272,15 @@ where 's: 't,
                 self.typing_interner,
                 calling_env.denizen_template_id(),
                 impl_isa.impl_name,
-                crate::typing::hinputs_t::make(self.typing_interner, vec![], vec![], vec![]));
+                make(self.typing_interner, vec![], vec![], vec![]));
             return IsParentResult::IsParent(IsParent {
                 templata: ITemplataT::Isa(self.typing_interner.alloc(*impl_isa)),
-                conclusions: std::collections::HashMap::new(),
+                conclusions: HashMap::new(),
                 impl_id: impl_isa.impl_name,
             });
         }
 
-        let mut seen_ranges: std::collections::HashSet<RangeS<'s>> = std::collections::HashSet::new();
+        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::new();
         let impl_defs: Vec<ImplDefinitionTemplataT<'s, 't>> = impl_defs_with_duplicates.into_iter()
             .filter(|d| seen_ranges.insert(d.impl_.range))
             .collect();

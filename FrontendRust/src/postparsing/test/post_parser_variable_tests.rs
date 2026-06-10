@@ -16,6 +16,7 @@ use crate::scout_arena::ScoutArena;
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::postparsing::post_parser::VariableNameAlreadyExists;
 use crate::postparsing::expressions::BlockSE;
+use crate::collect_only_snode;
 
 /*
 package dev.vale.postparsing
@@ -176,7 +177,7 @@ fn typeless_local_has_no_coord_rune() {
     "exported func main() int { x = 4; }",
   );
   let main = program1.lookup_function("main");
-  let local = crate::collect_only_snode!(
+  let local = collect_only_snode!(
     NodeRefS::Function(main),
     NodeRefS::Expression(IExpressionSE::Let(
       let_se @ LetSE { .. }

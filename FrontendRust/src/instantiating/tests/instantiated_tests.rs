@@ -1,3 +1,19 @@
+use crate::builtins::builtins::get_code_map;
+use crate::compile_options::GlobalOptions;
+use crate::instantiating::instantiated_compilation::InstantiatedCompilation;
+use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptions;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::code_hierarchy::test_from_vec;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::sync::Arc;
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::IPackageResolver;
 /*
 package dev.vale.instantiating
 
@@ -10,38 +26,37 @@ object InstantiatingCompilation {
 // mig: fn test
 pub fn test<'s, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
-    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
-    scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
-    keywords: &'ctx crate::keywords::Keywords<'s>,
-    parser_keywords: &'ctx crate::keywords::Keywords<'p>,
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    typing_interner: &'ctx TypingInterner<'s, 't>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx ParseArena<'p>,
     instantiating_bump: &'i bumpalo::Bump,
     code: &str,
-) -> crate::instantiating::instantiated_compilation::InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
+) -> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where 's: 't, 's: 'i, 'p: 'ctx,
 {
-    let packages_to_build: Vec<&'p crate::utils::code_hierarchy::PackageCoordinate<'p>> =
-        vec![crate::utils::code_hierarchy::PackageCoordinate::test_tld(parse_arena, parser_keywords)];
-    use crate::utils::code_hierarchy::IPackageResolver;
+    let packages_to_build: Vec<&'p PackageCoordinate<'p>> =
+        vec![PackageCoordinate::test_tld(parse_arena, parser_keywords)];
     let base_code_map =
-        crate::builtins::builtins::get_code_map(parse_arena, parser_keywords)
+        get_code_map(parse_arena, parser_keywords)
             .expect("Builtins code map failed to load");
     let resolver_concrete = base_code_map
-        .or(crate::utils::code_hierarchy::test_from_vec(parse_arena, vec![code.to_string()]))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
-    let resolver: &'ctx dyn crate::utils::code_hierarchy::IPackageResolver<'p, std::collections::HashMap<String, String>> =
+        .or(test_from_vec(parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>> =
         compilation_bump.alloc(resolver_concrete);
-    let global_options = crate::compile_options::GlobalOptions {
+    let global_options = GlobalOptions {
         sanity_check: true,
         use_overload_index: true,
         use_optimized_solver: true,
         verbose_errors: true,
         debug_output: true,
     };
-    let instantiator_options = crate::instantiating::instantiated_compilation::InstantiatorCompilationOptions {
-        debug_out: std::sync::Arc::new(|x: &str| println!("{}", x)),
+    let instantiator_options = InstantiatorCompilationOptions {
+        debug_out: Arc::new(|x: &str| println!("{}", x)),
     };
-    crate::instantiating::instantiated_compilation::InstantiatedCompilation::new(
+    InstantiatedCompilation::new(
         typing_interner,
         scout_arena,
         keywords,
@@ -75,7 +90,7 @@ where 's: 't, 's: 'i, 'p: 'ctx,
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
 pub struct InstantiatedTests<'s, 't> {
-  pub _marker: std::marker::PhantomData<(&'s (), &'t ())>,
+  pub _marker: PhantomData<(&'s (), &'t ())>,
 }
 
 // mig: impl InstantiatedTests
@@ -85,11 +100,6 @@ class InstantiatedTests extends FunSuite with Matchers {
 // mig: fn test_templates
 #[test]
 fn test_templates() {
-    use bumpalo::Bump;
-    use crate::keywords::Keywords;
-    use crate::parse_arena::ParseArena;
-    use crate::scout_arena::ScoutArena;
-    use crate::typing::typing_interner::TypingInterner;
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

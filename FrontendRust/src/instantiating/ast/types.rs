@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use crate::instantiating::ast::names::{IdI, IInterfaceNameI, IStructNameI, RuntimeSizedArrayNameI, StaticSizedArrayNameI};
 use crate::instantiating::instantiating_interner::MustIntern;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::templata::CoordTemplataI;
 
 /*
 package dev.vale.instantiating.ast
@@ -436,25 +438,25 @@ pub struct StaticSizedArrayITValI<'s, 'i, R> where 's: 'i {
 impl<'s, 'i, R: Copy> StaticSizedArrayIT<'s, 'i, R> where 's: 'i {
   pub fn mutability(self) -> MutabilityI {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.arr.mutability,
+      INameI::StaticSizedArray(n) => n.arr.mutability,
       _ => panic!("StaticSizedArrayIT::mutability: name.local_name is not StaticSizedArrayNameI"),
     }
   }
-  pub fn element_type(self) -> crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, R> {
+  pub fn element_type(self) -> CoordTemplataI<'s, 'i, R> {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.arr.element_type,
+      INameI::StaticSizedArray(n) => n.arr.element_type,
       _ => panic!("StaticSizedArrayIT::element_type: name.local_name is not StaticSizedArrayNameI"),
     }
   }
   pub fn size(self) -> i64 {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.size,
+      INameI::StaticSizedArray(n) => n.size,
       _ => panic!("StaticSizedArrayIT::size: name.local_name is not StaticSizedArrayNameI"),
     }
   }
   pub fn variability(self) -> VariabilityI {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::StaticSizedArray(n) => n.variability,
+      INameI::StaticSizedArray(n) => n.variability,
       _ => panic!("StaticSizedArrayIT::variability: name.local_name is not StaticSizedArrayNameI"),
     }
   }
@@ -502,13 +504,13 @@ pub struct RuntimeSizedArrayITValI<'s, 'i, R> where 's: 'i {
 impl<'s, 'i, R: Copy> RuntimeSizedArrayIT<'s, 'i, R> where 's: 'i {
   pub fn mutability(self) -> MutabilityI {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::RuntimeSizedArray(n) => n.arr.mutability,
+      INameI::RuntimeSizedArray(n) => n.arr.mutability,
       _ => panic!("RuntimeSizedArrayIT::mutability: name.local_name is not RuntimeSizedArrayNameI"),
     }
   }
-  pub fn element_type(self) -> crate::instantiating::ast::templata::CoordTemplataI<'s, 'i, R> {
+  pub fn element_type(self) -> CoordTemplataI<'s, 'i, R> {
     match self.name.local_name {
-      crate::instantiating::ast::names::INameI::RuntimeSizedArray(n) => n.arr.element_type,
+      INameI::RuntimeSizedArray(n) => n.arr.element_type,
       _ => panic!("RuntimeSizedArrayIT::element_type: name.local_name is not RuntimeSizedArrayNameI"),
     }
   }

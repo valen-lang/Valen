@@ -13,6 +13,26 @@ use crate::typing::types::types::{CoordT, KindT, StructTT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use crate::collect_where_tnode;
+use crate::postparsing::names::CodeRuneS;
+use crate::postparsing::names::IRuneS;
+use crate::tests::tests::get_package_to_resource_resolver;
+use crate::typing::ast::citizens::ReferenceMemberTypeT;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::names::names::IFunctionNameT;
+use crate::typing::names::names::InterfaceNameT;
+use crate::typing::names::names::InterfaceTemplateNameT;
+use crate::typing::names::names::KindPlaceholderNameT;
+use crate::typing::names::names::KindPlaceholderTemplateNameT;
+use crate::typing::names::names::LambdaCallFunctionNameT;
+use crate::typing::names::names::LambdaCallFunctionTemplateNameT;
+use crate::typing::overload_resolver::IFindFunctionFailureReason;
+use crate::typing::types::types::InterfaceTT;
+use crate::typing::types::types::KindPlaceholderT;
+use crate::typing::types::types::OwnershipT;
+use std::collections::HashSet;
 
 // mig: struct AfterRegionsTests
 pub struct AfterRegionsTests {}
@@ -50,14 +70,14 @@ fn method_call_on_generic_data() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\nsealed interface IShip {\n  func launch(virtual self &IShip);\n}\n\nstruct Raza { fuel int; }\n\nimpl IShip for Raza;\nfunc launch(self &Raza) { }\n\nfunc launchGeneric<T>(x &T)\nwhere implements(T, IShip) {\n  x.launch();\n}\n\nexported func main() {\n  launchGeneric(&Raza(42));\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     let launch_generic = coutputs.lookup_function_by_str("launchGeneric");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(launch_generic),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -69,12 +89,12 @@ fn method_call_on_generic_data() {
     );
 
     let main = coutputs.lookup_function_by_str("main");
-    let upcasts: Vec<_> = crate::collect_where_tnode!(
+    let upcasts: Vec<_> = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(u) => Some(u)
     );
     assert_eq!(upcasts.len(), 0);
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -199,7 +219,7 @@ fn lambda_body_type_matches_anonymous_interface_return_type() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\ninterface AFunction1<P Ref> {\n  func __call(virtual this &AFunction1<P>, a P) int;\n}\nexported func main() {\n  arr = AFunction1<int>((_) => { 4 });\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -294,14 +314,14 @@ fn can_destructure_and_assemble_tuple() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc swap<T, Y>(x (T, Y)) (Y, T) {\n  [a, b] = x;\n  return (b, a);\n}\n\nexported func main() bool {\n  return swap((5, true)).0;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("main").header.return_type {
-        CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
@@ -345,13 +365,13 @@ fn can_turn_a_borrow_coord_into_an_owning_coord() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.panicutils.*;\n\nstruct SomeStruct { }\n\nfunc inner<T>() T {\n  panic(\"never\");\n}\n\nfunc bork() ^&SomeStruct {\n  return inner<^&SomeStruct>();\n}\n\nexported func main() {\n  bork();\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     match coutputs.lookup_function_by_str("bork").header.return_type {
-        CoordT { ownership: crate::typing::types::types::OwnershipT::Own, kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }), .. } => {}
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("SomeStruct"), .. }), .. }), .. }, .. }), .. } => {}
         other => panic!("expected CoordT(OwnT, _, StructTT(SomeStruct)), got {:?}", other),
     }
 }
@@ -394,19 +414,19 @@ fn impl_rule() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\n\n\ninterface IShip {\n  func getFuel(virtual self &IShip) int;\n}\nstruct Firefly {}\nfunc getFuel(self &Firefly) int { return 7; }\nimpl IShip for Firefly;\n\nfunc genericGetFuel<T>(x &T) int\nwhere implements(T, IShip) {\n  return x.getFuel();\n}\n\nexported func main() int {\n  return genericGetFuel(&Firefly());\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let generic_get_fuel = coutputs.lookup_function_by_str("genericGetFuel");
-    let template_args = crate::typing::names::names::IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
+    let template_args = IFunctionNameT::try_from(generic_get_fuel.header.id.local_name).unwrap().template_args();
     match template_args.last().unwrap() {
-        ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(crate::typing::types::types::KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(crate::typing::names::names::KindPlaceholderNameT { template: crate::typing::names::names::KindPlaceholderTemplateNameT { index: 0, rune: crate::postparsing::names::IRuneS::CodeRune(crate::postparsing::names::CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }), .. } }) => {}
+        ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind: KindT::KindPlaceholder(KindPlaceholderT { id: IdT { local_name: INameT::KindPlaceholder(KindPlaceholderNameT { template: KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::CodeRune(CodeRuneS { name: StrI("T"), .. }), .. } }), .. }, .. }), .. } }) => {}
         other => panic!("expected CoordTemplataT(KindPlaceholderT(T)), got {:?}", other),
     }
     let main = coutputs.lookup_function_by_str("main");
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -480,14 +500,14 @@ fn can_downcast_interface_to_interface_through_registered_impl() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.as.*;\nimport v.builtins.result.*;\nimport v.builtins.logic.*;\nimport v.builtins.drop.*;\nimport panicutils.*;\n\nsealed interface ISuper { }\nsealed interface ISub { }\nimpl ISuper for ISub;\n\nfunc tryDowncast(ship ISuper) bool {\n  result Result<&ISub, &ISuper> = (&ship).as<ISub>();\n  return result.is_ok();\n}\n\nexported func main() bool {\n  return tryDowncast(__pretend<ISuper>());\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
-        CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
@@ -533,7 +553,7 @@ fn test_two_instantiations_of_anonymous_param_lambda() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.arith.*;\nimport v.builtins.logic.*;\n\nfunc doThing<T, F>(func F, a T, b T) bool\nwhere func __call(&F, T, T)bool, func drop(F)void {\n  func(a, b)\n}\n\nexported func main() {\n  lam = (a, b) => { a == b };\n  doThing(lam, 7, 8);\n  doThing(lam, true, false);\n}\n\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -542,8 +562,8 @@ fn test_two_instantiations_of_anonymous_param_lambda() {
     let lambda_funcs = coutputs.lookup_lambdas_in("main");
     assert_eq!(lambda_funcs.len(), 2);
 
-    let param_type_tuples: std::collections::HashSet<&[CoordT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
-        INameT::LambdaCallFunction(crate::typing::names::names::LambdaCallFunctionNameT { template: crate::typing::names::names::LambdaCallFunctionTemplateNameT { param_types, .. }, .. }) => *param_types,
+    let param_type_tuples: HashSet<&[CoordT]> = lambda_funcs.iter().map(|f| match f.header.id.local_name {
+        INameT::LambdaCallFunction(LambdaCallFunctionNameT { template: LambdaCallFunctionTemplateNameT { param_types, .. }, .. }) => *param_types,
         _ => panic!("expected LambdaCallFunctionNameT"),
     }).collect();
     assert_eq!(param_type_tuples.len(), 2);
@@ -593,25 +613,25 @@ fn test_interface_default_generic_argument_in_type() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nsealed interface MyInterface<K Ref, H Int = 5> { }\nstruct MyStruct {\n  x MyInterface<bool>;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let moo = coutputs.lookup_struct_by_str("MyStruct");
-    let tyype: CoordT = crate::collect_only_tnode!(
+    let tyype: CoordT = collect_only_tnode!(
         NodeRefT::StructDefinition(moo),
-        NodeRefT::ReferenceMemberType(crate::typing::ast::citizens::ReferenceMemberTypeT { reference }) => Some(*reference)
+        NodeRefT::ReferenceMemberType(ReferenceMemberTypeT { reference }) => Some(*reference)
     );
     match tyype {
         CoordT {
-            ownership: crate::typing::types::types::OwnershipT::Own,
-            kind: KindT::Interface(crate::typing::types::types::InterfaceTT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Interface(InterfaceTT {
                 id: IdT {
-                    local_name: INameT::Interface(crate::typing::names::names::InterfaceNameT {
-                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
+                    local_name: INameT::Interface(InterfaceNameT {
+                        template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
                         template_args: &[
-                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: crate::typing::types::types::OwnershipT::Share, kind: KindT::Bool(_), .. } }),
+                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } }),
                             ITemplataT::Integer(5),
                         ],
                         ..
@@ -664,15 +684,15 @@ fn reports_when_we_give_too_many_args() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc moo(a int, b bool, s str) int { a }\nexported func main() int {\n  moo(42, true, \"hello\", false)\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     match compile.get_compiler_outputs().err().unwrap() {
-        crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
+        ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
             assert!(fff.rejected_callee_to_reason.len() == 1);
             match fff.rejected_callee_to_reason[0].1 {
-                crate::typing::overload_resolver::IFindFunctionFailureReason::WrongNumberOfArguments { supplied: 4, expected: 3 } => {}
+                IFindFunctionFailureReason::WrongNumberOfArguments { supplied: 4, expected: 3 } => {}
                 _ => panic!("expected WrongNumberOfArguments(4, 3)"),
             }
         }
@@ -765,7 +785,7 @@ fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\nfunc moo(a str) { }\nfunc foo<T>(f T) void where func drop(T)void, func moo(str)void { }\nfunc foo<T>(f T) void where func drop(T)void, func moo(bool)void { }\nfunc main() { foo(\"hello\"); }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -820,7 +840,7 @@ fn bound_driven_return_rune_cannot_be_inferred_from_lambda_msae_general() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc callAndReturn<E, G>(g &G) E\nwhere func(&G)E {\n  return g();\n}\n\nexported func main() int {\n  f = { 7 };\n  return callAndReturn(&f);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -863,7 +883,7 @@ fn brrz_nested_bound_return_inference_through_a_lambda_body() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc callAndReturn<E, G>(g &G) E\nwhere func(&G)E {\n  return g();\n}\n\nexported func main() int {\n  f = { 7 };\n  g = { callAndReturn(&f) };\n  return callAndReturn(&g);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -905,7 +925,7 @@ fn brrz_two_bound_return_inferences_in_the_same_call() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nfunc applyTwo<E, F, G, H>(g &G, h &H) E\nwhere func(&G)E, func(&H)F {\n  return g();\n}\n\nexported func main() int {\n  a = { 7 };\n  b = { true };\n  return applyTwo(&a, &b);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -945,8 +965,8 @@ fn basic_ifunction1_anonymous_subclass() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport ifunction.ifunction1.*;\n\nexported func main() int {\n  f = IFunction1<mut, int, int>({_});\n  return (f)(7);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
-        .or(crate::tests::tests::get_package_to_resource_resolver());
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let _coutputs = compile.expect_compiler_outputs();

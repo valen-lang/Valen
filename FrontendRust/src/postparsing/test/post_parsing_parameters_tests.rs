@@ -18,6 +18,7 @@ use crate::postparsing::post_parser::{CouldntFindRuneS, ICompileErrorS, PostPars
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
+use crate::collect_only_snode;
 
 /*
 package dev.vale.postparsing
@@ -251,7 +252,7 @@ fn borrowed_rune() {
     _ => panic!("param structure did not match"),
   };
 
-  let t_coord_rune_from_rules: &RuneUsage<'_> = crate::collect_only_snode!(
+  let t_coord_rune_from_rules: &RuneUsage<'_> = collect_only_snode!(
     NodeRefS::Function(main),
     NodeRefS::AugmentRule(AugmentSR {
       inner_rune: RuneUsage {
@@ -319,7 +320,7 @@ fn anonymous_typed_param() {
     _ => panic!("param structure did not match (expected anonymous typed param)"),
   };
 
-  let rule_rune: RuneUsage = crate::collect_only_snode!(
+  let rule_rune: RuneUsage = collect_only_snode!(
     NodeRefS::Function(main),
     NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int") }),
@@ -404,7 +405,7 @@ fn test_param_less_lambda_identifying_runes() {
   assert_eq!(main.generic_params.len(), 0);
 
   let code_body = cast!(&main.body, CodeBody);
-  let lambda = crate::collect_only_snode!(
+  let lambda = collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Function(lambda_func) => Some(lambda_func)
   );
@@ -453,7 +454,7 @@ fn test_one_param_lambda_identifying_runes() {
   assert_eq!(main.generic_params.len(), 0);
 
   let code_body = cast!(&main.body, CodeBody);
-  let lambda = crate::collect_only_snode!(
+  let lambda = collect_only_snode!(
     NodeRefS::Expression(code_body.body.block.expr),
     NodeRefS::Function(lambda_func) => Some(lambda_func)
   );

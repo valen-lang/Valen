@@ -12,6 +12,7 @@ use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, RegionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use std::collections::HashSet;
+use std::iter::once;
 
 /*
 package dev.vale.typing.function
@@ -90,7 +91,6 @@ where 's: 't,
         params_2: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
     ) -> Result<(Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>), ICompileErrorT<'s, 't>> {
-        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // val bodyS = function1.body match { case CodeBodyS(b) => b; case _ => vwat() }
         let body_s = match &function_1.body {
             IBodyS::CodeBody(b) => b,
@@ -108,7 +108,7 @@ where 's: 't,
                 {
                     Err(ResultTypeMismatchError { expected_type, actual_type }) => {
                         let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                            &std::iter::once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                            &once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                         return Err(ICompileErrorT::BodyResultDoesntMatch {
                             range: range_list,
                             function_name: function_1.name,
@@ -144,7 +144,7 @@ where 's: 't,
                 {
                     Err(ResultTypeMismatchError { expected_type, actual_type }) => {
                         let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-                            &std::iter::once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                            &once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                         return Err(ICompileErrorT::BodyResultDoesntMatch {
                             range: range_list,
                             function_name: function_1.name,
@@ -327,7 +327,7 @@ where 's: 't,
 
         // val patternsTE = evaluateLets(env, coutputs, life + 0, body1.range :: parentRanges, callLocation, region, params1, params2)
         let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
-            &std::iter::once(body_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+            &once(body_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
         let params_2_refs: Vec<&'t ParameterT<'s, 't>> = params_2.iter().collect();
         let patterns_te = self.evaluate_lets(
             &mut env, coutputs, life.add(self.typing_interner, 0),

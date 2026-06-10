@@ -72,6 +72,12 @@ use crate::typing::names::names::FunctionNameT;
 use crate::typing::names::names::FunctionBoundNameT;
 use crate::typing::names::names::FunctionBoundTemplateNameT;
 use crate::typing::types::types::KindPlaceholderT;
+use crate::builtins::builtins::get_embedded_modulized_code_map;
+use crate::collect_only_tnode;
+use crate::collect_where_tnode;
+use crate::typing::templata::templata_utils::unapply_simple_name;
+use std::collections::HashSet;
+use std::marker::PhantomData;
 /*
 package dev.vale.typing
 
@@ -210,7 +216,7 @@ fn test_having_drop_function_concept_function() {
     }
 
     // Make sure it calls drop, and that it has the right placeholders
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(bork),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -300,7 +306,7 @@ fn test_calling_a_generic_function_with_a_concept_function() {
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
 
-    crate::collect_only_tnode!(
+    collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(FunctionCallTE {
             callable: PrototypeT {
@@ -548,14 +554,14 @@ fn humanize_errors() {
     let tz = vec![RangeS::test_zero(&scout_arena)];
     let test_package_coord = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
     let tz_code_loc = CodeLocationS::test_zero(&scout_arena);
-    let func_template_name = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
+    let func_template_name = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: PhantomData });
     let func_template_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::FunctionTemplate(func_template_name) });
-    let main_func_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
+    let main_func_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: PhantomData });
     let main_func_name = typing_interner.intern_function_name(FunctionNameValT { template: main_func_template, template_args: &[], parameters: &[] });
     let _func_name = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(main_func_name) });
     let denizen_name_s = scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::FunctionName(FunctionNameS { name: scout_arena.intern_str("main"), code_location: tz_code_loc })));
     let denizen_default_region_rune_s = DenizenDefaultRegionRuneS { denizen_name: denizen_name_s };
-    let kpt_name = typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::DenizenDefaultRegionRune(scout_arena.alloc(denizen_default_region_rune_s)), _phantom: std::marker::PhantomData });
+    let kpt_name = typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::DenizenDefaultRegionRune(scout_arena.alloc(denizen_default_region_rune_s)), _phantom: PhantomData });
     let kp_name = typing_interner.intern_kind_placeholder_name(KindPlaceholderNameT { template: kpt_name });
     let mut region_init_steps: Vec<INameT> = func_template_id.init_steps.to_vec();
     region_init_steps.push(func_template_id.local_name);
@@ -564,7 +570,7 @@ fn humanize_errors() {
     let region = RegionT { region: IRegionT::Default };
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: PhantomData });
     let firefly_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
     let firefly_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(firefly_struct_name) });
@@ -573,7 +579,7 @@ fn humanize_errors() {
     let _firefly_coord = CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: PhantomData });
     let serenity_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
     let serenity_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(serenity_struct_name) });
@@ -582,7 +588,7 @@ fn humanize_errors() {
     let _serenity_coord = CoordT { ownership: OwnershipT::Own, region, kind: serenity_kind };
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
-        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: std::marker::PhantomData });
+        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: PhantomData });
     let ispaceship_interface_name = typing_interner.intern_interface_name(
         InterfaceNameValT { template: ispaceship_interface_template_name, template_args: &[] });
     let ispaceship_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Interface(ispaceship_interface_name) });
@@ -591,7 +597,7 @@ fn humanize_errors() {
     let _ispaceship_coord = CoordT { ownership: OwnershipT::Own, region, kind: ispaceship_kind };
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: std::marker::PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: PhantomData });
     let unrelated_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(unrelated_struct_template_name), template_args: &[] });
     let unrelated_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(unrelated_struct_name) });
@@ -599,13 +605,13 @@ fn humanize_errors() {
     let unrelated_kind = KindT::Struct(unrelated_tt);
     let _unrelated_coord = CoordT { ownership: OwnershipT::Own, region, kind: unrelated_kind };
 
-    let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin, _phantom: std::marker::PhantomData });
+    let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin, _phantom: PhantomData });
     let myfunc_params: &[CoordT] = typing_bump.alloc_slice_copy(&[CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind }]);
     let myfunc_name = typing_interner.intern_function_name(FunctionNameValT { template: myfunc_template, template_args: &[], parameters: myfunc_params });
     let myfunc_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(myfunc_name) });
     let _firefly_signature = SignatureT { id: *myfunc_id };
 
-    let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin, _phantom: std::marker::PhantomData });
+    let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin, _phantom: PhantomData });
     let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(firefly_export_name) });
     let _firefly_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
@@ -647,33 +653,33 @@ fn humanize_errors() {
     ];
 
     let step1 = {
-        let mut conclusions = std::collections::HashMap::new();
+        let mut conclusions = HashMap::new();
         conclusions.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
         Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions }
     };
 
     let failed_solve_1 = FailedSolve {
         steps: vec![step1.clone()],
-        conclusions: std::collections::HashMap::new(),
+        conclusions: HashMap::new(),
         unsolved_rules: unsolved_rules.clone(),
         unsolved_runes: vec![],
         error: ISolverError::RuleError(RuleError {
             err: ITypingPassSolverError::KindIsNotConcrete { kind: ispaceship_kind },
-            _phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         }),
     };
     let text1 = humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between_f, &line_range_containing_f, &line_containing_f,
         ICompileErrorT::TypingPassSolverError { range: typing_bump.alloc_slice_copy(&tz), failed_solve: failed_solve_1 });
     assert!(!text1.is_empty());
 
-    let mut conclusions2 = std::collections::HashMap::new();
+    let mut conclusions2 = HashMap::new();
     conclusions2.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
     let failed_solve_2 = FailedSolve {
         steps: vec![step1],
         conclusions: conclusions2,
         unsolved_rules,
         unsolved_runes: vec![rune_i, rune_of, rune_an, implicit_rune],
-        error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: std::marker::PhantomData }),
+        error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: PhantomData }),
     };
     let error_text = humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between_f, &line_range_containing_f, &line_containing_f,
         ICompileErrorT::TypingPassSolverError { range: typing_bump.alloc_slice_copy(&tz), failed_solve: failed_solve_2 });
@@ -808,7 +814,7 @@ fn simple_int_rule() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let _ci: &ConstantIntTE = crate::collect_only_tnode!(
+    let _ci: &ConstantIntTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
@@ -845,7 +851,7 @@ fn equals_transitive() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let _ci: &ConstantIntTE = crate::collect_only_tnode!(
+    let _ci: &ConstantIntTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
@@ -882,7 +888,7 @@ fn one_of() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let _ci: &ConstantIntTE = crate::collect_only_tnode!(
+    let _ci: &ConstantIntTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::ConstantInt(ci @ ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. }) => Some(ci)
     );
@@ -1004,11 +1010,11 @@ fn prototype_rule_call_via_rune() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
+    let call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c) => Some(c)
     );
-    assert_eq!(crate::typing::templata::templata_utils::unapply_simple_name(&call.callable.id), Some("moo".to_string()));
+    assert_eq!(unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
 /*
   test("Prototype rule, call via rune") {
@@ -1047,11 +1053,11 @@ fn prototype_rule_call_directly() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
+    let call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c) => Some(c)
     );
-    assert_eq!(crate::typing::templata::templata_utils::unapply_simple_name(&call.callable.id), Some("moo".to_string()));
+    assert_eq!(unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
 /*
   test("Prototype rule, call directly") {
@@ -1157,7 +1163,7 @@ fn assume_most_specific_generic_param() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
+    let call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c @ FunctionCallTE { args: [_], .. }) => Some(c)
     );
@@ -1211,7 +1217,7 @@ fn assume_most_specific_common_ancestor() {
     let coutputs = compile.expect_compiler_outputs();
     let _moo = coutputs.lookup_function_by_str("moo");
     let main = coutputs.lookup_function_by_str("main");
-    let _call: &FunctionCallTE = crate::collect_only_tnode!(
+    let _call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c @ FunctionCallTE { args: [_, _], .. }) => Some({
             let fn_name = match c.callable.id.local_name {
@@ -1228,7 +1234,7 @@ fn assume_most_specific_common_ancestor() {
             c
         })
     );
-    let upcasts: Vec<&UpcastTE> = crate::collect_where_tnode!(
+    let upcasts: Vec<&UpcastTE> = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::Upcast(u) => Some(u)
     );
@@ -1297,7 +1303,7 @@ fn descendant_satisfying_call() {
         _ => panic!("expected Interface param coord"),
     }
     let main = coutputs.lookup_function_by_str("main");
-    let calls: Vec<&FunctionCallTE> = crate::collect_where_tnode!(
+    let calls: Vec<&FunctionCallTE> = collect_where_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c) => Some(c)
     );
@@ -1381,8 +1387,8 @@ fn reports_incomplete_solve() {
             let expected_n_rune = IRuneS::CodeRune(scout_arena.alloc(CodeRuneS {
                 name: scout_arena.intern_str("N"),
             }));
-            let unsolved_set: std::collections::HashSet<_> = failed_solve.unsolved_runes.iter().copied().collect();
-            let mut expected: std::collections::HashSet<IRuneS> = std::collections::HashSet::new();
+            let unsolved_set: HashSet<_> = failed_solve.unsolved_runes.iter().copied().collect();
+            let mut expected: HashSet<IRuneS> = HashSet::new();
             expected.insert(expected_n_rune);
             assert_eq!(unsolved_set, expected);
         }
@@ -1419,7 +1425,7 @@ fn stamps_an_interface_template_via_a_function_return() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\nimport v.builtins.drop.*;\n\ninterface MyInterface<X Ref> { }\n\nstruct SomeStruct<X Ref> where func drop(X)void { x X; }\nimpl<X> MyInterface<X> for SomeStruct<X> where func drop(X)void;\n\nfunc doAThing<T>(t T) SomeStruct<T>\nwhere func drop(T)void {\n  return SomeStruct<T>(t);\n}\n\nexported func main() {\n  doAThing(4);\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -1604,7 +1610,7 @@ fn can_destructure_and_assemble_static_sized_array() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = "\n\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nfunc swap<T>(x [#2]T) [#2]T {\n  [a, b] = x;\n  return [#](b, a);\n}\n\nexported func main() int {\n  return swap([#](5, 7)).0;\n}\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
-        .or(crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
@@ -1631,7 +1637,7 @@ fn can_destructure_and_assemble_static_sized_array() {
     }
 
     let main = coutputs.lookup_function_by_str("main");
-    let call: &FunctionCallTE = crate::collect_only_tnode!(
+    let call: &FunctionCallTE = collect_only_tnode!(
         NodeRefT::FunctionDefinition(main),
         NodeRefT::FunctionCall(c @ FunctionCallTE {
             callable: PrototypeT {

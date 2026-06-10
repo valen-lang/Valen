@@ -5,6 +5,20 @@ use crate::interner::StrI;
 use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, OpaqueHT};
 use crate::final_ast::ast::{PrototypeH, StructDefinitionH};
 use crate::final_ast::instructions::Local;
+use crate::final_ast::types::BoolHT;
+use crate::final_ast::types::FloatHT;
+use crate::final_ast::types::IntHT;
+use crate::final_ast::types::StrHT;
+use crate::final_ast::types::VoidHT;
+use crate::scout_arena::ScoutArena;
+use crate::simplifying::hammer_interner::HammerInterner;
+use crate::testvm::vivem::ConstraintViolatedExceptionV;
+use crate::testvm::vivem::PrintStream;
+use crate::testvm::vivem::VmRuntimeErrorV;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result as FmtResult;
+use std::io::Write;
 
 /*
 package dev.vale.testvm
@@ -24,7 +38,7 @@ pub struct RRReferenceV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
   pub hamut: CoordH<'s, 'h>,
-  pub _phantom: std::marker::PhantomData<&'v ()>,
+  pub _phantom: PhantomData<&'v ()>,
 }
 /*
 case class RRReference(hamut: CoordH[KindHT]) {
@@ -42,7 +56,7 @@ pub struct RRKindV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,
 {
   pub hamut: KindHT<'s, 'h>,
-  pub _phantom: std::marker::PhantomData<&'v ()>,
+  pub _phantom: PhantomData<&'v ()>,
 }
 /*
 case class RRKind(hamut: KindHT) {
@@ -170,7 +184,7 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn ensure_ref_count
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn ensure_ref_count(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), crate::testvm::vivem::VmRuntimeErrorV<'s>> {
+  pub fn ensure_ref_count(&self, scout_arena: &ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
     if matches!(self.kind, KindV::Void(_)) {
       // Void has no RC
       return Ok(());
@@ -186,7 +200,7 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
         maybe_ownership_filter.map(|of| format!("{:?} ", of)).unwrap_or_default(),
         matching_referrers.len(),
         matching_referrers);
-      return Err(crate::testvm::vivem::VmRuntimeErrorV::ConstraintViolatedException(crate::testvm::vivem::ConstraintViolatedExceptionV { msg: scout_arena.intern_str(&msg) }));
+      return Err(VmRuntimeErrorV::ConstraintViolatedException(ConstraintViolatedExceptionV { msg: scout_arena.intern_str(&msg) }));
     }
     Ok(())
   }
@@ -216,9 +230,8 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
 */
 // mig: fn print_refs
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
-  pub fn print_refs(&self, vivem_dout: &mut crate::testvm::vivem::PrintStream) {
+  pub fn print_refs(&self, vivem_dout: &mut PrintStream) {
     if self.get_total_ref_count(None) > 0 {
-      use std::io::Write;
       let referrers_str = self.referrers.iter().map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
       writeln!(vivem_dout, "o{}: {}", self.reference.alloc_id().num, referrers_str).unwrap();
     }
@@ -302,7 +315,7 @@ sealed trait KindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
-  pub fn tyype(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     match self {
       KindV::Void(v) => v.tyype(interner),
       KindV::Int(v) => v.tyype(interner),
@@ -357,8 +370,8 @@ case object VoidV extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl VoidV {
-  pub fn tyype<'v, 'h, 's>(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
-    RRKindV { hamut: KindHT::VoidHT(crate::final_ast::types::VoidHT), _phantom: PhantomData }
+  pub fn tyype<'v, 'h, 's>(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
+    RRKindV { hamut: KindHT::VoidHT(VoidHT), _phantom: PhantomData }
   }
 }
 /*
@@ -380,8 +393,8 @@ case class IntV(value: Long, bits: Int) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> IntV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    RRKindV { hamut: KindHT::IntHT(crate::final_ast::types::IntHT { bits: self.bits }), _phantom: PhantomData }
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::IntHT(IntHT { bits: self.bits }), _phantom: PhantomData }
   }
 }
 /*
@@ -402,8 +415,8 @@ case class BoolV(value: Boolean) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    RRKindV { hamut: KindHT::BoolHT(crate::final_ast::types::BoolHT), _phantom: PhantomData }
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::BoolHT(BoolHT), _phantom: PhantomData }
   }
 }
 /*
@@ -424,8 +437,8 @@ case class FloatV(value: Double) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    RRKindV { hamut: KindHT::FloatHT(crate::final_ast::types::FloatHT), _phantom: PhantomData }
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::FloatHT(FloatHT), _phantom: PhantomData }
   }
 }
 /*
@@ -446,8 +459,8 @@ case class StrV(value: String) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> StrV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    RRKindV { hamut: KindHT::StrHT(crate::final_ast::types::StrHT), _phantom: PhantomData }
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::StrHT(StrHT), _phantom: PhantomData }
   }
 }
 /*
@@ -468,8 +481,8 @@ case class OpaqueV(opaqueHT: OpaqueHT) extends PrimitiveKindV {
 */
 // mig: fn tyype
 impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
-    RRKindV { hamut: crate::final_ast::types::KindHT::OpaqueHT(_interner.bump().alloc(self.opaque_ht)), _phantom: std::marker::PhantomData }
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+    RRKindV { hamut: KindHT::OpaqueHT(_interner.bump().alloc(self.opaque_ht)), _phantom: PhantomData }
   }
 }
 /*
@@ -494,7 +507,7 @@ case class StructInstanceV(
 */
 // mig: fn tyype
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
-  pub fn tyype(&self, interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StructHT(self.struct_h.get_ref(interner)), _phantom: PhantomData }
   }
 }
@@ -563,7 +576,7 @@ case class ArrayInstanceV(
 */
 // mig: fn tyype
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
-  pub fn tyype(&self, _interner: &crate::simplifying::hammer_interner::HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
+  pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: self.type_h.kind, _phantom: PhantomData }
   }
 }
@@ -711,7 +724,7 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
 impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn actual_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
-      hamut: crate::final_ast::types::CoordH {
+      hamut: CoordH {
         ownership: self.ownership,
         location: self.location,
         kind: self.actual_kind.hamut,
@@ -724,7 +737,7 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
 impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn seen_as_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
-      hamut: crate::final_ast::types::CoordH {
+      hamut: CoordH {
         ownership: self.ownership,
         location: self.location,
         kind: self.seen_as_kind.hamut,
@@ -887,8 +900,8 @@ case class VariableAddressV(callId: CallId, local: Local) {
 /*
   override def toString: String = "*v:" + callId + "#v" + local.id.number
 */
-impl<'v, 'h, 's> std::fmt::Display for VariableAddressV<'v, 'h, 's> where 's: 'h, 'h: 'v {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'v, 'h, 's> Display for VariableAddressV<'v, 'h, 's> where 's: 'h, 'h: 'v {
+  fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
     write!(f, "*v:{}#v{}", self.call_id, self.local.id.number)
   }
 }
@@ -974,8 +987,8 @@ impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
 // string-concat via `+`. The Rust port realizes that as `impl Display`, mirroring
 // the Scala `toString` body line-for-line. The `to_string(&self) -> StrI<'s>`
 // method above stays panic-stubbed until a caller needs the interned form.
-impl<'v, 'h, 's> std::fmt::Display for CallIdV<'v, 'h, 's> {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'v, 'h, 's> Display for CallIdV<'v, 'h, 's> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
     write!(f, "ƒ{}/{}", self.call_depth, self.function.id.shortened_name.0)
   }
 }

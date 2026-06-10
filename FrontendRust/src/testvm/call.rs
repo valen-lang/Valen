@@ -40,7 +40,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
     let locals = &mut self.locals;
     assert!(!locals.contains_key(&var_addr));
     assert!(!locals.iter().any(|(addr, _)| addr.local.id.number == var_addr.local.id.number));
-    locals.insert(var_addr, crate::testvm::values::VariableV {
+    locals.insert(var_addr, VariableV {
       id: var_addr,
       reference,
       expected_type: tyype,

@@ -29,6 +29,8 @@ use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::typing::infer_compiler::IConclusionResolveError;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use std::iter::empty;
+use std::marker::PhantomData;
 
 /*
 package dev.vale.typing.function
@@ -232,7 +234,7 @@ where 's: 't,
                 .flat_map(|r| {
                     panic!("implement: evaluate_templated_function_from_call_for_banner reachable bounds");
                     #[allow(unreachable_code)]
-                    std::iter::empty::<PrototypeTemplataT<'s, 't>>()
+                    empty::<PrototypeTemplataT<'s, 't>>()
                 })
                 .collect();
 
@@ -617,7 +619,7 @@ where 's: 't,
         &self,
         near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         identifying_runes: &[IRuneS<'s>],
-        templatas_by_rune: &std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        templatas_by_rune: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds_from_params_and_return: &[PrototypeTemplataT<'s, 't>],
     ) -> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {
         let identifying_templatas: Vec<ITemplataT<'s, 't>> =
@@ -630,13 +632,13 @@ where 's: 't,
         let entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             reachable_bounds_from_params_and_return.iter().enumerate()
                 .map(|(i, t)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: i as i32, _phantom: std::marker::PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: i as i32, _phantom: PhantomData });
                     (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(*t))))
                 })
                 .chain(
                     templatas_by_rune.iter()
                         .map(|(k, v)| {
-                            let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *k, _phantom: std::marker::PhantomData });
+                            let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *k, _phantom: PhantomData });
                             (INameT::Rune(rune_name), IEnvEntryT::Templata(*v))
                         })
                 )
@@ -780,7 +782,7 @@ where 's: 't,
                         match &generic_param.default {
                             Some(default_rules) => {
                                 match solver_state.commit_step::<ITypingPassSolverError>(
-                                    false, vec![], std::collections::HashMap::new(),
+                                    false, vec![], HashMap::new(),
                                     default_rules.rules.iter().map(|r| **r).collect(),
                                     default_rules.rune_to_type.iter().map(|(k, _)| *k).collect()) {
                                     Ok(()) => {}
@@ -1266,7 +1268,7 @@ where 's: 't,
                                 let mut m = HashMap::new();
                                 m.insert(generic_param.rune.rune, templata);
                                 m
-                            }, vec![], std::collections::HashSet::new()).unwrap();
+                            }, vec![], HashSet::new()).unwrap();
                         true
                     }
                 }

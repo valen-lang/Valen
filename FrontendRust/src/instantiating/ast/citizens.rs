@@ -3,6 +3,7 @@ use crate::postparsing::names::IRuneS;
 use crate::instantiating::ast::types::{cI, CoordI, MutabilityI, VariabilityI, StructIT, InterfaceIT, ICitizenIT};
 use crate::instantiating::ast::names::{IdI, IVarNameI};
 use crate::instantiating::ast::ast::{ICitizenAttributeI, PrototypeI};
+use std::marker::PhantomData;
 
 /*
 package dev.vale.instantiating.ast
@@ -178,7 +179,7 @@ impl<'s, 'i, R> IMemberTypeI<'s, 'i, R> {
 #[derive(PartialEq, Eq, Hash)]
 pub struct AddressMemberTypeI<'s, 'i, R> {
     pub reference: CoordI<'s, 'i, cI>,
-    pub _marker: std::marker::PhantomData<R>,
+    pub _marker: PhantomData<R>,
 }
 // mig: impl AddressMemberTypeI
 /*
@@ -189,7 +190,7 @@ case class AddressMemberTypeI(reference: CoordI[cI]) extends IMemberTypeI
 #[derive(PartialEq, Eq, Hash)]
 pub struct ReferenceMemberTypeI<'s, 'i, R> {
     pub reference: CoordI<'s, 'i, cI>,
-    pub _marker: std::marker::PhantomData<R>,
+    pub _marker: PhantomData<R>,
 }
 // mig: impl ReferenceMemberTypeI
 /*
@@ -205,7 +206,7 @@ pub struct InterfaceDefinitionI<'s, 'i, R> {
     pub rune_to_function_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
     pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
     pub internal_methods: &'i [(&'i PrototypeI<'s, 'i, cI>, i32)],
-    pub _marker: std::marker::PhantomData<R>,
+    pub _marker: PhantomData<R>,
 }
 // mig: impl InterfaceDefinitionI
 /*

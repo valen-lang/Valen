@@ -13,6 +13,25 @@ use crate::instantiating::ast::templata::RegionTemplataI;
 use crate::instantiating::ast::types::{cI, CoordI, IntIT, KindIT, NeverIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
+use crate::final_ast::types::BoolHT;
+use crate::final_ast::types::FloatHT;
+use crate::final_ast::types::IntHT;
+use crate::final_ast::types::NeverHT;
+use crate::final_ast::types::RuntimeSizedArrayDefinitionHT;
+use crate::final_ast::types::RuntimeSizedArrayHTValH;
+use crate::final_ast::types::StaticSizedArrayDefinitionHT;
+use crate::final_ast::types::StaticSizedArrayHTValH;
+use crate::final_ast::types::StrHT;
+use crate::final_ast::types::VoidHT;
+use crate::instantiating::ast::names::INameI;
+use crate::instantiating::ast::names::RawArrayNameI;
+use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
+use crate::instantiating::ast::names::StaticSizedArrayNameI;
+use crate::instantiating::ast::types::StaticSizedArrayITValI;
+use crate::simplifying::conversions::evaluate_mutability;
+use crate::simplifying::conversions::evaluate_mutability_templata;
+use crate::simplifying::conversions::evaluate_variability_templata;
+use std::ptr::eq;
 
 /*
 package dev.vale.simplifying
@@ -41,12 +60,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) -> KindHT<'s, 'h>
     {
         match tyype {
-            KindIT::NeverIT(NeverIT { from_break, .. }) => KindHT::NeverHT(crate::final_ast::types::NeverHT { from_break }),
-            KindIT::IntIT(IntIT { bits, .. }) => KindHT::IntHT(crate::final_ast::types::IntHT { bits }),
-            KindIT::BoolIT(_) => KindHT::BoolHT(crate::final_ast::types::BoolHT),
-            KindIT::FloatIT(_) => KindHT::FloatHT(crate::final_ast::types::FloatHT),
-            KindIT::StrIT(_) => KindHT::StrHT(crate::final_ast::types::StrHT),
-            KindIT::VoidIT(_) => KindHT::VoidHT(crate::final_ast::types::VoidHT),
+            KindIT::NeverIT(NeverIT { from_break, .. }) => KindHT::NeverHT(NeverHT { from_break }),
+            KindIT::IntIT(IntIT { bits, .. }) => KindHT::IntHT(IntHT { bits }),
+            KindIT::BoolIT(_) => KindHT::BoolHT(BoolHT),
+            KindIT::FloatIT(_) => KindHT::FloatHT(FloatHT),
+            KindIT::StrIT(_) => KindHT::StrHT(StrHT),
+            KindIT::VoidIT(_) => KindHT::VoidHT(VoidHT),
             KindIT::StructIT(s) => {
                 if hinputs.kind_externs.contains_key(&s) {
                     KindHT::OpaqueHT(self.translate_opaque_i(hinputs, hamuts, s))
@@ -227,25 +246,25 @@ where 's: 'h, 's: 'i, 'i: 'h,
         ssa_it: StaticSizedArrayIT<'s, 'i, cI>,
     ) -> &'h StaticSizedArrayHT<'s, 'h>
     {
-        let ssa_it = self.instantiating_interner.intern_static_sized_array_it_ci(crate::instantiating::ast::types::StaticSizedArrayITValI { name: ssa_it.name });
+        let ssa_it = self.instantiating_interner.intern_static_sized_array_it_ci(StaticSizedArrayITValI { name: ssa_it.name });
         match hamuts.static_sized_arrays().get(&ssa_it).copied() {
-            Some(x) => self.interner.intern_static_sized_array_ht(crate::final_ast::types::StaticSizedArrayHTValH { id: x.name }),
+            Some(x) => self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: x.name }),
             None => {
                 let name = self.translate_full_name(hinputs, hamuts, &ssa_it.name);
                 let (mutability_i, variability_i, member_type, _arr_region, size) = match ssa_it.name.local_name {
-                    crate::instantiating::ast::names::INameI::StaticSizedArray(n) => {
-                        let crate::instantiating::ast::names::StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
-                        let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region } = arr;
+                    INameI::StaticSizedArray(n) => {
+                        let StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
+                        let RawArrayNameI { mutability, element_type, self_region } = arr;
                         (mutability, variability, element_type, self_region, size)
                     }
                     _ => panic!("translate_static_sized_array: local_name not StaticSizedArrayNameI"),
                 };
                 let member_reference_h = self.translate_coord(hinputs, hamuts, member_type.coord);
-                let mutability = crate::simplifying::conversions::evaluate_mutability_templata(mutability_i);
-                let variability = crate::simplifying::conversions::evaluate_variability_templata(variability_i);
-                let definition = crate::final_ast::types::StaticSizedArrayDefinitionHT { name, size, mutability, variability, element_type: member_reference_h };
-                let result = self.interner.intern_static_sized_array_ht(crate::final_ast::types::StaticSizedArrayHTValH { id: name });
-                match hamuts.static_sized_arrays().iter().find(|(_, def)| std::ptr::eq(self.interner.intern_static_sized_array_ht(crate::final_ast::types::StaticSizedArrayHTValH { id: def.name }) as *const _, result as *const _)) {
+                let mutability = evaluate_mutability_templata(mutability_i);
+                let variability = evaluate_variability_templata(variability_i);
+                let definition = StaticSizedArrayDefinitionHT { name, size, mutability, variability, element_type: member_reference_h };
+                let result = self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: name });
+                match hamuts.static_sized_arrays().iter().find(|(_, def)| eq(self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: def.name }) as *const _, result as *const _)) {
                     Some(x) => panic!("vwat: {:?}", x),
                     None => hamuts.add_static_sized_array(ssa_it, definition),
                 }
@@ -294,22 +313,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) -> &'h RuntimeSizedArrayHT<'s, 'h>
     {
         match hamuts.runtime_sized_arrays().get(&rsa_it).copied() {
-            Some(x) => self.interner.intern_runtime_sized_array_ht(crate::final_ast::types::RuntimeSizedArrayHTValH { name: x.name }),
+            Some(x) => self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: x.name }),
             None => {
                 let name_h = self.translate_full_name(hinputs, hamuts, &rsa_it.name);
                 let (mutability_i, member_type, _arr_region) = match rsa_it.name.local_name {
-                    crate::instantiating::ast::names::INameI::RuntimeSizedArray(n) => {
-                        let crate::instantiating::ast::names::RuntimeSizedArrayNameI { template: _, arr } = *n;
-                        let crate::instantiating::ast::names::RawArrayNameI { mutability, element_type, self_region } = arr;
+                    INameI::RuntimeSizedArray(n) => {
+                        let RuntimeSizedArrayNameI { template: _, arr } = *n;
+                        let RawArrayNameI { mutability, element_type, self_region } = arr;
                         (mutability, element_type, self_region)
                     }
                     _ => panic!("translate_runtime_sized_array: local_name not RuntimeSizedArrayNameI"),
                 };
                 let member_reference_h = self.translate_coord(hinputs, hamuts, member_type.coord);
-                let mutability = crate::simplifying::conversions::evaluate_mutability(mutability_i);
-                let definition = crate::final_ast::types::RuntimeSizedArrayDefinitionHT { name: name_h, mutability, element_type: member_reference_h };
-                let result = self.interner.intern_runtime_sized_array_ht(crate::final_ast::types::RuntimeSizedArrayHTValH { name: name_h });
-                match hamuts.runtime_sized_arrays().iter().find(|(_, def)| std::ptr::eq(self.interner.intern_runtime_sized_array_ht(crate::final_ast::types::RuntimeSizedArrayHTValH { name: def.name }) as *const _, result as *const _)) {
+                let mutability = evaluate_mutability(mutability_i);
+                let definition = RuntimeSizedArrayDefinitionHT { name: name_h, mutability, element_type: member_reference_h };
+                let result = self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: name_h });
+                match hamuts.runtime_sized_arrays().iter().find(|(_, def)| eq(self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: def.name }) as *const _, result as *const _)) {
                     Some(x) => panic!("vwat: {:?}", x),
                     None => hamuts.add_runtime_sized_array(rsa_it, definition),
                 }
