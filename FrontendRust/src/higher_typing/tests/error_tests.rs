@@ -225,6 +225,66 @@ fn report_type_not_found_with_mutability_literal_generic_arg_inner<'s>(
         _ => panic!("expected CouldntSolveRules(...RuneTypingCouldntFindType(CodeNameS(\"Bork\")))"),
     }
 }
+#[test]
+fn report_type_not_found_with_augment() {
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let compilation_bump = bumpalo::Bump::new();
+    report_type_not_found_with_augment_inner(
+        &parse_bump, &scout_bump, &compilation_bump);
+}
+
+fn report_type_not_found_with_augment_inner<'s>(
+    parse_bump: &'s bumpalo::Bump,
+    scout_bump: &'s bumpalo::Bump,
+    compilation_bump: &'s bumpalo::Bump,
+) {
+    let parse_arena = ParseArena::new(parse_bump);
+    let scout_arena = ScoutArena::new(scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main(a &Bork) {\n}\n";
+    let mut compilation = test(
+        compilation_bump, &scout_arena, &keywords, &parser_keywords, &parse_arena, code);
+    let err = compile_program_for_error(&mut compilation);
+    match &err {
+        ICompileErrorA::CouldntSolveRules(
+            CouldntSolveRulesA {
+                error: RuneTypeSolveError {
+                    failed_solve: FailedSolve {
+                        error: ISolverError::RuleError(RuleError {
+                            err: IRuneTypeRuleError::CouldntFindType(
+                                RuneTypingCouldntFindType {
+                                    name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("Bork") }),
+                                    ..
+                                }),
+                            ..
+                        }),
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }
+        ) => {
+            let code_map = compilation.get_code_map().unwrap();
+            let humanize_pos_fn = |x: CodeLocationS<'s>| humanize_pos_code_map(&code_map, &x);
+            let lines_between_fn = |x: CodeLocationS<'s>, y: CodeLocationS<'s>| lines_between(&code_map, &x, &y);
+            let line_range_containing_fn = |x: CodeLocationS<'s>| line_range_containing(&code_map, &x);
+            let line_containing_fn = |x: CodeLocationS<'s>| line_containing(&code_map, &x);
+            let error_text =
+                humanize(
+                    &humanize_pos_fn, &lines_between_fn, &line_range_containing_fn, &line_containing_fn, &err);
+            let expected_suffix = "Couldn't solve generics rules:\nCouldn't find anything with the name 'Bork'\nexported func main(a &Bork) {\n                            ^ _3: (unknown)\n                      ^^^^ _211211: (unknown)\n                     ^^^^^ _2111: (unknown)\nSteps:\nUnsolved rule: _211211 = \"Bork\"\nUnsolved rule: _2111 = &_211211\nUnsolved rule: _3 = \"void\"\n\nexported func main(a &Bork) {\n";
+            assert!(
+                error_text.ends_with(expected_suffix),
+                "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",
+                expected_suffix, error_text,
+            );
+        }
+        _ => panic!("expected CouldntSolveRules(...RuneTypingCouldntFindType(CodeNameS(\"Bork\")))"),
+    }
+}
 /* */
 /* Guardian: disable-all */
 /*

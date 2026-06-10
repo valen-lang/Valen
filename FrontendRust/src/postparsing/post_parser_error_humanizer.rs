@@ -430,7 +430,7 @@ pub fn humanize_rule<'s>(
     IRulexSR::Call(_) => panic!("implement: humanize_rule Call"),
     IRulexSR::Lookup(_) => panic!("implement: humanize_rule Lookup"),
     IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),
-    IRulexSR::Augment(_) => panic!("implement: humanize_rule Augment"),
+    IRulexSR::Augment(r) => humanize_rune(r.result_rune.rune) + " = " + &r.ownership.map(humanize_ownership).unwrap_or_else(String::new) + &humanize_rune(r.inner_rune.rune),
     IRulexSR::Equals(_) => panic!("implement: humanize_rule Equals"),
     IRulexSR::RuneParentEnvLookup(_) => panic!("implement: humanize_rule RuneParentEnvLookup"),
     IRulexSR::Pack(_) => panic!("implement: humanize_rule Pack"),
@@ -544,9 +544,15 @@ fn humanize_variability(
   }
 */
 fn humanize_ownership(
-  _p: OwnershipP,
+  p: OwnershipP,
 ) -> String {
-  panic!("Unimplemented humanize_ownership");
+  match p {
+    OwnershipP::Own => "^".to_string(),
+    OwnershipP::Share => "@".to_string(),
+    OwnershipP::Borrow => "&".to_string(),
+    OwnershipP::Weak => "&&".to_string(),
+    OwnershipP::Live => panic!("Unimplemented: humanize_ownership Live"),
+  }
 }
 /*
   def humanizeOwnership(p: OwnershipP) = {
