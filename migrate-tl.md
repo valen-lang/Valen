@@ -22,6 +22,8 @@
 
 **Per-test Scala-arg discipline:** check the Scala for each test before defaulting to in-tree precedent — Scala explicit args, default args, and "previous Rust test did X" can disagree, and Scala parity wins.
 
+**`#[ignore]` mirroring requires verifying Scala uses `ignore()`** — a `// This test does not pass yet, use #[ignore].` comment above a live `test()` block is stale Scala bookkeeping, not an ignore directive; mirror the actual declaration, not the comment.
+
 **`@TFITCX` classification is not the spec; Scala equality is.** If a `/// Arena-allocated`-tagged type is compared with case-class `==` in Scala, reclass to `/// Value-type` and derive — don't fight the convention with workarounds.
 
 **Shield exceptions vs temp-disables.** Shield exceptions encode expected, mechanical divergences that recur uniformly (surface a proposal when 3+ sites within a session share a structurally identical rationale, not "in this specific function"); temp-disables flag surprising ones that warrant architect review per site.
@@ -101,7 +103,11 @@ Scaffolding (Slabs 0–14b) is complete — every type/signature is built (`IReg
 
 **Substantive JR sync-readies (body fill, scaffolding add, SPDMX disable): parity-review, surface to architect, and HOLD JR — don't release next test until the architect rules on the change.**
 
-**Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver. **Don't work on CoordSendSR until after Phase 3 lands** — `[~]` accumulation is the data we want for evaluating the fix's true blast radius.
+**Phase 4d (UUSNNCBX cleanup) — COMPLETE.** 152/152 changed files cleaned across two commits (`406f345c0` 1-57 + `f03f168a5` ancestors landed 58-152). Six `as Alias` disambiguations needed pre-apply (`Result as StdResult` × 2, `Iter`/`IterMut as Slice*`, `humanize_failed_solve as solver_humanize_failed_solve`, `collapse_{impl_id,prototype}` `_consistent` suffix, `expect_coord_templata` `_t`/`_i` suffix); 1 file skipped (`solver/lib.rs` — script bug, kept original).
+
+**Phase 4e — COMPLETE.** Audit of `#[ignore = "ignored upstream in Scala"]` rationales surfaced 5 false-mirrors (only `upcasting_in_a_generic_function` is actually `ignore()`'d in Scala; 5 others were live `test()` blocks with stale "// This test does not pass yet" comments). Un-ignored all 5; JR body-filled 2 (`ambiguous_call` + `report_when_downcasting_between_unrelated_types`); 1 was already passing (`forgetting_set_when_changing`); 2 became `[~]` parser logic bugs (`report_leaving_out_semicolon...`, `func_with_func_bound_with_missing_where`) — re-`#[ignore]`'d with "blocked - …" rationales per existing precedent. Suite 1122/0/20.
+
+**Known deferred fix:** `CoordSendSR` Some-branch — designed, Scala-verified 1104/1104, reverted pending coordinated Scala+Rust landing. Write-up at `investigations/coord_send_some_branch_fix.md`. Blocks `panic_in_expr` and any test whose typing-pass overload resolution hits Never-sender + bound-receiver. Phase-3/4 gate has lifted; eligible to land as a standalone slab.
 
 Body migration stays test-driven: the active test drives which panic stubs get implemented (see "How To Continue").
 
