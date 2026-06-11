@@ -126,6 +126,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     // In Vale this uses the flagger library, we'll parse manually
     
     // Mirrors build.vale lines 297-304: Frontend path
+    let frontend_program_name = if windows { "frontend_rust.exe" } else { "frontend_rust" };
     let frontend_path = if let Some(override_path) = get_optional_flag(build_args, "--frontend_path_override") {
         let path = PathBuf::from(override_path);
         if !path.is_file() {
@@ -134,7 +135,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         }
         path
     } else {
-        compiler_dir.join("Frontend.jar")
+        compiler_dir.join(frontend_program_name)
     };
 
     // Mirrors build.vale lines 306-314: Backend path
