@@ -618,6 +618,25 @@ fn if_branches_must_move_same_variables() {
         other => panic!("expected RangedInternalErrorT for if-branch-move-mismatch, got: {:?}", other.map(|_| "Ok(_)")),
     }
 }
+#[test]
+fn if_branches_moving_same_vars_different_order_compiles() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "\nstruct S { x int; }\nfunc consume(s S) int { return s.x; }\nexported func main() int {\n  a = S(1);\n  b = S(2);\n  result = 0;\n  if true {\n    set result = consume(a);\n    set result = consume(b);\n  } else {\n    set result = consume(b);\n    set result = consume(a);\n  }\n  return result;\n}\n";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs() {
+        Ok(_) => {},
+        Err(e) => panic!("expected Ok (same vars moved in both branches, just different order), got Err: {:?}", e),
+    }
+}
 /*
   test("Can restackify in destructure pattern") {
     val compile = CompilerTestCompilation.test(

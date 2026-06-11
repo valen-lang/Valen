@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use indexmap::IndexSet;
 use crate::higher_typing::ast::FunctionA;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::IExpressionSE;
@@ -646,7 +647,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn get_effects_since(
     &self,
     earlier_node_env: &NodeEnvironmentT<'s, 't>,
-  ) -> (Vec<IVarNameT<'s, 't>>, Vec<IVarNameT<'s, 't>>) {
+  ) -> (IndexSet<IVarNameT<'s, 't>>, IndexSet<IVarNameT<'s, 't>>) {
     assert!(eq(self.parent_function_env, earlier_node_env.parent_function_env));
     let earlier_node_env_declared_locals: HashSet<IVarNameT<'s, 't>> =
         earlier_node_env.declared_locals.iter().map(|v| v.name()).collect();
@@ -656,9 +657,9 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
         earlier_node_env_declared_locals.difference(&earlier_node_env_unstackified).copied().collect();
     let live_locals_introduced_since_earlier: HashSet<IVarNameT<'s, 't>> =
         self.declared_locals.iter().map(|v| v.name()).filter(|x| !earlier_node_env_live_locals.contains(x)).collect();
-    let unstackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+    let unstackified_ancestor_locals: IndexSet<IVarNameT<'s, 't>> =
         self.unstackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
-    let restackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+    let restackified_ancestor_locals: IndexSet<IVarNameT<'s, 't>> =
         self.restackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
     (unstackified_ancestor_locals, restackified_ancestor_locals)
   }
