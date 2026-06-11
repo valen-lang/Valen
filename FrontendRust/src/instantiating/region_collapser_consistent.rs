@@ -345,7 +345,7 @@ where 's: 'i {
 
 */
 // mig: fn collapse_region_templata
-pub fn collapse_region_templata<'s, 'i>(map: &HashMap<i32, i32>, templata: RegionTemplataI<'s, 'i, sI>) -> RegionTemplataI<'s, 'i, nI>
+pub fn collapse_region_templata<'s, 'i>(map: &HashMap<i32, i32>, templata: RegionTemplataI<sI>) -> RegionTemplataI<nI>
 where 's: 'i {
     let RegionTemplataI { pure_height: old_pure_height, .. } = templata;
     RegionTemplataI { pure_height: *map.get(&old_pure_height).expect("collapse_region_templata: missing"), _marker: PhantomData }

@@ -192,7 +192,7 @@ class RunCompilation(
   var fullCompilation = new FullCompilation(interner, keywords, packagesToBuild, packageToContentsResolver, options)
 */
 impl<'s, 'h, 'ctx, 't, 'i, 'p> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h,
+where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
 {
   // mig: fn get_code_map
   pub fn get_code_map(&self) { panic!("Unimplemented: get_code_map"); }

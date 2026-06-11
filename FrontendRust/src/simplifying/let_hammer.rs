@@ -276,7 +276,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let var_id_full = add_step(&current_function_header.id, INameI::from(*var_id));
         let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
         let local = locals.add_typing_pass_local(var_id, var_id_name_h, evaluate_variability(variability), expected_local_box_type);
-        let member_names: Vec<&'h IdH<'s, 'h>> = hamuts.struct_defs().iter().find(|s| eq(s.get_ref(self.interner), box_struct_ref_h)).unwrap().members.iter().map(|m| m.name).collect();
+        let member_names: Vec<&'h IdH<'s>> = hamuts.struct_defs().iter().find(|s| eq(s.get_ref(self.interner), box_struct_ref_h)).unwrap().members.iter().map(|m| m.name).collect();
         let source_expressions = self.interner.bump().alloc_slice_copy(&[source_expr_he]);
         let target_member_names = self.interner.bump().alloc_slice_copy(&member_names);
         let new_struct_node = ExpressionH::NewStructH(self.interner.alloc(NewStructH {

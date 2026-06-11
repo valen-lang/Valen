@@ -61,7 +61,6 @@ where 's: 't,
                     self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                         human_name: n.name,
                         code_location: self.translate_code_location(n.code_location),
-                        _phantom: PhantomData,
                     })
                 )
             }
@@ -80,7 +79,6 @@ where 's: 't,
                             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                                 human_name: s.name,
                                 code_location: self.translate_code_location(s.range.begin),
-                                _phantom: PhantomData,
                             })
                         )
                     }
@@ -89,7 +87,6 @@ where 's: 't,
                             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                                 human_name: i.name,
                                 code_location: self.translate_code_location(i.range.begin),
-                                _phantom: PhantomData,
                             })
                         )
                     }
@@ -134,7 +131,6 @@ where 's: 't,
             IStructDeclarationNameS::TopLevelStructDeclarationName(top_level) => {
                 let struct_template_name = StructTemplateNameT {
                     human_name: top_level.name,
-                    _phantom: PhantomData,
                 };
                 IStructTemplateNameT::StructTemplate(
                     self.typing_interner.intern_struct_template_name(struct_template_name)
@@ -166,7 +162,6 @@ where 's: 't,
     pub fn translate_interface_name(&self, name: TopLevelInterfaceDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
         let interface_template_name = InterfaceTemplateNameT {
             human_namee: name.name,
-            _phantom: PhantomData,
         };
         IInterfaceTemplateNameT::InterfaceTemplate(
             self.typing_interner.intern_interface_template_name(interface_template_name)
@@ -187,7 +182,6 @@ where 's: 't,
                 ICitizenTemplateNameT::StructTemplate(
                     self.typing_interner.intern_struct_template_name(StructTemplateNameT {
                         human_name: n.name,
-                        _phantom: PhantomData,
                     })
                 )
             }
@@ -204,7 +198,6 @@ where 's: 't,
                 ICitizenTemplateNameT::InterfaceTemplate(
                     self.typing_interner.intern_interface_template_name(InterfaceTemplateNameT {
                         human_namee: n.name,
-                        _phantom: PhantomData,
                     })
                 )
             }
@@ -275,7 +268,6 @@ where 's: 't,
                         INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                             human_name: n.name,
                             code_location: n.code_location,
-                            _phantom: PhantomData,
                         }))
                     }
                     IFunctionDeclarationNameS::ConstructorName(ctor) => {
@@ -284,7 +276,6 @@ where 's: 't,
                                 INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                                     human_name: n.name,
                                     code_location: n.range.begin,
-                                    _phantom: PhantomData,
                                 }))
                             }
                             ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(_) => {
@@ -362,35 +353,35 @@ where 's: 't,
         match name {
             IVarNameS::CodeVarName(name_str) => {
                 IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(
-                    CodeVarNameT { name: name_str, _phantom: PhantomData }))
+                    CodeVarNameT { name: name_str}))
             }
             IVarNameS::ClosureParamName(closure_param_name_s) => {
                 IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(
-                    ClosureParamNameT { code_location: closure_param_name_s.code_location, _phantom: PhantomData }))
+                    ClosureParamNameT { code_location: closure_param_name_s.code_location}))
             }
             IVarNameS::MagicParamName(code_location) => {
                 IVarNameT::MagicParam(self.typing_interner.intern_magic_param_name(
-                    MagicParamNameT { code_location2: self.translate_code_location(code_location), _phantom: PhantomData }))
+                    MagicParamNameT { code_location2: self.translate_code_location(code_location)}))
             }
             IVarNameS::SelfName => {
                 IVarNameT::Self_(self.typing_interner.intern_self_name(
-                    SelfNameT { _phantom: PhantomData }))
+                    SelfNameT { }))
             }
             IVarNameS::ConstructingMemberName(n) => {
                 IVarNameT::ConstructingMember(self.typing_interner.intern_constructing_member_name(
-                    ConstructingMemberNameT { name: n, _phantom: PhantomData }))
+                    ConstructingMemberNameT { name: n}))
             }
             IVarNameS::IterableName(range) => {
                 IVarNameT::Iterable(self.typing_interner.intern_iterable_name(
-                    IterableNameT { range, _phantom: PhantomData }))
+                    IterableNameT { range}))
             }
             IVarNameS::IteratorName(range) => {
                 IVarNameT::Iterator(self.typing_interner.intern_iterator_name(
-                    IteratorNameT { range, _phantom: PhantomData }))
+                    IteratorNameT { range}))
             }
             IVarNameS::IterationOptionName(range) => {
                 IVarNameT::IterationOption(self.typing_interner.intern_iteration_option_name(
-                    IterationOptionNameT { range, _phantom: PhantomData }))
+                    IterationOptionNameT { range}))
             }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", discriminant(&name));
@@ -419,7 +410,6 @@ where 's: 't,
             IImplDeclarationNameS::ImplDeclarationName(impl_decl) => {
                 let impl_template_name = ImplTemplateNameT {
                     code_location_s: self.translate_code_location(impl_decl.code_location),
-                    _phantom: PhantomData,
                 };
                 IImplTemplateNameT::ImplTemplate(
                     self.typing_interner.intern_impl_template_name(impl_template_name)

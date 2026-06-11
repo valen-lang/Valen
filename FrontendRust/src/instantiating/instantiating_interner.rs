@@ -130,6 +130,87 @@ macro_rules! impl_intern_name_wrappers_5lt {
     };
 }
 
+// Arity-trimmed variants of impl_intern_name_wrappers, introduced when the
+// phantom-lifetime removal sweep changed the I-type struct arities. The 3lt
+// macro above still applies to I-types that kept <'s, 'i, R> (none currently,
+// but kept for symmetry / future use). The three macros below cover the
+// post-sweep arities: <'s, R>, <'i, R>, and <R>-only.
+
+macro_rules! impl_intern_name_wrappers_with_s {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        ::paste::paste! {
+            pub fn [<$method _si>](&self, val: $payload_ty<'s, sI>) -> &'i $payload_ty<'s, sI> {
+                match self.intern_name_si(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ni>](&self, val: $payload_ty<'s, nI>) -> &'i $payload_ty<'s, nI> {
+                match self.intern_name_ni(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ci>](&self, val: $payload_ty<'s, cI>) -> &'i $payload_ty<'s, cI> {
+                match self.intern_name_ci(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_intern_name_wrappers_with_i {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        ::paste::paste! {
+            pub fn [<$method _si>](&self, val: $payload_ty<'i, sI>) -> &'i $payload_ty<'i, sI> {
+                match self.intern_name_si(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ni>](&self, val: $payload_ty<'i, nI>) -> &'i $payload_ty<'i, nI> {
+                match self.intern_name_ni(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ci>](&self, val: $payload_ty<'i, cI>) -> &'i $payload_ty<'i, cI> {
+                match self.intern_name_ci(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_intern_name_wrappers_r_only {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        ::paste::paste! {
+            pub fn [<$method _si>](&self, val: $payload_ty<sI>) -> &'i $payload_ty<sI> {
+                match self.intern_name_si(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ni>](&self, val: $payload_ty<nI>) -> &'i $payload_ty<nI> {
+                match self.intern_name_ni(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+            pub fn [<$method _ci>](&self, val: $payload_ty<cI>) -> &'i $payload_ty<cI> {
+                match self.intern_name_ci(INameValI::$variant(val)) {
+                    INameI::$variant(r) => r,
+                    _ => unreachable!(),
+                }
+            }
+        }
+    };
+}
+
 // Big match shared across the 3 region-mode family methods. Every variant's arm
 // is structurally identical: alloc the val payload into the arena and wrap the
 // ref in the matching canonical variant. R is phantom — same code for sI/nI/cI.
@@ -613,79 +694,79 @@ where 's: 'i,
     // --- 72 macro-generated wrapper trios (216 user-facing intern methods) ---
     // Each invocation generates 3 methods (one per region mode):
     //   intern_<name>_si / _ni / _ci
-    impl_intern_name_wrappers!(intern_region_name, RegionName, RegionNameI);
-    impl_intern_name_wrappers!(intern_denizen_default_region_name, DenizenDefaultRegionName, DenizenDefaultRegionNameI);
-    impl_intern_name_wrappers!(intern_export_template_name, ExportTemplate, ExportTemplateNameI);
-    impl_intern_name_wrappers!(intern_export_name, Export, ExportNameI);
-    impl_intern_name_wrappers!(intern_extern_template_name, ExternTemplate, ExternTemplateNameI);
-    impl_intern_name_wrappers!(intern_extern_name, Extern, ExternNameI);
-    impl_intern_name_wrappers!(intern_impl_template_name, ImplTemplate, ImplTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_region_name, RegionName, RegionNameI);
+    impl_intern_name_wrappers_r_only!(intern_denizen_default_region_name, DenizenDefaultRegionName, DenizenDefaultRegionNameI);
+    impl_intern_name_wrappers_with_s!(intern_export_template_name, ExportTemplate, ExportTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_export_name, Export, ExportNameI);
+    impl_intern_name_wrappers_with_s!(intern_extern_template_name, ExternTemplate, ExternTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_extern_name, Extern, ExternNameI);
+    impl_intern_name_wrappers_with_s!(intern_impl_template_name, ImplTemplate, ImplTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_impl_name, Impl, ImplNameI);
-    impl_intern_name_wrappers!(intern_impl_bound_template_name, ImplBoundTemplate, ImplBoundTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_impl_bound_template_name, ImplBoundTemplate, ImplBoundTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_impl_bound_name, ImplBound, ImplBoundNameI);
-    impl_intern_name_wrappers!(intern_let_name, Let, LetNameI);
-    impl_intern_name_wrappers!(intern_export_as_name, ExportAs, ExportAsNameI);
+    impl_intern_name_wrappers_with_s!(intern_let_name, Let, LetNameI);
+    impl_intern_name_wrappers_with_s!(intern_export_as_name, ExportAs, ExportAsNameI);
     impl_intern_name_wrappers!(intern_raw_array_name, RawArray, RawArrayNameI);
-    impl_intern_name_wrappers!(intern_reachable_prototype_name, ReachablePrototype, ReachablePrototypeNameI);
-    impl_intern_name_wrappers!(intern_static_sized_array_template_name, StaticSizedArrayTemplate, StaticSizedArrayTemplateNameI);
+    impl_intern_name_wrappers_r_only!(intern_reachable_prototype_name, ReachablePrototype, ReachablePrototypeNameI);
+    impl_intern_name_wrappers_r_only!(intern_static_sized_array_template_name, StaticSizedArrayTemplate, StaticSizedArrayTemplateNameI);
     impl_intern_name_wrappers!(intern_static_sized_array_name, StaticSizedArray, StaticSizedArrayNameI);
-    impl_intern_name_wrappers!(intern_runtime_sized_array_template_name, RuntimeSizedArrayTemplate, RuntimeSizedArrayTemplateNameI);
+    impl_intern_name_wrappers_r_only!(intern_runtime_sized_array_template_name, RuntimeSizedArrayTemplate, RuntimeSizedArrayTemplateNameI);
     impl_intern_name_wrappers!(intern_runtime_sized_array_name, RuntimeSizedArray, RuntimeSizedArrayNameI);
     impl_intern_name_wrappers!(intern_override_dispatcher_template_name, OverrideDispatcherTemplate, OverrideDispatcherTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_override_dispatcher_name, OverrideDispatcher, OverrideDispatcherNameI);
     impl_intern_name_wrappers_5lt!(intern_override_dispatcher_case_name, OverrideDispatcherCase, OverrideDispatcherCaseNameI);
     impl_intern_name_wrappers_5lt!(intern_case_function_from_impl_name, CaseFunctionFromImpl, CaseFunctionFromImplNameI);
-    impl_intern_name_wrappers!(intern_case_function_from_impl_template_name, CaseFunctionFromImplTemplate, CaseFunctionFromImplTemplateNameI);
-    impl_intern_name_wrappers!(intern_typing_pass_block_result_var_name, TypingPassBlockResultVar, TypingPassBlockResultVarNameI);
-    impl_intern_name_wrappers!(intern_typing_pass_function_result_var_name, TypingPassFunctionResultVar, TypingPassFunctionResultVarNameI);
-    impl_intern_name_wrappers!(intern_typing_pass_temporary_var_name, TypingPassTemporaryVar, TypingPassTemporaryVarNameI);
-    impl_intern_name_wrappers!(intern_typing_pass_pattern_member_name, TypingPassPatternMember, TypingPassPatternMemberNameI);
-    impl_intern_name_wrappers!(intern_typing_ignored_param_name, TypingIgnoredParam, TypingIgnoredParamNameI);
-    impl_intern_name_wrappers!(intern_typing_pass_pattern_destructuree_name, TypingPassPatternDestructuree, TypingPassPatternDestructureeNameI);
-    impl_intern_name_wrappers!(intern_unnamed_local_name, UnnamedLocal, UnnamedLocalNameI);
-    impl_intern_name_wrappers!(intern_closure_param_name, ClosureParam, ClosureParamNameI);
-    impl_intern_name_wrappers!(intern_constructing_member_name, ConstructingMember, ConstructingMemberNameI);
-    impl_intern_name_wrappers!(intern_while_cond_result_name, WhileCondResult, WhileCondResultNameI);
-    impl_intern_name_wrappers!(intern_iterable_name, Iterable, IterableNameI);
-    impl_intern_name_wrappers!(intern_iterator_name, Iterator, IteratorNameI);
-    impl_intern_name_wrappers!(intern_iteration_option_name, IterationOption, IterationOptionNameI);
-    impl_intern_name_wrappers!(intern_magic_param_name, MagicParam, MagicParamNameI);
-    impl_intern_name_wrappers!(intern_code_var_name, CodeVar, CodeVarNameI);
-    impl_intern_name_wrappers!(intern_anonymous_substruct_member_name, AnonymousSubstructMember, AnonymousSubstructMemberNameI);
-    impl_intern_name_wrappers!(intern_primitive_name, Primitive, PrimitiveNameI);
-    impl_intern_name_wrappers!(intern_package_top_level_name, PackageTopLevel, PackageTopLevelNameI);
-    impl_intern_name_wrappers!(intern_project_name, Project, ProjectNameI);
-    impl_intern_name_wrappers!(intern_package_name, Package, PackageNameI);
-    impl_intern_name_wrappers!(intern_rune_name, Rune, RuneNameI);
+    impl_intern_name_wrappers_with_s!(intern_case_function_from_impl_template_name, CaseFunctionFromImplTemplate, CaseFunctionFromImplTemplateNameI);
+    impl_intern_name_wrappers_with_i!(intern_typing_pass_block_result_var_name, TypingPassBlockResultVar, TypingPassBlockResultVarNameI);
+    impl_intern_name_wrappers_r_only!(intern_typing_pass_function_result_var_name, TypingPassFunctionResultVar, TypingPassFunctionResultVarNameI);
+    impl_intern_name_wrappers_with_i!(intern_typing_pass_temporary_var_name, TypingPassTemporaryVar, TypingPassTemporaryVarNameI);
+    impl_intern_name_wrappers_with_i!(intern_typing_pass_pattern_member_name, TypingPassPatternMember, TypingPassPatternMemberNameI);
+    impl_intern_name_wrappers_r_only!(intern_typing_ignored_param_name, TypingIgnoredParam, TypingIgnoredParamNameI);
+    impl_intern_name_wrappers_with_i!(intern_typing_pass_pattern_destructuree_name, TypingPassPatternDestructuree, TypingPassPatternDestructureeNameI);
+    impl_intern_name_wrappers_with_s!(intern_unnamed_local_name, UnnamedLocal, UnnamedLocalNameI);
+    impl_intern_name_wrappers_with_s!(intern_closure_param_name, ClosureParam, ClosureParamNameI);
+    impl_intern_name_wrappers_with_s!(intern_constructing_member_name, ConstructingMember, ConstructingMemberNameI);
+    impl_intern_name_wrappers_with_s!(intern_while_cond_result_name, WhileCondResult, WhileCondResultNameI);
+    impl_intern_name_wrappers_with_s!(intern_iterable_name, Iterable, IterableNameI);
+    impl_intern_name_wrappers_with_s!(intern_iterator_name, Iterator, IteratorNameI);
+    impl_intern_name_wrappers_with_s!(intern_iteration_option_name, IterationOption, IterationOptionNameI);
+    impl_intern_name_wrappers_with_s!(intern_magic_param_name, MagicParam, MagicParamNameI);
+    impl_intern_name_wrappers_with_s!(intern_code_var_name, CodeVar, CodeVarNameI);
+    impl_intern_name_wrappers_r_only!(intern_anonymous_substruct_member_name, AnonymousSubstructMember, AnonymousSubstructMemberNameI);
+    impl_intern_name_wrappers_with_s!(intern_primitive_name, Primitive, PrimitiveNameI);
+    impl_intern_name_wrappers_r_only!(intern_package_top_level_name, PackageTopLevel, PackageTopLevelNameI);
+    impl_intern_name_wrappers_with_s!(intern_project_name, Project, ProjectNameI);
+    impl_intern_name_wrappers_with_s!(intern_package_name, Package, PackageNameI);
+    impl_intern_name_wrappers_with_s!(intern_rune_name, Rune, RuneNameI);
     impl_intern_name_wrappers!(intern_building_function_name_with_closureds, BuildingFunctionNameWithClosureds, BuildingFunctionNameWithClosuredsI);
     impl_intern_name_wrappers!(intern_extern_function_name, ExternFunction, ExternFunctionNameI);
     impl_intern_name_wrappers_5lt!(intern_function_name_x, FunctionNameIX, FunctionNameIX);
     impl_intern_name_wrappers!(intern_forwarder_function_name, ForwarderFunction, ForwarderFunctionNameI);
-    impl_intern_name_wrappers!(intern_function_bound_template_name, FunctionBoundTemplate, FunctionBoundTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_function_bound_template_name, FunctionBoundTemplate, FunctionBoundTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_function_bound_name, FunctionBound, FunctionBoundNameI);
-    impl_intern_name_wrappers!(intern_reachable_function_template_name, ReachableFunctionTemplate, ReachableFunctionTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_reachable_function_template_name, ReachableFunctionTemplate, ReachableFunctionTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_reachable_function_name, ReachableFunction, ReachableFunctionNameI);
-    impl_intern_name_wrappers!(intern_function_template_name, FunctionTemplate, FunctionTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_function_template_name, FunctionTemplate, FunctionTemplateNameI);
     impl_intern_name_wrappers!(intern_lambda_call_function_template_name, LambdaCallFunctionTemplate, LambdaCallFunctionTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_lambda_call_function_name, LambdaCallFunction, LambdaCallFunctionNameI);
     impl_intern_name_wrappers!(intern_forwarder_function_template_name, ForwarderFunctionTemplate, ForwarderFunctionTemplateNameI);
-    impl_intern_name_wrappers!(intern_constructor_template_name, ConstructorTemplate, ConstructorTemplateNameI);
-    impl_intern_name_wrappers!(intern_self_name, Self_, SelfNameI);
-    impl_intern_name_wrappers!(intern_arbitrary_name, Arbitrary, ArbitraryNameI);
+    impl_intern_name_wrappers_with_s!(intern_constructor_template_name, ConstructorTemplate, ConstructorTemplateNameI);
+    impl_intern_name_wrappers_r_only!(intern_self_name, Self_, SelfNameI);
+    impl_intern_name_wrappers_r_only!(intern_arbitrary_name, Arbitrary, ArbitraryNameI);
     impl_intern_name_wrappers_5lt!(intern_struct_name, StructName, StructNameI);
     impl_intern_name_wrappers_5lt!(intern_interface_name, InterfaceName, InterfaceNameI);
-    impl_intern_name_wrappers!(intern_lambda_citizen_template_name, LambdaCitizenTemplate, LambdaCitizenTemplateNameI);
-    impl_intern_name_wrappers!(intern_lambda_citizen_name, LambdaCitizen, LambdaCitizenNameI);
-    impl_intern_name_wrappers!(intern_struct_template_name, StructTemplate, StructTemplateNameI);
-    impl_intern_name_wrappers!(intern_interface_template_name, InterfaceTemplate, InterfaceTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_lambda_citizen_template_name, LambdaCitizenTemplate, LambdaCitizenTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_lambda_citizen_name, LambdaCitizen, LambdaCitizenNameI);
+    impl_intern_name_wrappers_with_s!(intern_struct_template_name, StructTemplate, StructTemplateNameI);
+    impl_intern_name_wrappers_with_s!(intern_interface_template_name, InterfaceTemplate, InterfaceTemplateNameI);
     impl_intern_name_wrappers!(intern_anonymous_substruct_impl_template_name, AnonymousSubstructImplTemplate, AnonymousSubstructImplTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_anonymous_substruct_impl_name, AnonymousSubstructImpl, AnonymousSubstructImplNameI);
     impl_intern_name_wrappers!(intern_anonymous_substruct_template_name, AnonymousSubstructTemplate, AnonymousSubstructTemplateNameI);
     impl_intern_name_wrappers!(intern_anonymous_substruct_constructor_template_name, AnonymousSubstructConstructorTemplate, AnonymousSubstructConstructorTemplateNameI);
     impl_intern_name_wrappers_5lt!(intern_anonymous_substruct_constructor_name, AnonymousSubstructConstructor, AnonymousSubstructConstructorNameI);
     impl_intern_name_wrappers_5lt!(intern_anonymous_substruct_name, AnonymousSubstruct, AnonymousSubstructNameI);
-    impl_intern_name_wrappers!(intern_resolving_env_name, ResolvingEnv, ResolvingEnvNameI);
-    impl_intern_name_wrappers!(intern_call_env_name, CallEnv, CallEnvNameI);
+    impl_intern_name_wrappers_r_only!(intern_resolving_env_name, ResolvingEnv, ResolvingEnvNameI);
+    impl_intern_name_wrappers_r_only!(intern_call_env_name, CallEnv, CallEnvNameI);
 
     // --- Future intern families (added when their AST shapes mature) ---
     // intern_id_* — once IdI is shaped (currently bare-placeholder)

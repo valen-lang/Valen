@@ -57,7 +57,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
         full_name2: &IdI<'s, 'i, cI>,
-    ) -> &'h IdH<'s, 'h>
+    ) -> &'h IdH<'s>
     {
         let IdI { package_coord, init_steps: _, local_name: local_name_t } = full_name2;
         let code_map = |loc: CodeLocationS<'s>| format!("{:?}", loc);
@@ -68,7 +68,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             package_coordinate: **package_coord,
             shortened_name: self.scout_arena.intern_str(&long_name),
             fully_qualified_name: self.scout_arena.intern_str(&long_name),
-            _phantom_h: PhantomData,
         })
     }
 /*
@@ -88,9 +87,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
     pub fn add_step(
         &self,
         _hamuts: &Hamuts<'s, 'i, 'h>,
-        full_name: &IdH<'s, 'h>,
+        full_name: &IdH<'s>,
         s: StrI<'s>,
-    ) -> &'h IdH<'s, 'h>
+    ) -> &'h IdH<'s>
     {
         let IdH { package_coordinate, shortened_name, fully_qualified_name, .. } = *full_name;
         let new_shortened = format!("{}.{}", shortened_name.0, s.0);
@@ -100,7 +99,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             package_coordinate,
             shortened_name: self.scout_arena.intern_str(&new_shortened),
             fully_qualified_name: self.scout_arena.intern_str(&new_fqn),
-            _phantom_h: PhantomData,
         })
     }
 }

@@ -40,11 +40,10 @@ import scala.collection.immutable.{List, ListMap, Map, Set}
 import scala.collection.mutable
 */
 /// Miscellaneous (see @TFITCX)
-pub struct TypingPassOptions<'s> {
+pub struct TypingPassOptions {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub tree_shaking_enabled: bool,
-  pub _phantom: PhantomData<&'s ()>,
 }
 /*
 case class TypingPassOptions(
@@ -65,7 +64,7 @@ where 's: 't,
   hinputs_cache: Option<HinputsT<'s, 't>>,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
-  options: TypingPassOptions<'s>,
+  options: TypingPassOptions,
   pub typing_interner: &'ctx TypingInterner<'s, 't>,
 }
 /*
@@ -95,7 +94,6 @@ where 's: 't,
       global_options,
       debug_out: instantiator_options.debug_out.clone(),
       tree_shaking_enabled: true,
-      _phantom: PhantomData,
     };
 
     let higher_typing_compilation = HigherTypingCompilation::new(

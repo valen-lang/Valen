@@ -1069,7 +1069,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 })
             }
             ExpressionH::ConstantStrH(c) => {
-                let ConstantStrH { value, _marker: _ } = *c;
+                let ConstantStrH { value} = *c;
                 IVonData::Object(VonObject {
                     tyype: "ConstantStr".to_string(),
                     id: None,
@@ -2426,8 +2426,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn vonify_name
-    pub fn vonify_name(&self, h: &IdH<'s, 'h>) -> IVonData {
-        let IdH { local_name, package_coordinate, shortened_name, fully_qualified_name: _, _must_intern: _, _phantom_h: _ } = h;
+    pub fn vonify_name(&self, h: &IdH<'s>) -> IVonData {
+        let IdH { local_name, package_coordinate, shortened_name, fully_qualified_name: _, _must_intern: _} = h;
         IVonData::Object(VonObject {
             tyype: "Name".to_string(),
             id: None,

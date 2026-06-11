@@ -723,7 +723,7 @@ where 's: 't,
         });
         let inner_env_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             inferences.iter().map(|(rune, templata)| {
-                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *rune, _phantom: PhantomData });
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *rune});
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
             }).collect();
         let mut inner_store = TemplatasStoreBuilder::new(inner_env_id);
@@ -932,7 +932,7 @@ where 's: 't,
         });
         let inner_env_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             inferences.iter().map(|(rune, templata)| {
-                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *rune, _phantom: PhantomData });
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *rune});
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
             }).collect();
         let mut inner_store = TemplatasStoreBuilder::new(inner_env_id);

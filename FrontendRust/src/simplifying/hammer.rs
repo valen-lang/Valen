@@ -218,7 +218,7 @@ where 's: 'i, 'i: 'h,
     pub fn add_typing_pass_local(
         &mut self,
         var_id: &'i IVarNameI<'s, 'i, cI>,
-        var_id_name_h: &'h IdH<'s, 'h>,
+        var_id_name_h: &'h IdH<'s>,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {
@@ -278,7 +278,7 @@ where 's: 'i, 'i: 'h,
     pub fn add_compiler_local(
         &mut self,
         var_id: &'i IVarNameI<'s, 'i, cI>,
-        var_id_name_h: &'h IdH<'s, 'h>,
+        var_id_name_h: &'h IdH<'s>,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {

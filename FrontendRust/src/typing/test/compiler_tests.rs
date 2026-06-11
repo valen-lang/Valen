@@ -1585,7 +1585,6 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
-            _phantom: PhantomData,
         });
     let template_args_vec = vec![
         ITemplataT::Coord(
@@ -1904,7 +1903,6 @@ fn tests_calling_a_templated_struct_s_constructor() {
     coutputs.lookup_struct_by_template_name(
         StructTemplateNameT {
             human_name: scout_arena.intern_str("MySome"),
-            _phantom: PhantomData,
         });
 
     let constructor = coutputs.lookup_function_by_str("MySome");
@@ -4045,7 +4043,7 @@ fn humanize_errors() {
     let line_containing = |x| line_containing(&filenames_and_sources, &x);
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly")});
     let firefly_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
     let firefly_id = typing_interner.intern_id(IdValT {
@@ -4056,7 +4054,7 @@ fn humanize_errors() {
     let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
     let serenity_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
     let serenity_id = typing_interner.intern_id(IdValT {
@@ -4067,7 +4065,7 @@ fn humanize_errors() {
     let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT { region: IRegionT::Default }, kind: serenity_kind };
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
-        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: PhantomData });
+        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
     let ispaceship_interface_name = typing_interner.intern_interface_name(
         InterfaceNameValT { template: ispaceship_interface_template_name, template_args: &[] });
     let ispaceship_id = typing_interner.intern_id(IdValT {
@@ -4077,7 +4075,7 @@ fn humanize_errors() {
     let ispaceship_kind = KindT::Interface(ispaceship_tt);
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon")});
     let unrelated_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(unrelated_struct_template_name), template_args: &[] });
     let unrelated_id = typing_interner.intern_id(IdValT {
@@ -4087,7 +4085,7 @@ fn humanize_errors() {
     let unrelated_kind = KindT::Struct(unrelated_tt);
 
     let myfunc_template_name = typing_interner.intern_function_template_name(
-        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: PhantomData });
+        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc});
     let firefly_func_name = typing_interner.intern_function_name(
         FunctionNameValT { template: myfunc_template_name, template_args: &[], parameters: &[firefly_coord] });
     let firefly_signature_id = typing_interner.intern_id(IdValT {
@@ -4097,7 +4095,7 @@ fn humanize_errors() {
         SignatureValT { id: IdValT { package_coord: test_tld, init_steps: &[], local_name: INameT::Function(firefly_func_name) } });
 
     let export_template_name = typing_interner.intern_export_template_name(
-        ExportTemplateNameT { code_loc: tz_code_loc, _phantom: PhantomData });
+        ExportTemplateNameT { code_loc: tz_code_loc});
     let export_name = typing_interner.intern_export_name(
         ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT {
@@ -4144,17 +4142,17 @@ fn humanize_errors() {
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
-    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: PhantomData });
+    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp")});
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }).is_empty());
-    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: PhantomData });
+    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly")});
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantUseUnstackifiedLocal { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::FunctionAlreadyExists { old_function_range: tz, new_function_range: tz, signature: *firefly_signature_id }).is_empty());
-    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: PhantomData });
+    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork")});
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::CantMutateFinalMember { range: tz_slice, struct_: *serenity_tt, member_name: IVarNameT::CodeVar(bork_var_name) }).is_empty());
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
@@ -4561,11 +4559,9 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
     let interface_template_name = compile.typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT {
             human_namee: scout_arena.intern_str("MyOption"),
-            _phantom: PhantomData,
         });
     let struct_template_name = StructTemplateNameT {
         human_name: scout_arena.intern_str("MySome"),
-        _phantom: PhantomData,
     };
 
     let coutputs = compile.expect_compiler_outputs();

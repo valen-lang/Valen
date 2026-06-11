@@ -193,7 +193,7 @@ where 's: 't,
     pub scout_arena: &'ctx ScoutArena<'s>,
     pub typing_interner: &'ctx TypingInterner<'s, 't>,
     pub keywords: &'ctx Keywords<'s>,
-    pub opts: &'ctx TypingPassOptions<'s>,
+    pub opts: &'ctx TypingPassOptions,
 }
 /*
 class Compiler(
@@ -210,7 +210,7 @@ where 's: 't,
         scout_arena: &'ctx ScoutArena<'s>,
         typing_interner: &'ctx TypingInterner<'s, 't>,
         keywords: &'ctx Keywords<'s>,
-        opts: &'ctx TypingPassOptions<'s>,
+        opts: &'ctx TypingPassOptions,
     ) -> Self {
         Compiler { scout_arena, typing_interner, keywords, opts }
     }
@@ -780,7 +780,7 @@ where 's: 't,
         param_coords: &'t [CoordT<'s, 't>],
         return_coord: CoordT<'s, 't>,
     ) -> PrototypeTemplataT<'s, 't> {
-        let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name, _phantom: PhantomData });
+        let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name});
         let pred_name = self.typing_interner.intern_predicted_function_name(PredictedFunctionNameValT { template: tmpl, template_args: &[], parameters: param_coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::PredictedFunction(pred_name));
         let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type: return_coord });
@@ -876,7 +876,7 @@ where 's: 't,
         coords: &'t [CoordT<'s, 't>],
         return_type: CoordT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name, _phantom: PhantomData });
+        let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name});
         let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: tmpl, template_args: &[], parameters: coords });
         let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::FunctionBound(bound_name));
         let result = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type });
@@ -930,7 +930,7 @@ where 's: 't,
         super_kind: KindT<'s, 't>,
     ) -> IsaTemplataT<'s, 't> {
         let tmpl = self.typing_interner.intern_impl_bound_template_name(
-            ImplBoundTemplateNameT { code_location_s: range.begin, _phantom: PhantomData });
+            ImplBoundTemplateNameT { code_location_s: range.begin});
         let bound_name = self.typing_interner.intern_impl_bound_name(
             ImplBoundNameValT { template: tmpl, template_args: &[] });
         let id = *env.original_calling_env.denizen_id().add_step(
@@ -1214,7 +1214,7 @@ where 's: 't,
         _generator: IFunctionGenerator,
         _full_env: &'t FunctionEnvironmentT<'s, 't>,
         _coutputs: &mut CompilerOutputs<'s, 't>,
-        _life: LocationInFunctionEnvironmentT<'s, 't>,
+        _life: LocationInFunctionEnvironmentT<'t>,
         _call_range: &[RangeS<'s>],
         _origin_function: Option<&'s FunctionA<'s>>,
         _param_coords: &[ParameterT<'s, 't>],
@@ -1362,7 +1362,7 @@ where 's: 't,
         let mut id_and_env_entry: Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
         for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
             let pkg_top_level_name =
-                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
+                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { });
             let pkg_top_level = INameT::PackageTopLevel(pkg_top_level_name);
             for struct_a in program_a.structs.iter() {
                 let struct_template_name = self.translate_struct_name(struct_a.name);
@@ -1440,7 +1440,7 @@ where 's: 't,
         }
 
         let pkg_top_level_for_group = INameT::PackageTopLevel(
-            self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData })
+            self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { })
         );
         // Per @IIIOZ: IndexMap so iteration at line ~1350 (into global_env.name_to_top_level_environment)
         // preserves id_and_env_entry source order — otherwise the package env's `global_namespaces`
@@ -1471,7 +1471,7 @@ where 's: 't,
             package_coord: builtin_coord,
             init_steps: &[],
             local_name: INameT::PackageTopLevel(
-                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData })
+                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { })
             ),
         });
         let mut builtins_builder = TemplatasStoreBuilder::new(builtin_id);
@@ -1486,7 +1486,7 @@ where 's: 't,
         ];
         for (human_name, kind) in primitives {
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
-                PrimitiveNameT { human_name: *human_name, _phantom: PhantomData }
+                PrimitiveNameT { human_name: *human_name}
             ));
             let kind_t = ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *kind }));
             builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(kind_t)));
@@ -1496,10 +1496,10 @@ where 's: 't,
         }
         {
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
-                PrimitiveNameT { human_name: self.keywords.array, _phantom: PhantomData }
+                PrimitiveNameT { human_name: self.keywords.array}
             ));
             let entry = IEnvEntryT::Templata(
-                ITemplataT::RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT { _phantom: PhantomData })
+                ITemplataT::RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT { })
             );
             builtins_builder.name_to_entry.push((prim, entry));
             if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
@@ -1508,10 +1508,10 @@ where 's: 't,
         }
         {
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
-                PrimitiveNameT { human_name: self.keywords.static_array, _phantom: PhantomData }
+                PrimitiveNameT { human_name: self.keywords.static_array}
             ));
             let entry = IEnvEntryT::Templata(
-                ITemplataT::StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT { _phantom: PhantomData })
+                ITemplataT::StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT { })
             );
             builtins_builder.name_to_entry.push((prim, entry));
             if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
@@ -1612,7 +1612,6 @@ where 's: 't,
                             Some(export_s) => {
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: struct_a.range.begin,
-                                    _phantom: PhantomData,
                                 });
                                 let template_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let template_id = *self.typing_interner.intern_id(IdValT {
@@ -1687,7 +1686,6 @@ where 's: 't,
                             Some(_export_s) => {
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: interface_a.range.begin,
-                                    _phantom: PhantomData,
                                 });
                                 let template_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let template_id = *self.typing_interner.intern_id(IdValT {
@@ -1820,7 +1818,6 @@ where 's: 't,
 
                                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                                     code_loc: function_a.range.begin,
-                                    _phantom: PhantomData,
                                 });
                                 let template_id_steps: Vec<INameT<'s, 't>> = vec![];
                                 let template_id = *self.typing_interner.intern_id(IdValT {
@@ -1903,7 +1900,7 @@ where 's: 't,
         for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
             for export in program_a.exports.iter() {
 
-                let package_top_level_name = self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
+                let package_top_level_name = self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { });
                 let package_id_steps: Vec<INameT<'s, 't>> = vec![];
                 let package_id = *self.typing_interner.intern_id(IdValT {
                     package_coord: coord,
@@ -1916,7 +1913,6 @@ where 's: 't,
 
                 let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
                     code_loc: export.range.begin,
-                    _phantom: PhantomData,
                 });
                 let template_id_steps: Vec<INameT<'s, 't>> = vec![];
                 let template_id = *self.typing_interner.intern_id(IdValT {

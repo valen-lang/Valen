@@ -470,7 +470,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::ConstantStrH(c) => {
-            let ConstantStrH { value, _marker: _ } = **c;
+            let ConstantStrH { value} = **c;
             let interned = scout_arena.intern_str(value);
             let r#ref = make_primitive(heap, interner, call_id, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })

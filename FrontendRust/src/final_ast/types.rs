@@ -241,7 +241,7 @@ case class VoidHT() extends KindHT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OpaqueHT<'s, 'h> where 's: 'h {
     pub package_coord: PackageCoordinate<'s>,
-    pub struct_id: &'h IdH<'s, 'h>,
+    pub struct_id: &'h IdH<'s>,
     pub simple_id: SimpleId<'s, 'h>,
 }
 /*
@@ -320,7 +320,7 @@ case class NeverHT(fromBreak: Boolean) extends KindHT {
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub _must_intern: MustIntern,
 }
 
@@ -328,7 +328,7 @@ pub struct InterfaceHT<'s, 'h> where 's: 'h {
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
 }
 /*
 case class InterfaceHT(
@@ -346,7 +346,7 @@ case class InterfaceHT(
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub _must_intern: MustIntern,
 }
 
@@ -354,7 +354,7 @@ pub struct StructHT<'s, 'h> where 's: 'h {
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
 }
 /*
 case class StructHT(
@@ -372,7 +372,7 @@ case class StructHT(
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub _must_intern: MustIntern,
 }
 
@@ -380,7 +380,7 @@ pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
 }
 /*
 // An array whose size is known at compile time, and therefore doesn't need to
@@ -400,7 +400,7 @@ case class StaticSizedArrayHT(
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
+    pub name: &'h IdH<'s>,
     pub size: i64,
     pub mutability: Mutability,
     pub variability: Variability,
@@ -434,7 +434,7 @@ case class StaticSizedArrayDefinitionHT(
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
+    pub name: &'h IdH<'s>,
     pub _must_intern: MustIntern,
 }
 
@@ -442,7 +442,7 @@ pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
+    pub name: &'h IdH<'s>,
 }
 /*
 case class RuntimeSizedArrayHT(
@@ -460,7 +460,7 @@ case class RuntimeSizedArrayHT(
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
+    pub name: &'h IdH<'s>,
     pub mutability: Mutability,
     pub element_type: CoordH<'s, 'h>,
 }

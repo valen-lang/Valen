@@ -112,7 +112,7 @@ where 's: 't,
         // (debug pattern match, not functionally needed)
 
         // val life = LocationInFunctionEnvironmentT(Vector())
-        let life = LocationInFunctionEnvironmentT { path: self.typing_interner.alloc_slice_from_vec(Vec::new()), _phantom: PhantomData };
+        let life = LocationInFunctionEnvironmentT { path: self.typing_interner.alloc_slice_from_vec(Vec::new())};
 
         // val isDestructor = params2.nonEmpty && params2.head.tyype.ownership == OwnT && ...
         let is_destructor =
@@ -560,7 +560,7 @@ where 's: 't,
         full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
         call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'t>,
         attributes_t: &'t [IFunctionAttributeT<'s>],
         params_t: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
@@ -750,7 +750,6 @@ where 's: 't,
                 // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
                 let extern_template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
                     code_loc: range.begin,
-                    _phantom: PhantomData,
                 });
                 let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
                     template: extern_template_name,

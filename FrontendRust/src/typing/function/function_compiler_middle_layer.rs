@@ -577,7 +577,7 @@ where 's: 't,
             //   }
             let name_t: IVarNameT<'s, 't> = match &param1.pattern.name {
                 None => {
-                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(TypingIgnoredParamNameT { num: index as i32, _phantom: PhantomData }))
+                    IVarNameT::TypingIgnoredParam(self.typing_interner.intern_typing_ignored_param_name(TypingIgnoredParamNameT { num: index as i32}))
                 }
                 Some(x) => {
                     self.translate_var_name_step(x.name)

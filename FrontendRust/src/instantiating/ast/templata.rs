@@ -51,7 +51,7 @@ pub fn expect_coord_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> Coor
   }
 */
 // mig: fn expect_integer_templata
-pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> IntegerTemplataI<'s, 'i, R> {
+pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> IntegerTemplataI<R> {
     match templata {
         ITemplataI::Integer(t) => t,
         _ => panic!("vfail"),
@@ -66,7 +66,7 @@ pub fn expect_integer_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> In
   }
 */
 // mig: fn expect_mutability_templata
-pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> MutabilityTemplataI<'s, 'i, R> {
+pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> MutabilityTemplataI<R> {
     match templata {
         ITemplataI::Mutability(m) => m,
         _ => panic!("expect_mutability_templata: not a MutabilityTemplataI"),
@@ -81,7 +81,7 @@ pub fn expect_mutability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) ->
   }
 */
 // mig: fn expect_variability_templata
-pub fn expect_variability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> VariabilityTemplataI<'s, 'i, R> {
+pub fn expect_variability_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> VariabilityTemplataI<R> {
     match templata {
         ITemplataI::Variability(t) => t,
         _ => panic!("expect_variability_templata: not a VariabilityTemplataI"),
@@ -116,7 +116,7 @@ pub fn expect_kind_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> KindT
   }
 */
 // mig: fn expect_region_templata
-pub fn expect_region_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> RegionTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_region_templata"); }
+pub fn expect_region_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> RegionTemplataI<R> { panic!("Unimplemented: expect_region_templata"); }
 /*
   def expectRegionTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): RegionTemplataI[R] = {
     templata match {
@@ -134,23 +134,23 @@ pub fn expect_region_templata<'s, 'i, R>(templata: ITemplataI<'s, 'i, R>) -> Reg
 pub enum ITemplataI<'s, 'i, R> {
   Coord(CoordTemplataI<'s, 'i, R>),
   Kind(KindTemplataI<'s, 'i, R>),
-  RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataI<'s, 'i, R>),
-  StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataI<'s, 'i, R>),
+  RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataI<R>),
+  StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataI<R>),
   Function(FunctionTemplataI<'s, 'i, R>),
   StructDefinition(StructDefinitionTemplataI<'s, 'i, R>),
   InterfaceDefinition(InterfaceDefinitionTemplataI<'s, 'i, R>),
   ImplDefinition(ImplDefinitionTemplataI<'s, 'i, R>),
-  Ownership(OwnershipTemplataI<'s, 'i, R>),
-  Variability(VariabilityTemplataI<'s, 'i, R>),
-  Mutability(MutabilityTemplataI<'s, 'i, R>),
-  Location(LocationTemplataI<'s, 'i, R>),
-  Boolean(BooleanTemplataI<'s, 'i, R>),
-  Integer(IntegerTemplataI<'s, 'i, R>),
-  String(StringTemplataI<'s, 'i, R>),
+  Ownership(OwnershipTemplataI<R>),
+  Variability(VariabilityTemplataI<R>),
+  Mutability(MutabilityTemplataI<R>),
+  Location(LocationTemplataI<R>),
+  Boolean(BooleanTemplataI<R>),
+  Integer(IntegerTemplataI<R>),
+  String(StringTemplataI<'s, R>),
   Prototype(PrototypeTemplataI<'s, 'i, R>),
   Isa(IsaTemplataI<'s, 'i, R>),
   CoordList(CoordListTemplataI<'s, 'i, R>),
-  Region(RegionTemplataI<'s, 'i, R>),
+  Region(RegionTemplataI<R>),
   ExternFunction(ExternFunctionTemplataI<'s, 'i, R>),
 }
 // mig: impl ITemplataI
@@ -169,7 +169,7 @@ impl<'s, 'i, R> ITemplataI<'s, 'i, R> {
   }
 */
 // mig: fn expect_region_templata
-  pub fn expect_region_templata(&self) -> RegionTemplataI<'s, 'i, R> { panic!("Unimplemented: expect_region_templata"); }
+  pub fn expect_region_templata(&self) -> RegionTemplataI<R> { panic!("Unimplemented: expect_region_templata"); }
 }
 /*
   def expectRegionTemplata(): RegionTemplataI[R] = {
@@ -194,7 +194,7 @@ impl<'s, 'i, R> ITemplataI<'s, 'i, R> {
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct CoordTemplataI<'s, 'i, R> {
-  pub region: RegionTemplataI<'s, 'i, R>,
+  pub region: RegionTemplataI<R>,
   pub coord: CoordI<'s, 'i, R>,
 }
 // mig: impl CoordTemplataI
@@ -245,8 +245,8 @@ case class KindTemplataI[+R <: IRegionsModeI](kind: KindIT[R]) extends ITemplata
 // mig: struct RuntimeSizedArrayTemplateTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct RuntimeSizedArrayTemplateTemplataI<'s, 'i, R> {
-  pub _marker: PhantomData<&'s &'i R>,
+pub struct RuntimeSizedArrayTemplateTemplataI<R> {
+  pub _marker: PhantomData<R>,
 }
 // mig: impl RuntimeSizedArrayTemplateTemplataI
 /*
@@ -259,8 +259,8 @@ case class RuntimeSizedArrayTemplateTemplataI[+R <: IRegionsModeI]() extends ITe
 // mig: struct StaticSizedArrayTemplateTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct StaticSizedArrayTemplateTemplataI<'s, 'i, R> {
-  pub _marker: PhantomData<&'s &'i R>,
+pub struct StaticSizedArrayTemplateTemplataI<R> {
+  pub _marker: PhantomData<R>,
 }
 // mig: impl StaticSizedArrayTemplateTemplataI
 /*
@@ -379,9 +379,9 @@ case class ImplDefinitionTemplataI[+R <: IRegionsModeI](
 // mig: struct OwnershipTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct OwnershipTemplataI<'s, 'i, R> {
+pub struct OwnershipTemplataI<R> {
   pub ownership: OwnershipI,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl OwnershipTemplataI
 /*
@@ -394,9 +394,9 @@ case class OwnershipTemplataI[+R <: IRegionsModeI](ownership: OwnershipI) extend
 // mig: struct VariabilityTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct VariabilityTemplataI<'s, 'i, R> {
+pub struct VariabilityTemplataI<R> {
   pub variability: VariabilityI,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl VariabilityTemplataI
 /*
@@ -409,9 +409,9 @@ case class VariabilityTemplataI[+R <: IRegionsModeI](variability: VariabilityI) 
 // mig: struct MutabilityTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct MutabilityTemplataI<'s, 'i, R> {
+pub struct MutabilityTemplataI<R> {
   pub mutability: MutabilityI,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl MutabilityTemplataI
 /*
@@ -424,9 +424,9 @@ case class MutabilityTemplataI[+R <: IRegionsModeI](mutability: MutabilityI) ext
 // mig: struct LocationTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct LocationTemplataI<'s, 'i, R> {
+pub struct LocationTemplataI<R> {
   pub location: LocationI,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl LocationTemplataI
 /*
@@ -440,9 +440,9 @@ case class LocationTemplataI[+R <: IRegionsModeI](location: LocationI) extends I
 // mig: struct BooleanTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct BooleanTemplataI<'s, 'i, R> {
+pub struct BooleanTemplataI<R> {
   pub value: bool,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl BooleanTemplataI
 /*
@@ -455,9 +455,9 @@ case class BooleanTemplataI[+R <: IRegionsModeI](value: Boolean) extends ITempla
 // mig: struct IntegerTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct IntegerTemplataI<'s, 'i, R> {
+pub struct IntegerTemplataI<R> {
   pub value: i64,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl IntegerTemplataI
 /*
@@ -470,9 +470,9 @@ case class IntegerTemplataI[+R <: IRegionsModeI](value: Long) extends ITemplataI
 // mig: struct StringTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct StringTemplataI<'s, 'i, R> {
+pub struct StringTemplataI<'s, R> {
   pub value: StrI<'s>,
-  pub _marker: PhantomData<&'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl StringTemplataI
 /*
@@ -530,9 +530,9 @@ case class CoordListTemplataI[+R <: IRegionsModeI](coords: Vector[CoordI[R]]) ex
 // mig: struct RegionTemplataI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct RegionTemplataI<'s, 'i, R> {
+pub struct RegionTemplataI<R> {
   pub pure_height: i32,
-  pub _marker: PhantomData<&'s &'i R>,
+  pub _marker: PhantomData<R>,
 }
 // mig: impl RegionTemplataI
 /*

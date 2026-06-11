@@ -175,7 +175,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 */
 // mig: fn get_von_hammer
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
-where 's: 'h, 's: 'i,
+where 's: 'h, 's: 'i, 'i: 'h,
 {
   pub fn get_von_hammer<'a>(&'a self) -> Hammer<'s, 'i, 'h, 'a>
   where 'ctx: 'a,

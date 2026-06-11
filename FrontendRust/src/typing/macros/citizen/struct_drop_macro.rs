@@ -399,7 +399,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         origin_function1: Option<&'s FunctionA<'s>>,
@@ -490,7 +490,7 @@ where 's: 't,
 
         let return_expr =
             ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
-                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }, _phantom: PhantomData })),
+                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT { region: IRegionT::Default }})),
             }));
         let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),

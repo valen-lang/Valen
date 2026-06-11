@@ -222,7 +222,7 @@ where 's: 't,
         let sibling_key = struct_template_id.add_step(
             self.typing_interner,
             INameT::PackageTopLevel(self.typing_interner.intern_package_top_level_name(
-                PackageTopLevelNameT { _phantom: PhantomData }
+                PackageTopLevelNameT { }
             )),
         );
         let sibling_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
@@ -344,7 +344,7 @@ where 's: 't,
         let sibling_key = interface_template_id.add_step(
             self.typing_interner,
             INameT::PackageTopLevel(self.typing_interner.intern_package_top_level_name(
-                PackageTopLevelNameT { _phantom: PhantomData }
+                PackageTopLevelNameT { }
             )),
         );
         let sibling_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =

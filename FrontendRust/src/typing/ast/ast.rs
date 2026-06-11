@@ -357,23 +357,22 @@ fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) ->
 */
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LocationInFunctionEnvironmentT<'s, 't> {
+pub struct LocationInFunctionEnvironmentT<'t> {
     pub path: &'t [i32],
-    pub _phantom: PhantomData<&'s ()>,
 }
 /*
 // A unique location in a function. Environment is in the name so it spells LIFE!
 case class LocationInFunctionEnvironmentT(path: Vector[Int]) {
 */
-impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
+impl<'t> LocationInFunctionEnvironmentT<'t> {
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-    pub fn add(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'s, 't> {
+    pub fn add<'s>(&self, interner: &TypingInterner<'s, 't>, sub_location: i32) -> LocationInFunctionEnvironmentT<'t> {
         let mut new_path: Vec<i32> = self.path.to_vec();
         new_path.push(sub_location);
-        LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path), _phantom: PhantomData }
+        LocationInFunctionEnvironmentT { path: interner.alloc_slice_from_vec(new_path) }
     }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {

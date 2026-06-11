@@ -64,7 +64,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Export<'s, 'h> where 's: 'h {
-    pub name_h: &'h IdH<'s, 'h>,
+    pub name_h: &'h IdH<'s>,
     pub exported_name: StrI<'s>,
 }
 /*
@@ -311,7 +311,7 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 // holds an ArenaIndexMap (which lacks those impls). Matches Scala's `vcurious`.
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub weakable: bool,
     pub extern_: bool,
     pub mutability: Mutability,
@@ -360,7 +360,7 @@ override def equals(obj: Any): Boolean = vcurious();
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructMemberH<'s, 'h> where 's: 'h {
-    pub name: &'h IdH<'s, 'h>,
+    pub name: &'h IdH<'s>,
     pub variability: Variability,
     pub tyype: CoordH<'s, 'h>,
 }
@@ -389,7 +389,7 @@ override def equals(obj: Any): Boolean = vcurious();
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub weakable: bool,
     pub mutability: Mutability,
     pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
@@ -541,7 +541,7 @@ impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub params: &'h [CoordH<'s, 'h>],
     pub return_type: CoordH<'s, 'h>,
     pub _must_intern: MustIntern,
@@ -561,7 +561,7 @@ override def hashCode(): Int = hash; }
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeHValH<'s, 'h> where 's: 'h {
-    pub id: &'h IdH<'s, 'h>,
+    pub id: &'h IdH<'s>,
     pub params: &'h [CoordH<'s, 'h>],
     pub return_type: CoordH<'s, 'h>,
 }
@@ -569,19 +569,18 @@ pub struct PrototypeHValH<'s, 'h> where 's: 'h {
 // mig: case class IdH
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdH<'s, 'h> where 's: 'h {
+pub struct IdH<'s> {
     pub local_name: StrI<'s>,
     pub package_coordinate: PackageCoordinate<'s>,
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
     pub _must_intern: MustIntern,
-    pub _phantom_h: PhantomData<&'h ()>,
 }
 // Realizes Scala's case-class auto-toString for IdH:
 //   IdH(<local_name>,<package_coordinate>,<shortened_name>,<fully_qualified_name>)
 // Per Scala convention: no space between case-class fields. StrI fields print as bare strings
 // per Rust StrI's existing Display canon (interner.rs:40); Scala would wrap each as StrI(<v>).
-impl<'s, 'h> Display for IdH<'s, 'h> where 's: 'h {
+impl<'s> Display for IdH<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
     }
@@ -629,12 +628,11 @@ case class IdH(
 // mig: case class IdH (transient companion)
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdHValH<'s, 'h> where 's: 'h {
+pub struct IdHValH<'s> {
     pub local_name: StrI<'s>,
     pub package_coordinate: PackageCoordinate<'s>,
     pub shortened_name: StrI<'s>,
     pub fully_qualified_name: StrI<'s>,
-    pub _phantom_h: PhantomData<&'h ()>,
 }
 
 // --- Auxiliary types referenced by hammer files ---

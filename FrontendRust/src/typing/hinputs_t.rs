@@ -293,7 +293,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // stays in the wide `INameT` enum, so we must extract the struct-template
     // case before structural comparison. `vassertOne` is inlined as a match on
     // the result count.
-    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
+    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT<'s>) -> &'t StructDefinitionT<'s, 't> {
         let matches: Vec<&'t StructDefinitionT<'s, 't>> = self.structs.iter()
             .filter(|s| match s.template_name.local_name {
                 INameT::StructTemplate(t) => *t == struct_template_name,
@@ -313,7 +313,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_name
-    pub fn lookup_interface_by_template_name(&self, interface_template_name: &'t InterfaceTemplateNameT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
+    pub fn lookup_interface_by_template_name(&self, interface_template_name: &'t InterfaceTemplateNameT<'s>) -> &'t InterfaceDefinitionT<'s, 't> {
         self.interfaces.iter().copied()
             .find(|i| i.template_name.local_name == INameT::InterfaceTemplate(interface_template_name))
             .unwrap_or_else(|| panic!("lookup_interface_by_template_name: not found"))

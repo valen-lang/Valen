@@ -221,8 +221,8 @@ pub enum ITemplataT<'s, 't> {
   Prototype(&'t PrototypeTemplataT<'s, 't>),
   Isa(&'t IsaTemplataT<'s, 't>),
   CoordList(&'t CoordListTemplataT<'s, 't>),
-  RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT<'s, 't>),
-  StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT<'s, 't>),
+  RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT),
+  StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT),
   Function(&'t FunctionTemplataT<'s, 't>),
   StructDefinition(&'t StructDefinitionTemplataT<'s, 't>),
   InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
@@ -328,8 +328,7 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
 */
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't> {
-  pub _phantom: PhantomData<(&'s (), &'t ())>,
+pub struct RuntimeSizedArrayTemplateTemplataT {
 }
 /*
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
@@ -340,8 +339,7 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
 */
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayTemplateTemplataT<'s, 't> {
-  pub _phantom: PhantomData<(&'s (), &'t ())>,
+pub struct StaticSizedArrayTemplateTemplataT {
 }
 /*
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {

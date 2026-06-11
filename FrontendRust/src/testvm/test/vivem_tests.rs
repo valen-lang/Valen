@@ -69,7 +69,6 @@ fn return_7() {
         package_coordinate: test_tld,
         shortened_name: main_str,
         fully_qualified_name: main_str,
-        _phantom_h: PhantomData,
     });
     let i32_return = CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) };
     let main_proto = interner.intern_prototype(PrototypeHValH {
@@ -169,7 +168,6 @@ fn adding() {
         package_coordinate: *builtin_pkg_ref,
         shortened_name: add_str,
         fully_qualified_name: add_str,
-        _phantom_h: PhantomData,
     });
     let add_prototype = interner.intern_prototype(PrototypeHValH {
         id: add_id,
@@ -183,7 +181,6 @@ fn adding() {
         package_coordinate: *test_tld_ref,
         shortened_name: main_str,
         fully_qualified_name: main_str,
-        _phantom_h: PhantomData,
     });
     let main_prototype = interner.intern_prototype(PrototypeHValH {
         id: main_id,

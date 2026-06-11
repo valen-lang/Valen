@@ -554,14 +554,14 @@ fn humanize_errors() {
     let tz = vec![RangeS::test_zero(&scout_arena)];
     let test_package_coord = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
     let tz_code_loc = CodeLocationS::test_zero(&scout_arena);
-    let func_template_name = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: PhantomData });
+    let func_template_name = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc});
     let func_template_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::FunctionTemplate(func_template_name) });
-    let main_func_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc, _phantom: PhantomData });
+    let main_func_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("main"), code_location: tz_code_loc});
     let main_func_name = typing_interner.intern_function_name(FunctionNameValT { template: main_func_template, template_args: &[], parameters: &[] });
     let _func_name = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(main_func_name) });
     let denizen_name_s = scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::FunctionName(FunctionNameS { name: scout_arena.intern_str("main"), code_location: tz_code_loc })));
     let denizen_default_region_rune_s = DenizenDefaultRegionRuneS { denizen_name: denizen_name_s };
-    let kpt_name = typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::DenizenDefaultRegionRune(scout_arena.alloc(denizen_default_region_rune_s)), _phantom: PhantomData });
+    let kpt_name = typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT { index: 0, rune: IRuneS::DenizenDefaultRegionRune(scout_arena.alloc(denizen_default_region_rune_s))});
     let kp_name = typing_interner.intern_kind_placeholder_name(KindPlaceholderNameT { template: kpt_name });
     let mut region_init_steps: Vec<INameT> = func_template_id.init_steps.to_vec();
     region_init_steps.push(func_template_id.local_name);
@@ -570,7 +570,7 @@ fn humanize_errors() {
     let region = RegionT { region: IRegionT::Default };
 
     let firefly_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly")});
     let firefly_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
     let firefly_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(firefly_struct_name) });
@@ -579,7 +579,7 @@ fn humanize_errors() {
     let _firefly_coord = CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind };
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
     let serenity_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
     let serenity_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(serenity_struct_name) });
@@ -588,7 +588,7 @@ fn humanize_errors() {
     let _serenity_coord = CoordT { ownership: OwnershipT::Own, region, kind: serenity_kind };
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
-        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: PhantomData });
+        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
     let ispaceship_interface_name = typing_interner.intern_interface_name(
         InterfaceNameValT { template: ispaceship_interface_template_name, template_args: &[] });
     let ispaceship_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Interface(ispaceship_interface_name) });
@@ -597,7 +597,7 @@ fn humanize_errors() {
     let _ispaceship_coord = CoordT { ownership: OwnershipT::Own, region, kind: ispaceship_kind };
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
-        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: PhantomData });
+        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon")});
     let unrelated_struct_name = typing_interner.intern_struct_name(
         StructNameValT { template: IStructTemplateNameT::StructTemplate(unrelated_struct_template_name), template_args: &[] });
     let unrelated_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(unrelated_struct_name) });
@@ -605,13 +605,13 @@ fn humanize_errors() {
     let unrelated_kind = KindT::Struct(unrelated_tt);
     let _unrelated_coord = CoordT { ownership: OwnershipT::Own, region, kind: unrelated_kind };
 
-    let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin, _phantom: PhantomData });
+    let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin});
     let myfunc_params: &[CoordT] = typing_bump.alloc_slice_copy(&[CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind }]);
     let myfunc_name = typing_interner.intern_function_name(FunctionNameValT { template: myfunc_template, template_args: &[], parameters: myfunc_params });
     let myfunc_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(myfunc_name) });
     let _firefly_signature = SignatureT { id: *myfunc_id };
 
-    let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin, _phantom: PhantomData });
+    let export_template_name = typing_interner.intern_export_template_name(ExportTemplateNameT { code_loc: tz[0].begin});
     let firefly_export_name = typing_interner.intern_export_name(ExportNameT { template: export_template_name, region: RegionT { region: IRegionT::Default } });
     let firefly_export_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Export(firefly_export_name) });
     let _firefly_export = KindExportT { range: tz[0], tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };

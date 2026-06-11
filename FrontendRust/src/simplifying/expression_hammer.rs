@@ -121,7 +121,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let construct_h = ExpressionH::ConstantVoidH(self.interner.alloc(ConstantVoidH));
                     (construct_h, Vec::new())
                 }
-                RE::ConstantStr(c) => (ExpressionH::ConstantStrH(self.interner.alloc(ConstantStrH { value: self.interner.bump().alloc_str(c.value), _marker: PhantomData })), Vec::new()),
+                RE::ConstantStr(c) => (ExpressionH::ConstantStrH(self.interner.alloc(ConstantStrH { value: self.interner.bump().alloc_str(c.value)})), Vec::new()),
                 RE::ConstantFloat(c) => {
                     (ExpressionH::ConstantF64H(self.interner.alloc(ConstantF64H { value: c.value })), Vec::new())
                 }
@@ -299,7 +299,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     assert!(result_reference.kind == KindHT::StructHT(underlying_struct_ref_h));
                     let struct_def_h = *hamuts.struct_t_to_struct_def_h().get(result_struct_i).expect("structDefH not in map");
                     assert!(results_he.len() == struct_def_h.members.len());
-                    let target_member_names: Vec<&'h IdH<'s, 'h>> = struct_def_h.members.iter().map(|m| m.name).collect();
+                    let target_member_names: Vec<&'h IdH<'s>> = struct_def_h.members.iter().map(|m| m.name).collect();
                     let new_struct_node = ExpressionH::NewStructH(self.interner.alloc(NewStructH {
                         source_expressions: self.interner.bump().alloc_slice_copy(&results_he),
                         target_member_names: self.interner.bump().alloc_slice_copy(&target_member_names),
@@ -386,7 +386,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     for (member_he, member_h) in members_he.iter().zip(struct_def_h.members.iter()) {
                         assert_eq!(member_he.result_type(), member_h.tyype);
                     }
-                    let member_names: Vec<&'h IdH<'s, 'h>> = struct_def_h.members.iter().map(|m| m.name).collect();
+                    let member_names: Vec<&'h IdH<'s>> = struct_def_h.members.iter().map(|m| m.name).collect();
                     let new_struct_node = ExpressionH::NewStructH(self.interner.alloc(NewStructH {
                         source_expressions: self.interner.bump().alloc_slice_fill_iter(members_he.into_iter()),
                         target_member_names: self.interner.bump().alloc_slice_fill_iter(member_names.into_iter()),

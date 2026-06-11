@@ -61,7 +61,7 @@ where
     ConstantVoidH(&'h ConstantVoidH),
     ConstantIntH(&'h ConstantIntH),
     ConstantBoolH(&'h ConstantBoolH),
-    ConstantStrH(&'h ConstantStrH<'s, 'h>),
+    ConstantStrH(&'h ConstantStrH<'h>),
     ConstantF64H(&'h ConstantF64H),
     ArgumentH(&'h ArgumentH<'s, 'h>),
     StackifyH(&'h StackifyH<'s, 'h>),
@@ -127,7 +127,7 @@ where
     SimpleIdStep(&'h SimpleIdStep<'s, 'h>),
 
     // ---- Names ----
-    Id(&'h IdH<'s, 'h>),
+    Id(&'h IdH<'s>),
 }
 
 fn collect_if<'s, 'h, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefH<'s, 'h>)
@@ -504,7 +504,7 @@ where
     collect_if(pred, out, NodeRefH::ConstantBoolH(x));
 }
 
-fn visit_constant_str<'s, 'h, T, F>(pred: &F, out: &mut Vec<T>, x: &'h ConstantStrH<'s, 'h>)
+fn visit_constant_str<'s, 'h, T, F>(pred: &F, out: &mut Vec<T>, x: &'h ConstantStrH<'h>)
 where
     F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
     's: 'h,
@@ -1227,7 +1227,7 @@ where
 // Names
 // ============================================================================
 
-fn visit_id<'s, 'h, T, F>(pred: &F, out: &mut Vec<T>, id: &'h IdH<'s, 'h>)
+fn visit_id<'s, 'h, T, F>(pred: &F, out: &mut Vec<T>, id: &'h IdH<'s>)
 where
     F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
     's: 'h,

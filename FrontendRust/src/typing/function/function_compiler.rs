@@ -347,7 +347,6 @@ where 's: 't,
                         INameT::LambdaCitizen(self.typing_interner.alloc(LambdaCitizenNameT {
                             template: self.typing_interner.alloc(LambdaCitizenTemplateNameT {
                                 code_location: lambda_name.code_location,
-                                _phantom: PhantomData,
                             }),
                         }))
                     }

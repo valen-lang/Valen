@@ -374,7 +374,6 @@ where 's: 't,
             template: self.typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT {
                 index,
                 rune,
-                _phantom: PhantomData,
             }),
         });
         let placeholder_id_ref = dispatcher_outer_env.id().add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
@@ -701,7 +700,7 @@ where 's: 't,
             *dispatcher_template_id_ref,
             dispatcher_id_ref,
             dispatcher_inner_inferences.iter().map(|(name_s, templata): (&IRuneS<'s>, &ITemplataT<'s, 't>)| {
-                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: PhantomData });
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s});
                 (INameT::from(rune_name), IEnvEntryT::Templata(*templata))
             }).collect(),
         );
@@ -782,7 +781,7 @@ where 's: 't,
                     // conflict, so we split into two phases: collect raw entries here, then mutate
                     // in the second pass below.
                     // Phase 1: collect raw entry data under immutable borrow of coutputs
-                    let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s, 't>, &'t [ITemplataT<'s, 't>], &'t [CoordT<'s, 't>], CoordT<'s, 't>)> = {
+                    let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s>, &'t [ITemplataT<'s, 't>], &'t [CoordT<'s, 't>], CoordT<'s, 't>)> = {
                         let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
                         citizen_inner_env.templatas().name_to_entry.iter()
                             .filter_map(|(name, entry)| {
@@ -805,7 +804,7 @@ where 's: 't,
                     // Phase 2: apply mutation, building substituted prototypes
                     raw_entries.into_iter().map(|(rune_in_citizen, human_name, template_args, params, return_type)| {
                         let function_bound_template_name = self.typing_interner.intern_function_bound_template_name(
-                            FunctionBoundTemplateNameT { human_name: human_name.human_name, _phantom: PhantomData });
+                            FunctionBoundTemplateNameT { human_name: human_name.human_name});
                         let function_bound_name = self.typing_interner.intern_function_bound_name(
                             FunctionBoundNameValT { template: function_bound_template_name, template_args, parameters: params });
                         let sub_citizen_placeholdered_prototype = self.typing_interner.intern_prototype(PrototypeValT {
@@ -828,7 +827,7 @@ where 's: 't,
             dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().enumerate()
                 .map(|(index, (_rune_in_impl, _rune_in_citizen, dispatcher_placeholdered_reachable_prototype))| {
                     let reachable_prototype_name = self.typing_interner.intern_reachable_prototype_name(
-                        ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
+                        ReachablePrototypeNameT { num: index as i32});
                     (INameT::ReachablePrototype(reachable_prototype_name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: dispatcher_placeholdered_reachable_prototype.prototype }))))
                 })
                 .collect(),

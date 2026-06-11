@@ -620,7 +620,7 @@ where 's: 't,
                     _ => panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS"),
                 };
                 IStructMemberT::Normal(NormalStructMemberT {
-                    name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name, _phantom: PhantomData })),
+                    name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name})),
                     variability: variability_t,
                     tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                 })
@@ -694,7 +694,6 @@ where 's: 't,
         let understruct_template_name_t =
             self.typing_interner.intern_lambda_citizen_template_name(LambdaCitizenTemplateNameT {
                 code_location: self.translate_code_location(function_a.range.begin),
-                _phantom: PhantomData,
             });
         let understruct_templated_id =
             containing_function_env.id().add_step(
@@ -728,7 +727,6 @@ where 's: 't,
             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                 human_name: self.keywords.drop,
                 code_location: function_a.range.begin,
-                _phantom: PhantomData,
             }));
 
         // We declare the function into the environment that we use to compile the
@@ -739,7 +737,6 @@ where 's: 't,
             self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                 human_name: self.keywords.underscores_call,
                 code_location: function_a.range.begin,
-                _phantom: PhantomData,
             }));
 
 
@@ -766,7 +763,7 @@ where 's: 't,
                 (drop_func_name_t, IEnvEntryT::Function(drop_function_a_ref)),
                 (understruct_instantiated_name_t, IEnvEntryT::Templata(
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
-                (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { _phantom: PhantomData })),
+                (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { })),
                  IEnvEntryT::Templata(
                     ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
             ]);

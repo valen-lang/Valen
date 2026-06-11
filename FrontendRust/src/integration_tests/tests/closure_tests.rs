@@ -381,7 +381,7 @@ fn test_returning_a_nonmutable_closured_variable_from_the_closure() {
 
         let expected_members = vec![
             IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: PhantomData })),
+                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x")})),
                 variability: VariabilityT::Final,
                 tyype: IMemberTypeT::Reference(ReferenceMemberTypeT {
                     reference: CoordT {
@@ -584,7 +584,7 @@ fn mutates_from_inside_a_closure() {
         let closure_struct_def = coutputs.lookup_struct(closure_struct.id);
         let expected_members = vec![
             IStructMemberT::Normal(NormalStructMemberT {
-                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x"), _phantom: PhantomData })),
+                name: IVarNameT::CodeVar(interner.intern_code_var_name(CodeVarNameT { name: scout_arena.intern_str("x")})),
                 variability: VariabilityT::Varying,
                 tyype: IMemberTypeT::Address(AddressMemberTypeT {
                     reference: CoordT {

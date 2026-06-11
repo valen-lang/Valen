@@ -308,7 +308,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s, 't>,
+  pub life: LocationInFunctionEnvironmentT<'t>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub declared_locals: &'t [IVariableT<'s, 't>],
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
@@ -893,7 +893,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s, 't>,
+  pub life: LocationInFunctionEnvironmentT<'t>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
   pub declared_locals: Vec<IVariableT<'s, 't>>,
   pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
@@ -1481,7 +1481,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child_node_environment(
     &'t self,
     node: &'s IExpressionSE<'s>,
-    life: LocationInFunctionEnvironmentT<'s, 't>,
+    life: LocationInFunctionEnvironmentT<'t>,
   ) -> NodeEnvironmentBox<'s, 't> {
     // See WTHPFE, if this is a lambda, we let our blocks start with
     // locals from the parent function.

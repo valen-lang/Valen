@@ -116,6 +116,14 @@ To discard a pending review without applying: `safe-script-runner abandon` (no a
 
 Only ONE review may be pending at a time — by design. Trying to `review` a second `<SRC>` while another is unapplied is refused. This makes batch-review-then-batch-apply impossible: the only physically possible sequence is `review A → apply A → review B → apply B → …`. Combined with the marker's SHA-256 binding of review to apply, the architect's "go" is always against the diff the apply will actually land.
 
+### Never apply a bulk-edit without explicit per-file permission
+
+The transform-and-review steps (writing the stdin→stdout script, running it to `./tmp/working/`, reading the diff) are all read-only and don't need permission. **The apply step does** — never run `safe-script-runner apply`, or the `cp <SRC> ./tmp/backup/... && mv ./tmp/working/... <SRC>` compound, without the user explicitly authorizing that specific file. Show the diff, wait for go-ahead, then apply. "I'm going to apply now" is not authorization; the user has to say so.
+
+### JR may not author scripts
+
+JR (the junior migration agent) does **not** write transform scripts of any kind — no `./tmp/scripts/*.py`, no shell scripts, no `python3 -c` one-liners, no heredoc rewrites. Script authorship is a TL/architect responsibility because the script's correctness propagates to every file it touches, and JR's review surface is per-file diffs, not the transform logic. If a bulk edit is the right move, JR escalates via mailbox; TL writes the script, JR drives it via `safe-script-runner review` / `apply` on each file. JR may freely run a TL-authored script — they're the executor, not the author.
+
 ### Reviewing diffs
 
 `safe-script-runner` mechanically enforces full-diff review: `review` always emits the entire diff and stderr, BESWX denies any pipe/filter/redirect/chain on the command, and the marker hash binds review to apply (drift refuses with a re-review prompt). The architect should still actually look at the diff — the tool guarantees evidence exists in the transcript, not that the human reads it.

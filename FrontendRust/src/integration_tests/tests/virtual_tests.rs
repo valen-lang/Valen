@@ -107,7 +107,6 @@ fn simple_program_containing_a_virtual_function() {
     let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
     let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
         human_namee: scout_arena.intern_str("I"),
-        _phantom: PhantomData,
     });
     let interface_name = interner.intern_interface_name(InterfaceNameValT {
         template: interface_template,
@@ -130,7 +129,6 @@ fn simple_program_containing_a_virtual_function() {
                 "0.vale"),
             offset: 24,
         },
-        _phantom: PhantomData,
     });
     let do_thing_name = interner.intern_function_name(FunctionNameValT {
         template: do_thing_template,
@@ -222,7 +220,6 @@ fn can_call_virtual_function() {
     let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
     let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
         human_namee: scout_arena.intern_str("I"),
-        _phantom: PhantomData,
     });
     let interface_name = interner.intern_interface_name(InterfaceNameValT {
         template: interface_template,
@@ -245,7 +242,6 @@ fn can_call_virtual_function() {
                 "0.vale"),
             offset: 24,
         },
-        _phantom: PhantomData,
     });
     let do_thing_name = interner.intern_function_name(FunctionNameValT {
         template: do_thing_template,

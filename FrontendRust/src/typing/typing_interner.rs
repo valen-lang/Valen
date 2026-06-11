@@ -67,6 +67,44 @@ macro_rules! impl_intern_name_wrapper_simple {
     };
 }
 
+// Arity-trimmed variants of impl_intern_name_wrapper_simple, introduced by the
+// phantom-lifetime removal sweep. The original macro above still applies to
+// T-types that kept <'s, 't>; the two below cover the post-sweep arities
+// <'s> (most ex-`<'s,'t>` types) and `` (empty, no lifetimes).
+
+macro_rules! impl_intern_name_wrapper_simple_s_only {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        pub fn $method(&self, val: $payload_ty<'s>) -> &'t $payload_ty<'s> {
+            match self.intern_name(INameValT::$variant(val)) {
+                INameT::$variant(r) => r,
+                _ => unreachable!(),
+            }
+        }
+    };
+}
+
+macro_rules! impl_intern_name_wrapper_simple_t_only {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        pub fn $method(&self, val: $payload_ty<'t>) -> &'t $payload_ty<'t> {
+            match self.intern_name(INameValT::$variant(val)) {
+                INameT::$variant(r) => r,
+                _ => unreachable!(),
+            }
+        }
+    };
+}
+
+macro_rules! impl_intern_name_wrapper_simple_none {
+    ($method:ident, $variant:ident, $payload_ty:ident) => {
+        pub fn $method(&self, val: $payload_ty) -> &'t $payload_ty {
+            match self.intern_name(INameValT::$variant(val)) {
+                INameT::$variant(r) => r,
+                _ => unreachable!(),
+            }
+        }
+    };
+}
+
 macro_rules! impl_intern_name_wrapper_transient {
     ($method:ident, $variant:ident, $val_ty:ident, $canonical_ty:ident) => {
         pub fn $method<'tmp>(&self, val: $val_ty<'s, 't, 'tmp>) -> &'t $canonical_ty<'s, 't> {
@@ -453,63 +491,63 @@ where 's: 't,
     impl_intern_name_wrapper_transient!(intern_anonymous_substruct_name, AnonymousSubstruct, AnonymousSubstructNameValT, AnonymousSubstructNameT);
 
     // --- 57 simple name wrappers ---
-    impl_intern_name_wrapper_simple!(intern_export_template_name, ExportTemplate, ExportTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_export_template_name, ExportTemplate, ExportTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_export_name, Export, ExportNameT);
-    impl_intern_name_wrapper_simple!(intern_impl_template_name, ImplTemplate, ImplTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_impl_bound_template_name, ImplBoundTemplate, ImplBoundTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_let_name, Let, LetNameT);
-    impl_intern_name_wrapper_simple!(intern_export_as_name, ExportAs, ExportAsNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_impl_template_name, ImplTemplate, ImplTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_impl_bound_template_name, ImplBoundTemplate, ImplBoundTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_let_name, Let, LetNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_export_as_name, ExportAs, ExportAsNameT);
     impl_intern_name_wrapper_simple!(intern_raw_array_name, RawArray, RawArrayNameT);
-    impl_intern_name_wrapper_simple!(intern_reachable_prototype_name, ReachablePrototype, ReachablePrototypeNameT);
-    impl_intern_name_wrapper_simple!(intern_static_sized_array_template_name, StaticSizedArrayTemplate, StaticSizedArrayTemplateNameT);
+    impl_intern_name_wrapper_simple_none!(intern_reachable_prototype_name, ReachablePrototype, ReachablePrototypeNameT);
+    impl_intern_name_wrapper_simple_none!(intern_static_sized_array_template_name, StaticSizedArrayTemplate, StaticSizedArrayTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_static_sized_array_name, StaticSizedArray, StaticSizedArrayNameT);
-    impl_intern_name_wrapper_simple!(intern_runtime_sized_array_template_name, RuntimeSizedArrayTemplate, RuntimeSizedArrayTemplateNameT);
+    impl_intern_name_wrapper_simple_none!(intern_runtime_sized_array_template_name, RuntimeSizedArrayTemplate, RuntimeSizedArrayTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_runtime_sized_array_name, RuntimeSizedArray, RuntimeSizedArrayNameT);
-    impl_intern_name_wrapper_simple!(intern_kind_placeholder_template_name, KindPlaceholderTemplate, KindPlaceholderTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_kind_placeholder_template_name, KindPlaceholderTemplate, KindPlaceholderTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_kind_placeholder_name, KindPlaceholder, KindPlaceholderNameT);
-    impl_intern_name_wrapper_simple!(intern_non_kind_non_region_placeholder_name, NonKindNonRegionPlaceholder, NonKindNonRegionPlaceholderNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_non_kind_non_region_placeholder_name, NonKindNonRegionPlaceholder, NonKindNonRegionPlaceholderNameT);
     impl_intern_name_wrapper_simple!(intern_override_dispatcher_template_name, OverrideDispatcherTemplate, OverrideDispatcherTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_pass_block_result_var_name, TypingPassBlockResultVar, TypingPassBlockResultVarNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_pass_function_result_var_name, TypingPassFunctionResultVar, TypingPassFunctionResultVarNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_pass_temporary_var_name, TypingPassTemporaryVar, TypingPassTemporaryVarNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_pass_pattern_member_name, TypingPassPatternMember, TypingPassPatternMemberNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_ignored_param_name, TypingIgnoredParam, TypingIgnoredParamNameT);
-    impl_intern_name_wrapper_simple!(intern_typing_pass_pattern_destructuree_name, TypingPassPatternDestructuree, TypingPassPatternDestructureeNameT);
-    impl_intern_name_wrapper_simple!(intern_unnamed_local_name, UnnamedLocal, UnnamedLocalNameT);
-    impl_intern_name_wrapper_simple!(intern_closure_param_name, ClosureParam, ClosureParamNameT);
-    impl_intern_name_wrapper_simple!(intern_constructing_member_name, ConstructingMember, ConstructingMemberNameT);
-    impl_intern_name_wrapper_simple!(intern_while_cond_result_name, WhileCondResult, WhileCondResultNameT);
-    impl_intern_name_wrapper_simple!(intern_iterable_name, Iterable, IterableNameT);
-    impl_intern_name_wrapper_simple!(intern_iterator_name, Iterator, IteratorNameT);
-    impl_intern_name_wrapper_simple!(intern_iteration_option_name, IterationOption, IterationOptionNameT);
-    impl_intern_name_wrapper_simple!(intern_magic_param_name, MagicParam, MagicParamNameT);
-    impl_intern_name_wrapper_simple!(intern_code_var_name, CodeVar, CodeVarNameT);
-    impl_intern_name_wrapper_simple!(intern_anonymous_substruct_member_name, AnonymousSubstructMember, AnonymousSubstructMemberNameT);
-    impl_intern_name_wrapper_simple!(intern_primitive_name, Primitive, PrimitiveNameT);
-    impl_intern_name_wrapper_simple!(intern_package_top_level_name, PackageTopLevel, PackageTopLevelNameT);
-    impl_intern_name_wrapper_simple!(intern_project_name, Project, ProjectNameT);
-    impl_intern_name_wrapper_simple!(intern_package_name, Package, PackageNameT);
-    impl_intern_name_wrapper_simple!(intern_rune_name, Rune, RuneNameT);
+    impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_block_result_var_name, TypingPassBlockResultVar, TypingPassBlockResultVarNameT);
+    impl_intern_name_wrapper_simple_none!(intern_typing_pass_function_result_var_name, TypingPassFunctionResultVar, TypingPassFunctionResultVarNameT);
+    impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_temporary_var_name, TypingPassTemporaryVar, TypingPassTemporaryVarNameT);
+    impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_pattern_member_name, TypingPassPatternMember, TypingPassPatternMemberNameT);
+    impl_intern_name_wrapper_simple_none!(intern_typing_ignored_param_name, TypingIgnoredParam, TypingIgnoredParamNameT);
+    impl_intern_name_wrapper_simple_t_only!(intern_typing_pass_pattern_destructuree_name, TypingPassPatternDestructuree, TypingPassPatternDestructureeNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_unnamed_local_name, UnnamedLocal, UnnamedLocalNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_closure_param_name, ClosureParam, ClosureParamNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_constructing_member_name, ConstructingMember, ConstructingMemberNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_while_cond_result_name, WhileCondResult, WhileCondResultNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_iterable_name, Iterable, IterableNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_iterator_name, Iterator, IteratorNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_iteration_option_name, IterationOption, IterationOptionNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_magic_param_name, MagicParam, MagicParamNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_code_var_name, CodeVar, CodeVarNameT);
+    impl_intern_name_wrapper_simple_none!(intern_anonymous_substruct_member_name, AnonymousSubstructMember, AnonymousSubstructMemberNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_primitive_name, Primitive, PrimitiveNameT);
+    impl_intern_name_wrapper_simple_none!(intern_package_top_level_name, PackageTopLevel, PackageTopLevelNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_project_name, Project, ProjectNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_package_name, Package, PackageNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_rune_name, Rune, RuneNameT);
     impl_intern_name_wrapper_simple!(intern_building_function_name_with_closureds, BuildingFunctionNameWithClosureds, BuildingFunctionNameWithClosuredsT);
-    impl_intern_name_wrapper_simple!(intern_extern_template_name, ExternTemplate, ExternTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_extern_template_name, ExternTemplate, ExternTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_extern_name, Extern, ExternNameT);
     impl_intern_name_wrapper_simple!(intern_forwarder_function_name, ForwarderFunction, ForwarderFunctionNameT);
-    impl_intern_name_wrapper_simple!(intern_function_bound_template_name, FunctionBoundTemplate, FunctionBoundTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_predicted_function_template_name, PredictedFunctionTemplate, PredictedFunctionTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_function_template_name, FunctionTemplate, FunctionTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_function_bound_template_name, FunctionBoundTemplate, FunctionBoundTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_predicted_function_template_name, PredictedFunctionTemplate, PredictedFunctionTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_function_template_name, FunctionTemplate, FunctionTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_forwarder_function_template_name, ForwarderFunctionTemplate, ForwarderFunctionTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_constructor_template_name, ConstructorTemplate, ConstructorTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_self_name, Self_, SelfNameT);
-    impl_intern_name_wrapper_simple!(intern_arbitrary_name, Arbitrary, ArbitraryNameT);
-    impl_intern_name_wrapper_simple!(intern_lambda_citizen_template_name, LambdaCitizenTemplate, LambdaCitizenTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_constructor_template_name, ConstructorTemplate, ConstructorTemplateNameT);
+    impl_intern_name_wrapper_simple_none!(intern_self_name, Self_, SelfNameT);
+    impl_intern_name_wrapper_simple_none!(intern_arbitrary_name, Arbitrary, ArbitraryNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_lambda_citizen_template_name, LambdaCitizenTemplate, LambdaCitizenTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_lambda_citizen_name, LambdaCitizen, LambdaCitizenNameT);
-    impl_intern_name_wrapper_simple!(intern_struct_template_name, StructTemplate, StructTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_interface_template_name, InterfaceTemplate, InterfaceTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_struct_template_name, StructTemplate, StructTemplateNameT);
+    impl_intern_name_wrapper_simple_s_only!(intern_interface_template_name, InterfaceTemplate, InterfaceTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_anonymous_substruct_impl_template_name, AnonymousSubstructImplTemplate, AnonymousSubstructImplTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_anonymous_substruct_template_name, AnonymousSubstructTemplate, AnonymousSubstructTemplateNameT);
     impl_intern_name_wrapper_simple!(intern_anonymous_substruct_constructor_template_name, AnonymousSubstructConstructorTemplate, AnonymousSubstructConstructorTemplateNameT);
-    impl_intern_name_wrapper_simple!(intern_resolving_env_name, ResolvingEnv, ResolvingEnvNameT);
-    impl_intern_name_wrapper_simple!(intern_call_env_name, CallEnv, CallEnvNameT);
+    impl_intern_name_wrapper_simple_none!(intern_resolving_env_name, ResolvingEnv, ResolvingEnvNameT);
+    impl_intern_name_wrapper_simple_none!(intern_call_env_name, CallEnv, CallEnvNameT);
 
     // --- 6 Kind-payload wrappers ---
     // 5 sealed types take their `*ValT` mirror; the macro builds the canonical

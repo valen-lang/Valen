@@ -118,7 +118,7 @@ pub enum ReferenceExpressionIE<'s, 'i, R> {
     While(&'i WhileIE<'s, 'i, R>),
     Mutate(&'i MutateIE<'s, 'i, R>),
     Return(&'i ReturnIE<'s, 'i, R>),
-    Break(&'i BreakIE<'s, 'i, R>),
+    Break(&'i BreakIE<R>),
     Block(&'i BlockIE<'s, 'i, R>),
     Mutabilify(&'i MutabilifyIE<'s, 'i, R>),
     Immutabilify(&'i ImmutabilifyIE<'s, 'i, R>),
@@ -129,11 +129,11 @@ pub enum ReferenceExpressionIE<'s, 'i, R> {
     ArraySize(&'i ArraySizeIE<'s, 'i, R>),
     IsSameInstance(&'i IsSameInstanceIE<'s, 'i, R>),
     AsSubtype(&'i AsSubtypeIE<'s, 'i, R>),
-    VoidLiteral(&'i VoidLiteralIE<'s, 'i, R>),
-    ConstantInt(&'i ConstantIntIE<'s, 'i, R>),
-    ConstantBool(&'i ConstantBoolIE<'s, 'i, R>),
-    ConstantStr(&'i ConstantStrIE<'s, 'i, R>),
-    ConstantFloat(&'i ConstantFloatIE<'s, 'i, R>),
+    VoidLiteral(&'i VoidLiteralIE<R>),
+    ConstantInt(&'i ConstantIntIE<R>),
+    ConstantBool(&'i ConstantBoolIE<R>),
+    ConstantStr(&'i ConstantStrIE<'s, R>),
+    ConstantFloat(&'i ConstantFloatIE<R>),
     ArgLookup(&'i ArgLookupIE<'s, 'i, R>),
     ArrayLength(&'i ArrayLengthIE<'s, 'i, R>),
     InterfaceFunctionCall(&'i InterfaceFunctionCallIE<'s, 'i, R>),
@@ -652,7 +652,7 @@ impl<'s, 'i, R> ReturnIE<'s, 'i, R> {
 // mig: struct BreakIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct BreakIE<'s, 'i, R>(pub PhantomData<(&'s (), &'i (), R)>);
+pub struct BreakIE<R>(pub PhantomData<R>);
 // mig: impl BreakIE
 /*
 case class BreakIE() extends ReferenceExpressionIE {
@@ -668,8 +668,8 @@ case class BreakIE() extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> BreakIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
+impl<R> BreakIE<R> {
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i, R> { panic!("Unimplemented: result"); }
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(true))
@@ -1032,7 +1032,7 @@ override def hashCode(): Int = vcurious()
 // mig: struct VoidLiteralIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct VoidLiteralIE<'s, 'i, R>(pub PhantomData<(&'s (), &'i (), R)>);
+pub struct VoidLiteralIE<R>(pub PhantomData<R>);
 // mig: impl VoidLiteralIE
 /*
 case class VoidLiteralIE() extends ReferenceExpressionIE {
@@ -1048,8 +1048,8 @@ case class VoidLiteralIE() extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> VoidLiteralIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> {
+impl<R> VoidLiteralIE<R> {
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i, R> {
 		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT { _marker: PhantomData }) }
 	}
 }
@@ -1060,10 +1060,10 @@ impl<'s, 'i, R> VoidLiteralIE<'s, 'i, R> {
 // mig: struct ConstantIntIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantIntIE<'s, 'i, R> {
+pub struct ConstantIntIE<R> {
 	pub value: i64,
 	pub bits: i32,
-	pub _marker: PhantomData<(&'s (), &'i (), R)>,
+	pub _marker: PhantomData<R>,
 }
 // mig: impl ConstantIntIE
 /*
@@ -1080,8 +1080,8 @@ case class ConstantIntIE(value: Long, bits: Int) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> {
+impl<R> ConstantIntIE<R> {
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i, R> {
 		CoordI {
 			ownership: OwnershipI::MutableShare,
 			kind: KindIT::IntIT(IntIT { bits: self.bits, _marker: PhantomData }),
@@ -1095,8 +1095,8 @@ impl<'s, 'i, R> ConstantIntIE<'s, 'i, R> {
 // mig: struct ConstantBoolIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantBoolIE<'s, 'i, R> {
-	pub _marker: PhantomData<(&'s (), &'i (), R)>,
+pub struct ConstantBoolIE<R> {
+	pub _marker: PhantomData<R>,
 	pub value: bool,
 }
 // mig: impl ConstantBoolIE
@@ -1114,8 +1114,8 @@ case class ConstantBoolIE(value: Boolean) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> {
+impl<R> ConstantBoolIE<R> {
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i, R> {
 		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT { _marker: PhantomData }) }
 	}
 }
@@ -1126,8 +1126,8 @@ impl<'s, 'i, R> ConstantBoolIE<'s, 'i, R> {
 // mig: struct ConstantStrIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantStrIE<'s, 'i, R> {
-	pub _marker: PhantomData<(&'s (), &'i (), R)>,
+pub struct ConstantStrIE<'s, R> {
+	pub _marker: PhantomData<(&'s (), R)>,
 	pub value: &'s str,
 }
 // mig: impl ConstantStrIE
@@ -1145,8 +1145,8 @@ case class ConstantStrIE(value: String) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> ConstantStrIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> {
+impl<'s, R> ConstantStrIE<'s, R> {
+	pub fn result<'i>(&self) -> CoordI<'s, 'i, R> {
 		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(StrIT { _marker: PhantomData }) }
 	}
 }
@@ -1157,8 +1157,8 @@ impl<'s, 'i, R> ConstantStrIE<'s, 'i, R> {
 // mig: struct ConstantFloatIE
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantFloatIE<'s, 'i, R> {
-	pub _marker: PhantomData<(&'s (), &'i (), R)>,
+pub struct ConstantFloatIE<R> {
+	pub _marker: PhantomData<R>,
 	pub value: f64,
 }
 // mig: impl ConstantFloatIE
@@ -1176,8 +1176,8 @@ case class ConstantFloatIE(value: Double) extends ReferenceExpressionIE {
 override def hashCode(): Int = vcurious()
 */
 // mig: fn result
-impl<'s, 'i, R> ConstantFloatIE<'s, 'i, R> {
-	pub fn result(&self) -> CoordI<'s, 'i, R> {
+impl<R> ConstantFloatIE<R> {
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i, R> {
 		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT { _marker: PhantomData }) }
 	}
 }

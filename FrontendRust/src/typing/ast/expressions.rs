@@ -199,7 +199,7 @@ pub enum ReferenceExpressionTE<'s, 't> {
     Restackify(&'t RestackifyTE<'s, 't>),
     Transmigrate(&'t TransmigrateTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
-    Break(&'t BreakTE<'s, 't>),
+    Break(&'t BreakTE),
     Block(&'t BlockTE<'s, 't>),
     Pure(&'t PureTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
@@ -208,11 +208,11 @@ pub enum ReferenceExpressionTE<'s, 't> {
     ArraySize(&'t ArraySizeTE<'s, 't>),
     IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
     AsSubtype(&'t AsSubtypeTE<'s, 't>),
-    VoidLiteral(&'t VoidLiteralTE<'s, 't>),
+    VoidLiteral(&'t VoidLiteralTE),
     ConstantInt(&'t ConstantIntTE<'s, 't>),
-    ConstantBool(&'t ConstantBoolTE<'s, 't>),
-    ConstantStr(&'t ConstantStrTE<'s, 't>),
-    ConstantFloat(&'t ConstantFloatTE<'s, 't>),
+    ConstantBool(&'t ConstantBoolTE),
+    ConstantStr(&'t ConstantStrTE<'s>),
+    ConstantFloat(&'t ConstantFloatTE),
     ArgLookup(&'t ArgLookupTE<'s, 't>),
     ArrayLength(&'t ArrayLengthTE<'s, 't>),
     InterfaceFunctionCall(&'t InterfaceFunctionCallTE<'s, 't>),
@@ -977,21 +977,20 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct BreakTE<'s, 't> {
+pub struct BreakTE {
     pub region: RegionT,
-    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class BreakTE(region: RegionT) extends ReferenceExpressionTE {
 */
-impl<'s, 't> BreakTE<'s, 't> {
+impl BreakTE {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 /*
 override def hashCode(): Int = vcurious()
 */
-    fn result(&self) -> ReferenceResultT<'s, 't> {
+    fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Never(NeverT { from_break: true }) } }
     }
 /*
@@ -1355,21 +1354,20 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct VoidLiteralTE<'s, 't> {
+pub struct VoidLiteralTE {
     pub region: RegionT,
-    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class VoidLiteralTE(region: RegionT) extends ReferenceExpressionTE {
 */
-impl<'s, 't> VoidLiteralTE<'s, 't> {
+impl VoidLiteralTE {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 /*
 override def hashCode(): Int = vcurious()
 */
-    fn result(&self) -> ReferenceResultT<'s, 't> {
+    fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
             coord: CoordT {
                 ownership: OwnershipT::Share,
@@ -1414,22 +1412,21 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantBoolTE<'s, 't> {
+pub struct ConstantBoolTE {
     pub value: bool,
     pub region: RegionT,
-    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ConstantBoolTE(value: Boolean, region: RegionT) extends ReferenceExpressionTE {
 */
-impl<'s, 't> ConstantBoolTE<'s, 't> {
+impl ConstantBoolTE {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 /*
 override def hashCode(): Int = vcurious()
 */
-    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+    pub fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Bool(BoolT) } }
     }
 /*
@@ -1440,22 +1437,21 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantStrTE<'s, 't> {
+pub struct ConstantStrTE<'s> {
     pub value: StrI<'s>,
     pub region: RegionT,
-    pub _phantom: PhantomData<&'t ()>,
 }
 /*
 case class ConstantStrTE(value: String, region: RegionT) extends ReferenceExpressionTE {
 */
-impl<'s, 't> ConstantStrTE<'s, 't> {
+impl<'s> ConstantStrTE<'s> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 /*
 override def hashCode(): Int = vcurious()
 */
-    fn result(&self) -> ReferenceResultT<'s, 't> {
+    fn result<'t>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Str(StrT) } }
     }
 /*
@@ -1466,22 +1462,21 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct ConstantFloatTE<'s, 't> {
+pub struct ConstantFloatTE {
     pub value: f64,
     pub region: RegionT,
-    pub _phantom: PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class ConstantFloatTE(value: Double, region: RegionT) extends ReferenceExpressionTE {
 */
-impl<'s, 't> ConstantFloatTE<'s, 't> {
+impl ConstantFloatTE {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 /*
 override def hashCode(): Int = vcurious()
 */
-    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+    pub fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: CoordT {
             ownership: OwnershipT::Share,
             region: self.region,

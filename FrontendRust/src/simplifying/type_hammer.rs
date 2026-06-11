@@ -121,7 +121,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        region: &RegionTemplataI<'s, 'i, cI>,
+        region: &RegionTemplataI<cI>,
     ) -> RegionH
     {
         panic!("Unimplemented: translate_region");

@@ -87,7 +87,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         types: Vec<CoordT<'s, 't>>,
     ) -> StructTT<'s, 't> {
-        let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()], _phantom: PhantomData });
+        let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()]});
         let tuple_template = match env.lookup_nearest_with_name(INameT::StructTemplate(tuple_template_name), {
             let mut s = HashSet::new();
             s.insert(ILookupContext::TemplataLookupContext);

@@ -80,7 +80,7 @@ pub enum NodeRefT<'s, 't> {
     Restackify(&'t RestackifyTE<'s, 't>),
     Transmigrate(&'t TransmigrateTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
-    Break(&'t BreakTE<'s, 't>),
+    Break(&'t BreakTE),
     Block(&'t BlockTE<'s, 't>),
     Pure(&'t PureTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
@@ -89,11 +89,11 @@ pub enum NodeRefT<'s, 't> {
     ArraySize(&'t ArraySizeTE<'s, 't>),
     IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
     AsSubtype(&'t AsSubtypeTE<'s, 't>),
-    VoidLiteral(&'t VoidLiteralTE<'s, 't>),
+    VoidLiteral(&'t VoidLiteralTE),
     ConstantInt(&'t ConstantIntTE<'s, 't>),
-    ConstantBool(&'t ConstantBoolTE<'s, 't>),
-    ConstantStr(&'t ConstantStrTE<'s, 't>),
-    ConstantFloat(&'t ConstantFloatTE<'s, 't>),
+    ConstantBool(&'t ConstantBoolTE),
+    ConstantStr(&'t ConstantStrTE<'s>),
+    ConstantFloat(&'t ConstantFloatTE),
     ArgLookup(&'t ArgLookupTE<'s, 't>),
     ArrayLength(&'t ArrayLengthTE<'s, 't>),
     InterfaceFunctionCall(&'t InterfaceFunctionCallTE<'s, 't>),
@@ -770,7 +770,7 @@ where
     visit_reference_expression(pred, out, x.source_expr);
 }
 
-fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE<'s, 't>)
+fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -874,7 +874,7 @@ where
     visit_id(pred, out, &x.err_impl_name);
 }
 
-fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiteralTE<'s, 't>)
+fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiteralTE)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -891,7 +891,7 @@ where
     visit_templata(pred, out, &x.value);
 }
 
-fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantBoolTE<'s, 't>)
+fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantBoolTE)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -899,7 +899,7 @@ where
     collect_if(pred, out, NodeRefT::ConstantBool(x));
 }
 
-fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantStrTE<'s, 't>)
+fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantStrTE<'s>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -907,7 +907,7 @@ where
     collect_if(pred, out, NodeRefT::ConstantStr(x));
 }
 
-fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantFloatTE<'s, 't>)
+fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantFloatTE)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,

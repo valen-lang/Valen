@@ -78,7 +78,6 @@ fn function_has_correct_name() {
             FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
-                _phantom: PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
             FunctionNameValT {
@@ -140,7 +139,6 @@ fn lambda_has_correct_name() {
             FunctionTemplateNameT {
                 human_name: scout_arena.intern_str("main"),
                 code_location: main_loc,
-                _phantom: PhantomData,
             });
         let main_name = typing_interner.intern_function_name(
             FunctionNameValT {
@@ -152,7 +150,6 @@ fn lambda_has_correct_name() {
         let lambda_citizen_template_name = typing_interner.intern_lambda_citizen_template_name(
             LambdaCitizenTemplateNameT {
                 code_location: lambda_loc,
-                _phantom: PhantomData,
             });
         let lambda_citizen_name = typing_interner.intern_lambda_citizen_name(
             LambdaCitizenNameT { template: lambda_citizen_template_name });

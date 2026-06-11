@@ -436,11 +436,11 @@ where 's: 't,
             }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
                 let m_rune_name = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.m }));
-                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: m_rune_name, _phantom: PhantomData }));
+                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: m_rune_name}));
                 let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
                 entries.push((m_rune_name_t, IEnvEntryT::Templata(ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))));
                 if let Some(e) = maybe_element_type_rune {
-                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e, _phantom: PhantomData }));
+                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e}));
                     let element_type = self.get_array_element_type(&templatas, e);
                     entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: element_type })))));
                 }
@@ -1110,7 +1110,7 @@ where 's: 't,
         // val templateId =
         //   IdT(builtinPackage, Vector.empty, interner.intern(StaticSizedArrayTemplateNameT()))
         let template_name = self.typing_interner.intern_static_sized_array_template_name(
-            StaticSizedArrayTemplateNameT { _phantom: PhantomData }
+            StaticSizedArrayTemplateNameT { }
         );
         let template_id = self.typing_interner.intern_id(IdValT {
             package_coord: builtin_package,
@@ -1286,7 +1286,7 @@ where 's: 't,
         let builtin_package: &'s PackageCoordinate<'s> =
             self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
         let template_name = self.typing_interner.intern_static_sized_array_template_name(
-            StaticSizedArrayTemplateNameT { _phantom: PhantomData }
+            StaticSizedArrayTemplateNameT { }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
             RawArrayNameT { mutability, element_type: type_2, self_region: region }
@@ -1327,7 +1327,7 @@ where 's: 't,
         // val templateId =
         //   IdT(builtinPackage, Vector.empty, interner.intern(RuntimeSizedArrayTemplateNameT()))
         let template_name = self.typing_interner.intern_runtime_sized_array_template_name(
-            RuntimeSizedArrayTemplateNameT { _phantom: PhantomData }
+            RuntimeSizedArrayTemplateNameT { }
         );
         let template_id = self.typing_interner.intern_id(IdValT {
             package_coord: builtin_package,
@@ -1473,7 +1473,7 @@ where 's: 't,
         let builtin_package: &'s PackageCoordinate<'s> =
             self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
         let template_name = self.typing_interner.intern_runtime_sized_array_template_name(
-            RuntimeSizedArrayTemplateNameT { _phantom: PhantomData }
+            RuntimeSizedArrayTemplateNameT { }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
             RawArrayNameT { mutability, element_type: type_2, self_region: region }

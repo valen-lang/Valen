@@ -2750,7 +2750,7 @@ where 's: 't,
         //     interner.intern(KindPlaceholderNameT(
         //       interner.intern(KindPlaceholderTemplateNameT(index, rune)))))
         let template_name = self.typing_interner.intern_kind_placeholder_template_name(
-            KindPlaceholderTemplateNameT { index, rune, _phantom: PhantomData });
+            KindPlaceholderTemplateNameT { index, rune});
         let placeholder_name = self.typing_interner.intern_kind_placeholder_name(
             KindPlaceholderNameT { template: template_name });
         let kind_placeholder_id = name_prefix.add_step(
@@ -2857,7 +2857,7 @@ where 's: 't,
     ) -> ITemplataT<'s, 't> {
         // val idT = namePrefix.addStep(interner.intern(NonKindNonRegionPlaceholderNameT(index, rune)))
         let placeholder_name = self.typing_interner.intern_non_kind_non_region_placeholder_name(
-            NonKindNonRegionPlaceholderNameT { index, rune, _phantom: PhantomData }
+            NonKindNonRegionPlaceholderNameT { index, rune}
         );
         let id_t = name_prefix.add_step(
             self.typing_interner,

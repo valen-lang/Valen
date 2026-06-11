@@ -35,7 +35,7 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
     ConstantVoidH(&'h ConstantVoidH),
     ConstantIntH(&'h ConstantIntH),
     ConstantBoolH(&'h ConstantBoolH),
-    ConstantStrH(&'h ConstantStrH<'s, 'h>),
+    ConstantStrH(&'h ConstantStrH<'h>),
     ConstantF64H(&'h ConstantF64H),
     ArgumentH(&'h ArgumentH<'s, 'h>),
     StackifyH(&'h StackifyH<'s, 'h>),
@@ -358,9 +358,8 @@ override def equals(obj: Any): Boolean = vcurious();
 // mig: struct ConstantStrH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
-pub struct ConstantStrH<'s, 'h> where 's: 'h {
+pub struct ConstantStrH<'h> {
     pub value: &'h str,
-    pub _marker: PhantomData<&'s ()>,
 }
 /*
 case class ConstantStrH(
@@ -437,7 +436,7 @@ case class ArgumentH(
 pub struct StackifyH<'s, 'h> where 's: 'h {
     pub source_expr: ExpressionH<'s, 'h>,
     pub local: Local<'s, 'h>,
-    pub name: Option<&'h IdH<'s, 'h>>,
+    pub name: Option<&'h IdH<'s>>,
 }
 /*
 case class StackifyH(
@@ -477,7 +476,7 @@ override def equals(obj: Any): Boolean = vcurious();
 pub struct RestackifyH<'s, 'h> where 's: 'h {
     pub source_expr: ExpressionH<'s, 'h>,
     pub local: Local<'s, 'h>,
-    pub name: Option<&'h IdH<'s, 'h>>,
+    pub name: Option<&'h IdH<'s>>,
 }
 /*
 case class RestackifyH(
@@ -721,7 +720,7 @@ override def equals(obj: Any): Boolean = vcurious();
 pub struct LocalStoreH<'s, 'h> where 's: 'h {
     pub local: Local<'s, 'h>,
     pub source_expression: ExpressionH<'s, 'h>,
-    pub local_name: &'h IdH<'s, 'h>,
+    pub local_name: &'h IdH<'s>,
 }
 /*
 case class LocalStoreH(
@@ -762,7 +761,7 @@ override def equals(obj: Any): Boolean = vcurious();
 pub struct LocalLoadH<'s, 'h> where 's: 'h {
     pub local: Local<'s, 'h>,
     pub target_ownership: OwnershipH,
-    pub local_name: &'h IdH<'s, 'h>,
+    pub local_name: &'h IdH<'s>,
 }
 /*
 case class LocalLoadH(
@@ -812,7 +811,7 @@ pub struct MemberStoreH<'s, 'h> where 's: 'h {
     pub struct_expression: ExpressionH<'s, 'h>,
     pub member_index: i32,
     pub source_expression: ExpressionH<'s, 'h>,
-    pub member_name: &'h IdH<'s, 'h>,
+    pub member_name: &'h IdH<'s>,
 }
 /*
 case class MemberStoreH(
@@ -846,7 +845,7 @@ pub struct MemberLoadH<'s, 'h> where 's: 'h {
     pub member_index: i32,
     pub expected_member_type: CoordH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
-    pub member_name: &'h IdH<'s, 'h>,
+    pub member_name: &'h IdH<'s>,
 }
 /*
 case class MemberLoadH(
@@ -1907,7 +1906,7 @@ override def equals(obj: Any): Boolean = vcurious();
 #[derive(Copy, Clone, Debug)]
 pub struct NewStructH<'s, 'h> where 's: 'h {
     pub source_expressions: &'h [ExpressionH<'s, 'h>],
-    pub target_member_names: &'h [&'h IdH<'s, 'h>],
+    pub target_member_names: &'h [&'h IdH<'s>],
     pub result_type: CoordH<'s, 'h>,
 }
 /*
@@ -2298,7 +2297,7 @@ override def equals(obj: Any): Boolean = vcurious();
 pub struct VariableIdH<'s, 'h> where 's: 'h {
     pub number: i32,
     pub height: i32,
-    pub name: Option<&'h IdH<'s, 'h>>,
+    pub name: Option<&'h IdH<'s>>,
 }
 /*
 case class VariableIdH(

@@ -48,7 +48,7 @@ where 's: 'h,
     // 5 intern families: 1 kind-payload dispatcher + 1 prototype HashMap.
     kind_payload_val_to_ref: StdHashMap<InternedKindPayloadValH<'s, 'h>, InternedKindPayloadH<'s, 'h>>,
     prototype_val_to_ref: StdHashMap<PrototypeHValH<'s, 'h>, &'h PrototypeH<'s, 'h>>,
-    id_h_val_to_ref: StdHashMap<IdHValH<'s, 'h>, &'h IdH<'s, 'h>>,
+    id_h_val_to_ref: StdHashMap<IdHValH<'s>, &'h IdH<'s>>,
 }
 
 impl<'s, 'h> HammerInterner<'s, 'h>
@@ -172,7 +172,7 @@ where 's: 'h,
         canonical
     }
 
-    pub fn intern_id_h(&self, val: IdHValH<'s, 'h>) -> &'h IdH<'s, 'h> {
+    pub fn intern_id_h(&self, val: IdHValH<'s>) -> &'h IdH<'s> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.id_h_val_to_ref.get(&val) {
@@ -185,9 +185,8 @@ where 's: 'h,
             shortened_name: val.shortened_name,
             fully_qualified_name: val.fully_qualified_name,
             _must_intern: MustIntern(()),
-            _phantom_h: PhantomData,
         };
-        let canonical: &'h IdH<'s, 'h> = self.bump.alloc(c);
+        let canonical: &'h IdH<'s> = self.bump.alloc(c);
         let mut inner = self.inner.borrow_mut();
         inner.id_h_val_to_ref.insert(val, canonical);
         canonical

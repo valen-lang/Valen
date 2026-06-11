@@ -65,7 +65,7 @@ impl FunctionBodyMacro {
         coutputs: &mut CompilerOutputs<'s, 't>,
         env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'t>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         origin_function: Option<&'s FunctionA<'s>>,

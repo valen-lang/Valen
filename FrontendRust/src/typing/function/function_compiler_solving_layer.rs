@@ -605,13 +605,13 @@ where 's: 't,
         let entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             reachable_bounds_from_params_and_return.iter().enumerate()
                 .map(|(i, t)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: i as i32, _phantom: PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: i as i32});
                     (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(*t))))
                 })
                 .chain(
                     templatas_by_rune.iter()
                         .map(|(k, v)| {
-                            let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *k, _phantom: PhantomData });
+                            let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *k});
                             (INameT::Rune(rune_name), IEnvEntryT::Templata(*v))
                         })
                 )

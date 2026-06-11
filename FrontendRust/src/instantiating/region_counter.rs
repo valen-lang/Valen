@@ -59,7 +59,7 @@ impl CounterI {
 
 */
 // mig: fn count
-    pub fn count<'s, 'i>(&mut self, region: RegionTemplataI<'s, 'i, sI>) where 's: 'i {
+    pub fn count<'s, 'i>(&mut self, region: RegionTemplataI<sI>) where 's: 'i {
         self.set.insert(region.pure_height);
     }
 /*

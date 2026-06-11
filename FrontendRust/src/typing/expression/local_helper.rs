@@ -54,7 +54,7 @@ class LocalHelper(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'s, 't>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
+    pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'t>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
         let var_id = self.typing_interner.intern_typing_pass_temporary_var_name(
             TypingPassTemporaryVarNameT { life });
         let rlv = ReferenceLocalVariableT { name: var_id.into(), variability: VariabilityT::Final, coord };
@@ -74,7 +74,7 @@ where 's: 't,
   }
 
 */
-    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s, 't>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
+    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
         match target_ownership {
             OwnershipT::Borrow => {}
             _ => panic!("implement: make_temporary_local_defer non-Borrow target_ownership"),

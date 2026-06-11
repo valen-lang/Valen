@@ -489,7 +489,7 @@ where 's: 't,
                 .enumerate()
                 .map(|(index, proto)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
                     let name = self.typing_interner.intern_reachable_prototype_name(
-                        ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
+                        ReachablePrototypeNameT { num: index as i32});
                     let entry = IEnvEntryT::Templata(ITemplataT::Prototype(
                         self.typing_interner.alloc(PrototypeTemplataT { prototype: proto })));
                     (INameT::ReachablePrototype(name), entry)
@@ -497,7 +497,7 @@ where 's: 't,
                 .collect();
         inner_env_entries.extend(inferences.iter().map(|(name_s, templata)| {
             let rune_name = self.typing_interner.intern_rune_name(
-                RuneNameT { rune: *name_s, _phantom: PhantomData });
+                RuneNameT { rune: *name_s});
             (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
         }));
 

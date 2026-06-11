@@ -1139,7 +1139,7 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32});
                     (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(*reachable_bound) }))))
                 })
                 .collect();
@@ -1182,7 +1182,7 @@ where 's: 't,
             conclusions
                 .iter()
                 .map(|(name_s, templata)| {
-                    let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: PhantomData });
+                    let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s});
                     (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
                 })
                 .collect();
@@ -1192,7 +1192,7 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: PhantomData });
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32});
                     let entry = IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: reachable_bound })));
                     (INameT::ReachablePrototype(name), entry)
                 })
