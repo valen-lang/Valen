@@ -212,7 +212,6 @@ class ExpressionHammer(
         }
 
         val resultStructI = resultType.kind match { case s @ StructIT(_) => s }
-        assert(resultStructI.id.packageCoord.module.str != "rust") // DO NOT SUBMIT
         val (underlyingStructRefH) =
           structHammer.translateStructI(hinputs, hamuts, resultStructI);
         val (resultReference) =

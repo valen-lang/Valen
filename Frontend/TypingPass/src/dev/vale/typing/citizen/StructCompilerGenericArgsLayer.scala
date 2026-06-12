@@ -336,7 +336,7 @@ class StructCompilerGenericArgsLayer(
 //                  solverState.concludeRune(rune, conclusion).getOrDie()
 //                })
 //                solverState.addStep(step)
-                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector(), Set.empty).getOrDie()
               }
 
               true
@@ -435,7 +435,7 @@ class StructCompilerGenericArgsLayer(
                   coutputs, outerEnv, interfaceTemplateId, genericParam, index, interfaceA.runeToType, placeholderPureHeight, true)
 
               { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector(), Set.empty).getOrDie()
 //                solverState.addStep(step)
 //                step.conclusions.foreach({ case (rune, conclusion) =>
 //                  solverState.concludeRune(solverState.getCanonicalRune(rune), conclusion)

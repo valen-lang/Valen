@@ -300,7 +300,6 @@ class ExpressionScout(
           inner1 match {
             case OwnershippedSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
             case LocalLoadSE(_, _, innerLoadAs) => vassert(loadAs == innerLoadAs)
-//            case OutsideLoadSE(_, _, _, innerLoadAs) => vassert(loadAs == innerLoadAs) DO NOT SUBMIT
             case _ => vwat()
           }
           (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)

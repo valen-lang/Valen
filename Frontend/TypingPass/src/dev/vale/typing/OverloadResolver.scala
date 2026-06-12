@@ -267,9 +267,11 @@ class OverloadResolver(
 //          function.tyype match {
 //            case TemplateTemplataType(identifyingRuneTemplataTypes, FunctionTemplataType()) => {
         val identifyingRuneTemplataTypes = function.tyype.paramTypes
-        // DO NOT SUBMIT this is the wrong logic, see test "Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes"
-        if (positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size) {
-          return Err(WrongNumberOfTemplateArguments(positionalExplicitTemplateArgRunesS.size, identifyingRuneTemplataTypes.size))
+        // Now we want to check that the user didn't specify too many right here.
+        // The function can inherit runes from its container, so subtract those first.
+        val ownRuneCount = identifyingRuneTemplataTypes.size - receivingRuneToExplicitTemplateArgRune.size
+        if (positionalExplicitTemplateArgRunesS.size > ownRuneCount) {
+          return Err(WrongNumberOfTemplateArguments(positionalExplicitTemplateArgRunesS.size, ownRuneCount))
         }
 
         val explicitTemplateArgRulesWithConnections =
