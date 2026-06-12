@@ -191,6 +191,7 @@ Instead, use the same file.
 - **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → docs/skills/collapsed-call-tree.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → docs/skills/feature-development-flow.md
 - **Read when the architect says the literal phrase "fire commit" (or you're about to commit + sync as a TL).** → docs/skills/fire-commit.md
+- **Read when the architect says the literal phrase "fire rebase".** → docs/skills/fire-rebase.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → docs/skills/good-testing.md
 - **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
 - **Read when promoting an LLM-mode shield to Rust mode with a deterministic companion program.** → docs/skills/guardian-rustify.md
