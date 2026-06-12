@@ -116,9 +116,11 @@ To discard a pending review without applying: `safe-script-runner abandon` (no a
 
 Only ONE review may be pending at a time — by design. Trying to `review` a second `<SRC>` while another is unapplied is refused. This makes batch-review-then-batch-apply impossible: the only physically possible sequence is `review A → apply A → review B → apply B → …`. Combined with the marker's SHA-256 binding of review to apply, the architect's "go" is always against the diff the apply will actually land.
 
-### Never apply a bulk-edit without explicit per-file permission
+### Never apply a bulk-edit without explicit authorization to start the flow
 
-The transform-and-review steps (writing the stdin→stdout script, running it to `./tmp/working/`, reading the diff) are all read-only and don't need permission. **The apply step does** — never run `safe-script-runner apply`, or the `cp <SRC> ./tmp/backup/... && mv ./tmp/working/... <SRC>` compound, without the user explicitly authorizing that specific file. Show the diff, wait for go-ahead, then apply. "I'm going to apply now" is not authorization; the user has to say so.
+The transform-and-review steps (writing the stdin→stdout script, running it to `./tmp/working/`, reading the diff) are all read-only and don't need permission. **The apply step does** — never run `safe-script-runner apply`, or the `cp <SRC> ./tmp/backup/... && mv ./tmp/working/... <SRC>` compound, without the user authorizing this bulk-edit flow first. Show the script + a representative diff, wait for go-ahead on the flow, then sweep apply across files. The authorization covers the whole flow (every file the script will touch), not each file individually. "I'm going to apply now" is not authorization; the user has to say so.
+
+Within a flow, re-confirm if you hit a diff that materially deviates from the representative one you showed (different shape of change, surprising counts, anomalies). Within-flow surprises are when you pause; routine same-shape edits are not.
 
 ### JR may not author scripts
 
