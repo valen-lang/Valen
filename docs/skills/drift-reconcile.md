@@ -208,6 +208,30 @@ After reconciling a file:
 
 If any of these regress, STOP and escalate — don't paper over with a temp-disable or "obvious" fix.
 
+## When You're Done — Sync-Ready Signal
+
+When you've reconciled every file the TL handed you (or every file in the `--check-all` list, if you were given the whole set), write to `from-jr.md` at the repo root:
+
+```
+## drift-reconcile: sync-ready
+
+**Files reconciled:**
+- FrontendRust/src/<path1>  (was N mismatches → 0)
+- FrontendRust/src/<path2>  (was M mismatches → 0)
+- ...
+
+**Verification:**
+- cargo check --lib: 0 errors
+- cargo nextest run: <pass count> passed, <ignore count> ignored, 0 failed
+- SCPX --check-all: <before> → <after> total mismatches
+
+**Notes:** <anything the TL should know — temp-disables you couldn't avoid, escalations resolved during the run, files you intentionally skipped per TL instruction, etc.>
+```
+
+Then **stop and wait** for the TL — don't open more files, don't pick up the next task. The TL parity-reviews the diff, surfaces to the architect, and the architect's go-ahead gates any commit/sync. Once the sync lands, the TL will clear `from-jr.md` and signal the next task (often via `for-jr.md`).
+
+Lead with the `## drift-reconcile: sync-ready` heading — same as escalations, the prefix tells the TL which workflow this came from.
+
 ## Use the Same `./tmp/` File
 
 Per CLAUDE.md's build-and-run convention: pipe every `cargo` / `sbt` invocation into the same `./tmp/drift-reconcile.txt` for the session. Inspect with separate follow-up `grep`/`tail`/`head` commands. Never chain a heavy build with `| tail` — you lose the ability to re-analyze.
