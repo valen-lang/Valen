@@ -365,8 +365,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
 //      immDestructorsByKind,
       exportNameToFunction,
       exportNameToKind,
-      externNameToFunction,
-      externNameToKind,
+      prototypeToExtern,
+      kindToExtern,
     ) = paackage
 
     VonObject(
@@ -419,7 +419,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
           "prototypeToExtern",
           VonArray(
             None,
-            externNameToFunction.toVector.map({ case (_, HamutsFunctionExtern(maybeExternName, prototype, simpleId)) =>
+            prototypeToExtern.toVector.map({ case (_, HamutsFunctionExtern(maybeExternName, prototype, simpleId)) =>
               VonObject(
                 "ExternFunction",
                 None,
@@ -429,10 +429,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
                   VonMember("prototype", vonifyPrototype(prototype))))
             }))),
         VonMember(
-          "kindToExtern", // DO NOT SUBMIT rename plz
+          "kindToExtern",
           VonArray(
             None,
-            externNameToKind.toVector.map({ case (_, HamutsKindExtern(maybeExternName, kind, simpleId)) =>
+            kindToExtern.toVector.map({ case (_, HamutsKindExtern(maybeExternName, kind, simpleId)) =>
               VonObject(
                 "ExternKind",
                 None,

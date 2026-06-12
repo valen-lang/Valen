@@ -6416,22 +6416,14 @@ fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
-  ignore("Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes") {
-    // Logic gap in OverloadResolver.attemptCandidateBanner:
-    // Currently blocked by FunctionScout.scala:114 (`vassert(userDeclaredRunes.isEmpty)`)
-    // which rejects internal methods that have their own runes (like `<N>` here).
-    // Once that assertion is lifted (same blocker as "Namespace method call with both
-    // container and method generic args"), this test should then fail with a match error
-    // because the current check uses identifyingRuneTemplataTypes.size (2) instead of
-    // the correct own-rune count (1). Fix: subtract receivingRuneToExplicitTemplateArgRune.size.
-    //
-    //   if (positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size)
+  test("Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes") {
     // After @PRIIROZ, a method `func zork<N>` inside `struct S<K>` has identifying runes
-    // [N, K] (size 2). The check allows up to 2 positional args, but only 1 (N) is the
-    // method's own — K is supplied via the container prefix as an EqualsSR rule.
-    // Calling S<int>.zork<float, bool>() supplies 2 positional args when only 1 is valid.
-    // The correct check is:
-    //   positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size - receivingRuneToExplicitTemplateArgRune.size
+    // [N, K] (size 2). Only N (size 1) is the method's own — K is supplied via the container
+    // prefix through the named-arg channel (receivingRuneToExplicitTemplateArgRune).
+    // Calling S<int>.zork<int, bool>(42) supplies 2 positional args when only 1 is valid.
+    // OverloadResolver.attemptCandidateBanner computes ownRuneCount as
+    //   identifyingRuneTemplataTypes.size - receivingRuneToExplicitTemplateArgRune.size
+    // and rejects positional args exceeding ownRuneCount.
     val compile = CompilerTestCompilation.test(
       """
         |struct S<K> {

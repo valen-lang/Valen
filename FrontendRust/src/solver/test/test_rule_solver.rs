@@ -130,7 +130,7 @@ pub fn complex_solve_impl(
           case Some(receiverInstantiation) => List(receiver -> receiverInstantiation)
         }
       }).toMap
-    solverState.commitStep[String](true, Vector(), newConclusions, Vector()) match { case Ok(_) => case Err(e) => return Err(e) }
+    solverState.commitStep[String](true, Vector(), newConclusions, Vector(), Set.empty) match { case Ok(_) => case Err(e) => return Err(e) }
     Ok(())
   }
 
@@ -289,37 +289,37 @@ pub fn solve_impl(
         solverState.getConclusion(leftRune) match {
           case Some(left) => {
             //            solverState.commitStep[String](rightRune, left) match { case Ok(_) => case Err(e) => return Err(e) }
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(rightRune -> left), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(rightRune -> left), Vector(), Set.empty)
           }
           case None => {
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(leftRune -> vassertSome(solverState.getConclusion(rightRune))), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(leftRune -> vassertSome(solverState.getConclusion(rightRune))), Vector(), Set.empty)
           }
         }
       }
       case Lookup(rune, name) => {
         val value = name
-        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> value), Vector())
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> value), Vector(), Set.empty)
       }
       case Literal(rune, literal) => {
-        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> literal), Vector())
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> literal), Vector(), Set.empty)
       }
       case OneOf(rune, literals) => {
         val literal = solverState.getConclusion(rune).get
         if (!literals.contains(literal)) {
           return Err(RuleError("conflict!"))
         }
-        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector())
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector(), Set.empty)
       }
       case CoordComponents(coordRune, ownershipRune, kindRune) => {
         solverState.getConclusion(coordRune) match {
           case Some(combined) => {
             val Array(ownership, kind) = combined.split("/")
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(ownershipRune -> ownership, kindRune -> kind), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(ownershipRune -> ownership, kindRune -> kind), Vector(), Set.empty)
           }
           case None => {
             (solverState.getConclusion(ownershipRune), solverState.getConclusion(kindRune)) match {
               case (Some(ownership), Some(kind)) => {
-                solverState.commitStep[String](false, Vector(ruleIndex), Map(coordRune -> (ownership + "/" + kind)), Vector())
+                solverState.commitStep[String](false, Vector(ruleIndex), Map(coordRune -> (ownership + "/" + kind)), Vector(), Set.empty)
               }
               case _ => vfail()
             }
@@ -330,11 +330,11 @@ pub fn solve_impl(
         solverState.getConclusion(resultRune) match {
           case Some(result) => {
             val parts = result.split(",")
-            solverState.commitStep[String](false, Vector(ruleIndex), memberRunes.zip(parts).toMap, Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), memberRunes.zip(parts).toMap, Vector(), Set.empty)
           }
           case None => {
             val result = memberRunes.map(solverState.getConclusion).map(_.get).mkString(",")
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> result), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> result), Vector(), Set.empty)
           }
         }
       }
@@ -346,10 +346,10 @@ pub fn solve_impl(
           case (Some(result), Some(templateName), _) => {
             val prefix = templateName + ":"
             vassert(result.startsWith(prefix))
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(argRune -> result.slice(prefix.length, result.length)), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(argRune -> result.slice(prefix.length, result.length)), Vector(), Set.empty)
           }
           case (_, Some(templateName), Some(arg)) => {
-            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> (templateName + ":" + arg)), Vector())
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> (templateName + ":" + arg)), Vector(), Set.empty)
           }
           case other => vwat(other)
         }
@@ -357,10 +357,10 @@ pub fn solve_impl(
       case Send(senderRune, receiverRune) => {
         val receiver = vassertSome(solverState.getConclusion(receiverRune))
         if (receiver == "ISpaceship" || receiver == "IWeapon:int") {
-          solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector(Implements(senderRune, receiverRune)))
+          solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector(Implements(senderRune, receiverRune)), Set.empty)
         } else {
           // Not receiving into an interface, so sender must be the same
-          solverState.commitStep[String](false, Vector(ruleIndex), Map(senderRune -> receiver), Vector())
+          solverState.commitStep[String](false, Vector(ruleIndex), Map(senderRune -> receiver), Vector(), Set.empty)
         }
       }
       case Implements(subRune, superRune) => {
@@ -373,7 +373,7 @@ pub fn solve_impl(
           case ("Flamethrower:int", "IWeapon:int") => Ok(())
           case other => vimpl(other)
         }
-        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector())
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector(), Set.empty)
       }
     }
   }

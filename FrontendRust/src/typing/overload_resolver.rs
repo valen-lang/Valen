@@ -561,7 +561,10 @@ where 's: 't,
             ICalleeCandidate::Function(FunctionCalleeCandidate { ft }) => {
                 // See OFCBT.
                 let identifying_rune_templata_types = ft.function.tyype.param_types;
-                if positional_explicit_template_arg_runes_s.len() > identifying_rune_templata_types.len() {
+                // Now we want to check that the user didn't specify too many right here.
+                // The function can inherit runes from its container, so subtract those first.
+                let own_rune_count = identifying_rune_templata_types.len() - receiving_rune_to_explicit_template_arg_rune.len();
+                if positional_explicit_template_arg_runes_s.len() > own_rune_count {
                     panic!("implement: attemptCandidateBanner WrongNumberOfTemplateArguments");
                 } else {
                     let explicit_template_arg_rules_with_connections: Vec<IRulexSR<'s>> = {
@@ -810,9 +813,11 @@ where 's: 't,
 //          function.tyype match {
 //            case TemplateTemplataType(identifyingRuneTemplataTypes, FunctionTemplataType()) => {
         val identifyingRuneTemplataTypes = function.tyype.paramTypes
-        // DO NOT SUBMIT this is the wrong logic, see test "Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes"
-        if (positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size) {
-          return Err(WrongNumberOfTemplateArguments(positionalExplicitTemplateArgRunesS.size, identifyingRuneTemplataTypes.size))
+        // Now we want to check that the user didn't specify too many right here.
+        // The function can inherit runes from its container, so subtract those first.
+        val ownRuneCount = identifyingRuneTemplataTypes.size - receivingRuneToExplicitTemplateArgRune.size
+        if (positionalExplicitTemplateArgRunesS.size > ownRuneCount) {
+          return Err(WrongNumberOfTemplateArguments(positionalExplicitTemplateArgRunesS.size, ownRuneCount))
         }
         val explicitTemplateArgRulesWithConnections =
           explicitTemplateArgRulesWithoutConnections ++

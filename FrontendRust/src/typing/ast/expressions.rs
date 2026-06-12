@@ -1809,14 +1809,6 @@ case class GenericParametersInheritance(
     // populates this field at the definition site in FunctionCompilerCore.makeExternFunction).
     numInheritedGenericParameters: Int,
 )
-// DO NOT SUBMIT turn the below into an arcana.
-// i think we want to store here some data per generic param about where it was inherited from
-// now might be a good time to ask though... why exactly does ValeRuster need it to be in that format?
-// probably because we want to print the right rust expression, so it can narrow down the containing impl first,
-// then the function within it. we need some way to target the right impl in rust separately without being confused
-// by the function generic parameters.
-// whats the corresponding stuff in vale?
-// i suppose it's that we need to target a certain namespace? or rely on function overloading to find the right one.
 */
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]

@@ -925,7 +925,6 @@ pub struct GenericParameterDefaultS<'s> {
 // self-contained — it travels intact when GenericParameterS is inherited (e.g. by struct
 // internal methods). `runeToType` carries types for default-only runes (currently just
 // resultRune); these get registered into the solver at default-fire time.
-// DO NOT SUBMIT is this true?
 case class GenericParameterDefaultS(
   resultRune: IRuneS,
   rules: Vector[IRulexSR],

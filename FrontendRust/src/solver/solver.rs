@@ -220,7 +220,7 @@ where
       solverState.sanityCheck()
     }
 
-    solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
+    solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector, Set.empty).getOrDie()
 
     if (sanityCheck) {
       solverState.sanityCheck()

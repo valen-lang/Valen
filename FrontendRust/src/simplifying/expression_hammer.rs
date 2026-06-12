@@ -293,7 +293,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
                         KindIT::StructIT(s) => s,
                         _ => panic!("Tuple: result_type.kind not StructIT"),
                     };
-                    assert!(result_struct_i.id.package_coord.module.0 != "rust");
                     let underlying_struct_ref_h = self.translate_struct_i(hinputs, hamuts, result_struct_i);
                     let result_reference = self.translate_coord(hinputs, hamuts, result_type);
                     assert!(result_reference.kind == KindHT::StructHT(underlying_struct_ref_h));
@@ -685,7 +684,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }
 
         val resultStructI = resultType.kind match { case s @ StructIT(_) => s }
-        assert(resultStructI.id.packageCoord.module.str != "rust") // DO NOT SUBMIT
         val (underlyingStructRefH) =
           structHammer.translateStructI(hinputs, hamuts, resultStructI);
         val (resultReference) =

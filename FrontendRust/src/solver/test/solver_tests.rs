@@ -900,7 +900,7 @@ fn advance(
     val firstConclusions = solverState.userifyConclusions().toMap
 
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
-    solverState.commitStep[String](false, Vector(), Map(-1L -> "Firefly"), Vector()).getOrDie()
+    solverState.commitStep[String](false, Vector(), Map(-1L -> "Firefly"), Vector(), Set.empty).getOrDie()
 
     while ( {
       advance(solverState) match {

@@ -654,34 +654,34 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
     rule match {
       case KindComponentsSR(range, resultRune, mutabilityRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> KindTemplataType(), mutabilityRune.rune -> MutabilityTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> KindTemplataType(), mutabilityRune.rune -> MutabilityTemplataType()), Vector(), Set.empty)
       }
       case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> CoordTemplataType(), ownershipRune.rune -> OwnershipTemplataType(), kindRune.rune -> KindTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> CoordTemplataType(), ownershipRune.rune -> OwnershipTemplataType(), kindRune.rune -> KindTemplataType()), Vector(), Set.empty)
       }
       case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramsRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramsRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case MaybeCoercingCallSR(range, resultRune, templateRune, argRunes) => {
         vassertSome(solverState.getConclusion(templateRune.rune)) match {
           case TemplateTemplataType(paramTypes, returnType) => {
             val conclusions = argRunes.map(_.rune).zip(paramTypes).map({ case (argRune, paramType) => (argRune -> paramType) }).toMap
-            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector())
+            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector(), Set.empty)
           }
           case other => vwat(other)
         }
       }
       case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case DefinitionFuncSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> PrototypeTemplataType(), paramListRune.rune -> PackTemplataType(CoordTemplataType()), returnRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case DefinitionCoordIsaSR(range, resultRune, subRune, superRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> ImplTemplataType(), subRune.rune -> CoordTemplataType(), superRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> ImplTemplataType(), subRune.rune -> CoordTemplataType(), superRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case CallSiteCoordIsaSR(range, resultRune, subRune, superRune) => {
         val conclusions = Map(subRune.rune -> CoordTemplataType(), superRune.rune -> CoordTemplataType()) ++
@@ -689,42 +689,42 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
               case Some(resultRune) => Map(resultRune.rune -> ImplTemplataType())
               case None => Map[IRuneS, ITemplataType]()
             })
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector(), Set.empty)
       }
       case OneOfSR(range, resultRune, literals) => {
         val types = literals.map(_.getType()).toSet
         if (types.size > 1) {
           vfail("OneOf rule's possibilities must all be the same type!")
         }
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> types.head), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> types.head), Vector(), Set.empty)
       }
       case EqualsSR(range, leftRune, rightRune) => {
         solverState.getConclusion(leftRune.rune) match {
           case None => {
-            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(leftRune.rune -> vassertSome(solverState.getConclusion(rightRune.rune))), Vector())
+            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(leftRune.rune -> vassertSome(solverState.getConclusion(rightRune.rune))), Vector(), Set.empty)
           }
           case Some(left) => {
-            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rightRune.rune -> left), Vector())
+            solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rightRune.rune -> left), Vector(), Set.empty)
           }
         }
       }
       case IsConcreteSR(range, rune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
       }
       case IsInterfaceSR(range, rune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
       }
       case IsStructSR(range, rune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
       }
       case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(CoordTemplataType())), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(CoordTemplataType())), Vector(), Set.empty)
       }
       case CoerceToCoordSR(range, coordRune, kindRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(coordRune.rune -> CoordTemplataType(), kindRune.rune -> KindTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(coordRune.rune -> CoordTemplataType(), kindRune.rune -> KindTemplataType()), Vector(), Set.empty)
       }
       case LiteralSR(range, rune, literal) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> literal.getType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> literal.getType()), Vector(), Set.empty)
       }
       case LookupSR(range, resultRune, name) => {
         val actualLookupResult =
@@ -737,7 +737,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
           case TemplataLookupResult(actualType) => actualType
           case CitizenRuneTypeSolverLookupResult(tyype, genericParams) => tyype
         }
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> tyype), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> tyype), Vector(), Set.empty)
       }
       case MaybeCoercingLookupSR(range, rune, name) => {
         val actualLookupResult =
@@ -746,7 +746,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
             case Ok(x) => x
           }
         lookup(env, solverState, range, rune, actualLookupResult) match {
-          case Ok(()) => solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(), Vector())
+          case Ok(()) => solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(), Vector(), Set.empty)
           case Err(e) => Err(e)
         }
       }
@@ -757,16 +757,16 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
             case Ok(x) => x
           }
         lookup(env, solverState, range, rune, actualLookupResult) match {
-          case Ok(()) => solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(), Vector())
+          case Ok(()) => solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(), Vector(), Set.empty)
           case Err(e) => Err(e)
         }
       }
       case AugmentSR(range, resultRune, ownership, innerRune) => {
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> CoordTemplataType(), innerRune.rune -> CoordTemplataType()), Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> CoordTemplataType(), innerRune.rune -> CoordTemplataType()), Vector(), Set.empty)
       }
       case PackSR(range, resultRune, memberRunes) => {
         val conclusions = memberRunes.map(x => (x.rune -> CoordTemplataType())).toMap + (resultRune.rune -> PackTemplataType(CoordTemplataType()))
-        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector())
+        solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), conclusions, Vector(), Set.empty)
       }
 //      case StaticSizedArraySR(range, resultRune, mutabilityRune, variabilityRune, sizeRune, elementRune) => {
 //        solverState.concludeRune[IRuneTypeRuleError](mutabilityRune.rune MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }

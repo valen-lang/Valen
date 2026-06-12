@@ -201,9 +201,8 @@ where
     newRules: Vector[Rule],
     // `newRunes` extends allRunes mid-solve, used when incrementally committing rules
     // that introduce previously-unknown runes (e.g. default-only runes that travel inside
-    // GenericParameterDefaultS, see DRSINI).
-    // DO NOT SUBMIT undefault this param
-    newRunes: Set[Rune] = Set.empty):
+    // GenericParameterDefaultS, see DRSINI). Pass `Set.empty` when not introducing new runes.
+    newRunes: Set[Rune]):
   Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
     allRunes = allRunes ++ newRunes
     val step = Step[Rule, Rune, Conclusion](complex, solvedRuleIndices.map(ruleIndex => (ruleIndex, rules(ruleIndex))), newRules, conclusions)
@@ -375,7 +374,7 @@ pub fn new(
         solverState.sanityCheck()
       }
 
-      solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
+      solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector, Set.empty).getOrDie()
 
       if (sanityCheck) {
         solverState.sanityCheck()
