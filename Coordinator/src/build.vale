@@ -288,7 +288,7 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           "--region_override",
           FLAG_STR(),
           "Overrides all regions.",
-          "resilient-v3",
+          "unsafe-fast",
           "Sets all regions to use the given allocator.")];
 
   parsed_flags = flags.parse_all_flags(all_args);

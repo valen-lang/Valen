@@ -11,9 +11,6 @@
 
 enum class RegionOverride {
   NAIVE_RC,
-  RESILIENT_V3,
-  SAFE_FASTEST,
-  SAFE,
   FAST
 };
 
@@ -60,7 +57,7 @@ struct ValeOptions {
     bool enableSideCalling = false;    // Enables side calling, used for fearless FFI
     std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;
 
-    RegionOverride regionOverride = RegionOverride::RESILIENT_V3;
+    RegionOverride regionOverride = RegionOverride::FAST;
 };
 
 int valeOptSet(ValeOptions *opt, int *argc, char **argv);

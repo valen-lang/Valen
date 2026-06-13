@@ -31,11 +31,6 @@ void WrcWeaks::buildCheckWrc(
     case RegionOverride::NAIVE_RC:
       // fine, proceed
       break;
-    case RegionOverride::RESILIENT_V3:
-      case RegionOverride::SAFE:
-      // These dont have WRCs
-      { assert(false); throw 1337; }
-      break;
     default:
       { assert(false); throw 1337; }
       break;
@@ -186,10 +181,6 @@ WeakFatPtrLE WrcWeaks::weakStructPtrToWrciWeakInterfacePtr(
     case RegionOverride::FAST:
     case RegionOverride::NAIVE_RC:
       // continue
-      break;
-    case RegionOverride::RESILIENT_V3:
-    case RegionOverride::SAFE:
-      { assert(false); throw 1337; }
       break;
     default:
       { assert(false); throw 1337; }
@@ -506,13 +497,6 @@ Ref WrcWeaks::getIsAliveFromWeakRef(
     Reference* weakRefM,
     Ref weakRef) {
   switch (globalState->opt->regionOverride) {
-    case RegionOverride::RESILIENT_V3:
-    case RegionOverride::SAFE:
-      assert(
-          weakRefM->ownership == Ownership::IMMUTABLE_BORROW ||
-          weakRefM->ownership == Ownership::MUTABLE_BORROW ||
-          weakRefM->ownership == Ownership::WEAK);
-      break;
     case RegionOverride::FAST:
     case RegionOverride::NAIVE_RC:
       assert(weakRefM->ownership == Ownership::WEAK);

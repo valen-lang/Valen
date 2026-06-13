@@ -12,18 +12,10 @@ class FunctionState;
 
 enum class ControlBlockMember {
   UNUSED_32B,
-  LGTI_32B,
-  GENERATION,
-  GENERATION_32B,
-  GENERATION_64B,
   WRCI_32B,
   STRONG_RC_32B,
   CENSUS_TYPE_STR,
   CENSUS_OBJ_ID,
-  // It's 32B because we put it in the spot where the generational heap puts its size,
-  // like we do with the UNUSED_32B elsewhere.
-  TETHER_32B,
-  METADATA_BITS_2B,
 };
 
 class ControlBlock {

@@ -1,6 +1,4 @@
 #include "../common/fatweaks/fatweaks.h"
-#include "../common/hgm/hgm.h"
-#include "../common/lgtweaks/lgtweaks.h"
 #include "../common/wrcweaks/wrcweaks.h"
 #include "../../translatetype.h"
 #include "../common/common.h"

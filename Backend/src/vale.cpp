@@ -37,12 +37,9 @@
 #include <llvm-c/Transforms/Utils.h>
 #include <llvm-c/Transforms/IPO.h>
 
-#include "region/resilientv3/resilientv3.h"
 #include "region/unsafe/unsafe.h"
 #include "function/expressions/shared/string.h"
 #include <sstream>
-#include <region/safe/safe.h>
-#include "region/safe-fastest/safefastest.h"
 #include "region/linear/linear.h"
 #include "function/expressions/shared/members.h"
 #include "function/expressions/expressions.h"
@@ -685,15 +682,6 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
     case RegionOverride::FAST:
       std::cout << "Region override: fast" << std::endl;
       break;
-    case RegionOverride::RESILIENT_V3:
-      std::cout << "Region override: resilient-v3" << std::endl;
-      break;
-    case RegionOverride::SAFE:
-      std::cout << "Region override: safe" << std::endl;
-      break;
-    case RegionOverride::SAFE_FASTEST:
-      std::cout << "Region override: safe-fastest" << std::endl;
-      break;
     default:
       { assert(false); throw 1337; }
       break;
@@ -856,15 +844,6 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
       break;
     case RegionOverride::FAST:
       globalState->mutRegion = new Unsafe(globalState);
-      break;
-    case RegionOverride::RESILIENT_V3:
-      globalState->mutRegion = new ResilientV3(globalState, globalState->metalCache->mutRegionId);
-      break;
-    case RegionOverride::SAFE:
-      globalState->mutRegion = new Safe(globalState);
-      break;
-    case RegionOverride::SAFE_FASTEST:
-      globalState->mutRegion = new SafeFastest(globalState);
       break;
     default:
       { assert(false); throw 1337; }

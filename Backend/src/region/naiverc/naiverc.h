@@ -6,8 +6,6 @@
 #include "../rcimm/rcimm.h"
 #include "../common/defaultlayout/structsrouter.h"
 #include "../common/wrcweaks/wrcweaks.h"
-#include "../common/lgtweaks/lgtweaks.h"
-#include "../common/hgm/hgm.h"
 #include "../../globalstate.h"
 #include "../../function/function.h"
 #include "../iregion.h"

@@ -4,7 +4,6 @@
 #include "../../globalstate.h"
 #include "../../function/function.h"
 #include <llvm-c/Types.h>
-#include "hgm/hgm.h"
 #include "wrcweaks/wrcweaks.h"
 
 LLVMValueRef weakStructPtrToGenWeakInterfacePtr(
@@ -285,8 +284,6 @@ Ref resilientDowncast(
     std::function<Ref(LLVMBuilderRef)> &buildElse,
     StructKind *targetStructKind,
     InterfaceKind *sourceInterfaceKind);
-ControlBlock makeResilientV1WeakableControlBlock(GlobalState* globalState);
-ControlBlock makeResilientV3WeakableControlBlock(GlobalState* globalState);
 ControlBlock makeMutNonWeakableControlBlock(GlobalState* globalState, RegionId* regionId);
 ControlBlock makeMutWeakableControlBlock(GlobalState* globalState, RegionId* regionId);
 void fillStaticSizedArray(
@@ -435,17 +432,6 @@ void regularFillControlBlock(
     const std::string& typeName,
     WrcWeaks* wrcWeaks);
 
-void gmFillControlBlock(
-    AreaAndFileAndLine from,
-    GlobalState* globalState,
-    FunctionState* functionState,
-    KindStructs* structs,
-    LLVMBuilderRef builder,
-    Kind* kindM,
-    ControlBlockPtrLE controlBlockPtrLE,
-    const std::string& typeName,
-    HybridGenerationalMemory* hgmWeaks);
-
 Ref getRuntimeSizedArrayLengthStrong(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -579,25 +565,6 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
     FunctionState* functionState,
     LLVMBuilderRef builder,
     KindStructs* kindStructs,
-    Reference* sourceRefMT,
-    Ref sourceRef);
-
-Ref resilientReceiveAndDecryptFamiliarReference(
-    GlobalState* globalState,
-    FunctionState *functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    KindStructs* weakableKindStructs,
-    HybridGenerationalMemory* hgm,
-    Reference *sourceRefMT,
-    LLVMValueRef sourceRefLE);
-
-LLVMValueRef resilientEncryptAndSendFamiliarReference(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    HybridGenerationalMemory* hgm,
     Reference* sourceRefMT,
     Ref sourceRef);
 

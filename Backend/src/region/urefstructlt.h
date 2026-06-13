@@ -42,12 +42,6 @@ struct UniversalRefStructLT {
   UniversalRefStructExplodedMembersLT explodeForRegularInterface(
       GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef urefLE);
 
-  UniversalRefStructExplodedMembersLT explodeForGenerationalConcrete(
-      GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef urefLE);
-
-  UniversalRefStructExplodedMembersLT explodeForGenerationalInterface(
-      GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef urefLE);
-
   LLVMValueRef implodeForRegularConcrete(
       GlobalState* globalState,
       FunctionState* functionState,

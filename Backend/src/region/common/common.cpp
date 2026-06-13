@@ -40,14 +40,6 @@ LLVMValueRef upcastThinPtr(
           sourceStructTypeM->ownership == Ownership::IMMUTABLE_BORROW);
       break;
     }
-    case RegionOverride::RESILIENT_V3:
-    case RegionOverride::SAFE: {
-      assert(
-          sourceStructTypeM->ownership == Ownership::MUTABLE_SHARE ||
-          sourceStructTypeM->ownership == Ownership::IMMUTABLE_SHARE ||
-          sourceStructTypeM->ownership == Ownership::OWN);
-      break;
-    }
     default:
       { assert(false); throw 1337; }
   }
@@ -1093,20 +1085,6 @@ Ref resilientDowncast(
       buildElse);
 }
 
-ControlBlock makeResilientV1WeakableControlBlock(GlobalState* globalState) {
-  ControlBlock controlBlock(globalState, LLVMStructCreateNamed(globalState->context, "mutControlBlock"));
-  controlBlock.addMember(ControlBlockMember::LGTI_32B);
-  // This is where we put the size in the current generational heap, we can use it for something
-  // else until we get rid of that.
-  controlBlock.addMember(ControlBlockMember::UNUSED_32B);
-  if (globalState->opt->census) {
-    controlBlock.addMember(ControlBlockMember::CENSUS_TYPE_STR);
-    controlBlock.addMember(ControlBlockMember::CENSUS_OBJ_ID);
-  }
-  controlBlock.build();
-  return controlBlock;
-}
-
 Ref normalLocalStore(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, Local* local, LLVMValueRef localAddr, Ref refToStore) {
   auto region = globalState->getRegion(local->type);
   auto localLT = region->translateType(local->type);
@@ -1148,13 +1126,6 @@ Ref normalLocalStore(GlobalState* globalState, FunctionState* functionState, LLV
 //      makeImmControlBlock(globalState),
 //      makeResilientV1WeakableControlBlock(globalState),
 //      makeResilientV1WeakableControlBlock(globalState));
-//}
-//StructsRouter makeResilientV2Layoutter(GlobalState* globalState) {
-//  return StructsRouter(
-//      globalState,
-//      makeImmControlBlock(globalState),
-//      makeResilientV3WeakableControlBlock(globalState),
-//      makeResilientV3WeakableControlBlock(globalState));
 //}
 
 // Returns a LLVMValueRef for a ref to the string object.
@@ -1500,29 +1471,6 @@ void regularFillControlBlock(
         wrcWeaks->fillWeakableControlBlock(functionState, builder, structs, kindM, newControlBlockLE);
   }
 
-  LLVMBuildStore(
-      builder,
-      newControlBlockLE,
-      controlBlockPtrLE.refLE);
-}
-
-void gmFillControlBlock(
-    AreaAndFileAndLine from,
-    GlobalState* globalState,
-    FunctionState* functionState,
-    KindStructs* structs,
-    LLVMBuilderRef builder,
-    Kind* kindM,
-    ControlBlockPtrLE controlBlockPtrLE,
-    const std::string& typeName,
-    HybridGenerationalMemory* hgmWeaks) {
-
-  LLVMValueRef newControlBlockLE = LLVMGetUndef(structs->getControlBlock(kindM)->getStruct());
-  newControlBlockLE =
-      fillControlBlockCensusFields(
-          from, globalState, functionState, structs, builder, kindM, newControlBlockLE, typeName);
-  newControlBlockLE =
-      hgmWeaks->fillWeakableControlBlock(functionState, builder, kindM, newControlBlockLE);
   LLVMBuildStore(
       builder,
       newControlBlockLE,
@@ -1909,169 +1857,6 @@ LLVMValueRef regularEncryptAndSendFamiliarReference(
   { assert(false); throw 1337; }
 }
 
-Ref resilientReceiveAndDecryptFamiliarReference(
-    GlobalState* globalState,
-    FunctionState *functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    KindStructs* weakableKindStructs,
-    HybridGenerationalMemory* hgm,
-    Reference *sourceRefMT,
-    LLVMValueRef sourceRefLE) {
-  switch (sourceRefMT->ownership) {
-    case Ownership::MUTABLE_SHARE:
-    case Ownership::IMMUTABLE_SHARE:
-    case Ownership::OWN:
-      return regularReceiveAndDecryptFamiliarReference(globalState, functionState, builder, kindStructs, sourceRefMT, sourceRefLE);
-    case Ownership::MUTABLE_BORROW:
-    case Ownership::IMMUTABLE_BORROW:
-    case Ownership::WEAK:
-      if (auto kindStruct = dynamic_cast<StructKind*>(sourceRefMT->kind)) {
-        auto urefMembersLE =
-            globalState->getUniversalRefStructLT()->explodeForGenerationalConcrete(
-                globalState, functionState, builder, sourceRefLE);
-
-        auto wrapperStructPtrLT = LLVMPointerType(weakableKindStructs->getStructWrapperStruct(kindStruct), 0);
-
-        auto wrapperPtrLE =
-            weakableKindStructs->makeWrapperPtr(FL(), functionState, builder, sourceRefMT,
-                LLVMBuildIntToPtr(builder, urefMembersLE.objPtrI64LE, wrapperStructPtrLT, "refD"));
-
-        auto weakFatPtrLE = hgm->assembleStructWeakRef(functionState, builder, sourceRefMT, kindStruct, urefMembersLE.objGenI32LE, wrapperPtrLE);
-        auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, weakFatPtrLE);
-        globalState->getRegion(sourceRefMT)->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-        // Alias when receiving from the outside world, see DEPAR.
-        globalState->getRegion(sourceRefMT)
-            ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
-        return ref;
-      } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind)) {
-        auto urefMembersLE =
-            globalState->getUniversalRefStructLT()->explodeForGenerationalConcrete(
-                globalState, functionState, builder, sourceRefLE);
-
-        auto wrapperStructPtrLT = LLVMPointerType(weakableKindStructs->getRuntimeSizedArrayWrapperStruct(rsaMT), 0);
-
-        auto wrapperPtrLE =
-            weakableKindStructs->makeWrapperPtr(FL(), functionState, builder, sourceRefMT,
-                LLVMBuildIntToPtr(builder, urefMembersLE.objPtrI64LE, wrapperStructPtrLT, "refD"));
-
-        auto weakFatPtrLE =
-            hgm->assembleRuntimeSizedArrayWeakRef(
-                functionState, builder, sourceRefMT, rsaMT, urefMembersLE.objGenI32LE, wrapperPtrLE);
-        auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, weakFatPtrLE);
-        globalState->getRegion(sourceRefMT)->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-        // Alias when receiving from the outside world, see DEPAR.
-        globalState->getRegion(sourceRefMT)
-            ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
-        return ref;
-      } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(sourceRefMT->kind)) {
-        auto urefMembersLE =
-            globalState->getUniversalRefStructLT()->explodeForGenerationalConcrete(
-                globalState, functionState, builder, sourceRefLE);
-
-        auto wrapperStructPtrLT = LLVMPointerType(weakableKindStructs->getStaticSizedArrayWrapperStruct(ssaMT), 0);
-
-        auto wrapperPtrLE =
-            weakableKindStructs->makeWrapperPtr(FL(), functionState, builder, sourceRefMT,
-                LLVMBuildIntToPtr(builder, urefMembersLE.objPtrI64LE, wrapperStructPtrLT, "refD"));
-
-        auto weakFatPtrLE = hgm->assembleStaticSizedArrayWeakRef(functionState, builder, sourceRefMT, ssaMT, urefMembersLE.objGenI32LE, wrapperPtrLE);
-        auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, weakFatPtrLE);
-        globalState->getRegion(sourceRefMT)
-            ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-        // Alias when receiving from the outside world, see DEPAR.
-        globalState->getRegion(sourceRefMT)
-            ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
-        return ref;
-      } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(sourceRefMT->kind)) {
-        auto urefMembersLE =
-            globalState->getUniversalRefStructLT()->explodeForGenerationalInterface(
-                globalState, functionState, builder, sourceRefLE);
-
-        auto itablePtrLT = LLVMPointerType(weakableKindStructs->getInterfaceTableStruct(interfaceMT), 0);
-        auto objPtrLT = LLVMPointerType(weakableKindStructs->getControlBlock(interfaceMT)->getStruct(), 0);
-
-        auto refLT = globalState->getRegion(sourceRefMT)->translateType(sourceRefMT);
-        auto objPtrLE = LLVMBuildIntToPtr(builder, urefMembersLE.objPtrI64LE, objPtrLT, "refE");
-        auto itablePtrLE = LLVMBuildIntToPtr(builder, urefMembersLE.typeInfoPtrI64LE, itablePtrLT, "refF");
-
-        auto interfaceFatPtrRawLE = makeInterfaceRefStruct(globalState, functionState, builder, weakableKindStructs, interfaceMT, objPtrLE, itablePtrLE);
-        auto interfaceFatPtrLE = weakableKindStructs->makeInterfaceFatPtr(FL(), functionState, builder, sourceRefMT, interfaceFatPtrRawLE);
-        auto weakFatPtrLE = hgm->assembleInterfaceWeakRef(functionState, builder, sourceRefMT, interfaceMT, urefMembersLE.objGenI32LE, interfaceFatPtrLE);
-
-        auto ref = toRef(globalState->getRegion(sourceRefMT), sourceRefMT, weakFatPtrLE);
-        globalState->getRegion(sourceRefMT)
-            ->checkValidReference(FL(), functionState, builder, true, sourceRefMT, ref);
-
-        // Alias when receiving from the outside world, see DEPAR.
-        globalState->getRegion(sourceRefMT)
-            ->alias(FL(), functionState, builder, sourceRefMT, ref);
-
-        return ref;
-      } else {
-        { assert(false); throw 1337; }
-      }
-      break;
-
-    default:
-      { assert(false); throw 1337; }
-  }
-  { assert(false); throw 1337; }
-}
-
-LLVMValueRef resilientEncryptAndSendFamiliarReference(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    KindStructs* kindStructs,
-    HybridGenerationalMemory* hgm,
-    Reference* sourceRefMT,
-    Ref sourceRef) {
-
-  switch (sourceRefMT->ownership) {
-    case Ownership::OWN:
-    case Ownership::IMMUTABLE_SHARE:
-    case Ownership::MUTABLE_SHARE: {
-      return regularEncryptAndSendFamiliarReference(
-          globalState, functionState, builder, kindStructs, sourceRefMT, sourceRef);
-    }
-    case Ownership::IMMUTABLE_BORROW:
-    case Ownership::MUTABLE_BORROW:
-    case Ownership::WEAK: {
-      // Dealias when sending to the outside world, see DEPAR.
-      globalState->getRegion(sourceRefMT)
-          ->dealias(FL(), functionState, builder, sourceRefMT, sourceRef);
-
-      if (dynamic_cast<StructKind*>(sourceRefMT->kind) ||
-          dynamic_cast<StaticSizedArrayT*>(sourceRefMT->kind) ||
-          dynamic_cast<RuntimeSizedArrayT*>(sourceRefMT->kind)) {
-//        auto sourceRefLE = globalState->getRegion(sourceRefMT)->checkValidReference(FL(), functionState, builder, sourceRefMT, sourceRef);
-//        auto objPtrIntLE = LLVMBuildPtrToInt(builder, sourceRefLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
-//
-        return hgm->implodeConcreteHandle(functionState, builder, sourceRefMT, sourceRef);
-      } else if (dynamic_cast<InterfaceKind*>(sourceRefMT->kind)) {
-//        globalState->getRegion(sourceRefMT)->checkValidReference(FL(), functionState, builder, sourceRefMT, sourceRef);
-//        LLVMValueRef itablePtrLE = nullptr, objPtrLE = nullptr;
-//        std::tie(itablePtrLE, objPtrLE) = globalState->getRegion(sourceRefMT)->explodeInterfaceRef(functionState, builder, sourceRefMT, sourceRef);
-//        auto objPtrIntLE = LLVMBuildPtrToInt(builder, objPtrLE, LLVMInt64TypeInContext(globalState->context), "objPtrInt");
-//        auto itablePtrIntLE = LLVMBuildPtrToInt(builder, itablePtrLE, LLVMInt64TypeInContext(globalState->context), "itablePtrInt");
-        return hgm->implodeInterfaceHandle(functionState, builder, sourceRefMT, sourceRef);
-      } else {
-        { assert(false); throw 1337; }
-      }
-      break;
-    }
-    default:
-      { assert(false); throw 1337; }
-  }
-  { assert(false); throw 1337; }
-}
 
 std::string generateUniversalRefStructDefC(Package* currentPackage, const std::string& name) {
   return std::string() + "typedef struct " + name + "Ref { uint64_t unused0; uint64_t unused1; uint64_t unused2; uint32_t unused3; uint32_t unused4; } " + name + "Ref;\n";

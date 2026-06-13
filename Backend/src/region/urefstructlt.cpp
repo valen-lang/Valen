@@ -54,18 +54,6 @@ UniversalRefStructExplodedMembersLT UniversalRefStructLT::explodeForRegularInter
   return result;
 }
 
-UniversalRefStructExplodedMembersLT UniversalRefStructLT::explodeForGenerationalConcrete(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef urefLE) {
-  UniversalRefStructExplodedMembersLT result = explodeInner(globalState, functionState, builder, urefLE);
-  buildAssertIntEq(globalState, functionState, builder, result.typeInfoPtrI64LE, constI64LE(globalState, universalRefTypeInfoPtrConstant), "Invalid reference in extern boundary! (t)");
-  result.typeInfoPtrI64LE = nullptr;
-  return result;
-}
-
-UniversalRefStructExplodedMembersLT UniversalRefStructLT::explodeForGenerationalInterface(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef urefLE) {
-  UniversalRefStructExplodedMembersLT result = explodeInner(globalState, functionState, builder, urefLE);
-  return result;
-}
-
 UniversalRefStructExplodedMembersLT UniversalRefStructLT::explodeInner(
     GlobalState* globalState,
     FunctionState* functionState,

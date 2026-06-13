@@ -78,12 +78,6 @@ LLVMValueRef adjustStrongRc(
       assert(refM->ownership == Ownership::MUTABLE_SHARE);
       // Shouldnt increment IMMUTABLE_SHARE's RC
       break;
-    case RegionOverride::RESILIENT_V3:
-    case RegionOverride::SAFE:
-    case RegionOverride::SAFE_FASTEST:
-      assert(refM->ownership == Ownership::MUTABLE_SHARE);
-      // Shouldnt increment IMMUTABLE_SHARE's RC
-      break;
     default:
       { assert(false); throw 1337; }
   }
