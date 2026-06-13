@@ -2,7 +2,7 @@ use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::{CoordI, KindIT, ICitizenIT, MutabilityI, VariabilityI, cI, StructIT};
+use crate::instantiating::ast::types::{CoordI, KindIT, ICitizenIT, MutabilityI, VariabilityI, StructIT};
 use crate::instantiating::ast::names::{
     IdI, INameI,
     IFunctionNameI, IImplNameI, IInterfaceNameI, IStructNameI, ICitizenNameI,
@@ -38,8 +38,8 @@ import scala.collection.immutable._
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindExportI<'s, 'i> {
     pub range: RangeS<'s>,
-    pub tyype: KindIT<'s, 'i, cI>,
-    pub id: IdI<'s, 'i, cI>,
+    pub tyype: KindIT<'s, 'i>,
+    pub id: IdI<'s, 'i>,
     pub exported_name: StrI<'s>,
 }
 /*
@@ -70,8 +70,8 @@ override def hashCode(): Int = vcurious()
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionExportI<'s, 'i> where 's: 'i {
     pub range: RangeS<'s>,
-    pub prototype: &'i PrototypeI<'s, 'i, cI>,
-    pub export_id: IdI<'s, 'i, cI>,
+    pub prototype: &'i PrototypeI<'s, 'i>,
+    pub export_id: IdI<'s, 'i>,
     pub exported_name: StrI<'s>,
 }
 /*
@@ -109,7 +109,7 @@ override def hashCode(): Int = vcurious()
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionExternI<'s, 'i> where 's: 'i {
-    pub prototype: &'i PrototypeI<'s, 'i, cI>,
+    pub prototype: &'i PrototypeI<'s, 'i>,
     // How many of the function's trailing generic-arg slots were inherited from a parent
     // citizen template, per @PRIIROZ (0 = no inheritance / top-level extern). Hammer uses
     // this to reshape the wire-format SimpleId so container template args land on the
@@ -143,7 +143,7 @@ case class FunctionExternI(
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindExternI<'s, 'i> where 's: 'i {
-    pub r#struct: &'i StructIT<'s, 'i, cI>,
+    pub r#struct: &'i StructIT<'s, 'i>,
 }
 /*
 case class KindExternI(struct: StructIT[cI]) {
@@ -164,8 +164,8 @@ case class KindExternI(struct: StructIT[cI]) {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceEdgeBlueprintI<'s, 'i> where 's: 'i {
-    pub interface: IdI<'s, 'i, cI>,
-    pub super_family_root_headers: &'i [(&'i PrototypeI<'s, 'i, cI>, i32)],
+    pub interface: IdI<'s, 'i>,
+    pub super_family_root_headers: &'i [(&'i PrototypeI<'s, 'i>, i32)],
 }
 /*
 case class InterfaceEdgeBlueprintI(
@@ -189,12 +189,12 @@ override def equals(obj: Any): Boolean = vcurious(); }
 /// Temporary state
 #[derive(PartialEq, Eq, Debug)]
 pub struct EdgeI<'s, 'i> where 's: 'i {
-    pub edge_id: IdI<'s, 'i, cI>,
-    pub sub_citizen: ICitizenIT<'s, 'i, cI>,
-    pub super_interface: IdI<'s, 'i, cI>,
-    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
-    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
-    pub abstract_func_to_override_func: ArenaIndexMap<'i, IdI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>>,
+    pub edge_id: IdI<'s, 'i>,
+    pub sub_citizen: ICitizenIT<'s, 'i>,
+    pub super_interface: IdI<'s, 'i>,
+    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
+    pub abstract_func_to_override_func: ArenaIndexMap<'i, IdI<'s, 'i>, &'i PrototypeI<'s, 'i>>,
 }
 /*
 case class EdgeI(
@@ -239,9 +239,9 @@ case class EdgeI(
 #[derive(Debug)]
 pub struct FunctionDefinitionI<'s, 'i> where 's: 'i {
     pub header: FunctionHeaderI<'s, 'i>,
-    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
-    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, cI>>,
-    pub body: ReferenceExpressionIE<'s, 'i, cI>,
+    pub rune_to_func_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
+    pub rune_to_impl_bound: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
+    pub body: ReferenceExpressionIE<'s, 'i>,
 }
 /*
 case class FunctionDefinitionI(
@@ -330,10 +330,10 @@ case class AbstractI()
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ParameterI<'s, 'i> where 's: 'i {
-    pub name: IVarNameI<'s, 'i, cI>,
+    pub name: IVarNameI<'s, 'i>,
     pub virtuality: Option<AbstractI>,
     pub pre_checked: bool,
-    pub tyype: CoordI<'s, 'i, cI>,
+    pub tyype: CoordI<'s, 'i>,
 }
 /*
 case class ParameterI(
@@ -373,15 +373,15 @@ impl<'s, 'i> ParameterI<'s, 'i> {
 // mig: struct SignatureI
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct SignatureI<'s, 'i, R> {
-    pub id: IdI<'s, 'i, R>,
+pub struct SignatureI<'s, 'i> {
+    pub id: IdI<'s, 'i>,
     pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct SignatureIValI<'s, 'i, R> {
-    pub id: IdI<'s, 'i, R>,
+pub struct SignatureIValI<'s, 'i> {
+    pub id: IdI<'s, 'i>,
 }
 // mig: impl SignatureI
 /*
@@ -406,7 +406,7 @@ case class SignatureI[+R <: IRegionsModeI](id: IdI[R, IFunctionNameI[R]]) {
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 'i, R> SignatureI<'s, 'i, R> {
+impl<'s, 'i> SignatureI<'s, 'i> {
     pub fn param_types(&self) -> Vec<()> {
         panic!("Unimplemented: param_types")
     }
@@ -463,7 +463,7 @@ case object UserFunctionI extends IFunctionAttributeI // Whether it was written 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionI<'s, 'i> where 's: 'i {
-    pub name: IRegionNameI<'s, 'i, cI>,
+    pub name: IRegionNameI<'s, 'i>,
     pub mutable: bool,
 }
 /*
@@ -477,11 +477,11 @@ case class RegionI(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionHeaderI<'s, 'i> where 's: 'i {
     // This one little name field can illuminate much of how the compiler works, see UINIT.
-    pub id: IdI<'s, 'i, cI>,
+    pub id: IdI<'s, 'i>,
     pub attributes: &'i [IFunctionAttributeI<'s>],
 //  regions: Vector[cIegionI],
     pub params: &'i [ParameterI<'s, 'i>],
-    pub return_type: CoordI<'s, 'i, cI>,
+    pub return_type: CoordI<'s, 'i>,
 }
 /*
 case class FunctionHeaderI(
@@ -558,7 +558,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 //  def paramTypes: Vector[CoordI[cI]] = params.map(_.tyype)
 */
 // mig: fn get_abstract_interface
-    pub fn get_abstract_interface(&self) -> Option<&'i InterfaceIT<'s, 'i, cI>> {
+    pub fn get_abstract_interface(&self) -> Option<&'i InterfaceIT<'s, 'i>> {
         let abstract_interfaces: Vec<_> = self.params.iter().filter_map(|p| match (p.virtuality, p.tyype.kind) {
             (Some(AbstractI), KindIT::InterfaceIT(ir)) => Some(ir),
             _ => None,
@@ -597,7 +597,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 //  })
 */
 // mig: fn to_prototype
-    pub fn to_prototype(&self, interner: &InstantiatingInterner<'s, 'i>) -> PrototypeI<'s, 'i, cI> {
+    pub fn to_prototype(&self, interner: &InstantiatingInterner<'s, 'i>) -> PrototypeI<'s, 'i> {
         //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
         //    val paramTypes = params.map(_.tyype).map(substituter.substituteForCoord)
         //    val newLastStep = fullName.last.makeFunctionName(interner, keywords, templateArgs, paramTypes)
@@ -614,7 +614,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
   }
 */
 // mig: fn to_signature
-    pub fn to_signature(&self) -> SignatureI<'_, '_, ()> {
+    pub fn to_signature(&self) -> SignatureI<'_, '_> {
         panic!("Unimplemented: to_signature")
     }
 }
@@ -625,7 +625,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 */
 // mig: fn param_types
 impl<'s, 'i> FunctionHeaderI<'s, 'i> where 's: 'i {
-    pub fn param_types(&self) -> Vec<CoordI<'s, 'i, cI>> {
+    pub fn param_types(&self) -> Vec<CoordI<'s, 'i>> {
         IFunctionNameI::try_from(self.id.local_name).unwrap().parameters().to_vec()
     }
 }
@@ -654,17 +654,17 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 // mig: struct PrototypeI
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct PrototypeI<'s, 'i, R> {
-    pub id: IdI<'s, 'i, R>,
-    pub return_type: CoordI<'s, 'i, R>,
+pub struct PrototypeI<'s, 'i> {
+    pub id: IdI<'s, 'i>,
+    pub return_type: CoordI<'s, 'i>,
     pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct PrototypeIValI<'s, 'i, R> {
-    pub id: IdI<'s, 'i, R>,
-    pub return_type: CoordI<'s, 'i, R>,
+pub struct PrototypeIValI<'s, 'i> {
+    pub id: IdI<'s, 'i>,
+    pub return_type: CoordI<'s, 'i>,
 }
 // mig: impl PrototypeI
 /*
@@ -679,8 +679,8 @@ case class PrototypeI[+R <: IRegionsModeI](
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> where 's: 'i {
-    pub fn param_types(&self) -> Vec<CoordI<'s, 'i, R>> {
+impl<'s, 'i> PrototypeI<'s, 'i> where 's: 'i {
+    pub fn param_types(&self) -> Vec<CoordI<'s, 'i>> {
         IFunctionNameI::try_from(self.id.local_name).unwrap().parameters().to_vec()
     }
 }
@@ -688,8 +688,8 @@ impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> where 's: 'i {
   def paramTypes: Vector[CoordI[R]] = id.localName.parameters
 */
 // mig: fn to_signature
-impl<'s, 'i, R: Copy> PrototypeI<'s, 'i, R> {
-    pub fn to_signature(&self) -> SignatureIValI<'s, 'i, R> {
+impl<'s, 'i> PrototypeI<'s, 'i> {
+    pub fn to_signature(&self) -> SignatureIValI<'s, 'i> {
         SignatureIValI { id: self.id }
     }
 }
@@ -747,7 +747,7 @@ sealed trait ILocalVariableI extends IVariableI {
 // mig: impl ILocalVariableI
 // mig: fn name
 impl<'s, 'i> ILocalVariableI<'s, 'i> {
-    pub fn name(&self) -> IVarNameI<'s, 'i, cI> {
+    pub fn name(&self) -> IVarNameI<'s, 'i> {
         match self {
             ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.name,
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.name,
@@ -757,7 +757,7 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
   def name: IVarNameI[cI]
 */
 // mig: fn collapsed_coord
-    pub fn collapsed_coord(&self) -> CoordI<'s, 'i, cI> {
+    pub fn collapsed_coord(&self) -> CoordI<'s, 'i> {
         match self {
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.collapsed_coord,
             ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.collapsed_coord,
@@ -780,9 +780,9 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressibleLocalVariableI<'s, 'i> where 's: 'i {
-    pub name: IVarNameI<'s, 'i, cI>,
+    pub name: IVarNameI<'s, 'i>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'s, 'i, cI>,
+    pub collapsed_coord: CoordI<'s, 'i>,
 }
 /*
 // Why the difference between reference and addressible:
@@ -814,9 +814,9 @@ override def equals(obj: Any): Boolean = vcurious();
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceLocalVariableI<'s, 'i> where 's: 'i {
-    pub name: IVarNameI<'s, 'i, cI>,
+    pub name: IVarNameI<'s, 'i>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'s, 'i, cI>,
+    pub collapsed_coord: CoordI<'s, 'i>,
 }
 /*
 case class ReferenceLocalVariableI(
@@ -843,10 +843,10 @@ override def equals(obj: Any): Boolean = vcurious();
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressibleClosureVariableI<'s, 'i> where 's: 'i {
-    pub name: IVarNameI<'s, 'i, cI>,
-    pub closured_vars_struct_type: StructIT<'s, 'i, cI>,
+    pub name: IVarNameI<'s, 'i>,
+    pub closured_vars_struct_type: StructIT<'s, 'i>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'s, 'i, cI>,
+    pub collapsed_coord: CoordI<'s, 'i>,
 }
 /*
 case class AddressibleClosureVariableI(
@@ -863,10 +863,10 @@ case class AddressibleClosureVariableI(
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceClosureVariableI<'s, 'i> where 's: 'i {
-    pub name: IVarNameI<'s, 'i, cI>,
-    pub closured_vars_struct_type: StructIT<'s, 'i, cI>,
+    pub name: IVarNameI<'s, 'i>,
+    pub closured_vars_struct_type: StructIT<'s, 'i>,
     pub variability: VariabilityI,
-    pub collapsed_coord: CoordI<'s, 'i, cI>,
+    pub collapsed_coord: CoordI<'s, 'i>,
 }
 /*
 case class ReferenceClosureVariableI(

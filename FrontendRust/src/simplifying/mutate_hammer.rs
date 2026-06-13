@@ -8,7 +8,7 @@ use crate::instantiating::ast::ast::FunctionHeaderI;
 use crate::instantiating::ast::expressions::{ExpressionIE, MutateIE, ReferenceExpressionIE};
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::{cI, CoordI, VariabilityI};
+use crate::instantiating::ast::types::{CoordI, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::instructions::LocalStoreH;
@@ -58,7 +58,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        mutate2: &MutateIE<'s, 'i, cI>,
+        mutate2: &MutateIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let MutateIE { destination_expr: destination_expr2, source_expr: source_expr2, result: _ } = *mutate2;
@@ -139,9 +139,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        array_expr2: ReferenceExpressionIE<'s, 'i>,
+        index_expr2: ReferenceExpressionIE<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let (destination_result_line, destination_deferreds) =
             self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
@@ -158,7 +158,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             source_expression: source_expr_result_line,
             result_type,
         }));
-        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = destination_deferreds;
+        let mut deferreds: Vec<ExpressionIE<'s, 'i>> = destination_deferreds;
         deferreds.extend(index_deferreds);
         (store_node, deferreds)
     }
@@ -200,9 +200,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        array_expr2: ReferenceExpressionIE<'s, 'i>,
+        index_expr2: ReferenceExpressionIE<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
     }
@@ -244,9 +244,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        struct_expr2: ReferenceExpressionIE<'s, 'i>,
+        member_name: &'i IVarNameI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let (destination_result_line, destination_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
@@ -362,9 +362,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        struct_expr2: ReferenceExpressionIE<'s, 'i>,
+        member_name: &'i IVarNameI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let (destination_result_line, destination_deferreds) =
             self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
@@ -430,10 +430,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        reference: CoordI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         panic!("Unimplemented: translate_addressible_local_mutate");
     }
@@ -482,8 +482,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_result_line: ExpressionH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        var_id: &'i IVarNameI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let local = locals.get_by_var_name(var_id).expect("local not found");
         assert!(!locals.unstackified_vars.contains(&local.id));

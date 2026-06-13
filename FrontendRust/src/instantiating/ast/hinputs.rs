@@ -1,7 +1,7 @@
 // VISTODO: rename Hinputs everywhere
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::{cI, sI, StructIT};
+use crate::instantiating::ast::types::StructIT;
 use crate::instantiating::ast::names::IdI;
 use crate::instantiating::ast::names::{IStructTemplateNameI, IInterfaceTemplateNameI, IImplTemplateNameI, IFunctionTemplateNameI};
 use crate::instantiating::ast::ast::{
@@ -30,10 +30,10 @@ import scala.collection.mutable
 // mig: struct InstantiationBoundArgumentsI
 /// Temporary state (see @TFITCX)
 pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
-    pub rune_to_function_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>,
+    pub rune_to_function_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i>>,
     pub caller_rune_to_callee_rune_to_reachable_func:
-        ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i, sI>>>,
-    pub rune_to_impl_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i, sI>>,
+        ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i>>>,
+    pub rune_to_impl_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
 }
 
 // mig: impl InstantiationBoundArgumentsI
@@ -47,16 +47,16 @@ case class InstantiationBoundArgumentsI(
 // mig: struct HinputsI
 /// Temporary state (see @TFITCX) — top-level container for instantiated output.
 pub struct HinputsI<'s, 'i> where 's: 'i {
-    pub interfaces: &'i [InterfaceDefinitionI<'s, 'i, cI>],
-    pub structs: &'i [&'i StructDefinitionI<'s, 'i, cI>],
+    pub interfaces: &'i [InterfaceDefinitionI<'s, 'i>],
+    pub structs: &'i [&'i StructDefinitionI<'s, 'i>],
     pub functions: &'i [&'i FunctionDefinitionI<'s, 'i>],
     pub interface_to_edge_blueprints:
-        ArenaIndexMap<'i, IdI<'s, 'i, cI>, InterfaceEdgeBlueprintI<'s, 'i>>,
+        ArenaIndexMap<'i, IdI<'s, 'i>, InterfaceEdgeBlueprintI<'s, 'i>>,
     pub interface_to_sub_citizen_to_edge:
-        ArenaIndexMap<'i, IdI<'s, 'i, cI>, ArenaIndexMap<'i, IdI<'s, 'i, cI>, EdgeI<'s, 'i>>>,
+        ArenaIndexMap<'i, IdI<'s, 'i>, ArenaIndexMap<'i, IdI<'s, 'i>, EdgeI<'s, 'i>>>,
     pub kind_exports: &'i [KindExportI<'s, 'i>],
     pub function_exports: &'i [FunctionExportI<'s, 'i>],
-    pub kind_externs: ArenaIndexMap<'i, &'i StructIT<'s, 'i, cI>, KindExternI<'s, 'i>>,
+    pub kind_externs: ArenaIndexMap<'i, &'i StructIT<'s, 'i>, KindExternI<'s, 'i>>,
     pub function_externs: &'i [FunctionExternI<'s, 'i>],
 }
 /*
@@ -130,8 +130,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_struct
     pub fn lookup_struct(
         &self,
-        _struct_id: &IdI<'s, 'i, cI>,
-    ) -> &'i StructDefinitionI<'s, 'i, cI> {
+        _struct_id: &IdI<'s, 'i>,
+    ) -> &'i StructDefinitionI<'s, 'i> {
         self.structs.iter().find(|s| s.instantiated_citizen.id == *_struct_id).copied().expect("lookup_struct: not found")
     }
 /*
@@ -143,8 +143,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_interface
     pub fn lookup_interface(
         &self,
-        _interface_id: &IdI<'s, 'i, cI>,
-    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+        _interface_id: &IdI<'s, 'i>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i> {
         self.interfaces.iter().find(|i| i.instantiated_interface.id == *_interface_id).expect("lookup_interface: not found")
     }
 /*
@@ -156,8 +156,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_citizen
     pub fn lookup_citizen(
         &self,
-        _citizen_id: &IdI<'s, 'i, cI>,
-    ) -> ICitizenDefinitionI<'s, 'i, cI> {
+        _citizen_id: &IdI<'s, 'i>,
+    ) -> ICitizenDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_citizen")
     }
 /*
@@ -170,8 +170,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_struct_by_template
     pub fn lookup_struct_by_template(
         &self,
-        _struct_template_name: &IStructTemplateNameI<'s, 'i, cI>,
-    ) -> &'i StructDefinitionI<'s, 'i, cI> {
+        _struct_template_name: &IStructTemplateNameI<'s, 'i>,
+    ) -> &'i StructDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_struct_by_template")
     }
 /*
@@ -183,8 +183,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_interface_by_template
     pub fn lookup_interface_by_template(
         &self,
-        _interface_template_name: &IInterfaceTemplateNameI<'s, 'i, cI>,
-    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+        _interface_template_name: &IInterfaceTemplateNameI<'s, 'i>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_interface_by_template")
     }
 /*
@@ -196,7 +196,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_impl_by_template
     pub fn lookup_impl_by_template(
         &self,
-        _impl_template_name: &IImplTemplateNameI<'s, 'i, cI>,
+        _impl_template_name: &IImplTemplateNameI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl_by_template")
     }
@@ -209,7 +209,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_edge
     pub fn lookup_edge(
         &self,
-        _impl_id: &IdI<'s, 'i, cI>,
+        _impl_id: &IdI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_edge")
     }
@@ -257,7 +257,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_function
     pub fn lookup_function_by_template(
         &self,
-        _func_template_name: &IFunctionTemplateNameI<'s, 'i, cI>,
+        _func_template_name: &IFunctionTemplateNameI<'s, 'i>,
     ) -> Option<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: lookup_function_by_template")
     }
@@ -295,8 +295,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     pub fn lookup_struct_by_name(
         &self,
         human_name: &str,
-    ) -> &'i StructDefinitionI<'s, 'i, cI> {
-        let matches: Vec<&&'i StructDefinitionI<'s, 'i, cI>> = self.structs.iter().filter(|s| {
+    ) -> &'i StructDefinitionI<'s, 'i> {
+        let matches: Vec<&&'i StructDefinitionI<'s, 'i>> = self.structs.iter().filter(|s| {
             match s.instantiated_citizen.id.local_name {
                 INameI::StructName(StructNameI { template: IStructTemplateNameI::StructTemplate(t), .. }) if t.human_name.0 == human_name => true,
                 _ => false,
@@ -329,8 +329,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 // mig: fn lookup_impl
     pub fn lookup_impl(
         &self,
-        _sub_citizen_it: &IdI<'s, 'i, cI>,
-        _interface_it: &IdI<'s, 'i, cI>,
+        _sub_citizen_it: &IdI<'s, 'i>,
+        _interface_it: &IdI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl")
     }
@@ -349,7 +349,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     pub fn lookup_interface_by_name(
         &self,
         _human_name: &str,
-    ) -> &'i InterfaceDefinitionI<'s, 'i, cI> {
+    ) -> &'i InterfaceDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_interface_by_name")
     }
 /*

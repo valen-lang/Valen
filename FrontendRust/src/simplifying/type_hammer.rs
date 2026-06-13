@@ -9,8 +9,7 @@ use crate::instantiating::ast::types::OwnershipI;
 use crate::simplifying::conversions::evaluate_ownership;
 use crate::instantiating::ast::ast::PrototypeI;
 use crate::instantiating::ast::hinputs::HinputsI;
-use crate::instantiating::ast::templata::RegionTemplataI;
-use crate::instantiating::ast::types::{cI, CoordI, IntIT, KindIT, NeverIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
+use crate::instantiating::ast::types::{CoordI, IntIT, KindIT, NeverIT, RuntimeSizedArrayIT, StaticSizedArrayIT};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
 use crate::final_ast::types::BoolHT;
@@ -56,7 +55,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        tyype: KindIT<'s, 'i, cI>,
+        tyype: KindIT<'s, 'i>,
     ) -> KindHT<'s, 'h>
     {
         match tyype {
@@ -116,16 +115,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
   }
 */
 
-// mig: fn translate_region
-    pub fn translate_region(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        region: &RegionTemplataI<cI>,
-    ) -> RegionH
-    {
-        panic!("Unimplemented: translate_region");
-    }
 /*
   def translateRegion(
     hinputs: HinputsI,
@@ -141,7 +130,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        coord: CoordI<'s, 'i, cI>,
+        coord: CoordI<'s, 'i>,
     ) -> CoordH<'s, 'h>
     {
         let CoordI { ownership, kind: inner_type } = coord;
@@ -187,7 +176,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        references2: &[CoordI<'s, 'i, cI>],
+        references2: &[CoordI<'s, 'i>],
     ) -> Vec<CoordH<'s, 'h>>
     {
         references2.iter().map(|c| self.translate_coord(hinputs, hamuts, *c)).collect()
@@ -223,7 +212,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        ssa_it: StaticSizedArrayIT<'s, 'i, cI>,
+        ssa_it: StaticSizedArrayIT<'s, 'i>,
     ) -> &'h StaticSizedArrayHT<'s, 'h>
     {
         let ssa_it = self.instantiating_interner.intern_static_sized_array_it_ci(StaticSizedArrayITValI { name: ssa_it.name });
@@ -285,7 +274,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>,
+        rsa_it: &'i RuntimeSizedArrayIT<'s, 'i>,
     ) -> &'h RuntimeSizedArrayHT<'s, 'h>
     {
         match hamuts.runtime_sized_arrays().get(&rsa_it).copied() {
@@ -340,7 +329,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        prototype2: &'i PrototypeI<'s, 'i, cI>,
+        prototype2: &'i PrototypeI<'s, 'i>,
     ) -> &'h PrototypeH<'s, 'h>
     {
         let PrototypeI { id: full_name2, return_type: return_type2, _must_intern: _ } = prototype2;

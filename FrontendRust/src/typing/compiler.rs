@@ -930,7 +930,7 @@ where 's: 't,
         super_kind: KindT<'s, 't>,
     ) -> IsaTemplataT<'s, 't> {
         let tmpl = self.typing_interner.intern_impl_bound_template_name(
-            ImplBoundTemplateNameT { code_location_s: range.begin});
+            ImplBoundTemplateNameT { code_location: range.begin});
         let bound_name = self.typing_interner.intern_impl_bound_name(
             ImplBoundNameValT { template: tmpl, template_args: &[] });
         let id = *env.original_calling_env.denizen_id().add_step(

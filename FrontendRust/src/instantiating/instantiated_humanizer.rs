@@ -15,7 +15,7 @@ use crate::instantiating::ast::types::OwnershipI;
 use crate::instantiating::ast::types::VariabilityI;
 use std::marker::PhantomData;
 use std::mem::discriminant;
-
+use crate::typing::types::types::{IRegionT, RegionT};
 /*
 package dev.vale.instantiating
 
@@ -25,9 +25,9 @@ import dev.vale.instantiating.ast._
 object InstantiatedHumanizer {
 */
 // mig: fn humanize_templata
-pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_templata<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    templata: &ITemplataI<'s, 'i, R>,
+    templata: &ITemplataI<'s, 'i>,
 ) -> String {
     match templata {
         ITemplataI::RuntimeSizedArrayTemplate(_) => "Array".to_string(),
@@ -45,7 +45,8 @@ pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
         },
         ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
-        ITemplataI::Region(r) => r.pure_height.to_string(),
+        ITemplataI::Region(RegionT { region: IRegionT::Iso }) => "iso'".to_string(),
+        ITemplataI::Region(RegionT { region: IRegionT::Default }) => "default'".to_string(),
         _ => panic!("humanize_templata: unimplemented variant"),
     }
 }
@@ -101,9 +102,9 @@ pub fn humanize_templata<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_coord
-pub fn humanize_coord<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_coord<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    coord: &CoordI<'s, 'i, R>,
+    coord: &CoordI<'s, 'i>,
 ) -> String {
     let ownership_str = match coord.ownership {
         OwnershipI::Own => "",
@@ -137,9 +138,9 @@ pub fn humanize_coord<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_kind
-pub fn humanize_kind<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_kind<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    kind: &KindIT<'s, 'i, R>,
+    kind: &KindIT<'s, 'i>,
 ) -> String {
     match kind {
         KindIT::IntIT(b) => format!("i{}", b.bits),
@@ -174,10 +175,10 @@ pub fn humanize_kind<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_id
-pub fn humanize_id<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_id<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    name: &IdI<'s, 'i, R>,
-    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+    name: &IdI<'s, 'i>,
+    containing_region: Option<&ITemplataI<'s, 'i>>,
 ) -> String {
     let prefix = if !name.init_steps.is_empty() {
         name.init_steps.iter().map(|n| humanize_name(code_map, *n, None)).collect::<Vec<_>>().join(".") + "."
@@ -201,10 +202,10 @@ pub fn humanize_id<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_name
-pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_name<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    name: INameI<'s, 'i, R>,
-    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+    name: INameI<'s, 'i>,
+    containing_region: Option<&ITemplataI<'s, 'i>>,
 ) -> String {
     match name {
         INameI::FunctionNameIX(f) => {
@@ -243,19 +244,19 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
             let StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
             let RawArrayNameI { mutability, element_type, self_region: region } = arr;
             "[]<".to_string()
-                + &humanize_templata(code_map, &ITemplataI::<R>::Integer(IntegerTemplataI { value: size, _marker: PhantomData })) + ","
-                + &humanize_templata(code_map, &ITemplataI::<R>::Mutability(MutabilityTemplataI { mutability, _marker: PhantomData })) + ","
-                + &humanize_templata(code_map, &ITemplataI::<R>::Variability(VariabilityTemplataI { variability, _marker: PhantomData })) + ","
-                + &humanize_templata(code_map, &ITemplataI::<R>::Region(region)) + ">"
-                + &humanize_templata(code_map, &ITemplataI::<R>::Coord(element_type))
+                + &humanize_templata(code_map, &ITemplataI::Integer(IntegerTemplataI { value: size })) + ","
+                + &humanize_templata(code_map, &ITemplataI::Mutability(MutabilityTemplataI { mutability })) + ","
+                + &humanize_templata(code_map, &ITemplataI::Variability(VariabilityTemplataI { variability })) + ","
+                + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
+                + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
         }
         INameI::RuntimeSizedArray(n) => {
             let RuntimeSizedArrayNameI { template: _, arr } = *n;
             let RawArrayNameI { mutability, element_type, self_region: region } = arr;
             "[]<".to_string()
                 + (match mutability { MutabilityI::Immutable => "i", MutabilityI::Mutable => "m" }) + ","
-                + &humanize_templata(code_map, &ITemplataI::<R>::Region(region)) + ">"
-                + &humanize_templata(code_map, &ITemplataI::<R>::Coord(element_type))
+                + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
+                + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
         }
         INameI::Iterator(i) => "it:".to_string() + &code_map(i.range.begin),
         INameI::Iterable(i) => "ib:".to_string() + &code_map(i.range.begin),
@@ -363,10 +364,10 @@ pub fn humanize_name<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_generic_args
-pub fn humanize_generic_args<'s, 'i, R: Copy + PartialEq>(
+pub fn humanize_generic_args<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    template_args: &[ITemplataI<'s, 'i, R>],
-    containing_region: Option<&ITemplataI<'s, 'i, R>>,
+    template_args: &[ITemplataI<'s, 'i>],
+    containing_region: Option<&ITemplataI<'s, 'i>>,
 ) -> String {
     if !template_args.is_empty() {
         let (last, init) = template_args.split_last().unwrap();
@@ -405,9 +406,9 @@ pub fn humanize_generic_args<'s, 'i, R: Copy + PartialEq>(
   }
 */
 // mig: fn humanize_signature
-pub fn humanize_signature<'s, 'i, R>(
+pub fn humanize_signature<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
-    signature: &'i SignatureI<'s, 'i, R>,
+    signature: &'i SignatureI<'s, 'i>,
 ) -> String {
     panic!("Unimplemented: humanize_signature");
 }

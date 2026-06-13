@@ -15,7 +15,7 @@ use crate::simplifying::hammer::Hammer;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::{IdI, INameI};
 use crate::instantiating::ast::templata::ITemplataI;
-use crate::instantiating::ast::types::{cI, CoordI, KindIT};
+use crate::instantiating::ast::types::{CoordI, KindIT};
 use crate::final_ast::ast::IdHValH;
 use crate::instantiating::ast::names::IStructTemplateNameI;
 use crate::instantiating::ast::names::StructNameI;
@@ -56,7 +56,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
-        full_name2: &IdI<'s, 'i, cI>,
+        full_name2: &IdI<'s, 'i>,
     ) -> &'h IdH<'s>
     {
         let IdI { package_coord, init_steps: _, local_name: local_name_t } = full_name2;
@@ -188,7 +188,7 @@ pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObj
 */
 
 // mig: fn simplify_id (object NameHammer free function)
-pub fn simplify_id<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, id: &IdI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_id<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, id: &IdI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     let IdI { package_coord, init_steps, local_name } = id;
@@ -217,7 +217,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_name (object NameHammer free function)
-pub fn simplify_name<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, name: &INameI<'s, 'i, cI>) -> SimpleIdStep<'s, 'h>
+pub fn simplify_name<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, name: &INameI<'s, 'i>) -> SimpleIdStep<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match name {
@@ -258,7 +258,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_templata (object NameHammer free function)
-pub fn simplify_templata<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, templata: &ITemplataI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_templata<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, templata: &ITemplataI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match templata {
@@ -276,7 +276,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_kind (object NameHammer free function)
-pub fn simplify_kind<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &KindIT<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_kind<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &KindIT<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     match value {
@@ -302,7 +302,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn simplify_coord (object NameHammer free function)
-pub fn simplify_coord<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &CoordI<'s, 'i, cI>) -> SimpleId<'s, 'h>
+pub fn simplify_coord<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &CoordI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
     let CoordI { ownership, kind } = *value;

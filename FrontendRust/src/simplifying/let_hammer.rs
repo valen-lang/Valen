@@ -14,7 +14,7 @@ use crate::instantiating::ast::expressions::{
 };
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::{cI, CoordI, VariabilityI};
+use crate::instantiating::ast::types::{CoordI, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::ast::IdH;
@@ -72,7 +72,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        let2: &'i LetNormalIE<'s, 'i, cI>,
+        let2: &'i LetNormalIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let local_variable = let2.variable;
@@ -138,7 +138,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        let2: &'i RestackifyIE<'s, 'i, cI>,
+        let2: &'i RestackifyIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let local_variable = let2.variable;
@@ -204,7 +204,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
+        let_ie: &LetAndLendIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let LetAndLendIE { variable: local_variable, expr: source_expr2, target_ownership: _target_ownership, result: _ } = *let_ie;
@@ -262,9 +262,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
+        reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, reference, source_result_pointer_type_h);
@@ -330,9 +330,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
+        reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         panic!("Unimplemented: translate_addressible_restackify");
@@ -374,13 +374,13 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr2: ReferenceExpressionIE<'s, 'i>,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        let_ie: &LetAndLendIE<'s, 'i>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
-        reference: CoordI<'s, 'i, cI>,
+        reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         panic!("Unimplemented: translate_addressible_let_and_point");
@@ -425,7 +425,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
     ) -> &'h StackifyH<'s, 'h>
     {
@@ -478,7 +478,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         source_expr_he: ExpressionH<'s, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
     ) -> &'h RestackifyH<'s, 'h>
     {
         locals.mark_restackified_by_var_name(var_id);
@@ -527,11 +527,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        source_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        source_expr2: ReferenceExpressionIE<'s, 'i>,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
-        let_ie: &LetAndLendIE<'s, 'i, cI>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        let_ie: &LetAndLendIE<'s, 'i>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
     ) -> ExpressionH<'s, 'h>
     {
@@ -589,7 +589,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        unlet2: &UnletIE<'s, 'i, cI>,
+        unlet2: &UnletIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let var_name = unlet2.variable.name();
@@ -679,7 +679,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        des2: &'i DestroyStaticSizedArrayIntoLocalsIE<'s, 'i, cI>,
+        des2: &'i DestroyStaticSizedArrayIntoLocalsIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let DestroyStaticSizedArrayIntoLocalsIE { expr: source_expr2, static_sized_array: arr_seq_i, destination_reference_variables: destination_reference_local_variables } = *des2;
@@ -764,7 +764,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        des2: &DestroyIE<'s, 'i, cI>,
+        des2: &DestroyIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let DestroyIE { expr: source_expr2, struct_tt: struct_ti, destination_reference_variables: destination_reference_local_variables } = *des2;

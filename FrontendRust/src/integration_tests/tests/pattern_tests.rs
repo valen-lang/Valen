@@ -9,7 +9,6 @@ use crate::instantiating::ast::types::IntIT;
 use crate::instantiating::ast::types::KindIT;
 use crate::instantiating::ast::types::OwnershipI;
 use crate::instantiating::ast::types::StructIT;
-use crate::instantiating::ast::types::cI;
 use crate::integration_tests::tests::run_compilation::test;
 use crate::interner::StrI;
 use crate::keywords::Keywords;
@@ -235,7 +234,7 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
     {
         let monouts = compile.get_monouts();
         let tup_def = monouts.lookup_struct_by_name("Tup2");
-        let tup_def_member_types: Vec<CoordI<'_, '_, cI>> = tup_def.members.iter().filter_map(|m| match m.tyype {
+        let tup_def_member_types: Vec<CoordI<'_, '_>> = tup_def.members.iter().filter_map(|m| match m.tyype {
             IMemberTypeI::AddressMemberTypeI(t) => Some(t.reference),
             IMemberTypeI::ReferenceMemberTypeI(t) => Some(t.reference),
         }).collect();

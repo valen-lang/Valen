@@ -5,11 +5,7 @@ pub mod collector;
 pub mod instantiated_compilation;
 pub mod instantiating_arena;
 pub mod instantiating_interner;
-pub mod reintern;
 pub mod instantiated_humanizer;
-pub mod region_collapser_consistent;
-pub mod region_collapser_individual;
-pub mod region_counter;
 #[cfg(test)]
 pub mod tests;
 // instantiator.rs (4416-line translation engine, 70 methods): signatures

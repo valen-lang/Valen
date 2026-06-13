@@ -151,60 +151,12 @@ case object YonderI extends LocationI {
   override def toString: String = "heap"
 }
 */
-// mig: enum IRegionsModeI
-// Per architect Slab 16a: kept as pure compile-time phantom marker. The three
-// ZST variants below (sI/nI/cI) implement a private `Sealed` trait so only this
-// module can introduce new region modes — same closed-set guarantee as Scala's
-// `sealed trait IRegionsModeI`.
-mod region_mode_sealed {
-    pub trait Sealed {}
-}
-pub trait IRegionsModeIT: region_mode_sealed::Sealed {}
-
-#[allow(non_camel_case_types)]
-pub enum IRegionsModeI {
-  sI(sI),
-  nI(nI),
-  cI(cI),
-}
-// mig: impl IRegionsModeI
 /*
-sealed trait IRegionsModeI
-*/
-// mig: struct sI
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-#[allow(non_camel_case_types)]
-pub struct sI;
-impl region_mode_sealed::Sealed for sI {}
-impl IRegionsModeIT for sI {}
-// mig: impl sI
-/*
-// See CCFCTS, these need to have zero members. If we need to have members, we'll need to stop
-// casting from collapsed to subjective ASTs.
-class sI() extends IRegionsModeI
-*/
-// Region modes are covariant in Scala (`nI <: sI`); Rust erases that covariance (same rationale as
-// +T-erasure). Per CCFCTS the modes are inert zero-member tags, so `nI`/`cI` alias `sI` to make ASTs
-// across modes interchangeable (e.g. passing `PrototypeI<nI>` where `PrototypeI<sI>` is expected).
-// mig: struct nI
-#[allow(non_camel_case_types)]
-pub type nI = sI;
-// mig: impl nI
-/*
-class nI() extends sI // Stands for new. Serves as a starting point for a new instantiation.
-*/
-// mig: struct cI
-#[allow(non_camel_case_types)]
-pub type cI = sI;
-// mig: impl cI
-/*
-class cI() extends IRegionsModeI
-
 object CoordI {
 */
 // mig: fn void
-impl<'s, 'i, R> CoordI<'s, 'i, R> where 's: 'i {
-  pub fn void() -> CoordI<'s, 'i, R> { panic!("Unimplemented: void"); }
+impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
+  pub fn void() -> CoordI<'s, 'i> { panic!("Unimplemented: void"); }
 }
 /*
   def void[R <: IRegionsModeI]: CoordI[R] = CoordI[R](MutableShareI, VoidIT())
@@ -215,9 +167,9 @@ impl<'s, 'i, R> CoordI<'s, 'i, R> where 's: 'i {
 // mig: struct CoordI
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CoordI<'s, 'i, R> where 's: 'i {
+pub struct CoordI<'s, 'i> where 's: 'i {
   pub ownership: OwnershipI,
-  pub kind: KindIT<'s, 'i, R>,
+  pub kind: KindIT<'s, 'i>,
 }
 // mig: impl CoordI
 /*
@@ -257,17 +209,17 @@ case class CoordI[+R <: IRegionsModeI](
 // interned and held by `&'i` ref (see @WVSBIZ).
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum KindIT<'s, 'i, R> where 's: 'i {
-  NeverIT(NeverIT<R>),
-  VoidIT(VoidIT<R>),
-  IntIT(IntIT<R>),
-  BoolIT(BoolIT<R>),
-  StrIT(StrIT<R>),
-  FloatIT(FloatIT<R>),
-  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i, R>),
-  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i, R>),
-  StructIT(&'i StructIT<'s, 'i, R>),
-  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
+pub enum KindIT<'s, 'i> where 's: 'i {
+  NeverIT(NeverIT),
+  VoidIT(VoidIT),
+  IntIT(IntIT),
+  BoolIT(BoolIT),
+  StrIT(StrIT),
+  FloatIT(FloatIT),
+  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i>),
+  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i>),
+  StructIT(&'i StructIT<'s, 'i>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
 // mig: impl KindIT
 /*
@@ -277,13 +229,13 @@ sealed trait KindIT[+R <: IRegionsModeI] {
   // We can always get the mutability for a struct from the coutputs.
 */
 // mig: fn is_primitive
-impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
   pub fn is_primitive(&self) -> bool { panic!("Unimplemented: is_primitive"); }
 /*
   def isPrimitive: Boolean
 */
 // mig: fn expect_citizen
-  pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i, R> { panic!("Unimplemented: expect_citizen"); }
+  pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i> { panic!("Unimplemented: expect_citizen"); }
 /*
   def expectCitizen(): ICitizenIT[R] = {
     this match {
@@ -293,7 +245,7 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   }
 */
 // mig: fn expect_interface
-  pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i, R> {
+  pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i> {
     match self {
       KindIT::InterfaceIT(c) => c,
       _ => panic!("expect_interface: not an interface"),
@@ -308,7 +260,7 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
   }
 */
 // mig: fn expect_struct
-  pub fn expect_struct(&self) -> &'i StructIT<'s, 'i, R> { panic!("Unimplemented: expect_struct"); }
+  pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> { panic!("Unimplemented: expect_struct"); }
 }
 /*
   def expectStruct(): StructIT[R] = {
@@ -322,9 +274,8 @@ impl<'s, 'i, R> KindIT<'s, 'i, R> where 's: 'i {
 // mig: struct NeverIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct NeverIT<R> {
+pub struct NeverIT {
   pub from_break: bool,
-  pub _marker: PhantomData<R>,
 }
 // mig: impl NeverIT
 /*
@@ -342,8 +293,7 @@ case class NeverIT[+R <: IRegionsModeI](
 // mig: struct VoidIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct VoidIT<R> {
-  pub _marker: PhantomData<R>,
+pub struct VoidIT {
 }
 // mig: impl VoidIT
 /*
@@ -355,9 +305,8 @@ case class VoidIT[+R <: IRegionsModeI]() extends KindIT[R] {
 // mig: struct IntIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IntIT<R> {
+pub struct IntIT {
   pub bits: i32,
-  pub _marker: PhantomData<R>,
 }
 // mig: impl IntIT
 /*
@@ -368,8 +317,7 @@ case class IntIT[+R <: IRegionsModeI](bits: Int) extends KindIT[R] {
 // mig: struct BoolIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct BoolIT<R> {
-  pub _marker: PhantomData<R>,
+pub struct BoolIT {
 }
 // mig: impl BoolIT
 /*
@@ -380,8 +328,7 @@ case class BoolIT[+R <: IRegionsModeI]() extends KindIT[R] {
 // mig: struct StrIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StrIT<R> {
-  pub _marker: PhantomData<R>,
+pub struct StrIT {
 }
 // mig: impl StrIT
 /*
@@ -392,8 +339,7 @@ case class StrIT[+R <: IRegionsModeI]() extends KindIT[R] {
 // mig: struct FloatIT
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct FloatIT<R> {
-  pub _marker: PhantomData<R>,
+pub struct FloatIT {
 }
 // mig: impl FloatIT
 /*
@@ -404,7 +350,7 @@ case class FloatIT[+R <: IRegionsModeI]() extends KindIT[R] {
 object contentsStaticSizedArrayIT {
 */
 // mig: fn unapply (realized-by-TryFrom)
-// (Realized via `impl TryFrom<StaticSizedArrayIT<R>> for ...` or inline match.)
+// (Realized via `impl TryFrom<StaticSizedArrayIT> for ...` or inline match.)
 /*
   def unapply[R <: IRegionsModeI](ssa: StaticSizedArrayIT[R]):
   Option[(Long, MutabilityI, VariabilityI, CoordTemplataI[R], RegionTemplataI[R])] = {
@@ -418,25 +364,25 @@ object contentsStaticSizedArrayIT {
 // mig: struct StaticSizedArrayIT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayIT<'s, 'i, R> where 's: 'i {
-  pub name: IdI<'s, 'i, R>,
+pub struct StaticSizedArrayIT<'s, 'i> where 's: 'i {
+  pub name: IdI<'s, 'i>,
   pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StaticSizedArrayITValI<'s, 'i, R> where 's: 'i {
-  pub name: IdI<'s, 'i, R>,
+pub struct StaticSizedArrayITValI<'s, 'i> where 's: 'i {
+  pub name: IdI<'s, 'i>,
 }
 // mig: impl StaticSizedArrayIT
-impl<'s, 'i, R: Copy> StaticSizedArrayIT<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> StaticSizedArrayIT<'s, 'i> where 's: 'i {
   pub fn mutability(self) -> MutabilityI {
     match self.name.local_name {
       INameI::StaticSizedArray(n) => n.arr.mutability,
       _ => panic!("StaticSizedArrayIT::mutability: name.local_name is not StaticSizedArrayNameI"),
     }
   }
-  pub fn element_type(self) -> CoordTemplataI<'s, 'i, R> {
+  pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
     match self.name.local_name {
       INameI::StaticSizedArray(n) => n.arr.element_type,
       _ => panic!("StaticSizedArrayIT::element_type: name.local_name is not StaticSizedArrayNameI"),
@@ -470,7 +416,7 @@ case class StaticSizedArrayIT[+R <: IRegionsModeI](
 object contentsRuntimeSizedArrayIT {
 */
 // mig: fn unapply (realized-by-TryFrom)
-// (Realized via `impl TryFrom<RuntimeSizedArrayIT<R>> for ...` or inline match.)
+// (Realized via `impl TryFrom<RuntimeSizedArrayIT> for ...` or inline match.)
 /*
   def unapply[R <: IRegionsModeI](rsa: RuntimeSizedArrayIT[R]):
   Option[(MutabilityI, CoordTemplataI[R], RegionTemplataI[R])] = {
@@ -484,25 +430,25 @@ object contentsRuntimeSizedArrayIT {
 // mig: struct RuntimeSizedArrayIT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayIT<'s, 'i, R> where 's: 'i {
-  pub name: IdI<'s, 'i, R>,
+pub struct RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
+  pub name: IdI<'s, 'i>,
   pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct RuntimeSizedArrayITValI<'s, 'i, R> where 's: 'i {
-  pub name: IdI<'s, 'i, R>,
+pub struct RuntimeSizedArrayITValI<'s, 'i> where 's: 'i {
+  pub name: IdI<'s, 'i>,
 }
 // mig: impl RuntimeSizedArrayIT
-impl<'s, 'i, R: Copy> RuntimeSizedArrayIT<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
   pub fn mutability(self) -> MutabilityI {
     match self.name.local_name {
       INameI::RuntimeSizedArray(n) => n.arr.mutability,
       _ => panic!("RuntimeSizedArrayIT::mutability: name.local_name is not RuntimeSizedArrayNameI"),
     }
   }
-  pub fn element_type(self) -> CoordTemplataI<'s, 'i, R> {
+  pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
     match self.name.local_name {
       INameI::RuntimeSizedArray(n) => n.arr.element_type,
       _ => panic!("RuntimeSizedArrayIT::element_type: name.local_name is not RuntimeSizedArrayNameI"),
@@ -526,7 +472,7 @@ case class RuntimeSizedArrayIT[+R <: IRegionsModeI](
 object ICitizenIT {
 */
 // mig: fn unapply (realized-by-TryFrom)
-// (Realized via `impl TryFrom<ICitizenIT<R>> for ...` or inline match.)
+// (Realized via `impl TryFrom<ICitizenIT> for ...` or inline match.)
 /*
   def unapply[R <: IRegionsModeI](self: ICitizenIT[R]): Option[IdI[R, ICitizenNameI[R]]] = {
     Some(self.id)
@@ -538,9 +484,9 @@ object ICitizenIT {
 // mig: enum ISubKindIT
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum ISubKindIT<'s, 'i, R> where 's: 'i {
-  StructIT(&'i StructIT<'s, 'i, R>),
-  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
+pub enum ISubKindIT<'s, 'i> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
 // mig: impl ISubKindIT
 /*
@@ -552,14 +498,14 @@ sealed trait ISubKindIT[+R <: IRegionsModeI] extends KindIT[R] {
 // mig: enum ICitizenIT
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum ICitizenIT<'s, 'i, R> where 's: 'i {
-  StructIT(&'i StructIT<'s, 'i, R>),
-  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
+pub enum ICitizenIT<'s, 'i> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
 // mig: impl ICitizenIT
 // mig: fn id (Scala `def id: IdI[R, ICitizenNameI[R]]` on trait)
-impl<'s, 'i, R: Copy> ICitizenIT<'s, 'i, R> where 's: 'i {
-    pub fn id(&self) -> IdI<'s, 'i, R> {
+impl<'s, 'i> ICitizenIT<'s, 'i> where 's: 'i {
+    pub fn id(&self) -> IdI<'s, 'i> {
         match self {
             ICitizenIT::StructIT(s) => s.id,
             ICitizenIT::InterfaceIT(i) => i.id,
@@ -574,15 +520,15 @@ sealed trait ICitizenIT[+R <: IRegionsModeI] extends ISubKindIT[R] {
 // mig: struct StructIT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructIT<'s, 'i, R> where 's: 'i {
-  pub id: IdI<'s, 'i, R>,
+pub struct StructIT<'s, 'i> where 's: 'i {
+  pub id: IdI<'s, 'i>,
   pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructITValI<'s, 'i, R> where 's: 'i {
-  pub id: IdI<'s, 'i, R>,
+pub struct StructITValI<'s, 'i> where 's: 'i {
+  pub id: IdI<'s, 'i>,
 }
 // mig: impl StructIT
 /*
@@ -598,15 +544,15 @@ case class StructIT[+R <: IRegionsModeI](id: IdI[R, IStructNameI[R]]) extends IC
 // mig: struct InterfaceIT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceIT<'s, 'i, R> where 's: 'i {
-  pub id: IdI<'s, 'i, R>,
+pub struct InterfaceIT<'s, 'i> where 's: 'i {
+  pub id: IdI<'s, 'i>,
   pub _must_intern: MustIntern,
 }
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct InterfaceITValI<'s, 'i, R> where 's: 'i {
-  pub id: IdI<'s, 'i, R>,
+pub struct InterfaceITValI<'s, 'i> where 's: 'i {
+  pub id: IdI<'s, 'i>,
 }
 // mig: impl InterfaceIT
 /*
@@ -625,18 +571,18 @@ case class InterfaceIT[+R <: IRegionsModeI](id: IdI[R, IInterfaceNameI[R]]) exte
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedKindPayloadValI<'s, 'i, R> where 's: 'i {
-  StructIT(StructITValI<'s, 'i, R>),
-  InterfaceIT(InterfaceITValI<'s, 'i, R>),
-  StaticSizedArrayIT(StaticSizedArrayITValI<'s, 'i, R>),
-  RuntimeSizedArrayIT(RuntimeSizedArrayITValI<'s, 'i, R>),
+pub enum InternedKindPayloadValI<'s, 'i> where 's: 'i {
+  StructIT(StructITValI<'s, 'i>),
+  InterfaceIT(InterfaceITValI<'s, 'i>),
+  StaticSizedArrayIT(StaticSizedArrayITValI<'s, 'i>),
+  RuntimeSizedArrayIT(RuntimeSizedArrayITValI<'s, 'i>),
 }
 
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedKindPayloadI<'s, 'i, R> where 's: 'i {
-  StructIT(&'i StructIT<'s, 'i, R>),
-  InterfaceIT(&'i InterfaceIT<'s, 'i, R>),
-  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i, R>),
-  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i, R>),
+pub enum InternedKindPayloadI<'s, 'i> where 's: 'i {
+  StructIT(&'i StructIT<'s, 'i>),
+  InterfaceIT(&'i InterfaceIT<'s, 'i>),
+  StaticSizedArrayIT(&'i StaticSizedArrayIT<'s, 'i>),
+  RuntimeSizedArrayIT(&'i RuntimeSizedArrayIT<'s, 'i>),
 }

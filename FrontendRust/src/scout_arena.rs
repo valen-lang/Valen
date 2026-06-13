@@ -17,10 +17,10 @@ use crate::postparsing::names::{
   AnonymousSubstructTemplateImpreciseNameS,
   AnonymousSubstructConstructorTemplateImpreciseNameS, ImplImpreciseNameS,
   ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS,
-  ImplicitRuneValS, PureBlockRegionRuneValS, CallRegionRuneValS,
+  ImplicitRuneValS, CallRegionRuneValS,
   CallPureMergeRegionRuneValS, LetImplicitRuneValS, MagicParamRuneValS,
   LocalDefaultRegionRuneValS,
-  ImplicitRuneS, PureBlockRegionRuneS, CallRegionRuneS,
+  ImplicitRuneS, CallRegionRuneS,
   CallPureMergeRegionRuneS, LetImplicitRuneS, MagicParamRuneS,
   LocalDefaultRegionRuneS,
 };
@@ -359,11 +359,6 @@ impl<'s> ScoutArena<'s> {
         let lid = v.lid().promote_in(self.bump);
         let canonical = IRuneS::ImplicitRune(self.bump.alloc(ImplicitRuneS { lid }));
         (IRuneValS::ImplicitRune(ImplicitRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
-      }
-      PureBlockRegionRune(v) => {
-        let lid = v.lid().promote_in(self.bump);
-        let canonical = IRuneS::PureBlockRegionRune(self.bump.alloc(PureBlockRegionRuneS { lid }));
-        (IRuneValS::PureBlockRegionRune(PureBlockRegionRuneValS::new(LocationInDenizenVal::from_canonical(&lid))), canonical)
       }
       CallRegionRune(v) => {
         let lid = v.lid().promote_in(self.bump);

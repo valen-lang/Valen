@@ -883,7 +883,6 @@ pub enum IRuneS<'s> {
   ImplDropCoordRune(&'s ImplDropCoordRuneS),
   ImplDropVoidRune(&'s ImplDropVoidRuneS),
   ImplicitRune(&'s ImplicitRuneS<'s>),
-  PureBlockRegionRune(&'s PureBlockRegionRuneS<'s>),
   CallRegionRune(&'s CallRegionRuneS<'s>),
   CallPureMergeRegionRune(&'s CallPureMergeRegionRuneS<'s>),
   ImplicitRegionRune(&'s ImplicitRegionRuneS<'s>),
@@ -957,7 +956,6 @@ impl<'s> IRuneS<'s> {
       IRuneS::ImplDropCoordRune(r) => *r as *const _ as *const (),
       IRuneS::ImplDropVoidRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitRune(r) => *r as *const _ as *const (),
-      IRuneS::PureBlockRegionRune(r) => *r as *const _ as *const (),
       IRuneS::CallRegionRune(r) => *r as *const _ as *const (),
       IRuneS::CallPureMergeRegionRune(r) => *r as *const _ as *const (),
       IRuneS::ImplicitRegionRune(r) => *r as *const _ as *const (),
@@ -1109,10 +1107,6 @@ pub struct ImplicitRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> ImplicitRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PureBlockRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
-impl<'tmp> PureBlockRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> CallRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
@@ -1141,7 +1135,6 @@ pub enum IRuneValS<'s, 'tmp> {
   ImplDropCoordRune(ImplDropCoordRuneS),
   ImplDropVoidRune(ImplDropVoidRuneS),
   ImplicitRune(ImplicitRuneValS<'tmp>),
-  PureBlockRegionRune(PureBlockRegionRuneValS<'tmp>),
   CallRegionRune(CallRegionRuneValS<'tmp>),
   CallPureMergeRegionRune(CallPureMergeRegionRuneValS<'tmp>),
   ImplicitRegionRune(ImplicitRegionRuneValS<'s>),
@@ -1229,7 +1222,6 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
     match (self.0, key) {
       // 7 lid variants: compare path contents
       (ImplicitRune(a), ImplicitRune(b)) => a.lid().path() == b.lid().path(),
-      (PureBlockRegionRune(a), PureBlockRegionRune(b)) => a.lid().path() == b.lid().path(),
       (CallRegionRune(a), CallRegionRune(b)) => a.lid().path() == b.lid().path(),
       (CallPureMergeRegionRune(a), CallPureMergeRegionRune(b)) => a.lid().path() == b.lid().path(),
       (LetImplicitRune(a), LetImplicitRune(b)) => a.lid().path() == b.lid().path(),
@@ -1346,13 +1338,6 @@ case class ImplicitRuneS(lid: LocationInDenizen) extends IRuneS {
     case _ =>
   }
 }
-*/
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PureBlockRegionRuneS<'s> {
-  pub lid: LocationInDenizen<'s>,
-}
-/*
-case class PureBlockRegionRuneS(lid: LocationInDenizen) extends IRuneS
 */
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallRegionRuneS<'s> {

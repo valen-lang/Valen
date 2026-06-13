@@ -130,6 +130,8 @@ JR (the junior migration agent) does **not** write, review, or apply transform s
 
 `safe-script-runner` mechanically enforces full-diff review: `review` always emits the entire diff and stderr, BESWX denies any pipe/filter/redirect/chain on the command, and the marker hash binds review to apply (drift refuses with a re-review prompt). The architect should still actually look at the diff — the tool guarantees evidence exists in the transcript, not that the human reads it.
 
+**After every `review`, before `apply`, emit a line beginning literally `Issues I see in the diff:` followed by every issue you find (or "none"). Required even when the diff looks routine — that's when script bugs slip through. If the list is non-empty, fix the script and re-review.**
+
 ### Raw `python3 ./tmp/scripts/*.py` for bulk-edit is retired
 
 Bulk-edit transforms — `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN>` — are no longer auto-allowed by VRBX. The only canonical bulk-edit path is `safe-script-runner`. If you invoke the raw form against `./tmp/working/`, Claude Code falls through to the normal Bash confirmation dialog (no auto-allow); using `safe-script-runner` is the friction-free path.

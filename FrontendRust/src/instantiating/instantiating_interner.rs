@@ -28,7 +28,6 @@ pub struct MustIntern(());
 
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::instantiating::ast::types::{
-    cI, nI, sI,
     InterfaceIT, InterfaceITValI,
     InternedKindPayloadI, InternedKindPayloadValI,
     RuntimeSizedArrayIT, RuntimeSizedArrayITValI,
@@ -59,18 +58,18 @@ where 's: 'i,
     // 12 intern families: 4 logical types × 3 region modes (sI / nI / cI).
     // R stays phantom; the 3 maps per logical type stay distinct at the type
     // level because each is parameterized on a different ZST region marker.
-    kind_payload_val_to_ref_si: StdHashMap<InternedKindPayloadValI<'s, 'i, sI>, InternedKindPayloadI<'s, 'i, sI>>,
-    kind_payload_val_to_ref_ni: StdHashMap<InternedKindPayloadValI<'s, 'i, nI>, InternedKindPayloadI<'s, 'i, nI>>,
-    kind_payload_val_to_ref_ci: StdHashMap<InternedKindPayloadValI<'s, 'i, cI>, InternedKindPayloadI<'s, 'i, cI>>,
-    prototype_val_to_ref_si: StdHashMap<PrototypeIValI<'s, 'i, sI>, &'i PrototypeI<'s, 'i, sI>>,
-    prototype_val_to_ref_ni: StdHashMap<PrototypeIValI<'s, 'i, nI>, &'i PrototypeI<'s, 'i, nI>>,
-    prototype_val_to_ref_ci: StdHashMap<PrototypeIValI<'s, 'i, cI>, &'i PrototypeI<'s, 'i, cI>>,
-    signature_val_to_ref_si: StdHashMap<SignatureIValI<'s, 'i, sI>, &'i SignatureI<'s, 'i, sI>>,
-    signature_val_to_ref_ni: StdHashMap<SignatureIValI<'s, 'i, nI>, &'i SignatureI<'s, 'i, nI>>,
-    signature_val_to_ref_ci: StdHashMap<SignatureIValI<'s, 'i, cI>, &'i SignatureI<'s, 'i, cI>>,
-    name_val_to_ref_si: StdHashMap<INameValI<'s, 'i, sI>, INameI<'s, 'i, sI>>,
-    name_val_to_ref_ni: StdHashMap<INameValI<'s, 'i, nI>, INameI<'s, 'i, nI>>,
-    name_val_to_ref_ci: StdHashMap<INameValI<'s, 'i, cI>, INameI<'s, 'i, cI>>,
+    kind_payload_val_to_ref_si: StdHashMap<InternedKindPayloadValI<'s, 'i>, InternedKindPayloadI<'s, 'i>>,
+    kind_payload_val_to_ref_ni: StdHashMap<InternedKindPayloadValI<'s, 'i>, InternedKindPayloadI<'s, 'i>>,
+    kind_payload_val_to_ref_ci: StdHashMap<InternedKindPayloadValI<'s, 'i>, InternedKindPayloadI<'s, 'i>>,
+    prototype_val_to_ref_si: StdHashMap<PrototypeIValI<'s, 'i>, &'i PrototypeI<'s, 'i>>,
+    prototype_val_to_ref_ni: StdHashMap<PrototypeIValI<'s, 'i>, &'i PrototypeI<'s, 'i>>,
+    prototype_val_to_ref_ci: StdHashMap<PrototypeIValI<'s, 'i>, &'i PrototypeI<'s, 'i>>,
+    signature_val_to_ref_si: StdHashMap<SignatureIValI<'s, 'i>, &'i SignatureI<'s, 'i>>,
+    signature_val_to_ref_ni: StdHashMap<SignatureIValI<'s, 'i>, &'i SignatureI<'s, 'i>>,
+    signature_val_to_ref_ci: StdHashMap<SignatureIValI<'s, 'i>, &'i SignatureI<'s, 'i>>,
+    name_val_to_ref_si: StdHashMap<INameValI<'s, 'i>, INameI<'s, 'i>>,
+    name_val_to_ref_ni: StdHashMap<INameValI<'s, 'i>, INameI<'s, 'i>>,
+    name_val_to_ref_ci: StdHashMap<INameValI<'s, 'i>, INameI<'s, 'i>>,
 }
 
 // --- Per-concrete wrapper macros (generate per-region-mode trios) ---------
@@ -81,19 +80,19 @@ where 's: 'i,
 macro_rules! impl_intern_name_wrappers {
     ($method:ident, $variant:ident, $payload_ty:ident) => {
         ::paste::paste! {
-            pub fn [<$method _si>](&self, val: $payload_ty<'s, 'i, sI>) -> &'i $payload_ty<'s, 'i, sI> {
+            pub fn [<$method _si>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_si(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ni>](&self, val: $payload_ty<'s, 'i, nI>) -> &'i $payload_ty<'s, 'i, nI> {
+            pub fn [<$method _ni>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_ni(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ci>](&self, val: $payload_ty<'s, 'i, cI>) -> &'i $payload_ty<'s, 'i, cI> {
+            pub fn [<$method _ci>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_ci(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
@@ -108,19 +107,19 @@ macro_rules! impl_intern_name_wrappers {
 macro_rules! impl_intern_name_wrappers_5lt {
     ($method:ident, $variant:ident, $payload_ty:ident) => {
         ::paste::paste! {
-            pub fn [<$method _si>](&self, val: $payload_ty<'s, 'i, sI>) -> &'i $payload_ty<'s, 'i, sI> {
+            pub fn [<$method _si>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_si(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ni>](&self, val: $payload_ty<'s, 'i, nI>) -> &'i $payload_ty<'s, 'i, nI> {
+            pub fn [<$method _ni>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_ni(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ci>](&self, val: $payload_ty<'s, 'i, cI>) -> &'i $payload_ty<'s, 'i, cI> {
+            pub fn [<$method _ci>](&self, val: $payload_ty<'s, 'i>) -> &'i $payload_ty<'s, 'i> {
                 match self.intern_name_ci(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
@@ -132,26 +131,26 @@ macro_rules! impl_intern_name_wrappers_5lt {
 
 // Arity-trimmed variants of impl_intern_name_wrappers, introduced when the
 // phantom-lifetime removal sweep changed the I-type struct arities. The 3lt
-// macro above still applies to I-types that kept <'s, 'i, R> (none currently,
+// macro above still applies to I-types that kept <'s, 'i> (none currently,
 // but kept for symmetry / future use). The three macros below cover the
-// post-sweep arities: <'s, R>, <'i, R>, and <R>-only.
+// post-sweep arities: <'s>, <'i>, and -only.
 
 macro_rules! impl_intern_name_wrappers_with_s {
     ($method:ident, $variant:ident, $payload_ty:ident) => {
         ::paste::paste! {
-            pub fn [<$method _si>](&self, val: $payload_ty<'s, sI>) -> &'i $payload_ty<'s, sI> {
+            pub fn [<$method _si>](&self, val: $payload_ty<'s>) -> &'i $payload_ty<'s> {
                 match self.intern_name_si(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ni>](&self, val: $payload_ty<'s, nI>) -> &'i $payload_ty<'s, nI> {
+            pub fn [<$method _ni>](&self, val: $payload_ty<'s>) -> &'i $payload_ty<'s> {
                 match self.intern_name_ni(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ci>](&self, val: $payload_ty<'s, cI>) -> &'i $payload_ty<'s, cI> {
+            pub fn [<$method _ci>](&self, val: $payload_ty<'s>) -> &'i $payload_ty<'s> {
                 match self.intern_name_ci(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
@@ -164,19 +163,19 @@ macro_rules! impl_intern_name_wrappers_with_s {
 macro_rules! impl_intern_name_wrappers_with_i {
     ($method:ident, $variant:ident, $payload_ty:ident) => {
         ::paste::paste! {
-            pub fn [<$method _si>](&self, val: $payload_ty<'i, sI>) -> &'i $payload_ty<'i, sI> {
+            pub fn [<$method _si>](&self, val: $payload_ty<'i>) -> &'i $payload_ty<'i> {
                 match self.intern_name_si(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ni>](&self, val: $payload_ty<'i, nI>) -> &'i $payload_ty<'i, nI> {
+            pub fn [<$method _ni>](&self, val: $payload_ty<'i>) -> &'i $payload_ty<'i> {
                 match self.intern_name_ni(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ci>](&self, val: $payload_ty<'i, cI>) -> &'i $payload_ty<'i, cI> {
+            pub fn [<$method _ci>](&self, val: $payload_ty<'i>) -> &'i $payload_ty<'i> {
                 match self.intern_name_ci(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
@@ -189,19 +188,19 @@ macro_rules! impl_intern_name_wrappers_with_i {
 macro_rules! impl_intern_name_wrappers_r_only {
     ($method:ident, $variant:ident, $payload_ty:ident) => {
         ::paste::paste! {
-            pub fn [<$method _si>](&self, val: $payload_ty<sI>) -> &'i $payload_ty<sI> {
+            pub fn [<$method _si>](&self, val: $payload_ty) -> &'i $payload_ty {
                 match self.intern_name_si(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ni>](&self, val: $payload_ty<nI>) -> &'i $payload_ty<nI> {
+            pub fn [<$method _ni>](&self, val: $payload_ty) -> &'i $payload_ty {
                 match self.intern_name_ni(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
                 }
             }
-            pub fn [<$method _ci>](&self, val: $payload_ty<cI>) -> &'i $payload_ty<cI> {
+            pub fn [<$method _ci>](&self, val: $payload_ty) -> &'i $payload_ty {
                 match self.intern_name_ci(INameValI::$variant(val)) {
                     INameI::$variant(r) => r,
                     _ => unreachable!(),
@@ -346,8 +345,8 @@ where 's: 'i,
 
     pub fn intern_kind_payload_si(
         &self,
-        val: InternedKindPayloadValI<'s, 'i, sI>,
-    ) -> InternedKindPayloadI<'s, 'i, sI> {
+        val: InternedKindPayloadValI<'s, 'i>,
+    ) -> InternedKindPayloadI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.kind_payload_val_to_ref_si.get(&val) {
@@ -379,25 +378,25 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_struct_it_si(&self, val: StructITValI<'s, 'i, sI>) -> &'i StructIT<'s, 'i, sI> {
+    pub fn intern_struct_it_si(&self, val: StructITValI<'s, 'i>) -> &'i StructIT<'s, 'i> {
         match self.intern_kind_payload_si(InternedKindPayloadValI::StructIT(val)) {
             InternedKindPayloadI::StructIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_interface_it_si(&self, val: InterfaceITValI<'s, 'i, sI>) -> &'i InterfaceIT<'s, 'i, sI> {
+    pub fn intern_interface_it_si(&self, val: InterfaceITValI<'s, 'i>) -> &'i InterfaceIT<'s, 'i> {
         match self.intern_kind_payload_si(InternedKindPayloadValI::InterfaceIT(val)) {
             InternedKindPayloadI::InterfaceIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_static_sized_array_it_si(&self, val: StaticSizedArrayITValI<'s, 'i, sI>) -> &'i StaticSizedArrayIT<'s, 'i, sI> {
+    pub fn intern_static_sized_array_it_si(&self, val: StaticSizedArrayITValI<'s, 'i>) -> &'i StaticSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_si(InternedKindPayloadValI::StaticSizedArrayIT(val)) {
             InternedKindPayloadI::StaticSizedArrayIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_runtime_sized_array_it_si(&self, val: RuntimeSizedArrayITValI<'s, 'i, sI>) -> &'i RuntimeSizedArrayIT<'s, 'i, sI> {
+    pub fn intern_runtime_sized_array_it_si(&self, val: RuntimeSizedArrayITValI<'s, 'i>) -> &'i RuntimeSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_si(InternedKindPayloadValI::RuntimeSizedArrayIT(val)) {
             InternedKindPayloadI::RuntimeSizedArrayIT(r) => r,
             _ => unreachable!(),
@@ -410,8 +409,8 @@ where 's: 'i,
 
     pub fn intern_kind_payload_ni(
         &self,
-        val: InternedKindPayloadValI<'s, 'i, nI>,
-    ) -> InternedKindPayloadI<'s, 'i, nI> {
+        val: InternedKindPayloadValI<'s, 'i>,
+    ) -> InternedKindPayloadI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.kind_payload_val_to_ref_ni.get(&val) {
@@ -443,25 +442,25 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_struct_it_ni(&self, val: StructITValI<'s, 'i, nI>) -> &'i StructIT<'s, 'i, nI> {
+    pub fn intern_struct_it_ni(&self, val: StructITValI<'s, 'i>) -> &'i StructIT<'s, 'i> {
         match self.intern_kind_payload_ni(InternedKindPayloadValI::StructIT(val)) {
             InternedKindPayloadI::StructIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_interface_it_ni(&self, val: InterfaceITValI<'s, 'i, nI>) -> &'i InterfaceIT<'s, 'i, nI> {
+    pub fn intern_interface_it_ni(&self, val: InterfaceITValI<'s, 'i>) -> &'i InterfaceIT<'s, 'i> {
         match self.intern_kind_payload_ni(InternedKindPayloadValI::InterfaceIT(val)) {
             InternedKindPayloadI::InterfaceIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_static_sized_array_it_ni(&self, val: StaticSizedArrayITValI<'s, 'i, nI>) -> &'i StaticSizedArrayIT<'s, 'i, nI> {
+    pub fn intern_static_sized_array_it_ni(&self, val: StaticSizedArrayITValI<'s, 'i>) -> &'i StaticSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_ni(InternedKindPayloadValI::StaticSizedArrayIT(val)) {
             InternedKindPayloadI::StaticSizedArrayIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_runtime_sized_array_it_ni(&self, val: RuntimeSizedArrayITValI<'s, 'i, nI>) -> &'i RuntimeSizedArrayIT<'s, 'i, nI> {
+    pub fn intern_runtime_sized_array_it_ni(&self, val: RuntimeSizedArrayITValI<'s, 'i>) -> &'i RuntimeSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_ni(InternedKindPayloadValI::RuntimeSizedArrayIT(val)) {
             InternedKindPayloadI::RuntimeSizedArrayIT(r) => r,
             _ => unreachable!(),
@@ -474,8 +473,8 @@ where 's: 'i,
 
     pub fn intern_kind_payload_ci(
         &self,
-        val: InternedKindPayloadValI<'s, 'i, cI>,
-    ) -> InternedKindPayloadI<'s, 'i, cI> {
+        val: InternedKindPayloadValI<'s, 'i>,
+    ) -> InternedKindPayloadI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.kind_payload_val_to_ref_ci.get(&val) {
@@ -507,25 +506,25 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_struct_it_ci(&self, val: StructITValI<'s, 'i, cI>) -> &'i StructIT<'s, 'i, cI> {
+    pub fn intern_struct_it_ci(&self, val: StructITValI<'s, 'i>) -> &'i StructIT<'s, 'i> {
         match self.intern_kind_payload_ci(InternedKindPayloadValI::StructIT(val)) {
             InternedKindPayloadI::StructIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_interface_it_ci(&self, val: InterfaceITValI<'s, 'i, cI>) -> &'i InterfaceIT<'s, 'i, cI> {
+    pub fn intern_interface_it_ci(&self, val: InterfaceITValI<'s, 'i>) -> &'i InterfaceIT<'s, 'i> {
         match self.intern_kind_payload_ci(InternedKindPayloadValI::InterfaceIT(val)) {
             InternedKindPayloadI::InterfaceIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_static_sized_array_it_ci(&self, val: StaticSizedArrayITValI<'s, 'i, cI>) -> &'i StaticSizedArrayIT<'s, 'i, cI> {
+    pub fn intern_static_sized_array_it_ci(&self, val: StaticSizedArrayITValI<'s, 'i>) -> &'i StaticSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_ci(InternedKindPayloadValI::StaticSizedArrayIT(val)) {
             InternedKindPayloadI::StaticSizedArrayIT(r) => r,
             _ => unreachable!(),
         }
     }
-    pub fn intern_runtime_sized_array_it_ci(&self, val: RuntimeSizedArrayITValI<'s, 'i, cI>) -> &'i RuntimeSizedArrayIT<'s, 'i, cI> {
+    pub fn intern_runtime_sized_array_it_ci(&self, val: RuntimeSizedArrayITValI<'s, 'i>) -> &'i RuntimeSizedArrayIT<'s, 'i> {
         match self.intern_kind_payload_ci(InternedKindPayloadValI::RuntimeSizedArrayIT(val)) {
             InternedKindPayloadI::RuntimeSizedArrayIT(r) => r,
             _ => unreachable!(),
@@ -536,14 +535,14 @@ where 's: 'i,
     // Prototype interning — 3 region-mode families
     // =========================================================================
 
-    pub fn intern_prototype_si(&self, val: PrototypeIValI<'s, 'i, sI>) -> &'i PrototypeI<'s, 'i, sI> {
+    pub fn intern_prototype_si(&self, val: PrototypeIValI<'s, 'i>) -> &'i PrototypeI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.prototype_val_to_ref_si.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i PrototypeI<'s, 'i, sI> = self.bump.alloc(PrototypeI {
+        let canonical: &'i PrototypeI<'s, 'i> = self.bump.alloc(PrototypeI {
             id: val.id,
             return_type: val.return_type,
             _must_intern: MustIntern(()),
@@ -553,14 +552,14 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_prototype_ni(&self, val: PrototypeIValI<'s, 'i, nI>) -> &'i PrototypeI<'s, 'i, nI> {
+    pub fn intern_prototype_ni(&self, val: PrototypeIValI<'s, 'i>) -> &'i PrototypeI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.prototype_val_to_ref_ni.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i PrototypeI<'s, 'i, nI> = self.bump.alloc(PrototypeI {
+        let canonical: &'i PrototypeI<'s, 'i> = self.bump.alloc(PrototypeI {
             id: val.id,
             return_type: val.return_type,
             _must_intern: MustIntern(()),
@@ -570,14 +569,14 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_prototype_ci(&self, val: PrototypeIValI<'s, 'i, cI>) -> &'i PrototypeI<'s, 'i, cI> {
+    pub fn intern_prototype_ci(&self, val: PrototypeIValI<'s, 'i>) -> &'i PrototypeI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.prototype_val_to_ref_ci.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i PrototypeI<'s, 'i, cI> = self.bump.alloc(PrototypeI {
+        let canonical: &'i PrototypeI<'s, 'i> = self.bump.alloc(PrototypeI {
             id: val.id,
             return_type: val.return_type,
             _must_intern: MustIntern(()),
@@ -591,14 +590,14 @@ where 's: 'i,
     // Signature interning — 3 region-mode families
     // =========================================================================
 
-    pub fn intern_signature_si(&self, val: SignatureIValI<'s, 'i, sI>) -> &'i SignatureI<'s, 'i, sI> {
+    pub fn intern_signature_si(&self, val: SignatureIValI<'s, 'i>) -> &'i SignatureI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.signature_val_to_ref_si.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i SignatureI<'s, 'i, sI> = self.bump.alloc(SignatureI {
+        let canonical: &'i SignatureI<'s, 'i> = self.bump.alloc(SignatureI {
             id: val.id,
             _must_intern: MustIntern(()),
         });
@@ -607,14 +606,14 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_signature_ni(&self, val: SignatureIValI<'s, 'i, nI>) -> &'i SignatureI<'s, 'i, nI> {
+    pub fn intern_signature_ni(&self, val: SignatureIValI<'s, 'i>) -> &'i SignatureI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.signature_val_to_ref_ni.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i SignatureI<'s, 'i, nI> = self.bump.alloc(SignatureI {
+        let canonical: &'i SignatureI<'s, 'i> = self.bump.alloc(SignatureI {
             id: val.id,
             _must_intern: MustIntern(()),
         });
@@ -623,14 +622,14 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_signature_ci(&self, val: SignatureIValI<'s, 'i, cI>) -> &'i SignatureI<'s, 'i, cI> {
+    pub fn intern_signature_ci(&self, val: SignatureIValI<'s, 'i>) -> &'i SignatureI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.signature_val_to_ref_ci.get(&val) {
                 return *existing;
             }
         }
-        let canonical: &'i SignatureI<'s, 'i, cI> = self.bump.alloc(SignatureI {
+        let canonical: &'i SignatureI<'s, 'i> = self.bump.alloc(SignatureI {
             id: val.id,
             _must_intern: MustIntern(()),
         });
@@ -652,7 +651,7 @@ where 's: 'i,
     // Per-concrete wrappers (`intern_<name>_<mode>`) come from
     // `impl_intern_name_wrappers!` invocations below.
 
-    pub fn intern_name_si(&self, val: INameValI<'s, 'i, sI>) -> INameI<'s, 'i, sI> {
+    pub fn intern_name_si(&self, val: INameValI<'s, 'i>) -> INameI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.name_val_to_ref_si.get(&val) {
@@ -665,7 +664,7 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_name_ni(&self, val: INameValI<'s, 'i, nI>) -> INameI<'s, 'i, nI> {
+    pub fn intern_name_ni(&self, val: INameValI<'s, 'i>) -> INameI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.name_val_to_ref_ni.get(&val) {
@@ -678,7 +677,7 @@ where 's: 'i,
         canonical
     }
 
-    pub fn intern_name_ci(&self, val: INameValI<'s, 'i, cI>) -> INameI<'s, 'i, cI> {
+    pub fn intern_name_ci(&self, val: INameValI<'s, 'i>) -> INameI<'s, 'i> {
         {
             let inner = self.inner.borrow();
             if let Some(existing) = inner.name_val_to_ref_ci.get(&val) {
@@ -812,8 +811,8 @@ mod tests {
         }
     }
 
-    // Region-mode separation is enforced at the type level — `StructIT<sI>` and
-    // `StructIT<nI>` are distinct types that can't be confused, so the interner's
+    // Region-mode separation is enforced at the type level — `StructIT` and
+    // `StructIT` are distinct types that can't be confused, so the interner's
     // 3 per-mode HashMaps are statically separate. No runtime test needed (and
     // address-level checks are unreliable while StructIT is still a ZST due to
     // bare-placeholder IdI).

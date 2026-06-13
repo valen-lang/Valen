@@ -11,7 +11,7 @@ use crate::instantiating::ast::citizens::{
     AddressMemberTypeI, InterfaceDefinitionI, ReferenceMemberTypeI, StructDefinitionI, StructMemberI,
 };
 use crate::instantiating::ast::hinputs::HinputsI;
-use crate::instantiating::ast::types::{cI, CoordI, InterfaceIT, StructIT, VariabilityI};
+use crate::instantiating::ast::types::{CoordI, InterfaceIT, StructIT, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
 use crate::final_ast::ast::PrototypeH;
@@ -29,7 +29,7 @@ use crate::instantiating::ast::names::StructTemplateNameI;
 use crate::instantiating::ast::names::add_step;
 use crate::instantiating::ast::templata::CoordTemplataI;
 use crate::instantiating::ast::templata::ITemplataI;
-use crate::instantiating::ast::templata::RegionTemplataI;
+use crate::typing::types::types::{IRegionT, RegionT};
 use crate::instantiating::ast::types::InterfaceITValI;
 use crate::instantiating::ast::types::MutabilityI;
 use crate::simplifying::conversions::evaluate_mutability_templata;
@@ -82,7 +82,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
+        interface_tt: &'i InterfaceIT<'s, 'i>,
     ) -> Vec<InterfaceMethodH<'s, 'h>>
     {
         let edge_blueprint = hinputs.interface_to_edge_blueprints.get(&interface_tt.id).expect("vassertSome: interface_to_edge_blueprints");
@@ -116,7 +116,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+        interface_it: &'i InterfaceIT<'s, 'i>,
     ) -> &'h InterfaceHT<'s, 'h>
     {
         match hamuts.interface_t_to_interface_h.get(&interface_it).copied() {
@@ -224,7 +224,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_it: &'i StructIT<'s, 'i, cI>,
+        struct_it: &'i StructIT<'s, 'i>,
     ) -> &'h StructHT<'s, 'h>
     {
         match hamuts.struct_t_to_struct_h.get(&struct_it).copied() {
@@ -314,7 +314,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_it: &'i StructIT<'s, 'i, cI>,
+        struct_it: &'i StructIT<'s, 'i>,
     ) -> &'h OpaqueHT<'s, 'h>
     {
         match hamuts.struct_t_to_opaque_h.get(&struct_it).copied() {
@@ -382,9 +382,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i, cI>,
+        struct_name: &IdI<'s, 'i>,
         struct_mutability_h: Mutability,
-        members: &[StructMemberI<'s, 'i, cI>],
+        members: &[StructMemberI<'s, 'i>],
     ) -> Vec<StructMemberH<'s, 'h>>
     {
         members.iter().map(|m| self.translate_member(hinputs, hamuts, struct_name, struct_mutability_h, m)).collect()
@@ -401,9 +401,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i, cI>,
+        struct_name: &IdI<'s, 'i>,
         struct_mutability_h: Mutability,
-        member2: &StructMemberI<'s, 'i, cI>,
+        member2: &StructMemberI<'s, 'i>,
     ) -> StructMemberH<'s, 'h>
     {
         let (variability, member_type) = match member2.tyype {
@@ -464,18 +464,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         _conceptual_variability: VariabilityI,
-        type2: CoordI<'s, 'i, cI>,
+        type2: CoordI<'s, 'i>,
         type_h: CoordH<'s, 'h>,
     ) -> &'h StructHT<'s, 'h>
     {
         let template_args = self.instantiating_interner.bump().alloc_slice_copy(&[
             ITemplataI::Coord(CoordTemplataI {
-                region: RegionTemplataI { pure_height: 0, _marker: PhantomData },
+                region: RegionT { region: IRegionT::Default },
                 coord: type2,
             }),
         ]);
         let struct_name = StructNameI {
-            template: IStructTemplateNameI::StructTemplate(self.instantiating_interner.intern_struct_template_name_ci(StructTemplateNameI { _marker: PhantomData, human_name: self.keywords.box_human_name })),
+            template: IStructTemplateNameI::StructTemplate(self.instantiating_interner.intern_struct_template_name_ci(StructTemplateNameI { human_name: self.keywords.box_human_name })),
             template_args,
         };
         let box_full_name2 = IdI {
@@ -564,7 +564,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_ref_h: &'h StructHT<'s, 'h>,
-        struct_tt: &'i StructIT<'s, 'i, cI>,
+        struct_tt: &'i StructIT<'s, 'i>,
     ) -> Vec<EdgeH<'s, 'h>>
     {
         let edges2: Vec<&EdgeI<'s, 'i>> = hinputs.interface_to_sub_citizen_to_edge.iter()
@@ -611,7 +611,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         struct_ref_h: &'h StructHT<'s, 'h>,
-        interface_it: &'i InterfaceIT<'s, 'i, cI>,
+        interface_it: &'i InterfaceIT<'s, 'i>,
         edge2: &EdgeI<'s, 'i>,
     ) -> EdgeH<'s, 'h>
     {
@@ -659,8 +659,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         _hamuts: &Hamuts<'s, 'i, 'h>,
-        struct_tt: StructIT<'s, 'i, cI>,
-    ) -> &'i StructDefinitionI<'s, 'i, cI>
+        struct_tt: StructIT<'s, 'i>,
+    ) -> &'i StructDefinitionI<'s, 'i>
     {
         hinputs.lookup_struct(&struct_tt.id)
     }
@@ -675,8 +675,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &Hamuts<'s, 'i, 'h>,
-        interface_tt: &'i InterfaceIT<'s, 'i, cI>,
-    ) -> &'i InterfaceDefinitionI<'s, 'i, cI>
+        interface_tt: &'i InterfaceIT<'s, 'i>,
+    ) -> &'i InterfaceDefinitionI<'s, 'i>
     {
         panic!("Unimplemented: lookup_interface");
     }

@@ -27,23 +27,23 @@ use indexmap::IndexMap;
 
 /// A reference to a node yielded to the collector predicate. Wide (predicate narrows within).
 #[derive(Copy, Clone)]
-pub enum NodeRefI<'s, 'i, R> {
-    Prototype(&'i PrototypeI<'s, 'i, R>),
-    Id(IdI<'s, 'i, R>),
-    Name(INameI<'s, 'i, R>),
-    Coord(CoordI<'s, 'i, R>),
-    Kind(KindIT<'s, 'i, R>),
-    Templata(ITemplataI<'s, 'i, R>),
+pub enum NodeRefI<'s, 'i> {
+    Prototype(&'i PrototypeI<'s, 'i>),
+    Id(IdI<'s, 'i>),
+    Name(INameI<'s, 'i>),
+    Coord(CoordI<'s, 'i>),
+    Kind(KindIT<'s, 'i>),
+    Templata(ITemplataI<'s, 'i>),
     // Top-level / expression-hierarchy variants (only meaningful when R = cI for FunctionDefinition).
     FunctionDefinition(&'i FunctionDefinitionI<'s, 'i>),
-    ReferenceExpression(ReferenceExpressionIE<'s, 'i, R>),
-    LetNormal(&'i LetNormalIE<'s, 'i, R>),
-    FunctionCall(&'i FunctionCallIE<'s, 'i, R>),
+    ReferenceExpression(ReferenceExpressionIE<'s, 'i>),
+    LetNormal(&'i LetNormalIE<'s, 'i>),
+    FunctionCall(&'i FunctionCallIE<'s, 'i>),
 }
 
-fn collect_if<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefI<'s, 'i, R>)
+fn collect_if<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefI<'s, 'i>)
 where
-    F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>,
+    F: Fn(NodeRefI<'s, 'i>) -> Option<T>,
 {
     if let Some(t) = pred(node) {
         out.push(t);
@@ -52,36 +52,36 @@ where
 
 // ── Public API (mirrors Scala Collector.all / Collector.only) ────────────────────────────────────
 
-pub fn all_in_prototype<'s, 'i, R, T, F>(root: &'i PrototypeI<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn all_in_prototype<'s, 'i, T, F>(root: &'i PrototypeI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_prototype(pred, &mut out, root);
     out
 }
 
-pub fn all_in_id<'s, 'i, R, T, F>(root: IdI<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn all_in_id<'s, 'i, T, F>(root: IdI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_id(pred, &mut out, root);
     out
 }
 
-pub fn all_in_coord<'s, 'i, R, T, F>(root: CoordI<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn all_in_coord<'s, 'i, T, F>(root: CoordI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_coord(pred, &mut out, root);
     out
 }
 
-pub fn all_in_kind<'s, 'i, R, T, F>(root: KindIT<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn all_in_kind<'s, 'i, T, F>(root: KindIT<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_kind(pred, &mut out, root);
     out
 }
 
-pub fn all_in_templata<'s, 'i, R, T, F>(root: ITemplataI<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn all_in_templata<'s, 'i, T, F>(root: ITemplataI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_templata(pred, &mut out, root);
     out
@@ -92,11 +92,11 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
 /// collector cannot walk them, but an I-side templata (e.g. `RegionTemplataI`) cannot structurally
 /// appear inside a typing-side `IdT` anyway — so walking values is complete w.r.t. any I-side-typed
 /// predicate.
-pub fn all_in_substitutions<'s, 't, 'i, R, T, F>(
-    subs: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i, R>>,
+pub fn all_in_substitutions<'s, 't, 'i, T, F>(
+    subs: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>,
     pred: &F,
 ) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     for (_id, templata) in subs.iter() {
         visit_templata(pred, &mut out, *templata);
@@ -105,15 +105,15 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
 }
 
 /// Scala `Collector.only` over a prototype root — exactly one match or panic.
-pub fn only_in_prototype<'s, 'i, R, T, F>(root: &'i PrototypeI<'s, 'i, R>, pred: &F) -> T
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn only_in_prototype<'s, 'i, T, F>(root: &'i PrototypeI<'s, 'i>, pred: &F) -> T
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut matches = all_in_prototype(root, pred);
     assert_eq!(matches.len(), 1, "Collector::only expected exactly one match");
     matches.remove(0)
 }
 
 pub fn all_in_function<'s, 'i, T, F>(root: &'i FunctionDefinitionI<'s, 'i>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     visit_function_definition(pred, &mut out, root);
     out
@@ -121,14 +121,14 @@ where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
 
 /// Scala `Collector.only` over a function-definition root — exactly one match or panic.
 pub fn only_in_function<'s, 'i, T, F>(root: &'i FunctionDefinitionI<'s, 'i>, pred: &F) -> T
-where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut matches = all_in_function(root, pred);
     assert_eq!(matches.len(), 1, "Collector::only expected exactly one match");
     matches.remove(0)
 }
 
-pub fn collect_in_inode<'s, 'i, R, T, F>(node: &NodeRefI<'s, 'i, R>, pred: &F) -> Vec<T>
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+pub fn collect_in_inode<'s, 'i, T, F>(node: &NodeRefI<'s, 'i>, pred: &F) -> Vec<T>
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut out = Vec::new();
     match node {
         NodeRefI::Prototype(p) => visit_prototype(pred, &mut out, p),
@@ -140,22 +140,22 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
         NodeRefI::ReferenceExpression(e) => visit_reference_expression_ie(pred, &mut out, *e),
         NodeRefI::LetNormal(l) => visit_let_normal_ie(pred, &mut out, l),
         NodeRefI::FunctionCall(c) => visit_function_call_ie(pred, &mut out, c),
-        NodeRefI::FunctionDefinition(_) => panic!("INSTANTIATING_TEST_COLLECT_IN_INODE: FunctionDefinition requires R=cI dispatcher (use all_in_function or NodeRefI<cI> root form)"),
+        NodeRefI::FunctionDefinition(_) => panic!("INSTANTIATING_TEST_COLLECT_IN_INODE: FunctionDefinition requires R=cI dispatcher (use all_in_function or NodeRefI root form)"),
     }
     out
 }
 
 // ── Value-AST walkers ────────────────────────────────────────────────────────────────────────────
 
-fn visit_prototype<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, p: &'i PrototypeI<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_prototype<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, p: &'i PrototypeI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Prototype(p));
     visit_id(pred, out, p.id);
     visit_coord(pred, out, p.return_type);
 }
 
-fn visit_id<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, id: IdI<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_id<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, id: IdI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Id(id));
     for step in id.init_steps {
         visit_name(pred, out, *step);
@@ -163,14 +163,14 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
     visit_name(pred, out, id.local_name);
 }
 
-fn visit_coord<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, c: CoordI<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_coord<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: CoordI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Coord(c));
     visit_kind(pred, out, c.kind);
 }
 
-fn visit_kind<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, k: KindIT<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_kind<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, k: KindIT<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Kind(k));
     match k {
         KindIT::StaticSizedArrayIT(a) => visit_id(pred, out, a.name),
@@ -181,8 +181,8 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
     }
 }
 
-fn visit_citizen_it<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, c: ICitizenIT<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_citizen_it<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: ICitizenIT<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     match c {
         ICitizenIT::StructIT(s) => visit_id(pred, out, s.id),
         ICitizenIT::InterfaceIT(i) => visit_id(pred, out, i.id),
@@ -191,8 +191,8 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
 
 // ── Names (all 75 INameI variants; leaf names fall to `_ => {}`) ──────────────────────────────────
 
-fn visit_name<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, n: INameI<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_name<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, n: INameI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Name(n));
     match n {
         // Function-ish names
@@ -275,8 +275,8 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
 
 // ── Templatas (20 ITemplataI payloads; leaf payloads fall to `_ => {}`) ───────────────────────────
 
-fn visit_templata<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, t: ITemplataI<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_templata<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, t: ITemplataI<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::Templata(t));
     match t {
         ITemplataI::Coord(x) => visit_coord(pred, out, x.coord),
@@ -304,13 +304,13 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
 // ── Expression hierarchy walkers (extend as needed per the file's stated design intent) ─────────
 
 fn visit_function_definition<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, f: &'i FunctionDefinitionI<'s, 'i>)
-where F: Fn(NodeRefI<'s, 'i, cI>) -> Option<T>, 's: 'i {
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::FunctionDefinition(f));
     visit_reference_expression_ie(pred, out, f.body);
 }
 
-fn visit_reference_expression_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, e: ReferenceExpressionIE<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_reference_expression_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, e: ReferenceExpressionIE<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::ReferenceExpression(e));
     match e {
         ReferenceExpressionIE::LetNormal(l) => visit_let_normal_ie(pred, out, l),
@@ -332,14 +332,14 @@ where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
     }
 }
 
-fn visit_let_normal_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, l: &'i LetNormalIE<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_let_normal_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, l: &'i LetNormalIE<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::LetNormal(l));
     visit_reference_expression_ie(pred, out, l.expr);
 }
 
-fn visit_function_call_ie<'s, 'i, R, T, F>(pred: &F, out: &mut Vec<T>, c: &'i FunctionCallIE<'s, 'i, R>)
-where F: Fn(NodeRefI<'s, 'i, R>) -> Option<T>, 's: 'i, R: Copy {
+fn visit_function_call_ie<'s, 'i, T, F>(pred: &F, out: &mut Vec<T>, c: &'i FunctionCallIE<'s, 'i>)
+where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     collect_if(pred, out, NodeRefI::FunctionCall(c));
     visit_prototype(pred, out, &c.callable);
     for arg in c.args {

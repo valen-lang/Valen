@@ -22,7 +22,6 @@ mod ownership_tests;
 mod pack_tests;
 mod pattern_tests;
 mod print_tests;
-mod pure_function_tests;
 mod result_tests;
 mod run_compilation;
 mod string_tests;

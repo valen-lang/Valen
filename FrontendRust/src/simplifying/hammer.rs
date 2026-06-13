@@ -17,7 +17,7 @@ use crate::instantiating::ast::ast::{FunctionDefinitionI, FunctionExportI, Funct
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::{IdI, INameI, IVarNameI};
 use crate::instantiating::ast::templata::ITemplataI;
-use crate::instantiating::ast::types::{cI, CoordI, KindIT};
+use crate::instantiating::ast::types::{CoordI, KindIT};
 use crate::keywords::Keywords;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hamuts::Hamuts;
@@ -95,7 +95,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn typing_pass_locals
-    pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>> {
+    pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i>, VariableIdH<'s, 'h>> {
         panic!("Unimplemented: typing_pass_locals");
     }
 /*
@@ -128,7 +128,7 @@ where 's: 'i, 'i: 'h,
 
 // mig: fn get_by_var_name (Scala overload `get(IVarNameI[cI])` —
 // disambiguated per instantiating overload-suffix pattern.)
-    pub fn get_by_var_name(&self, id: &IVarNameI<'s, 'i, cI>) -> Option<Local<'s, 'h>> {
+    pub fn get_by_var_name(&self, id: &IVarNameI<'s, 'i>) -> Option<Local<'s, 'h>> {
         self.typing_pass_locals.get(id).copied().and_then(|var_id| self.locals.get(&var_id).copied())
     }
 /*
@@ -144,7 +144,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn mark_unstackified_by_var_name (Scala overload disambiguated.)
-    pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
+    pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i>) {
         let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
         self.mark_unstackified(var_id_h);
     }
@@ -155,7 +155,7 @@ where 's: 'i, 'i: 'h,
 */
 
 // mig: fn mark_restackified_by_var_name (Scala overload disambiguated.)
-    pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i, cI>) {
+    pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i>) {
         let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
         self.mark_restackified(var_id_h);
     }
@@ -217,7 +217,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn add_typing_pass_local (Scala name; matches Scala `addTypingPassLocal`.)
     pub fn add_typing_pass_local(
         &mut self,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         var_id_name_h: &'h IdH<'s>,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
@@ -245,7 +245,7 @@ where 's: 'i, 'i: 'h,
 pub struct Locals<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
-    pub typing_pass_locals: HashMap<&'i IVarNameI<'s, 'i, cI>, VariableIdH<'s, 'h>>,
+    pub typing_pass_locals: HashMap<&'i IVarNameI<'s, 'i>, VariableIdH<'s, 'h>>,
     pub unstackified_vars: HashSet<VariableIdH<'s, 'h>>,
     pub locals: HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>>,
     pub next_local_id_number: i32,
@@ -277,7 +277,7 @@ where 's: 'i, 'i: 'h,
 {
     pub fn add_compiler_local(
         &mut self,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         var_id_name_h: &'h IdH<'s>,
         variability: Variability,
         tyype: CoordH<'s, 'h>,
@@ -439,7 +439,7 @@ class Hammer(interner: Interner, keywords: Keywords) {
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
-    pub fn mangle_func(&self, id: &IdI<'s, 'i, cI>) -> String {
+    pub fn mangle_func(&self, id: &IdI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_func");
     }
 /*
@@ -470,7 +470,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_name
-    pub fn mangle_name(&self, name: &INameI<'s, 'i, cI>, stuff_after: bool) -> String {
+    pub fn mangle_name(&self, name: &INameI<'s, 'i>, stuff_after: bool) -> String {
         panic!("Unimplemented: mangle_name");
     }
 /*
@@ -489,7 +489,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_struct
-    pub fn mangle_struct(&self, id: &IdI<'s, 'i, cI>) -> String {
+    pub fn mangle_struct(&self, id: &IdI<'s, 'i>) -> String {
         String::new()
     }
 /*
@@ -501,7 +501,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_kind
-    pub fn mangle_kind(&self, kind: &KindIT<'s, 'i, cI>) -> String {
+    pub fn mangle_kind(&self, kind: &KindIT<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_kind");
     }
 /*
@@ -515,7 +515,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_coord
-    pub fn mangle_coord(&self, coord: &CoordI<'s, 'i, cI>) -> String {
+    pub fn mangle_coord(&self, coord: &CoordI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_coord");
     }
 /*
@@ -534,7 +534,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 */
 
 // mig: fn mangle_templata
-    pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i, cI>) -> String {
+    pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_templata");
     }
 /*

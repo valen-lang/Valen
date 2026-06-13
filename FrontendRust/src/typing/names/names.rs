@@ -1090,7 +1090,7 @@ case class ExportNameT(template: ExportTemplateNameT, region: RegionT) extends I
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplTemplateNameT<'s> {
-    pub code_location_s: CodeLocationS<'s>,
+    pub code_location: CodeLocationS<'s>,
 }
 /*
 case class ImplTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {
@@ -1123,7 +1123,7 @@ case class ImplNameT(
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplBoundTemplateNameT<'s> {
-    pub code_location_s: CodeLocationS<'s>,
+    pub code_location: CodeLocationS<'s>,
 }
 /*
 case class ImplBoundTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {

@@ -409,7 +409,7 @@ where 's: 't,
         match n {
             IImplDeclarationNameS::ImplDeclarationName(impl_decl) => {
                 let impl_template_name = ImplTemplateNameT {
-                    code_location_s: self.translate_code_location(impl_decl.code_location),
+                    code_location: self.translate_code_location(impl_decl.code_location),
                 };
                 IImplTemplateNameT::ImplTemplate(
                     self.typing_interner.intern_impl_template_name(impl_template_name)

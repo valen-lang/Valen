@@ -306,7 +306,6 @@ pub fn humanize_rune<'s>(
     IRuneS::CallRegionRune(_) => panic!("implement: humanize_rune CallRegionRune"),
     IRuneS::CaseRuneFromImpl(_) => panic!("implement: humanize_rune CaseRuneFromImpl"),
     IRuneS::DispatcherRuneFromImpl(_) => panic!("implement: humanize_rune DispatcherRuneFromImpl"),
-    IRuneS::PureBlockRegionRune(_) => panic!("implement: humanize_rune PureBlockRegionRune"),
     IRuneS::CallPureMergeRegionRune(_) => panic!("implement: humanize_rune CallPureMergeRegionRune"),
     IRuneS::ReachablePrototypeRune(_) => panic!("implement: humanize_rune ReachablePrototypeRune"),
     IRuneS::MemberRune(_) => panic!("implement: humanize_rune MemberRune"),

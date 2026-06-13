@@ -11,7 +11,7 @@ use crate::instantiating::ast::expressions::{
     StaticArrayFromCallableIE, WhileIE,
 };
 use crate::instantiating::ast::hinputs::HinputsI;
-use crate::instantiating::ast::types::{cI, CoordI};
+use crate::instantiating::ast::types::CoordI;
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::ast::IdH;
@@ -108,8 +108,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        expr2: ExpressionIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        expr2: ExpressionIE<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         use crate::instantiating::ast::expressions::ReferenceExpressionIE as RE;
         match expr2 {
@@ -167,14 +167,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (ExpressionH::BlockH(block_h), Vec::new())
                 }
                 RE::FunctionCall(call2) => {
-                    let args_ie: Vec<ExpressionIE<'s, 'i, cI>> = call2.args.iter().map(|a| ExpressionIE::Reference(*a)).collect();
+                    let args_ie: Vec<ExpressionIE<'s, 'i>> = call2.args.iter().map(|a| ExpressionIE::Reference(*a)).collect();
                     let access = self.translate_function_pointer_call(hinputs, hamuts, current_function_header, locals, &call2.callable, &args_ie, call2.result);
                     (access, Vec::new())
                 }
                 RE::PreCheckBorrow(p) => panic!("translate_expression: PreCheckBorrow branch"),
                 RE::InterfaceFunctionCall(ic) => {
                     let InterfaceFunctionCallIE { super_function_prototype, virtual_param_index, args: args_exprs2, result: result_type2 } = *ic;
-                    let args_exprs2_ie: Vec<ExpressionIE<'s, 'i, cI>> = args_exprs2.iter().map(|e| ExpressionIE::Reference(*e)).collect();
+                    let args_exprs2_ie: Vec<ExpressionIE<'s, 'i>> = args_exprs2.iter().map(|e| ExpressionIE::Reference(*e)).collect();
                     let access = self.translate_interface_function_call(hinputs, hamuts, current_function_header, locals, self.interner.alloc(super_function_prototype), virtual_param_index, result_type2, &args_exprs2_ie);
                     (access, Vec::new())
                 }
@@ -243,7 +243,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let DeferIE { inner_expr, deferred_expr, result: _ } = *d2;
                     let (inner_expr_he, inner_deferreds) =
                         self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(inner_expr));
-                    let mut new_deferreds: Vec<ExpressionIE<'s, 'i, cI>> = vec![ExpressionIE::Reference(deferred_expr)];
+                    let mut new_deferreds: Vec<ExpressionIE<'s, 'i>> = vec![ExpressionIE::Reference(deferred_expr)];
                     new_deferreds.extend(inner_deferreds);
                     (inner_expr_he, new_deferreds)
                 }
@@ -281,7 +281,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 }
                 RE::Tuple(t) => {
                     let TupleIE { elements: exprs, result: result_type } = *t;
-                    let exprs_ie: Vec<ExpressionIE<'s, 'i, cI>> = exprs.iter().map(|e| ExpressionIE::Reference(*e)).collect();
+                    let exprs_ie: Vec<ExpressionIE<'s, 'i>> = exprs.iter().map(|e| ExpressionIE::Reference(*e)).collect();
                     let (results_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &exprs_ie);
                     match results_he.last().map(|e| e.result_type().kind) {
                         Some(KindHT::NeverHT(_)) => {
@@ -309,7 +309,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 }
                 RE::StaticArrayFromValues(a) => {
                     let StaticArrayFromValuesIE { elements: exprs, result_reference: array_reference_2, array_type: array_type_2 } = *a;
-                    let exprs_ie: Vec<ExpressionIE<'s, 'i, cI>> = exprs.iter().map(|e| ExpressionIE::Reference(*e)).collect();
+                    let exprs_ie: Vec<ExpressionIE<'s, 'i>> = exprs.iter().map(|e| ExpressionIE::Reference(*e)).collect();
                     let (results_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &exprs_ie);
                     match results_he.last().map(|e| e.result_type().kind) {
                         Some(KindHT::NeverHT(_)) => {
@@ -1100,7 +1100,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
         original_expr: ExpressionH<'s, 'h>,
-        deferreds: Vec<ExpressionIE<'s, 'i, cI>>,
+        deferreds: Vec<ExpressionIE<'s, 'i>>,
     ) -> ExpressionH<'s, 'h>
     {
         if deferreds.is_empty() {
@@ -1207,10 +1207,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        exprs_ie: &[ExpressionIE<'s, 'i, cI>],
-    ) -> (Vec<ExpressionH<'s, 'h>>, Vec<ExpressionIE<'s, 'i, cI>>)
+        exprs_ie: &[ExpressionIE<'s, 'i>],
+    ) -> (Vec<ExpressionH<'s, 'h>>, Vec<ExpressionIE<'s, 'i>>)
     {
-        let (exprs_he, deferreds) = exprs_ie.iter().fold((Vec::<ExpressionH<'s, 'h>>::new(), Vec::<ExpressionIE<'s, 'i, cI>>::new()), |(prev_exprs_he, prev_deferreds), next_ie| {
+        let (exprs_he, deferreds) = exprs_ie.iter().fold((Vec::<ExpressionH<'s, 'h>>::new(), Vec::<ExpressionIE<'s, 'i>>::new()), |(prev_exprs_he, prev_deferreds), next_ie| {
             let prev_is_never = match prev_exprs_he.last().map(|e| e.result_type().kind) {
                 Some(KindHT::NeverHT(_)) => true,
                 _ => false,
@@ -1271,7 +1271,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        exprs2: &[ExpressionIE<'s, 'i, cI>],
+        exprs2: &[ExpressionIE<'s, 'i>],
     ) -> ExpressionH<'s, 'h>
     {
         let exprs: Vec<ExpressionH<'s, 'h>> = exprs2.iter().map(|expr2| {
@@ -1307,11 +1307,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        prototype2: &'i PrototypeI<'s, 'i, cI>,
-        args_exprs2: &[ReferenceExpressionIE<'s, 'i, cI>],
+        prototype2: &'i PrototypeI<'s, 'i>,
+        args_exprs2: &[ReferenceExpressionIE<'s, 'i>],
     ) -> ExpressionH<'s, 'h>
     {
-        let args_ie: Vec<ExpressionIE<'s, 'i, cI>> = args_exprs2.iter().map(|a| ExpressionIE::Reference(*a)).collect();
+        let args_ie: Vec<ExpressionIE<'s, 'i>> = args_exprs2.iter().map(|a| ExpressionIE::Reference(*a)).collect();
         let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, &args_ie);
         // Don't evaluate anything that can't ever be run, see BRCOBS
         if !args_he.is_empty() && matches!(args_he.last().unwrap().result_type().kind, KindHT::NeverHT(NeverHT { from_break: true })) {
@@ -1362,9 +1362,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        function: &'i PrototypeI<'s, 'i, cI>,
-        args: &[ExpressionIE<'s, 'i, cI>],
-        result_type2: CoordI<'s, 'i, cI>,
+        function: &'i PrototypeI<'s, 'i>,
+        args: &[ExpressionIE<'s, 'i>],
+        result_type2: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let return_type2 = function.return_type;
@@ -1436,7 +1436,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i, cI>,
+        construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let array_type2 = construct_array2.array_type;
@@ -1494,7 +1494,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        construct_array2: &'i NewImmRuntimeSizedArrayIE<'s, 'i, cI>,
+        construct_array2: &'i NewImmRuntimeSizedArrayIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let NewImmRuntimeSizedArrayIE { array_type: array_type2, size_expr: size_expr2, generator: generator_expr2, generator_method, result: _ } = construct_array2;
@@ -1517,7 +1517,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             element_type,
             result_type: array_ref_type_h.expect_runtime_sized_array_coord(),
         }));
-        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = generator_deferreds;
+        let mut deferreds: Vec<ExpressionIE<'s, 'i>> = generator_deferreds;
         deferreds.extend(size_deferreds);
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, deferreds)
     }
@@ -1571,7 +1571,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        expr_ie: &'i StaticArrayFromCallableIE<'s, 'i, cI>,
+        expr_ie: &'i StaticArrayFromCallableIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let StaticArrayFromCallableIE { array_type: array_type_2, generator: generator_expr_2, generator_method, result: _ } = *expr_ie;
@@ -1636,7 +1636,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        das2: &'i DestroyStaticSizedArrayIntoFunctionIE<'s, 'i, cI>,
+        das2: &'i DestroyStaticSizedArrayIntoFunctionIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let DestroyStaticSizedArrayIntoFunctionIE { array_expr: array_expr_2, array_type: static_sized_array_type, consumer: consumer_expr_2, consumer_method: _consumer_method_2 } = *das2;
@@ -1707,7 +1707,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        das2: &DestroyImmRuntimeSizedArrayIE<'s, 'i, cI>,
+        das2: &DestroyImmRuntimeSizedArrayIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
@@ -1765,7 +1765,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         parent_locals: &mut Locals<'s, 'i, 'h>,
-        if2: &IfIE<'s, 'i, cI>,
+        if2: &IfIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let condition2 = if2.condition;
@@ -1895,7 +1895,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        while2: &'i WhileIE<'s, 'i, cI>,
+        while2: &'i WhileIE<'s, 'i>,
     ) -> &'h WhileH<'s, 'h>
     {
         let body_expr2 = &while2.block;
@@ -1931,10 +1931,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        super_function_prototype: &'i PrototypeI<'s, 'i, cI>,
+        super_function_prototype: &'i PrototypeI<'s, 'i>,
         virtual_param_index: i32,
-        result_type2: CoordI<'s, 'i, cI>,
-        args_exprs2: &[ExpressionIE<'s, 'i, cI>],
+        result_type2: CoordI<'s, 'i>,
+        args_exprs2: &[ExpressionIE<'s, 'i>],
     ) -> ExpressionH<'s, 'h>
     {
         let (args_he, args_deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, args_exprs2);

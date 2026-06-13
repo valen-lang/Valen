@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::instantiating::ast::types::{
-    cI, InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
+    InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
 };
 use crate::instantiating::ast::ast::PrototypeI;
 use crate::final_ast::ast::{
@@ -84,7 +84,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn struct_t_to_opaque_h (HamutsBox accessor)
-    pub fn struct_t_to_opaque_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, &'h OpaqueHT<'s, 'h>> {
+    pub fn struct_t_to_opaque_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, &'h OpaqueHT<'s, 'h>> {
         &self.struct_t_to_opaque_h
     }
 /*
@@ -92,7 +92,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn struct_t_to_struct_h (HamutsBox accessor)
-    pub fn struct_t_to_struct_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, &'h StructHT<'s, 'h>> {
+    pub fn struct_t_to_struct_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, &'h StructHT<'s, 'h>> {
         &self.struct_t_to_struct_h
     }
 /*
@@ -100,7 +100,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn struct_t_to_struct_def_h (HamutsBox accessor)
-    pub fn struct_t_to_struct_def_h(&self) -> &HashMap<&'i StructIT<'s, 'i, cI>, StructDefinitionH<'s, 'h>> {
+    pub fn struct_t_to_struct_def_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, StructDefinitionH<'s, 'h>> {
         &self.struct_t_to_struct_def_h
     }
 /*
@@ -116,7 +116,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn interface_t_to_interface_h (HamutsBox accessor)
-    pub fn interface_t_to_interface_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i, cI>, &'h InterfaceHT<'s, 'h>> {
+    pub fn interface_t_to_interface_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i>, &'h InterfaceHT<'s, 'h>> {
         &self.interface_t_to_interface_h
     }
 /*
@@ -124,7 +124,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn interface_t_to_interface_def_h (HamutsBox accessor)
-    pub fn interface_t_to_interface_def_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i, cI>, InterfaceDefinitionH<'s, 'h>> {
+    pub fn interface_t_to_interface_def_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i>, InterfaceDefinitionH<'s, 'h>> {
         &self.interface_t_to_interface_def_h
     }
 /*
@@ -132,7 +132,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn function_refs (HamutsBox accessor)
-    pub fn function_refs(&self) -> &HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionRefH<'s, 'h>> {
+    pub fn function_refs(&self) -> &HashMap<&'i PrototypeI<'s, 'i>, FunctionRefH<'s, 'h>> {
         &self.function_refs
     }
 /*
@@ -140,7 +140,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn function_defs (HamutsBox accessor)
-    pub fn function_defs(&self) -> &HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionH<'s, 'h>> {
+    pub fn function_defs(&self) -> &HashMap<&'i PrototypeI<'s, 'i>, FunctionH<'s, 'h>> {
         &self.function_defs
     }
 /*
@@ -148,7 +148,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn static_sized_arrays (HamutsBox accessor)
-    pub fn static_sized_arrays(&self) -> &HashMap<&'i StaticSizedArrayIT<'s, 'i, cI>, StaticSizedArrayDefinitionHT<'s, 'h>> {
+    pub fn static_sized_arrays(&self) -> &HashMap<&'i StaticSizedArrayIT<'s, 'i>, StaticSizedArrayDefinitionHT<'s, 'h>> {
         &self.static_sized_arrays
     }
 /*
@@ -156,7 +156,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn runtime_sized_arrays (HamutsBox accessor)
-    pub fn runtime_sized_arrays(&self) -> &HashMap<&'i RuntimeSizedArrayIT<'s, 'i, cI>, RuntimeSizedArrayDefinitionHT<'s, 'h>> {
+    pub fn runtime_sized_arrays(&self) -> &HashMap<&'i RuntimeSizedArrayIT<'s, 'i>, RuntimeSizedArrayDefinitionHT<'s, 'h>> {
         &self.runtime_sized_arrays
     }
 /*
@@ -164,7 +164,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn forward_declare_struct (HamutsBox mutator)
-    pub fn forward_declare_struct(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_ref_h: &'h StructHT<'s, 'h>) {
+    pub fn forward_declare_struct(&mut self, struct_it: &'i StructIT<'s, 'i>, struct_ref_h: &'h StructHT<'s, 'h>) {
         self.struct_t_to_struct_h.insert(struct_it, struct_ref_h);
     }
 /*
@@ -174,7 +174,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_struct_originating_from_typing_pass (HamutsBox mutator)
-    pub fn add_struct_originating_from_typing_pass(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, struct_def_h: StructDefinitionH<'s, 'h>) {
+    pub fn add_struct_originating_from_typing_pass(&mut self, struct_it: &'i StructIT<'s, 'i>, struct_def_h: StructDefinitionH<'s, 'h>) {
         assert!(self.struct_t_to_struct_h.contains_key(&struct_it));
         self.struct_t_to_struct_def_h.insert(struct_it, struct_def_h);
         self.struct_defs.push(struct_def_h);
@@ -186,7 +186,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_opaque (HamutsBox mutator)
-    pub fn add_opaque(&mut self, struct_it: &'i StructIT<'s, 'i, cI>, opaque_h: &'h OpaqueHT<'s, 'h>) {
+    pub fn add_opaque(&mut self, struct_it: &'i StructIT<'s, 'i>, opaque_h: &'h OpaqueHT<'s, 'h>) {
         assert!(!self.struct_t_to_opaque_h.contains_key(&struct_it));
         self.struct_t_to_opaque_h.insert(struct_it, opaque_h);
     }
@@ -208,7 +208,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn forward_declare_interface (HamutsBox mutator)
-    pub fn forward_declare_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_ref_h: &'h InterfaceHT<'s, 'h>) {
+    pub fn forward_declare_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i>, interface_ref_h: &'h InterfaceHT<'s, 'h>) {
         self.interface_t_to_interface_h.insert(interface_it, interface_ref_h);
     }
 /*
@@ -218,7 +218,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_interface (HamutsBox mutator)
-    pub fn add_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i, cI>, interface_def_h: InterfaceDefinitionH<'s, 'h>) {
+    pub fn add_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i>, interface_def_h: InterfaceDefinitionH<'s, 'h>) {
         self.interface_t_to_interface_def_h.insert(interface_it, interface_def_h);
     }
 /*
@@ -228,7 +228,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_static_sized_array (HamutsBox mutator)
-    pub fn add_static_sized_array(&mut self, ssa_it: &'i StaticSizedArrayIT<'s, 'i, cI>, static_sized_array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>) {
+    pub fn add_static_sized_array(&mut self, ssa_it: &'i StaticSizedArrayIT<'s, 'i>, static_sized_array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>) {
         self.static_sized_arrays.insert(ssa_it, static_sized_array_definition_th);
     }
 /*
@@ -238,7 +238,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_runtime_sized_array (HamutsBox mutator)
-    pub fn add_runtime_sized_array(&mut self, rsa_it: &'i RuntimeSizedArrayIT<'s, 'i, cI>, runtime_sized_array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>) {
+    pub fn add_runtime_sized_array(&mut self, rsa_it: &'i RuntimeSizedArrayIT<'s, 'i>, runtime_sized_array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>) {
         self.runtime_sized_arrays.insert(rsa_it, runtime_sized_array_definition_th);
     }
 /*
@@ -248,7 +248,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn forward_declare_function (HamutsBox mutator)
-    pub fn forward_declare_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_ref_h: FunctionRefH<'s, 'h>) {
+    pub fn forward_declare_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i>, function_ref_h: FunctionRefH<'s, 'h>) {
         assert!(!self.function_refs.contains_key(&function_ref2));
         self.function_refs.insert(function_ref2, function_ref_h);
     }
@@ -259,7 +259,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 */
 
 // mig: fn add_function (HamutsBox mutator)
-    pub fn add_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i, cI>, function_def_h: FunctionH<'s, 'h>) {
+    pub fn add_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i>, function_def_h: FunctionH<'s, 'h>) {
         assert!(self.function_refs.contains_key(&function_ref2));
         if self.function_defs.values().any(|f| f.prototype.id == function_def_h.prototype.id) {
             panic!("Internal error: Can't add function (already has function with same hammer name)");
@@ -381,16 +381,16 @@ pub struct Hamuts<'s, 'i, 'h>
 where 's: 'i, 'i: 'h,
 {
     pub human_name_to_full_name_to_id: HashMap<String, HashMap<String, i32>>,
-    pub struct_t_to_opaque_h: HashMap<&'i StructIT<'s, 'i, cI>, &'h OpaqueHT<'s, 'h>>,
-    pub struct_t_to_struct_h: HashMap<&'i StructIT<'s, 'i, cI>, &'h StructHT<'s, 'h>>,
-    pub struct_t_to_struct_def_h: HashMap<&'i StructIT<'s, 'i, cI>, StructDefinitionH<'s, 'h>>,
+    pub struct_t_to_opaque_h: HashMap<&'i StructIT<'s, 'i>, &'h OpaqueHT<'s, 'h>>,
+    pub struct_t_to_struct_h: HashMap<&'i StructIT<'s, 'i>, &'h StructHT<'s, 'h>>,
+    pub struct_t_to_struct_def_h: HashMap<&'i StructIT<'s, 'i>, StructDefinitionH<'s, 'h>>,
     pub struct_defs: Vec<StructDefinitionH<'s, 'h>>,
-    pub static_sized_arrays: HashMap<&'i StaticSizedArrayIT<'s, 'i, cI>, StaticSizedArrayDefinitionHT<'s, 'h>>,
-    pub runtime_sized_arrays: HashMap<&'i RuntimeSizedArrayIT<'s, 'i, cI>, RuntimeSizedArrayDefinitionHT<'s, 'h>>,
-    pub interface_t_to_interface_h: HashMap<&'i InterfaceIT<'s, 'i, cI>, &'h InterfaceHT<'s, 'h>>,
-    pub interface_t_to_interface_def_h: HashMap<&'i InterfaceIT<'s, 'i, cI>, InterfaceDefinitionH<'s, 'h>>,
-    pub function_refs: HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionRefH<'s, 'h>>,
-    pub function_defs: HashMap<&'i PrototypeI<'s, 'i, cI>, FunctionH<'s, 'h>>,
+    pub static_sized_arrays: HashMap<&'i StaticSizedArrayIT<'s, 'i>, StaticSizedArrayDefinitionHT<'s, 'h>>,
+    pub runtime_sized_arrays: HashMap<&'i RuntimeSizedArrayIT<'s, 'i>, RuntimeSizedArrayDefinitionHT<'s, 'h>>,
+    pub interface_t_to_interface_h: HashMap<&'i InterfaceIT<'s, 'i>, &'h InterfaceHT<'s, 'h>>,
+    pub interface_t_to_interface_def_h: HashMap<&'i InterfaceIT<'s, 'i>, InterfaceDefinitionH<'s, 'h>>,
+    pub function_refs: HashMap<&'i PrototypeI<'s, 'i>, FunctionRefH<'s, 'h>>,
+    pub function_defs: HashMap<&'i PrototypeI<'s, 'i>, FunctionH<'s, 'h>>,
     pub package_coord_to_export_name_to_function: HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, &'h PrototypeH<'s, 'h>>>,
     pub package_coord_to_export_name_to_kind: HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, KindHT<'s, 'h>>>,
     pub package_coord_to_prototype_to_extern: HashMap<PackageCoordinate<'s>, HashMap<&'h PrototypeH<'s, 'h>, HamutsFunctionExtern<'s, 'h>>>,

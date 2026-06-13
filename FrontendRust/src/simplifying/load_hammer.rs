@@ -11,7 +11,7 @@ use crate::instantiating::ast::expressions::{
 };
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::{cI, CoordI, OwnershipI, VariabilityI};
+use crate::instantiating::ast::types::{CoordI, OwnershipI, VariabilityI};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::instructions::LocalLoadH;
@@ -56,8 +56,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        load2: &SoftLoadIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        load2: &SoftLoadIE<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let SoftLoadIE { expr: source_expr2, target_ownership, .. } = *load2;
         let (loaded_access_h, source_deferreds) = match source_expr2 {
@@ -196,11 +196,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        array_expr2: ReferenceExpressionIE<'s, 'i>,
+        index_expr2: ReferenceExpressionIE<'s, 'i>,
         target_ownership_i: OwnershipI,
-        result_type2: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        result_type2: CoordI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let _ = result_type2;
         let target_ownership = evaluate_ownership(target_ownership_i);
@@ -227,7 +227,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             expected_element_type,
             result_type,
         }));
-        let mut deferreds: Vec<ExpressionIE<'s, 'i, cI>> = array_deferreds;
+        let mut deferreds: Vec<ExpressionIE<'s, 'i>> = array_deferreds;
         deferreds.extend(index_deferreds);
         (loaded_node_h, deferreds)
     }
@@ -291,10 +291,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        array_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        index_expr2: ReferenceExpressionIE<'s, 'i, cI>,
+        array_expr2: ReferenceExpressionIE<'s, 'i>,
+        index_expr2: ReferenceExpressionIE<'s, 'i>,
         target_ownership_i: OwnershipI,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let target_ownership = evaluate_ownership(target_ownership_i);
         let (array_result_line, array_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(array_expr2));
@@ -382,11 +382,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i>,
+        member_name: &'i IVarNameI<'s, 'i>,
         target_ownership_i: OwnershipI,
-        expected_member_coord: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        expected_member_coord: CoordI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let (struct_result_line, struct_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
         let struct_it = match struct_expr2.result().kind {
@@ -506,11 +506,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        struct_expr2: ReferenceExpressionIE<'s, 'i, cI>,
-        member_name: &'i IVarNameI<'s, 'i, cI>,
+        struct_expr2: ReferenceExpressionIE<'s, 'i>,
+        member_name: &'i IVarNameI<'s, 'i>,
         target_ownership_i: OwnershipI,
-        expected_member_coord: CoordI<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        expected_member_coord: CoordI<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let (struct_result_line, struct_deferreds) =
             self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(struct_expr2));
@@ -584,11 +584,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
         variability: VariabilityI,
-        local_reference2: CoordI<'s, 'i, cI>,
+        local_reference2: CoordI<'s, 'i>,
         target_ownership_i: OwnershipI,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let local = locals.get_by_var_name(var_id).unwrap();
         assert!(!locals.unstackified_vars.contains(&local.id));
@@ -668,10 +668,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        var_id: &'i IVarNameI<'s, 'i, cI>,
-        local_type: CoordI<'s, 'i, cI>,
+        var_id: &'i IVarNameI<'s, 'i>,
+        local_type: CoordI<'s, 'i>,
         target_ownership_i: OwnershipI,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let target_ownership = evaluate_ownership(target_ownership_i);
         let local = locals.get_by_var_name(var_id).expect("wot");
@@ -724,7 +724,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        lookup2: &LocalLookupIE<'s, 'i, cI>,
+        lookup2: &LocalLookupIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let local_var = lookup2.local_variable;
@@ -772,8 +772,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        lookup2: &AddressMemberLookupIE<'s, 'i, cI>,
-    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i, cI>>)
+        lookup2: &AddressMemberLookupIE<'s, 'i>,
+    ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         let struct_expr2 = lookup2.struct_expr;
         let member_name = lookup2.member_name;

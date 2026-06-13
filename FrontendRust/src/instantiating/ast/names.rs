@@ -3,7 +3,8 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
 use crate::instantiating::ast::types::{CoordI, ICitizenIT, MutabilityI, VariabilityI};
-use crate::instantiating::ast::templata::{ITemplataI, CoordTemplataI, RegionTemplataI};
+use crate::instantiating::ast::templata::{ITemplataI, CoordTemplataI};
+use crate::typing::types::types::RegionT;
 use crate::instantiating::ast::ast::LocationInFunctionEnvironmentI;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::typing::types::types::CoordT;
@@ -23,10 +24,10 @@ import dev.vale.typing.types.CoordT
 */
 // mig: struct IdI
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdI<'s, 'i, R> {
+pub struct IdI<'s, 'i> {
     pub package_coord: &'s PackageCoordinate<'s>,
-    pub init_steps: &'i [INameI<'s, 'i, R>],
-    pub local_name: INameI<'s, 'i, R>,
+    pub init_steps: &'i [INameI<'s, 'i>],
+    pub local_name: INameI<'s, 'i>,
 }
 // mig: impl IdI
 /*
@@ -56,8 +57,8 @@ case class IdI[+R <: IRegionsModeI, +I <: INameI[R]](
 */
 // mig: fn package_id
 // (was cfg-gated)
-impl<'s, 'i, R> IdI<'s, 'i, R> {
-    pub fn package_id(&self) -> IdI<'s, 'i, R> { panic!("Unimplemented: package_id"); }
+impl<'s, 'i> IdI<'s, 'i> {
+    pub fn package_id(&self) -> IdI<'s, 'i> { panic!("Unimplemented: package_id"); }
 /*
   def packageId: IdI[R, PackageTopLevelNameI[R]] = {
     IdI(packageCoord, Vector(), PackageTopLevelNameI())
@@ -66,7 +67,7 @@ impl<'s, 'i, R> IdI<'s, 'i, R> {
 */
 // mig: fn init_id
 // (was cfg-gated)
-    pub fn init_id(&self) -> IdI<'s, 'i, R> { panic!("Unimplemented: init_id"); }
+    pub fn init_id(&self) -> IdI<'s, 'i> { panic!("Unimplemented: init_id"); }
 }
 /*
   def initId: IdI[R, INameI[R]] = {
@@ -80,8 +81,8 @@ impl<'s, 'i, R> IdI<'s, 'i, R> {
 */
 // mig: fn init_non_package_id
 // (was cfg-gated)
-impl<'s, 'i, R: Copy> IdI<'s, 'i, R> {
-    pub fn init_non_package_id(&self) -> Option<IdI<'s, 'i, R>> {
+impl<'s, 'i> IdI<'s, 'i> {
+    pub fn init_non_package_id(&self) -> Option<IdI<'s, 'i>> {
         if self.init_steps.is_empty() {
             None
         } else {
@@ -102,8 +103,8 @@ impl<'s, 'i, R: Copy> IdI<'s, 'i, R> {
 */
 // mig: fn steps
 // (was cfg-gated)
-impl<'s, 'i, R> IdI<'s, 'i, R> {
-    pub fn steps(&self) -> &'i[INameI<'s, 'i, R>] { panic!("Unimplemented: steps"); }
+impl<'s, 'i> IdI<'s, 'i> {
+    pub fn steps(&self) -> &'i[INameI<'s, 'i>] { panic!("Unimplemented: steps"); }
 }
 /*
   def steps: Vector[INameI[R]] = {
@@ -118,7 +119,7 @@ object INameI {
 */
 // mig: fn add_step
 // (was cfg-gated)
-pub fn add_step<'s, 'i, R>(old: &IdI<'s, 'i, R>, new_last: INameI<'s, 'i, R>) -> IdI<'s, 'i, R> {
+pub fn add_step<'s, 'i>(old: &IdI<'s, 'i>, new_last: INameI<'s, 'i>) -> IdI<'s, 'i> {
     IdI { package_coord: old.package_coord, init_steps: old.init_steps, local_name: new_last }
 }
 /*
@@ -131,159 +132,159 @@ pub fn add_step<'s, 'i, R>(old: &IdI<'s, 'i, R>, new_last: INameI<'s, 'i, R>) ->
 // mig: enum INameI
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum INameI<'s, 'i, R> {
-    RegionName(&'i RegionNameI<'s, R>),
-    DenizenDefaultRegionName(&'i DenizenDefaultRegionNameI<R>),
-    ExportTemplate(&'i ExportTemplateNameI<'s, R>),
-    Export(&'i ExportNameI<'s, R>),
-    ExternTemplate(&'i ExternTemplateNameI<'s, R>),
-    Extern(&'i ExternNameI<'s, R>),
-    ImplTemplate(&'i ImplTemplateNameI<'s, R>),
-    Impl(&'i ImplNameI<'s, 'i, R>),
-    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s, R>),
-    ImplBound(&'i ImplBoundNameI<'s, 'i, R>),
-    Let(&'i LetNameI<'s, R>),
-    ExportAs(&'i ExportAsNameI<'s, R>),
-    RawArray(&'i RawArrayNameI<'s, 'i, R>),
-    ReachablePrototype(&'i ReachablePrototypeNameI<R>),
-    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<R>),
-    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
-    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<R>),
-    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
-    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i, R>),
-    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i, R>),
-    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i, R>),
-    CaseFunctionFromImpl(&'i CaseFunctionFromImplNameI<'s, 'i, R>),
-    CaseFunctionFromImplTemplate(&'i CaseFunctionFromImplTemplateNameI<'s, R>),
-    TypingPassBlockResultVar(&'i TypingPassBlockResultVarNameI<'i, R>),
-    TypingPassFunctionResultVar(&'i TypingPassFunctionResultVarNameI<R>),
-    TypingPassTemporaryVar(&'i TypingPassTemporaryVarNameI<'i, R>),
-    TypingPassPatternMember(&'i TypingPassPatternMemberNameI<'i, R>),
-    TypingIgnoredParam(&'i TypingIgnoredParamNameI<R>),
-    TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i, R>),
-    UnnamedLocal(&'i UnnamedLocalNameI<'s, R>),
-    ClosureParam(&'i ClosureParamNameI<'s, R>),
-    ConstructingMember(&'i ConstructingMemberNameI<'s, R>),
-    WhileCondResult(&'i WhileCondResultNameI<'s, R>),
-    Iterable(&'i IterableNameI<'s, R>),
-    Iterator(&'i IteratorNameI<'s, R>),
-    IterationOption(&'i IterationOptionNameI<'s, R>),
-    MagicParam(&'i MagicParamNameI<'s, R>),
-    CodeVar(&'i CodeVarNameI<'s, R>),
-    AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI<R>),
-    Primitive(&'i PrimitiveNameI<'s, R>),
-    PackageTopLevel(&'i PackageTopLevelNameI<R>),
-    Project(&'i ProjectNameI<'s, R>),
-    Package(&'i PackageNameI<'s, R>),
-    Rune(&'i RuneNameI<'s, R>),
-    BuildingFunctionNameWithClosureds(&'i BuildingFunctionNameWithClosuredsI<'s, 'i, R>),
-    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
-    FunctionNameIX(&'i FunctionNameIX<'s, 'i, R>),
-    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i, R>),
-    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s, R>),
-    FunctionBound(&'i FunctionBoundNameI<'s, 'i, R>),
-    ReachableFunctionTemplate(&'i ReachableFunctionTemplateNameI<'s, R>),
-    ReachableFunction(&'i ReachableFunctionNameI<'s, 'i, R>),
-    FunctionTemplate(&'i FunctionTemplateNameI<'s, R>),
-    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i, R>),
-    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i, R>),
-    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i, R>),
-    ConstructorTemplate(&'i ConstructorTemplateNameI<'s, R>),
-    Self_(&'i SelfNameI<R>),
-    Arbitrary(&'i ArbitraryNameI<R>),
-    StructName(&'i StructNameI<'s, 'i, R>),
-    InterfaceName(&'i InterfaceNameI<'s, 'i, R>),
-    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, R>),
-    LambdaCitizen(&'i LambdaCitizenNameI<'s, R>),
-    StructTemplate(&'i StructTemplateNameI<'s, R>),
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
-    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i, R>),
-    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i, R>),
-    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
-    ResolvingEnv(&'i ResolvingEnvNameI<R>),
-    CallEnv(&'i CallEnvNameI<R>),
+pub enum INameI<'s, 'i> {
+    RegionName(&'i RegionNameI<'s>),
+    DenizenDefaultRegionName(&'i DenizenDefaultRegionNameI),
+    ExportTemplate(&'i ExportTemplateNameI<'s>),
+    Export(&'i ExportNameI<'s>),
+    ExternTemplate(&'i ExternTemplateNameI<'s>),
+    Extern(&'i ExternNameI<'s>),
+    ImplTemplate(&'i ImplTemplateNameI<'s>),
+    Impl(&'i ImplNameI<'s, 'i>),
+    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s>),
+    ImplBound(&'i ImplBoundNameI<'s, 'i>),
+    Let(&'i LetNameI<'s>),
+    ExportAs(&'i ExportAsNameI<'s>),
+    RawArray(&'i RawArrayNameI<'s, 'i>),
+    ReachablePrototype(&'i ReachablePrototypeNameI),
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI),
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i>),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i>),
+    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i>),
+    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i>),
+    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i>),
+    CaseFunctionFromImpl(&'i CaseFunctionFromImplNameI<'s, 'i>),
+    CaseFunctionFromImplTemplate(&'i CaseFunctionFromImplTemplateNameI<'s>),
+    TypingPassBlockResultVar(&'i TypingPassBlockResultVarNameI<'i>),
+    TypingPassFunctionResultVar(&'i TypingPassFunctionResultVarNameI),
+    TypingPassTemporaryVar(&'i TypingPassTemporaryVarNameI<'i>),
+    TypingPassPatternMember(&'i TypingPassPatternMemberNameI<'i>),
+    TypingIgnoredParam(&'i TypingIgnoredParamNameI),
+    TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i>),
+    UnnamedLocal(&'i UnnamedLocalNameI<'s>),
+    ClosureParam(&'i ClosureParamNameI<'s>),
+    ConstructingMember(&'i ConstructingMemberNameI<'s>),
+    WhileCondResult(&'i WhileCondResultNameI<'s>),
+    Iterable(&'i IterableNameI<'s>),
+    Iterator(&'i IteratorNameI<'s>),
+    IterationOption(&'i IterationOptionNameI<'s>),
+    MagicParam(&'i MagicParamNameI<'s>),
+    CodeVar(&'i CodeVarNameI<'s>),
+    AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
+    Primitive(&'i PrimitiveNameI<'s>),
+    PackageTopLevel(&'i PackageTopLevelNameI),
+    Project(&'i ProjectNameI<'s>),
+    Package(&'i PackageNameI<'s>),
+    Rune(&'i RuneNameI<'s>),
+    BuildingFunctionNameWithClosureds(&'i BuildingFunctionNameWithClosuredsI<'s, 'i>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i>),
+    FunctionNameIX(&'i FunctionNameIX<'s, 'i>),
+    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i>),
+    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s>),
+    FunctionBound(&'i FunctionBoundNameI<'s, 'i>),
+    ReachableFunctionTemplate(&'i ReachableFunctionTemplateNameI<'s>),
+    ReachableFunction(&'i ReachableFunctionNameI<'s, 'i>),
+    FunctionTemplate(&'i FunctionTemplateNameI<'s>),
+    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i>),
+    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i>),
+    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i>),
+    ConstructorTemplate(&'i ConstructorTemplateNameI<'s>),
+    Self_(&'i SelfNameI),
+    Arbitrary(&'i ArbitraryNameI),
+    StructName(&'i StructNameI<'s, 'i>),
+    InterfaceName(&'i InterfaceNameI<'s, 'i>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s>),
+    StructTemplate(&'i StructTemplateNameI<'s>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
+    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i>),
+    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
+    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
+    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
+    ResolvingEnv(&'i ResolvingEnvNameI),
+    CallEnv(&'i CallEnvNameI),
 }
 
 /// Interning transient (see @TFITCX) — mirror of INameI holding payloads by value
 /// (used as HashMap lookup key in the interner). Per typing-pass parity (INameValT).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum INameValI<'s, 'i, R> {
-    RegionName(RegionNameI<'s, R>),
-    DenizenDefaultRegionName(DenizenDefaultRegionNameI<R>),
-    ExportTemplate(ExportTemplateNameI<'s, R>),
-    Export(ExportNameI<'s, R>),
-    ExternTemplate(ExternTemplateNameI<'s, R>),
-    Extern(ExternNameI<'s, R>),
-    ImplTemplate(ImplTemplateNameI<'s, R>),
-    Impl(ImplNameI<'s, 'i, R>),
-    ImplBoundTemplate(ImplBoundTemplateNameI<'s, R>),
-    ImplBound(ImplBoundNameI<'s, 'i, R>),
-    Let(LetNameI<'s, R>),
-    ExportAs(ExportAsNameI<'s, R>),
-    RawArray(RawArrayNameI<'s, 'i, R>),
-    ReachablePrototype(ReachablePrototypeNameI<R>),
-    StaticSizedArrayTemplate(StaticSizedArrayTemplateNameI<R>),
-    StaticSizedArray(StaticSizedArrayNameI<'s, 'i, R>),
-    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateNameI<R>),
-    RuntimeSizedArray(RuntimeSizedArrayNameI<'s, 'i, R>),
-    OverrideDispatcherTemplate(OverrideDispatcherTemplateNameI<'s, 'i, R>),
-    OverrideDispatcher(OverrideDispatcherNameI<'s, 'i, R>),
-    OverrideDispatcherCase(OverrideDispatcherCaseNameI<'s, 'i, R>),
-    CaseFunctionFromImpl(CaseFunctionFromImplNameI<'s, 'i, R>),
-    CaseFunctionFromImplTemplate(CaseFunctionFromImplTemplateNameI<'s, R>),
-    TypingPassBlockResultVar(TypingPassBlockResultVarNameI<'i, R>),
-    TypingPassFunctionResultVar(TypingPassFunctionResultVarNameI<R>),
-    TypingPassTemporaryVar(TypingPassTemporaryVarNameI<'i, R>),
-    TypingPassPatternMember(TypingPassPatternMemberNameI<'i, R>),
-    TypingIgnoredParam(TypingIgnoredParamNameI<R>),
-    TypingPassPatternDestructuree(TypingPassPatternDestructureeNameI<'i, R>),
-    UnnamedLocal(UnnamedLocalNameI<'s, R>),
-    ClosureParam(ClosureParamNameI<'s, R>),
-    ConstructingMember(ConstructingMemberNameI<'s, R>),
-    WhileCondResult(WhileCondResultNameI<'s, R>),
-    Iterable(IterableNameI<'s, R>),
-    Iterator(IteratorNameI<'s, R>),
-    IterationOption(IterationOptionNameI<'s, R>),
-    MagicParam(MagicParamNameI<'s, R>),
-    CodeVar(CodeVarNameI<'s, R>),
-    AnonymousSubstructMember(AnonymousSubstructMemberNameI<R>),
-    Primitive(PrimitiveNameI<'s, R>),
-    PackageTopLevel(PackageTopLevelNameI<R>),
-    Project(ProjectNameI<'s, R>),
-    Package(PackageNameI<'s, R>),
-    Rune(RuneNameI<'s, R>),
-    BuildingFunctionNameWithClosureds(BuildingFunctionNameWithClosuredsI<'s, 'i, R>),
-    ExternFunction(ExternFunctionNameI<'s, 'i, R>),
-    FunctionNameIX(FunctionNameIX<'s, 'i, R>),
-    ForwarderFunction(ForwarderFunctionNameI<'s, 'i, R>),
-    FunctionBoundTemplate(FunctionBoundTemplateNameI<'s, R>),
-    FunctionBound(FunctionBoundNameI<'s, 'i, R>),
-    ReachableFunctionTemplate(ReachableFunctionTemplateNameI<'s, R>),
-    ReachableFunction(ReachableFunctionNameI<'s, 'i, R>),
-    FunctionTemplate(FunctionTemplateNameI<'s, R>),
-    LambdaCallFunctionTemplate(LambdaCallFunctionTemplateNameI<'s, 'i, R>),
-    LambdaCallFunction(LambdaCallFunctionNameI<'s, 'i, R>),
-    ForwarderFunctionTemplate(ForwarderFunctionTemplateNameI<'s, 'i, R>),
-    ConstructorTemplate(ConstructorTemplateNameI<'s, R>),
-    Self_(SelfNameI<R>),
-    Arbitrary(ArbitraryNameI<R>),
-    StructName(StructNameI<'s, 'i, R>),
-    InterfaceName(InterfaceNameI<'s, 'i, R>),
-    LambdaCitizenTemplate(LambdaCitizenTemplateNameI<'s, R>),
-    LambdaCitizen(LambdaCitizenNameI<'s, R>),
-    StructTemplate(StructTemplateNameI<'s, R>),
-    InterfaceTemplate(InterfaceTemplateNameI<'s, R>),
-    AnonymousSubstructImplTemplate(AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructImpl(AnonymousSubstructImplNameI<'s, 'i, R>),
-    AnonymousSubstructTemplate(AnonymousSubstructTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructConstructorTemplate(AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructConstructor(AnonymousSubstructConstructorNameI<'s, 'i, R>),
-    AnonymousSubstruct(AnonymousSubstructNameI<'s, 'i, R>),
-    ResolvingEnv(ResolvingEnvNameI<R>),
-    CallEnv(CallEnvNameI<R>),
+pub enum INameValI<'s, 'i> {
+    RegionName(RegionNameI<'s>),
+    DenizenDefaultRegionName(DenizenDefaultRegionNameI),
+    ExportTemplate(ExportTemplateNameI<'s>),
+    Export(ExportNameI<'s>),
+    ExternTemplate(ExternTemplateNameI<'s>),
+    Extern(ExternNameI<'s>),
+    ImplTemplate(ImplTemplateNameI<'s>),
+    Impl(ImplNameI<'s, 'i>),
+    ImplBoundTemplate(ImplBoundTemplateNameI<'s>),
+    ImplBound(ImplBoundNameI<'s, 'i>),
+    Let(LetNameI<'s>),
+    ExportAs(ExportAsNameI<'s>),
+    RawArray(RawArrayNameI<'s, 'i>),
+    ReachablePrototype(ReachablePrototypeNameI),
+    StaticSizedArrayTemplate(StaticSizedArrayTemplateNameI),
+    StaticSizedArray(StaticSizedArrayNameI<'s, 'i>),
+    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateNameI),
+    RuntimeSizedArray(RuntimeSizedArrayNameI<'s, 'i>),
+    OverrideDispatcherTemplate(OverrideDispatcherTemplateNameI<'s, 'i>),
+    OverrideDispatcher(OverrideDispatcherNameI<'s, 'i>),
+    OverrideDispatcherCase(OverrideDispatcherCaseNameI<'s, 'i>),
+    CaseFunctionFromImpl(CaseFunctionFromImplNameI<'s, 'i>),
+    CaseFunctionFromImplTemplate(CaseFunctionFromImplTemplateNameI<'s>),
+    TypingPassBlockResultVar(TypingPassBlockResultVarNameI<'i>),
+    TypingPassFunctionResultVar(TypingPassFunctionResultVarNameI),
+    TypingPassTemporaryVar(TypingPassTemporaryVarNameI<'i>),
+    TypingPassPatternMember(TypingPassPatternMemberNameI<'i>),
+    TypingIgnoredParam(TypingIgnoredParamNameI),
+    TypingPassPatternDestructuree(TypingPassPatternDestructureeNameI<'i>),
+    UnnamedLocal(UnnamedLocalNameI<'s>),
+    ClosureParam(ClosureParamNameI<'s>),
+    ConstructingMember(ConstructingMemberNameI<'s>),
+    WhileCondResult(WhileCondResultNameI<'s>),
+    Iterable(IterableNameI<'s>),
+    Iterator(IteratorNameI<'s>),
+    IterationOption(IterationOptionNameI<'s>),
+    MagicParam(MagicParamNameI<'s>),
+    CodeVar(CodeVarNameI<'s>),
+    AnonymousSubstructMember(AnonymousSubstructMemberNameI),
+    Primitive(PrimitiveNameI<'s>),
+    PackageTopLevel(PackageTopLevelNameI),
+    Project(ProjectNameI<'s>),
+    Package(PackageNameI<'s>),
+    Rune(RuneNameI<'s>),
+    BuildingFunctionNameWithClosureds(BuildingFunctionNameWithClosuredsI<'s, 'i>),
+    ExternFunction(ExternFunctionNameI<'s, 'i>),
+    FunctionNameIX(FunctionNameIX<'s, 'i>),
+    ForwarderFunction(ForwarderFunctionNameI<'s, 'i>),
+    FunctionBoundTemplate(FunctionBoundTemplateNameI<'s>),
+    FunctionBound(FunctionBoundNameI<'s, 'i>),
+    ReachableFunctionTemplate(ReachableFunctionTemplateNameI<'s>),
+    ReachableFunction(ReachableFunctionNameI<'s, 'i>),
+    FunctionTemplate(FunctionTemplateNameI<'s>),
+    LambdaCallFunctionTemplate(LambdaCallFunctionTemplateNameI<'s, 'i>),
+    LambdaCallFunction(LambdaCallFunctionNameI<'s, 'i>),
+    ForwarderFunctionTemplate(ForwarderFunctionTemplateNameI<'s, 'i>),
+    ConstructorTemplate(ConstructorTemplateNameI<'s>),
+    Self_(SelfNameI),
+    Arbitrary(ArbitraryNameI),
+    StructName(StructNameI<'s, 'i>),
+    InterfaceName(InterfaceNameI<'s, 'i>),
+    LambdaCitizenTemplate(LambdaCitizenTemplateNameI<'s>),
+    LambdaCitizen(LambdaCitizenNameI<'s>),
+    StructTemplate(StructTemplateNameI<'s>),
+    InterfaceTemplate(InterfaceTemplateNameI<'s>),
+    AnonymousSubstructImplTemplate(AnonymousSubstructImplTemplateNameI<'s, 'i>),
+    AnonymousSubstructImpl(AnonymousSubstructImplNameI<'s, 'i>),
+    AnonymousSubstructTemplate(AnonymousSubstructTemplateNameI<'s, 'i>),
+    AnonymousSubstructConstructorTemplate(AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
+    AnonymousSubstructConstructor(AnonymousSubstructConstructorNameI<'s, 'i>),
+    AnonymousSubstruct(AnonymousSubstructNameI<'s, 'i>),
+    ResolvingEnv(ResolvingEnvNameI),
+    CallEnv(CallEnvNameI),
 }
 
 // mig: impl INameI
@@ -294,36 +295,36 @@ sealed trait INameI[+R <: IRegionsModeI]
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ITemplateNameI<'s, 'i, R> {
-    ExportTemplate(&'i ExportTemplateNameI<'s, R>),
-    ImplTemplate(&'i ImplTemplateNameI<'s, R>),
-    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s, R>),
-    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<R>),
-    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<R>),
-    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i, R>),
-    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i, R>),
-    ExternTemplate(&'i ExternTemplateNameI<'s, R>),
-    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
-    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s, R>),
-    FunctionTemplate(&'i FunctionTemplateNameI<'s, R>),
-    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i, R>),
-    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i, R>),
-    ConstructorTemplate(&'i ConstructorTemplateNameI<'s, R>),
-    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, R>),
-    StructTemplate(&'i StructTemplateNameI<'s, R>),
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
-    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
-    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
+pub enum ITemplateNameI<'s, 'i> {
+    ExportTemplate(&'i ExportTemplateNameI<'s>),
+    ImplTemplate(&'i ImplTemplateNameI<'s>),
+    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s>),
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI),
+    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i>),
+    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i>),
+    ExternTemplate(&'i ExternTemplateNameI<'s>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i>),
+    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s>),
+    FunctionTemplate(&'i FunctionTemplateNameI<'s>),
+    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i>),
+    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i>),
+    ConstructorTemplate(&'i ConstructorTemplateNameI<'s>),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s>),
+    StructTemplate(&'i StructTemplateNameI<'s>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
+    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
+    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
 }
 // mig: impl ITemplateNameI
 /*
 sealed trait ITemplateNameI[+R <: IRegionsModeI] extends INameI[R]
 */
 // Rust-only narrowing INameI -> ITemplateNameI (mirrors T-side TryFrom<INameT>). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ITemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ITemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::ExportTemplate(x) => Ok(ITemplateNameI::ExportTemplate(x)),
             INameI::ImplTemplate(x) => Ok(ITemplateNameI::ImplTemplate(x)),
@@ -353,15 +354,15 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ITemplateNameI<'s, 'i, R> where '
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IFunctionTemplateNameI<'s, 'i, R> {
-    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i, R>),
-    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
-    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s, R>),
-    FunctionTemplate(&'i FunctionTemplateNameI<'s, R>),
-    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i, R>),
-    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i, R>),
-    ConstructorTemplate(&'i ConstructorTemplateNameI<'s, R>),
-    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>),
+pub enum IFunctionTemplateNameI<'s, 'i> {
+    OverrideDispatcherTemplate(&'i OverrideDispatcherTemplateNameI<'s, 'i>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i>),
+    FunctionBoundTemplate(&'i FunctionBoundTemplateNameI<'s>),
+    FunctionTemplate(&'i FunctionTemplateNameI<'s>),
+    LambdaCallFunctionTemplate(&'i LambdaCallFunctionTemplateNameI<'s, 'i>),
+    ForwarderFunctionTemplate(&'i ForwarderFunctionTemplateNameI<'s, 'i>),
+    ConstructorTemplate(&'i ConstructorTemplateNameI<'s>),
+    AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
 }
 // mig: impl IFunctionTemplateNameI
 /*
@@ -370,8 +371,8 @@ sealed trait IFunctionTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[
 }
 */
 // Rust-only widening IFunctionTemplateNameI -> INameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> From<IFunctionTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> {
-    fn from(t: IFunctionTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IFunctionTemplateNameI<'s, 'i>> for INameI<'s, 'i> {
+    fn from(t: IFunctionTemplateNameI<'s, 'i>) -> Self {
         match t {
             IFunctionTemplateNameI::OverrideDispatcherTemplate(x) => INameI::OverrideDispatcherTemplate(x),
             IFunctionTemplateNameI::ExternFunction(x) => INameI::ExternFunction(x),
@@ -386,9 +387,9 @@ impl<'s, 'i, R> From<IFunctionTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> {
 }
 /* */
 // Rust-only narrowing INameI -> IFunctionTemplateNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionTemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IFunctionTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::OverrideDispatcherTemplate(x) => Ok(IFunctionTemplateNameI::OverrideDispatcherTemplate(x)),
             INameI::ExternFunction(x) => Ok(IFunctionTemplateNameI::ExternFunction(x)),
@@ -405,26 +406,26 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionTemplateNameI<'s, 'i, R>
 // mig: enum IInstantiationNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum IInstantiationNameI<'s, 'i, R> {
-    Export(&'i ExportNameI<'s, R>),
-    Impl(&'i ImplNameI<'s, 'i, R>),
-    ImplBound(&'i ImplBoundNameI<'s, 'i, R>),
-    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
-    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
-    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i, R>),
-    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i, R>),
-    Extern(&'i ExternNameI<'s, R>),
-    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
-    Function(&'i FunctionNameIX<'s, 'i, R>),
-    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i, R>),
-    FunctionBound(&'i FunctionBoundNameI<'s, 'i, R>),
-    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i, R>),
-    Struct(&'i StructNameI<'s, 'i, R>),
-    Interface(&'i InterfaceNameI<'s, 'i, R>),
-    LambdaCitizen(&'i LambdaCitizenNameI<'s, R>),
-    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i, R>),
-    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i, R>),
-    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
+pub enum IInstantiationNameI<'s, 'i> {
+    Export(&'i ExportNameI<'s>),
+    Impl(&'i ImplNameI<'s, 'i>),
+    ImplBound(&'i ImplBoundNameI<'s, 'i>),
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i>),
+    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i>),
+    OverrideDispatcherCase(&'i OverrideDispatcherCaseNameI<'s, 'i>),
+    Extern(&'i ExternNameI<'s>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i>),
+    Function(&'i FunctionNameIX<'s, 'i>),
+    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i>),
+    FunctionBound(&'i FunctionBoundNameI<'s, 'i>),
+    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i>),
+    Struct(&'i StructNameI<'s, 'i>),
+    Interface(&'i InterfaceNameI<'s, 'i>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s>),
+    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i>),
+    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl IInstantiationNameI
 /*
@@ -434,17 +435,17 @@ sealed trait IInstantiationNameI[+R <: IRegionsModeI] extends INameI[R] {
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    pub fn template_args(&self, interner: &InstantiatingInterner<'s, 'i>) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self, interner: &InstantiatingInterner<'s, 'i>) -> &'i [ITemplataI<'s, 'i>] {
         match self {
-            IInstantiationNameI::Export(x) => interner.alloc_slice_from_vec(vec![ITemplataI::Region(x.region)]),
+            IInstantiationNameI::Export(_) => &[],
             IInstantiationNameI::Impl(x) => x.template_args,
             IInstantiationNameI::ImplBound(x) => x.template_args,
             IInstantiationNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
             IInstantiationNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
             IInstantiationNameI::OverrideDispatcher(x) => x.template_args,
             IInstantiationNameI::OverrideDispatcherCase(x) => x.independent_impl_template_args,
-            IInstantiationNameI::Extern(x) => interner.alloc_slice_from_vec(vec![ITemplataI::Region(x.region)]),
+            IInstantiationNameI::Extern(_) => &[],
             IInstantiationNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
             IInstantiationNameI::Function(x) => x.template_args,
             IInstantiationNameI::ForwarderFunction(f) => f.inner.template_args(),
@@ -461,8 +462,8 @@ impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i, R: Copy {
 }
 /* */
 // mig: fn template
-impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i {
-    pub fn template(&self) -> ITemplateNameI<'s, 'i, R> {
+impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
+    pub fn template(&self) -> ITemplateNameI<'s, 'i> {
         match self {
             IInstantiationNameI::Export(x) => ITemplateNameI::ExportTemplate(&x.template),
             IInstantiationNameI::Impl(x) => match x.template {
@@ -498,9 +499,9 @@ impl<'s, 'i, R> IInstantiationNameI<'s, 'i, R> where 's: 'i {
 }
 // Rust-only narrowing from the wide INameI to the IInstantiationNameI subset
 // (mirrors the T-side `TryFrom<INameT> for IInstantiationNameT`). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInstantiationNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IInstantiationNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::Export(x) => Ok(IInstantiationNameI::Export(x)),
             INameI::Impl(x) => Ok(IInstantiationNameI::Impl(x)),
@@ -529,14 +530,14 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInstantiationNameI<'s, 'i, R> wh
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IFunctionNameI<'s, 'i, R> {
-    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i, R>),
-    ExternFunction(&'i ExternFunctionNameI<'s, 'i, R>),
-    Function(&'i FunctionNameIX<'s, 'i, R>),
-    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i, R>),
-    FunctionBound(&'i FunctionBoundNameI<'s, 'i, R>),
-    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i, R>),
-    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i, R>),
+pub enum IFunctionNameI<'s, 'i> {
+    OverrideDispatcher(&'i OverrideDispatcherNameI<'s, 'i>),
+    ExternFunction(&'i ExternFunctionNameI<'s, 'i>),
+    Function(&'i FunctionNameIX<'s, 'i>),
+    ForwarderFunction(&'i ForwarderFunctionNameI<'s, 'i>),
+    FunctionBound(&'i FunctionBoundNameI<'s, 'i>),
+    LambdaCallFunction(&'i LambdaCallFunctionNameI<'s, 'i>),
+    AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i>),
 }
 // mig: impl IFunctionNameI
 /*
@@ -547,8 +548,8 @@ sealed trait IFunctionNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] 
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> IFunctionNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             IFunctionNameI::OverrideDispatcher(x) => x.template_args,
             IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
@@ -560,7 +561,7 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
         }
     }
 // mig: fn template
-    pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i, R> {
+    pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i> {
         match self {
             IFunctionNameI::OverrideDispatcher(x) => IFunctionTemplateNameI::OverrideDispatcherTemplate(&x.template),
             IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template on ExternFunctionNameI (Scala: override def template = ExternFunctionTemplateNameI(humanName) — needs interner)"),
@@ -572,7 +573,7 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
         }
     }
 // mig: fn parameters
-    pub fn parameters(&self) -> &'i [CoordI<'s, 'i, R>] {
+    pub fn parameters(&self) -> &'i [CoordI<'s, 'i>] {
         match self {
             IFunctionNameI::OverrideDispatcher(f) => f.parameters,
             IFunctionNameI::ExternFunction(f) => f.parameters,
@@ -585,9 +586,9 @@ impl<'s, 'i, R> IFunctionNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // Rust-only narrowing INameI -> IFunctionNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IFunctionNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::OverrideDispatcher(x) => Ok(IFunctionNameI::OverrideDispatcher(x)),
             INameI::ExternFunction(x) => Ok(IFunctionNameI::ExternFunction(x)),
@@ -602,8 +603,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IFunctionNameI<'s, 'i, R> where '
 }
 // Rust-only widening IFunctionNameI -> INameI (mirrors Scala `IFunctionNameI extends INameI`
 // subtyping; reverse of the TryFrom above, same as the template-name From widenings below). No Scala counterpart.
-impl<'s, 'i, R> From<IFunctionNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IFunctionNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IFunctionNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IFunctionNameI<'s, 'i>) -> Self {
         match name {
             IFunctionNameI::OverrideDispatcher(x) => INameI::OverrideDispatcher(x),
             IFunctionNameI::ExternFunction(x) => INameI::ExternFunction(x),
@@ -619,8 +620,8 @@ impl<'s, 'i, R> From<IFunctionNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ISuperKindTemplateNameI<'s, 'i, R> {
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
+pub enum ISuperKindTemplateNameI<'s, 'i> {
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
 }
 // mig: impl ISuperKindTemplateNameI
 /*
@@ -630,13 +631,13 @@ sealed trait ISuperKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ISubKindTemplateNameI<'s, 'i, R> {
-    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<R>),
-    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<R>),
-    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, R>),
-    StructTemplate(&'i StructTemplateNameI<'s, R>),
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
-    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
+pub enum ISubKindTemplateNameI<'s, 'i> {
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s>),
+    StructTemplate(&'i StructTemplateNameI<'s>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
 }
 // mig: impl ISubKindTemplateNameI
 /*
@@ -646,13 +647,13 @@ sealed trait ISubKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ICitizenTemplateNameI<'s, 'i, R> {
-    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI<R>),
-    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI<R>),
-    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, R>),
-    StructTemplate(&'i StructTemplateNameI<'s, R>),
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
-    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
+pub enum ICitizenTemplateNameI<'s, 'i> {
+    StaticSizedArrayTemplate(&'i StaticSizedArrayTemplateNameI),
+    RuntimeSizedArrayTemplate(&'i RuntimeSizedArrayTemplateNameI),
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s>),
+    StructTemplate(&'i StructTemplateNameI<'s>),
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
 }
 // mig: impl ICitizenTemplateNameI
 /*
@@ -664,16 +665,16 @@ sealed trait ICitizenTemplateNameI[+R <: IRegionsModeI] extends ISubKindTemplate
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IStructTemplateNameI<'s, 'i, R> {
-    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s, R>),
-    StructTemplate(&'i StructTemplateNameI<'s, R>),
-    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i, R>),
+pub enum IStructTemplateNameI<'s, 'i> {
+    LambdaCitizenTemplate(&'i LambdaCitizenTemplateNameI<'s>),
+    StructTemplate(&'i StructTemplateNameI<'s>),
+    AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
 }
 // Widening conversions mirroring the Scala `extends` hierarchy of the template-name traits
 // (IStructTemplateNameI <: ICitizenTemplateNameI <: ISubKindTemplateNameI). Rust-only (no Scala
 // counterpart — Scala uses subtyping); the T-side encodes the same widenings as `From` impls.
-impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for ICitizenTemplateNameI<'s, 'i, R> {
-    fn from(t: IStructTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IStructTemplateNameI<'s, 'i>> for ICitizenTemplateNameI<'s, 'i> {
+    fn from(t: IStructTemplateNameI<'s, 'i>) -> Self {
         match t {
             IStructTemplateNameI::LambdaCitizenTemplate(x) => ICitizenTemplateNameI::LambdaCitizenTemplate(x),
             IStructTemplateNameI::StructTemplate(x) => ICitizenTemplateNameI::StructTemplate(x),
@@ -681,8 +682,8 @@ impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for ICitizenTemplateNameI<
         }
     }
 }
-impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for ISubKindTemplateNameI<'s, 'i, R> {
-    fn from(t: ICitizenTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<ICitizenTemplateNameI<'s, 'i>> for ISubKindTemplateNameI<'s, 'i> {
+    fn from(t: ICitizenTemplateNameI<'s, 'i>) -> Self {
         match t {
             ICitizenTemplateNameI::StaticSizedArrayTemplate(x) => ISubKindTemplateNameI::StaticSizedArrayTemplate(x),
             ICitizenTemplateNameI::RuntimeSizedArrayTemplate(x) => ISubKindTemplateNameI::RuntimeSizedArrayTemplate(x),
@@ -694,9 +695,9 @@ impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for ISubKindTemplateNameI
     }
 }
 // Rust-only narrowing INameI -> ICitizenTemplateNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ICitizenTemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ICitizenTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::StaticSizedArrayTemplate(x) => Ok(ICitizenTemplateNameI::StaticSizedArrayTemplate(x)),
             INameI::RuntimeSizedArrayTemplate(x) => Ok(ICitizenTemplateNameI::RuntimeSizedArrayTemplate(x)),
@@ -711,8 +712,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ICitizenTemplateNameI<'s, 'i, R> 
 /* */
 // Rust-only widening IInterfaceTemplateNameI -> ICitizenTemplateNameI
 // (IInterfaceTemplateNameI <: ICitizenTemplateNameI). Rust-only (no Scala counterpart — Scala uses subtyping).
-impl<'s, 'i, R> From<IInterfaceTemplateNameI<'s, 'i, R>> for ICitizenTemplateNameI<'s, 'i, R> {
-    fn from(t: IInterfaceTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for ICitizenTemplateNameI<'s, 'i> {
+    fn from(t: IInterfaceTemplateNameI<'s, 'i>) -> Self {
         match t {
             IInterfaceTemplateNameI::InterfaceTemplate(x) => ICitizenTemplateNameI::InterfaceTemplate(x),
         }
@@ -720,9 +721,9 @@ impl<'s, 'i, R> From<IInterfaceTemplateNameI<'s, 'i, R>> for ICitizenTemplateNam
 }
 /* */
 // Rust-only narrowing ICitizenTemplateNameI -> IStructTemplateNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<ICitizenTemplateNameI<'s, 'i, R>> for IStructTemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IStructTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: ICitizenTemplateNameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: ICitizenTemplateNameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             ICitizenTemplateNameI::StructTemplate(x) => Ok(IStructTemplateNameI::StructTemplate(x)),
             ICitizenTemplateNameI::AnonymousSubstructTemplate(x) => Ok(IStructTemplateNameI::AnonymousSubstructTemplate(x)),
@@ -733,9 +734,9 @@ impl<'s, 'i, R> TryFrom<ICitizenTemplateNameI<'s, 'i, R>> for IStructTemplateNam
 }
 /* */
 // Rust-only narrowing ICitizenTemplateNameI -> IInterfaceTemplateNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<ICitizenTemplateNameI<'s, 'i, R>> for IInterfaceTemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IInterfaceTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: ICitizenTemplateNameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: ICitizenTemplateNameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             ICitizenTemplateNameI::InterfaceTemplate(x) => Ok(IInterfaceTemplateNameI::InterfaceTemplate(x)),
             _ => Err(()),
@@ -744,9 +745,9 @@ impl<'s, 'i, R> TryFrom<ICitizenTemplateNameI<'s, 'i, R>> for IInterfaceTemplate
 }
 /* */
 // Rust-only narrowing INameI -> IStructTemplateNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IStructTemplateNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IStructTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::StructTemplate(x) => Ok(IStructTemplateNameI::StructTemplate(x)),
             INameI::AnonymousSubstructTemplate(x) => Ok(IStructTemplateNameI::AnonymousSubstructTemplate(x)),
@@ -769,8 +770,8 @@ sealed trait IStructTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateN
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IInterfaceTemplateNameI<'s, 'i, R> {
-    InterfaceTemplate(&'i InterfaceTemplateNameI<'s, R>),
+pub enum IInterfaceTemplateNameI<'s, 'i> {
+    InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
 }
 // mig: impl IInterfaceTemplateNameI
 /*
@@ -782,8 +783,8 @@ sealed trait IInterfaceTemplateNameI[+R <: IRegionsModeI] extends ICitizenTempla
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ISuperKindNameI<'s, 'i, R> {
-    Interface(&'i InterfaceNameI<'s, 'i, R>),
+pub enum ISuperKindNameI<'s, 'i> {
+    Interface(&'i InterfaceNameI<'s, 'i>),
 }
 // mig: impl ISuperKindNameI
 /*
@@ -793,14 +794,14 @@ sealed trait ISuperKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R]
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> ISuperKindNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             ISuperKindNameI::Interface(x) => x.template_args,
         }
     }
 // mig: fn template
-    pub fn template(&self) -> ISuperKindTemplateNameI<'s, 'i, R> {
+    pub fn template(&self) -> ISuperKindTemplateNameI<'s, 'i> {
         match self {
             ISuperKindNameI::Interface(x) => match x.template {
                 IInterfaceTemplateNameI::InterfaceTemplate(t) => ISuperKindTemplateNameI::InterfaceTemplate(t),
@@ -809,9 +810,9 @@ impl<'s, 'i, R> ISuperKindNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // Rust-only narrowing INameI -> ISuperKindNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISuperKindNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ISuperKindNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::InterfaceName(x) => Ok(ISuperKindNameI::Interface(x)),
             _ => Err(()),
@@ -822,13 +823,13 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISuperKindNameI<'s, 'i, R> where 
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ISubKindNameI<'s, 'i, R> {
-    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
-    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
-    Struct(&'i StructNameI<'s, 'i, R>),
-    Interface(&'i InterfaceNameI<'s, 'i, R>),
-    LambdaCitizen(&'i LambdaCitizenNameI<'s, R>),
-    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
+pub enum ISubKindNameI<'s, 'i> {
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i>),
+    Struct(&'i StructNameI<'s, 'i>),
+    Interface(&'i InterfaceNameI<'s, 'i>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl ISubKindNameI
 /*
@@ -838,8 +839,8 @@ sealed trait ISubKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> ISubKindNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             ISubKindNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
             ISubKindNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
@@ -851,8 +852,8 @@ impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // mig: fn template
-impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    pub fn template(&self) -> ISubKindTemplateNameI<'s, 'i, R> {
+impl<'s, 'i> ISubKindNameI<'s, 'i> where 's: 'i {
+    pub fn template(&self) -> ISubKindTemplateNameI<'s, 'i> {
         match self {
             ISubKindNameI::StaticSizedArray(x) => ISubKindTemplateNameI::StaticSizedArrayTemplate(&x.template),
             ISubKindNameI::RuntimeSizedArray(x) => ISubKindTemplateNameI::RuntimeSizedArrayTemplate(&x.template),
@@ -866,9 +867,9 @@ impl<'s, 'i, R> ISubKindNameI<'s, 'i, R> where 's: 'i, R: Copy {
     }
 }
 // Rust-only narrowing INameI -> ISubKindNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISubKindNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ISubKindNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::StaticSizedArray(x) => Ok(ISubKindNameI::StaticSizedArray(x)),
             INameI::RuntimeSizedArray(x) => Ok(ISubKindNameI::RuntimeSizedArray(x)),
@@ -884,13 +885,13 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ISubKindNameI<'s, 'i, R> where 's
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum ICitizenNameI<'s, 'i, R> {
-    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i, R>),
-    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i, R>),
-    Struct(&'i StructNameI<'s, 'i, R>),
-    Interface(&'i InterfaceNameI<'s, 'i, R>),
-    LambdaCitizen(&'i LambdaCitizenNameI<'s, R>),
-    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
+pub enum ICitizenNameI<'s, 'i> {
+    StaticSizedArray(&'i StaticSizedArrayNameI<'s, 'i>),
+    RuntimeSizedArray(&'i RuntimeSizedArrayNameI<'s, 'i>),
+    Struct(&'i StructNameI<'s, 'i>),
+    Interface(&'i InterfaceNameI<'s, 'i>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl ICitizenNameI
 /*
@@ -900,8 +901,8 @@ sealed trait ICitizenNameI[+R <: IRegionsModeI] extends ISubKindNameI[R] {
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> ICitizenNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             ICitizenNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
             ICitizenNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
@@ -913,8 +914,8 @@ impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // mig: fn template
-impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    pub fn template(&self) -> ICitizenTemplateNameI<'s, 'i, R> {
+impl<'s, 'i> ICitizenNameI<'s, 'i> where 's: 'i {
+    pub fn template(&self) -> ICitizenTemplateNameI<'s, 'i> {
         match self {
             ICitizenNameI::StaticSizedArray(x) => ICitizenTemplateNameI::StaticSizedArrayTemplate(&x.template),
             ICitizenNameI::RuntimeSizedArray(x) => ICitizenTemplateNameI::RuntimeSizedArrayTemplate(&x.template),
@@ -928,9 +929,9 @@ impl<'s, 'i, R> ICitizenNameI<'s, 'i, R> where 's: 'i, R: Copy {
     }
 }
 // Rust-only narrowing INameI -> ICitizenNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::StaticSizedArray(x) => Ok(ICitizenNameI::StaticSizedArray(x)),
             INameI::RuntimeSizedArray(x) => Ok(ICitizenNameI::RuntimeSizedArray(x)),
@@ -944,8 +945,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's
 }
 // Rust-only widening ICitizenNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
 // same family as the IFunctionNameI widening — feeds translateCitizenId's IdI.local_name). No Scala counterpart.
-impl<'s, 'i, R> From<ICitizenNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: ICitizenNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<ICitizenNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: ICitizenNameI<'s, 'i>) -> Self {
         match name {
             ICitizenNameI::StaticSizedArray(x) => INameI::StaticSizedArray(x),
             ICitizenNameI::RuntimeSizedArray(x) => INameI::RuntimeSizedArray(x),
@@ -960,10 +961,10 @@ impl<'s, 'i, R> From<ICitizenNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: '
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IStructNameI<'s, 'i, R> {
-    Struct(&'i StructNameI<'s, 'i, R>),
-    LambdaCitizen(&'i LambdaCitizenNameI<'s, R>),
-    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i, R>),
+pub enum IStructNameI<'s, 'i> {
+    Struct(&'i StructNameI<'s, 'i>),
+    LambdaCitizen(&'i LambdaCitizenNameI<'s>),
+    AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl IStructNameI
 /*
@@ -973,8 +974,8 @@ sealed trait IStructNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with ISu
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> IStructNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             IStructNameI::Struct(x) => x.template_args,
             IStructNameI::LambdaCitizen(_) => &[],
@@ -983,8 +984,8 @@ impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // mig: fn template
-impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    pub fn template(&self) -> IStructTemplateNameI<'s, 'i, R> {
+impl<'s, 'i> IStructNameI<'s, 'i> where 's: 'i {
+    pub fn template(&self) -> IStructTemplateNameI<'s, 'i> {
         match self {
             IStructNameI::Struct(x) => x.template,
             IStructNameI::LambdaCitizen(x) => IStructTemplateNameI::LambdaCitizenTemplate(&x.template),
@@ -993,9 +994,9 @@ impl<'s, 'i, R> IStructNameI<'s, 'i, R> where 's: 'i, R: Copy {
     }
 }
 // Rust-only narrowing INameI -> IStructNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IStructNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IStructNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::StructName(x) => Ok(IStructNameI::Struct(x)),
             INameI::LambdaCitizen(x) => Ok(IStructNameI::LambdaCitizen(x)),
@@ -1006,8 +1007,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IStructNameI<'s, 'i, R> where 's:
 }
 // Rust-only widening IStructNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
 // same family as the IFunctionNameI widening — feeds translateStructId's IdI.local_name). No Scala counterpart.
-impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IStructNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IStructNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IStructNameI<'s, 'i>) -> Self {
         match name {
             IStructNameI::Struct(x) => INameI::StructName(x),
             IStructNameI::LambdaCitizen(x) => INameI::LambdaCitizen(x),
@@ -1017,8 +1018,8 @@ impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i
 }
 // Rust-only widening IStructNameI -> ICitizenNameI (mirrors Scala `IStructNameI extends ICitizenNameI`
 // subtyping; same shape as the INameI widening just above). No Scala counterpart.
-impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IStructNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IStructNameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: 'i {
+    fn from(name: IStructNameI<'s, 'i>) -> Self {
         match name {
             IStructNameI::Struct(x) => ICitizenNameI::Struct(x),
             IStructNameI::LambdaCitizen(x) => ICitizenNameI::LambdaCitizen(x),
@@ -1029,8 +1030,8 @@ impl<'s, 'i, R> From<IStructNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where
 /* Guardian: disable-all */
 // Rust-only widening IInterfaceNameI -> ICitizenNameI (mirrors Scala `IInterfaceNameI extends
 // ICitizenNameI` subtyping; same family as the IStructNameI widening just above). No Scala counterpart.
-impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IInterfaceNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IInterfaceNameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: 'i {
+    fn from(name: IInterfaceNameI<'s, 'i>) -> Self {
         match name {
             IInterfaceNameI::Interface(x) => ICitizenNameI::Interface(x),
         }
@@ -1040,8 +1041,8 @@ impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for ICitizenNameI<'s, 'i, R> wh
 // Rust-only widening IStructTemplateNameI -> INameI (mirrors Scala `IStructTemplateNameI extends
 // ITemplateNameI extends INameI`; needed so humanize_name can recurse on a struct name's `template`
 // without inline matching at the call site). No Scala counterpart.
-impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IStructTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IStructTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IStructTemplateNameI<'s, 'i>) -> Self {
         match name {
             IStructTemplateNameI::StructTemplate(x) => INameI::StructTemplate(x),
             IStructTemplateNameI::AnonymousSubstructTemplate(x) => INameI::AnonymousSubstructTemplate(x),
@@ -1051,8 +1052,8 @@ impl<'s, 'i, R> From<IStructTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> wher
 }
 /* Guardian: disable-all */
 // Rust-only widening IInterfaceTemplateNameI -> INameI. No Scala counterpart.
-impl<'s, 'i, R> From<IInterfaceTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IInterfaceTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IInterfaceTemplateNameI<'s, 'i>) -> Self {
         match name {
             IInterfaceTemplateNameI::InterfaceTemplate(x) => INameI::InterfaceTemplate(x),
         }
@@ -1060,8 +1061,8 @@ impl<'s, 'i, R> From<IInterfaceTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> w
 }
 /* Guardian: disable-all */
 // Rust-only widening ICitizenTemplateNameI -> INameI. No Scala counterpart.
-impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: ICitizenTemplateNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<ICitizenTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: ICitizenTemplateNameI<'s, 'i>) -> Self {
         match name {
             ICitizenTemplateNameI::StaticSizedArrayTemplate(x) => INameI::StaticSizedArrayTemplate(x),
             ICitizenTemplateNameI::RuntimeSizedArrayTemplate(x) => INameI::RuntimeSizedArrayTemplate(x),
@@ -1077,8 +1078,8 @@ impl<'s, 'i, R> From<ICitizenTemplateNameI<'s, 'i, R>> for INameI<'s, 'i, R> whe
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IInterfaceNameI<'s, 'i, R> {
-    Interface(&'i InterfaceNameI<'s, 'i, R>),
+pub enum IInterfaceNameI<'s, 'i> {
+    Interface(&'i InterfaceNameI<'s, 'i>),
 }
 // mig: impl IInterfaceNameI
 /*
@@ -1088,14 +1089,14 @@ sealed trait IInterfaceNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with 
 }
 */
 // mig: fn template_args
-impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> IInterfaceNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             IInterfaceNameI::Interface(x) => x.template_args,
         }
     }
 // mig: fn template
-    pub fn template(&self) -> &'i InterfaceTemplateNameI<'s, R> {
+    pub fn template(&self) -> &'i InterfaceTemplateNameI<'s> {
         match self {
             IInterfaceNameI::Interface(x) => match x.template {
                 IInterfaceTemplateNameI::InterfaceTemplate(t) => t,
@@ -1104,9 +1105,9 @@ impl<'s, 'i, R> IInterfaceNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // Rust-only narrowing INameI -> IInterfaceNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInterfaceNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IInterfaceNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::InterfaceName(x) => Ok(IInterfaceNameI::Interface(x)),
             _ => Err(()),
@@ -1115,8 +1116,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IInterfaceNameI<'s, 'i, R> where 
 }
 // Rust-only widening IInterfaceNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
 // same family as the IFunctionNameI widening — feeds translateInterfaceId's IdI.local_name). No Scala counterpart.
-impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IInterfaceNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IInterfaceNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IInterfaceNameI<'s, 'i>) -> Self {
         match name {
             IInterfaceNameI::Interface(x) => INameI::InterfaceName(x),
         }
@@ -1126,10 +1127,10 @@ impl<'s, 'i, R> From<IInterfaceNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's:
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IImplTemplateNameI<'s, 'i, R> {
-    ImplTemplate(&'i ImplTemplateNameI<'s, R>),
-    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s, R>),
-    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i, R>),
+pub enum IImplTemplateNameI<'s, 'i> {
+    ImplTemplate(&'i ImplTemplateNameI<'s>),
+    ImplBoundTemplate(&'i ImplBoundTemplateNameI<'s>),
+    AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i>),
 }
 // mig: impl IImplTemplateNameI
 /*
@@ -1141,10 +1142,10 @@ sealed trait IImplTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R] {
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IImplNameI<'s, 'i, R> {
-    Impl(&'i ImplNameI<'s, 'i, R>),
-    ImplBound(&'i ImplBoundNameI<'s, 'i, R>),
-    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i, R>),
+pub enum IImplNameI<'s, 'i> {
+    Impl(&'i ImplNameI<'s, 'i>),
+    ImplBound(&'i ImplBoundNameI<'s, 'i>),
+    AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i>),
 }
 // mig: impl IImplNameI
 /*
@@ -1154,8 +1155,8 @@ sealed trait IImplNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
 
 */
 // mig: fn template_args
-impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i {
-    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i, R>] {
+impl<'s, 'i> IImplNameI<'s, 'i> where 's: 'i {
+    pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             IImplNameI::Impl(x) => x.template_args,
             IImplNameI::ImplBound(x) => x.template_args,
@@ -1164,8 +1165,8 @@ impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i {
     }
 }
 // mig: fn template
-impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i, R: Copy {
-    pub fn template(&self) -> IImplTemplateNameI<'s, 'i, R> {
+impl<'s, 'i> IImplNameI<'s, 'i> where 's: 'i {
+    pub fn template(&self) -> IImplTemplateNameI<'s, 'i> {
         match self {
             IImplNameI::Impl(x) => x.template,
             IImplNameI::ImplBound(x) => IImplTemplateNameI::ImplBoundTemplate(&x.template),
@@ -1174,9 +1175,9 @@ impl<'s, 'i, R> IImplNameI<'s, 'i, R> where 's: 'i, R: Copy {
     }
 }
 // Rust-only narrowing INameI -> IImplNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IImplNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IImplNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::Impl(x) => Ok(IImplNameI::Impl(x)),
             INameI::ImplBound(x) => Ok(IImplNameI::ImplBound(x)),
@@ -1187,8 +1188,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IImplNameI<'s, 'i, R> where 's: '
 }
 // Rust-only widening IImplNameI -> INameI (mirrors Scala subtyping; reverse of the TryFrom above,
 // same family as the IFunctionNameI widening — feeds translateImplId's IdI.local_name). No Scala counterpart.
-impl<'s, 'i, R> From<IImplNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IImplNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IImplNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IImplNameI<'s, 'i>) -> Self {
         match name {
             IImplNameI::Impl(x) => INameI::Impl(x),
             IImplNameI::ImplBound(x) => INameI::ImplBound(x),
@@ -1200,8 +1201,8 @@ impl<'s, 'i, R> From<IImplNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IRegionNameI<'s, 'i, R> {
-    _Phantom(PhantomData<(&'s (), &'i (), R)>),
+pub enum IRegionNameI<'s, 'i> {
+    _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl IRegionNameI
 /*
@@ -1211,8 +1212,7 @@ sealed trait IRegionNameI[+R <: IRegionsModeI] extends INameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct RegionNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct RegionNameI<'s> {
     pub rune: IRuneS<'s>,
 }
 /*
@@ -1222,7 +1222,7 @@ case class RegionNameI[+R <: IRegionsModeI](rune: IRuneS) extends IRegionNameI[R
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct DenizenDefaultRegionNameI<R>(pub PhantomData<R>);
+pub struct DenizenDefaultRegionNameI;
 /*
 case class DenizenDefaultRegionNameI[+R <: IRegionsModeI]() extends IRegionNameI[R]
 */
@@ -1230,8 +1230,7 @@ case class DenizenDefaultRegionNameI[+R <: IRegionsModeI]() extends IRegionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExportTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ExportTemplateNameI<'s> {
     pub code_loc: CodeLocationS<'s>,
 }
 /*
@@ -1241,9 +1240,8 @@ case class ExportTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) exte
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExportNameI<'s, R> {
-    pub template: ExportTemplateNameI<'s, R>,
-    pub region: RegionTemplataI<R>,
+pub struct ExportNameI<'s> {
+    pub template: ExportTemplateNameI<'s>,
 }
 /*
 case class ExportNameI[+R <: IRegionsModeI](
@@ -1258,8 +1256,7 @@ case class ExportNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExternTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ExternTemplateNameI<'s> {
     pub code_loc: CodeLocationS<'s>,
 }
 /*
@@ -1269,9 +1266,8 @@ case class ExternTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) exte
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExternNameI<'s, R> {
-    pub template: ExternTemplateNameI<'s, R>,
-    pub region: RegionTemplataI<R>,
+pub struct ExternNameI<'s> {
+    pub template: ExternTemplateNameI<'s>,
 }
 /*
 case class ExternNameI[+R <: IRegionsModeI](
@@ -1286,9 +1282,8 @@ case class ExternNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ImplTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
-    pub code_location_s: CodeLocationS<'s>,
+pub struct ImplTemplateNameI<'s> {
+    pub code_location: CodeLocationS<'s>,
 }
 /*
 case class ImplTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocationS) extends IImplTemplateNameI[R] {
@@ -1302,10 +1297,10 @@ case class ImplTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocationS) 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ImplNameI<'s, 'i, R> {
-    pub template: IImplTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub sub_citizen: ICitizenIT<'s, 'i, R>,
+pub struct ImplNameI<'s, 'i> {
+    pub template: IImplTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub sub_citizen: ICitizenIT<'s, 'i>,
 }
 /*
 case class ImplNameI[+R <: IRegionsModeI](
@@ -1323,9 +1318,8 @@ case class ImplNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ImplBoundTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
-    pub code_location_s: CodeLocationS<'s>,
+pub struct ImplBoundTemplateNameI<'s> {
+    pub code_location: CodeLocationS<'s>,
 }
 /*
 case class ImplBoundTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocationS) extends IImplTemplateNameI[R] {
@@ -1338,9 +1332,9 @@ case class ImplBoundTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocati
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ImplBoundNameI<'s, 'i, R> {
-    pub template: ImplBoundTemplateNameI<'s, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
+pub struct ImplBoundNameI<'s, 'i> {
+    pub template: ImplBoundTemplateNameI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
 /*
@@ -1363,8 +1357,7 @@ case class ImplBoundNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct LetNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct LetNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 /*
@@ -1374,8 +1367,7 @@ case class LetNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends IN
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExportAsNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ExportAsNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 /*
@@ -1385,10 +1377,10 @@ case class ExportAsNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) exten
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct RawArrayNameI<'s, 'i, R> {
+pub struct RawArrayNameI<'s, 'i> {
     pub mutability: MutabilityI,
-    pub element_type: CoordTemplataI<'s, 'i, R>,
-    pub self_region: RegionTemplataI<R>,
+    pub element_type: CoordTemplataI<'s, 'i>,
+    pub self_region: RegionT,
 }
 
 /*
@@ -1404,8 +1396,7 @@ case class RawArrayNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ReachablePrototypeNameI<R> {
-    pub _marker: PhantomData<R>,
+pub struct ReachablePrototypeNameI {
     pub num: i32,
 }
 /*
@@ -1415,7 +1406,7 @@ case class ReachablePrototypeNameI[+R <: IRegionsModeI](num: Int) extends INameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct StaticSizedArrayTemplateNameI<R>(pub PhantomData<R>);
+pub struct StaticSizedArrayTemplateNameI;
 /*
 case class StaticSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitizenTemplateNameI[R] {
 //  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI = {
@@ -1434,11 +1425,11 @@ case class StaticSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitizen
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct StaticSizedArrayNameI<'s, 'i, R> {
-    pub template: StaticSizedArrayTemplateNameI<R>,
+pub struct StaticSizedArrayNameI<'s, 'i> {
+    pub template: StaticSizedArrayTemplateNameI,
     pub size: i64,
     pub variability: VariabilityI,
-    pub arr: RawArrayNameI<'s, 'i, R>,
+    pub arr: RawArrayNameI<'s, 'i>,
 }
 
 /*
@@ -1452,8 +1443,8 @@ case class StaticSizedArrayNameI[+R <: IRegionsModeI](
 */
 // mig: fn template_args
 // (was cfg-gated)
-impl<'s, 'i, R> StaticSizedArrayNameI<'s, 'i, R> {
-    pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i, R>] { panic!("Unimplemented: template_args"); }
+impl<'s, 'i> StaticSizedArrayNameI<'s, 'i> {
+    pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i>] { panic!("Unimplemented: template_args"); }
 }
 /*
   override def templateArgs: Vector[ITemplataI[R]] = {
@@ -1469,7 +1460,7 @@ impl<'s, 'i, R> StaticSizedArrayNameI<'s, 'i, R> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct RuntimeSizedArrayTemplateNameI<R>(pub PhantomData<R>);
+pub struct RuntimeSizedArrayTemplateNameI;
 /*
 case class RuntimeSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitizenTemplateNameI[R] {
 //  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI = {
@@ -1486,9 +1477,9 @@ case class RuntimeSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitize
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct RuntimeSizedArrayNameI<'s, 'i, R> {
-    pub template: RuntimeSizedArrayTemplateNameI<R>,
-    pub arr: RawArrayNameI<'s, 'i, R>,
+pub struct RuntimeSizedArrayNameI<'s, 'i> {
+    pub template: RuntimeSizedArrayTemplateNameI,
+    pub arr: RawArrayNameI<'s, 'i>,
 }
 /*
 case class RuntimeSizedArrayNameI[+R <: IRegionsModeI](
@@ -1498,8 +1489,8 @@ case class RuntimeSizedArrayNameI[+R <: IRegionsModeI](
 */
 // mig: fn template_args
 // (was cfg-gated)
-impl<'s, 'i, R> RuntimeSizedArrayNameI<'s, 'i, R> {
-    pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i, R>] { panic!("Unimplemented: template_args"); }
+impl<'s, 'i> RuntimeSizedArrayNameI<'s, 'i> {
+    pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i>] { panic!("Unimplemented: template_args"); }
 }
 /*
   override def templateArgs: Vector[ITemplataI[R]] = {
@@ -1514,8 +1505,8 @@ impl<'s, 'i, R> RuntimeSizedArrayNameI<'s, 'i, R> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct OverrideDispatcherTemplateNameI<'s, 'i, R> {
-    pub impl_id: IdI<'s, 'i, R>,
+pub struct OverrideDispatcherTemplateNameI<'s, 'i> {
+    pub impl_id: IdI<'s, 'i>,
 }
 /*
 case class OverrideDispatcherTemplateNameI[+R <: IRegionsModeI](
@@ -1536,10 +1527,10 @@ case class OverrideDispatcherTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct OverrideDispatcherNameI<'s, 'i, R> {
-    pub template: OverrideDispatcherTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct OverrideDispatcherNameI<'s, 'i> {
+    pub template: OverrideDispatcherTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -1557,8 +1548,8 @@ case class OverrideDispatcherNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct OverrideDispatcherCaseNameI<'s, 'i, R> {
-    pub independent_impl_template_args: &'i[ITemplataI<'s, 'i, R>],
+pub struct OverrideDispatcherCaseNameI<'s, 'i> {
+    pub independent_impl_template_args: &'i[ITemplataI<'s, 'i>],
 }
 
 /*
@@ -1576,10 +1567,10 @@ case class OverrideDispatcherCaseNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct CaseFunctionFromImplNameI<'s, 'i, R> {
-    pub template: CaseFunctionFromImplTemplateNameI<'s, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct CaseFunctionFromImplNameI<'s, 'i> {
+    pub template: CaseFunctionFromImplTemplateNameI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -1597,8 +1588,7 @@ case class CaseFunctionFromImplNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct CaseFunctionFromImplTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct CaseFunctionFromImplTemplateNameI<'s> {
     pub human_name: StrI<'s>,
     pub rune_in_impl: IRuneS<'s>,
     pub rune_in_citizen: IRuneS<'s>,
@@ -1618,33 +1608,33 @@ case class CaseFunctionFromImplTemplateNameI[+R <: IRegionsModeI](
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum IVarNameI<'s, 'i, R> {
-    TypingPassBlockResultVar(&'i TypingPassBlockResultVarNameI<'i, R>),
-    TypingPassFunctionResultVar(&'i TypingPassFunctionResultVarNameI<R>),
-    TypingPassTemporaryVar(&'i TypingPassTemporaryVarNameI<'i, R>),
-    TypingPassPatternMember(&'i TypingPassPatternMemberNameI<'i, R>),
-    TypingIgnoredParam(&'i TypingIgnoredParamNameI<R>),
-    TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i, R>),
-    UnnamedLocal(&'i UnnamedLocalNameI<'s, R>),
-    ClosureParam(&'i ClosureParamNameI<'s, R>),
-    ConstructingMember(&'i ConstructingMemberNameI<'s, R>),
-    WhileCondResult(&'i WhileCondResultNameI<'s, R>),
-    Iterable(&'i IterableNameI<'s, R>),
-    Iterator(&'i IteratorNameI<'s, R>),
-    IterationOption(&'i IterationOptionNameI<'s, R>),
-    MagicParam(&'i MagicParamNameI<'s, R>),
-    CodeVar(&'i CodeVarNameI<'s, R>),
-    AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI<R>),
-    Self_(&'i SelfNameI<R>),
+pub enum IVarNameI<'s, 'i> {
+    TypingPassBlockResultVar(&'i TypingPassBlockResultVarNameI<'i>),
+    TypingPassFunctionResultVar(&'i TypingPassFunctionResultVarNameI),
+    TypingPassTemporaryVar(&'i TypingPassTemporaryVarNameI<'i>),
+    TypingPassPatternMember(&'i TypingPassPatternMemberNameI<'i>),
+    TypingIgnoredParam(&'i TypingIgnoredParamNameI),
+    TypingPassPatternDestructuree(&'i TypingPassPatternDestructureeNameI<'i>),
+    UnnamedLocal(&'i UnnamedLocalNameI<'s>),
+    ClosureParam(&'i ClosureParamNameI<'s>),
+    ConstructingMember(&'i ConstructingMemberNameI<'s>),
+    WhileCondResult(&'i WhileCondResultNameI<'s>),
+    Iterable(&'i IterableNameI<'s>),
+    Iterator(&'i IteratorNameI<'s>),
+    IterationOption(&'i IterationOptionNameI<'s>),
+    MagicParam(&'i MagicParamNameI<'s>),
+    CodeVar(&'i CodeVarNameI<'s>),
+    AnonymousSubstructMember(&'i AnonymousSubstructMemberNameI),
+    Self_(&'i SelfNameI),
 }
 // mig: impl IVarNameI
 /*
 sealed trait IVarNameI[+R <: IRegionsModeI] extends INameI[R]
 */
 // Rust-only narrowing INameI -> IVarNameI (mirrors T-side). No Scala counterpart.
-impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IVarNameI<'s, 'i, R> where 's: 'i {
+impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IVarNameI<'s, 'i> where 's: 'i {
     type Error = ();
-    fn try_from(name: INameI<'s, 'i, R>) -> Result<Self, ()> {
+    fn try_from(name: INameI<'s, 'i>) -> Result<Self, ()> {
         match name {
             INameI::TypingPassBlockResultVar(x) => Ok(IVarNameI::TypingPassBlockResultVar(x)),
             INameI::TypingPassFunctionResultVar(x) => Ok(IVarNameI::TypingPassFunctionResultVar(x)),
@@ -1669,8 +1659,8 @@ impl<'s, 'i, R> TryFrom<INameI<'s, 'i, R>> for IVarNameI<'s, 'i, R> where 's: 'i
 }
 // Rust-only widening IVarNameI -> INameI (mirrors Scala `IVarNameI extends INameI` subtyping;
 // reverse of the TryFrom above, same shape as the From<IFunctionNameI> widening). No Scala counterpart.
-impl<'s, 'i, R> From<IVarNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
-    fn from(name: IVarNameI<'s, 'i, R>) -> Self {
+impl<'s, 'i> From<IVarNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
+    fn from(name: IVarNameI<'s, 'i>) -> Self {
         match name {
             IVarNameI::TypingPassBlockResultVar(x) => INameI::TypingPassBlockResultVar(x),
             IVarNameI::TypingPassFunctionResultVar(x) => INameI::TypingPassFunctionResultVar(x),
@@ -1697,8 +1687,7 @@ impl<'s, 'i, R> From<IVarNameI<'s, 'i, R>> for INameI<'s, 'i, R> where 's: 'i {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingPassBlockResultVarNameI<'i, R> {
-    pub _marker: PhantomData<R>,
+pub struct TypingPassBlockResultVarNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
 /*
@@ -1708,7 +1697,7 @@ case class TypingPassBlockResultVarNameI[+R <: IRegionsModeI](life: LocationInFu
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingPassFunctionResultVarNameI<R>(pub PhantomData<R>);
+pub struct TypingPassFunctionResultVarNameI;
 /*
 case class TypingPassFunctionResultVarNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
 */
@@ -1716,8 +1705,7 @@ case class TypingPassFunctionResultVarNameI[+R <: IRegionsModeI]() extends IVarN
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingPassTemporaryVarNameI<'i, R> {
-    pub _marker: PhantomData<R>,
+pub struct TypingPassTemporaryVarNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
 /*
@@ -1727,8 +1715,7 @@ case class TypingPassTemporaryVarNameI[+R <: IRegionsModeI](life: LocationInFunc
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingPassPatternMemberNameI<'i, R> {
-    pub _marker: PhantomData<R>,
+pub struct TypingPassPatternMemberNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
 /*
@@ -1738,8 +1725,7 @@ case class TypingPassPatternMemberNameI[+R <: IRegionsModeI](life: LocationInFun
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingIgnoredParamNameI<R> {
-    pub _marker: PhantomData<R>,
+pub struct TypingIgnoredParamNameI {
     pub num: i32,
 }
 /*
@@ -1749,8 +1735,7 @@ case class TypingIgnoredParamNameI[+R <: IRegionsModeI](num: Int) extends IVarNa
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct TypingPassPatternDestructureeNameI<'i, R> {
-    pub _marker: PhantomData<R>,
+pub struct TypingPassPatternDestructureeNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
 /*
@@ -1760,8 +1745,7 @@ case class TypingPassPatternDestructureeNameI[+R <: IRegionsModeI](life: Locatio
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct UnnamedLocalNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct UnnamedLocalNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 /*
@@ -1771,8 +1755,7 @@ case class UnnamedLocalNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) e
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ClosureParamNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ClosureParamNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 /*
@@ -1782,8 +1765,7 @@ case class ClosureParamNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) e
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ConstructingMemberNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ConstructingMemberNameI<'s> {
     pub name: StrI<'s>,
 }
 /*
@@ -1793,8 +1775,7 @@ case class ConstructingMemberNameI[+R <: IRegionsModeI](name: StrI) extends IVar
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct WhileCondResultNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct WhileCondResultNameI<'s> {
     pub range: RangeS<'s>,
 }
 /*
@@ -1804,8 +1785,7 @@ case class WhileCondResultNameI[+R <: IRegionsModeI](range: RangeS) extends IVar
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IterableNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct IterableNameI<'s> {
     pub range: RangeS<'s>,
 }
 /*
@@ -1815,8 +1795,7 @@ case class IterableNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IteratorNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct IteratorNameI<'s> {
     pub range: RangeS<'s>,
 }
 /*
@@ -1826,8 +1805,7 @@ case class IteratorNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct IterationOptionNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct IterationOptionNameI<'s> {
     pub range: RangeS<'s>,
 }
 /*
@@ -1837,8 +1815,7 @@ case class IterationOptionNameI[+R <: IRegionsModeI](range: RangeS) extends IVar
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct MagicParamNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct MagicParamNameI<'s> {
     pub code_location_2: CodeLocationS<'s>,
 }
 /*
@@ -1848,8 +1825,7 @@ case class MagicParamNameI[+R <: IRegionsModeI](codeLocation2: CodeLocationS) ex
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct CodeVarNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct CodeVarNameI<'s> {
     pub name: StrI<'s>,
 }
 /*
@@ -1860,8 +1836,7 @@ case class CodeVarNameI[+R <: IRegionsModeI](name: StrI) extends IVarNameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructMemberNameI<R> {
-    pub _marker: PhantomData<R>,
+pub struct AnonymousSubstructMemberNameI {
     pub index: i32,
 }
 /*
@@ -1871,8 +1846,7 @@ case class AnonymousSubstructMemberNameI[+R <: IRegionsModeI](index: Int) extend
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct PrimitiveNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct PrimitiveNameI<'s> {
     pub human_name: StrI<'s>,
 }
 /*
@@ -1883,7 +1857,7 @@ case class PrimitiveNameI[+R <: IRegionsModeI](humanName: StrI) extends INameI[R
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct PackageTopLevelNameI<R>(pub PhantomData<R>);
+pub struct PackageTopLevelNameI;
 /*
 case class PackageTopLevelNameI[+R <: IRegionsModeI]() extends INameI[R]
 */
@@ -1891,8 +1865,7 @@ case class PackageTopLevelNameI[+R <: IRegionsModeI]() extends INameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ProjectNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ProjectNameI<'s> {
     pub name: StrI<'s>,
 }
 /*
@@ -1902,8 +1875,7 @@ case class ProjectNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct PackageNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct PackageNameI<'s> {
     pub name: StrI<'s>,
 }
 /*
@@ -1913,8 +1885,7 @@ case class PackageNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct RuneNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct RuneNameI<'s> {
     pub rune: IRuneS<'s>,
 }
 /*
@@ -1927,8 +1898,8 @@ case class RuneNameI[+R <: IRegionsModeI](rune: IRuneS) extends INameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct BuildingFunctionNameWithClosuredsI<'s, 'i, R> {
-    pub template_name: IFunctionTemplateNameI<'s, 'i, R>,
+pub struct BuildingFunctionNameWithClosuredsI<'s, 'i> {
+    pub template_name: IFunctionTemplateNameI<'s, 'i>,
 }
 
 /*
@@ -1945,10 +1916,10 @@ case class BuildingFunctionNameWithClosuredsI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ExternFunctionNameI<'s, 'i, R> {
+pub struct ExternFunctionNameI<'s, 'i> {
     pub human_name: StrI<'s>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 /*
 case class ExternFunctionNameI[+R <: IRegionsModeI](
@@ -1964,10 +1935,10 @@ case class ExternFunctionNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct FunctionNameIX<'s, 'i, R> {
-    pub template: FunctionTemplateNameI<'s, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct FunctionNameIX<'s, 'i> {
+    pub template: FunctionTemplateNameI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -1982,9 +1953,9 @@ case class FunctionNameIX[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ForwarderFunctionNameI<'s, 'i, R> {
-    pub template: ForwarderFunctionTemplateNameI<'s, 'i, R>,
-    pub inner: IFunctionNameI<'s, 'i, R>,
+pub struct ForwarderFunctionNameI<'s, 'i> {
+    pub template: ForwarderFunctionTemplateNameI<'s, 'i>,
+    pub inner: IFunctionNameI<'s, 'i>,
 }
 
 /*
@@ -2001,8 +1972,7 @@ case class ForwarderFunctionNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct FunctionBoundTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct FunctionBoundTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
 
@@ -2022,10 +1992,10 @@ case class FunctionBoundTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct FunctionBoundNameI<'s, 'i, R> {
-    pub template: FunctionBoundTemplateNameI<'s, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct FunctionBoundNameI<'s, 'i> {
+    pub template: FunctionBoundTemplateNameI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -2040,8 +2010,7 @@ case class FunctionBoundNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ReachableFunctionTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ReachableFunctionTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
 
@@ -2055,10 +2024,10 @@ case class ReachableFunctionTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ReachableFunctionNameI<'s, 'i, R> {
-    pub template: ReachableFunctionTemplateNameI<'s, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct ReachableFunctionNameI<'s, 'i> {
+    pub template: ReachableFunctionTemplateNameI<'s>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -2073,8 +2042,7 @@ case class ReachableFunctionNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct FunctionTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct FunctionTemplateNameI<'s> {
     pub human_name: StrI<'s>,
     pub code_location: CodeLocationS<'s>,
 }
@@ -2096,10 +2064,9 @@ case class FunctionTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct LambdaCallFunctionTemplateNameI<'s, 'i, R> {
-    pub _marker: PhantomData<R>,
+pub struct LambdaCallFunctionTemplateNameI<'s, 'i> {
     pub code_location: CodeLocationS<'s>,
-    pub param_types: &'i[CoordI<'s, 'i, R>],
+    pub param_types: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -2120,10 +2087,10 @@ case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct LambdaCallFunctionNameI<'s, 'i, R> {
-    pub template: LambdaCallFunctionTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct LambdaCallFunctionNameI<'s, 'i> {
+    pub template: LambdaCallFunctionTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -2138,8 +2105,8 @@ case class LambdaCallFunctionNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ForwarderFunctionTemplateNameI<'s, 'i, R> {
-    pub inner: IFunctionTemplateNameI<'s, 'i, R>,
+pub struct ForwarderFunctionTemplateNameI<'s, 'i> {
+    pub inner: IFunctionTemplateNameI<'s, 'i>,
     pub index: i32,
 }
 
@@ -2196,8 +2163,7 @@ case class ForwarderFunctionTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ConstructorTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct ConstructorTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 
@@ -2258,7 +2224,7 @@ case class ConstructorTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct SelfNameI<R>(pub PhantomData<R>);
+pub struct SelfNameI;
 /*
 case class SelfNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
 */
@@ -2266,7 +2232,7 @@ case class SelfNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ArbitraryNameI<R>(pub PhantomData<R>);
+pub struct ArbitraryNameI;
 /*
 case class ArbitraryNameI[+R <: IRegionsModeI]() extends INameI[R]
 */
@@ -2274,8 +2240,8 @@ case class ArbitraryNameI[+R <: IRegionsModeI]() extends INameI[R]
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum CitizenNameI<'s, 'i, R> {
-    _Phantom(PhantomData<(&'s (), &'i (), R)>),
+pub enum CitizenNameI<'s, 'i> {
+    _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl CitizenNameI
 /*
@@ -2302,9 +2268,9 @@ object CitizenNameI {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct StructNameI<'s, 'i, R> {
-    pub template: IStructTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
+pub struct StructNameI<'s, 'i> {
+    pub template: IStructTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
 /*
@@ -2320,9 +2286,9 @@ case class StructNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct InterfaceNameI<'s, 'i, R> {
-    pub template: IInterfaceTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
+pub struct InterfaceNameI<'s, 'i> {
+    pub template: IInterfaceTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
 /*
@@ -2339,8 +2305,7 @@ case class InterfaceNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct LambdaCitizenTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct LambdaCitizenTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 
@@ -2360,8 +2325,8 @@ case class LambdaCitizenTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct LambdaCitizenNameI<'s, R> {
-    pub template: LambdaCitizenTemplateNameI<'s, R>,
+pub struct LambdaCitizenNameI<'s> {
+    pub template: LambdaCitizenTemplateNameI<'s>,
 }
 
 /*
@@ -2377,8 +2342,8 @@ case class LambdaCitizenNameI[+R <: IRegionsModeI](
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 // (was cfg-gated)
-pub enum CitizenTemplateNameI<'s, 'i, R> {
-    _Phantom(PhantomData<(&'s (), &'i (), R)>),
+pub enum CitizenTemplateNameI<'s, 'i> {
+    _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl CitizenTemplateNameI
 /*
@@ -2401,8 +2366,7 @@ sealed trait CitizenTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateN
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct StructTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct StructTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
 /*
@@ -2427,8 +2391,7 @@ case class StructTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct InterfaceTemplateNameI<'s, R> {
-    pub _marker: PhantomData<R>,
+pub struct InterfaceTemplateNameI<'s> {
     pub human_namee: StrI<'s>,
 }
 /*
@@ -2444,7 +2407,7 @@ case class InterfaceTemplateNameI[+R <: IRegionsModeI](
 */
 // mig: fn human_name
 // (was cfg-gated)
-impl<'s, R> InterfaceTemplateNameI<'s, R> {
+impl<'s> InterfaceTemplateNameI<'s> {
     pub fn human_name(&self) -> StrI<'s> { panic!("Unimplemented: human_name"); }
 }
 /*
@@ -2462,8 +2425,8 @@ impl<'s, R> InterfaceTemplateNameI<'s, R> {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructImplTemplateNameI<'s, 'i, R> {
-    pub interface: IInterfaceTemplateNameI<'s, 'i, R>,
+pub struct AnonymousSubstructImplTemplateNameI<'s, 'i> {
+    pub interface: IInterfaceTemplateNameI<'s, 'i>,
 }
 /*
 case class AnonymousSubstructImplTemplateNameI[+R <: IRegionsModeI](
@@ -2478,10 +2441,10 @@ case class AnonymousSubstructImplTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructImplNameI<'s, 'i, R> {
-    pub template: AnonymousSubstructImplTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub sub_citizen: ICitizenIT<'s, 'i, R>,
+pub struct AnonymousSubstructImplNameI<'s, 'i> {
+    pub template: AnonymousSubstructImplTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub sub_citizen: ICitizenIT<'s, 'i>,
 }
 
 /*
@@ -2497,8 +2460,8 @@ case class AnonymousSubstructImplNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructTemplateNameI<'s, 'i, R> {
-    pub interface: IInterfaceTemplateNameI<'s, 'i, R>,
+pub struct AnonymousSubstructTemplateNameI<'s, 'i> {
+    pub interface: IInterfaceTemplateNameI<'s, 'i>,
 }
 /*
 case class AnonymousSubstructTemplateNameI[+R <: IRegionsModeI](
@@ -2515,8 +2478,8 @@ case class AnonymousSubstructTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructConstructorTemplateNameI<'s, 'i, R> {
-    pub substruct: ICitizenTemplateNameI<'s, 'i, R>,
+pub struct AnonymousSubstructConstructorTemplateNameI<'s, 'i> {
+    pub substruct: ICitizenTemplateNameI<'s, 'i>,
 }
 
 /*
@@ -2533,10 +2496,10 @@ case class AnonymousSubstructConstructorTemplateNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructConstructorNameI<'s, 'i, R> {
-    pub template: AnonymousSubstructConstructorTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
-    pub parameters: &'i[CoordI<'s, 'i, R>],
+pub struct AnonymousSubstructConstructorNameI<'s, 'i> {
+    pub template: AnonymousSubstructConstructorTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
+    pub parameters: &'i[CoordI<'s, 'i>],
 }
 
 /*
@@ -2551,9 +2514,9 @@ case class AnonymousSubstructConstructorNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct AnonymousSubstructNameI<'s, 'i, R> {
-    pub template: AnonymousSubstructTemplateNameI<'s, 'i, R>,
-    pub template_args: &'i[ITemplataI<'s, 'i, R>],
+pub struct AnonymousSubstructNameI<'s, 'i> {
+    pub template: AnonymousSubstructTemplateNameI<'s, 'i>,
+    pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
 /*
@@ -2574,7 +2537,7 @@ case class AnonymousSubstructNameI[+R <: IRegionsModeI](
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct ResolvingEnvNameI<R>(pub PhantomData<R>);
+pub struct ResolvingEnvNameI;
 
 /*
 case class ResolvingEnvNameI[+R <: IRegionsModeI]() extends INameI[R] {
@@ -2586,7 +2549,7 @@ case class ResolvingEnvNameI[+R <: IRegionsModeI]() extends INameI[R] {
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
-pub struct CallEnvNameI<R>(pub PhantomData<R>);
+pub struct CallEnvNameI;
 /*
 case class CallEnvNameI[+R <: IRegionsModeI]() extends INameI[R] {
   vpass()
