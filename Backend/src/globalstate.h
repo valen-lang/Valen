@@ -87,16 +87,6 @@ public:
 
 //  LLVMValueRef coroutineEntryFunc = nullptr;
 
-  // These should eventually be moved into thread local storage when we do multithreading.
-  // Initialized at the beginning of main, used for C FFI.
-  LLVMValueRef sideStackLE = nullptr;
-  // Used for passing arguments to wrapper functions across stack switches.
-  // At some point we should just pass a pointer to a struct containing all of these.
-  // We should make sure that these don't get destroyed before the coroutine wants them.
-  // Though, I guess thats what structured concurrency is for.
-//  LLVMValueRef sideStackArgReturnDestPtr = nullptr;
-//  LLVMValueRef sideStackArgCalleeFuncPtrPtr = nullptr;
-
   LLVMBuilderRef stringConstantBuilder = nullptr;
   std::unordered_map<std::string, LLVMValueRef> stringConstants;
 

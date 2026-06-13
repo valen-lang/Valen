@@ -10,8 +10,6 @@
 #include <utils/counters.h>
 #include <utils/randomgeneration.h>
 
-#define STACK_SIZE (8 * 1024 * 1024)
-
 std::tuple<RawFuncPtrLE, LLVMBuilderRef> makeStringSetupFunction(GlobalState* globalState) {
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
 
@@ -162,53 +160,6 @@ Prototype* makeValeMainFunction(
   return valeMainProto;
 }
 
-//LLVMValueRef makeCoroutineEntryFunc(GlobalState* globalState) {
-//  auto voidLT = LLVMVoidTypeInContext(globalState->context);
-//  auto int1LT = LLVMInt1TypeInContext(globalState->context);
-//  auto int8LT = LLVMInt8TypeInContext(globalState->context);
-//  auto int32LT = LLVMInt32TypeInContext(globalState->context);
-//  auto int32PtrLT = LLVMPointerType(int32LT, 0);
-//  auto int64LT = LLVMInt64TypeInContext(globalState->context);
-//  auto voidPtrLT = LLVMPointerType(int8LT, 0);
-//  auto int8PtrLT = LLVMPointerType(int8LT, 0);
-//
-//  LLVMTypeRef functionTypeL = LLVMFunctionType(voidLT, NULL, 0, 0);
-//  LLVMValueRef entryFunctionL = LLVMAddFunction(globalState->mod, "__coroutineEntry", functionTypeL);
-//
-//  LLVMBuilderRef entryBuilder = LLVMCreateBuilderInContext(globalState->context);
-//  LLVMBasicBlockRef blockL =
-//      LLVMAppendBasicBlockInContext(globalState->context, entryFunctionL, "thebestblock");
-//  LLVMPositionBuilderAtEnd(entryBuilder, blockL);
-//
-//  buildPrint(globalState, entryBuilder, "Inside other func!\n");
-//
-////  std::vector<LLVMTypeRef> paramTypes;
-////  auto calleeFuncPtrLE =
-////      LLVMBuildPointerCast(
-////          entryBuilder,
-////          unmigratedLLVMBuildLoad(entryBuilder, globalState->sideStackArgCalleeFuncPtrPtr, "calleeFuncPtr"),
-////          LLVMPointerType(LLVMFunctionType(int64LT, paramTypes.data(), paramTypes.size(), false), 0),
-////          "calleeFuncPtrCasted");
-////  buildCall(globalState, entryBuilder, calleeFuncPtrLE, {});
-//
-////  auto returnDestPtrLE =
-////      unmigratedLLVMBuildLoad(entryBuilder, globalState->sideStackArgReturnDestPtr, "returnDestPtr");
-////  buildPrint(globalState, entryBuilder, "Jumping back to:");
-////  buildPrint(globalState, entryBuilder, ptrToIntLE(globalState, entryBuilder, returnDestPtrLE));
-////  buildPrint(globalState, entryBuilder, "\n");
-//
-////  //start here
-////  // seems the been-here workaround doesnt work.
-////  // lets try the stacksave and stackrestore that zig was doing.
-////  unmigratedLLVMBuildCall(entryBuilder, globalState->externs->longjmpIntrinsic, &returnDestPtrLE, 1, "");
-//
-//  LLVMBuildRetVoid(entryBuilder);
-//
-//  LLVMDisposeBuilder(entryBuilder);
-//
-//  return entryFunctionL;
-//}
-
 LLVMValueRef makeEntryFunction(
     GlobalState* globalState,
     Prototype* valeMainPrototype) {
@@ -259,15 +210,6 @@ LLVMValueRef makeEntryFunction(
     numMainArgsLE = LLVMBuildSub(entryBuilder, numMainArgsLE, numConsumedArgsLE, "newMainArgsCount");
   }
 
-  if (globalState->opt->enableSideCalling) {
-    LLVMBuildStore(
-        entryBuilder,
-        buildMaybeNeverCall(
-            globalState, entryBuilder, globalState->externs->malloc,
-            { constI64LE(globalState, STACK_SIZE) }),
-        globalState->sideStackLE);
-  }
-
   auto genLT = LLVMIntTypeInContext(globalState->context, globalState->opt->generationSize);
   auto newGenLE =
       adjustCounterReturnOld(
@@ -283,12 +225,6 @@ LLVMValueRef makeEntryFunction(
   auto resultLE =
       buildMaybeNeverCallV(
           globalState, entryBuilder, calleeUserFunction, nextGenLocalPtrLE, {});
-
-  if (globalState->opt->enableSideCalling) {
-    buildMaybeNeverCall(
-        globalState, entryBuilder, globalState->externs->free,
-        { LLVMBuildLoad2(entryBuilder, LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0), globalState->sideStackLE, "") });
-  }
 
   if (globalState->opt->enableReplaying) {
     globalState->determinism->buildMaybeStopDeterministicMode(

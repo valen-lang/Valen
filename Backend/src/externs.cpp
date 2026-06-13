@@ -15,7 +15,6 @@ Externs::Externs(LLVMModuleRef mod, LLVMContextRef context) {
   auto int64LT = LLVMInt64TypeInContext(context);
   auto voidPtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
-  auto metadataLT = LLVMMetadataTypeInContext(context);
   auto int256LT = LLVMIntTypeInContext(context, 256);
 
   censusContains = addExtern(mod, "__vcensusContains", int64LT, {voidPtrLT});
@@ -42,27 +41,6 @@ Externs::Externs(LLVMModuleRef mod, LLVMContextRef context) {
   fclose = addExtern(mod, "fclose", int64LT, {int8PtrLT});
   fread = addExtern(mod, "fread", int64LT, {int8PtrLT, int64LT, int64LT, int8PtrLT});
   fwrite = addExtern(mod, "fwrite", int64LT, {int8PtrLT, int64LT, int64LT, int8PtrLT});
-
-  // https://llvm.org/docs/LangRef.html#llvm-read-register-llvm-read-volatile-register-and-llvm-write-register-intrinsics
-  // Warning from docs:
-  //   WARNING: So far it only works with the stack pointer on selected architectures
-  //   (ARM, AArch64, PowerPC and x86_64). Significant amount of work is needed to support other
-  //   registers and even more so, allocatable registers.
-  // So, only use it for stack pointer, on those architectures.
-  readRegisterI64Intrinsic = addExtern(mod, "llvm.read_register.i64", int64LT, {metadataLT});
-  assert(LLVMGetIntrinsicID(readRegisterI64Intrinsic.ptrLE));
-  writeRegisterI64Intrinsinc = addExtern(mod, "llvm.write_register.i64", voidLT, {metadataLT, int64LT});
-  assert(LLVMGetIntrinsicID(writeRegisterI64Intrinsinc.ptrLE));
-
-  setjmpIntrinsic = addExtern(mod, "llvm.eh.sjlj.setjmp", int32LT, {int8PtrLT});
-  assert(LLVMGetIntrinsicID(setjmpIntrinsic.ptrLE));
-  longjmpIntrinsic = addExtern(mod, "llvm.eh.sjlj.longjmp", voidLT, {int8PtrLT});
-  assert(LLVMGetIntrinsicID(longjmpIntrinsic.ptrLE));
-
-  stacksaveIntrinsic = addExtern(mod, "llvm.stacksave", int8PtrLT, {});
-  assert(LLVMGetIntrinsicID(setjmpIntrinsic.ptrLE));
-  stackrestoreIntrinsic = addExtern(mod, "llvm.stackrestore", voidLT, {int8PtrLT});
-  assert(LLVMGetIntrinsicID(longjmpIntrinsic.ptrLE));
 
   strHasherCallLF = addExtern(mod, "strHasherCall", int64LT, {emptyPtrLT, int8PtrLT});
   strEquatorCallLF = addExtern(mod, "strEquatorCall", int1LT, {emptyPtrLT, int8PtrLT, int8PtrLT});

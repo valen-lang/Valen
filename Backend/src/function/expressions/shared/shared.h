@@ -280,12 +280,4 @@ inline LLVMValueRef ptrToIntLE(GlobalState* globalState, LLVMBuilderRef builder,
   return LLVMBuildPointerCast(builder, ptrLE, LLVMInt64TypeInContext(globalState->context), "asI64");
 }
 
-// A side call is a call using different stack memory
-LLVMValueRef buildSideCall(
-    GlobalState* globalState,
-    LLVMBuilderRef entryBuilder,
-    LLVMValueRef sideStackStartPtrAsI8PtrLE,
-    RawFuncPtrLE calleeFuncLE,
-    const std::vector<LLVMValueRef>& userArgsLE);
-
 #endif

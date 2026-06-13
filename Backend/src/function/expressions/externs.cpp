@@ -65,8 +65,6 @@ Ref buildCallOrSideCall(
     LLVMBuilderRef builder,
     Prototype* prototype,
     const std::vector<Ref>& valeArgRefs) {
-  auto int8PtrLT = LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0);
-
   auto hostArgsLE = std::vector<LLVMValueRef>{};
   hostArgsLE.reserve(valeArgRefs.size() + 1);
 
@@ -124,28 +122,14 @@ Ref buildCallOrSideCall(
     buildFlare(FL(), globalState, functionState, builder, "Return ptr! ", ptrToIntLE(globalState, builder, localPtrLE));
     hostArgsLE.insert(hostArgsLE.begin(), localPtrLE);
 
-    if (globalState->opt->enableSideCalling) {
-      auto sideStackI8PtrLE = LLVMBuildLoad2(builder, int8PtrLT, globalState->sideStackLE, "sideStack");
-      auto resultLE =
-          buildSideCall(
-              globalState, builder, sideStackI8PtrLE, externFuncL, hostArgsLE);
-      assert(LLVMTypeOf(resultLE) == LLVMVoidTypeInContext(globalState->context));
-    } else {
-      auto resultLE = buildMaybeNeverCall(globalState, builder, externFuncL, hostArgsLE);
-      assert(LLVMTypeOf(resultLE) == LLVMVoidTypeInContext(globalState->context));
-    }
+    auto resultLE = buildMaybeNeverCall(globalState, builder, externFuncL, hostArgsLE);
+    assert(LLVMTypeOf(resultLE) == LLVMVoidTypeInContext(globalState->context));
     hostReturnLE = LLVMBuildLoad2(builder, hostReturnRefLT, localPtrLE, "hostReturn");
     buildFlare(FL(), globalState, functionState, builder, "Loaded the return! ",
         LLVMABISizeOfType(globalState->dataLayout, LLVMTypeOf(hostReturnLE)));
   } else {
-    if (globalState->opt->enableSideCalling) {
-      auto sideStackI8PtrLE = LLVMBuildLoad2(builder, int8PtrLT, globalState->sideStackLE, "sideStack");
-      hostReturnLE =
-          buildSideCall(globalState, builder, sideStackI8PtrLE, externFuncL, hostArgsLE);
-    } else {
-      hostReturnLE =
-          buildMaybeNeverCall(globalState, builder, externFuncL, hostArgsLE);
-    }
+    hostReturnLE =
+        buildMaybeNeverCall(globalState, builder, externFuncL, hostArgsLE);
   }
 
   buildFlare(FL(), globalState, functionState, builder, "Done calling function ", prototype->name->name);

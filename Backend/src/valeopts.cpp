@@ -53,7 +53,6 @@ enum
     OPT_PRINT_MEM_OVERHEAD,
     OPT_ENABLE_REPLAYING,
     OPT_REPLAY_WHITELIST_EXTERN,
-    OPT_ENABLE_SIDE_CALLING,
     OPT_CENSUS,
     OPT_REGION_OVERRIDE,
     OPT_FILENAMES,
@@ -104,7 +103,6 @@ static opt_arg_t args[] =
     { "print_mem_overhead", '\0', OPT_ARG_OPTIONAL, OPT_PRINT_MEM_OVERHEAD },
     { "enable_replaying", '\0', OPT_ARG_OPTIONAL, OPT_ENABLE_REPLAYING },
     { "replay_whitelist_extern", '\0', OPT_ARG_REQUIRED, OPT_REPLAY_WHITELIST_EXTERN },
-    { "enable_side_calling", '\0', OPT_ARG_OPTIONAL, OPT_ENABLE_SIDE_CALLING },
     { "census", '\0', OPT_ARG_OPTIONAL, OPT_CENSUS },
     { "region_override", '\0', OPT_ARG_REQUIRED, OPT_REGION_OVERRIDE },
     { "ir", '\0', OPT_ARG_NONE, OPT_IR },
@@ -367,17 +365,6 @@ int valeOptSet(ValeOptions *opt, int *argc, char **argv) {
               opt->enableReplaying = true;
             } else if (s.arg_val == std::string("false")) {
               opt->enableReplaying = false;
-            } else { assert(false); throw 1337; }
-            break;
-          }
-
-          case OPT_ENABLE_SIDE_CALLING: {
-            if (!s.arg_val) {
-              opt->enableSideCalling = true;
-            } else if (s.arg_val == std::string("true")) {
-              opt->enableSideCalling = true;
-            } else if (s.arg_val == std::string("false")) {
-              opt->enableSideCalling = false;
             } else { assert(false); throw 1337; }
             break;
           }

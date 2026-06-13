@@ -803,15 +803,6 @@ void compileValeCode(GlobalState* globalState, std::vector<std::string>& inputFi
   globalState->neverPtrLE = LLVMAddGlobal(globalState->mod, makeNeverType(globalState), "__never");
   LLVMSetInitializer(globalState->neverPtrLE, LLVMConstArray(LLVMIntTypeInContext(globalState->context, NEVER_INT_BITS), empty, 0));
 
-  globalState->sideStackLE = LLVMAddGlobal(globalState->mod, LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0), "__sideStack");
-  LLVMSetInitializer(globalState->sideStackLE, LLVMConstNull(LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0)));
-
-//  globalState->sideStackArgCalleeFuncPtrPtr = LLVMAddGlobal(globalState->mod, LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0), "sideStackArgCalleeFuncPtrPtr");
-//  LLVMSetInitializer(globalState->sideStackArgCalleeFuncPtrPtr, LLVMConstNull(LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0)));
-
-//  globalState->sideStackArgReturnDestPtr = LLVMAddGlobal(globalState->mod, LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0), "sideStackArgReturnDestPtr");
-//  LLVMSetInitializer(globalState->sideStackArgReturnDestPtr, LLVMConstNull(LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0)));
-
   globalState->mutRcAdjustCounterLE =
       LLVMAddGlobal(globalState->mod, LLVMInt64TypeInContext(globalState->context), "__mutRcAdjustCounter");
   LLVMSetInitializer(globalState->mutRcAdjustCounterLE, LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 0, false));

@@ -54,7 +54,6 @@ struct ValeOptions {
     bool forceAllKnownLive = false;    // Enables generational heap
     bool printMemOverhead = false;    // Enables generational heap
     bool enableReplaying = false;    // Enables deterministic replaying
-    bool enableSideCalling = false;    // Enables side calling, used for fearless FFI
     std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;
 
     RegionOverride regionOverride = RegionOverride::FAST;

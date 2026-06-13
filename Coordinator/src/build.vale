@@ -201,12 +201,6 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           "",
           "How much to optimize the resulting binary. Valid values: O0, O1, O2, O2i, O3"),
         Flag(
-          "--enable_side_calling",
-          FLAG_BOOL(),
-          "Whether to enable fearless FFI and green threads.",
-          "false",
-          "If true, the program will be able to make temporary stacks without firing up threads, saving space and making extern calls a bit safer."),
-        Flag(
           "--flares",
           FLAG_BOOL(),
           "Internal option, enables flares for debugging.",
@@ -337,7 +331,6 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
   run_clang = parsed_flags.get_bool_flag("--run_clang", true);
   sanity_check = parsed_flags.get_bool_flag("--sanity_check", true);
   enable_replaying = parsed_flags.get_bool_flag("--enable_replaying", false);
-  enable_side_calling = parsed_flags.get_bool_flag("--enable_side_calling", false);
   output_vpst = parsed_flags.get_bool_flag("--output_vpst", true);
   no_std = parsed_flags.get_bool_flag("--no_std", false);
 
@@ -506,7 +499,6 @@ func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
           asm,
           enable_replaying,
           replay_whitelist_extern,
-          enable_side_calling,
           pic,
           print_mem_overhead,
           elide_checks_for_known_live,

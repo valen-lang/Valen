@@ -16,7 +16,6 @@ func invoke_backend(
   asm bool,
   enable_replaying bool,
   replay_whitelist_extern str,
-  enable_side_calling bool,
   pic bool,
   print_mem_overhead bool,
   elide_checks_for_known_live bool,
@@ -80,9 +79,6 @@ Subprocess {
   }
   if replay_whitelist_extern != "" {
     command_line_args.add("--replay_whitelist_extern={replay_whitelist_extern}");
-  }
-  if enable_side_calling {
-    command_line_args.add("--enable_side_calling=true");
   }
   if pic {
     command_line_args.add("--pic");

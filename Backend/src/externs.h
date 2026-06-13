@@ -31,16 +31,6 @@ public:
   RawFuncPtrLE censusAdd;
   RawFuncPtrLE censusRemove;
 
-  // https://llvm.org/docs/LangRef.html#llvm-read-register-llvm-read-volatile-register-and-llvm-write-register-intrinsics
-  RawFuncPtrLE readRegisterI64Intrinsic;
-  RawFuncPtrLE writeRegisterI64Intrinsinc;
-  //https://releases.llvm.org/8.0.0/docs/ExceptionHandling.html#llvm-eh-sjlj-setjmp
-  RawFuncPtrLE setjmpIntrinsic;
-  RawFuncPtrLE longjmpIntrinsic;
-  // https://llvm.org/docs/LangRef.html#llvm-stacksave-intrinsic
-  RawFuncPtrLE stacksaveIntrinsic;
-  RawFuncPtrLE stackrestoreIntrinsic;
-
   RawFuncPtrLE strHasherCallLF;
   RawFuncPtrLE strEquatorCallLF;
   RawFuncPtrLE int256HasherCallLF;
