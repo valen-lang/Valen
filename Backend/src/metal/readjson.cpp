@@ -780,9 +780,9 @@ Package* readPackage(MetalCache* cache, const json& program) {
           cache,
           std::hash<std::string>(),
           std::equal_to<std::string>(),
-          program["externNameToFunction"],
+          program["prototypeToExtern"],
           [](MetalCache* cache, json entryJ){
-            auto externName = readString(cache, entryJ["externName"]);
+            auto externName = readString(cache, entryJ["mangledName"]);
             auto prototype = readPrototype(cache, entryJ["prototype"]);
             return std::make_pair(externName, prototype);
           }),
@@ -790,9 +790,9 @@ Package* readPackage(MetalCache* cache, const json& program) {
           cache,
           std::hash<std::string>(),
           std::equal_to<std::string>(),
-          program["externNameToKind"],
+          program["kindToExtern"],
           [](MetalCache* cache, json entryJ){
-            auto externName = readString(cache, entryJ["externName"]);
+            auto externName = readString(cache, entryJ["mangledName"]);
             auto kind = readKind(cache, entryJ["kind"]);
             return std::make_pair(externName, kind);
           }));

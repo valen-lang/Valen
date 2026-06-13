@@ -27,6 +27,7 @@ auditor-history/
 .vscode/
 Auditor/
 build/
+testbuild/
 conversation_log.txt
 loopdetection.md
 regions-release-mac/
