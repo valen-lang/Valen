@@ -455,10 +455,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     &substitutions,
                     &RegionT { region: IRegionT::Default },
                     &tyype);
-                let kind_ct = kind_it;
                 KindExportI {
                     range: *range,
-                    tyype: kind_ct,
+                    tyype: kind_it,
                     id: export_id,
                     exported_name: *exported_name,
                 }
@@ -486,7 +485,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     func_id_to_bound_arg_prototype: IndexMap::new(),
                     bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
                 };
-                let (_, prototype) =
+                let prototype =
                     self.translate_prototype(
                         monouts,
                         export_placeholdered_id_t,
@@ -535,7 +534,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         func_id_to_bound_arg_prototype: IndexMap::new(),
                         bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
                     };
-                    let (_, prototype) =
+                    let prototype =
                         self.translate_prototype(
                             monouts,
                             extern_placeholdered_id_t,
@@ -569,13 +568,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             if !monouts.new_functions.is_empty() {
                 let (new_func_id_t, new_func_id, instantiation_bound_args, maybe_denizen_bound_to_denizen_caller_supplied_thing) =
                     monouts.new_functions.remove(0);
-                self.translate_function(
+                self.translate_function_callsite(
                     monouts, &new_func_id_t, &new_func_id, &instantiation_bound_args,
                     maybe_denizen_bound_to_denizen_caller_supplied_thing.as_ref());
                 true
             } else if !monouts.new_impls.is_empty() {
                 let (impl_id_t, impl_id, instantiation_bounds_for_unsubstituted_impl) = monouts.new_impls.remove(0);
-                self.translate_impl(monouts, &impl_id_t, &impl_id, instantiation_bounds_for_unsubstituted_impl);
+                self.translate_impl_callsite(monouts, &impl_id_t, &impl_id, instantiation_bounds_for_unsubstituted_impl);
                 true
             } else if !monouts.new_abstract_funcs.is_empty() {
                 let (abstract_func_t, abstract_func, virtual_index, interface_id, instantiation_bound_args) = monouts.new_abstract_funcs.remove(0);
@@ -935,8 +934,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     vimpl()
   }
 */
-// mig: fn collapse_and_translate_interface_definition
-    pub fn collapse_and_translate_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_t: &IdT<'s, 't>, _interface_id: &IdI<'s, 'i>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
+// mig: fn translate_interface_callsite
+    pub fn translate_interface_callsite(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _interface_id_t: &IdT<'s, 't>, _interface_id: &IdI<'s, 'i>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         let interface_def_t = self.find_interface(_interface_id_t);
         let denizen_bound_to_denizen_caller_supplied_thing = Self::assemble_instantiation_bound_param_to_arg(&interface_def_t.instantiation_bound_params, _instantiation_bound_args);
         if let Some(x) = _monouts.interface_to_bounds.get(_interface_id) {
@@ -944,8 +943,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         }
         _monouts.interface_to_bounds.insert(*_interface_id, denizen_bound_to_denizen_caller_supplied_thing.clone());
         let substitutions = self.assemble_placeholder_map(&interface_def_t.instantiated_interface.id, _interface_id);
-        let interface_id = *_interface_id;
-        self.translate_collapsed_interface_definition(_monouts, _interface_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, &interface_id, interface_def_t);
+        self.translate_interface_definition(_monouts, _interface_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _interface_id, interface_def_t);
     }
 /*
   def collapseAndTranslateInterfaceDefinition(
@@ -1092,8 +1090,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     })
   }
 */
-// mig: fn collapse_and_translate_struct_definition
-    pub fn collapse_and_translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _struct_id_t: &IdT<'s, 't>, _struct_id: &IdI<'s, 'i>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
+// mig: fn translate_struct_callsite
+    pub fn translate_struct_callsite(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _struct_id_t: &IdT<'s, 't>, _struct_id: &IdI<'s, 'i>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) {
         let struct_def_t = self.find_struct(_struct_id_t);
         let denizen_bound_to_denizen_caller_supplied_thing =
             Self::assemble_instantiation_bound_param_to_arg(&struct_def_t.instantiation_bound_params, _instantiation_bound_args);
@@ -1105,8 +1103,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         }
         _monouts.struct_to_bounds.insert(*_struct_id, denizen_bound_to_denizen_caller_supplied_thing.clone());
         let substitutions = self.assemble_placeholder_map(&struct_def_t.instantiated_citizen.id, _struct_id);
-        let struct_id = *_struct_id;
-        self.translate_collapsed_struct_definition(_monouts, _struct_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _struct_id_t, &struct_id, struct_def_t);
+        self.translate_struct_definition(_monouts, _struct_id_t, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _struct_id_t, _struct_id, struct_def_t);
     }
 /*
   def collapseAndTranslateStructDefinition(
@@ -1302,7 +1299,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let case_instantiation_bound_params_to_args = dispatcher_instantiation_bound_params_to_args.plus(&extra_bounds);
 
         let case_substitutions_idx: IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>> = _case_substitutions.iter().map(|(k, v)| (*k, *v)).collect();
-        let (_override_prototype, override_prototype) =
+        let override_prototype =
             self.translate_prototype(_monouts, &_dispatcher_case_id_t, &case_instantiation_bound_params_to_args, &case_substitutions_idx, &RegionT { region: IRegionT::Default }, &_override_prototype_t);
 
         let super_interface_id = _monouts.impls.get(_impl_id).expect("vassertSome monouts.impls").1;
@@ -1541,8 +1538,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     monouts.addMethodToVTable(implIdC, superInterfaceId, abstractFuncPrototypeC, overridePrototypeC)
   }
 */
-// mig: fn translate_impl
-    pub fn translate_impl(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, impl_id: &IdI<'s, 'i>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>) {
+// mig: fn translate_impl_callsite
+    pub fn translate_impl_callsite(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _impl_id_t: &IdT<'s, 't>, impl_id: &IdI<'s, 'i>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>) {
         let impl_template_id = Compiler::get_impl_template(self.typing_interner, *_impl_id_t);
         let impl_definition = vassert_one(self.hinputs.interface_to_sub_citizen_to_edge.iter().flat_map(|(_, m)| m.values()).filter(|edge| {
             Compiler::get_impl_template(self.typing_interner, edge.edge_id) == impl_template_id
@@ -1550,7 +1547,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
         let denizen_bound_to_denizen_caller_supplied_thing = Self::assemble_instantiation_bound_param_to_arg(&impl_definition.instantiation_bound_params, &_instantiation_bounds_for_unsubstituted_impl);
         let substitutions = self.assemble_placeholder_map(&impl_definition.edge_id, impl_id);
-        self.translate_collapsed_impl_definition(_monouts, _impl_id_t, _instantiation_bounds_for_unsubstituted_impl, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _impl_id_t, impl_id, impl_definition);
+        self.translate_impl_definition(_monouts, _impl_id_t, _instantiation_bounds_for_unsubstituted_impl, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, _impl_id_t, impl_id, impl_definition);
     }
 /*
   def translateImpl(
@@ -1595,17 +1592,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
       implDefinition)
   }
 */
-// mig: fn translate_function
-    pub fn translate_function(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, desired_prototype_t: &PrototypeT<'s, 't>, desired_prototype: &PrototypeI<'s, 'i>, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>, _maybe_denizen_bound_to_denizen_caller_supplied_thing: Option<&DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>) -> &'i FunctionDefinitionI<'s, 'i> {
-        // This works because the sI/cI are never actually used in these instances, they are just a
-        // compile-time type-system bit of tracking, see CCFCTS.
+// mig: fn translate_function_callsite
+    pub fn translate_function_callsite(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, desired_prototype_t: &PrototypeT<'s, 't>, desired_prototype: &PrototypeI<'s, 'i>, _supplied_bound_args: &InstantiationBoundArgumentsI<'s, 'i>, _maybe_denizen_bound_to_denizen_caller_supplied_thing: Option<&DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>>) -> &'i FunctionDefinitionI<'s, 'i> {
         let desired_func_super_template_name = Compiler::get_super_template(self.typing_interner, desired_prototype_t.id);
         let func_t =
             vassert_one(self.hinputs.functions.iter().filter(|func_t| {
                 Compiler::get_super_template(self.typing_interner, func_t.header.id) == desired_func_super_template_name
             }));
 
-        let denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself =
+        let denizen_bound_to_denizen_caller_supplied_thing =
             match _maybe_denizen_bound_to_denizen_caller_supplied_thing {
                 Some(x) => x.clone(),
                 None => Self::assemble_instantiation_bound_param_to_arg(&func_t.instantiation_bound_params, _supplied_bound_args),
@@ -1613,17 +1608,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let _args_m: Vec<_> = IFunctionNameI::try_from(desired_prototype.id.local_name).unwrap().parameters().iter().map(|c| c.kind).collect();
         let _params_t: Vec<_> = func_t.header.params.iter().map(|p| p.tyype.kind).collect();
 
-        let denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself_and_params =
-            denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself;
-
-        let denizen_bound_to_denizen_caller_supplied_thing =
-            denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself_and_params;
-
         let substitutions =
             self.assemble_placeholder_map(&func_t.header.id, &desired_prototype.id);
 
         let monomorphized_func_t =
-            self.translate_collapsed_function(
+            self.translate_function_definition(
                 monouts, &desired_prototype_t.id, &denizen_bound_to_denizen_caller_supplied_thing, &substitutions, &desired_prototype, func_t);
 
         assert!(desired_prototype.return_type == monomorphized_func_t.header.return_type);
@@ -1715,7 +1704,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn translate_abstract_func
     pub fn translate_abstract_func(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, interface_id: &IdI<'s, 'i>, desired_abstract_prototype_t: &PrototypeT<'s, 't>, desired_abstract_prototype: &PrototypeI<'s, 'i>, virtual_index: usize, supplied_bound_args: InstantiationBoundArgumentsI<'s, 'i>) {
-        // sI/cI/nI are compile-time tracking only, see CCFCTS.
         let desired_abstract_prototype = *desired_abstract_prototype;
 
         let desired_super_template_id = Compiler::get_super_template(self.typing_interner, desired_abstract_prototype_t.id);
@@ -1723,13 +1711,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             Compiler::get_super_template(self.typing_interner, f.header.id) == desired_super_template_id
         }));
 
-        let denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself =
+        let denizen_bound_to_denizen_caller_supplied_thing =
             Self::assemble_instantiation_bound_param_to_arg(&func_t.instantiation_bound_params, &supplied_bound_args);
 
         let _args_m: Vec<KindIT<'s, 'i>> = IFunctionNameI::try_from(desired_abstract_prototype.id.local_name).unwrap().parameters().iter().map(|c| c.kind).collect();
         let _params_t: Vec<KindT<'s, 't>> = func_t.header.params.iter().map(|p| p.tyype.kind).collect();
-
-        let denizen_bound_to_denizen_caller_supplied_thing = denizen_bound_to_denizen_caller_supplied_thing_from_denizen_itself;
 
         assert!(!monouts.abstract_func_to_bounds.contains_key(&desired_abstract_prototype.id));
         let supplied_bound_args_ref: &'i InstantiationBoundArgumentsI<'s, 'i> = self.interner.bump().alloc(supplied_bound_args);
@@ -1823,16 +1809,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         };
         match IInstantiationNameT::try_from(id_t.local_name) {
             Ok(_local_name_t) => {
-                let instantiation_id_t = id_t;
-                let instantiation_id =
-                    match IInstantiationNameI::try_from(id.local_name) {
-                        Ok(_) => id,
-                        Err(_) => {
-                            // We could get here if, for example, idT is an instantiation like Vec<int> and idS is a template Vec.
-                            panic!("vwat")
-                        }
-                    };
-                let inner = self.assemble_placeholder_map_inner(instantiation_id_t, instantiation_id);
+                let instantiation_id = match IInstantiationNameI::try_from(id.local_name) {
+                    Ok(_) => id,
+                    Err(_) => panic!("vwat"), // e.g. idT is an instantiation like Vec<int> and idS is a template Vec
+                };
+                let inner = self.assemble_placeholder_map_inner(id_t, instantiation_id);
                 result.extend(inner);
             }
             Err(_) => {}
@@ -1875,8 +1856,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 */
 // mig: fn assemble_placeholder_map_inner
     pub fn assemble_placeholder_map_inner(&self, id_t: &IdT<'s, 't>, id: &IdI<'s, 'i>) -> IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>> {
-        let placeholdered_name = id_t;
-        IInstantiationNameT::try_from(placeholdered_name.local_name).unwrap().template_args()
+        IInstantiationNameT::try_from(id_t.local_name).unwrap().template_args()
             .iter()
             .zip(IInstantiationNameI::try_from(id.local_name).unwrap().template_args(self.interner).iter())
             .flat_map(|(template_arg_t, template_arg_i)| -> Vec<(IdT<'s, 't>, ITemplataI<'s, 'i>)> {
@@ -2146,7 +2126,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match _member {
             IStructMemberT::Normal(n) => {
                 let NormalStructMemberT { name, variability, tyype } = n;
-                let (member_subjective_it, member_type_i) = match tyype {
+                let (member_it, member_type_i) = match tyype {
                     IMemberTypeT::Reference(r) => {
                         let tyype = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &r.reference);
                         let result_ref = ReferenceMemberTypeI {
@@ -2170,7 +2150,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     variability: Self::translate_variability(variability),
                     tyype: member_type_i,
                 };
-                (member_subjective_it, member)
+                (member_it, member)
             }
             IStructMemberT::Variadic(_) => panic!("Unimplemented: translate_struct_member Variadic"),
         }
@@ -2249,7 +2229,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
   }
 */
 // mig: fn translate_prototype
-    pub fn translate_prototype(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, desired_prototype_t: &PrototypeT<'s, 't>) -> (PrototypeI<'s, 'i>, PrototypeI<'s, 'i>) {
+    pub fn translate_prototype(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, perspective_region_t: &RegionT, desired_prototype_t: &PrototypeT<'s, 't>) -> PrototypeI<'s, 'i> {
         let PrototypeT { id: desired_prototype_id_unsubstituted, return_type: desired_prototype_return_type_unsubstituted } = desired_prototype_t;
 
         let rune_to_bound_args_for_call =
@@ -2261,7 +2241,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 perspective_region_t,
                 self.hinputs.get_instantiation_bound_args(desired_prototype_t.id));
 
-        let return_subjective_it =
+        let return_it =
             self.translate_coord(
                 monouts,
                 denizen_name,
@@ -2273,22 +2253,19 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let desired_prototype =
             self.interner.intern_prototype_si(PrototypeIValI {
                 id: self.translate_function_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, desired_prototype_id_unsubstituted),
-                return_type: return_subjective_it.coord,
+                return_type: return_it.coord,
             });
 
         match desired_prototype_t.id {
             IdT { local_name: INameT::FunctionBound(_), .. } => {
                 let func_bound_name = desired_prototype_t.id;
                 let prototype = *denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype");
-                (*prototype, *prototype)
+                *prototype
             }
             IdT { local_name: INameT::ExternFunction(_), .. } => {
-                if self.opts.sanity_check {
-                    // Scala's `vassert(Collector.all(desiredPrototypeS, {case KindPlaceholderTemplateNameT => }).isEmpty)`
-                    // sanity check is omitted: the I-side AST is statically typed and can't structurally hold a
-                    // typing-pass placeholder template name, so it's vacuously empty. (Architect-approved parity gap.)
-                }
-                (*desired_prototype, *desired_prototype)
+
+
+                *desired_prototype
             }
             IdT { local_name: last, .. } => {
                 match last {
@@ -2333,7 +2310,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     rune_to_bound_args_for_call,
                     maybe_denizen_bound_to_denizen_caller_supplied_thing,
                 ));
-                (*desired_prototype, *desired_prototype)
+                *desired_prototype
             }
         }
     }
@@ -2504,9 +2481,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                             *_denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype")
                         }
                         _ => {
-                            let (prototype_i, _prototype) =
+                            let prototype =
                                 self.translate_prototype(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, supplied_prototype_unsubstituted);
-                            self.interner.alloc(prototype_i)
+                            self.interner.alloc(prototype)
                         }
                     };
                     (*rune, prototype)
@@ -2529,9 +2506,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                                         *_denizen_bound_to_denizen_caller_supplied_thing.func_id_to_bound_arg_prototype.get(&func_bound_name).expect("vassertSome: func_id_to_bound_arg_prototype")
                                     }
                                     _ => {
-                                        let (prototype_i, _prototype) =
+                                        let prototype =
                                             self.translate_prototype(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, supplied_reachable_prototype_for_call_unsubstituted);
-                                        self.interner.alloc(prototype_i)
+                                        self.interner.alloc(prototype)
                                     }
                                 };
                                 (*callee_rune, prototype_i)
@@ -2664,8 +2641,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
       runeToSuppliedImplForCall)
   }
 */
-// mig: fn translate_collapsed_struct_definition
-    pub fn translate_collapsed_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i>, _struct_def_t: &StructDefinitionT<'s, 't>) {
+// mig: fn translate_struct_definition
+    pub fn translate_struct_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id_t: &IdT<'s, 't>, _new_id: &IdI<'s, 'i>, _struct_def_t: &StructDefinitionT<'s, 't>) {
         let StructDefinitionT { template_name: _, instantiated_citizen: _, attributes, weakable, mutability: mutability_t, members, is_closure, instantiation_bound_params: _ } = _struct_def_t;
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let mutability = expect_mutability_templata(self.translate_templata(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, mutability_t)).mutability;
@@ -2747,8 +2724,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     result
   }
 */
-// mig: fn translate_collapsed_interface_definition
-    pub fn translate_collapsed_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id: &IdI<'s, 'i>, _interface_def_t: &InterfaceDefinitionT<'s, 't>) {
+// mig: fn translate_interface_definition
+    pub fn translate_interface_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _new_id: &IdI<'s, 'i>, _interface_def_t: &InterfaceDefinitionT<'s, 't>) {
         if _monouts.interface_to_mutability.contains_key(_new_id) {
             return;
         }
@@ -2924,8 +2901,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
   }
 */
-// mig: fn translate_collapsed_function
-    pub fn translate_collapsed_function(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, desired_prototype: &PrototypeI<'s, 'i>, function_t: &FunctionDefinitionT<'s, 't>) -> &'i FunctionDefinitionI<'s, 'i> {
+// mig: fn translate_function_definition
+    pub fn translate_function_definition(&self, monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, denizen_name: &IdT<'s, 't>, denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, desired_prototype: &PrototypeI<'s, 'i>, function_t: &FunctionDefinitionT<'s, 't>) -> &'i FunctionDefinitionI<'s, 'i> {
 
         let perspective_region_t = RegionT { region: IRegionT::Default };
           // functionT.header.id.localName.templateArgs.last match {
@@ -2950,7 +2927,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             panic!("vfail");
         }
 
-        let (_body_subjective_it, body_ce) =
+        let (_body_it, body_ce) =
             self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, &perspective_region_t, &function_t.body);
 
         let result: &'i FunctionDefinitionI<'s, 'i> =
@@ -3138,33 +3115,31 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match _expr {
             AddressExpressionTE::LocalLookup(ll) => {
                 let LocalLookupTE { range: _range, local_variable: local_variable_t } = **ll;
-                let (local_subjective_it, local_variable_i) = self.translate_local_variable(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &local_variable_t);
-                let result_subjective_it = local_subjective_it;
+                let (local_it, local_variable_i) = self.translate_local_variable(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &local_variable_t);
                 let result_ce = AddressExpressionIE::LocalLookup(self.interner.bump().alloc(LocalLookupIE {
                     local_variable: local_variable_i,
-                    result: result_subjective_it,
+                    result: local_it,
                 }));
-                (result_subjective_it, result_ce)
+                (local_it, result_ce)
             }
             AddressExpressionTE::ReferenceMemberLookup(rml) => {
                 let ReferenceMemberLookupTE { range, struct_expr: struct_expr_t, member_name: member_name_t, member_reference: member_coord_t, variability } = **rml;
-                let (_struct_subjective_it, struct_ce) =
+                let (_struct_it, struct_ce) =
                     self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &struct_expr_t);
                 let member_name = Self::translate_var_name(self.interner, &member_name_t);
                 let member_coord = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &member_coord_t);
-                let result_subjective_it = member_coord;
                 let result_ce = AddressExpressionIE::ReferenceMemberLookup(self.interner.bump().alloc(ReferenceMemberLookupIE {
                     range,
                     struct_expr: struct_ce,
                     member_name,
-                    member_reference: result_subjective_it.coord,
+                    member_reference: member_coord.coord,
                     variability: Self::translate_variability(&variability),
                 }));
-                (result_subjective_it.coord, result_ce)
+                (member_coord.coord, result_ce)
             }
             AddressExpressionTE::StaticSizedArrayLookup(s) => {
                 let StaticSizedArrayLookupTE { range, array_expr: array_expr_t, array_type: _, index_expr: index_expr_t, element_type: element_type_t, variability } = **s;
-                let (_array_subjective_it, array_ce) =
+                let (_array_it, array_ce) =
                     self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &array_expr_t);
                 let element_type = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &element_type_t).coord;
                 let (_index_it, index_ce) =
@@ -3200,14 +3175,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_index_it, index_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &index_expr);
                 let variability = Self::translate_variability(&variability);
                 let element_it = self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &rsa_tt.element_type());
-                let result_it = element_it;
                 let result_ce = AddressExpressionIE::RuntimeSizedArrayLookup(self.interner.alloc(RuntimeSizedArrayLookupIE {
                     array_expr: array_ce,
                     index_expr: index_ce,
                     element_type: element_it.coord,
                     variability,
                 }));
-                (result_it.coord, result_ce)
+                (element_it.coord, result_ce)
             }
         }
     }
@@ -3381,15 +3355,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         match expr {
             ReferenceExpressionTE::LetAndLend(lal) => {
                 let LetAndLendTE { variable, expr: source_expr_t, target_ownership: outer_ownership_t } = **lal;
-                let (source_subjective_it, source_ce) =
+                let (source_it, source_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr_t);
                 let result_ownership =
                     Self::translate_ownership(
                         substitutions,
                         perspective_region_t,
-                        &Self::compose_ownerships_second(&outer_ownership_t, &source_subjective_it.ownership),
+                        &Self::compose_ownerships_second(&outer_ownership_t, &source_it.ownership),
                         &source_expr_t.result().coord.region);
-                let result_it = CoordI { ownership: result_ownership, kind: source_subjective_it.kind };
+                let result_it = CoordI { ownership: result_ownership, kind: source_it.kind };
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &variable);
                 let result_ce = ReferenceExpressionIE::LetAndLend(self.interner.bump().alloc(LetAndLendIE {
@@ -3404,23 +3378,22 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let LockWeakTE { inner_expr, result_opt_borrow_type, some_constructor, none_constructor, some_impl_name, none_impl_name } = **lw;
                 let result_it =
                     self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_opt_borrow_type).coord;
-                let result_ct = result_it;
                 let (_inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
-                let (_some_proto, some_proto) =
+                let some_proto =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, some_constructor);
-                let (_none_proto, none_proto) =
+                let none_proto =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, none_constructor);
                 let some_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &some_impl_name);
                 let none_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &none_impl_name);
                 let result_ce = ReferenceExpressionIE::LockWeak(self.interner.bump().alloc(LockWeakIE {
                     inner_expr: inner_ce,
-                    result_opt_borrow_type: result_ct,
+                    result_opt_borrow_type: result_it,
                     some_constructor: some_proto,
                     none_constructor: none_proto,
                     some_impl_name: some_impl_id,
                     none_impl_name: none_impl_id,
-                    result: result_ct,
+                    result: result_it,
                 }));
                 (result_it, result_ce)
             }
@@ -3429,8 +3402,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let result_it = CoordI { ownership: OwnershipI::Weak, kind: inner_it.kind };
-                let result_ct = result_it;
-                (result_it, ReferenceExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, result: result_ct })))
+                (result_it, ReferenceExpressionIE::BorrowToWeak(self.interner.bump().alloc(BorrowToWeakIE { inner_expr: inner_ce, result: result_it })))
             }
             ReferenceExpressionTE::LetNormal(l) => {
                 let (_inner_it, inner_ce) =
@@ -3438,24 +3410,23 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &l.variable);
                 // env.addTranslatedVariable(variableT.name, vimpl(translatedVariable))
-                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) };
+                let result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) };
                 let expr_ce = ReferenceExpressionIE::LetNormal(self.interner.alloc(LetNormalIE {
                     variable: local_i,
                     expr: inner_ce,
-                    result: subjective_result_it,
+                    result: result_it,
                 }));
-                (subjective_result_it, expr_ce)
+                (result_it, expr_ce)
             }
             ReferenceExpressionTE::Unlet(u) => {
                 let (local_it, local_ce) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &u.variable);
-                let result_it = local_it;
                 // val local = env.lookupOriginalTranslatedVariable(variable.name)
                 let result_ce = ReferenceExpressionIE::Unlet(self.interner.alloc(UnletIE {
                     variable: local_ce,
-                    result: result_it,
+                    result: local_it,
                 }));
-                (result_it, result_ce)
+                (local_it, result_ce)
             }
             ReferenceExpressionTE::Discard(d) => {
                 let (_inner_it, inner_ce) =
@@ -3469,13 +3440,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let (_deferred_it, deferred_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &deferred_expr);
-                let result_it = inner_it;
                 let result_ce = ReferenceExpressionIE::Defer(self.interner.bump().alloc(DeferIE {
                     inner_expr: inner_ce,
                     deferred_expr: deferred_ce,
-                    result: result_it,
+                    result: inner_it,
                 }));
-                (result_it, result_ce)
+                (inner_it, result_ce)
             }
             ReferenceExpressionTE::If(if_te) => {
                 let (_condition_it, condition_ce) =
@@ -3524,13 +3494,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let MutateTE { destination_expr: destination_tt, source_expr } = **m;
                 let (destination_it, destination_ce) = self.translate_addr_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &destination_tt);
                 let (_source_it, source_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &source_expr);
-                let result_it = destination_it;
                 let result_ce = ReferenceExpressionIE::Mutate(self.interner.bump().alloc(MutateIE {
                     destination_expr: destination_ce,
                     source_expr: source_ce,
-                    result: result_it,
+                    result: destination_it,
                 }));
-                (result_it, result_ce)
+                (destination_it, result_ce)
             }
             ReferenceExpressionTE::Restackify(r) => {
                 let (_inner_it, inner_ce) =
@@ -3538,13 +3507,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let (_local_it, local_i) =
                     self.translate_local_variable(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.variable);
                 // env.addTranslatedVariable(variableT.name, vimpl(translatedVariable))
-                let subjective_result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) };
+                let result_it = CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) };
                 let expr_ce = ReferenceExpressionIE::Restackify(self.interner.alloc(RestackifyIE {
                     variable: local_i,
                     expr: inner_ce,
-                    result: subjective_result_it,
+                    result: result_it,
                 }));
-                (subjective_result_it, expr_ce)
+                (result_it, expr_ce)
             }
             ReferenceExpressionTE::Transmigrate(_) => panic!("Unimplemented: translate_ref_expr Transmigrate"),
             ReferenceExpressionTE::Return(r) => {
@@ -3562,12 +3531,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             ReferenceExpressionTE::Block(b) => {
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &b.inner);
-                let result_it = inner_it;
                 let result_ce = ReferenceExpressionIE::Block(self.interner.alloc(BlockIE {
                     inner: inner_ce,
-                    result: result_it,
+                    result: inner_it,
                 }));
-                (result_it, result_ce)
+                (inner_it, result_ce)
             }
             ReferenceExpressionTE::Pure(_) => panic!("Unimplemented: translate_ref_expr Pure"),
             ReferenceExpressionTE::Consecutor(c) => {
@@ -3634,8 +3602,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_result_type).coord;
                 let target_coord = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &target_subtype).coord;
                 let result_result_coord = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_result_type).coord;
-                let (_, ok) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, ok_constructor);
-                let (_, err) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, err_constructor);
+                let ok = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, ok_constructor);
+                let err = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, err_constructor);
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &impl_id_t);
                 let ok_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &ok_result_impl_id_t);
                 let err_impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &err_result_impl_id_t);
@@ -3694,9 +3662,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }
             ReferenceExpressionTE::InterfaceFunctionCall(ifc) => {
                 let InterfaceFunctionCallTE { super_function_prototype: super_function_prototype_t, virtual_param_index, result_reference: _result_reference, args } = **ifc;
-                let (super_function_prototype_i, super_function_prototype) =
+                let super_function_prototype =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, super_function_prototype_t);
-                let result_it = super_function_prototype_i.return_type;
+                let result_it = super_function_prototype.return_type;
                 let args_ce: Vec<ReferenceExpressionIE<'s, 'i>> = args.iter().map(|arg| {
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg).1
                 }).collect();
@@ -3708,17 +3676,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 let interface_id = super_function_prototype.param_types()[virtual_param_index as usize].kind.expect_interface().id;
                 let instantiation_bound_args = self.translate_bound_args_for_callee(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, self.hinputs.get_instantiation_bound_args(super_function_prototype_t.id));
-                let super_function_prototype =
-                    super_function_prototype_i;
-                assert!(super_function_prototype == super_function_prototype);
                 monouts.new_abstract_funcs.push((*super_function_prototype_t, super_function_prototype, virtual_param_index as usize, interface_id, instantiation_bound_args));
                 (result_it, result_ce)
             }
             ReferenceExpressionTE::ExternFunctionCall(efc) => {
                 let ExternFunctionCallTE { prototype2, args } = **efc;
-                let (prototype_i, prototype) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
+                let prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype2);
                 let args_ce: Vec<ReferenceExpressionIE<'s, 'i>> = args.iter().map(|arg_te| self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te).1).collect();
-                let result_it = prototype_i.return_type;
+                let result_it = prototype.return_type;
                 let result_ce = ReferenceExpressionIE::ExternFunctionCall(self.interner.bump().alloc(ExternFunctionCallIE { prototype2: prototype, args: self.interner.bump().alloc_slice_fill_iter(args_ce.into_iter()), result: prototype.return_type }));
                 match prototype2.id.local_name {
                     INameT::ExternFunction(ExternFunctionNameT { human_name, template_args, .. }) if !template_args.is_empty() => {
@@ -3747,16 +3712,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     let (_arg_it, arg_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, arg_te);
                     arg_ce
                 }).collect();
-                let (prototype_i, prototype) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype_t);
-                let return_coord_it = prototype_i.return_type;
-                let return_coord_ct = return_coord_it;
+                let prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, prototype_t);
+                let return_coord = prototype.return_type;
                 let result_ce = ReferenceExpressionIE::FunctionCall(self.interner.alloc(FunctionCallIE {
                     callable: prototype,
                     args: self.interner.bump().alloc_slice_fill_iter(inners_ce.into_iter()),
-                    result: return_coord_it,
+                    result: return_coord,
                 }));
-                let _ = return_coord_ct;
-                (return_coord_it, result_ce)
+                (return_coord, result_ce)
             }
             ReferenceExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
             ReferenceExpressionTE::Construct(c) => {
@@ -3801,7 +3764,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let StaticArrayFromCallableTE { array_type, region: _, generator, generator_method } = **s;
                 let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
                 let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
-                let (_generator_prototype_i, generator_prototype) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
+                let generator_prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
                 let result_it = CoordI {
                     ownership: match ssa_it.mutability() {
                         MutabilityI::Mutable => OwnershipI::Own,
@@ -3824,7 +3787,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let ssa_it = self.translate_static_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type_t);
                 let (_consumer_it, consumer_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &consumer_t);
-                let (_consumer_prototype_i, consumer_prototype) =
+                let consumer_prototype =
                     self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, consumer_method_t);
                 let result_ce = ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(self.interner.alloc(DestroyStaticSizedArrayIntoFunctionIE {
                     array_expr: array_ce,
@@ -3963,7 +3926,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let rsa_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
                 let (_size_it, size_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &size_expr);
                 let (_generator_it, generator_ce) = self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &generator);
-                let (_generator_prototype_i, generator_prototype) = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
+                let generator_prototype = self.translate_prototype(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, generator_method);
                 let array_mutability = match rsa_it.name.local_name {
                     INameI::RuntimeSizedArray(n) => n.arr.mutability,
                     _ => panic!("translate_ref_expr NewImmRuntimeSizedArray: local_name not RuntimeSizedArrayNameI"),
@@ -5098,7 +5061,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()),
             local_name: struct_name_si.into(),
         };
-        self.collapse_and_translate_struct_definition(_monouts, _struct_id_t, &full_name, _instantiation_bound_args);
+        self.translate_struct_callsite(_monouts, _struct_id_t, &full_name, _instantiation_bound_args);
         full_name
     }
 /*
@@ -5139,7 +5102,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             init_steps: self.interner.bump().alloc_slice_fill_iter(translated_steps.into_iter()),
             local_name: interface_name_si.into(),
         };
-        self.collapse_and_translate_interface_definition(_monouts, _interface_id_t, &full_name, _instantiation_bound_args);
+        self.translate_interface_callsite(_monouts, _interface_id_t, &full_name, _instantiation_bound_args);
         full_name
     }
 /*
@@ -5169,9 +5132,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         let IdT { package_coord: module, init_steps: steps, local_name: last_t, .. } = *_impl_id_t;
         match last_t {
             INameT::ImplBound(_) => {
-                let impl_bound_name = *_impl_id_t;
-                let impl_id = *_denizen_bound_to_denizen_caller_supplied_thing.bound_param_impl_id_to_bound_arg_impl_id.get(&impl_bound_name).expect("translate_impl_id: missing impl bound");
-                impl_id
+                *_denizen_bound_to_denizen_caller_supplied_thing.bound_param_impl_id_to_bound_arg_impl_id.get(_impl_id_t).expect("translate_impl_id: missing impl bound")
             }
             _ => {
                 let translated_steps: Vec<INameI<'s, 'i>> = steps.iter().map(|s| Self::translate_name(s)).collect();
@@ -6497,15 +6458,15 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
     }
   }
 */
-// mig: fn translate_collapsed_impl_definition
-    pub fn translate_collapsed_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _impl_id_t: &IdT<'s, 't>, _impl_id: &IdI<'s, 'i>, _impl_definition: &EdgeT<'s, 't>) {
+// mig: fn translate_impl_definition
+    pub fn translate_impl_definition(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _instantiation_bounds_for_unsubstituted_impl: InstantiationBoundArgumentsI<'s, 'i>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _impl_id_t: &IdT<'s, 't>, _impl_id: &IdI<'s, 'i>, _impl_definition: &EdgeT<'s, 't>) {
         let perspective_region_t = RegionT { region: IRegionT::Default };
         let sub_citizen_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.sub_citizen.id()));
         let sub_citizen = self.translate_citizen(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.sub_citizen, &sub_citizen_bound_args);
         let super_interface_bound_args = self.translate_bound_args_for_callee(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &self.hinputs.get_instantiation_bound_args(_impl_definition.super_interface));
         let super_interface = self.translate_interface_id(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, &perspective_region_t, &_impl_definition.super_interface, &super_interface_bound_args);
 
-        let mutability = *_monouts.interface_to_mutability.get(&super_interface).expect("translate_collapsed_impl_definition: superInterfaceC mutability missing");
+        let mutability = *_monouts.interface_to_mutability.get(&super_interface).expect("translate_impl_definition: superInterfaceC mutability missing");
         if _monouts.impl_to_mutability.contains_key(_impl_id) {
             return;
         }
