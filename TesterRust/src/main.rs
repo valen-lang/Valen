@@ -222,6 +222,33 @@ fn main() -> ExitCode {
             suite.StartTest(10, "ssamutparamexport", &samples_path.join("programs/externs/ssamutparamexport"), &[], region, false, None);
             suite.StartTest(42, "ssamutreturnexport", &samples_path.join("programs/externs/ssamutreturnexport"), &[], region, false, None);
         }
+
+        // Replay tests — re-homed from the legacy Tester (where they lived
+        // gated under resilient-v3 purely as suite organization). Replay
+        // mechanism is region-agnostic; running on unsafe-fast exercises
+        // Backend/src/determinism/ extern-call recording.
+        if region == "unsafe-fast" {
+            suite.StartReplayTest(42, 84, "simpleexternreturn_replay", &samples_path.join("programs/externs/simpleexternreturn"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "simpleexternparam_replay", &samples_path.join("programs/externs/simpleexternparam"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmreturnextern_replay", &samples_path.join("programs/externs/structimmreturnextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmreturnexport_replay", &samples_path.join("programs/externs/structimmreturnexport"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmparamextern_replay", &samples_path.join("programs/externs/structimmparamextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmparamexport_replay", &samples_path.join("programs/externs/structimmparamexport"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmparamdeepextern_replay", &samples_path.join("programs/externs/structimmparamdeepextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "structimmparamdeepexport_replay", &samples_path.join("programs/externs/structimmparamdeepexport"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "rsaimmreturnextern_replay", &samples_path.join("programs/externs/rsaimmreturnextern"), &[], region, false, None);
+            suite.StartReplayTest(10, 20, "rsaimmparamextern_replay", &samples_path.join("programs/externs/rsaimmparamextern"), &[], region, false, None);
+            suite.StartReplayTest(10, 20, "rsaimmparamexport_replay", &samples_path.join("programs/externs/rsaimmparamexport"), &[], region, false, None);
+            suite.StartReplayTest(20, 40, "rsaimmparamdeepextern_replay", &samples_path.join("programs/externs/rsaimmparamdeepextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "rsaimmparamdeepexport_replay", &samples_path.join("programs/externs/rsaimmparamdeepexport"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "ssaimmparamextern_replay", &samples_path.join("programs/externs/ssaimmparamextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "ssaimmparamexport_replay", &samples_path.join("programs/externs/ssaimmparamexport"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "ssaimmreturnextern_replay", &samples_path.join("programs/externs/ssaimmreturnextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "ssaimmparamdeepextern_replay", &samples_path.join("programs/externs/ssaimmparamdeepextern"), &[], region, false, None);
+            suite.StartReplayTest(42, 84, "ssaimmparamdeepexport_replay", &samples_path.join("programs/externs/ssaimmparamdeepexport"), &[], region, false, None);
+            suite.StartReplayTest(6, 12, "strreturnexport_replay", &samples_path.join("programs/externs/strreturnexport"), &[], region, false, None);
+            suite.StartReplayTest(11, 22, "strlenextern_replay", &samples_path.join("programs/externs/strlenextern"), &[], region, false, None);
+        }
     }
 
     // ====== beyond-port: rust-interop tests ======
