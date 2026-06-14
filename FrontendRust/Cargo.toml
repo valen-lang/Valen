@@ -22,3 +22,7 @@ tempfile = "3"
 name = "frontend_rust"
 path = "src/lib.rs"
 
+[[bin]]
+name = "valec"
+path = "src/bin/valec/main.rs"
+

@@ -1,1 +1,1 @@
-../TesterRust/target/debug/testvalec --frontend_path ../FrontendRust/target/debug/frontend_rust --backend_path ./build/backend --builtins_dir ./builtins --valec_path ../CoordinatorRust/target/debug/valec --backend_tests_dir ./test --frontend_tests_dir ../Frontend --stdlib_dir ../stdlib "$@"
+../TesterRust/target/debug/testvalec --frontend_path ../FrontendRust/target/debug/frontend_rust --backend_path ./build/backend --builtins_dir ./builtins --valec_path ../FrontendRust/target/debug/valec --backend_tests_dir ./test --frontend_tests_dir ../Frontend --stdlib_dir ../stdlib "$@"

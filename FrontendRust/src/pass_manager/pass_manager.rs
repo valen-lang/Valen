@@ -605,7 +605,7 @@ fn resolve_package_contents<'a>(
 
 /// Returns `(exit_code, package_coord_stems)`. The stems are dot-joined
 /// `(project, package_steps...)` strings (e.g. `"__vale"`, `"stdlib.collections.hashmap"`)
-/// — one per compiled package. CoordinatorRust uses them to find the matching
+/// — one per compiled package. The valec bin uses them to find the matching
 /// `<project>/<package_steps>/native/*.c` files for the link step.
 pub fn build<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
@@ -714,7 +714,7 @@ where
   let program_h = compilation.get_hamuts();
 
   // Collect (project, package_steps) stems for each compiled package, so
-  // CoordinatorRust can find their matching native/*.c dirs at link time.
+  // the valec bin can find their matching native/*.c dirs at link time.
   // Empty module → "__vale" (Backend's `userFuncName` convention; see the
   // walker's lower_package_coord and Backend/src/vale.cpp).
   let package_coord_stems: Vec<String> = program_h.packages.package_coord_to_contents.iter()

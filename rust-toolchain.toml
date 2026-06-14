@@ -1,13 +1,13 @@
 # Pins the Rust toolchain for the Cargo projects in this repo (FrontendRust,
-# CoordinatorRust). rustup picks this up automatically when running cargo/rustc from any
+# TesterRust). rustup picks this up automatically when running cargo/rustc from any
 # subdirectory.
 #
 # Why pin:
 # - FrontendRust uses nightly-only features (allocator-api2, etc.) that move across
 #   nightlies. Pinning gives reproducible builds across machines and CI.
 #
-# To bump: pick a nightly, verify FrontendRust and CoordinatorRust still build + tests
-# pass, then change `channel` here.
+# To bump: pick a nightly, verify FrontendRust still builds + tests pass, then
+# change `channel` here.
 [toolchain]
 channel = "nightly-2025-12-09"
 # Components required by the pipeline:

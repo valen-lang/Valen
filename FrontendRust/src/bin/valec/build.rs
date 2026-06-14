@@ -175,8 +175,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         // Skip recognized flags
         if arg.starts_with("--") || arg == "-g" || arg == "-o" {
             // Skip flag and its value (if it has one)
-            if arg == "-o" || arg == "--output_dir" || arg == "--frontend_path_override" 
-                || arg == "--backend_path_override" || arg == "--builtins_dir_override"
+            if arg == "-o" || arg == "--output_dir" || arg == "--builtins_dir_override"
                 || arg == "--clang_override" || arg == "--libc_override"
                 || arg == "--region_override" || arg == "--opt_level" || arg == "--cpu"
                 || arg == "--replay_whitelist_extern" {
