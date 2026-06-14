@@ -19,25 +19,9 @@ ValeFuncPtrLE addValeFunction(
     const std::string& name,
     LLVMTypeRef returnLT,
     std::vector<LLVMTypeRef> argsLT) {
-  static const std::string NOALIAS = "noalias";
-
-  auto genLT = LLVMIntTypeInContext(globalState->context, globalState->opt->generationSize);
-  // The first parameter is always a restrict "next generation" pointer.
-  argsLT.insert(argsLT.begin(), LLVMPointerType(genLT, 0));
   auto functionLT = LLVMFunctionType(returnLT, argsLT.data(), argsLT.size(), false);
 
   auto functionLF = LLVMAddFunction(globalState->mod, name.c_str(), functionLT);
-
-  // Now lets add the restrict/noalias attribute for the pointer to the next generation number.
-  // See RPPFNG.
-  auto noaliasAttribute =
-      LLVMCreateEnumAttribute(globalState->context, llvm::Attribute::NoAlias, 0);
-  assert(noaliasAttribute);
-  // From LLVMAttributeIndex docs: "Attribute index are either LLVMAttributeReturnIndex,
-  // LLVMAttributeFunctionIndex or a parameter number from 1 to N."
-  // So this 1 means the 0th parameter.
-  auto firstParamAttributeIndex = static_cast<LLVMAttributeIndex>(1);
-  LLVMAddAttributeAtIndex(functionLF, firstParamAttributeIndex, noaliasAttribute);
 
   // Add static, should help optimizations
   LLVMSetLinkage(functionLF, LLVMInternalLinkage);
@@ -93,7 +77,7 @@ void defineRawFunctionBody(
   LLVMBuilderRef bodyTopLevelBuilder = LLVMCreateBuilderInContext(context);
   LLVMPositionBuilderAtEnd(bodyTopLevelBuilder, firstBlockL);
 
-  FunctionState functionState(name, functionL, returnTypeL, localsBuilder, std::nullopt);
+  FunctionState functionState(name, functionL, returnTypeL, localsBuilder);
 
   definer(&functionState, bodyTopLevelBuilder);
 
@@ -112,10 +96,5 @@ void defineValeFunctionBody(
     const std::string& name,
     std::function<void(FunctionState*, LLVMBuilderRef)> definer) {
   defineRawFunctionBody(
-      context, funcPtr.inner.ptrLE, returnTypeL, name,
-      [definer](FunctionState* functionState, LLVMBuilderRef builder) {
-        functionState->nextGenPtrLE =
-            std::make_optional(LLVMGetParam(functionState->containingFuncL, 0));
-        definer(functionState, builder);
-      });
+      context, funcPtr.inner.ptrLE, returnTypeL, name, definer);
 }

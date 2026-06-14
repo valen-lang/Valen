@@ -254,9 +254,11 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
 
   // mig: fn get_hamuts
   pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
-      let hamuts = self.hammer_compilation.get_hamuts();
-      self.hammer_compilation.get_von_hammer().vonify_program(hamuts);
-      hamuts
+      // Scala called `vonHammer.vonifyProgram(hamuts)` here as a discarded
+      // side effect (parity-checking the von tree). VonHammer was retired
+      // alongside `pass_manager::build`'s JSON output path; the sanity
+      // check went with it.
+      self.hammer_compilation.get_hamuts()
   }
   /*
   def getHamuts(): ProgramH = {

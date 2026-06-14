@@ -11,30 +11,6 @@ use crate::clang;
 use crate::midas;
 use crate::valestrom::{ProjectDirectoryDeclaration, ProjectNonValeInputDeclaration, ProjectValeInputDeclaration};
 
-/// List all .vast files in the output directory
-/// Mirrors list_vasts in build.vale lines 29-37
-fn list_vasts(output_dir: &Path) -> Vec<PathBuf> {
-    let mut vast_files = Vec::new();
-    let vast_dir = output_dir.join("vast");
-    
-    if vast_dir.exists() && vast_dir.is_dir() {
-        if let Ok(entries) = fs::read_dir(&vast_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_file() {
-                    if let Some(name) = path.file_name() {
-                        if name.to_string_lossy().ends_with(".vast") {
-                            vast_files.push(path);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    vast_files
-}
-
 /// Parse a flag value from command-line arguments
 /// Helper function for flag parsing
 fn get_flag_value(args: &[String], flag: &str, default: &str) -> String {
@@ -59,16 +35,6 @@ fn get_bool_flag(args: &[String], flag: &str, default: bool) -> bool {
                 return args[i + 1] == "true";
             }
             return true; // Flag present without value means true
-        }
-    }
-    default
-}
-
-/// Get integer flag value
-fn get_int_flag(args: &[String], flag: &str, default: i32) -> i32 {
-    for i in 0..args.len() {
-        if args[i] == flag && i + 1 < args.len() {
-            return args[i + 1].parse().unwrap_or(default);
         }
     }
     default
@@ -116,7 +82,7 @@ fn print_and_join(mut child: process::Child) -> Result<i32, String> {
 /// Main build function
 /// Mirrors build_stuff in build.vale lines 39-632
 pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
-    // Mirrors build.vale line 42
+
     let windows = cfg!(windows);
 
     // Skip first two args (program name and "build" command)
@@ -125,31 +91,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     // Parse all the flags (mirrors build.vale lines 57-292)
     // In Vale this uses the flagger library, we'll parse manually
     
-    // Mirrors build.vale lines 297-304: Frontend path
-    let frontend_program_name = if windows { "frontend_rust.exe" } else { "frontend_rust" };
-    let frontend_path = if let Some(override_path) = get_optional_flag(build_args, "--frontend_path_override") {
-        let path = PathBuf::from(override_path);
-        if !path.is_file() {
-            eprintln!("Error: --frontend_path_override's value ({}) is not a file.", path.display());
-            process::exit(1);
-        }
-        path
-    } else {
-        compiler_dir.join(frontend_program_name)
-    };
 
-    // Mirrors build.vale lines 306-314: Backend path
-    let backend_program_name = if windows { "backend.exe" } else { "backend" };
-    let backend_path = if let Some(override_path) = get_optional_flag(build_args, "--backend_path_override") {
-        let path = PathBuf::from(override_path);
-        if !path.is_file() {
-            eprintln!("Error: --backend_path_override's value ({}) is not a file.", path.display());
-            process::exit(1);
-        }
-        path
-    } else {
-        compiler_dir.join(backend_program_name)
-    };
 
     // Mirrors build.vale lines 316-323: Builtins directory
     let builtins_dir = if let Some(override_path) = get_optional_flag(build_args, "--builtins_dir_override") {
@@ -182,7 +124,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     let sanity_check = get_bool_flag(build_args, "--sanity_check", true);
     let enable_replaying = get_bool_flag(build_args, "--enable_replaying", false);
     let enable_side_calling = get_bool_flag(build_args, "--enable_side_calling", false);
-    let output_vpst = get_bool_flag(build_args, "--output_vpst", true);
     let no_std = get_bool_flag(build_args, "--no_std", false);
 
     // Mirrors build.vale lines 344-366: More flags
@@ -205,7 +146,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     let print_mem_overhead = get_bool_flag(build_args, "--print_mem_overhead", false);
     let elide_checks_for_known_live = get_bool_flag(build_args, "--elide_checks_for_known_live", true);
     let elide_checks_for_regions = get_bool_flag(build_args, "--elide_checks_for_regions", true);
-    let gen_size = get_int_flag(build_args, "--gen_size", 32);
     let use_atomic_rc = get_bool_flag(build_args, "--use_atomic_rc", false);
     let include_bounds_checks = get_bool_flag(build_args, "--include_bounds_checks", true);
     let force_all_known_live = get_bool_flag(build_args, "--force_all_known_live", false);
@@ -239,13 +179,13 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
                 || arg == "--backend_path_override" || arg == "--builtins_dir_override"
                 || arg == "--clang_override" || arg == "--libc_override"
                 || arg == "--region_override" || arg == "--opt_level" || arg == "--cpu"
-                || arg == "--replay_whitelist_extern" || arg == "--gen_size" {
+                || arg == "--replay_whitelist_extern" {
                 i += 2; // Skip flag and value
                 continue;
             } else if arg == "--benchmark" || arg == "--sanity_check" || arg == "--verbose"
                 || arg == "--debug_output" || arg == "--include_builtins" || arg == "--output_vast"
                 || arg == "--reuse_vast" || arg == "--run_backend" || arg == "--run_clang"
-                || arg == "--enable_replaying" || arg == "--enable_side_calling" || arg == "--output_vpst"
+                || arg == "--enable_replaying" || arg == "--enable_side_calling"
                 || arg == "--no_std" || arg == "--flares" || arg == "--gen_heap" || arg == "--census"
                 || arg == "--asan" || arg == "--verify" || arg == "--llvm_ir" || arg == "--pic"
                 || arg == "--pie" || arg == "--asm" || arg == "--print_mem_overhead"
@@ -276,7 +216,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
                 });
             } else if resolved_path.file_name()
                 .and_then(|n| n.to_str())
-                .map(|n| n.ends_with(".vale") || n.ends_with(".vpst"))
+                .map(|n| n.ends_with(".vale"))
                 .unwrap_or(false) {
                 project_vale_input_declarations.push(ProjectValeInputDeclaration {
                     project_name: project_name.to_string(),
@@ -296,15 +236,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         i += 1;
     }
 
-    // Mirrors build.vale lines 409-417: Validate paths
-    if !frontend_path.exists() {
-        eprintln!("Cannot find Frontend directory: {}", frontend_path.display());
-        process::exit(1);
-    }
-    if !backend_path.exists() {
-        eprintln!("Cannot find Backend directory: {}", backend_path.display());
-        process::exit(1);
-    }
     if !builtins_dir.exists() {
         eprintln!("Cannot find builtins directory: {}", builtins_dir.display());
         process::exit(1);
@@ -316,11 +247,13 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     }
 
     if reuse_vast {
-        if list_vasts(&output_dir).is_empty() {
-            eprintln!("Error: --reuse_vast specified, but no .vast files found in {}.", output_dir.display());
-            process::exit(1);
-        }
-    } else {
+        // The in-process MetalLowerer path has no JSON intermediate to reuse.
+        // The flag is parsed for backward-compat error reporting.
+        eprintln!("Error: --reuse_vast is no longer supported; compilation runs directly in-process.");
+        process::exit(1);
+    }
+    let compiled_package_stems: Vec<String>;
+    {
         if output_dir.exists() {
             println!("Deleting existing {}.", output_dir.display());
             if let Err(e) = fs::remove_dir_all(&output_dir) {
@@ -335,101 +268,48 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             process::exit(1);
         }
 
-        let frontend_process = match crate::valestrom::invoke_frontend(
-            &frontend_path,
+        let backend_argv = midas::build_backend_argv(
+            &output_dir,
+            maybe_region_override.as_deref(),
+            maybe_opt_level.as_deref(),
+            maybe_cpu.as_deref(),
+            &executable_name,
+            flares, gen_heap, census, verify,
+            &opt_level,
+            llvm_ir, asm,
+            enable_replaying, &replay_whitelist_extern,
+            enable_side_calling, pic, print_mem_overhead,
+            elide_checks_for_known_live, elide_checks_for_regions,
+            use_atomic_rc,
+            force_all_known_live, include_bounds_checks,
+        );
+
+        println!("Running frontend + backend in-process...");
+        let (return_code, stems) = match crate::valestrom::compile_in_process(
             &project_directory_declarations,
             &project_vale_input_declarations,
             &project_non_vale_input_declarations,
-            benchmark,
-            sanity_check,
-            verbose,
-            debug_output,
+            benchmark, sanity_check, verbose, debug_output,
             include_builtins,
-            output_vast,
-            output_vpst,
             &output_dir,
+            backend_argv,
         ) {
-            Ok(process) => process,
-            Err(e) => {
-                eprintln!("Error invoking frontend: {}", e);
-                process::exit(1);
-            }
+            Ok(result) => result,
+            Err(e) => { eprintln!("Compilation error: {}", e); process::exit(1); }
         };
 
-        println!("Running frontend...");
-        let frontend_return_code = match print_and_join(frontend_process) {
-            Ok(code) => code,
-            Err(e) => {
-                eprintln!("Error waiting for frontend: {}", e);
-                process::exit(1);
-            }
-        };
-        
-        if frontend_return_code != 0 {
-            eprintln!("Frontend returned error code {}, aborting.", frontend_return_code);
-            process::exit(frontend_return_code);
+        if return_code != 0 {
+            eprintln!("Compilation returned error code {}, aborting.", return_code);
+            process::exit(return_code);
         }
+        let _ = output_vast;
+        compiled_package_stems = stems;
     }
 
     // Mirrors build.vale lines 480-483: Check if should run backend
     if !run_backend {
         println!("Not running backend, stopping here.");
         return;
-    }
-
-    // Mirrors build.vale lines 485-522: Run backend
-    if verbose {
-        println!("Invoking Backend...");
-    }
-
-    let vast_files = list_vasts(&output_dir);
-
-    let backend_process = match midas::invoke_backend(
-        &backend_path,
-        &vast_files,
-        &output_dir,
-        maybe_region_override.as_deref(),
-        maybe_opt_level.as_deref(),
-        maybe_cpu.as_deref(),
-        &executable_name,
-        flares,
-        gen_heap,
-        census,
-        verify,
-        &opt_level,
-        llvm_ir,
-        asm,
-        enable_replaying,
-        &replay_whitelist_extern,
-        enable_side_calling,
-        pic,
-        print_mem_overhead,
-        elide_checks_for_known_live,
-        elide_checks_for_regions,
-        use_atomic_rc,
-        gen_size,
-        force_all_known_live,
-        include_bounds_checks,
-    ) {
-        Ok(process) => process,
-        Err(e) => {
-            eprintln!("Error invoking backend: {}", e);
-            process::exit(1);
-        }
-    };
-
-    println!("Running backend...");
-    let backend_return_code = match print_and_join(backend_process) {
-        Ok(code) => code,
-        Err(e) => {
-            eprintln!("Error waiting for backend: {}", e);
-            process::exit(1);
-        }
-    };
-    
-    if backend_return_code != 0 {
-        eprintln!("Backend returned error code {}, aborting.", backend_return_code);
-        process::exit(backend_return_code);
     }
 
     // Mirrors build.vale lines 524-527: Check if should run clang
@@ -478,41 +358,31 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         }
     }
 
-    // Mirrors build.vale lines 552-606: Collect native .c files from projects
+    // Mirrors build.vale lines 552-606: Collect native .c files from projects.
+    // pass_manager::build hands us a (project, package_steps...) stem per
+    // compiled package; we walk the matching `<project_dir>/<steps...>/native/`
+    // for `.c` files to feed into clang.
     let mut project_names = HashSet::new();
-
-    for vast_file in &vast_files {
-        if let Some(file_name) = vast_file.file_name().and_then(|n| n.to_str()) {
-            let package_coord_str = file_name.strip_suffix(".vast").unwrap_or(file_name);
-            let package_coord_parts: Vec<&str> = package_coord_str.split('.').collect();
-            
-            if !package_coord_parts.is_empty() {
-                let project_name = package_coord_parts[0];
-                project_names.insert(project_name.to_string());
-
-                // Find native files in project directories
-                for declaration in &project_directory_declarations {
-                    if declaration.project_name == project_name {
-                        let mut package_native_dir = declaration.path.clone();
-                        
-                        // Navigate through package steps
-                        for package_step in &package_coord_parts[1..] {
-                            package_native_dir = package_native_dir.join(package_step);
-                        }
-                        
-                        let possible_native_dir = package_native_dir.join("native");
-                        if possible_native_dir.exists() && possible_native_dir.is_dir() {
-                            if let Ok(entries) = fs::read_dir(&possible_native_dir) {
-                                for entry in entries.flatten() {
-                                    let path = entry.path();
-                                    if path.is_file() {
-                                        if let Some(name) = path.file_name() {
-                                            if name.to_string_lossy().ends_with(".c") {
-                                                clang_inputs.push(path);
-                                            }
-                                        }
-                                    }
-                                }
+    for stem in &compiled_package_stems {
+        let parts: Vec<&str> = stem.split('.').collect();
+        if parts.is_empty() { continue; }
+        let project_name = parts[0];
+        project_names.insert(project_name.to_string());
+        for declaration in &project_directory_declarations {
+            if declaration.project_name == project_name {
+                let mut package_native_dir = declaration.path.clone();
+                for package_step in &parts[1..] {
+                    package_native_dir = package_native_dir.join(package_step);
+                }
+                let possible_native_dir = package_native_dir.join("native");
+                if possible_native_dir.is_dir() {
+                    if let Ok(entries) = fs::read_dir(&possible_native_dir) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.is_file()
+                                && path.file_name().map_or(false, |n| n.to_string_lossy().ends_with(".c"))
+                            {
+                                clang_inputs.push(path);
                             }
                         }
                     }

@@ -173,25 +173,10 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 }
 /*
 */
-// mig: fn get_von_hammer
+// mig: fn get_code_map
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
-  pub fn get_von_hammer<'a>(&'a self) -> Hammer<'s, 'i, 'h, 'a>
-  where 'ctx: 'a,
-  {
-    Hammer {
-      interner: self.interner,
-      keywords: self.keywords,
-      scout_arena: self.scout_arena,
-      instantiating_interner: &self.instantiated_compilation.instantiating_interner,
-    }
-  }
-/*
-  def getVonHammer() = vassertSome(vonHammerCache)
-*/
-
-// mig: fn get_code_map
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_code_map()
   }

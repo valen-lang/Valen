@@ -1,20 +1,21 @@
-// Backend (Midas) invocation
-// Mirrors Coordinator/src/midas.vale
+// Backend (Midas) argv assembly. The actual backend call happens inside
+// pass_manager::build (which feeds the in-process MetalCache
+// populated by MetalLowerer straight into backend_compile_program).
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::path::Path;
 
-/// Invoke the Backend (Midas) pass
-/// Mirrors invoke_backend in midas.vale lines 2-116
+/// Build the argv that pass_manager::build will feed to
+/// backend_compile_program. argv[0] is the conventional program-name
+/// placeholder; the rest are valeOptSet-style flags.
 #[allow(clippy::too_many_arguments)]
-pub fn invoke_backend(
-    backend_program_path: &Path,
-    vast_files: &[PathBuf],
+pub fn build_backend_argv(
     output_dir: &Path,
     maybe_region_override: Option<&str>,
     maybe_opt_level: Option<&str>,
     maybe_cpu: Option<&str>,
-    executable_name: &str,
+    // `-o <name>` is consumed by valec for the final clang invocation;
+    // the backend writes a fixed `build.o` regardless of this name.
+    _executable_name: &str,
     flares: bool,
     gen_heap: bool,
     census: bool,
@@ -30,17 +31,11 @@ pub fn invoke_backend(
     elide_checks_for_known_live: bool,
     elide_checks_for_regions: bool,
     use_atomic_rc: bool,
-    gen_size: i32,
     force_all_known_live: bool,
     include_bounds_checks: bool,
-) -> Result<std::process::Child, String> {
-    // Mirrors midas.vale lines 32-34
-    if !backend_program_path.exists() {
-        return Err(format!("Cannot find backend at: {}", backend_program_path.display()));
-    }
-
-    // Mirrors midas.vale lines 36-39
+) -> Vec<String> {
     let mut command_line_args = Vec::new();
+    command_line_args.push("backend".to_string()); // argv[0] placeholder
     command_line_args.push("--verify".to_string());
     command_line_args.push("--output_dir".to_string());
     command_line_args.push(output_dir.display().to_string());
@@ -111,21 +106,7 @@ pub fn invoke_backend(
         command_line_args.push("--use_atomic_rc=true".to_string());
     }
 
-    command_line_args.push(format!("--gen_size={}", gen_size));
-
-    // Mirrors midas.vale lines 111-113
-    for vast_file in vast_files {
-        command_line_args.push(vast_file.display().to_string());
-    }
-
-    // Mirrors midas.vale line 115
-    let child = Command::new(backend_program_path)
-        .args(&command_line_args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn backend process: {}", e))?;
-
-    Ok(child)
+    // No vast file paths — MetalLowerer feeds the program directly in-process.
+    command_line_args
 }
 

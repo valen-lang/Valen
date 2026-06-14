@@ -8,7 +8,6 @@
 #include "translatetype.h"
 #include <region/common/migration.h>
 #include <utils/counters.h>
-#include <utils/randomgeneration.h>
 
 std::tuple<RawFuncPtrLE, LLVMBuilderRef> makeStringSetupFunction(GlobalState* globalState) {
   auto voidLT = LLVMVoidTypeInContext(globalState->context);
@@ -50,10 +49,8 @@ Prototype* makeValeMainFunction(
         buildFlare(FL(), globalState, functionState, entryBuilder);
 
         stringSetupFunctionL.call(entryBuilder, {}, "");
-        // Main has the next gen ptr handed in from the entry function.
-        auto nextGenPtrLE = functionState->nextGenPtrLE.value();
         globalState->lookupFunction(mainSetupFuncProto)
-            .call(entryBuilder, nextGenPtrLE, {}, "");
+            .call(entryBuilder, {}, "");
 
 //        LLVMBuildStore(
 //            entryBuilder,
@@ -101,17 +98,6 @@ Prototype* makeValeMainFunction(
           buildPrintToStderr(
               globalState, entryBuilder,
               LLVMBuildLoad2(entryBuilder, int64LT, globalState->mutRcAdjustCounterLE, "rcadjusts"));
-
-
-          buildPrintToStderr(globalState, entryBuilder, "\nLiveness checks: ");
-          buildPrintToStderr(
-              globalState, entryBuilder,
-              LLVMBuildLoad2(entryBuilder, int64LT, globalState->livenessCheckCounterLE, "genprechecks"));
-
-          buildPrintToStderr(globalState, entryBuilder, "\nLiveness pre-checks: ");
-          buildPrintToStderr(
-              globalState, entryBuilder,
-              LLVMBuildLoad2(entryBuilder, int64LT, globalState->livenessPreCheckCounterLE, "genchecks"));
 
           buildPrintToStderr(globalState, entryBuilder, "\n");
         }
@@ -210,21 +196,13 @@ LLVMValueRef makeEntryFunction(
     numMainArgsLE = LLVMBuildSub(entryBuilder, numMainArgsLE, numConsumedArgsLE, "newMainArgsCount");
   }
 
-  auto genLT = LLVMIntTypeInContext(globalState->context, globalState->opt->generationSize);
-  auto newGenLE =
-      adjustCounterReturnOld(
-          entryBuilder, genLT, globalState->nextGenThreadGlobalIntLE,
-          getRandomGenerationAddend(globalState->nextGenerationAddend++));
-  auto nextGenLocalPtrLE = LLVMBuildAlloca(entryBuilder, genLT, "nextGenLocalPtr");
-  LLVMBuildStore(entryBuilder, newGenLE, nextGenLocalPtrLE);
-
   auto calleeUserFunction = globalState->lookupFunction(valeMainPrototype);
   auto calleeUserFunctionReturnMT = valeMainPrototype->returnType;
   auto calleeUserFunctionReturnLT =
       globalState->getRegion(calleeUserFunctionReturnMT)->translateType(calleeUserFunctionReturnMT);
   auto resultLE =
       buildMaybeNeverCallV(
-          globalState, entryBuilder, calleeUserFunction, nextGenLocalPtrLE, {});
+          globalState, entryBuilder, calleeUserFunction, {});
 
   if (globalState->opt->enableReplaying) {
     globalState->determinism->buildMaybeStopDeterministicMode(

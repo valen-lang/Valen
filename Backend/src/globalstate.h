@@ -58,11 +58,8 @@ public:
   LLVMValueRef liveHeapObjCounterLE = nullptr;
   LLVMValueRef derefCounterLE = nullptr;
   LLVMValueRef mutRcAdjustCounterLE = nullptr;
-  LLVMValueRef livenessCheckCounterLE = nullptr;
-  LLVMValueRef livenessPreCheckCounterLE = nullptr;
   LLVMValueRef writeOnlyGlobalLE = nullptr;
   LLVMValueRef crashGlobalLE = nullptr;
-  LLVMValueRef nextGenThreadGlobalIntLE = nullptr;
 //  LLVMValueRef nullLE = nullptr;
 
   LLVMTypeRef wrcTableStructLT = nullptr;
@@ -121,8 +118,6 @@ public:
   OverridesBySubstructByInterfaceMap overridesBySubstructByInterface;
   // This keeps us from adding more edges or interfaces after we've already started compiling them.
   bool interfacesOpen = true;
-
-  uint64_t nextGenerationAddend = 0;
 
   UniversalRefStructLT* getUniversalRefStructLT() { return universalRefStructLT.get(); }
 

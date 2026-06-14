@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables, unused_imports)]
 
+pub mod backend_ffi;
 pub mod builtins;
 pub mod compile_options;
 pub mod file_coordinate_map;

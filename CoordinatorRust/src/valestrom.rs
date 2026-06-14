@@ -1,8 +1,8 @@
-// Frontend invocation
-// Mirrors Coordinator/src/valestrom.vale
+// Frontend invocation. Calls `frontend_rust::pass_manager::build`
+// in-process (linked as a library); runs the MetalLowerer pipeline straight
+// into the C++ backend, no subprocess and no JSON intermediate.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone)]
 pub struct ProjectDirectoryDeclaration {
@@ -22,8 +22,11 @@ pub struct ProjectNonValeInputDeclaration {
     pub path: PathBuf,
 }
 
-pub fn invoke_frontend(
-    frontend_path: &Path,
+/// Run the complete in-process pipeline: parse → typing → hammer →
+/// MetalLowerer → backend_compile_program. No `.vast` JSON written, no JSON
+/// re-parse — MetalLowerer hands the ProgramH straight into the C++
+/// MetalCache via FFI.
+pub fn compile_in_process(
     project_directories: &[ProjectDirectoryDeclaration],
     project_vale_inputs: &[ProjectValeInputDeclaration],
     _project_non_vale_inputs: &[ProjectNonValeInputDeclaration],
@@ -32,65 +35,65 @@ pub fn invoke_frontend(
     verbose: bool,
     debug_output: bool,
     include_builtins: bool,
-    output_vast: bool,
-    output_vpst: bool,
     output_dir: &Path,
-) -> Result<std::process::Child, String> {
-    if !frontend_path.exists() {
-        return Err(format!("Cannot find frontend at: {}", frontend_path.display()));
-    }
+    backend_argv: Vec<String>,
+) -> Result<(i32, Vec<String>), String> {
+    // Build the same arg list pass_manager::main consumes, then route it
+    // through parse_opts to populate the Options struct.
+    let mut frontend_args: Vec<String> = Vec::new();
+    frontend_args.push("build".to_string());
+    frontend_args.push("--output_dir".to_string());
+    frontend_args.push(output_dir.display().to_string());
 
-    let mut command_line_args: Vec<String> = Vec::new();
-    command_line_args.push("build".to_string());
-    command_line_args.push("--output_dir".to_string());
-    command_line_args.push(output_dir.display().to_string());
-
-    if benchmark {
-        command_line_args.push("--benchmark".to_string());
-    }
+    if benchmark { frontend_args.push("--benchmark".to_string()); }
     if sanity_check {
-        command_line_args.push("--sanity_check".to_string());
-        command_line_args.push("true".to_string());
+        frontend_args.push("--sanity_check".to_string());
+        frontend_args.push("true".to_string());
     }
-    if verbose {
-        command_line_args.push("--verbose".to_string());
-    }
-    if debug_output {
-        command_line_args.push("--debug_output".to_string());
-    }
+    if verbose { frontend_args.push("--verbose".to_string()); }
+    if debug_output { frontend_args.push("--debug_output".to_string()); }
     if !include_builtins {
-        command_line_args.push("--include_builtins".to_string());
-        command_line_args.push("false".to_string());
-    }
-    if !output_vast {
-        command_line_args.push("--output_vast".to_string());
-        command_line_args.push("false".to_string());
-    }
-    if !output_vpst {
-        command_line_args.push("--output_vpst".to_string());
-        command_line_args.push("false".to_string());
+        frontend_args.push("--include_builtins".to_string());
+        frontend_args.push("false".to_string());
     }
 
     for declaration in project_directories {
         let resolved_path = declaration.path.canonicalize()
             .unwrap_or_else(|_| declaration.path.clone());
-        command_line_args.push(format!("{}={}", declaration.project_name, resolved_path.display()));
+        frontend_args.push(format!("{}={}", declaration.project_name, resolved_path.display()));
     }
-
     for declaration in project_vale_inputs {
         let resolved_path = declaration.path.canonicalize()
             .unwrap_or_else(|_| declaration.path.clone());
-        command_line_args.push(format!("{}={}", declaration.project_name, resolved_path.display()));
+        frontend_args.push(format!("{}={}", declaration.project_name, resolved_path.display()));
     }
 
-    let child = Command::new(frontend_path)
-        .args(&command_line_args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn frontend process: {}", e))?;
+    let parse_bump = bumpalo::Bump::new();
+    let parse_arena = frontend_rust::parse_arena::ParseArena::new(&parse_bump);
+    let keywords = frontend_rust::keywords::Keywords::new_for_parse(&parse_arena);
 
-    Ok(child)
+    let opts = frontend_rust::pass_manager::pass_manager::parse_opts(
+        &parse_arena,
+        frontend_rust::pass_manager::pass_manager::Options {
+            inputs: vec![],
+            output_dir_path: None,
+            benchmark: false,
+            output_vast: true,
+            include_builtins: true,
+            mode: None,
+            sanity_check: false,
+            use_optimized_solver: true,
+            use_overload_index: true,
+            verbose_errors: false,
+            debug_output: false,
+        },
+        frontend_args,
+    );
+
+    let argv_refs: Vec<&str> = backend_argv.iter().map(|s| s.as_str()).collect();
+    frontend_rust::pass_manager::pass_manager::build(
+        &parse_arena, &keywords, &opts, &argv_refs,
+    )
 }
 /*
 func invoke_frontend(

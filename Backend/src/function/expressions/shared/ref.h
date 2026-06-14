@@ -21,8 +21,8 @@ struct KindStructs;
 // Then we can have a PtrLE-like thing that contains that IType and an LLVMValueRef.
 // Perhaps we dont even need that IType* elementType? probably do. must think on it.
 
-// A "Raw function" is one that doesn't have a restrict nextgen ptr as the first parameter.
-// As opposed to a Vale function which does.
+// A "Raw function" is C-ABI-shaped (external/extern linkage).
+// A "Vale function" has internal linkage (see addValeFunction).
 struct RawFuncPtrLE {
   LLVMValueRef ptrLE;
   LLVMTypeRef funcLT;
@@ -45,8 +45,8 @@ struct RawFuncPtrLE {
   }
 };
 
-// A "Vale function" is one that has a restrict nextgen ptr as the first parameter.
-// As opposed to a raw function which doesnt.
+// A "Vale function" is one with internal linkage (see addValeFunction).
+// As opposed to a raw function which has external/extern linkage.
 struct ValeFuncPtrLE {
   RawFuncPtrLE inner;
 
@@ -55,20 +55,13 @@ struct ValeFuncPtrLE {
   explicit ValeFuncPtrLE(RawFuncPtrLE inner_)
       : inner(inner_) { }
 
-  LLVMValueRef call(LLVMBuilderRef builder, LLVMValueRef nextGenPtrLE, std::vector<LLVMValueRef> argsLE, const char* name) const {
-    argsLE.insert(argsLE.begin(), nextGenPtrLE);
+  LLVMValueRef call(LLVMBuilderRef builder, const std::vector<LLVMValueRef>& argsLE, const char* name) const {
     return inner.call(builder, argsLE, name);
   }
 
   LLVMValueRef getValeParam(int index) {
-    // The 0th argument is always the next gen ptr.
-    return inner.getRawArg(index + 1);
+    return inner.getRawArg(index);
   }
-
-//  LLVMValueRef getNextGenPtrArg() {
-//    // The 0th argument is always the next gen ptr.
-//    return inner.getRawArg(0);
-//  }
 };
 
 // A type-system token to assure certain functions that we indeed checked the bounds of an array

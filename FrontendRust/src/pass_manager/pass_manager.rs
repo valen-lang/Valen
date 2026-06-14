@@ -16,8 +16,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::parsing::vonifier::ParserVonifier;
-use crate::von::printer::VonPrinter;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::builtins::builtins::get_code_map as get_builtins_code_map;
 use crate::final_ast::ast::PackageH;
@@ -122,11 +120,8 @@ override def equals(obj: Any): Boolean = vcurious();
 pub struct Options<'a> {
   pub inputs: Vec<IFrontendInput<'a>>,
   pub output_dir_path: Option<String>,
-  pub input_vpst_dir: Option<String>,
   pub benchmark: bool,
-  pub output_vpst: bool,
   pub output_vast: bool,
-  pub output_highlights: bool,
   pub include_builtins: bool,
   pub mode: Option<String>,
   pub sanity_check: bool,
@@ -192,28 +187,6 @@ fn parse_opts_recursive<'a>(
       opts.output_dir_path = Some(list[index + 1].clone());
       parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
-    "--input_vpst" => {
-      // From PassManager.scala lines 78-81
-      if index + 1 >= list.len() {
-        eprintln!("--input_vpst requires a value");
-        exit(22);
-      }
-      if opts.input_vpst_dir.is_some() {
-        eprintln!("Multiple --input_vpst specified!");
-        exit(22);
-      }
-      opts.input_vpst_dir = Some(list[index + 1].clone());
-      parse_opts_recursive(parse_arena, opts, list, index + 2)
-    }
-    "--output_vpst" => {
-      // From PassManager.scala lines 82-84
-      if index + 1 >= list.len() {
-        eprintln!("--output_vpst requires a value");
-        exit(22);
-      }
-      opts.output_vpst = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(parse_arena, opts, list, index + 2)
-    }
     "--output_vast" => {
       // From PassManager.scala lines 85-87
       if index + 1 >= list.len() {
@@ -263,15 +236,6 @@ fn parse_opts_recursive<'a>(
       // From PassManager.scala lines 100-102
       opts.benchmark = true;
       parse_opts_recursive(parse_arena, opts, list, index + 1)
-    }
-    "--output_highlights" => {
-      // From PassManager.scala lines 103-105
-      if index + 1 >= list.len() {
-        eprintln!("--output_highlights requires a value");
-        exit(22);
-      }
-      opts.output_highlights = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "-v" | "--verbose" => {
       // From PassManager.scala lines 106-108
@@ -329,7 +293,7 @@ fn parse_opts_recursive<'a>(
           };
 
           // From PassManager.scala lines 135-143
-          let input = if path.ends_with(".vale") || path.ends_with(".vpst") {
+          let input = if path.ends_with(".vale") {
             IFrontendInput::DirectFilePathInput {
               package_coord: package_coordinate,
               path: path.to_string(),
@@ -551,7 +515,7 @@ fn resolve_package_contents<'a>(
             let path = entry.path();
             if let Some(name) = path.file_name() {
               let name_str = name.to_string_lossy();
-              if name_str.ends_with(".vale") || name_str.ends_with(".vpst") {
+              if name_str.ends_with(".vale") {
                 if let Ok(code) = fs::read_to_string(&path) {
                   source_inputs.push((path.display().to_string(), code));
                 }
@@ -638,47 +602,28 @@ fn resolve_package_contents<'a>(
 
 */
 
-// From PassManager.scala lines 356-366: buildAndOutput
-fn build_and_output<'p>(parse_arena: &'p ParseArena<'p>, keywords: &'p Keywords<'p>, opts: &Options<'p>) {
-  match build(parse_arena, keywords, opts) {
-    Ok(_) => {
-      // Success
-    }
-    Err(error) => {
-      eprintln!("Error: {}", error);
-      exit(22);
-    }
-  }
-}
 
-// From PassManager.scala lines 203-342: build function
+/// Returns `(exit_code, package_coord_stems)`. The stems are dot-joined
+/// `(project, package_steps...)` strings (e.g. `"__vale"`, `"stdlib.collections.hashmap"`)
+/// — one per compiled package. CoordinatorRust uses them to find the matching
+/// `<project>/<package_steps>/native/*.c` files for the link step.
 pub fn build<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   opts: &Options<'p>,
-) -> Result<(), String>
+  backend_argv: &[&str],
+) -> Result<(i32, Vec<String>), String>
 where
   'p: 'ctx,
 {
-  // From PassManager.scala lines 205-207: Create output directories
   let output_dir_path = opts.output_dir_path.as_ref().unwrap();
   fs::create_dir_all(output_dir_path)
     .map_err(|e| format!("Failed to create output directory: {}", e))?;
-  fs::create_dir_all(format!("{}/vast", output_dir_path))
-    .map_err(|e| format!("Failed to create vast directory: {}", e))?;
-  fs::create_dir_all(format!("{}/vpst", output_dir_path))
-    .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
+  fs::create_dir_all(format!("{}/include", output_dir_path))
+    .map_err(|e| format!("Failed to create include directory: {}", e))?;
 
-  // From PassManager.scala line 209
-  let _start_time = Instant::now();
-
-  // From PassManager.scala lines 211-227: Load .vpst files if --input_vpst is provided
-  if opts.input_vpst_dir.is_some() {
-    panic!("Loading .vpst files not yet implemented - see PassManager.scala lines 213-225. Need ParsedLoader and SourceInput")
-  }
   let all_inputs = &opts.inputs;
 
-  // From PassManager.scala line 229: Get distinct package coordinates
   let package_coords: Vec<&PackageCoordinate<'p>> = all_inputs
     .iter()
     .map(|input| input.package_coord(parse_arena))
@@ -686,20 +631,15 @@ where
     .into_iter()
     .collect();
 
-  // From PassManager.scala lines 231-253: Create FullCompilation
   let builtins_code_map = get_builtins_code_map(parse_arena, keywords);
-
-  // From PassManager.scala line 235: Add BUILTIN package coordinate
   let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
   packages_to_build.extend(package_coords);
 
-  // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
   let all_inputs_clone = all_inputs.clone();
   let resolver = builtins_code_map.or(move |package_coord: &'p PackageCoordinate<'p>| {
     resolve_package_contents(parse_arena, &all_inputs_clone, &*package_coord)
   });
 
-  // From PassManager.scala lines 238-253: Create FullCompilationOptions
   let options = FullCompilationOptions {
     global_options: GlobalOptions {
       sanity_check: opts.sanity_check,
@@ -715,11 +655,6 @@ where
     },
   };
 
-  // From PassManager.scala lines 231-233: Create FullCompilation
-  // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
-  // and the scout pass gets its own arena.
-  // V: should we reference some docs here about how our arenas work
-  // VA: (documentation task — see docs/background/arenas.md and docs/architecture/arenas.md)
   let scout_bump = bumpalo::Bump::new();
   let typing_bump = bumpalo::Bump::new();
   let hammer_bump = bumpalo::Bump::new();
@@ -742,143 +677,60 @@ where
     &instantiating_bump,
   );
 
-  // From PassManager.scala line 255
-  let _start_load_and_parse_time = Instant::now();
-
-  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
-  // Keep this before get_parseds so mutable borrows don't overlap.
   let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
 
-  // From PassManager.scala lines 257-263: Get parsed files
   let parseds = match compilation.get_parseds() {
-    Err(failed_parse) => {
-      // From PassManager.scala lines 259-261
-      panic!(
-        "ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}",
-        failed_parse
-      );
-    }
+    Err(failed_parse) => panic!(
+      "ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}",
+      failed_parse
+    ),
     Ok(p) => p,
   };
-  // From PassManager.scala lines 271-279: Write VPST files if requested
-  if opts.output_vpst {
 
-    for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
-      // From PassManager.scala line 273
-      let von = ParserVonifier::vonify_file(program_p);
-      // From PassManager.scala line 274
-      let vpst_json = VonPrinter::new().print(&von);
-      // From PassManager.scala lines 275-276
-      let parts: Vec<&str> = file_coord.filepath.split(&['/', '\\'][..]).collect();
-      let filename = parts.last().unwrap().replace(".vale", ".vpst");
-      let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
-      // From PassManager.scala line 277
-      write_file(&vpst_filepath, &vpst_json);
-    }
+  match compilation.get_scoutput() {
+    Err(e) => panic!("PostParserErrorHumanizer.humanize not yet implemented: {:?}", e),
+    Ok(_) => {}
+  }
+  match compilation.get_astrouts() {
+    Err(error) => return Err(higher_typing_error_humanizer::humanize(
+      &|x| source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
+      &|a, b| source_code_utils::lines_between(&vale_code_map, &a, &b),
+      &|x| source_code_utils::line_range_containing(&vale_code_map, &x),
+      &|x| source_code_utils::line_containing(&vale_code_map, &x),
+      &error)),
+    Ok(_) => {}
+  }
+  match compilation.get_compiler_outputs() {
+    Err(e) => return Err(crate::typing::compiler_error_humanizer::humanize(
+      &scout_arena, &typing_interner, opts.verbose_errors,
+      &|x| crate::utils::source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
+      &|a, b| crate::utils::source_code_utils::lines_between(&vale_code_map, &a, &b),
+      &|x| crate::utils::source_code_utils::line_range_containing(&vale_code_map, &x),
+      &|x| crate::utils::source_code_utils::line_containing(&vale_code_map, &x),
+      e)),
+    Ok(_) => {}
   }
 
-  // From PassManager.scala lines 281-284: Benchmark timing
-  let _start_scout_time = Instant::now();
-  if opts.benchmark {
-    println!(
-      "Loading and parsing duration: {:?}",
-      _start_scout_time.duration_since(_start_load_and_parse_time)
-    );
-  }
+  let program_h = compilation.get_hamuts();
 
-  // From PassManager.scala lines 395-447: Full compilation (scout, typing, hammer) - only if outputVAST
-  if opts.output_vast {
-    // From PassManager.scala lines 396-398
-    match compilation.get_scoutput() {
-      Err(e) => panic!("PostParserErrorHumanizer.humanize not yet implemented: {:?}", e),
-      Ok(_) => {}
-    }
+  // Collect (project, package_steps) stems for each compiled package, so
+  // CoordinatorRust can find their matching native/*.c dirs at link time.
+  // Empty module → "__vale" (Backend's `userFuncName` convention; see the
+  // walker's lower_package_coord and Backend/src/vale.cpp).
+  let package_coord_stems: Vec<String> = program_h.packages.package_coord_to_contents.iter()
+    .map(|(coord, _pkg)| {
+      let module = if coord.module.0.is_empty() { "__vale" } else { coord.module.0 };
+      let pkg_steps: String = coord.packages.iter().map(|p| format!(".{}", p.0)).collect();
+      format!("{}{}", module, pkg_steps)
+    })
+    .collect();
 
-    // From PassManager.scala lines 401-404
-    let _start_higher_typing_time = Instant::now();
-    if opts.benchmark {
-      println!(
-        "Scout phase duration: {:?}",
-        _start_higher_typing_time.duration_since(_start_scout_time)
-      );
-    }
+  // MetalLowerer: H-AST → MetalCache via FFI, replacing readjson.cpp.
+  let cache = crate::backend_ffi::metal_cache::MetalCache::new();
+  let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, program_h);
 
-    // From PassManager.scala lines 406-409
-    match compilation.get_astrouts() {
-      Err(error) => return Err(higher_typing_error_humanizer::humanize(
-        &|x| source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
-        &|a, b| source_code_utils::lines_between(&vale_code_map, &a, &b),
-        &|x| source_code_utils::line_range_containing(&vale_code_map, &x),
-        &|x| source_code_utils::line_containing(&vale_code_map, &x),
-        &error)),
-      Ok(_) => {}
-    }
-
-    // From PassManager.scala lines 411-414
-    let _start_typing_pass_time = Instant::now();
-    if opts.benchmark {
-      println!(
-        "Higher typing phase duration: {:?}",
-        _start_typing_pass_time.duration_since(_start_higher_typing_time)
-      );
-    }
-
-    // From PassManager.scala lines 416-419
-    match compilation.get_compiler_outputs() {
-      Err(e) => return Err(crate::typing::compiler_error_humanizer::humanize(
-        &scout_arena, &typing_interner, opts.verbose_errors,
-        &|x| crate::utils::source_code_utils::humanize_pos_code_map(&vale_code_map, &x),
-        &|a, b| crate::utils::source_code_utils::lines_between(&vale_code_map, &a, &b),
-        &|x| crate::utils::source_code_utils::line_range_containing(&vale_code_map, &x),
-        &|x| crate::utils::source_code_utils::line_containing(&vale_code_map, &x),
-        e)),
-      Ok(_) => {}
-    }
-
-    // From PassManager.scala lines 421-424
-    let _start_hammer_time = Instant::now();
-    if opts.benchmark {
-      println!(
-        "Compiler phase duration: {:?}",
-        _start_hammer_time.duration_since(_start_typing_pass_time)
-      );
-    }
-
-    // From PassManager.scala line 426
-    let program_h = compilation.get_hamuts();
-
-    // From PassManager.scala lines 428-431
-    let _finish_time = Instant::now();
-    if opts.benchmark {
-      println!(
-        "Hammer phase duration: {:?}",
-        _finish_time.duration_since(_start_hammer_time)
-      );
-    }
-
-    // From PassManager.scala lines 433-446
-    let von_hammer = compilation.get_von_hammer();
-    program_h.packages.flat_map(|package_coord, paackage| {
-      let output_vast_filepath = format!(
-        "{}/vast/{}.vast",
-        output_dir_path,
-        if package_coord.is_internal() {
-          "__vale".to_string()
-        } else {
-          format!(
-            "{}{}",
-            package_coord.module,
-            package_coord.packages.iter().map(|p| format!(".{}", p)).collect::<String>()
-          )
-        }
-      );
-      let json = jsonify_package(&von_hammer, *package_coord, paackage);
-      write_file(&output_vast_filepath, &json);
-      // println!("Wrote VAST to file {}", output_vast_filepath);
-    });
-  }
-
-  Ok(())
+  let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, backend_argv);
+  Ok((rc, package_coord_stems))
 }
 
 /*
@@ -1023,189 +875,6 @@ where
   }
 */
 
-
-// From PassManager.scala lines 1028-1032: jsonifyPackage
-fn jsonify_package<'s, 'i, 'h, 'ctx>(
-  von_hammer: &Hammer<'s, 'i, 'h, 'ctx>,
-  package_coord: PackageCoordinate<'s>,
-  package_h: &PackageH<'s, 'h>,
-) -> String
-where 's: 'h, 's: 'i, 'i: 'h,
-{
-  let program_v = von_hammer.vonify_package(package_coord, package_h);
-  let json = VonPrinter::new().print(&program_v);
-  json
-}
-/*
-  def jsonifyPackage(vonHammer: VonHammer, packageCoord: PackageCoordinate, packageH: PackageH): String = {
-    val programV = vonHammer.vonifyPackage(packageCoord, packageH)
-    val json = new VonPrinter(JsonSyntax, 120).print(programV)
-    json
-  }
-*/
-/*
-  def jsonifyProgram(vonHammer: VonHammer, programH: ProgramH): String = {
-    val programV = vonHammer.vonifyProgram(programH)
-    val json = new VonPrinter(JsonSyntax, 120).print(programV)
-    json
-  }
-*/
-/*
-  def buildAndOutput(interner: Interner, keywords: Keywords, opts: Options) = {
-      build(interner, keywords, opts) match {
-        case Ok(_) => {
-        }
-        case Err(error) => {
-          System.err.println("Error: " + error)
-          System.exit(22)
-          vfail()
-        }
-      }
-  }
-*/
-/*
-  def run(program: ProgramH, verbose: Boolean): IVonData = {
-    if (verbose) {
-      Vivem.executeWithPrimitiveArgs(
-        program, Vector(), System.out, Vivem.emptyStdin, Vivem.nullStdout)
-    } else {
-      Vivem.executeWithPrimitiveArgs(
-        program,
-        Vector(),
-        new PrintStream(new OutputStream() {
-          override def write(b: Int): Unit = {
-            // System.out.write(b)
-          }
-        }),
-        () => {
-          scala.io.StdIn.readLine()
-        },
-        (str: String) => {
-          print(str)
-        })
-    }
-  }
-*/
-
-// From PassManager.scala lines 390-481: main
-pub fn main(args: Vec<String>) {
-  // From PassManager.scala lines 391-393
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-
-  // From PassManager.scala lines 395-413
-  let opts = parse_opts(
-    &parse_arena,
-    Options {
-      inputs: vec![],
-      output_dir_path: None,
-      input_vpst_dir: None,
-      benchmark: false,
-      output_vpst: true,
-      output_vast: true,
-      output_highlights: false,
-      include_builtins: true,
-      mode: None,
-      sanity_check: false,
-      use_optimized_solver: true,
-      use_overload_index: true,
-      verbose_errors: false,
-      debug_output: false,
-    },
-    args,
-  );
-
-  // From PassManager.scala lines 414-415
-  if opts.mode.is_none() {
-    eprintln!("No mode!");
-    exit(22);
-  }
-  if opts.inputs.is_empty() && opts.input_vpst_dir.is_none() {
-    eprintln!("No input files!");
-    exit(22);
-  }
-
-  // From PassManager.scala lines 417-474
-  match opts.mode.as_ref().unwrap().as_str() {
-    "highlight" => {
-      // Retired. See PassManager.scala — moved to VmdSiteGen/tools/highlighter
-      // (inkjet + tree-sitter-vale).
-      eprintln!("Highlight mode has been retired; use VmdSiteGen/tools/highlighter (inkjet + tree-sitter-vale) instead.");
-      exit(22);
-    }
-    "build" => {
-      // From PassManager.scala lines 467-469
-      if opts.output_dir_path.is_none() {
-        eprintln!("Must specify --output-dir!");
-        exit(22);
-      }
-  build_and_output(&parse_arena, &keywords, &opts);
-    }
-    "run" => {
-      // From PassManager.scala lines 471-473
-      eprintln!("Run command has been disabled.");
-      exit(22);
-    }
-    _ => {
-      eprintln!("Unknown mode: {}", opts.mode.as_ref().unwrap());
-      exit(22);
-    }
-  }
-}
-/*
-  def main(args: Array[String]): Unit = {
-    try {
-      val interner = new Interner()
-      val keywords = new Keywords(interner)
-
-      val opts =
-        parseOpts(
-          interner,
-          Options(
-            inputs = Vector.empty,
-            outputDirPath = None,
-            inputVpstDir = None,
-            benchmark = false,
-            outputVPST = true,
-            outputVAST = true,
-            outputHighlights = false,
-            includeBuiltins = true,
-            mode = None,
-            sanityCheck = false,
-            useOptimizedSolver = true,
-            useOverloadIndex = true,
-            verboseErrors = false,
-            debugOutput = false),
-          args.toList)
-      vcheck(opts.mode.nonEmpty, "No mode!", InputException)
-      vcheck(opts.inputs.nonEmpty || opts.inputVpstDir.nonEmpty, "No input files!", InputException)
-
-      opts.mode.get match {
-        case "highlight" => {
-          // Retired. Static-HTML highlighting now lives in VmdSiteGen/tools/highlighter
-          // (Rust binary using inkjet + the tree-sitter-vale grammar). Editor
-          // highlighting uses the same tree-sitter grammar directly. See
-          // VmdSiteGen commit e4953c7 "Replace Java/highlight.js highlighting
-          // with build-time inkjet binary".
-          throw InputException("Highlight mode has been retired; use VmdSiteGen/tools/highlighter (inkjet + tree-sitter-vale) instead.")
-        }
-        case "build" => {
-          vcheck(opts.outputDirPath.nonEmpty, "Must specify --output-dir!", InputException)
-          buildAndOutput(interner, keywords, opts)
-        }
-        case "run" => {
-          throw InputException("Run command has been disabled.");
-        }
-      }
-    } catch {
-      case ie @ InputException(msg) => {
-        println(msg)
-        System.exit(22)
-      }
-    }
-  }
-*/
 
 // From PassManager.scala lines 551-560: writeFile
 fn write_file(filepath: &str, s: &str) {

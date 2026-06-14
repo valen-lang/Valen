@@ -181,25 +181,6 @@ LLVMValueRef insertStrongRc(
       "controlBlockWithRc");
 }
 
-// Checks that the generation is <= to the actual one.
-void buildCheckGen(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    bool expectLive,
-    LLVMValueRef targetGenLE,
-    LLVMValueRef actualGenLE) {
-  if (expectLive) {
-    auto isValidLE =
-        LLVMBuildICmp(builder, LLVMIntSGE, targetGenLE, actualGenLE, "genIsValid");
-    // This assert makes sense because we only call this when we need to dereference the
-    // object.
-    buildAssertV(
-        globalState, functionState, builder, isValidLE,
-        "Invalid generation, from the future!");
-  }
-}
-
 // Not returning Ref because we might need to wrap it in something else like a weak fat ptr
 LLVMValueRef makeInterfaceRefStruct(
     GlobalState* globalState,

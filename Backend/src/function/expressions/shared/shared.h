@@ -263,7 +263,6 @@ LLVMValueRef buildMaybeNeverCallV(
     GlobalState* globalState,
     LLVMBuilderRef builder,
     ValeFuncPtrLE functionLE,
-    LLVMValueRef nextGenPtrLE,
     std::vector<LLVMValueRef> argsLE);
 
 RawFuncPtrLE addExtern(

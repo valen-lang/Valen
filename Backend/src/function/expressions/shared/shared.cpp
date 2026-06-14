@@ -329,7 +329,7 @@ Ref buildInterfaceCall(
       LLVMTypeOf(newVirtualArgLE) ==
       globalState->getRegion(virtualParamMT)
           ->getInterfaceMethodVirtualParamAnyType(virtualParamMT));
-  auto resultLE = methodFunctionPtrLE.call(builder, functionState->nextGenPtrLE.value(), argsLE, "");
+  auto resultLE = methodFunctionPtrLE.call(builder, argsLE, "");
   assert(LLVMTypeOf(resultLE) == LLVMGetReturnType(methodFunctionPtrLE.inner.funcLT));
   buildFlare(FL(), globalState, functionState, builder);
   return toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultLE);
@@ -406,7 +406,7 @@ Ref buildCallV(
 
   buildFlare(FL(), globalState, functionState, builder, "Doing call");
 
-  auto resultLE = funcL.call(builder, functionState->nextGenPtrLE.value(), argsLE, "");
+  auto resultLE = funcL.call(builder, argsLE, "");
 
   buildFlare(FL(), globalState, functionState, builder, "Done with call");
 
@@ -447,9 +447,7 @@ LLVMValueRef buildMaybeNeverCallV(
     GlobalState* globalState,
     LLVMBuilderRef builder,
     ValeFuncPtrLE functionLE,
-    LLVMValueRef nextGenPtrLE,
     std::vector<LLVMValueRef> argsLE) {
-  argsLE.insert(argsLE.begin(), nextGenPtrLE);
   return buildMaybeNeverCall(globalState, builder, functionLE.inner, argsLE);
 }
 

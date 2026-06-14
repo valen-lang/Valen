@@ -1,5 +1,7 @@
 # Vale
 
+**Never commit unless the architect says the literal phrase "fire commit" — no other phrasing ("just commit", "go ahead", "ship it", etc.) authorizes a commit.**
+
 This is the Vale compiler. The `FrontendRust/` tree is a Rust compiler frontend.
 
 > Migration-era content (project overview, key directories, lifetime model, migration philosophy, slice/migration subagents, Scala→Rust notes) has moved to `migrate-tl.md`. Read it when working on anything tied to the Scala→Rust migration tail.

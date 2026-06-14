@@ -3,7 +3,6 @@ pub mod expression_tests;
 pub mod functions;
 pub mod if_tests;
 pub mod impl_tests;
-pub mod load_tests;
 pub mod parse_samples_tests;
 pub mod parser_test_compilation;
 pub mod patterns;

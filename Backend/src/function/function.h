@@ -157,20 +157,16 @@ public:
   LLVMBuilderRef localsBuilder;
   int nextBlockNumber = 1;
   int instructionDepthInAst = 0;
-  // Ptr to the "next generation number", see RPPFNG.
-  std::optional<LLVMValueRef> nextGenPtrLE;
 
   FunctionState(
       std::string containingFuncName_,
       LLVMValueRef containingFuncL_,
       LLVMTypeRef returnTypeL_,
-      LLVMBuilderRef localsBuilder_,
-      std::optional<LLVMValueRef> nextGenPtrLE_) :
+      LLVMBuilderRef localsBuilder_) :
     containingFuncName(containingFuncName_),
     containingFuncL(containingFuncL_),
     returnTypeL(returnTypeL_),
-    localsBuilder(localsBuilder_),
-    nextGenPtrLE(nextGenPtrLE_) {}
+    localsBuilder(localsBuilder_) {}
 
   std::string nextBlockName() {
     return std::string("block") + std::to_string(nextBlockNumber++);

@@ -135,8 +135,32 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         },
         ExpressionH::ConsecutorH(c) => c.exprs.last().expect("ConsecutorH exprs nonEmpty").result_type(),
         ExpressionH::BlockH(b) => b.inner.result_type(),
-        ExpressionH::MutabilifyH(_) => panic!("Unimplemented: result_type for MutabilifyH"),
-        ExpressionH::ImmutabilifyH(_) => panic!("Unimplemented: result_type for ImmutabilifyH"),
+        ExpressionH::MutabilifyH(m) => {
+            let CoordH { ownership, location, kind } = m.inner.result_type();
+            CoordH {
+                ownership: match ownership {
+                    OwnershipH::OwnH => OwnershipH::OwnH,
+                    OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::MutableBorrowH,
+                    OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::MutableShareH,
+                    OwnershipH::WeakH => panic!("MutabilifyH::result_type: WeakH unimplemented (vimpl)"),
+                },
+                location,
+                kind,
+            }
+        }
+        ExpressionH::ImmutabilifyH(im) => {
+            let CoordH { ownership, location, kind } = im.inner.result_type();
+            CoordH {
+                ownership: match ownership {
+                    OwnershipH::OwnH => OwnershipH::OwnH,
+                    OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::ImmutableBorrowH,
+                    OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::ImmutableShareH,
+                    OwnershipH::WeakH => panic!("ImmutabilifyH::result_type: WeakH unimplemented (vimpl)"),
+                },
+                location,
+                kind,
+            }
+        }
         ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
         ExpressionH::NewImmRuntimeSizedArrayH(n) => n.result_type,
         ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,

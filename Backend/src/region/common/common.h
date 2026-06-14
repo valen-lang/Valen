@@ -78,14 +78,6 @@ LLVMValueRef insertStrongRc(
     Kind* kindM,
     LLVMValueRef newControlBlockLE);
 
-void buildCheckGen(
-    GlobalState* globalState,
-    FunctionState* functionState,
-    LLVMBuilderRef builder,
-    bool expectLive,
-    LLVMValueRef targetGenLE,
-    LLVMValueRef actualGenLE);
-
 LLVMValueRef makeInterfaceRefStruct(
     GlobalState* globalState,
     FunctionState* functionState,

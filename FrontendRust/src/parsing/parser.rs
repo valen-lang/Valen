@@ -13,9 +13,6 @@ use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
 use std::collections::HashMap;
 use crate::parsing::parse_and_explore;
-use crate::parsing::parsed_loader;
-use crate::parsing::vonifier::ParserVonifier;
-use crate::von::printer::VonPrinter;
 use crate::parse_arena::ParseArena;
 use std::collections::HashSet;
 
@@ -1708,45 +1705,16 @@ where
     let mut parsed_map: FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> =
       FileCoordinateMap::new();
 
-    // From Parser.scala lines 717-740: Load .vpst files directly
-    for package_coord in needed_packages {
-      if let Some(filepath_to_code) = resolver.resolve(package_coord) {
-        for (filepath, _code) in filepath_to_code {
-          if filepath.ends_with(".vpst") {
-            panic!("ParsedLoader not yet implemented - see Parser.scala lines 724-735. Need to load .vpst file: {}", filepath);
-          }
-        }
-      }
-    }
-
-    // From Parser.scala lines 742-749: Create resolver that filters out .vpst files
-    struct ValeOnlyResolver<'p, 'ctx> {
-      inner: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    }
-    impl<'p, 'ctx> IPackageResolver<'p, HashMap<String, String>> for ValeOnlyResolver<'p, 'ctx> {
-      fn resolve(
-        &self,
-        package_coord: &'p PackageCoordinate<'p>,
-      ) -> Option<HashMap<String, String>> {
-        self.inner.resolve(package_coord).map(|filepath_to_code| {
-          filepath_to_code
-            .into_iter()
-            .filter(|(filepath, _)| filepath.ends_with(".vale"))
-            .collect()
-        })
-      }
-    }
-    let vale_only_resolver = ValeOnlyResolver { inner: resolver };
-
     // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
     let parser = Parser::new(self.parse_arena, self.keywords);
+    let resolver_fn = |package_coord: &'p PackageCoordinate<'p>| resolver.resolve(package_coord);
     parse_and_explore::parse_and_explore(
             self.parse_arena,
             self.keywords,
             self.opts.clone(),
             &parser,
             needed_packages.to_vec(),
-            &vale_only_resolver,
+            &resolver_fn,
             |_file_coord, _code, _imports, denizen| denizen,
             |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
                 // From Parser.scala lines 756-766
@@ -1758,26 +1726,7 @@ where
                     comments_ranges: comments_slice,
                     denizens: denizens_slice,
                 };
-                
-                // From Parser.scala lines 759-764: Sanity check
-                if self.opts.sanity_check {
 
-                    let json = VonPrinter::new().print(&ParserVonifier::vonify_file(&file));
-                    let loaded_file = parsed_loader::load(self.parse_arena, &json).unwrap_or_else(|e| {
-                        panic!(
-                            "Sanity check failed to load generated VPST for {}: {:?}",
-                            file_coord.filepath, e
-                        )
-                    });
-                    let second_json =
-                        VonPrinter::new().print(&ParserVonifier::vonify_file(&loaded_file));
-                    assert_eq!(
-                        json, second_json,
-                        "Sanity check round-trip mismatch for {}",
-                        file_coord.filepath
-                    );
-                }
-                
                 // From Parser.scala line 766
                 parsed_map.put(file_coord, (file, comment_ranges.to_vec()));
             },

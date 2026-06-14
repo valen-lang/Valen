@@ -9,3 +9,4 @@ path = "src/main.rs"
 
 [dependencies]
 frontend_rust = { path = "../FrontendRust" }
+bumpalo = { version = "3", features = ["collections", "allocator-api2"] }

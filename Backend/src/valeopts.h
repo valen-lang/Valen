@@ -46,7 +46,6 @@ struct ValeOptions {
     bool census = false;    // Enable census checking
     bool flares = false;    // Enable flare output
     bool fastCrash = false;    // Enable single-instruction crash, a bit faster
-    int generationSize = 32;    // Size of generation integer, in bits.
     bool elideChecksForKnownLive = true;    // Elide checks for static-analysis-known live
     bool elideChecksForRegions = true;    // Elide checks for immutable regions
     bool includeBoundsChecks = true;

@@ -18,7 +18,6 @@ pub mod mutate_hammer;
 pub mod name_hammer;
 pub mod struct_hammer;
 pub mod type_hammer;
-pub mod von_hammer;
 #[cfg(test)]
 pub mod test;
 

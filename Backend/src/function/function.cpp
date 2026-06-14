@@ -8,7 +8,6 @@
 #include "function.h"
 #include "expression.h"
 #include "boundary.h"
-#include "utils/randomgeneration.h"
 #include <region/common/migration.h>
 #include <utils/counters.h>
 
@@ -114,20 +113,7 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
   // should be fine.
   LLVMBuilderRef localsBuilder = builder;
 
-  // Exported functions cant have their nextGen pointer passed in from the outside, so we need to
-  // grab it from the global. We add a prime to the global too, so that we get different generations
-  // each call.
-  auto genLT = LLVMIntTypeInContext(globalState->context, globalState->opt->generationSize);
-  auto newGenLE =
-      adjustCounterReturnOld(
-          builder,
-          genLT,
-          globalState->nextGenThreadGlobalIntLE,
-          getRandomGenerationAddend(globalState->nextGenerationAddend++));
-  auto nextGenLocalPtrLE = LLVMBuildAlloca(localsBuilder, genLT, "nextGenLocalPtr");
-  LLVMBuildStore(builder, newGenLE, nextGenLocalPtrLE);
-
-  FunctionState functionState(exportName, exportFunctionL, exportReturnLT, localsBuilder, nextGenLocalPtrLE);
+  FunctionState functionState(exportName, exportFunctionL, exportReturnLT, localsBuilder);
   BlockState initialBlockState(globalState->addressNumberer, nullptr, std::nullopt);
   buildFlare(FL(), globalState, &functionState, builder, "Calling export function ", functionState.containingFuncName, " from native");
 
@@ -324,9 +310,5 @@ void declareAndDefineExtraFunction(
 
 
 LLVMValueRef FunctionState::getParam(UserArgIndex userArgIndex) {
-  if (nextGenPtrLE.has_value()) {
-    return LLVMGetParam(containingFuncL, userArgIndex.userArgIndex + 1);
-  } else {
-    return LLVMGetParam(containingFuncL, userArgIndex.userArgIndex);
-  }
+  return LLVMGetParam(containingFuncL, userArgIndex.userArgIndex);
 }

@@ -20,7 +20,6 @@ use crate::final_ast::ast::ProgramH;
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::post_parser::ICompileErrorS;
-use crate::simplifying::hammer::Hammer;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::hinputs_t::HinputsT;
 
@@ -138,20 +137,10 @@ where
 
 }
 
-// mig: fn get_von_hammer
+// mig: fn get_code_map
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'i: 'h,
 {
-  pub fn get_von_hammer<'a>(&'a self) -> Hammer<'s, 'i, 'h, 'a>
-  where 'ctx: 'a,
-  {
-    self.hammer_compilation.get_von_hammer()
-  }
-/*
-  def getVonHammer(): VonHammer = hammerCompilation.getVonHammer()
-*/
-
-// mig: fn get_code_map
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.hammer_compilation.get_code_map()
   }

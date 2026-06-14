@@ -44,7 +44,6 @@ enum
     OPT_FLARES,
     OPT_FAST_CRASH,
     OPT_GEN_HEAP,
-    OPT_GENERATION_SIZE,
     OPT_ELIDE_CHECKS_FOR_KNOWN_LIVE,
     OPT_ELIDE_CHECKS_FOR_REGIONS,
     OPT_INCLUDE_BOUNDS_CHECKS,
@@ -95,7 +94,6 @@ static opt_arg_t args[] =
     { "fast_crash", '\0', OPT_ARG_OPTIONAL, OPT_FAST_CRASH },
     { "gen_heap", '\0', OPT_ARG_OPTIONAL, OPT_GEN_HEAP },
     { "elide_checks_for_known_live", '\0', OPT_ARG_OPTIONAL, OPT_ELIDE_CHECKS_FOR_KNOWN_LIVE },
-    { "gen_size", '\0', OPT_ARG_REQUIRED, OPT_GENERATION_SIZE },
     { "elide_checks_for_regions", '\0', OPT_ARG_OPTIONAL, OPT_ELIDE_CHECKS_FOR_REGIONS },
     { "include_bounds_checks", '\0', OPT_ARG_OPTIONAL, OPT_INCLUDE_BOUNDS_CHECKS },
     { "use_atomic_rc", '\0', OPT_ARG_OPTIONAL, OPT_USE_ATOMIC_RC },
@@ -300,16 +298,6 @@ int valeOptSet(ValeOptions *opt, int *argc, char **argv) {
               opt->optLevel = ValeOptimizationLevel::O2i;
             } else if (s.arg_val == std::string("O3")) {
               opt->optLevel = ValeOptimizationLevel::O3;
-            } else { assert(false); throw 1337; }
-            break;
-          }
-
-          case OPT_GENERATION_SIZE: {
-            assert(s.arg_val);
-            if (s.arg_val == std::string("32")) {
-              opt->generationSize = 32;
-            } else if (s.arg_val == std::string("64")) {
-              opt->generationSize = 64;
             } else { assert(false); throw 1337; }
             break;
           }

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh ${GUARDIAN_PORT} || exit 2"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/guardian-client.sh ${GUARDIAN_PORT} || exit 2"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Vale/.claude/hooks/guardian-client.sh ${GUARDIAN_PORT} || exit 2"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/guardian-client.sh ${GUARDIAN_PORT} || exit 2"
           }
         ]
       }
