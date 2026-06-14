@@ -41,7 +41,12 @@ fn extract_seq() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  [x, y] = (5, 6);\n  return x;\n}\n",
+        r"
+exported func main() int {
+  [x, y] = (5, 6);
+  return x;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -93,7 +98,12 @@ fn nested_seqs() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  [x, [y, z]] = ((4, 5), (6, 7));\n  return y;\n}\n",
+        r"
+exported func main() int {
+  [x, [y, z]] = ((4, 5), (6, 7));
+  return y;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -157,7 +167,12 @@ fn nested_tuples() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  [x, [y, z]] = (5, (6, false));\n  return x;\n}\n",
+        r"
+exported func main() int {
+  [x, [y, z]] = (5, (6, false));
+  return x;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();

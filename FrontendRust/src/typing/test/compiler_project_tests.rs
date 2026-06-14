@@ -227,7 +227,10 @@ fn struct_has_correct_name() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported struct MyStruct { a int; }\n";
+    let code = r"
+
+exported struct MyStruct { a int; }
+";
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
             HashMap::from([("test.vale".to_string(), code.to_string())]),
@@ -289,7 +292,13 @@ fn typing_pass_array_type_convertible() {
 
     // Loads list.vale, whose `drop` for a List exercises is_type_convertible
     // on a RuntimeSizedArray vs a placeholder.
-    let source = "\nimport list.*;\nexported func main() {\n  l = List<int>();\n  l.add(3);\n}\n";
+    let source = r"
+import list.*;
+exported func main() {
+  l = List<int>();
+  l.add(3);
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
@@ -342,7 +351,14 @@ fn typing_pass_uses_same_instance() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
     // Minimal program that triggers the `===` (vale_same_instance) builtin.
-    let source = "\nstruct MyStruct { }\nexported func main() bool {\n  a = MyStruct();\n  b = MyStruct();\n  return &a === &b;\n}\n";
+    let source = r"
+struct MyStruct { }
+exported func main() bool {
+  a = MyStruct();
+  b = MyStruct();
+  return &a === &b;
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
@@ -391,7 +407,13 @@ fn typing_pass_ssa_destructure() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source = "\nexported func main() int {\n  arr = #[#](3, 4);\n  [a, b] = arr;\n  return a + b;\n}\n";
+    let source = r"
+exported func main() int {
+  arr = #[#](3, 4);
+  [a, b] = arr;
+  return a + b;
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
@@ -443,7 +465,13 @@ fn typing_pass_closure_var_mutate() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source = "\nexported func main() {\n  x = 0;\n  l = () => { set x = 1; };\n  l();\n}\n";
+    let source = r"
+exported func main() {
+  x = 0;
+  l = () => { set x = 1; };
+  l();
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
@@ -495,7 +523,11 @@ fn typing_pass_tuple_literal() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source = "\nexported func main() {\n  x = (3, 4);\n}\n";
+    let source = r"
+exported func main() {
+  x = (3, 4);
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
@@ -546,7 +578,13 @@ fn typing_pass_destruct_struct() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source = "\nstruct MyStruct { a int; }\nexported func main() {\n  m = MyStruct(7);\n  destruct m;\n}\n";
+    let source = r"
+struct MyStruct { a int; }
+exported func main() {
+  m = MyStruct(7);
+  destruct m;
+}
+";
 
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);

@@ -119,7 +119,10 @@ fn test_matching_a_multiple_member_seq_of_mutables() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine { hp int; }\nexported func main() int { [x, y] = (Marine(6), Marine(8)); return y.hp; }\n",
+        r"
+struct Marine { hp int; }
+exported func main() int { [x, y] = (Marine(6), Marine(8)); return y.hp; }
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -170,7 +173,10 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine { hp int; }\nexported func main() int { [x, y] = (7, Marine(8)); return y.hp; }\n",
+        r"
+struct Marine { hp int; }
+exported func main() int { [x, y] = (7, Marine(8)); return y.hp; }
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -220,7 +226,14 @@ fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine { hp int; }\nexported func main() int {\n  m = Marine(8);\n  [x, y] = (7, &m);\n  return y.hp;\n}\n",
+        r"
+struct Marine { hp int; }
+exported func main() int {
+  m = Marine(8);
+  [x, y] = (7, &m);
+  return y.hp;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -324,7 +337,15 @@ fn test_destructuring_a_shared() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.iter.*;\nexported func main() int {\n  sm = #[#](#[#](42, 73, 73));\n  foreach [i, m1] in sm {\n    return i;\n  }\n}\n",
+        r"
+import array.iter.*;
+exported func main() int {
+  sm = #[#](#[#](42, 73, 73));
+  foreach [i, m1] in sm {
+    return i;
+  }
+}
+",
     );
     {
         let _coutputs = compile.expect_compiler_outputs();
@@ -429,7 +450,16 @@ fn ignore_destructure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(4);\n  Marine[_] = m;\n  return 42;\n}\n",
+        r"
+struct Marine {
+  hp int;
+}
+exported func main() int {
+  m = Marine(4);
+  Marine[_] = m;
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}

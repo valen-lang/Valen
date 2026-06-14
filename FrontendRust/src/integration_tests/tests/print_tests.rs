@@ -33,7 +33,12 @@ fn printlning_an_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nexported func main() {\n  println(6);\n}\n",
+        r"
+import printutils.*;
+exported func main() {
+  println(6);
+}
+",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "6\n");
 }
@@ -69,7 +74,12 @@ fn printlning_a_bool() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nexported func main() {\n  println(true);\n}\n",
+        r"
+import printutils.*;
+exported func main() {
+  println(true);
+}
+",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "true\n");
 }

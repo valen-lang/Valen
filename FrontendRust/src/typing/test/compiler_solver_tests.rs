@@ -298,7 +298,15 @@ fn test_calling_a_generic_function_with_a_concept_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc moo(x int) { }\n\nfunc bork<T>(a T) T where func moo(T)void { a }\n\nexported func main() {\n  bork(3);\n}\n";
+    let code = r"
+func moo(x int) { }
+
+func bork<T>(a T) T where func moo(T)void { a }
+
+exported func main() {
+  bork(3);
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -408,7 +416,19 @@ fn test_single_parameter_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nstruct Functor1<F Prot = func(P1)R> imm\nwhere P1 Ref, R Ref { }\n\nfunc __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R\nwhere P1 Ref, R Ref {\n  F(param1)\n}\n\nexported func main() int {\n  Functor1({_})(4)\n}\n";
+    let code = r"
+struct Functor1<F Prot = func(P1)R> imm
+where P1 Ref, R Ref { }
+
+func __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R
+where P1 Ref, R Ref {
+  F(param1)
+}
+
+exported func main() int {
+  Functor1({_})(4)
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -444,7 +464,16 @@ fn test_calling_a_generic_function_with_a_drop_concept_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc bork<T>(a T) where func drop(T)void {\n}\n\nstruct Mork {}\n\nexported func main() {\n  bork(Mork());\n}\n";
+    let code = r"
+func bork<T>(a T) where func drop(T)void {
+}
+
+struct Mork {}
+
+exported func main() {
+  bork(Mork());
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -807,7 +836,12 @@ fn simple_int_rule() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() int where N Int = 3 {\n  return N;\n}\n";
+    let code = r"
+
+exported func main() int where N Int = 3 {
+  return N;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -844,7 +878,12 @@ fn equals_transitive() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() int where N Int = 3, M Int = N {\n  return M;\n}\n";
+    let code = r"
+
+exported func main() int where N Int = 3, M Int = N {
+  return M;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -881,7 +920,12 @@ fn one_of() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() int where N Int = any(2, 3, 4), N = 3 {\n  return N;\n}\n";
+    let code = r"
+
+exported func main() int where N Int = any(2, 3, 4), N = 3 {
+  return N;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -918,7 +962,16 @@ fn components() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nexported struct MyStruct { }\nexported func main() X\nwhere\n  MyStruct = Ref[O Ownership, K Kind],\n  X Ref = Ref[borrow, K]\n{\n  return &MyStruct();\n}\n";
+    let code = r"
+exported struct MyStruct { }
+exported func main() X
+where
+  MyStruct = Ref[O Ownership, K Kind],
+  X Ref = Ref[borrow, K]
+{
+  return &MyStruct();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1003,7 +1056,15 @@ fn prototype_rule_call_via_rune() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nfunc moo(i int, b bool) str { return \"hello\"; }\nexported func main() str\nwhere mooFunc Prot = func moo(int, bool)str\n{\n  return (mooFunc)(5, true);\n}\n";
+    let code = r#"
+
+func moo(i int, b bool) str { return "hello"; }
+exported func main() str
+where mooFunc Prot = func moo(int, bool)str
+{
+  return (mooFunc)(5, true);
+}
+"#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1046,7 +1107,15 @@ fn prototype_rule_call_directly() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nfunc moo(i int, b bool) str { return \"hello\"; }\nexported func main() str\nwhere func moo(int, bool)str\n{\n  return moo(5, true);\n}\n";
+    let code = r#"
+
+func moo(i int, b bool) str { return "hello"; }
+exported func main() str
+where func moo(int, bool)str
+{
+  return moo(5, true);
+}
+"#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1089,7 +1158,14 @@ fn send_struct_to_struct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct MyStruct {}\nfunc moo(m MyStruct) { }\nexported func main() {\n  moo(MyStruct())\n}\n";
+    let code = r"
+
+struct MyStruct {}
+func moo(m MyStruct) { }
+exported func main() {
+  moo(MyStruct())
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1122,7 +1198,16 @@ fn send_struct_to_interface() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct MyStruct {}\ninterface MyInterface {}\nimpl MyInterface for MyStruct;\nfunc moo(m MyInterface) { }\nexported func main() {\n  moo(MyStruct())\n}\n";
+    let code = r"
+
+struct MyStruct {}
+interface MyInterface {}
+impl MyInterface for MyStruct;
+func moo(m MyInterface) { }
+exported func main() {
+  moo(MyStruct())
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1156,7 +1241,16 @@ fn assume_most_specific_generic_param() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct MyStruct {}\ninterface MyInterface {}\nimpl MyInterface for MyStruct;\nfunc moo<T>(m T) where func drop(T)void { }\nexported func main() {\n  moo(MyStruct())\n}\n";
+    let code = r"
+
+struct MyStruct {}
+interface MyInterface {}
+impl MyInterface for MyStruct;
+func moo<T>(m T) where func drop(T)void { }
+exported func main() {
+  moo(MyStruct())
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1209,7 +1303,17 @@ fn assume_most_specific_common_ancestor() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\ninterface IShip {}\nstruct Firefly {}\nimpl IShip for Firefly;\nstruct Serenity {}\nimpl IShip for Serenity;\nfunc moo<T>(a T, b T) where func drop(T)void { }\nexported func main() {\n  moo(Firefly(), Serenity())\n}\n";
+    let code = r"
+interface IShip {}
+struct Firefly {}
+impl IShip for Firefly;
+struct Serenity {}
+impl IShip for Serenity;
+func moo<T>(a T, b T) where func drop(T)void { }
+exported func main() {
+  moo(Firefly(), Serenity())
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1282,7 +1386,15 @@ fn descendant_satisfying_call() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\ninterface IShip<T> where T Ref {}\nstruct Firefly<T> where T Ref {}\nimpl<T> IShip<T> for Firefly<T>;\nfunc moo<T>(a IShip<T>) { }\nexported func main() {\n  moo(Firefly<int>())\n}\n";
+    let code = r"
+interface IShip<T> where T Ref {}
+struct Firefly<T> where T Ref {}
+impl<T> IShip<T> for Firefly<T>;
+func moo<T>(a IShip<T>) { }
+exported func main() {
+  moo(Firefly<int>())
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1375,7 +1487,11 @@ fn reports_incomplete_solve() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() int where N Int {\n}\n";
+    let code = r"
+
+exported func main() int where N Int {
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1423,7 +1539,23 @@ fn stamps_an_interface_template_via_a_function_return() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.drop.*;\n\ninterface MyInterface<X Ref> { }\n\nstruct SomeStruct<X Ref> where func drop(X)void { x X; }\nimpl<X> MyInterface<X> for SomeStruct<X> where func drop(X)void;\n\nfunc doAThing<T>(t T) SomeStruct<T>\nwhere func drop(T)void {\n  return SomeStruct<T>(t);\n}\n\nexported func main() {\n  doAThing(4);\n}\n";
+    let code = r"
+import v.builtins.drop.*;
+
+interface MyInterface<X Ref> { }
+
+struct SomeStruct<X Ref> where func drop(X)void { x X; }
+impl<X> MyInterface<X> for SomeStruct<X> where func drop(X)void;
+
+func doAThing<T>(t T) SomeStruct<T>
+where func drop(T)void {
+  return SomeStruct<T>(t);
+}
+
+exported func main() {
+  doAThing(4);
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -1466,7 +1598,19 @@ fn pointer_becomes_share_if_kind_is_immutable() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\n\nstruct SomeStruct imm { i int; }\n\nfunc bork(x &SomeStruct) int {\n  return x.i;\n}\n\nexported func main() int {\n  return bork(SomeStruct(7));\n}\n";
+    let code = r"
+
+
+struct SomeStruct imm { i int; }
+
+func bork(x &SomeStruct) int {
+  return x.i;
+}
+
+exported func main() int {
+  return bork(SomeStruct(7));
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1506,7 +1650,13 @@ fn detects_conflict_between_types() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct ShipA {}\nstruct ShipB {}\nexported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {\n}\n";
+    let code = r"
+
+struct ShipA {}
+struct ShipB {}
+exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1560,7 +1710,21 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\n#!DeriveStructDrop\nstruct SomeStruct<T>\n{ x T; }\n\nfunc bork<X Kind, Z>() Z\nwhere X Kind = SomeStruct<int>, X = SomeStruct<Z> {\n  return 9;\n}\n\nexported func main() int {\n  return bork();\n}\n";
+    let code = r"
+
+#!DeriveStructDrop
+struct SomeStruct<T>
+{ x T; }
+
+func bork<X Kind, Z>() Z
+where X Kind = SomeStruct<int>, X = SomeStruct<Z> {
+  return 9;
+}
+
+exported func main() int {
+  return bork();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1608,7 +1772,20 @@ fn can_destructure_and_assemble_static_sized_array() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nfunc swap<T>(x [#2]T) [#2]T {\n  [a, b] = x;\n  return [#](b, a);\n}\n\nexported func main() int {\n  return swap([#](5, 7)).0;\n}\n";
+    let code = r"
+
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+
+func swap<T>(x [#2]T) [#2]T {
+  [a, b] = x;
+  return [#](b, a);
+}
+
+exported func main() int {
+  return swap([#](5, 7)).0;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -1746,7 +1923,10 @@ fn iragp_test_equivalent_identifying_runes_in_struct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n#!DeriveStructDrop\nstruct Bork<T, Y> where T = Y { t T; y Y; }\n";
+    let code = r"
+#!DeriveStructDrop
+struct Bork<T, Y> where T = Y { t T; y Y; }
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);

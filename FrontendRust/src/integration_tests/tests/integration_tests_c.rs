@@ -61,7 +61,14 @@ fn tests_floats() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Moo imm {\n  x float;\n}\nexported func main() int {\n  return 7;\n}\n",
+        r"
+struct Moo imm {
+  x float;
+}
+exported func main() int {
+  return 7;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -137,7 +144,15 @@ fn panic_on_drop_because_of_outstanding_borrow() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  ship; // drops it\n}\n",
+        r"
+struct Ship { hp int; }
+
+exported func main() {
+  ship = Ship(1337);
+  borrow_ship = &ship;
+  ship; // drops it
+}
+",
     );
     let _ = compile.expect_compiler_outputs();
     match compile.eval_for_kind_primitive_args(Vec::new()) {
@@ -191,7 +206,16 @@ fn unlet_to_avoid_an_outstanding_borrow_panic() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Ship { hp int; }\n\nexported func main() {\n  ship = Ship(1337);\n  borrow_ship = &ship;\n  unlet borrow_ship;\n  ship; // drops it\n}\n",
+        r"
+struct Ship { hp int; }
+
+exported func main() {
+  ship = Ship(1337);
+  borrow_ship = &ship;
+  unlet borrow_ship;
+  ship; // drops it
+}
+",
     );
     let _ = compile.expect_compiler_outputs();
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
@@ -287,7 +311,15 @@ fn test_shaking() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nfunc bork(x str) { print(x); }\nfunc helperFunc(x int) { print(x); }\nfunc helperFunc(x str) { print(x); }\nexported func main() {\n  helperFunc(4);\n}\n",
+        r"
+import printutils.*;
+func bork(x str) { print(x); }
+func helperFunc(x int) { print(x); }
+func helperFunc(x str) { print(x); }
+exported func main() {
+  helperFunc(4);
+}
+",
     );
     let hinputs = compile.get_monouts();
 
@@ -357,7 +389,21 @@ fn test_overloading_between_borrow_and_weak() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nsealed interface IMoo  {}\nstruct Moo {}\nimpl IMoo for Moo;\n\nabstract func func(virtual moo &IMoo) int;\nabstract func func(virtual moo &&IMoo) int;\n\nfunc func(moo &Moo) int { return 42; }\nfunc func(moo &&Moo) int { return 73; }\n\nexported func main() int {\n  return func(&Moo());\n}\n",
+        r"
+sealed interface IMoo  {}
+struct Moo {}
+impl IMoo for Moo;
+
+abstract func func(virtual moo &IMoo) int;
+abstract func func(virtual moo &&IMoo) int;
+
+func func(moo &Moo) int { return 42; }
+func func(moo &&Moo) int { return 73; }
+
+exported func main() int {
+  return func(&Moo());
+}
+",
     );
     let _coutputs = compile.get_compiler_outputs().unwrap();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -408,7 +454,11 @@ fn truncate_i64_to_i32() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  return TruncateI64ToI32(4300000000i64);\n}\n",
+        r"
+exported func main() int {
+  return TruncateI64ToI32(4300000000i64);
+}
+",
     );
     let _coutputs = compile.expect_compiler_outputs();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -485,7 +535,11 @@ fn test_export_functions() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func moo() int {\n  return 42;\n}\n",
+        r"
+exported func moo() int {
+  return 42;
+}
+",
     );
     let _hamuts = compile.get_hamuts();
 }
@@ -589,7 +643,24 @@ fn test_narrowing_between_borrow_and_owning_overloads() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport panicutils.*;\n\nsealed interface XOpt<T> where T Ref { }\nstruct XNone<T> where T Ref { }\nimpl<T> XOpt<T> for XNone<T>;\n\nabstract func get<T>(virtual opt XOpt<T>) int;\nfunc get<T>(opt XNone<T>) int { __vbi_panic() }\n\nabstract func get<T>(virtual opt &XOpt<T>) int;\nfunc get<T>(opt &XNone<T>) int { return 42; }\n\nexported func main() int {\n  opt XOpt<int> = XNone<int>();\n  return opt.get();\n}\n",
+        r"
+import panicutils.*;
+
+sealed interface XOpt<T> where T Ref { }
+struct XNone<T> where T Ref { }
+impl<T> XOpt<T> for XNone<T>;
+
+abstract func get<T>(virtual opt XOpt<T>) int;
+func get<T>(opt XNone<T>) int { __vbi_panic() }
+
+abstract func get<T>(virtual opt &XOpt<T>) int;
+func get<T>(opt &XNone<T>) int { return 42; }
+
+exported func main() int {
+  opt XOpt<int> = XNone<int>();
+  return opt.get();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -686,7 +757,23 @@ fn using_same_constraint_ref_from_both_branches_of_if() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Moo {}\nfunc foo(a &Moo) int { return 41; }\nfunc bork(a &Moo) int {\n  if (false) {\n    return foo(a);\n  } else if (false) {\n    return foo(a);\n  } else {\n    // continue\n  }\n  return foo(a) + 1;\n}\nexported func main() int {\n  return bork(&Moo());\n}\n",
+        r"
+struct Moo {}
+func foo(a &Moo) int { return 41; }
+func bork(a &Moo) int {
+  if (false) {
+    return foo(a);
+  } else if (false) {
+    return foo(a);
+  } else {
+    // continue
+  }
+  return foo(a) + 1;
+}
+exported func main() int {
+  return bork(&Moo());
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -740,7 +827,23 @@ fn moving_same_thing_from_both_branches_of_if() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Moo {}\nfunc foo(a Moo) int { return 41; }\nfunc bork(a Moo) int {\n  if (false) {\n    return foo(a);\n  } else if (false) {\n    return foo(a);\n  } else {\n    // continue\n  }\n  return 42;\n}\nexported func main() int {\n  return bork(Moo());\n}\n",
+        r"
+struct Moo {}
+func foo(a Moo) int { return 41; }
+func bork(a Moo) int {
+  if (false) {
+    return foo(a);
+  } else if (false) {
+    return foo(a);
+  } else {
+    // continue
+  }
+  return 42;
+}
+exported func main() int {
+  return bork(Moo());
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -832,7 +935,13 @@ fn call_borrow_parameter_with_shared_reference() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc bork<T>(a &T) &T { return a; }\n\nexported func main() int {\n  return bork(6);\n}\n",
+        r"
+func bork<T>(a &T) &T { return a; }
+
+exported func main() int {
+  return bork(6);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 6 }) => {}
@@ -873,7 +982,15 @@ fn supplying_bounded_struct_to_struct_accepting() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Bork<T> where func drop(T)void { a T; }\n\nstruct Spork<T> where func drop(T)void { a T; }\n\nexported func main() int {\n  return Spork<Bork<int>>(Bork(7)).a.a;\n}\n",
+        r"
+struct Bork<T> where func drop(T)void { a T; }
+
+struct Spork<T> where func drop(T)void { a T; }
+
+exported func main() int {
+  return Spork<Bork<int>>(Bork(7)).a.a;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -942,7 +1059,15 @@ fn same_type_multiple_times_in_an_invocation() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Bork<T> where func drop(T)void {\n  a T;\n}\n\nexported func main() int {\n  return Bork<Bork<Bork<int>>>(Bork(Bork(7))).a.a.a;\n}\n",
+        r"
+struct Bork<T> where func drop(T)void {
+  a T;
+}
+
+exported func main() int {
+  return Bork<Bork<Bork<int>>>(Bork(Bork(7))).a.a.a;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -1097,7 +1222,11 @@ fn ignoring_receiver() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine { hp int; }\nexported func main() int { [_, y] = (Marine(6), Marine(8)); return y.hp; }\n\n",
+        r"
+struct Marine { hp int; }
+exported func main() int { [_, y] = (Marine(6), Marine(8)); return y.hp; }
+
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();

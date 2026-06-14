@@ -193,7 +193,11 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       panic!("implement: humanize ArrayElementsHaveDifferentTypes")
     }
     ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { range: _, paackage, signature, non_exported_kind } => {
-      format!("Exported function:\n{}\ndepends on kind:\n{}\nthat wasn't exported from package {}",
+      format!(r"Exported function:
+{}
+depends on kind:
+{}
+that wasn't exported from package {}",
         humanize_signature(scout_arena, typing_interner, code_map, **signature),
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Kind(typing_interner.alloc(KindTemplataT { kind: *non_exported_kind }))),
         humanize_package(paackage))

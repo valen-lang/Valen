@@ -41,7 +41,14 @@ fn print_float() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\n\nexported func main() {\n  a = 42.125;\n  print(a);\n}\n",
+        r"
+import printutils.*;
+
+exported func main() {
+  a = 42.125;
+  print(a);
+}
+",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "42.125");
 }

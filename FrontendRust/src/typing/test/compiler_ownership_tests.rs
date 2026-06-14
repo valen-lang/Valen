@@ -66,7 +66,17 @@ fn parenthesized_method_syntax_will_move_instead_of_borrow() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Bork { a int; }\nfunc doSomething(bork Bork) int {\n  return bork.a;\n}\nfunc main() int {\n  bork = Bork(42);\n  return (bork).doSomething();\n}\n";
+    let code = r"
+
+struct Bork { a int; }
+func doSomething(bork Bork) int {
+  return bork.a;
+}
+func main() int {
+  bork = Bork(42);
+  return (bork).doSomething();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -101,7 +111,16 @@ fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Bork { a int; }\nfunc doSomething(bork Bork) int {\n  return bork.a;\n}\nfunc main() int {\n  return Bork(42).doSomething();\n}\n";
+    let code = r"
+
+struct Bork { a int; }
+func doSomething(bork Bork) int {
+  return bork.a;
+}
+func main() int {
+  return Bork(42).doSomething();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -135,7 +154,16 @@ fn explicit_borrow_method_call() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Bork { a int; }\nfunc doSomething(bork &Bork) int {\n  return bork.a;\n}\nfunc main() int {\n  return Bork(42)&.doSomething();\n}\n";
+    let code = r"
+
+struct Bork { a int; }
+func doSomething(bork &Bork) int {
+  return bork.a;
+}
+func main() int {
+  return Bork(42)&.doSomething();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -169,7 +197,17 @@ fn calling_a_method_on_a_local_will_supply_borrow_ref() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Bork { a int; }\nfunc doSomething(bork &Bork) int {\n  return bork.a;\n}\nfunc main() int {\n  bork = Bork(42);\n  return bork.doSomething();\n}\n";
+    let code = r"
+
+struct Bork { a int; }
+func doSomething(bork &Bork) int {
+  return bork.a;
+}
+func main() int {
+  bork = Bork(42);
+  return bork.doSomething();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -204,7 +242,18 @@ fn calling_a_method_on_a_member_will_supply_borrow_ref() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Zork { bork Bork; }\nstruct Bork { a int; }\nfunc doSomething(bork &Bork) int {\n  return bork.a;\n}\nfunc main() int {\n  zork = Zork(Bork(42));\n  return zork.bork.doSomething();\n}\n";
+    let code = r"
+
+struct Zork { bork Bork; }
+struct Bork { a int; }
+func doSomething(bork &Bork) int {
+  return bork.a;
+}
+func main() int {
+  zork = Zork(Bork(42));
+  return zork.bork.doSomething();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -240,7 +289,16 @@ fn no_derived_or_custom_drop_gives_error() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\n\n#!DeriveStructDrop\nstruct Muta { }\n\nexported func main() {\n  Muta();\n}\n";
+    let code = r"
+
+
+#!DeriveStructDrop
+struct Muta { }
+
+exported func main() {
+  Muta();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -279,7 +337,40 @@ fn opt_with_undroppable_contents() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n#!DeriveInterfaceDrop\nsealed interface Opt<T> where T Ref { }\n\n#!DeriveStructDrop\nstruct Some<T> where T Ref { value T; }\n\nimpl<T> Opt<T> for Some<T>;\n\nabstract func drop<T>(virtual opt Opt<T>)\nwhere func drop(T)void;\n\nfunc drop<T>(opt Some<T>)\nwhere func drop(T)void\n{\n  [x] = opt;\n}\n\nabstract func get<T>(virtual opt Opt<T>) T;\nfunc get<T>(opt Some<T>) T {\n  [value] = opt;\n  return value;\n}\n\n#!DeriveStructDrop\nstruct Spaceship { }\n\nexported func main() {\n  s Opt<Spaceship> = Some<Spaceship>(Spaceship());\n  // Drops the ship manually\n  [ ] = (s).get();\n}\n\n";
+    let code = r"
+#!DeriveInterfaceDrop
+sealed interface Opt<T> where T Ref { }
+
+#!DeriveStructDrop
+struct Some<T> where T Ref { value T; }
+
+impl<T> Opt<T> for Some<T>;
+
+abstract func drop<T>(virtual opt Opt<T>)
+where func drop(T)void;
+
+func drop<T>(opt Some<T>)
+where func drop(T)void
+{
+  [x] = opt;
+}
+
+abstract func get<T>(virtual opt Opt<T>) T;
+func get<T>(opt Some<T>) T {
+  [value] = opt;
+  return value;
+}
+
+#!DeriveStructDrop
+struct Spaceship { }
+
+exported func main() {
+  s Opt<Spaceship> = Some<Spaceship>(Spaceship());
+  // Drops the ship manually
+  [ ] = (s).get();
+}
+
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -337,7 +428,40 @@ fn opt_with_undroppable_mutable_ref_contents() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.drop.*;\n\n#!DeriveInterfaceDrop\nsealed interface Opt<T Ref> { }\n\n#!DeriveStructDrop\nstruct Some<T Ref> { value T; }\n\nimpl<T> Opt<T> for Some<T>;\n\nabstract func drop<T>(virtual opt Opt<T>)\nwhere func drop(T)void;\n\nfunc drop<T>(opt Some<T>)\nwhere func drop(T)void\n{\n  [x] = opt;\n}\n\n#!DeriveStructDrop\nstruct Spaceship { }\n\nstruct ContainerWithDerivedDrop {\n  maybeThing Opt<&Spaceship>;\n}\n\nexported func main() {\n  ship = Spaceship();\n  c = ContainerWithDerivedDrop(Some<&Spaceship>(&ship));\n  [ ] = ship;\n}\n\n";
+    let code = r"
+import v.builtins.drop.*;
+
+#!DeriveInterfaceDrop
+sealed interface Opt<T Ref> { }
+
+#!DeriveStructDrop
+struct Some<T Ref> { value T; }
+
+impl<T> Opt<T> for Some<T>;
+
+abstract func drop<T>(virtual opt Opt<T>)
+where func drop(T)void;
+
+func drop<T>(opt Some<T>)
+where func drop(T)void
+{
+  [x] = opt;
+}
+
+#!DeriveStructDrop
+struct Spaceship { }
+
+struct ContainerWithDerivedDrop {
+  maybeThing Opt<&Spaceship>;
+}
+
+exported func main() {
+  ship = Spaceship();
+  c = ContainerWithDerivedDrop(Some<&Spaceship>(&ship));
+  [ ] = ship;
+}
+
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });

@@ -109,7 +109,15 @@ fn test_templates() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let code = "\nfunc drop(x int) { }\nfunc bork<T>(a T) void where func drop(T)void {\n  // implicitly calls drop\n}\nexported func main() {\n  bork(3);\n}\n";
+    let code = r"
+func drop(x int) { }
+func bork<T>(a T) void where func drop(T)void {
+  // implicitly calls drop
+}
+exported func main() {
+  bork(3);
+}
+";
     let mut compile = test(&compilation_bump, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &instantiating_bump, code);
     compile.get_monouts();
 }
@@ -125,7 +133,16 @@ fn nested_anonymous_substruct_captures_outer() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let code = "\ninterface IF<R Ref, P Ref> {\n  func __call(virtual this &IF<R, P>, p P) R;\n}\nexported func main() int {\n  inner = IF<bool, int>((it) => { true });\n  outer = IF<bool, int>((it) => { inner(it) });\n  return 0;\n}\n";
+    let code = r"
+interface IF<R Ref, P Ref> {
+  func __call(virtual this &IF<R, P>, p P) R;
+}
+exported func main() int {
+  inner = IF<bool, int>((it) => { true });
+  outer = IF<bool, int>((it) => { inner(it) });
+  return 0;
+}
+";
     let mut compile = test(&compilation_bump, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &instantiating_bump, code);
     compile.get_monouts();
 }

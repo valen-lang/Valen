@@ -1748,7 +1748,11 @@ fn reports_when_we_forget_set() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    "exported func main() {\n  x = \"world!\";\n  x = \"changed\";\n}",
+    r#"
+exported func main() {
+  x = "world!";
+  x = "changed";
+}"#,
   );
   match &err {
     ICompileErrorS::VariableNameAlreadyExists(
@@ -1813,7 +1817,11 @@ fn statement_after_result_or_return() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    "func doCivicDance(virtual this Car) {\n  return 4;\n  7\n}",
+    r"
+func doCivicDance(virtual this Car) {
+  return 4;
+  7
+}",
   );
   match &err {
     ICompileErrorS::StatementAfterReturnS(_) => {}
@@ -1844,7 +1852,12 @@ fn report_type_mismatch() {
     &scout_arena,
     &keywords,
     &parse_arena,
-    "struct Vec<N, T> where N Int\n{\n  values [#N]<imm>T;\n}\n",
+    r"
+struct Vec<N, T> where N Int
+{
+  values [#N]<imm>T;
+}
+",
   );
   match &err {
     ICompileErrorS::RuneExplicitTypeConflictS(

@@ -45,7 +45,15 @@ fn returning_tuple_from_function_and_dotting_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc makeTup() (int, int) { return (2, 3); }\nexported func main() int {\n  return makeTup().1;\n}\n",
+        r"
+import v.builtins.tup2.*;
+import v.builtins.drop.*;
+
+func makeTup() (int, int) { return (2, 3); }
+exported func main() int {
+  return makeTup().1;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -87,7 +95,14 @@ fn tuple_with_two_things() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nexported func main() bool {\n  return (9, true).1;\n}\n",
+        r"
+import v.builtins.tup2.*;
+import v.builtins.drop.*;
+
+exported func main() bool {
+  return (9, true).1;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Bool(VonBool { value: true }) => {}
@@ -127,7 +142,16 @@ fn tuple_type() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import v.builtins.tup2.*;\nimport v.builtins.drop.*;\n\nfunc moo(a (int, int)) int { return a.1; }\n\nexported func main() int {\n  return moo((3, 4));\n}\n",
+        r"
+import v.builtins.tup2.*;
+import v.builtins.drop.*;
+
+func moo(a (int, int)) int { return a.1; }
+
+exported func main() int {
+  return moo((3, 4));
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}

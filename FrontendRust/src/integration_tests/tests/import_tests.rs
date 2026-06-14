@@ -36,7 +36,14 @@ class ImportTests extends FunSuite with Matchers {
 #[test]
 fn tests_import() {
     let module_a_code =
-        "\nimport moduleB.moo;\n\nexported func main() int {\n  a = moo();\n  return a;\n}\n".to_string();
+        r"
+import moduleB.moo;
+
+exported func main() int {
+  a = moo();
+  return a;
+}
+".to_string();
 
     let module_b_code =
         "\nfunc moo() int { return 42; }\n".to_string();
@@ -148,7 +155,12 @@ fn tests_import() {
 #[test]
 fn tests_non_imported_module_isnt_brought_in() {
     let module_a_code =
-        "\nexported func main() int {\n  a = 42;\n  return a;\n}\n".to_string();
+        r"
+exported func main() int {
+  a = 42;
+  return a;
+}
+".to_string();
 
     let module_b_code =
         "\nfunc moo() int { return 73; }\n".to_string();
@@ -257,7 +269,14 @@ fn tests_non_imported_module_isnt_brought_in() {
 #[test]
 fn tests_import_with_paackage() {
     let module_a_code =
-        "\nimport moduleB.bork.*;\n\nexported func main() int {\n  a = moo();\n  return a;\n}\n".to_string();
+        r"
+import moduleB.bork.*;
+
+exported func main() int {
+  a = moo();
+  return a;
+}
+".to_string();
 
     let module_b_code =
         "\nfunc moo() int { return 42; }\n".to_string();
@@ -363,7 +382,14 @@ fn tests_import_with_paackage() {
 #[test]
 fn tests_import_of_directory_with_no_vale_files() {
     let module_a_code =
-        "\nimport moduleB.bork.*;\n\nexported func main() int {\n  a = 42;\n  return a;\n}\n".to_string();
+        r"
+import moduleB.bork.*;
+
+exported func main() int {
+  a = 42;
+  return a;
+}
+".to_string();
 
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();

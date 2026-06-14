@@ -90,7 +90,13 @@ fn simple_program_containing_a_virtual_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nsealed interface I  {}\nfunc doThing(virtual i I) int { return 4; }\nfunc main(i I) int {\n  return doThing(i);\n}\n",
+        r"
+sealed interface I  {}
+func doThing(virtual i I) int { return 4; }
+func main(i I) int {
+  return doThing(i);
+}
+",
     );
     let interner = compile.interner;
     let coutputs = compile.expect_compiler_outputs();
@@ -203,7 +209,13 @@ fn can_call_virtual_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nsealed interface I  {}\nfunc doThing(virtual i I) int { return 4; }\nfunc main(i I) int {\n  return doThing(i);\n}\n",
+        r"
+sealed interface I  {}
+func doThing(virtual i I) int { return 4; }
+func main(i I) int {
+  return doThing(i);
+}
+",
     );
     let interner = compile.interner;
     let coutputs = compile.expect_compiler_outputs();
@@ -318,7 +330,13 @@ fn owning_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.opt.*;\nexported func main() int {\n  x Opt<int> = Some(7);\n  return 7;\n}\n",
+        r"
+import v.builtins.opt.*;
+exported func main() int {
+  x Opt<int> = Some(7);
+  return 7;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -358,7 +376,23 @@ fn simple_override_with_param_and_bound() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Serenity<A Ref, B Ref, C Ref> { }\nimpl<H, I, J> ISpaceship<H, I, J> for Serenity<H, I, J>;\nfunc launch<M, N, P>(self &Serenity<M, N, P>, bork M)\n    where func drop(M)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Serenity<int, bool, str>();\n  ship.launch(7);\n}\n",
+        r"
+import v.builtins.drop.*;
+
+sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
+    where func drop(X)void;
+
+struct Serenity<A Ref, B Ref, C Ref> { }
+impl<H, I, J> ISpaceship<H, I, J> for Serenity<H, I, J>;
+func launch<M, N, P>(self &Serenity<M, N, P>, bork M)
+    where func drop(M)void { }
+
+exported func main() {
+  ship ISpaceship<int, bool, str> = Serenity<int, bool, str>();
+  ship.launch(7);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -406,7 +440,23 @@ fn struct_with_different_ordered_runes() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Firefly<A Ref, B Ref, C Ref> { }\nimpl<H, I, J> ISpaceship<H, I, J> for Firefly<J, I, H>;\nfunc launch<M, N, P>(self &Firefly<M, N, P>, bork P)\n    where func drop(P)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Firefly<str, bool, int>();\n  ship.launch(7);\n}\n",
+        r"
+import v.builtins.drop.*;
+
+sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
+    where func drop(X)void;
+
+struct Firefly<A Ref, B Ref, C Ref> { }
+impl<H, I, J> ISpaceship<H, I, J> for Firefly<J, I, H>;
+func launch<M, N, P>(self &Firefly<M, N, P>, bork P)
+    where func drop(P)void { }
+
+exported func main() {
+  ship ISpaceship<int, bool, str> = Firefly<str, bool, int>();
+  ship.launch(7);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -454,7 +504,22 @@ fn struct_with_less_generic_params_than_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Raza<B Ref, C Ref> { }\nimpl<I, J> ISpaceship<int, I, J> for Raza<I, J>;\nfunc launch<N, P>(self &Raza<N, P>, bork int) { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Raza<bool, str>();\n  ship.launch(7);\n}\n",
+        r"
+import v.builtins.drop.*;
+
+sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
+    where func drop(X)void;
+
+struct Raza<B Ref, C Ref> { }
+impl<I, J> ISpaceship<int, I, J> for Raza<I, J>;
+func launch<N, P>(self &Raza<N, P>, bork int) { }
+
+exported func main() {
+  ship ISpaceship<int, bool, str> = Raza<bool, str>();
+  ship.launch(7);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -501,7 +566,22 @@ fn struct_with_more_generic_params_than_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Milano<A Ref, B Ref, C Ref, D Ref> { }\nimpl<H, I, J, K> ISpaceship<H, I, J> for Milano<H, I, J, K>;\nfunc launch<H, I, J, K>(self &Milano<H, I, J, K>, bork H) where func drop(H)void { }\n\nexported func main() {\n  ship ISpaceship<int, bool, str> = Milano<int, bool, str, float>();\n  ship.launch(7);\n}\n",
+        r"
+import v.builtins.drop.*;
+
+sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
+    where func drop(X)void;
+
+struct Milano<A Ref, B Ref, C Ref, D Ref> { }
+impl<H, I, J, K> ISpaceship<H, I, J> for Milano<H, I, J, K>;
+func launch<H, I, J, K>(self &Milano<H, I, J, K>, bork H) where func drop(H)void { }
+
+exported func main() {
+  ship ISpaceship<int, bool, str> = Milano<int, bool, str, float>();
+  ship.launch(7);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -548,7 +628,22 @@ fn struct_repeating_generic_params_for_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.drop.*;\n\nsealed interface ISpaceship<E Ref, F Ref, G Ref> { }\nabstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)\n    where func drop(X)void;\n\nstruct Enterprise<A Ref> { }\nimpl<H> ISpaceship<H, H, H> for Enterprise<H>;\nfunc launch<H>(self &Enterprise<H>, bork H) where func drop(H)void { }\n\nexported func main() {\n  ship ISpaceship<int, int, int> = Enterprise<int>();\n  ship.launch(7);\n}\n",
+        r"
+import v.builtins.drop.*;
+
+sealed interface ISpaceship<E Ref, F Ref, G Ref> { }
+abstract func launch<X, Y, Z>(virtual self &ISpaceship<X, Y, Z>, bork X)
+    where func drop(X)void;
+
+struct Enterprise<A Ref> { }
+impl<H> ISpaceship<H, H, H> for Enterprise<H>;
+func launch<H>(self &Enterprise<H>, bork H) where func drop(H)void { }
+
+exported func main() {
+  ship ISpaceship<int, int, int> = Enterprise<int>();
+  ship.launch(7);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -628,7 +723,14 @@ fn can_call_interface_envs_function_from_outside() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nsealed interface I {\n  func doThing(virtual i I) int;\n}\nfunc main(i I) int {\n  return doThing(i);\n}\n",
+        r"
+sealed interface I {
+  func doThing(virtual i I) int;
+}
+func main(i I) int {
+  return doThing(i);
+}
+",
     );
     let _interner = compile.interner;
     let coutputs = compile.expect_compiler_outputs();
@@ -686,7 +788,15 @@ fn interface_with_method_with_param_of_substruct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct List<T Ref> { }\n\nsealed interface SectionMember {}\nstruct Header {}\nimpl SectionMember for Header;\nabstract func collectHeaders2(header &List<&Header>, virtual this &SectionMember);\nfunc collectHeaders2(header &List<&Header>, this &Header) { }\n",
+        r"
+struct List<T Ref> { }
+
+sealed interface SectionMember {}
+struct Header {}
+impl SectionMember for Header;
+abstract func collectHeaders2(header &List<&Header>, virtual this &SectionMember);
+func collectHeaders2(header &List<&Header>, this &Header) { }
+",
     );
     let _coutputs = compile.get_hamuts();
 }
@@ -724,7 +834,26 @@ fn feeding_instantiation_bounds_for_something_created_in_same_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "#!DeriveStructDrop\nstruct Spork<T Ref, Y>\nwhere func splork(Y)void {\n  lam Y;\n}\n\nfunc bork<T, Y>(\n  self &Spork<T, Y> // It had trouble here finding the bound for splork\n) { }\n\nfunc splork(x int) {}\n\nexported func main() int {\n  f = Spork<int>(42);\n  f.bork(); // We should be feeding in Spork's instantiation bounds here for the params' reachables?\n  [z] = f;\n  return z;\n}\n",
+        r"
+#!DeriveStructDrop
+struct Spork<T Ref, Y>
+where func splork(Y)void {
+  lam Y;
+}
+
+func bork<T, Y>(
+  self &Spork<T, Y> // It had trouble here finding the bound for splork
+) { }
+
+func splork(x int) {}
+
+exported func main() int {
+  f = Spork<int>(42);
+  f.bork(); // We should be feeding in Spork's instantiation bounds here for the params' reachables?
+  [z] = f;
+  return z;
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -773,7 +902,34 @@ fn generic_interface_forwarder_with_bound() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "#!DeriveInterfaceDrop\nsealed interface Bork<T Ref>\nwhere func threeify(T)T {\n  func bork(virtual self &Bork<T>) int;\n}\n\n#!DeriveStructDrop\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)().threeify();\n}\n\nfunc threeify(x int) int { 3 }\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  z = f.bork();\n  [_] = f;\n  return z;\n}\n",
+        r"
+#!DeriveInterfaceDrop
+sealed interface Bork<T Ref>
+where func threeify(T)T {
+  func bork(virtual self &Bork<T>) int;
+}
+
+#!DeriveStructDrop
+struct BorkForwarder<T Ref, Lam>
+where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
+  lam Lam;
+}
+
+impl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;
+
+func bork<T, Lam>(self &BorkForwarder<T, Lam>) T {
+  return (self.lam)().threeify();
+}
+
+func threeify(x int) int { 3 }
+
+exported func main() int {
+  f = BorkForwarder<int>({ 7 });
+  z = f.bork();
+  [_] = f;
+  return z;
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -830,7 +986,30 @@ fn generic_interface_forwarder_with_drop_bound() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "sealed interface Bork<T Ref>\nwhere func threeify(T)T {\n  func bork(virtual self &Bork<T>) int;\n}\n\nstruct BorkForwarder<T Ref, Lam>\nwhere func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {\n  lam Lam;\n}\n\nimpl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;\n\nfunc bork<T, Lam>(self &BorkForwarder<T, Lam>) T {\n  return (self.lam)().threeify();\n}\n\nfunc threeify(x int) int { 3 }\n\nexported func main() int {\n  f = BorkForwarder<int>({ 7 });\n  return f.bork();\n}\n",
+        r"
+sealed interface Bork<T Ref>
+where func threeify(T)T {
+  func bork(virtual self &Bork<T>) int;
+}
+
+struct BorkForwarder<T Ref, Lam>
+where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
+  lam Lam;
+}
+
+impl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;
+
+func bork<T, Lam>(self &BorkForwarder<T, Lam>) T {
+  return (self.lam)().threeify();
+}
+
+func threeify(x int) int { 3 }
+
+exported func main() int {
+  f = BorkForwarder<int>({ 7 });
+  return f.bork();
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -883,7 +1062,23 @@ fn open_interface_constructor() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\ninterface Bipedal {\n  func hop(virtual s &Bipedal) int;\n}\n\nfunc hopscotch(s &Bipedal) int {\n  s.hop();\n  return s.hop();\n}\n\nexported func main() int {\n   x = Bipedal({ 3 });\n  // x is an unnamed substruct which implements Bipedal.\n\n  return hopscotch(&x);\n}\n",
+        r"
+interface Bipedal {
+  func hop(virtual s &Bipedal) int;
+}
+
+func hopscotch(s &Bipedal) int {
+  s.hop();
+  return s.hop();
+}
+
+exported func main() int {
+   x = Bipedal({ 3 });
+  // x is an unnamed substruct which implements Bipedal.
+
+  return hopscotch(&x);
+}
+",
     );
     let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -934,7 +1129,30 @@ fn open_interface_constructor_multiple_methods() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\ninterface Bipedal {\n  func hop(virtual s &Bipedal) int;\n  func skip(virtual s &Bipedal) int;\n}\n\nstruct Human {  }\nfunc hop(s &Human) int { return 7; }\nfunc skip(s &Human) int { return 9; }\nimpl Bipedal for Human;\n\nfunc hopscotch(s &Bipedal) int {\n  s.hop();\n  s.skip();\n  return s.hop();\n}\n\nexported func main() int {\n   x = Bipedal({ 3 }, { 5 });\n  // x is an unnamed substruct which implements Bipedal.\n\n  return hopscotch(&x);\n}\n",
+        r"
+interface Bipedal {
+  func hop(virtual s &Bipedal) int;
+  func skip(virtual s &Bipedal) int;
+}
+
+struct Human {  }
+func hop(s &Human) int { return 7; }
+func skip(s &Human) int { return 9; }
+impl Bipedal for Human;
+
+func hopscotch(s &Bipedal) int {
+  s.hop();
+  s.skip();
+  return s.hop();
+}
+
+exported func main() int {
+   x = Bipedal({ 3 }, { 5 });
+  // x is an unnamed substruct which implements Bipedal.
+
+  return hopscotch(&x);
+}
+",
     );
     let _coutputs = compile.get_hamuts();
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -1229,7 +1447,17 @@ fn lambda_is_compatible_anonymous_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport castutils.*;\n\ninterface AFunction2<R Ref, P1 Ref, P2 Ref> {\n  func __call(virtual this &AFunction2<R, P1, P2>, a P1, b P2) R;\n}\nexported func main() str {\n  func = AFunction2<str, int, bool>((i, b) => { str(i) + str(b) });\n  return func(42, true);\n}\n",
+        r"
+import castutils.*;
+
+interface AFunction2<R Ref, P1 Ref, P2 Ref> {
+  func __call(virtual this &AFunction2<R, P1, P2>, a P1, b P2) R;
+}
+exported func main() str {
+  func = AFunction2<str, int, bool>((i, b) => { str(i) + str(b) });
+  return func(42, true);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Str(VonStr { value }) if value == "42true" => {}

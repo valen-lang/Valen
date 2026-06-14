@@ -1062,7 +1062,15 @@ fn test_generic() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc drop(x int) { }\nfunc bork<T>(a T) void where func drop(T)void {\n  // implicitly calls drop\n}\nexported func main() {\n  bork(3);\n}\n",
+        r"
+func drop(x int) { }
+func bork<T>(a T) void where func drop(T)void {
+  // implicitly calls drop
+}
+exported func main() {
+  bork(3);
+}
+",
     );
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -1100,7 +1108,10 @@ fn test_multiple_invocations_of_generic() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc bork<T>(a T, b T) T where func drop(T)void { return a; }\nexported func main() int {true bork false; 2 bork 2; return 3 bork 3;}\n",
+        r"
+func bork<T>(a T, b T) T where func drop(T)void { return a; }
+exported func main() int {true bork false; 2 bork 2; return 3 bork 3;}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -1197,7 +1208,10 @@ fn test_taking_a_callable_param() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc do<T>(callable T) int where func(&T)int, func drop(T)void { return callable(); }\nexported func main() int { return do({ 3 }); }\n",
+        r"
+func do<T>(callable T) int where func(&T)int, func drop(T)void { return callable(); }
+exported func main() int { return do({ 3 }); }
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -1234,7 +1248,21 @@ fn stamps_an_interface_template_via_a_function_parameter() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\ninterface MyInterface<T Ref> { }\nfunc doAThing<T>(i MyInterface<T>) { }\n\nstruct SomeStruct<T Ref> { }\nfunc doAThing<T>(s SomeStruct<T>) { }\nimpl<T> MyInterface<T> for SomeStruct<T>;\n\nexport MyInterface<int> as SomeIntInterface;\nexport SomeStruct<int> as SomeIntStruct;\n\nexported func main(a SomeStruct<int>) {\n  doAThing<int>(a);\n}\n",
+        r"
+interface MyInterface<T Ref> { }
+func doAThing<T>(i MyInterface<T>) { }
+
+struct SomeStruct<T Ref> { }
+func doAThing<T>(s SomeStruct<T>) { }
+impl<T> MyInterface<T> for SomeStruct<T>;
+
+export MyInterface<int> as SomeIntInterface;
+export SomeStruct<int> as SomeIntStruct;
+
+exported func main(a SomeStruct<int>) {
+  doAThing<int>(a);
+}
+",
     );
     let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
     let mut vivem_dout = stdout();
@@ -1403,7 +1431,13 @@ fn equals_equals_equals_true() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct MyStruct { a int; }\nexported func main() bool {\n  a = MyStruct(7);\n  return &a === &a;\n}\n      ",
+        r"
+struct MyStruct { a int; }
+exported func main() bool {
+  a = MyStruct(7);
+  return &a === &a;
+}
+      ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Bool(VonBool { value: true }) => {}
@@ -1442,7 +1476,14 @@ fn equals_equals_equals_false() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct MyStruct { a int; }\nexported func main() bool {\n  a = MyStruct(7);\n  b = MyStruct(7);\n  return &a === &b;\n}\n      ",
+        r"
+struct MyStruct { a int; }
+exported func main() bool {
+  a = MyStruct(7);
+  b = MyStruct(7);
+  return &a === &b;
+}
+      ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Bool(VonBool { value: false }) => {}
@@ -1483,7 +1524,13 @@ fn lambda_can_call_sibling_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  continueF = (x) => { x };\n  barkF = (x) => { continueF(x) };\n  return barkF(42);\n}\n",
+        r"
+exported func main() int {
+  continueF = (x) => { x };
+  barkF = (x) => { continueF(x) };
+  return barkF(42);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -1596,7 +1643,14 @@ fn extern_function_returning_extern_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "extern struct Vec<T> imm;\nextern func VecOuterNew<T>() Vec<T>;\nexported func main() int {\n  v = VecOuterNew<int>();\n  return 42;\n}\n",
+        r"
+extern struct Vec<T> imm;
+extern func VecOuterNew<T>() Vec<T>;
+exported func main() int {
+  v = VecOuterNew<int>();
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -1640,7 +1694,15 @@ fn extern_rust_vec() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "extern struct Vec<T> imm {\n  extern func new() Vec<T>;\n}\nexported func main() int {\n  v = Vec<int>.new();\n  return 42;\n}\n",
+        r"
+extern struct Vec<T> imm {
+  extern func new() Vec<T>;
+}
+exported func main() int {
+  v = Vec<int>.new();
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -1683,7 +1745,16 @@ fn extern_rust_vec_capacity() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "extern struct Vec<T> imm {\n  extern func with_capacity(c i64) Vec<T>;\n  extern func capacity(self Vec<T>) i64;\n}\nexported func main() i64 {\n  v = Vec<int>.with_capacity(42i64);\n  return Vec<int>.capacity(v);\n}\n",
+        r"
+extern struct Vec<T> imm {
+  extern func with_capacity(c i64) Vec<T>;
+  extern func capacity(self Vec<T>) i64;
+}
+exported func main() i64 {
+  v = Vec<int>.with_capacity(42i64);
+  return Vec<int>.capacity(v);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -1727,7 +1798,16 @@ fn extern_method_on_generic_extern_struct_returns_expected_value() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "extern struct Vec<T> imm {\n  extern func with_capacity(c i64) Vec<T>;\n  extern func capacity(self Vec<T>) i64;\n}\nexported func main() i64 {\n  v = Vec<int>.with_capacity(42i64);\n  return v.capacity();\n}\n",
+        r"
+extern struct Vec<T> imm {
+  extern func with_capacity(c i64) Vec<T>;
+  extern func capacity(self Vec<T>) i64;
+}
+exported func main() i64 {
+  v = Vec<int>.with_capacity(42i64);
+  return v.capacity();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}

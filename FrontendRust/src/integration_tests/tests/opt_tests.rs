@@ -39,7 +39,15 @@ fn test_empty_and_get_for_some() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.opt.*;\n\nexported func main() int {\n  opt Opt<int> = Some(9);\n  return if (opt.isEmpty()) { 0 }\n    else { opt.get() };\n}\n",
+        r"
+import v.builtins.opt.*;
+
+exported func main() int {
+  opt Opt<int> = Some(9);
+  return if (opt.isEmpty()) { 0 }
+    else { opt.get() };
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -81,7 +89,13 @@ fn test_empty_and_get_for_none() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  opt Opt<int> = None<int>();\n  return if (opt.isEmpty()) { 0 }\n    else { opt.get() };\n}\n",
+        r"
+exported func main() int {
+  opt Opt<int> = None<int>();
+  return if (opt.isEmpty()) { 0 }
+    else { opt.get() };
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 0 }) => {}
@@ -121,7 +135,18 @@ fn test_empty_and_get_for_borrow() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\n// This is the same as the one in optutils.vale, just named differently,\n// so its easier to debug.\nfunc borrowGet<T>(opt &Some<T>) &T { &opt.value }\n\nstruct Spaceship { fuel int; }\nexported func main() int {\n  s = Spaceship(42);\n  bork = Some<&Spaceship>(&s);\n  return bork.borrowGet().fuel;\n}\n",
+        r"
+// This is the same as the one in optutils.vale, just named differently,
+// so its easier to debug.
+func borrowGet<T>(opt &Some<T>) &T { &opt.value }
+
+struct Spaceship { fuel int; }
+exported func main() int {
+  s = Spaceship(42);
+  bork = Some<&Spaceship>(&s);
+  return bork.borrowGet().fuel;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}

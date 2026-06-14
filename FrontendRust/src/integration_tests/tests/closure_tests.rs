@@ -209,7 +209,15 @@ pub fn captured_own_is_borrow() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine {\n  hp int;\n}\nexported func main() int {\n  m = Marine(9);\n  return { m.hp }();\n}\n",
+        r"
+struct Marine {
+  hp int;
+}
+exported func main() int {
+  m = Marine(9);
+  return { m.hp }();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -572,7 +580,13 @@ fn mutates_from_inside_a_closure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  x = 4;\n  { set x = x + 1; }();\n  return x;\n}\n",
+        r"
+exported func main() int {
+  x = 4;
+  { set x = x + 1; }();
+  return x;
+}
+",
     );
     {
         let interner = compile.interner;
@@ -719,7 +733,12 @@ fn read_from_inside_a_closure_inside_a_closure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  x = 42;\n  return { { x }() }();\n}\n",
+        r"
+exported func main() int {
+  x = 42;
+  return { { x }() }();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}

@@ -161,7 +161,13 @@ fn lambda_is_reused() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nexported func main() {\n  lam = x => x;\n  lam(4);\n  lam(7);\n}\n";
+    let code = r"
+exported func main() {
+  lam = x => x;
+  lam(4);
+  lam(7);
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -203,7 +209,13 @@ fn lambda_called_with_different_types() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nexported func main() {\n  lam = x => x;\n  lam(4);\n  lam(true);\n}\n";
+    let code = r"
+exported func main() {
+  lam = x => x;
+  lam(4);
+  lam(true);
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -245,7 +257,13 @@ fn curried_lambda() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nexported func main() {\n  lam = x => y => 7;\n  lam(true)(4);\n  lam(true)(\"hello\");\n}\n";
+    let code = r#"
+exported func main() {
+  lam = x => y => 7;
+  lam(true)(4);
+  lam(true)("hello");
+}
+"#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -291,7 +309,12 @@ fn lambda_with_a_type_specified_param() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.arith.*;\nexported func main() int {\n  return (a int) => {+(a,a)}(3);\n}\n";
+    let code = r"
+import v.builtins.arith.*;
+exported func main() int {
+  return (a int) => {+(a,a)}(3);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -359,7 +382,19 @@ fn tests_lambda_and_concept_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.print.*;\nimport v.builtins.drop.*;\nimport v.builtins.str.*;\n\nfunc moo<X, F>(x X, f F)\nwhere func(&F, &X)void, func drop(X)void, func drop(F)void {\n  f(&x);\n}\nexported func main() {\n  moo(\"hello\", { print(_); });\n}\n";
+    let code = r#"
+import v.builtins.print.*;
+import v.builtins.drop.*;
+import v.builtins.str.*;
+
+func moo<X, F>(x X, f F)
+where func(&F, &X)void, func drop(X)void, func drop(F)void {
+  f(&x);
+}
+exported func main() {
+  moo("hello", { print(_); });
+}
+"#;
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -399,7 +434,20 @@ fn lambda_inside_different_function_with_same_name() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport printutils.*;\n\nfunc helperFunc(x int) {\n  { print(x); }();\n}\nfunc helperFunc(x str) {\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
+    let code = r#"
+import printutils.*;
+
+func helperFunc(x int) {
+  { print(x); }();
+}
+func helperFunc(x str) {
+  { print(x); }();
+}
+exported func main() {
+  helperFunc(4);
+  helperFunc("bork");
+}
+"#;
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -444,7 +492,20 @@ fn lambda_inside_template() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.drop.*;\nimport printutils.*;\n\nfunc helperFunc<T>(x T)\nwhere func print(&T)void, func drop(T)void\n{\n  { print(x); }();\n}\nexported func main() {\n  helperFunc(4);\n  helperFunc(\"bork\");\n}\n";
+    let code = r#"
+import v.builtins.drop.*;
+import printutils.*;
+
+func helperFunc<T>(x T)
+where func print(&T)void, func drop(T)void
+{
+  { print(x); }();
+}
+exported func main() {
+  helperFunc(4);
+  helperFunc("bork");
+}
+"#;
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -489,7 +550,17 @@ fn curried_lambda_inside_template() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "import v.builtins.drop.*;\nfunc helper<T>(x &T) &T {\n  lam = a => b => x;\n  return lam(true)(7);\n}\nexported func main() {\n  helper(4);\n  helper(\"bork\");\n}\n";
+    let code = r#"
+import v.builtins.drop.*;
+func helper<T>(x &T) &T {
+  lam = a => b => x;
+  return lam(true)(7);
+}
+exported func main() {
+  helper(4);
+  helper("bork");
+}
+"#;
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });

@@ -69,7 +69,10 @@ where 's: 't,
         target_pointer_types: &[CoordT<'s, 't>],
     ) -> Vec<ReferenceExpressionTE<'s, 't>> {
         if source_exprs.len() != target_pointer_types.len() {
-            panic!("num exprs mismatch, source:\n{:?}\ntarget:\n{:?}", source_exprs, target_pointer_types);
+            panic!(r"num exprs mismatch, source:
+{:?}
+target:
+{:?}", source_exprs, target_pointer_types);
         }
 
         let mut previous_ref_exprs = Vec::new();

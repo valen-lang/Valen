@@ -216,7 +216,18 @@ fn report_when_downcasting_between_unrelated_types() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.as.*;\nimport panicutils.*;\n\ninterface ISpaceship { }\nstruct Spoon { }\n\nexported func main() {\n  ship = __pretend<ISpaceship>();\n  ship.as<Spoon>();\n}\n";
+    let code = r"
+import v.builtins.as.*;
+import panicutils.*;
+
+interface ISpaceship { }
+struct Spoon { }
+
+exported func main() {
+  ship = __pretend<ISpaceship>();
+  ship.as<Spoon>();
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -261,7 +272,14 @@ fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\ninterface AFunction1<P Ref> {\n  func __call(virtual this &AFunction1<P>, a P) int;\n}\nexported func main() {\n  arr = AFunction1<int>((_) => { true });\n}\n";
+    let code = r"
+interface AFunction1<P Ref> {
+  func __call(virtual this &AFunction1<P>, a P) int;
+}
+exported func main() {
+  arr = AFunction1<int>((_) => { true });
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -372,7 +390,16 @@ fn detects_sending_non_citizen_to_citizen() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\ninterface MyInterface {}\nfunc moo<T>(a T)\nwhere implements(T, MyInterface), func drop(T)void\n{ }\nexported func main() {\n  moo(7);\n}\n";
+    let code = r"
+
+interface MyInterface {}
+func moo<T>(a T)
+where implements(T, MyInterface), func drop(T)void
+{ }
+exported func main() {
+  moo(7);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -445,7 +472,15 @@ fn accidentally_mention_type_rune() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc moo<Z>(z &Z) {\n  drop(Z);\n}\n\nexported func main() void {\n  moo(4);\n}\n";
+    let code = r"
+func moo<Z>(z &Z) {
+  drop(Z);
+}
+
+exported func main() void {
+  moo(4);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -491,7 +526,12 @@ fn call_bound_with_wrong_arguments() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc add<X>(i int, x &X) where func str(&X)str {\n  str(true);\n}\n\n";
+    let code = r"
+func add<X>(i int, x &X) where func str(&X)str {
+  str(true);
+}
+
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -582,7 +622,14 @@ fn ambiguous_call() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc add<X>(i int, x &X) { }\nfunc add<X>(x &X, i int) { }\n\nexported func main() void {\n  add(3, 4);\n}\n";
+    let code = r"
+func add<X>(i int, x &X) { }
+func add<X>(x &X, i int) { }
+
+exported func main() void {
+  add(3, 4);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -631,7 +678,12 @@ fn cant_make_non_weakable_extend_a_weakable() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nweakable interface IUnit {}\nstruct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
+    let code = r"
+weakable interface IUnit {}
+struct Muta { hp int; }
+impl IUnit for Muta;
+func main(muta Muta) int  { return 7; }
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -674,7 +726,12 @@ fn cant_make_weakable_extend_a_non_weakable() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\ninterface IUnit {}\nweakable struct Muta { hp int; }\nimpl IUnit for Muta;\nfunc main(muta Muta) int  { return 7; }\n";
+    let code = r"
+interface IUnit {}
+weakable struct Muta { hp int; }
+impl IUnit for Muta;
+func main(muta Muta) int  { return 7; }
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -718,7 +775,14 @@ fn cant_make_weak_ref_to_non_weakable() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nstruct Muta { hp int; }\nexported func main() int {\n  m = Muta(7);\n  w = &&m;\n  return m.hp;\n}\n";
+    let code = r"
+struct Muta { hp int; }
+exported func main() int {
+  m = Muta(7);
+  w = &&m;
+  return m.hp;
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -768,7 +832,19 @@ fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nstruct MyStruct<K, V, H> { }\n\nfunc make<K, V, H>(h H) MyStruct<K, V, H>\nwhere func drop(H)void {\n  return MyStruct<K, V, H>();\n}\n\nexported func main() int {\n  m = make(7);\n  return 0;\n}\n";
+    let code = r"
+struct MyStruct<K, V, H> { }
+
+func make<K, V, H>(h H) MyStruct<K, V, H>
+where func drop(H)void {
+  return MyStruct<K, V, H>();
+}
+
+exported func main() int {
+  m = make(7);
+  return 0;
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());

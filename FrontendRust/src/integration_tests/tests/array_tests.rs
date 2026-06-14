@@ -69,7 +69,15 @@ fn returning_static_array_from_function_and_dotting_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc makeArray() [#5]int { return [#](2, 3, 4, 5, 6); }\nexported func main() int {\n  a = makeArray();\n  x = a.3;\n  [_, _, _, _, _] = a;\n  return x;\n}\n",
+        r"
+func makeArray() [#5]int { return [#](2, 3, 4, 5, 6); }
+exported func main() int {
+  a = makeArray();
+  x = a.3;
+  [_, _, _, _, _] = a;
+  return x;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -111,7 +119,13 @@ fn simple_static_array_and_runtime_index_lookup() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  i = 2;\n  a = [#](2, 3, 4, 5, 6);\n  return a[i];\n}\n",
+        r"
+exported func main() int {
+  i = 2;
+  a = [#](2, 3, 4, 5, 6);
+  return a[i];
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -165,7 +179,14 @@ fn destroy_ssa_of_imms_into_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = [#](13, 14, 15);\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e; });\n  return sum;\n}\n",
+        r"
+exported func main() int {
+  a = [#](13, 14, 15);
+  sum = 0;
+  drop_into(a, &(e) => { set sum = sum + e; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -206,7 +227,14 @@ fn destroy_rsa_of_imms_into_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = Array<imm, int>(3, {13 + _});\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e; });\n  return sum;\n}\n",
+        r"
+exported func main() int {
+  a = Array<imm, int>(3, {13 + _});
+  sum = 0;
+  drop_into(a, &(e) => { set sum = sum + e; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -247,7 +275,15 @@ fn destroy_ssa_of_muts_into_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = [#](Spaceship(13), Spaceship(14), Spaceship(15));\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e.fuel; });\n  return sum;\n}\n",
+        r"
+struct Spaceship { fuel int; }
+exported func main() int {
+  a = [#](Spaceship(13), Spaceship(14), Spaceship(15));
+  sum = 0;
+  drop_into(a, &(e) => { set sum = sum + e.fuel; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -289,7 +325,16 @@ fn destroy_rsa_of_muts_into_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = MakeArray<Spaceship>(3, &{Spaceship(13 + _)});\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e.fuel; });\n  return sum;\n}\n",
+        r"
+import array.make.*;
+struct Spaceship { fuel int; }
+exported func main() int {
+  a = MakeArray<Spaceship>(3, &{Spaceship(13 + _)});
+  sum = 0;
+  drop_into(a, &(e) => { set sum = sum + e.fuel; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -332,7 +377,16 @@ fn migrate_rsa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = Array<mut, Spaceship>(3, &{Spaceship(41 + _)});\n  b = Array<mut, Spaceship>(3);\n  migrate(a, &b);\n  return b[1].fuel;\n}\n",
+        r"
+import array.make.*;
+struct Spaceship { fuel int; }
+exported func main() int {
+  a = Array<mut, Spaceship>(3, &{Spaceship(41 + _)});
+  b = Array<mut, Spaceship>(3);
+  migrate(a, &b);
+  return b[1].fuel;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -375,7 +429,16 @@ fn migrate_ssa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nstruct Spaceship { fuel int; }\nexported func main() int {\n  a = [#3](&{Spaceship(41 + _)});\n  b = Array<mut, Spaceship>(3);\n  migrate(a, &b);\n  return b[1].fuel;\n}\n",
+        r"
+import array.make.*;
+struct Spaceship { fuel int; }
+exported func main() int {
+  a = [#3](&{Spaceship(41 + _)});
+  b = Array<mut, Spaceship>(3);
+  migrate(a, &b);
+  return b[1].fuel;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -418,7 +481,13 @@ fn unspecified_mutability_static_array_from_lambda_defaults_to_mutable() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  i = 3;\n  a = [#5](&{_ * 42});\n  return a[1];\n}\n",
+        r"
+exported func main() int {
+  i = 3;
+  a = [#5](&{_ * 42});
+  return a[1];
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -689,7 +758,14 @@ fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nexported func main() int {\n  i = 3;\n  a = MakeArray<int>(5, &{_ * 42});\n  return a[1];\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  i = 3;
+  a = MakeArray<int>(5, &{_ * 42});
+  return a[1];
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -858,7 +934,15 @@ fn take_arraysequence_as_a_parameter() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc doThings(arr [#5]<imm>int) int {\n  return arr.3;\n}\nexported func main() int {\n  a = #[#](2, 3, 4, 5, 6);\n  return doThings(a);\n}\n",
+        r"
+func doThings(arr [#5]<imm>int) int {
+  return arr.3;
+}
+exported func main() int {
+  a = #[#](2, 3, 4, 5, 6);
+  return doThings(a);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -901,7 +985,19 @@ fn borrow_arraysequence_as_a_parameter() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct MutableStruct {\n  x int;\n}\n\nfunc doThings(arr &[#3]^MutableStruct) int {\n  return arr.2.x;\n}\nexported func main() int {\n  a = [#](MutableStruct(2), MutableStruct(3), MutableStruct(4));\n  return doThings(&a);\n}\n",
+        r"
+struct MutableStruct {
+  x int;
+}
+
+func doThings(arr &[#3]^MutableStruct) int {
+  return arr.2.x;
+}
+exported func main() int {
+  a = [#](MutableStruct(2), MutableStruct(3), MutableStruct(4));
+  return doThings(&a);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
@@ -949,7 +1045,14 @@ fn array_map_with_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc __call(lol int, i int) int { return i; }\n\nexported func main() int {\n  a = #[]int(10, 1337);\n  return a.3;\n}\n",
+        r"
+func __call(lol int, i int) int { return i; }
+
+exported func main() int {
+  a = #[]int(10, 1337);
+  return a.3;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -1011,7 +1114,15 @@ fn new_rsa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = []int(3);\n  a.push(73);\n  a.push(42);\n  a.push(73);\n  return a.1;\n}\n",
+        r"
+exported func main() int {
+  a = []int(3);
+  a.push(73);
+  a.push(42);
+  a.push(73);
+  return a.1;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -1080,7 +1191,16 @@ fn array_map_with_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Lam imm {}\nfunc __call(lam Lam, i int) int { return i; }\n\nexported func main() int\nwhere F Prot = func(Lam, int)int {\n  a = #[]int(10, Lam());\n  return a.3;\n}\n",
+        r"
+struct Lam imm {}
+func __call(lam Lam, i int) int { return i; }
+
+exported func main() int
+where F Prot = func(Lam, int)int {
+  a = #[]int(10, Lam());
+  return a.3;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -1142,7 +1262,17 @@ fn make_array_map_with_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\n\nstruct Lam imm {}\nfunc __call(lam Lam, i int) int { return i; }\n\nexported func main() int {\n  a = MakeArray<int>(10, Lam());\n  return a.3;\n}\n",
+        r"
+import array.make.*;
+
+struct Lam imm {}
+func __call(lam Lam, i int) int { return i; }
+
+exported func main() int {
+  a = MakeArray<int>(10, Lam());
+  return a.3;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -1186,7 +1316,13 @@ fn make_array_map_with_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nexported func main() int {\n  a = MakeArray<int>(10, {_});\n  return a.3;\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  a = MakeArray<int>(10, {_});
+  return a.3;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -1226,7 +1362,24 @@ fn array_map_with_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\n\nsealed interface IThing {\n  func __call(virtual self &IThing, i int) int;\n}\n\nstruct MyThing { }\nfunc __call(self &MyThing, i int) int { i }\n\nimpl IThing for MyThing;\n\nexported func main() int {\n  i IThing = MyThing();\n  a = Array<imm, int>(10, &i);\n  return a.3;\n}\n",
+        r"
+import array.make.*;
+
+sealed interface IThing {
+  func __call(virtual self &IThing, i int) int;
+}
+
+struct MyThing { }
+func __call(self &MyThing, i int) int { i }
+
+impl IThing for MyThing;
+
+exported func main() int {
+  i IThing = MyThing();
+  a = Array<imm, int>(10, &i);
+  return a.3;
+}
+",
     );
     {
         let _coutputs = compile.expect_compiler_outputs();
@@ -1281,7 +1434,14 @@ fn array_map_taking_a_closure_which_captures_something() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() int {\n  x = 7;\n  a = MakeImmArray<int>(10, { _ + x });\n  return a.3;\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  x = 7;
+  a = MakeImmArray<int>(10, { _ + x });
+  return a.3;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 10 }) => {}
@@ -1320,7 +1480,14 @@ fn simple_array_map_with_runtime_index_lookup() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() int {\n  a = MakeImmArray<int>(10, {_});\n  i = 5;\n  return a[i];\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  a = MakeImmArray<int>(10, {_});
+  i = 5;
+  return a[i];
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -1360,7 +1527,11 @@ fn nested_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  return [#]([#](2)).0.0;\n}\n",
+        r"
+exported func main() int {
+  return [#]([#](2)).0.0;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 2 }) => {}
@@ -1399,7 +1570,16 @@ fn two_dimensional_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() int {\n  board =\n      MakeArray<Array<mut, int>>(\n          3,\n          (row) => { MakeArray<int>(3, { row + _ }) });\n  return board.1.2;\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  board =
+      MakeArray<Array<mut, int>>(
+          3,
+          (row) => { MakeArray<int>(3, { row + _ }) });
+  return board.1.2;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -1441,7 +1621,18 @@ fn array_with_capture() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nstruct IntBox {\n  i int;\n}\n\nexported func main() int {\n  box = IntBox(7);\n  board = MakeArray<int>(3, &(col) => { box.i });\n  return board.1;\n}\n",
+        r"
+import array.make.*;
+struct IntBox {
+  i int;
+}
+
+exported func main() int {
+  box = IntBox(7);
+  board = MakeArray<int>(3, &(col) => { box.i });
+  return board.1;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -1485,7 +1676,24 @@ fn capture() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc myFunc<T, F>(generator F) T\nwhere func(&F, int)T, func drop(F)void\n{\n  return generator(9);\n}\n\nstruct IntBox {\n  i int;\n}\n\nexported func main() int {\n  box = IntBox(7);\n  lam = (col) => { box.i };\n  board = myFunc<int>(&lam);\n  return board;\n}\n",
+        r"
+func myFunc<T, F>(generator F) T
+where func(&F, int)T, func drop(F)void
+{
+  return generator(9);
+}
+
+struct IntBox {
+  i int;
+}
+
+exported func main() int {
+  box = IntBox(7);
+  lam = (col) => { box.i };
+  board = myFunc<int>(&lam);
+  return board;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -1537,7 +1745,14 @@ fn mutate_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() int {\n  arr = MakeArray<int>(3, {_});\n  set arr[1] = 1337;\n  return arr.1;\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  arr = MakeArray<int>(3, {_});
+  set arr[1] = 1337;
+  return arr.1;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 1337 }) => {}
@@ -1577,7 +1792,17 @@ fn capture_mutable_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nstruct MyIntIdentity {}\nfunc __call(this &MyIntIdentity, i int) int { return i; }\nexported func main() {\n  m = MyIntIdentity();\n  arr = MakeArray<int>(10, &m);\n  lam = { print(str(arr.6)); };\n  lam();\n}\n",
+        r"
+import array.make.*;
+struct MyIntIdentity {}
+func __call(this &MyIntIdentity, i int) int { return i; }
+exported func main() {
+  m = MyIntIdentity();
+  arr = MakeArray<int>(10, &m);
+  lam = { print(str(arr.6)); };
+  lam();
+}
+",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "6");
 }
@@ -1617,7 +1842,16 @@ fn swap_out_of_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nstruct Goblin { }\n\nexported func main() int {\n  arr = MakeArray<Goblin>(1, i => Goblin());\n  set arr.0 = Goblin();\n  return 4;\n}\n",
+        r"
+import array.make.*;
+struct Goblin { }
+
+exported func main() int {
+  arr = MakeArray<Goblin>(1, i => Goblin());
+  set arr.0 = Goblin();
+  return 4;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
@@ -1660,7 +1894,13 @@ fn test_array_length() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() int {\n  a = MakeArray<int>(11, {_});\n  return len(&a);\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  a = MakeArray<int>(11, {_});
+  return len(&a);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 11 }) => {}
@@ -1698,7 +1938,17 @@ fn map_using_array_construct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nexported func main() int {\n  board = MakeArray<int>(5, {_});\n  result =\n      MakeArray<int>(5, &(i) => {\n        board[i] + 2\n      });\n  return result.2;\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  board = MakeArray<int>(5, {_});
+  result =
+      MakeArray<int>(5, &(i) => {
+        board[i] + 2
+      });
+  return result.2;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
@@ -1742,7 +1992,16 @@ fn map_from_hardcoded_values() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nfunc toArray<N Int, E, SourceM Mutability>(seq &[#N]<SourceM>E) []E\nwhere func clone(&E)E {\n  return MakeArray<E>(N, &{ clone(seq[_]) });\n}\nexported func main() int {\n  return #[#]int(6, 4, 3, 5, 2, 8).toArray()[3];\n}\n",
+        r"
+import array.make.*;
+func toArray<N Int, E, SourceM Mutability>(seq &[#N]<SourceM>E) []E
+where func clone(&E)E {
+  return MakeArray<E>(N, &{ clone(seq[_]) });
+}
+exported func main() int {
+  return #[#]int(6, 4, 3, 5, 2, 8).toArray()[3];
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -1784,7 +2043,16 @@ fn nested_imm_arrays() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nexported func main() int {\n  return #[#]#[]int(\n    #[#]int(6, 60).toImmArray(),\n    #[#]int(4, 40).toImmArray(),\n    #[#]int(3, 30).toImmArray()\n  ).toImmArray()[2][1];\n}\n",
+        r"
+import array.make.*;
+exported func main() int {
+  return #[#]#[]int(
+    #[#]int(6, 60).toImmArray(),
+    #[#]int(4, 40).toImmArray(),
+    #[#]int(3, 30).toImmArray()
+  ).toImmArray()[2][1];
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 30 }) => {}
@@ -1826,7 +2094,15 @@ fn array_foreach() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nimport array.each.*;\nexported func main() int {\n  sum = 0;\n  [#]int(6, 60, 103)&.each(&{ set sum = sum + _; });\n  return sum;\n}\n",
+        r"
+import array.make.*;
+import array.each.*;
+exported func main() int {
+  sum = 0;
+  [#]int(6, 60, 103)&.each(&{ set sum = sum + _; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 169 }) => {}
@@ -1867,7 +2143,12 @@ fn array_has() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.has.*;\nexported func main() bool {\n  return [#]int(6, 60, 103)&.has(103);\n}\n",
+        r"
+import array.has.*;
+exported func main() bool {
+  return [#]int(6, 60, 103)&.has(103);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Bool(VonBool { value: true }) => {}
@@ -1906,7 +2187,16 @@ fn each_on_ssa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport array.make.*;\nimport array.iter.*;\nexported func main() {\n  planets = [#](\"Venus\", \"Earth\", \"Mars\");\n  foreach planet in planets {\n    print(planet);\n  }\n}\n",
+        r#"
+import array.make.*;
+import array.iter.*;
+exported func main() {
+  planets = [#]("Venus", "Earth", "Mars");
+  foreach planet in planets {
+    print(planet);
+  }
+}
+"#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "VenusEarthMars");
 }
@@ -1945,7 +2235,14 @@ fn change_mutability() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import array.make.*;\nexported func main() str {\n  a = MakeArray<str>(10, { str(_) });\n  b = a.toImmArray();\n  return a.3;\n}\n",
+        r"
+import array.make.*;
+exported func main() str {
+  a = MakeArray<str>(10, { str(_) });
+  b = a.toImmArray();
+  return a.3;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Str(VonStr { ref value }) if value == "3" => {}
@@ -1985,7 +2282,13 @@ fn reports_when_making_new_imm_rsa_without_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = #[]int(3);\n  a.push(73);\n  return a.0;\n}\n",
+        r"
+exported func main() int {
+  a = #[]int(3);
+  a.push(73);
+  return a.0;
+}
+",
     );
     match compile.get_compiler_outputs() {
         Err(ICompileErrorT::NewImmRSANeedsCallable { .. }) => {}
@@ -2070,7 +2373,20 @@ fn new_immutable_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  arr = Array<mut, int>(3);\n  arr.push(13);\n  arr.push(14);\n  arr.push(15);\n  immArr = toImmArray(&arr);\n  return immArr[1];\n}\n\nfunc toImmArray<E Ref imm>(arr &[]E) Array<imm, E> {\n  Array<imm, E>(arr.len(), &{ arr[_] })\n}\n",
+        r"
+exported func main() int {
+  arr = Array<mut, int>(3);
+  arr.push(13);
+  arr.push(14);
+  arr.push(15);
+  immArr = toImmArray(&arr);
+  return immArr[1];
+}
+
+func toImmArray<E Ref imm>(arr &[]E) Array<imm, E> {
+  Array<imm, E>(arr.len(), &{ arr[_] })
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 14 }) => {}

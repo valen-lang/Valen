@@ -82,7 +82,12 @@ fn test_returning_empty_seq() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexport () as Tup0;\nexported func main() () {\n  return ();\n}\n",
+        r"
+export () as Tup0;
+exported func main() () {
+  return ();
+}
+",
     );
     let _coutputs = compile.expect_compiler_outputs();
 
@@ -213,7 +218,23 @@ fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() 
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "sealed interface IShip {\n  func getFuel(virtual self &IShip) int;\n}\nstruct Raza { fuel int; }\nimpl IShip for Raza;\nfunc getFuel(self &Raza) int { return self.fuel; }\n\nfunc genericGetFuel<T>(x &T) int\nwhere implements(T, IShip) {\n  return x.getFuel();\n}\n\nexported func main() int {\n  return genericGetFuel(&Raza(42));\n}\n",
+        r"
+sealed interface IShip {
+  func getFuel(virtual self &IShip) int;
+}
+struct Raza { fuel int; }
+impl IShip for Raza;
+func getFuel(self &Raza) int { return self.fuel; }
+
+func genericGetFuel<T>(x &T) int
+where implements(T, IShip) {
+  return x.getFuel();
+}
+
+exported func main() int {
+  return genericGetFuel(&Raza(42));
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -347,7 +368,26 @@ fn upcasting_in_a_generic_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "func upcast<SuperKind Kind, SubType Ref>(left SubType) SuperType\nwhere O Ownership,\n  SubKind Kind,\n  SuperType Ref = Ref[O, SuperKind],\n  SubType Ref = Ref[O, SubKind],\n  implements(SubType, SuperType)\n{\n  left\n}\n\nsealed interface IShip  {}\nstruct Serenity {}\nimpl IShip for Serenity;\n\nexported func main() {\n  ship &IShip = upcast<IShip>(&Serenity());\n}\n\n",
+        r"
+func upcast<SuperKind Kind, SubType Ref>(left SubType) SuperType
+where O Ownership,
+  SubKind Kind,
+  SuperType Ref = Ref[O, SuperKind],
+  SubType Ref = Ref[O, SubKind],
+  implements(SubType, SuperType)
+{
+  left
+}
+
+sealed interface IShip  {}
+struct Serenity {}
+impl IShip for Serenity;
+
+exported func main() {
+  ship &IShip = upcast<IShip>(&Serenity());
+}
+
+",
     );
 
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
@@ -456,7 +496,14 @@ fn call_array_without_element_type() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = Array<imm>(3, {13 + _});\n  sum = 0;\n  drop_into(a, &(e) => { set sum = sum + e; });\n  return sum;\n}\n",
+        r"
+exported func main() int {
+  a = Array<imm>(3, {13 + _});
+  sum = 0;
+  drop_into(a, &(e) => { set sum = sum + e; });
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -497,7 +544,12 @@ fn make_array_without_type() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = #[](10, {_});\n  return a.3;\n}\n",
+        r"
+exported func main() int {
+  a = #[](10, {_});
+  return a.3;
+}
+",
     );
 
     let _coutputs = compile.expect_compiler_outputs();
@@ -539,7 +591,21 @@ fn borrowing_to_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\n\nfunc toArray<E>(list &List<E>) []<mut>&E {\n  return []&E(list.len(), { list.get(_) });\n}\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.toArray()[1];\n}\n",
+        r"
+import list.*;
+
+func toArray<E>(list &List<E>) []<mut>&E {
+  return []&E(list.len(), { list.get(_) });
+}
+
+exported func main() int {
+  l = List<int>();
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  return l.toArray()[1];
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}

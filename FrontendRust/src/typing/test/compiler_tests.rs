@@ -199,7 +199,11 @@ fn simple_local() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "exported func main() int {\n  a = 42;\n  return a;\n}";
+    let code = r"
+exported func main() int {
+  a = 42;
+  return a;
+}";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -234,7 +238,11 @@ fn tests_panic_return_type() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "import v.builtins.panic.*;\nexported func main() int {\n  x = { __vbi_panic() }();\n}";
+    let code = r"
+import v.builtins.panic.*;
+exported func main() int {
+  x = { __vbi_panic() }();
+}";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -429,7 +437,11 @@ fn simple_struct_read() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "exported struct Moo { hp int; }\nexported func main(moo &Moo) int {\n  return moo.hp;\n}";
+    let code = r"
+exported struct Moo { hp int; }
+exported func main(moo &Moo) int {
+  return moo.hp;
+}";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -3359,7 +3371,16 @@ fn test_return_from_inside_if() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "import v.builtins.panic.*;\nexported func main() int {\n  if (true) {\n    return 7;\n  } else {\n    return 9;\n  }\n  __vbi_panic();\n}";
+    let code = r"
+import v.builtins.panic.*;
+exported func main() int {
+  if (true) {
+    return 7;
+  } else {
+    return 9;
+  }
+  __vbi_panic();
+}";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -3600,7 +3621,11 @@ fn reports_when_exported_struct_depends_on_non_exported_member() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "exported struct Firefly imm {\n  raza Raza;\n}\nstruct Raza imm { }";
+    let code = r"
+exported struct Firefly imm {
+  raza Raza;
+}
+struct Raza imm { }";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -4380,7 +4405,11 @@ fn report_when_multiple_types_in_array() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "exported func main() int {\n  arr = [#](true, 42);\n  return arr.1;\n}";
+    let code = r"
+exported func main() int {
+  arr = [#](true, 42);
+  return arr.1;
+}";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -4424,7 +4453,13 @@ fn report_when_abstract_method_defined_outside_open_interface() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "import v.builtins.panic.*;\ninterface IBlah { }\nabstract func bork(virtual moo &IBlah);\nexported func main() {\n  bork(__vbi_panic());\n}";
+    let code = r"
+import v.builtins.panic.*;
+interface IBlah { }
+abstract func bork(virtual moo &IBlah);
+exported func main() {
+  bork(__vbi_panic());
+}";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -4462,7 +4497,15 @@ fn report_when_imm_struct_has_varying_member() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}\nexported func main() {\n  ship = Spaceship(\"Serenity\", 2);\n  println(ship.name);\n}";
+    let code = r#"
+struct Spaceship imm {
+  name! str;
+  numWings int;
+}
+exported func main() {
+  ship = Spaceship("Serenity", 2);
+  println(ship.name);
+}"#;
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -4503,7 +4546,11 @@ fn report_imm_mut_mismatch_for_generic_type() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "struct MyImmContainer<T Ref> imm\nwhere func drop(T)void { value T; }\nstruct MyMutStruct { }\nexported func main() { x = MyImmContainer<MyMutStruct>(MyMutStruct()); }";
+    let code = r"
+struct MyImmContainer<T Ref> imm
+where func drop(T)void { value T; }
+struct MyMutStruct { }
+exported func main() { x = MyImmContainer<MyMutStruct>(MyMutStruct()); }";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());
@@ -4610,7 +4657,11 @@ fn report_when_imm_contains_varying_member() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}";
+    let code = r"
+struct Spaceship imm {
+  name! str;
+  numWings int;
+}";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(get_package_to_resource_resolver());

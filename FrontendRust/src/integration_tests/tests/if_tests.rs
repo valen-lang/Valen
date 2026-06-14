@@ -65,7 +65,11 @@ fn simple_true_branch_returning_an_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  return if (true) { 3 } else { 5 };\n}\n",
+        r"
+exported func main() int {
+  return if (true) { 3 } else { 5 };
+}
+",
     );
     {
         let test_str = scout_arena.intern_str("test");
@@ -156,7 +160,11 @@ fn simple_false_branch_returning_an_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  return if (false) { 3 } else { 5 };\n}\n",
+        r"
+exported func main() int {
+  return if (false) { 3 } else { 5 };
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -194,7 +202,11 @@ fn ladder() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  return if (false) { 3 } else if (true) { 5 } else { 7 };\n}\n",
+        r"
+exported func main() int {
+  return if (false) { 3 } else if (true) { 5 } else { 7 };
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -269,7 +281,19 @@ fn moving_from_inside_if() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Marine { x int; }\nexported func main() int {\n  m = Marine(5);\n  return if (false) {\n      [x] = m;\n      x\n    } else {\n      [y] = m;\n      y\n    };\n}\n",
+        r"
+struct Marine { x int; }
+exported func main() int {
+  m = Marine(5);
+  return if (false) {
+      [x] = m;
+      x
+    } else {
+      [y] = m;
+      y
+    };
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -349,7 +373,15 @@ fn if_with_complex_condition() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine { x int; }\nexported func main() str {\n  m = Marine(5);\n  return if (m.x == 5) { \"#\" }\n  else if (0 == 0) { \"?\" }\n  else { \".\" };\n}\n",
+        r##"
+struct Marine { x int; }
+exported func main() str {
+  m = Marine(5);
+  return if (m.x == 5) { "#" }
+  else if (0 == 0) { "?" }
+  else { "." };
+}
+"##,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -410,7 +442,12 @@ fn if_with_condition_declaration() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  return if x = 42; x < 50 { x }\n    else { 73 };\n}\n",
+        r"
+exported func main() int {
+  return if x = 42; x < 50 { x }
+    else { 73 };
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -449,7 +486,28 @@ fn ret_from_inside_if_will_destroy_locals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\n#!DeriveStructDrop\nstruct Marine { hp int; }\nfunc drop(marine Marine) void {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() int {\n  m = Marine(5);\n  x =\n    if (true) {\n      println(\"In then!\");\n      return 7;\n    } else {\n      println(\"In else!\");\n      m.hp\n    };\n  println(\"In rest!\");\n  return x;\n}\n",
+        r#"
+import printutils.*;
+#!DeriveStructDrop
+struct Marine { hp int; }
+func drop(marine Marine) void {
+  println("Destroying marine!");
+  Marine[weapon] = marine;
+}
+exported func main() int {
+  m = Marine(5);
+  x =
+    if (true) {
+      println("In then!");
+      return 7;
+    } else {
+      println("In else!");
+      m.hp
+    };
+  println("In rest!");
+  return x;
+}
+"#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In then!\nDestroying marine!\n");
 }
@@ -500,13 +558,38 @@ fn can_continue_if_other_branch_would_have_returned() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\n\n#!DeriveStructDrop\nstruct Marine { hp int; }\nfunc drop(marine Marine) void {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() int {\n  m = Marine(5);\n  x =\n    if (false) {\n      println(\"In then!\");\n      return 7;\n    } else {\n      println(\"In else!\");\n      m.hp\n    };\n  println(\"In rest!\");\n  return x;\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Marine { hp int; }
+func drop(marine Marine) void {
+  println("Destroying marine!");
+  Marine[weapon] = marine;
+}
+exported func main() int {
+  m = Marine(5);
+  x =
+    if (false) {
+      println("In then!");
+      return 7;
+    } else {
+      println("In else!");
+      m.hp
+    };
+  println("In rest!");
+  return x;
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
         let _main = coutputs.lookup_function_by_str("main");
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In else!\nIn rest!\nDestroying marine!\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), r"In else!
+In rest!
+Destroying marine!
+");
 }
 /*
   test("Can continue if other branch would have returned") {
@@ -558,13 +641,39 @@ fn destructure_inside_if() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nstruct Bork {\n  num int;\n}\nstruct Moo {\n  bork Bork;\n}\n\nexported func main() {\n  zork = 0;\n  while (zork < 4) {\n    moo = Moo(Bork(5));\n    if (true) {\n      [bork] = moo;\n      println(bork.num);\n    } else {\n      drop(moo);\n    }\n    set zork = zork + 1;\n  }\n}\n",
+        r"
+import printutils.*;
+struct Bork {
+  num int;
+}
+struct Moo {
+  bork Bork;
+}
+
+exported func main() {
+  zork = 0;
+  while (zork < 4) {
+    moo = Moo(Bork(5));
+    if (true) {
+      [bork] = moo;
+      println(bork.num);
+    } else {
+      drop(moo);
+    }
+    set zork = zork + 1;
+  }
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
         let _main = coutputs.lookup_function_by_str("main");
     }
-    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "5\n5\n5\n5\n");
+    assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), r"5
+5
+5
+5
+");
 }
 /*
   test("Destructure inside if") {
@@ -648,7 +757,19 @@ fn if_with_panics_and_rets() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  a = 7;\n  if false {\n    panic(\"lol\");\n    return 73;\n  } else {\n    return 42;\n  }\n  return 73;\n}\n\n",
+        r#"
+exported func main() int {
+  a = 7;
+  if false {
+    panic("lol");
+    return 73;
+  } else {
+    return 42;
+  }
+  return 73;
+}
+
+"#,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -694,7 +815,18 @@ fn toast() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  a = 0;\n  if (a == 2) {\n    return 71;\n  } else if (a == 5) {\n    return 73;\n  } else {\n    return 42;\n  }\n}\n",
+        r"
+exported func main() int {
+  a = 0;
+  if (a == 2) {
+    return 71;
+  } else if (a == 5) {
+    return 73;
+  } else {
+    return 42;
+  }
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();

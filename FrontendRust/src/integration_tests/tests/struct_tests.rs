@@ -40,7 +40,12 @@ fn make_empty_imm_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine imm {}\nexported func main() {\n  Marine();\n}\n",
+        r"
+struct Marine imm {}
+exported func main() {
+  Marine();
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -76,7 +81,12 @@ fn make_imm_struct_with_one_member() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine imm { hp int; }\nexported func main() {\n  Marine(7);\n}\n",
+        r"
+struct Marine imm { hp int; }
+exported func main() {
+  Marine(7);
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -112,7 +122,13 @@ fn make_nested_imm_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Weapon imm { ammo int; }\nstruct Marine imm { hp int; weapon Weapon; }\nexported func main() {\n  Marine(5, Weapon(7));\n}\n",
+        r"
+struct Weapon imm { ammo int; }
+struct Marine imm { hp int; weapon Weapon; }
+exported func main() {
+  Marine(5, Weapon(7));
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -149,7 +165,12 @@ fn make_empty_mut_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine {}\nexported func main() {\n  Marine();\n}\n",
+        r"
+struct Marine {}
+exported func main() {
+  Marine();
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -219,7 +240,12 @@ fn make_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine { hp int; }\nexported func main() {\n  Marine(9);\n}\n",
+        r"
+struct Marine { hp int; }
+exported func main() {
+  Marine(9);
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -321,7 +347,17 @@ fn normal_destructure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine {\n  hp int;\n  ammo int;\n}\nexported func main() int {\n  m = Marine(4, 7);\n  Marine[hp, ammo] = m;\n  return ammo;\n}\n",
+        r"
+struct Marine {
+  hp int;
+  ammo int;
+}
+exported func main() int {
+  m = Marine(4, 7);
+  Marine[hp, ammo] = m;
+  return ammo;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 7 }) => {}
@@ -365,7 +401,17 @@ fn sugar_destructure() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "struct Marine {\n  hp int;\n  ammo int;\n}\nexported func main() int {\n  m = Marine(4, 7);\n  destruct m;\n  return 9;\n}\n",
+        r"
+struct Marine {
+  hp int;
+  ammo int;
+}
+exported func main() int {
+  m = Marine(4, 7);
+  destruct m;
+  return 9;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -409,7 +455,27 @@ fn destroy_members_at_right_times() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\n\n#!DeriveStructDrop\nstruct Weapon { }\nfunc drop(weapon Weapon) {\n  println(\"Destroying weapon!\");\n  Weapon[ ] = weapon;\n}\n#!DeriveStructDrop\nstruct Marine {\n  weapon Weapon;\n}\nfunc drop(marine Marine) {\n  println(\"Destroying marine!\");\n  Marine[weapon] = marine;\n}\nexported func main() {\n  Marine(Weapon());\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Weapon { }
+func drop(weapon Weapon) {
+  println("Destroying weapon!");
+  Weapon[ ] = weapon;
+}
+#!DeriveStructDrop
+struct Marine {
+  weapon Weapon;
+}
+func drop(marine Marine) {
+  println("Destroying marine!");
+  Marine[weapon] = marine;
+}
+exported func main() {
+  Marine(Weapon());
+}
+"#,
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying marine!\nDestroying weapon!\n");
 }
@@ -510,7 +576,27 @@ fn panic_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.panic.*;\nimport v.builtins.drop.*;\n\nsealed interface XOpt<T Ref>\nwhere func drop(T)void {\n  func get(virtual opt &XOpt<T>) &T;\n}\n\nstruct XNone<T Ref> where func drop(T)void  { }\nimpl<T> XOpt<T> for XNone<T>;\n\nfunc get<T>(opt &XNone<T>) &T {\n  __vbi_panic();\n}\n\nexported func main() int {\n  m XOpt<int> = XNone<int>();\n  return m.get();\n}\n      ",
+        r"
+import v.builtins.panic.*;
+import v.builtins.drop.*;
+
+sealed interface XOpt<T Ref>
+where func drop(T)void {
+  func get(virtual opt &XOpt<T>) &T;
+}
+
+struct XNone<T Ref> where func drop(T)void  { }
+impl<T> XOpt<T> for XNone<T>;
+
+func get<T>(opt &XNone<T>) &T {
+  __vbi_panic();
+}
+
+exported func main() int {
+  m XOpt<int> = XNone<int>();
+  return m.get();
+}
+      ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()) {
         Err(VmRuntimeErrorV::PanicException(_)) => {}
@@ -553,7 +639,21 @@ fn panic_function() {
 // mig: fn odmfrc
 #[test]
 fn odmfrc() {
-    let code = "\nimport v.builtins.opt.*;\n\nstruct _X { }\nfunc __call(self &_X) int { 0 }\n\nstruct _Y<H>\nwhere func(&H)int, func drop(H)void {\n  hasher H;\n}\n\nstruct _Z {\n  idByName _Y<_X>;\n}\n    ";
+    let code = r"
+import v.builtins.opt.*;
+
+struct _X { }
+func __call(self &_X) int { 0 }
+
+struct _Y<H>
+where func(&H)int, func drop(H)void {
+  hasher H;
+}
+
+struct _Z {
+  idByName _Y<_X>;
+}
+    ";
 
     let replacements_set: Vec<indexmap::IndexMap<&str, &str>> = scrambles(&{
         let mut m = indexmap::IndexMap::new();

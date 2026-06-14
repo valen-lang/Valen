@@ -45,7 +45,11 @@ fn simple_string() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() str {\n  return \"sprogwoggle\";\n}\n",
+        r#"
+exported func main() str {
+  return "sprogwoggle";
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -94,7 +98,11 @@ fn empty_string() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() str {\n  return \"\";\n}\n",
+        r#"
+exported func main() str {
+  return "";
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -143,7 +151,11 @@ fn string_with_escapes() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() str {\n  return \"sprog\\nwoggle\";\n}\n",
+        r#"
+exported func main() str {
+  return "sprog\nwoggle";
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -429,7 +441,53 @@ fn slice_a_slice() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import panicutils.*;\nimport printutils.*;\n\nstruct StrSlice imm {\n  string str;\n  begin int;\n  end int;\n}\nfunc newStrSlice(string str, begin int, end int) StrSlice {\n  vassert(begin >= 0, \"slice begin was negative!\");\n  vassert(end >= 0, \"slice end was negative!\");\n  vassert(begin <= string.len(), \"slice begin was more than length!\");\n  vassert(end <= string.len(), \"slice end was more than length!\");\n  vassert(end >= begin, \"slice end was before begin!\");\n  return StrSlice(string, begin, end);\n}\n\nfunc slice(s str) StrSlice {\n  return newStrSlice(s, 0, s.len());\n}\n\nfunc slice(s str, begin int) StrSlice { return s.slice().slice(begin); }\nfunc slice(s StrSlice, begin int) StrSlice {\n  newBegin = s.begin + begin;\n  vassert(newBegin <= s.string.len(), \"slice begin is more than string length!\");\n  return newStrSlice(s.string, newBegin, s.end);\n}\n\nfunc len(s StrSlice) int {\n  return s.end - s.begin;\n}\n\nfunc slice(s str, begin int, end int) StrSlice {\n  return newStrSlice(s, begin, end);\n}\n\nfunc slice(s StrSlice, begin int, end int) StrSlice {\n  newGlyphBeginOffset = s.begin + begin;\n  newGlyphEndOffset = s.begin + end;\n  return newStrSlice(s.string, newGlyphBeginOffset, newGlyphEndOffset);\n}\n\nexported func main() int {\n  return \"hello\".slice().slice(1, 4).len();\n}\n",
+        r#"
+import panicutils.*;
+import printutils.*;
+
+struct StrSlice imm {
+  string str;
+  begin int;
+  end int;
+}
+func newStrSlice(string str, begin int, end int) StrSlice {
+  vassert(begin >= 0, "slice begin was negative!");
+  vassert(end >= 0, "slice end was negative!");
+  vassert(begin <= string.len(), "slice begin was more than length!");
+  vassert(end <= string.len(), "slice end was more than length!");
+  vassert(end >= begin, "slice end was before begin!");
+  return StrSlice(string, begin, end);
+}
+
+func slice(s str) StrSlice {
+  return newStrSlice(s, 0, s.len());
+}
+
+func slice(s str, begin int) StrSlice { return s.slice().slice(begin); }
+func slice(s StrSlice, begin int) StrSlice {
+  newBegin = s.begin + begin;
+  vassert(newBegin <= s.string.len(), "slice begin is more than string length!");
+  return newStrSlice(s.string, newBegin, s.end);
+}
+
+func len(s StrSlice) int {
+  return s.end - s.begin;
+}
+
+func slice(s str, begin int, end int) StrSlice {
+  return newStrSlice(s, begin, end);
+}
+
+func slice(s StrSlice, begin int, end int) StrSlice {
+  newGlyphBeginOffset = s.begin + begin;
+  newGlyphEndOffset = s.begin + end;
+  return newStrSlice(s.string, newGlyphBeginOffset, newGlyphEndOffset);
+}
+
+exported func main() int {
+  return "hello".slice().slice(1, 4).len();
+}
+"#,
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}

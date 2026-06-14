@@ -186,7 +186,11 @@ fn type_simple_generic_struct() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo<T> {\n  bork T;\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+struct Moo<T> {
+  bork T;
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let _astrouts = compilation.expect_astrouts();
@@ -211,7 +215,14 @@ fn template_call_recursively_evaluate() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct Moo<T> {\n  bork T;\n}\nstruct Bork<T> {\n  x Moo<T>;\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+struct Moo<T> {
+  bork T;
+}
+struct Bork<T> {
+  x Moo<T>;
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let astrouts = compilation.expect_astrouts();
@@ -300,7 +311,11 @@ fn type_simple_generic_interface_method() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface Moo<T> where T Ref {\n  func bork(virtual self &Moo<T>) int;\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+interface Moo<T> where T Ref {
+  func bork(virtual self &Moo<T>) int;
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let _astrouts = compilation.expect_astrouts();
@@ -325,7 +340,13 @@ fn infer_generic_type_through_param_type_template_call() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["struct List<T> {\n  moo T;\n}\nexported func moo<T>(x List<T>) {\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+struct List<T> {
+  moo T;
+}
+exported func moo<T>(x List<T>) {
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let astrouts = compilation.expect_astrouts();
@@ -365,7 +386,12 @@ fn test_evaluate_pack() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<T RefList>()\nwhere T = Refs(int, bool)\n{\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+func moo<T RefList>()
+where T = Refs(int, bool)
+{
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let astrouts = compilation.expect_astrouts();
@@ -407,7 +433,12 @@ fn test_infer_pack_from_result() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<T>()\nwhere func moo(T, bool)str\n{\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+func moo<T>()
+where func moo(T, bool)str
+{
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let astrouts = compilation.expect_astrouts();
@@ -446,7 +477,12 @@ fn test_infer_pack_from_empty_result() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["func moo<P RefList>()\nwhere P = Refs(), Prot[P, str]\n{\n}\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+func moo<P RefList>()
+where P = Refs(), Prot[P, str]
+{
+}
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let astrouts = compilation.expect_astrouts();
@@ -504,7 +540,13 @@ fn type_simple_impl() {
     let scout_keywords = Keywords::new_for_scout(&scout_arena);
     let parse_arena = ParseArena::new(&parser_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec!["interface IMoo {\n}\nstruct Moo {\n}\nimpl IMoo for Moo;\n".to_string()])
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![r"
+interface IMoo {
+}
+struct Moo {
+}
+impl IMoo for Moo;
+".to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let mut compilation = setup_test(&scout_arena, &scout_keywords, &parser_keywords, &parse_arena, &resolver);
     let _astrouts = compilation.expect_astrouts();

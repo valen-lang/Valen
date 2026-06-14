@@ -43,7 +43,11 @@ fn tests_single_expression_and_single_statement_functions_returns() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct MyThing { value int; }\nfunc moo() MyThing { return MyThing(4); }\nexported func main() { moo(); }\n      ",
+        r"
+struct MyThing { value int; }
+func moo() MyThing { return MyThing(4); }
+exported func main() { moo(); }
+      ",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -77,7 +81,15 @@ fn tests_calling_a_templated_struct_constructor() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\n#!DeriveStructDrop\nstruct MySome<T Ref> { value T; }\n\nexported func main() int {\n  [x] = MySome<int>(4);\n  return x;\n}\n",
+        r"
+#!DeriveStructDrop
+struct MySome<T Ref> { value T; }
+
+exported func main() int {
+  [x] = MySome<int>(4);
+  return x;
+}
+",
     );
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -115,7 +127,21 @@ fn test_array_push_pop_len_capacity_drop() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport castutils.*;\nimport printutils.*;\nimport array.make.*;\n\nexported func main() int {\n  arr = Array<mut, int>(9);\n  arr.push(420);\n  arr.push(421);\n  arr.push(422);\n  arr.len();\n  return arr.capacity();\n  // implicit drop with pops\n}\n",
+        r"
+import castutils.*;
+import printutils.*;
+import array.make.*;
+
+exported func main() int {
+  arr = Array<mut, int>(9);
+  arr.push(420);
+  arr.push(421);
+  arr.push(422);
+  arr.len();
+  return arr.capacity();
+  // implicit drop with pops
+}
+",
     );
     {
         let _coutputs = compile.expect_compiler_outputs();
@@ -166,7 +192,17 @@ fn test_int_generic() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Vec<N Int, T>\n{\n  values [#N]<imm>T;\n}\n\nexported func main() int {\n  v = Vec<3, int>(#[#](3, 4, 5));\n  return v.values.2;\n}\n",
+        r"
+struct Vec<N Int, T>
+{
+  values [#N]<imm>T;
+}
+
+exported func main() int {
+  v = Vec<3, int>(#[#](3, 4, 5));
+  return v.values.2;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -273,7 +309,12 @@ fn tests_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  a = 7;\n  return { a }();\n}\n",
+        r"
+exported func main() int {
+  a = 7;
+  return { a }();
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -309,7 +350,14 @@ fn tests_generic_with_a_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc genFunc<T>(a &T) &T {\n  return { a }();\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+        r"
+func genFunc<T>(a &T) &T {
+  return { a }();
+}
+exported func main() int {
+  genFunc(7)
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -348,7 +396,15 @@ fn tests_generic_s_lambda_calling_parent_function_s_bound() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc genFunc<T>(a &T)\nwhere func print(&T)void {\n  { print(a); }()\n}\nexported func main() {\n  genFunc(\"hello\");\n}\n",
+        r#"
+func genFunc<T>(a &T)
+where func print(&T)void {
+  { print(a); }()
+}
+exported func main() {
+  genFunc("hello");
+}
+"#,
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -389,7 +445,14 @@ fn tests_generic_with_a_polymorphic_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc genFunc<T>(a &T) &T {\n  return (x => a)(true);\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+        r"
+func genFunc<T>(a &T) &T {
+  return (x => a)(true);
+}
+exported func main() int {
+  genFunc(7)
+}
+",
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -429,7 +492,16 @@ fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc genFunc<T>(a &T) &T {\n  lam = (x => a);\n  lam(true);\n  return lam(\"hello\");\n}\nexported func main() int {\n  genFunc(7)\n}\n",
+        r#"
+func genFunc<T>(a &T) &T {
+  lam = (x => a);
+  lam(true);
+  return lam("hello");
+}
+exported func main() int {
+  genFunc(7)
+}
+"#,
     );
     compile.run_primitive_args(Vec::new()).unwrap();
 }
@@ -550,7 +622,10 @@ fn test_generic_param_default() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc bork<N Int = 42>() int { return N; }\nexported func main() int { bork() }\n",
+        r"
+func bork<N Int = 42>() int { return N; }
+exported func main() int { bork() }
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -874,7 +949,23 @@ fn tests_generic_recursion() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nfunc factorial<T>(one T, x T) T\nwhere func isZero(&T)bool, func *(&T, &T)T, func -(&T, &T)T, func drop(T)void {\n  return if isZero(&x) {\n      one\n    } else {\n      q = &one;\n      x * factorial(one, x - q)\n    };\n}\n\nfunc isZero(x int) bool { x == 0 }\n\nexported func main() int {\n  return factorial(1, 5);\n}\n",
+        r"
+func factorial<T>(one T, x T) T
+where func isZero(&T)bool, func *(&T, &T)T, func -(&T, &T)T, func drop(T)void {
+  return if isZero(&x) {
+      one
+    } else {
+      q = &one;
+      x * factorial(one, x - q)
+    };
+}
+
+func isZero(x int) bool { x == 0 }
+
+exported func main() int {
+  return factorial(1, 5);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 120 }) => {}

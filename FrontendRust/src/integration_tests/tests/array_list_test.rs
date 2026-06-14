@@ -49,7 +49,36 @@ fn simple_array_list_no_optionals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport v.builtins.migrate.*;\n\n#!DeriveStructDrop\nstruct List<E Ref> {\n  array! []<mut>E;\n}\nfunc drop<E>(self List<E>)\nwhere func drop(E)void {\n  [array] = self;\n  drop(array);\n}\nfunc len<E>(list &List<E>) int { return len(&list.array); }\nfunc add<E>(list &List<E>, newElement E) {\n  oldArray = set list.array = Array<mut, E>(len(&list) + 1);\n  migrate(oldArray, list.array);\n  list.array.push(newElement);\n}\nfunc get<E>(list &List<E>, index int) &E {\n  a = list.array;\n  return a[index];\n}\nexported func main() int {\n  l = List<int>(Array<mut, int>(0));\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n",
+        r"
+import v.builtins.migrate.*;
+
+#!DeriveStructDrop
+struct List<E Ref> {
+  array! []<mut>E;
+}
+func drop<E>(self List<E>)
+where func drop(E)void {
+  [array] = self;
+  drop(array);
+}
+func len<E>(list &List<E>) int { return len(&list.array); }
+func add<E>(list &List<E>, newElement E) {
+  oldArray = set list.array = Array<mut, E>(len(&list) + 1);
+  migrate(oldArray, list.array);
+  list.array.push(newElement);
+}
+func get<E>(list &List<E>, index int) &E {
+  a = list.array;
+  return a[index];
+}
+exported func main() int {
+  l = List<int>(Array<mut, int>(0));
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  return l.get(1);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -112,7 +141,18 @@ fn doubling_array_list() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport list.*;\n\nexported func main() int {\n  l = List<int>(Array<mut, int>(0));\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n\n",
+        r"
+import list.*;
+
+exported func main() int {
+  l = List<int>(Array<mut, int>(0));
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  return l.get(1);
+}
+
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -157,7 +197,18 @@ fn array_list_zero_constructor() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.get(1);\n}\n\n",
+        r"
+import list.*;
+
+exported func main() int {
+  l = List<int>();
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  return l.get(1);
+}
+
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -201,7 +252,17 @@ fn array_list_len() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  return l.len();\n}\n",
+        r"
+import list.*;
+
+exported func main() int {
+  l = List<int>();
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  return l.len();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 3 }) => {}
@@ -244,7 +305,18 @@ fn array_list_set() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\n\nexported func main() int {\n  l = List<int>();\n  add(&l, 5);\n  add(&l, 9);\n  add(&l, 7);\n  set(&l, 1, 11);\n  return l.get(1);\n}\n",
+        r"
+import list.*;
+
+exported func main() int {
+  l = List<int>();
+  add(&l, 5);
+  add(&l, 9);
+  add(&l, 7);
+  set(&l, 1, 11);
+  return l.get(1);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 11 }) => {}
@@ -288,7 +360,22 @@ fn array_list_with_optionals_with_mutable_element() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  l =\n      List<Marine>(\n          Array<mut, Marine>(\n              0,\n              (index) => { Marine(index) }));\n  add(&l, Marine(5));\n  add(&l, Marine(9));\n  add(&l, Marine(7));\n  return l.get(1).hp;\n}\n",
+        r"
+import list.*;
+struct Marine { hp int; }
+
+exported func main() int {
+  l =
+      List<Marine>(
+          Array<mut, Marine>(
+              0,
+              (index) => { Marine(index) }));
+  add(&l, Marine(5));
+  add(&l, Marine(9));
+  add(&l, Marine(7));
+  return l.get(1).hp;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -336,7 +423,20 @@ fn mutate_mutable_from_in_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  m = Marine(6);\n  lam = {\n    set m = Marine(9);\n  };\n  lam();\n  lam();\n  return m.hp;\n}\n",
+        r"
+import list.*;
+struct Marine { hp int; }
+
+exported func main() int {
+  m = Marine(6);
+  lam = {
+    set m = Marine(9);
+  };
+  lam();
+  lam();
+  return m.hp;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -406,7 +506,19 @@ fn move_mutable_from_in_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\nstruct Marine { hp int; }\n\nexported func main() int {\n  m Opt<Marine> = Some(Marine(6));\n  lam = {\n    m2 = (set m = None<Marine>()).get();\n    m2.hp\n  };\n  return lam();\n}\n",
+        r"
+import list.*;
+struct Marine { hp int; }
+
+exported func main() int {
+  m Opt<Marine> = Some(Marine(6));
+  lam = {
+    m2 = (set m = None<Marine>()).get();
+    m2.hp
+  };
+  return lam();
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -471,7 +583,25 @@ fn remove_from_middle() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\nimport panicutils.*;\nstruct Marine { hp int; }\n\nexported func main() {\n  l = List<Marine>();\n  add(&l, Marine(5));\n  add(&l, Marine(7));\n  add(&l, Marine(9));\n  add(&l, Marine(11));\n  add(&l, Marine(13));\n  l.remove(2);\n  vassert(l.get(0).hp == 5);\n  vassert(l.get(1).hp == 7);\n  vassert(l.get(2).hp == 11);\n  vassert(l.get(3).hp == 13);\n}\n",
+        r"
+import list.*;
+import panicutils.*;
+struct Marine { hp int; }
+
+exported func main() {
+  l = List<Marine>();
+  add(&l, Marine(5));
+  add(&l, Marine(7));
+  add(&l, Marine(9));
+  add(&l, Marine(11));
+  add(&l, Marine(13));
+  l.remove(2);
+  vassert(l.get(0).hp == 5);
+  vassert(l.get(1).hp == 7);
+  vassert(l.get(2).hp == 11);
+  vassert(l.get(3).hp == 13);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
@@ -519,7 +649,20 @@ fn remove_from_beginning() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import list.*;\nimport panicutils.*;\nstruct Marine { hp int; }\n\nexported func main() {\n  l = List<Marine>();\n  add(&l, Marine(5));\n  add(&l, Marine(7));\n  l.remove(0);\n  l.remove(0);\n  vassert(l.len() == 0);\n}\n",
+        r"
+import list.*;
+import panicutils.*;
+struct Marine { hp int; }
+
+exported func main() {
+  l = List<Marine>();
+  add(&l, Marine(5));
+  add(&l, Marine(7));
+  l.remove(0);
+  l.remove(0);
+  vassert(l.len() == 0);
+}
+",
     );
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }

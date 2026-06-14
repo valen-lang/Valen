@@ -51,7 +51,13 @@ fn empty_block() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  block {\n  }\n  return 3;\n}\n",
+        r"
+exported func main() int {
+  block {
+  }
+  return 3;
+}
+",
     );
     {
         let test_str = scout_arena.intern_str("test");
@@ -121,7 +127,14 @@ fn simple_block_with_a_variable() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  block {\n    y = 6;\n  }\n  return 3;\n}\n",
+        r"
+exported func main() int {
+  block {
+    y = 6;
+  }
+  return 3;
+}
+",
     );
     {
         let test_str = scout_arena.intern_str("test");
@@ -212,7 +225,15 @@ fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  block {\n    y = 6;\n  }\n  y = 3;\n  return y;\n}\n",
+        r"
+exported func main() int {
+  block {
+    y = 6;
+  }
+  y = 3;
+  return y;
+}
+",
     );
     let _scoutput = compile.get_scoutput().expect("get_scoutput failed");
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {

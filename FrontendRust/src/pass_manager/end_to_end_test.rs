@@ -216,7 +216,17 @@ fn pass_manager_build_returns_humanized_higher_typing_couldnt_find_type() {
   let result = crate::pass_manager::pass_manager::build(&parse_arena, &keywords, &opts);
   let err = result.expect_err("expected higher-typing error for unknown type 'Bork'");
   let expected_suffix =
-    "Couldn't solve generics rules:\nCouldn't find anything with the name 'Bork'\nexported func main(a Bork) {\n                           ^ _3: (unknown)\n                     ^^^^ _21111: (unknown)\nSteps:\nUnsolved rule: _21111 = \"Bork\"\nUnsolved rule: _3 = \"void\"\n\nexported func main(a Bork) {\n";
+    r#"Couldn't solve generics rules:
+Couldn't find anything with the name 'Bork'
+exported func main(a Bork) {
+                           ^ _3: (unknown)
+                     ^^^^ _21111: (unknown)
+Steps:
+Unsolved rule: _21111 = "Bork"
+Unsolved rule: _3 = "void"
+
+exported func main(a Bork) {
+"#;
   assert!(
     err.ends_with(expected_suffix),
     "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",

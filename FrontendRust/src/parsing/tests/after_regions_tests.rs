@@ -53,7 +53,10 @@ fn report_leaving_out_semicolon_or_ending_body_after_expression_for_paren() {
   let err = compile_block_contents(
     &parse_arena,
     &keywords,
-    "\n  a = 3;\n  set x = 7 )\n").unwrap_err();
+    r"
+  a = 3;
+  set x = 7 )
+").unwrap_err();
   match err {
     ParseError::BadStartOfStatementError(_) => {}
     other => panic!("Expected BadStartOfStatementError, got {:?}", other),

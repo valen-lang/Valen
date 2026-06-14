@@ -320,7 +320,11 @@ fn make_weak_ref_from_temporary() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nweakable struct Muta { hp int; }\nfunc getHp(weakMuta &&Muta) int { return (lock(weakMuta)).get().hp; }\nexported func main() int { return getHp(&&Muta(7)); }\n",
+        r"
+weakable struct Muta { hp int; }
+func getHp(weakMuta &&Muta) int { return (lock(weakMuta)).get().hp; }
+exported func main() int { return getHp(&&Muta(7)); }
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -720,7 +724,28 @@ fn weak_yonder_member() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nweakable struct Base {\n  hp int;\n}\nstruct Spaceship {\n  origin &&Base;\n}\nexported func main() int {\n  base = Base(73);\n  ship = Spaceship(&&base);\n\n  (base).drop(); // Destroys base.\n\n  maybeOrigin = lock(ship.origin);\n  if (not maybeOrigin.isEmpty()) {\n    o = maybeOrigin.get();\n    return o.hp;\n  } else {\n    return 42;\n  }\n}\n",
+        r"
+weakable struct Base {
+  hp int;
+}
+struct Spaceship {
+  origin &&Base;
+}
+exported func main() int {
+  base = Base(73);
+  ship = Spaceship(&&base);
+
+  (base).drop(); // Destroys base.
+
+  maybeOrigin = lock(ship.origin);
+  if (not maybeOrigin.isEmpty()) {
+    o = maybeOrigin.get();
+    return o.hp;
+  } else {
+    return 42;
+  }
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();

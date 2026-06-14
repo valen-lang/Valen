@@ -63,7 +63,14 @@ pub fn test_inferring_a_borrowed_argument() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Muta { hp int; }\nfunc moo<T>(m &T) &T { return m; }\nexported func main() int {\n  x = Muta(10);\n  return moo(&x).hp;\n}\n",
+        r"
+struct Muta { hp int; }
+func moo<T>(m &T) &T { return m; }
+exported func main() int {
+  x = Muta(10);
+  return moo(&x).hp;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -168,7 +175,14 @@ pub fn test_inferring_a_borrowed_static_sized_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Muta { hp int; }\nfunc moo<N Int>(m &[#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(&x);\n}\n",
+        r"
+struct Muta { hp int; }
+func moo<N Int>(m &[#N]Muta) int { return m[0].hp; }
+exported func main() int {
+  x = [#](Muta(10));
+  return moo(&x);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 10 }) => {}
@@ -209,7 +223,14 @@ pub fn test_inferring_an_owning_static_sized_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Muta { hp int; }\nfunc moo<N Int>(m [#N]Muta) int { return m[0].hp; }\nexported func main() int {\n  x = [#](Muta(10));\n  return moo(x);\n}\n",
+        r"
+struct Muta { hp int; }
+func moo<N Int>(m [#N]Muta) int { return m[0].hp; }
+exported func main() int {
+  x = [#](Muta(10));
+  return moo(x);
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 10 }) => {}

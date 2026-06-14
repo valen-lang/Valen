@@ -71,7 +71,10 @@ fn test_mutating_a_local_var() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() {a = 3; set a = 4; }\n";
+    let code = r"
+
+exported func main() {a = 3; set a = 4; }
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -132,7 +135,15 @@ fn test_mutable_member_permission() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Engine { fuel int; }\nstruct Spaceship { engine! Engine; }\nexported func main() {\n  ship = Spaceship(Engine(10));\n  set ship.engine = Engine(15);\n}\n";
+    let code = r"
+
+struct Engine { fuel int; }
+struct Spaceship { engine! Engine; }
+exported func main() {
+  ship = Spaceship(Engine(10));
+  set ship.engine = Engine(15);
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -189,7 +200,20 @@ fn local_set_upcasts() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.drop.*;\n\ninterface IXOption<T Ref> where func drop(T)void { }\nstruct XSome<T Ref> where func drop(T)void { value T; }\nimpl<T Ref> IXOption<T> for XSome<T> where func drop(T)void;\nstruct XNone<T Ref> where func drop(T)void { }\nimpl<T Ref> IXOption<T> for XNone<T> where func drop(T)void;\n\nexported func main() {\n  m IXOption<int> = XNone<int>();\n  set m = XSome(6);\n}\n";
+    let code = r"
+import v.builtins.drop.*;
+
+interface IXOption<T Ref> where func drop(T)void { }
+struct XSome<T Ref> where func drop(T)void { value T; }
+impl<T Ref> IXOption<T> for XSome<T> where func drop(T)void;
+struct XNone<T Ref> where func drop(T)void { }
+impl<T Ref> IXOption<T> for XNone<T> where func drop(T)void;
+
+exported func main() {
+  m IXOption<int> = XNone<int>();
+  set m = XSome(6);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -243,7 +267,23 @@ fn expr_set_upcasts() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.drop.*;\n\ninterface IXOption<T Ref> where func drop(T)void { }\nstruct XSome<T Ref> where func drop(T)void { value T; }\nimpl<T Ref> IXOption<T> for XSome<T>;\nstruct XNone<T Ref> where func drop(T)void { }\nimpl<T Ref> IXOption<T> for XNone<T>;\n\nstruct Marine {\n  weapon! IXOption<int>;\n}\nexported func main() {\n  m = Marine(XNone<int>());\n  set m.weapon = XSome(6);\n}\n";
+    let code = r"
+import v.builtins.drop.*;
+
+interface IXOption<T Ref> where func drop(T)void { }
+struct XSome<T Ref> where func drop(T)void { value T; }
+impl<T Ref> IXOption<T> for XSome<T>;
+struct XNone<T Ref> where func drop(T)void { }
+impl<T Ref> IXOption<T> for XNone<T>;
+
+struct Marine {
+  weapon! IXOption<int>;
+}
+exported func main() {
+  m = Marine(XNone<int>());
+  set m.weapon = XSome(6);
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -300,7 +340,14 @@ fn reports_when_we_try_to_mutate_an_imm_struct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Vec3 imm { x float; y float; z float; }\nexported func main() int {\n  v = Vec3(3.0, 4.0, 5.0);\n  set v.x = 10.0;\n}\n";
+    let code = r"
+
+struct Vec3 imm { x float; y float; z float; }
+exported func main() int {
+  v = Vec3(3.0, 4.0, 5.0);
+  set v.x = 10.0;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -357,7 +404,14 @@ fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nstruct Vec3 { x float; y float; z float; }\nexported func main() int {\n  v = Vec3(3.0, 4.0, 5.0);\n  set v.x = 10.0;\n}\n";
+    let code = r"
+
+struct Vec3 { x float; y float; z float; }
+exported func main() int {
+  v = Vec3(3.0, 4.0, 5.0);
+  set v.x = 10.0;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -414,7 +468,16 @@ fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nexported func main() int {\n  arr = #[#10]({_});\n  set arr[4] = 10;\n  return 73;\n}\n";
+    let code = r"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+
+exported func main() int {
+  arr = #[#10]({_});
+  set arr[4] = 10;
+  return 73;
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -479,7 +542,13 @@ fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nexported func main() {\n  a = 5;\n  set a = \"blah\";\n}\n";
+    let code = r#"
+
+exported func main() {
+  a = 5;
+  set a = "blah";
+}
+"#;
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -516,7 +585,14 @@ fn reports_when_we_try_to_override_a_non_interface() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n\nimpl int for Bork;\nstruct Bork { }\nexported func main() {\n  Bork();\n}\n";
+    let code = r"
+
+impl int for Bork;
+struct Bork { }
+exported func main() {
+  Bork();
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -554,7 +630,19 @@ fn can_mutate_an_element_in_a_runtime_sized_array() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nimport v.builtins.arrays.*;\nimport v.builtins.drop.*;\n\nexported func main() int {\n  arr = Array<mut, int>(3);\n  arr.push(0);\n  arr.push(1);\n  arr.push(2);\n  set arr[1] = 10;\n  return 73;\n}\n";
+    let code = r"
+import v.builtins.arrays.*;
+import v.builtins.drop.*;
+
+exported func main() int {
+  arr = Array<mut, int>(3);
+  arr.push(0);
+  arr.push(1);
+  arr.push(2);
+  set arr[1] = 10;
+  return 73;
+}
+";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -592,7 +680,25 @@ fn can_restackify_in_destructure_pattern() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\n#!DeriveStructDrop\nstruct Ship { fuel int; }\n\n/// TODO: Bring tuples back\n#!DeriveStructDrop\nstruct GetFuelResult { fuel int; ship Ship; }\n\nfunc GetFuel(ship Ship) GetFuelResult {\n  return GetFuelResult(ship.fuel, ship);\n}\n\nexported func main() int {\n  ship = Ship(42);\n  [fuel, set ship] = GetFuel(ship);\n  [f] = ship;\n  return fuel;\n}\n";
+    let code = r"
+#!DeriveStructDrop
+struct Ship { fuel int; }
+
+/// TODO: Bring tuples back
+#!DeriveStructDrop
+struct GetFuelResult { fuel int; ship Ship; }
+
+func GetFuel(ship Ship) GetFuelResult {
+  return GetFuelResult(ship.fuel, ship);
+}
+
+exported func main() int {
+  ship = Ship(42);
+  [fuel, set ship] = GetFuel(ship);
+  [f] = ship;
+  return fuel;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -608,7 +714,20 @@ fn if_branches_must_move_same_variables() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nstruct S { x int; }\nfunc consume(s S) int { return s.x; }\nexported func main() int {\n  s = S(7);\n  result = 0;\n  if true {\n    set result = consume(s);\n  } else {\n    set result = 5;\n  }\n  return result;\n}\n";
+    let code = r"
+struct S { x int; }
+func consume(s S) int { return s.x; }
+exported func main() int {
+  s = S(7);
+  result = 0;
+  if true {
+    set result = consume(s);
+  } else {
+    set result = 5;
+  }
+  return result;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -627,7 +746,23 @@ fn if_branches_moving_same_vars_different_order_compiles() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nstruct S { x int; }\nfunc consume(s S) int { return s.x; }\nexported func main() int {\n  a = S(1);\n  b = S(2);\n  result = 0;\n  if true {\n    set result = consume(a);\n    set result = consume(b);\n  } else {\n    set result = consume(b);\n    set result = consume(a);\n  }\n  return result;\n}\n";
+    let code = r"
+struct S { x int; }
+func consume(s S) int { return s.x; }
+exported func main() int {
+  a = S(1);
+  b = S(2);
+  result = 0;
+  if true {
+    set result = consume(a);
+    set result = consume(b);
+  } else {
+    set result = consume(b);
+    set result = consume(a);
+  }
+  return result;
+}
+";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);

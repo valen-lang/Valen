@@ -155,7 +155,21 @@ fn report_type_not_found_with_literal_generic_arg_inner<'s>(
             let error_text =
                 humanize(
                     &humanize_pos_fn, &lines_between_fn, &line_range_containing_fn, &line_containing_fn, &err);
-            let expected_suffix = "Couldn't solve generics rules:\nCouldn't find anything with the name 'Bork'\nexported func main(a Bork<5>) {\n                              ^ _3: (unknown)\n                          ^ _211311: (unknown)\n                     ^^^^ _211211: (unknown)\n                     ^^^^^^^ _2111: (unknown)\nSteps:\nUnsolved rule: _211211 = \"Bork\"\nUnsolved rule: _211311 = 5\nUnsolved rule: _2111 = _211211<_211311>\nUnsolved rule: _3 = \"void\"\n\nexported func main(a Bork<5>) {\n";
+            let expected_suffix = r#"Couldn't solve generics rules:
+Couldn't find anything with the name 'Bork'
+exported func main(a Bork<5>) {
+                              ^ _3: (unknown)
+                          ^ _211311: (unknown)
+                     ^^^^ _211211: (unknown)
+                     ^^^^^^^ _2111: (unknown)
+Steps:
+Unsolved rule: _211211 = "Bork"
+Unsolved rule: _211311 = 5
+Unsolved rule: _2111 = _211211<_211311>
+Unsolved rule: _3 = "void"
+
+exported func main(a Bork<5>) {
+"#;
             assert!(
                 error_text.ends_with(expected_suffix),
                 "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",
@@ -215,7 +229,21 @@ fn report_type_not_found_with_mutability_literal_generic_arg_inner<'s>(
             let error_text =
                 humanize(
                     &humanize_pos_fn, &lines_between_fn, &line_range_containing_fn, &line_containing_fn, &err);
-            let expected_suffix = "Couldn't solve generics rules:\nCouldn't find anything with the name 'Bork'\nexported func main(a Bork<mut>) {\n                                ^ _3: (unknown)\n                          ^^^ _211311: (unknown)\n                     ^^^^ _211211: (unknown)\n                     ^^^^^^^^^ _2111: (unknown)\nSteps:\nUnsolved rule: _211211 = \"Bork\"\nUnsolved rule: _211311 = mut\nUnsolved rule: _2111 = _211211<_211311>\nUnsolved rule: _3 = \"void\"\n\nexported func main(a Bork<mut>) {\n";
+            let expected_suffix = r#"Couldn't solve generics rules:
+Couldn't find anything with the name 'Bork'
+exported func main(a Bork<mut>) {
+                                ^ _3: (unknown)
+                          ^^^ _211311: (unknown)
+                     ^^^^ _211211: (unknown)
+                     ^^^^^^^^^ _2111: (unknown)
+Steps:
+Unsolved rule: _211211 = "Bork"
+Unsolved rule: _211311 = mut
+Unsolved rule: _2111 = _211211<_211311>
+Unsolved rule: _3 = "void"
+
+exported func main(a Bork<mut>) {
+"#;
             assert!(
                 error_text.ends_with(expected_suffix),
                 "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",
@@ -275,7 +303,19 @@ fn report_type_not_found_with_augment_inner<'s>(
             let error_text =
                 humanize(
                     &humanize_pos_fn, &lines_between_fn, &line_range_containing_fn, &line_containing_fn, &err);
-            let expected_suffix = "Couldn't solve generics rules:\nCouldn't find anything with the name 'Bork'\nexported func main(a &Bork) {\n                            ^ _3: (unknown)\n                      ^^^^ _211211: (unknown)\n                     ^^^^^ _2111: (unknown)\nSteps:\nUnsolved rule: _211211 = \"Bork\"\nUnsolved rule: _2111 = &_211211\nUnsolved rule: _3 = \"void\"\n\nexported func main(a &Bork) {\n";
+            let expected_suffix = r#"Couldn't solve generics rules:
+Couldn't find anything with the name 'Bork'
+exported func main(a &Bork) {
+                            ^ _3: (unknown)
+                      ^^^^ _211211: (unknown)
+                     ^^^^^ _2111: (unknown)
+Steps:
+Unsolved rule: _211211 = "Bork"
+Unsolved rule: _2111 = &_211211
+Unsolved rule: _3 = "void"
+
+exported func main(a &Bork) {
+"#;
             assert!(
                 error_text.ends_with(expected_suffix),
                 "humanized error suffix mismatch\nexpected ending: {:?}\nactual: {:?}",

@@ -37,7 +37,12 @@ fn simple_while_loop_that_doesnt_execute() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while (false) {}\n  return 5;\n}\n",
+        r"
+exported func main() int {
+  while (false) {}
+  return 5;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
@@ -76,7 +81,15 @@ fn test_a_for_ish_while_loop() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  i = 0;\n  while (i < 4) {\n    set i = i + 1;\n  }\n  return i;\n}\n",
+        r"
+exported func main() int {
+  i = 0;
+  while (i < 4) {
+    set i = i + 1;
+  }
+  return i;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 4 }) => {}
@@ -118,7 +131,17 @@ fn tests_a_while_loop_with_a_complex_condition() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import ioutils.*;\nimport printutils.*;\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key < 96 {\n    print(key);\n  }\n  return key;\n}\n",
+        r"
+import ioutils.*;
+import printutils.*;
+exported func main() int {
+  key = 0;
+  while set key = __getch(); key < 96 {
+    print(key);
+  }
+  return key;
+}
+",
     );
     match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap() {
         IVonData::Int(VonInt { value: 99 }) => {}
@@ -161,7 +184,19 @@ fn tests_a_while_loop_with_a_set_in_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() int {\n  key = 0;\n  while set key = __getch(); key != 99 {\n    print(key);\n  }\n  return key;\n}\n",
+        r"
+import printutils.*;
+import ioutils.*;
+import logic.*;
+
+exported func main() int {
+  key = 0;
+  while set key = __getch(); key != 99 {
+    print(key);
+  }
+  return key;
+}
+",
     );
     match compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap() {
         IVonData::Int(VonInt { value: 99 }) => {}
@@ -207,7 +242,17 @@ fn tests_a_while_loop_with_a_declaration_in_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "import printutils.*;\nimport ioutils.*;\nimport logic.*;\n\nexported func main() {\n  while key = __getch(); key != 99 {\n    print(key);\n  }\n}\n",
+        r"
+import printutils.*;
+import ioutils.*;
+import logic.*;
+
+exported func main() {
+  while key = __getch(); key != 99 {
+    print(key);
+  }
+}
+",
     );
     compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap();
 }
@@ -248,7 +293,14 @@ fn return_from_infinite_while_loop() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while (true) {\n    return 9;\n  }\n  return __vbi_panic();\n}\n",
+        r"
+exported func main() int {
+  while (true) {
+    return 9;
+  }
+  return __vbi_panic();
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 9 }) => {}
@@ -289,7 +341,17 @@ fn infinite_while_loop_conditional_break() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    if true {\n      break;\n    }\n    4;\n  }\n  return 42;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    if true {
+      break;
+    }
+    4;
+  }
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -333,7 +395,14 @@ fn infinite_while_loop_unconditional_break() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    break;\n  }\n  return 42;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    break;
+  }
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -374,7 +443,18 @@ fn infinite_while_loop_conditional_break_from_both_sides() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    if true {\n      break;\n    } else {\n      break;\n    }\n  }\n  return 42;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    if true {
+      break;
+    } else {
+      break;
+    }
+  }
+  return 42;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -419,7 +499,17 @@ fn infinite_while_loop_conditional_return() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    }\n    73;\n  }\n  return 74;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    if true {
+      return 42;
+    }
+    73;
+  }
+  return 74;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -463,7 +553,14 @@ fn infinite_while_loop_unconditional_return() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    return 42;\n  }\n  return 73;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    return 42;
+  }
+  return 73;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -504,7 +601,18 @@ fn infinite_while_loop_conditional_return_from_both_sides() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while true {\n    if true {\n      return 42;\n    } else {\n      return 73;\n    }\n  }\n  return 74;\n}\n",
+        r"
+exported func main() int {
+  while true {
+    if true {
+      return 42;
+    } else {
+      return 73;
+    }
+  }
+  return 74;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -549,7 +657,12 @@ fn while_with_condition_declaration() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int {\n  while x = 42; x < 50 { return x; }\n  return 73;\n}\n",
+        r"
+exported func main() int {
+  while x = 42; x < 50 { return x; }
+  return 73;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -588,7 +701,17 @@ fn each_on_int_range() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    set sum = sum + i;\n  }\n  return sum;\n}\n",
+        r"
+import intrange.*;
+
+exported func main() int {
+  sum = 0;
+  foreach i in 0..10 {
+    set sum = sum + i;
+  }
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 45 }) => {}
@@ -631,7 +754,22 @@ fn parallel_foreach() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport intrange.*;\nimport list.*;\nimport listprintutils.*;\n\nexported func main() {\n  exponent = 3;\n\n  results =\n    parallel foreach i in 0..5 {\n      i + 1\n    };\n\n  println(&results);\n}\n",
+        r"
+import intrange.*;
+import list.*;
+import listprintutils.*;
+
+exported func main() {
+  exponent = 3;
+
+  results =
+    parallel foreach i in 0..5 {
+      i + 1
+    };
+
+  println(&results);
+}
+",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
 }
@@ -676,7 +814,36 @@ fn mutable_foreach() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\n// A fake 1-element list\nstruct Ship {\n  fuel! int;\n}\nstruct List {\n  ship Ship;\n}\n\nstruct ListIter {\n  ship &Ship;\n  pos! int;\n}\nfunc begin(self &List) ListIter { ListIter(&self.ship, 0) }\nfunc next(iter &ListIter) Opt<&Ship> {\n  if pos = set iter.pos = iter.pos + 1; pos < 1 {\n    Some<&Ship>(iter.ship)\n  } else {\n    None<&Ship>()\n  }\n}\n\nexported func main() int {\n  list = List(Ship(73));\n  foreach i in &list {\n    set i.fuel = 42;\n  }\n  return list.ship.fuel;\n}\n",
+        r"
+// A fake 1-element list
+struct Ship {
+  fuel! int;
+}
+struct List {
+  ship Ship;
+}
+
+struct ListIter {
+  ship &Ship;
+  pos! int;
+}
+func begin(self &List) ListIter { ListIter(&self.ship, 0) }
+func next(iter &ListIter) Opt<&Ship> {
+  if pos = set iter.pos = iter.pos + 1; pos < 1 {
+    Some<&Ship>(iter.ship)
+  } else {
+    None<&Ship>()
+  }
+}
+
+exported func main() int {
+  list = List(Ship(73));
+  foreach i in &list {
+    set i.fuel = 42;
+  }
+  return list.ship.fuel;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -738,7 +905,22 @@ fn each_on_int_range_with_conditional_break() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport intrange.*;\nimport list.*;\n\nexported func main() int {\n  sum = 0;\n  results =\n    foreach i in 0..10 {\n      if true {\n        break;\n      }\n      3\n    };\n  return 0;\n}\n",
+        r"
+import intrange.*;
+import list.*;
+
+exported func main() int {
+  sum = 0;
+  results =
+    foreach i in 0..10 {
+      if true {
+        break;
+      }
+      3
+    };
+  return 0;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 0 }) => {}
@@ -786,7 +968,17 @@ fn each_on_int_range_with_unconditional_break() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    break;\n  }\n  return sum;\n}\n",
+        r"
+import intrange.*;
+
+exported func main() int {
+  sum = 0;
+  foreach i in 0..10 {
+    break;
+  }
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 0 }) => {}
@@ -829,7 +1021,21 @@ fn each_on_int_range_with_conditional_break_from_both_branches() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport intrange.*;\n\nexported func main() int {\n  sum = 0;\n  foreach i in 0..10 {\n    if true {\n      break;\n    } else {\n      break;\n    }\n  }\n  return sum;\n}\n",
+        r"
+import intrange.*;
+
+exported func main() int {
+  sum = 0;
+  foreach i in 0..10 {
+    if true {
+      break;
+    } else {
+      break;
+    }
+  }
+  return sum;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 0 }) => {}

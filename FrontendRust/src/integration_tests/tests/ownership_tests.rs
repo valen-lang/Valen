@@ -70,7 +70,12 @@ fn borrowing_a_temporary_mutable_makes_a_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Muta { hp int; }\nexported func main() int {\n  return (&Muta(9)).hp;\n}\n",
+        r"
+struct Muta { hp int; }
+exported func main() int {
+  return (&Muta(9)).hp;
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -148,7 +153,16 @@ fn owning_ref_method_call() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Muta { hp int; }\nfunc take(m Muta) int {\n  return m.hp;\n}\nexported func main() int {\n  m = Muta(9);\n  return (m).hp;\n}\n",
+        r"
+struct Muta { hp int; }
+func take(m Muta) int {
+  return m.hp;
+}
+exported func main() int {
+  m = Muta(9);
+  return (m).hp;
+}
+",
     );
     {
         let _main = compile.expect_compiler_outputs().lookup_function_by_str("main");
@@ -196,7 +210,15 @@ fn derive_drop() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\nstruct Muta { }\n\nexported func main() {\n  Muta();\n}\n",
+        r"
+import printutils.*;
+
+struct Muta { }
+
+exported func main() {
+  Muta();
+}
+",
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -255,7 +277,21 @@ fn custom_drop_result_is_an_owning_ref_calls_destructor() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) void {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nexported func main() {\n  Muta();\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Muta { }
+
+func drop(m ^Muta) void {
+  println("Destroying!");
+  Muta[ ] = m;
+}
+
+exported func main() {
+  Muta();
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -320,7 +356,21 @@ fn saves_return_value_then_destroys_temporary() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { hp int; }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[hp] = m;\n}\n\nexported func main() int {\n  return (Muta(10)).hp;\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Muta { hp int; }
+
+func drop(m ^Muta) {
+  println("Destroying!");
+  Muta[hp] = m;
+}
+
+exported func main() int {
+  return (Muta(10)).hp;
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -382,7 +432,21 @@ fn calls_destructor_on_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nexported func main() {\n  a = Muta();\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Muta { }
+
+func drop(m ^Muta) {
+  println("Destroying!");
+  Muta[ ] = m;
+}
+
+exported func main() {
+  a = Muta();
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -448,7 +512,25 @@ fn calls_destructor_on_local_var_unless_moved() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[ ] = m;\n}\n\nfunc moo(m ^Muta) {\n}\n\nexported func main() {\n  a = Muta();\n  moo(a);\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Muta { }
+
+func drop(m ^Muta) {
+  println("Destroying!");
+  Muta[ ] = m;
+}
+
+func moo(m ^Muta) {
+}
+
+exported func main() {
+  a = Muta();
+  moo(a);
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -589,7 +671,22 @@ fn saves_return_value_then_destroys_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nimport printutils.*;\n\n#!DeriveStructDrop\nstruct Muta { hp int; }\n\nfunc drop(m ^Muta) {\n  println(\"Destroying!\");\n  Muta[hp] = m;\n}\n\nexported func main() int {\n  a = Muta(10);\n  return a.hp;\n}\n",
+        r#"
+import printutils.*;
+
+#!DeriveStructDrop
+struct Muta { hp int; }
+
+func drop(m ^Muta) {
+  println("Destroying!");
+  Muta[hp] = m;
+}
+
+exported func main() int {
+  a = Muta(10);
+  return a.hp;
+}
+"#,
     );
     {
         let coutputs = compile.expect_compiler_outputs();
@@ -658,7 +755,17 @@ fn gets_from_temporary_struct_a_members_member() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Wand {\n  charges int;\n}\nstruct Wizard {\n  wand ^Wand;\n}\nexported func main() int {\n  return Wizard(Wand(10)).wand.charges;\n}\n      ",
+        r"
+struct Wand {
+  charges int;
+}
+struct Wizard {
+  wand ^Wand;
+}
+exported func main() int {
+  return Wizard(Wand(10)).wand.charges;
+}
+      ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 10 }) => {}
@@ -708,7 +815,12 @@ fn unstackifies_local_vars() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nexported func main() int {\n  i = 0;\n  return i;\n}\n",
+        r"
+exported func main() int {
+  i = 0;
+  return i;
+}
+",
     );
     let coutputs = compile.expect_compiler_outputs();
     let main = coutputs.lookup_function_by_str("main");
@@ -762,7 +874,21 @@ fn basic_builder_pattern() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Ship { hp! int; fuel! int; }\nfunc setHp(ship Ship, hp int) Ship {\n  set ship.hp = hp;\n  return ship;\n}\nfunc setFuel(ship Ship, fuel int) Ship {\n  set ship.fuel = fuel;\n  return ship;\n}\nexported func main() int {\n  ship = Ship(0, 0).setHp(42).setFuel(43);\n  return ship.hp;\n}\n",
+        r"
+struct Ship { hp! int; fuel! int; }
+func setHp(ship Ship, hp int) Ship {
+  set ship.hp = hp;
+  return ship;
+}
+func setFuel(ship Ship, fuel int) Ship {
+  set ship.fuel = fuel;
+  return ship;
+}
+exported func main() int {
+  ship = Ship(0, 0).setHp(42).setFuel(43);
+  return ship.hp;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}
@@ -811,7 +937,12 @@ fn member_access_on_returned_owning_ref() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "\nstruct Ship { hp int; }\nexported func main() int {\n  return Ship(42).hp;\n}\n",
+        r"
+struct Ship { hp int; }
+exported func main() int {
+  return Ship(42).hp;
+}
+",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 42 }) => {}

@@ -102,7 +102,11 @@ fn reports_when_non_kind_interface_in_impl() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "\nstruct Moo {}\ninterface IMoo {}\nimpl &IMoo for Moo;\n";
+  let code = r"
+struct Moo {}
+interface IMoo {}
+impl &IMoo for Moo;
+";
   let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
       .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let err = compile_for_error(
@@ -141,7 +145,11 @@ fn reports_when_non_kind_struct_in_impl() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "\nstruct Moo {}\ninterface IMoo {}\nimpl IMoo for &Moo;\n";
+  let code = r"
+struct Moo {}
+interface IMoo {}
+impl IMoo for &Moo;
+";
   let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
       .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let err = compile_for_error(
@@ -180,7 +188,10 @@ fn abstract_func_without_virtual() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "\nsealed interface ISpaceship<X Ref, Y Ref, Z Ref> { }\nabstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop(X)void;\n";
+  let code = r"
+sealed interface ISpaceship<X Ref, Y Ref, Z Ref> { }
+abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop(X)void;
+";
   let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
       .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let err = compile_for_error(
