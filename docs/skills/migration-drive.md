@@ -15,6 +15,10 @@ Here's what I want you to do:
 
 0. **Process layer: read `guardian-jr.md` first** for the mailbox CLI, identity derivation (`<dirname>-jr` / `<dirname>-tl`), the watcher arming + re-arm rule, the `z` protocol, escalation hygiene, temp-disable mechanics, and the "you don't touch git state" rule. The steps below assume that setup is in place. Before starting a failing test, wait for TL to name it via mailbox.
 
+   **Migration-specific additions on top of `guardian-jr.md`:**
+   - **Escalation citations.** When you escalate, cite the canonical Scala location (`Frontend/path/to/Foo.scala:NNN`) as the *source* path, not the Rust audit-trail line. Also cite Rust file + line, the exact panic/error, and any relevant shield IDs (e.g. SPDMX, TFITCX classification).
+   - **Temp-disable directive placement.** A temp-disable directive lives at the top of the def's trailing `/* ... */` audit block (between the opening `/*` and the first line of Scala content) — that's the contextified-diff window SCPX reads. A `/*` or `*/` in the rationale forms a nested block comment that breaks SCPX parsing; once broken, NAGDX prevents you from editing the directive to repair it (only TL can unstick the file). Paraphrase code in rationales or cite by line range (e.g. `at hamuts.rs:755-792`).
+
 1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
     * FrontendRust/docs/migration/migration-policy.md
     * FrontendRust/docs/usage/test-helpers.md

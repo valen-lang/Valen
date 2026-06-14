@@ -1,84 +1,14 @@
-# Frontend Rust - Scala to Rust Migration Project
+# Vale
 
-This is a Rust compiler frontend being migrated from Scala. The project is **mid-migration** with extensive commented Scala code alongside working Rust implementations.
+This is the Vale compiler. The `FrontendRust/` tree is a Rust compiler frontend.
 
-## Project Overview
-
-The codebase implements a compiler frontend with parsing, post-parsing validation/transformation, and type solving. The original Scala implementation used garbage collection; the Rust version uses arena allocation with explicit lifetime management.
-
-## Key Directories
-
-- **`src/postparsing/`** - Post-parsing pass: validates and transforms parsed AST (actively migrating)
-- **`src/solver/`** - Type solver/inference engine (actively migrating)
-- **`src/interner.rs`** - String and type interning with arena-backed allocation
-- **`src/postparsing/names.rs`** - Name resolution and scope management
-- **`src/postparsing/function_scout.rs`** - Function signature extraction and validation
-- **`src/postparsing/post_parser.rs`** - Main post-parser orchestration
-
-## Migration Philosophy
-
-We're doing **incremental, safe migration**. Many functions have commented-out Scala code above working (or placeholder) Rust implementations. The migration process uses systematic "slicing" to isolate and translate individual definitions.
-
-## Lifetime Model
-
-The Rust codebase uses **three arena lifetimes** (see `docs/background/arenas.md` for full details):
-
-- **`'p`** - Parser arena (via `ParseArena<'p>`): interned strings, coordinates, parser AST nodes
-- **`'s`** - Scout (postparser + higher_typing) arena (via `ScoutArena<'s>`): interned names, runes, imprecise names, postparser/higher-typing output nodes
-- **`'ctx`** - Context/infrastructure borrows: `&'ctx ParseArena<'p>`, `&'ctx ScoutArena<'s>`, `&'ctx Keywords<'p>`
-
-Each arena is self-contained with its own interning maps. Cross-pass data is re-interned at pass boundaries (e.g. `StrI<'p>` → `StrI<'s>` via `scout_arena.intern_str()`).
-
-## Conventions
-
-All rules in `.claude/rules/` are **path-targeted** and auto-load when editing relevant files. They contain:
-
-- Scala→Rust type mappings
-- Allowable differences between implementations
-- Architecture and organization maps
-- Style guidelines
-
-## Migration Subagents
-
-The codebase includes specialized subagents for systematic migration. These are autonomous agents that can be invoked using the Task tool.
-
-### Slice Pipeline (Full Migration)
-- **`slice-orchestrator`** - Orchestrates the full migration pipeline on a Rust file
-- **`slice-start`** - Add `// mig:` marker comments above Scala definitions
-- **`slice-rustify`** - Convert Scala-style markers to Rust-style
-- **`slice-placehold`** - Generate Rust placeholder stubs
-- **`slice-reconcile-mark`** - Mark old definitions as obsolete
-- **`slice-reconcile-copy`** - Copy old code into stubs
-- **`slice-reconcile-delete`** - Remove obsolete definitions
-
-### Incremental Migration
-- **`migration-migrate`** - Partially migrate specific Scala code sections
-- **`migration-diagnoser`** - Diagnose migration issues and differences
-- **`migration-check-specific`** - Check specific definitions for correctness
-- **`migration-gate`** - Validate migration readiness before proceeding
-
-### Verification
-- **`agent-check-correct-loop`** - Loop-based correctness verification
-
-All subagents are defined in `.claude/agents/` and can be invoked using the Task tool.
+> Migration-era content (project overview, key directories, lifetime model, migration philosophy, slice/migration subagents, Scala→Rust notes) has moved to `migrate-tl.md`. Read it when working on anything tied to the Scala→Rust migration tail.
 
 ## Build & Test
 
-Always run **`cargo build --lib`** after making changes. The project builds as a library.
-
-Use **`cargo check`** for faster iteration during development.
-
-The build may have warnings during migration - that's expected. Focus on getting it to compile first.
+Always run **`cargo build --lib`** after making changes. The project builds as a library. Use **`cargo check`** for faster iteration.
 
 Eliminate all compiler warnings (unused imports, unused variables, dead code) before saying you're done. Variables prefixed with `_` are intentionally unused and don't count.
-
-## Working with This Project
-
-1. When editing postparser files, relevant lifetime and migration rules auto-load
-2. Use the slice subagents for systematic translation of commented Scala code
-3. Use migration subagents for incremental fixes and verification
-4. Always verify builds succeed after changes
-5. Respect the lifetime invariants - see the rules for guidance when rustc complains
 
 ## Agent Rules
 
@@ -86,59 +16,9 @@ Eliminate all compiler warnings (unused imports, unused variables, dead code) be
 
 **When spawning any agent**, the prompt must include clear instructions that the agent **must not modify any files in this project** — only the main conversation and the human are allowed to do that. Agents are free to create and read/write temporary files in `/tmp` for their own use.
 
-## Notes
-
-- **Interning:** Rust interns more aggressively than Scala. This is intentional and allowed.
-- **Panics:** `panic!()` placeholders are acceptable during mid-migration. Scala's `vimpl` maps to Rust `panic!`.
-- **Naming:** Rust uses `snake_case` (e.g., `self_uses`) vs Scala's `camelCase` (e.g., `selfUses`).
-- **Profiling:** Rust doesn't need Scala's `Profiler.frame(() => { ... })` wrappers.
-
-
 ## Bulk Edits
 
-`sed` and `perl -pi` are outlawed. For bulk transforms, **prefer the Edit tool** — ~40 distinct invocations is the threshold before Python becomes worth it.
-
-### Bulk-edit workflow: `safe-script-runner`
-
-The canonical path for any `./tmp/scripts/<NAME>.py` transform is the `safe-script-runner` CLI (`Luz/safe-script-runner/`). It splits the flow into three subcommands and enforces strict iteration via a single-marker invariant on disk — you cannot batch reviews, and you cannot apply cold without a prior review of the exact same content. Built binary: `Luz/safe-script-runner/target/release/safe-script-runner`.
-
-One file at a time:
-
-1. Write the script to `./tmp/scripts/<name>.py` (pure stdin → stdout transform; no file I/O, no subprocess, no `exec`/`eval`).
-2. **Review:** `safe-script-runner review ./tmp/scripts/<name>.py <SRC>`. The tool runs the script, prints the full `=== STDERR (<SRC>) ===` and `=== DIFF (<SRC>) ===` to stdout, and writes the marker `./tmp/working/.current-review` (script + src + SHA-256 of working/stderr).
-3. Iterate: edit the script and re-run step 2 on the SAME `<SRC>` — the marker refreshes in place. Switching to a different `<SRC>` while the marker is unapplied is **refused** (`ReviewPending`).
-4. **Apply:** `safe-script-runner apply ./tmp/scripts/<name>.py <SRC>`. The tool re-runs the script, verifies the marker exists and its `(script, src)` and hashes match the new run, then backs up `<SRC>` to `./tmp/backup/<ts>/<src-with-dirs>` and `mv`'s working over src. Marker is deleted. If anything drifted between review and apply (src or script was edited), apply refuses with a hash-mismatch error and you must re-review.
-5. Next file: back to step 2.
-
-To discard a pending review without applying: `safe-script-runner abandon` (no args, no-op if no marker).
-
-### Single-marker invariant (enforced)
-
-Only ONE review may be pending at a time — by design. Trying to `review` a second `<SRC>` while another is unapplied is refused. This makes batch-review-then-batch-apply impossible: the only physically possible sequence is `review A → apply A → review B → apply B → …`. Combined with the marker's SHA-256 binding of review to apply, the architect's "go" is always against the diff the apply will actually land.
-
-### Never apply a bulk-edit without explicit authorization to start the flow
-
-The transform-and-review steps (writing the stdin→stdout script, running it to `./tmp/working/`, reading the diff) are all read-only and don't need permission. **The apply step does** — never run `safe-script-runner apply`, or the `cp <SRC> ./tmp/backup/... && mv ./tmp/working/... <SRC>` compound, without the user authorizing this bulk-edit flow first. Show the script + a representative diff, wait for go-ahead on the flow, then sweep apply across files. The authorization covers the whole flow (every file the script will touch), not each file individually. "I'm going to apply now" is not authorization; the user has to say so.
-
-Within a flow, re-confirm if you hit a diff that materially deviates from the representative one you showed (different shape of change, surprising counts, anomalies). Within-flow surprises are when you pause; routine same-shape edits are not.
-
-### JR never touches safe-script-runner
-
-JR (the junior migration agent) does **not** write, review, or apply transform scripts of any kind — no `./tmp/scripts/*.py`, no shell scripts, no `python3 -c` one-liners, no heredoc rewrites, no `safe-script-runner review` / `apply` invocations. Scripts are a TL-only tool end-to-end. The reasoning: the script's correctness propagates to every file it touches, JR's review surface is per-file diffs not transform logic, and a script bug that JR rubber-stamps across N files is far worse than N individual Edit calls. If a bulk edit looks warranted, JR escalates via mailbox; TL decides — default answer is "no, do the Edits anyway" — and if TL is convinced a script is justified, TL authors AND drives it themselves without JR involvement at any stage. See `guardian-tl.md` "Bulk Edits Are TL-Only" for the TL-side rule.
-
-### Reviewing diffs
-
-`safe-script-runner` mechanically enforces full-diff review: `review` always emits the entire diff and stderr, BESWX denies any pipe/filter/redirect/chain on the command, and the marker hash binds review to apply (drift refuses with a re-review prompt). The architect should still actually look at the diff — the tool guarantees evidence exists in the transcript, not that the human reads it.
-
-**After every `review`, before `apply`, emit a line beginning literally `Issues I see in the diff:` followed by every issue you find (or "none"). Required even when the diff looks routine — that's when script bugs slip through. If the list is non-empty, fix the script and re-review.**
-
-### Raw `python3 ./tmp/scripts/*.py` for bulk-edit is retired
-
-Bulk-edit transforms — `python3 ./tmp/scripts/<NAME>.py < <SRC> > ./tmp/working/<BN>` — are no longer auto-allowed by VRBX. The only canonical bulk-edit path is `safe-script-runner`. If you invoke the raw form against `./tmp/working/`, Claude Code falls through to the normal Bash confirmation dialog (no auto-allow); using `safe-script-runner` is the friction-free path.
-
-Read-only / info / analysis scripts under `./tmp/scripts/` are unaffected — `python3 ./tmp/scripts/analyze.py < log.txt | head` still auto-allows. The retirement is narrowly targeted at the `> ./tmp/working/` stdout shape.
-
-A failed apply via `safe-script-runner` is recoverable from the backup at `./tmp/backup/<ts>/...`.
+See the `scripting` skill (`docs/skills/scripting.md`) for the full bulk-edit / `safe-script-runner` protocol. Quick rule: `sed`/`perl -pi` outlawed, prefer the Edit tool up to ~40 invocations, `safe-script-runner` for Python transforms beyond that, never parallelize bulk edits.
 
 ## Build & Run Convention
 
@@ -197,4 +77,5 @@ Instead, use the same file.
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → docs/skills/good-testing.md
 - **Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.** → docs/skills/guardian-diagnose.md
 - **Read when promoting an LLM-mode shield to Rust mode with a deterministic companion program.** → docs/skills/guardian-rustify.md
+- **Read when authoring or running any bulk-edit script (`./tmp/scripts/*.py`, shell loops over many files, or any per-file transform across more than a handful of files).** → docs/skills/scripting.md
 - **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → docs/skills/tdd.md
