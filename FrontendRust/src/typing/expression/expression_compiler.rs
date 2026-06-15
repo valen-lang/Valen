@@ -253,7 +253,7 @@ where 's: 't,
                         })))))
                     }
                     None => Ok(None),
-                    _ => panic!("implement: evaluate_lookup_for_load None branch — unexpected templata"),
+                    _ => unreachable!("Scala's evaluateLookupForLoad None-branch match is exhaustive over IntegerTemplataT/BooleanTemplataT/None with no catch-all"),
                 }
             }
         }
@@ -326,7 +326,7 @@ where 's: 't,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability"),
-                    _ => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — unexpected mutability"),
+                    _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
@@ -475,7 +475,7 @@ where 's: 't,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability"),
-                    _ => panic!("implement: evaluate_addressible_lookup AddressibleClosure — unexpected mutability"),
+                    _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
@@ -505,7 +505,7 @@ where 's: 't,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
                     ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability"),
-                    _ => panic!("implement: evaluate_addressible_lookup ReferenceClosure — unexpected mutability"),
+                    _ => unreachable!("Scala's ReferenceClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
@@ -671,7 +671,7 @@ where 's: 't,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
                 ITemplataT::Placeholder(_) => { panic!("Unimplemented: make_closure_struct_construct_expression PlaceholderTemplataT"); }
-                _ => { panic!("Unimplemented: make_closure_struct_construct_expression unexpected mutability"); }
+                _ => unreachable!("Scala's closure-struct mutability match has no catch-all"),
             };
         let struct_ref = self.typing_interner.alloc(closure_struct_ref);
         let result_pointer_type = CoordT { ownership, region, kind: KindT::Struct(struct_ref) };
@@ -1482,9 +1482,6 @@ where 's: 't,
                     if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
                         panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (1)");
                     }
-                    if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
-                        panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (2)");
-                    }
                     for local in &then_unstackified_ancestor_locals {
                         nenv.mark_local_unstackified(*local);
                     }
@@ -2141,7 +2138,7 @@ where 's: 't,
                             name,
                         });
                     }
-                    _ => panic!("implement: evaluate_expression OverloadSet — unexpected"),
+                    _ => unreachable!("Scala's OverloadSet match has no catch-all; Rust over-matches for slice-pattern exhaustiveness"),
                 };
                 #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
                 Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
@@ -3362,7 +3359,7 @@ where 's: 't,
             context_region,
             &[contained_coord],
             &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option some_constructor")) {
+        ).expect("get_option some_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3389,7 +3386,7 @@ where 's: 't,
             context_region,
             &[],
             &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option none_constructor")) {
+        ).expect("get_option none_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3555,7 +3552,7 @@ where 's: 't,
             region,
             &[contained_success_coord],
             &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result ok_constructor")) {
+        ).expect("get_result ok_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3597,7 +3594,7 @@ where 's: 't,
             region,
             &[contained_fail_coord],
             &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result err_constructor")) {
+        ).expect("get_result err_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }

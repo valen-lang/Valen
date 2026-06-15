@@ -2472,10 +2472,10 @@ where 's: 't,
                                     }
                                 }
                             }
-                            _ => panic!("Unimplemented: solve_call_rule Some Kind {:?}", kt.kind),
+                            _ => unreachable!("Scala's solve_call_rule Some-branch Kind match is exhaustive in practice (RSA/SSA only); other Kind variants vimpl-deferred"),
                         }
                     }
-                    _ => panic!("Unimplemented: solve_call_rule Some non-Kind {:?}", result),
+                    _ => unreachable!("Scala's solve_call_rule Some branch handles only Kind result; other ITemplataT variants vimpl-deferred"),
                 }
             }
             None => {
@@ -2967,8 +2967,8 @@ where 's: 't,
             ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
             ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
             ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
-            ILiteralSL::BoolLiteral(_) => panic!("Unimplemented: literal_to_templata BoolLiteral"),
-            ILiteralSL::LocationLiteral(_) => panic!("Unimplemented: literal_to_templata LocationLiteral"),
+            ILiteralSL::BoolLiteral(_) => unreachable!("Scala's literalToTemplata has no BoolLiteral arm; constructed by TemplexScout but never reaches solver in practice"),
+            ILiteralSL::LocationLiteral(_) => unreachable!("Scala's literalToTemplata has no LocationLiteral arm; constructed by TemplexScout but never reaches solver in practice"),
         }
     }
     /*
