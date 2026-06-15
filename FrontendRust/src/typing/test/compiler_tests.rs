@@ -3780,6 +3780,86 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
 
 */
 #[test]
+fn reports_when_dot_applied_to_non_container() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  x = 5;\n",
+        "  return x.foo;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Can't apply") => {}
+        other => panic!("expected RangedInternalErrorT 'Can't apply', got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_rsa_dot_member_is_not_digit() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arrays.*;\n",
+        "import v.builtins.drop.*;\n",
+        "exported func main() int {\n",
+        "  a = Array<mut, int>(3);\n",
+        "  return a.foo;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Array has no member") => {}
+        other => panic!("expected RangedInternalErrorT 'Array has no member', got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_ssa_dot_member_is_not_digit() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  a = #[#](1, 2, 3);\n",
+        "  return a.foo;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Sequence has no member") => {}
+        other => panic!("expected RangedInternalErrorT 'Sequence has no member', got {:?}", other),
+    }
+}
+
+#[test]
 fn reports_when_if_branches_have_different_kinds() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

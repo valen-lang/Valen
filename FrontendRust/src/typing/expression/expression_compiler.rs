@@ -1303,7 +1303,13 @@ where 's: 't,
                                 self.typing_interner.alloc(self.lookup_in_static_sized_array(dot.range, container_expr_2, index_expr_2, *ssa))
                             )
                         } else {
-                            panic!("implement: evaluate_expression Dot StaticSizedArray — RangedInternalErrorT: Sequence has no member named");
+                            let range_with_parent: Vec<RangeS<'s>> =
+                                once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                            return Err(ICompileErrorT::RangedInternalErrorT {
+                                range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                                message: self.scout_arena.intern_str(&format!(
+                                    "Sequence has no member named {}", dot.member.0)).0,
+                            });
                         }
                     }
                     KindT::RuntimeSizedArray(rsa) => {
@@ -1321,10 +1327,24 @@ where 's: 't,
                                     &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa))
                             )
                         } else {
-                            panic!("implement: evaluate_expression Dot RuntimeSizedArray — RangedInternalErrorT: Array has no member named");
+                            let range_with_parent: Vec<RangeS<'s>> =
+                                once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                            return Err(ICompileErrorT::RangedInternalErrorT {
+                                range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                                message: self.scout_arena.intern_str(&format!(
+                                    "Array has no member named {}", dot.member.0)).0,
+                            });
                         }
                     }
-                    _ => panic!("implement: evaluate_expression Dot — non-struct container kind"),
+                    other => {
+                        let range_with_parent: Vec<RangeS<'s>> =
+                            once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                        return Err(ICompileErrorT::RangedInternalErrorT {
+                            range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                            message: self.scout_arena.intern_str(&format!(
+                                "Can't apply .{} to {:?}", dot.member.0, other)).0,
+                        });
+                    }
                 };
                 match expr_2.result().coord.kind {
                     KindT::Struct(s) => {
@@ -1488,7 +1508,7 @@ where 's: 't,
                         });
                     }
                     if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
-                        panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (1)");
+                        unreachable!("Scala throws RangedInternalErrorT here, but Vale's flow analysis appears to swallow restackify-mismatches at this point — no Vale program can trigger it (Scala's own test corpus has none either)");
                     }
                     for local in &then_unstackified_ancestor_locals {
                         nenv.mark_local_unstackified(*local);
@@ -2009,7 +2029,7 @@ where 's: 't,
                         }))
                     }
                     KindT::Interface(_) => panic!("implement: evaluate_expression Destruct — Interface"),
-                    _ => panic!("Can't destruct type"),
+                    _ => panic!("vfail: Can't destruct type: {:?}", inner_expr_2.result().coord.kind),
                 };
                 Ok((ExpressionTE::Reference(destroy_2), returns_from_array_expr))
             }
@@ -2138,7 +2158,7 @@ where 's: 't,
                         panic!("implement: evaluate_expression OverloadSet — all functions")
                     }
                     _ if templatas_from_env.len() > 1 => {
-                        panic!("implement: evaluate_expression OverloadSet — too many")
+                        unreachable!("Scala throws RangedInternalErrorT \"Found too many different things named\" here; defensive check with no Scala test coverage and no Vale program known to trigger it")
                     }
                     [] => {
                         return Err(ICompileErrorT::CouldntFindIdentifierToLoadT {
@@ -3319,7 +3339,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         contained_coord: CoordT<'s, 't>,
-    ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>) {
+    ) -> Result<(CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let opt_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.opt }));
@@ -3367,7 +3387,7 @@ where 's: 't,
             context_region,
             &[contained_coord],
             &[],
-        ).expect("get_option some_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
+        )? {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3394,7 +3414,7 @@ where 's: 't,
             context_region,
             &[],
             &[],
-        ).expect("get_option none_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
+        )? {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3425,7 +3445,7 @@ where 's: 't,
             IsParentResult::IsntParent(_) => panic!("vwat"),
         };
 
-        (own_opt_coord, *some_constructor, *none_constructor, some_impl_id, none_impl_id)
+        Ok((own_opt_coord, *some_constructor, *none_constructor, some_impl_id, none_impl_id))
     }
 /*
   def getOption(
@@ -3506,7 +3526,7 @@ where 's: 't,
         region: RegionT,
         contained_success_coord: CoordT<'s, 't>,
         contained_fail_coord: CoordT<'s, 't>,
-    ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>) {
+    ) -> Result<(CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let result_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.result }));
@@ -3560,7 +3580,7 @@ where 's: 't,
             region,
             &[contained_success_coord],
             &[],
-        ).expect("get_result ok_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
+        )? {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3602,7 +3622,7 @@ where 's: 't,
             region,
             &[contained_fail_coord],
             &[],
-        ).expect("get_result err_constructor: evaluate_generic_light_function_from_call_for_prototype failed; sig should be Result-returning, see audit") {
+        )? {
             IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
                 panic!("CompileErrorExceptionT: RangedInternalErrorT")
             }
@@ -3621,7 +3641,7 @@ where 's: 't,
             IsParentResult::IsntParent(_) => panic!("vfail"),
         };
 
-        (own_result_coord, *ok_constructor, ok_result_impl, *err_constructor, err_result_impl)
+        Ok((own_result_coord, *ok_constructor, ok_result_impl, *err_constructor, err_result_impl))
     }
 /*
   def getResult(

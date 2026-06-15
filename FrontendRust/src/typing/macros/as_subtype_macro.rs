@@ -9,6 +9,7 @@ use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::types::types::{CoordT, RegionT, OwnershipT, ISubKindTT, ISuperKindTT};
 use crate::typing::templata::templata::ITemplataT;
@@ -64,7 +65,7 @@ where 's: 't,
         origin_function: Option<&FunctionA<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
 
         let header = FunctionHeaderT {
             id: env.id,
@@ -89,7 +90,7 @@ where 's: 't,
         let success_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: target_kind };
         let fail_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: incoming_kind };
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
-            self.get_result(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, success_coord, fail_coord);
+            self.get_result(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {
             panic!("CompileErrorExceptionT: RangedInternalErrorT: Bad result coord");
         }
@@ -134,7 +135,7 @@ where 's: 't,
                 source_expr: as_subtype_expr,
             })),
         }));
-        (header, body)
+        Ok((header, body))
     }
 /*
   def generateFunctionBody(

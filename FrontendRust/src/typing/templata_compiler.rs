@@ -2113,7 +2113,7 @@ where 's: 't,
                 }
             }
             _ => {
-                panic!("implement: isTypeConvertible — non-equal kind cases: {:?} -> {:?}", source_type, target_type);
+                panic!("vfail: Dont know if we can convert from {:?} to {:?}", source_type, target_type);
             }
         }
 
