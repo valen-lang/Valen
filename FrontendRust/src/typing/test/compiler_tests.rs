@@ -3780,6 +3780,196 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
 
 */
 #[test]
+fn reports_when_ssa_from_callable_has_unknown_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  a = #[#5]NoSuchType(&{_ * 42});\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::HigherTypingInferError { .. } => {}
+        other => panic!("expected HigherTypingInferError, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_ssa_callable_returns_wrong_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arith.*;\n",
+        "exported func main() int {\n",
+        "  a = #[#5]int(&{ _ == 0 });\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::UnexpectedArrayElementType { .. } => {}
+        other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_rsa_from_callable_has_unknown_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arrays.*;\n",
+        "import v.builtins.drop.*;\n",
+        "exported func main() int {\n",
+        "  a = []NoSuchType(3, &(i int) => { i });\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::HigherTypingInferError { .. } => {}
+        other => panic!("expected HigherTypingInferError, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_rsa_callable_returns_wrong_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arrays.*;\n",
+        "import v.builtins.arith.*;\n",
+        "import v.builtins.drop.*;\n",
+        "exported func main() int {\n",
+        "  a = #[]int(5, &{ _ == 0 });\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::UnexpectedArrayElementType { .. } => {}
+        other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_ssa_from_values_has_unknown_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  a = #[#]NoSuchType(1, 2, 3);\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::HigherTypingInferError { .. } => {}
+        other => panic!("expected HigherTypingInferError, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_ssa_values_have_wrong_element_type() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  a = #[#]int(true, false, true);\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::UnexpectedArrayElementType { .. } => {}
+        other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
+    }
+}
+
+#[test]
+fn reports_when_rsa_indexed_with_non_integer() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arrays.*;\n",
+        "import v.builtins.drop.*;\n",
+        "exported func main() int {\n",
+        "  a = Array<mut, int>(3);\n",
+        "  return a[true];\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::IndexedArrayWithNonInteger { .. } => {}
+        other => panic!("expected IndexedArrayWithNonInteger, got {:?}", other),
+    }
+}
+
+#[test]
 fn reports_when_dot_applied_to_non_container() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

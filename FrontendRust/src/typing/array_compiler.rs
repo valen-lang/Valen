@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter::once;
 
 use crate::utils::range::RangeS;
 
@@ -103,7 +104,7 @@ where 's: 't,
         mutability_rune: IRuneS<'s>,
         variability_rune: IRuneS<'s>,
         callable_te: ReferenceExpressionTE<'s, 't>,
-    ) -> StaticArrayFromCallableTE<'s, 't> {
+    ) -> Result<StaticArrayFromCallableTE<'s, 't>, ICompileErrorT<'s, 't>> {
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
@@ -125,7 +126,10 @@ where 's: 't,
                 &[],
                 true,
                 initially_known_runes,
-            ).unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — HigherTypingInferError"));
+            ).map_err(|e| ICompileErrorT::HigherTypingInferError {
+                range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                err: e,
+            })?;
 
         let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
@@ -194,23 +198,27 @@ where 's: 't,
         let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
         let variability = expect_variability(templatas.get(&variability_rune).copied().expect("vassertSome: variabilityRune not in templatas"));
         let prototype = self.get_array_generator_prototype(
-            coutputs, calling_env, parent_ranges, call_location, callable_te, region);
+            coutputs, calling_env, parent_ranges, call_location, callable_te, region)?;
         let ssa_mt = self.resolve_static_sized_array(
             mutability, variability, size, prototype.return_type, region);
 
         if let Some(element_type_rune_a) = maybe_element_type_rune_a {
             let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
             if prototype.return_type != expected_element_type {
-                panic!("implement: evaluate_static_sized_array_from_callable — UnexpectedArrayElementType");
+                return Err(ICompileErrorT::UnexpectedArrayElementType {
+                    range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                    expected_type: expected_element_type,
+                    actual_type: prototype.return_type,
+                });
             }
         }
 
-        StaticArrayFromCallableTE {
+        Ok(StaticArrayFromCallableTE {
             array_type: self.typing_interner.alloc(ssa_mt),
             region,
             generator: callable_te,
             generator_method: prototype,
-        }
+        })
     }
 /*
   def evaluateStaticSizedArrayFromCallable(
@@ -347,7 +355,10 @@ where 's: 't,
                 &[],
                 true,
                 initially_known_runes,
-            ).unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — HigherTypingInferError"));
+            ).map_err(|e| ICompileErrorT::HigherTypingInferError {
+                range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                err: e,
+            })?;
         let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
@@ -418,12 +429,16 @@ where 's: 't,
                     Some(c) => c,
                 };
                 let prototype = self.get_array_generator_prototype(
-                    coutputs, IInDenizenEnvironmentT::Node(calling_env), parent_ranges, call_location, callable_te, region);
+                    coutputs, IInDenizenEnvironmentT::Node(calling_env), parent_ranges, call_location, callable_te, region)?;
                 let rsa_mt = self.resolve_runtime_sized_array(prototype.return_type, mutability, region);
                 if let Some(element_type_rune_a) = maybe_element_type_rune {
                     let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
                     if prototype.return_type != expected_element_type {
-                        panic!("Untested branch: Scala throws CompileErrorExceptionT(UnexpectedArrayElementType) here when prototype return type doesn't match the element-type rune");
+                        return Err(ICompileErrorT::UnexpectedArrayElementType {
+                            range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                            expected_type: expected_element_type,
+                            actual_type: prototype.return_type,
+                        });
                     }
                 }
                 Ok(ReferenceExpressionTE::NewImmRuntimeSizedArray(self.typing_interner.alloc(NewImmRuntimeSizedArrayTE {
@@ -482,9 +497,11 @@ where 's: 't,
                     &args,
                     &[],
                     true,
-                )
-                    .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Mutable findFunction Err ICompileErrorT"))
-                    .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Mutable findFunction CouldntFindFunctionToCallT"));
+                )?
+                    .map_err(|e| ICompileErrorT::CouldntFindFunctionToCallT {
+                        range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                        fff: e,
+                    })?;
                 let prototype = stamp.prototype;
                 let element_type = match prototype.return_type.kind {
                     KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
@@ -755,7 +772,10 @@ where 's: 't,
                 &[],
                 true,
                 initially_known_runes,
-            ).unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_values — HigherTypingInferError"));
+            ).map_err(|e| ICompileErrorT::HigherTypingInferError {
+                range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                err: e,
+            })?;
 
         let member_types: HashSet<CoordT<'s, 't>> =
             exprs_2.iter().map(|e| e.result().coord).collect();
@@ -832,7 +852,11 @@ where 's: 't,
         if let Some(element_type_rune_a) = maybe_element_type_rune_a {
             let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
             if member_type != expected_element_type {
-                panic!("implement: evaluate_static_sized_array_from_values — UnexpectedArrayElementType");
+                return Err(ICompileErrorT::UnexpectedArrayElementType {
+                    range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                    expected_type: expected_element_type,
+                    actual_type: member_type,
+                });
             }
         }
 
@@ -1568,9 +1592,14 @@ where 's: 't,
         container_expr_2: ReferenceExpressionTE<'s, 't>,
         index_expr_2: ReferenceExpressionTE<'s, 't>,
         rsa: &'t RuntimeSizedArrayTT<'s, 't>,
-    ) -> RuntimeSizedArrayLookupTE<'s, 't> {
+    ) -> Result<RuntimeSizedArrayLookupTE<'s, 't>, ICompileErrorT<'s, 't>> {
         if index_expr_2.result().coord.kind != KindT::Int(IntT::I32) {
-            panic!("implement: lookup_in_unknown_sized_array — IndexedArrayWithNonInteger");
+            let range_with_parent: Vec<RangeS<'s>> =
+                once(range).chain(parent_ranges.iter().copied()).collect();
+            return Err(ICompileErrorT::IndexedArrayWithNonInteger {
+                range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                types: index_expr_2.result().coord,
+            });
         }
         let variability = match rsa.mutability() {
             ITemplataT::Placeholder(_) => VariabilityT::Final,
@@ -1578,7 +1607,7 @@ where 's: 't,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => VariabilityT::Varying,
             _ => panic!("vwat"),
         };
-        RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2, variability)
+        Ok(RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2, variability))
     }
 /*
   def lookupInUnknownSizedArray(

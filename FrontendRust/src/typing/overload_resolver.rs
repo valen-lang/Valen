@@ -1611,7 +1611,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         callable_te: ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
-    ) -> &'t PrototypeT<'s, 't> {
+    ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         let func_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![
@@ -1622,11 +1622,12 @@ where 's: 't,
                 kind: KindT::Int(IntT { bits: 32 }),
             },
         ];
-        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)
-            .unwrap_or_else(|_e| panic!("Unimplemented: get_array_generator_prototype — propagated ICompileErrorT"))
-        {
-            Err(_e) => panic!("CouldntFindFunctionToCallT"),
-            Ok(sfs) => sfs.prototype,
+        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)? {
+            Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {
+                range: self.typing_interner.alloc_slice_copy(range),
+                fff: e,
+            }),
+            Ok(sfs) => Ok(sfs.prototype),
         }
     }
 /*

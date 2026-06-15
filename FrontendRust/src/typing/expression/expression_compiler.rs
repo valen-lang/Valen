@@ -1324,7 +1324,7 @@ where 's: 't,
                                 once(dot.range).chain(parent_ranges.iter().copied()).collect();
                             AddressExpressionTE::RuntimeSizedArrayLookup(
                                 self.typing_interner.alloc(self.lookup_in_unknown_sized_array(
-                                    &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa))
+                                    &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa)?)
                             )
                         } else {
                             let range_with_parent: Vec<RangeS<'s>> =
@@ -1928,7 +1928,7 @@ where 's: 't,
                     sa.mutability_st.rune,
                     sa.variability_st.rune,
                     callable_te,
-                );
+                )?;
                 Ok((ExpressionTE::Reference(ReferenceExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2))), returns_from_callable))
             }
             IExpressionSE::NewRuntimeSizedArray(nrsa) => {
@@ -2060,7 +2060,7 @@ where 's: 't,
                         coutputs, nenv, life.add(self.typing_interner, 2), parent_ranges, outer_call_location, nenv.default_region(), index_se.index_expr)?;
                 let expr_templata = match container_expr_2.result().coord.kind {
                     KindT::RuntimeSizedArray(rsa) => {
-                        let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa);
+                        let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa)?;
                         ExpressionTE::Address(AddressExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup)))
                     }
                     KindT::StaticSizedArray(at) => {
