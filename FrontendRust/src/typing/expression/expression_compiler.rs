@@ -1526,7 +1526,6 @@ where 's: 't,
                 all_returns.extend(else_returns_from_exprs);
                 Ok((ExpressionTE::Reference(if_expr_2), all_returns))
             }
-            IExpressionSE::Loop(_) => panic!("implement: evaluate_expression — Loop"),
             IExpressionSE::Break(b) => {
                 // See BEAFB, we need to find the nearest while to see local since then.
                 let range_with_parent: Vec<RangeS<'s>> =
@@ -1807,7 +1806,6 @@ where 's: 't,
                 returns.extend(returns_from_destination);
                 Ok((ExpressionTE::Reference(mutate_2), returns))
             }
-            IExpressionSE::GlobalMutate(_) => panic!("implement: evaluate_expression — GlobalMutate"),
             IExpressionSE::LocalMutate(lm) => {
                 let (unconverted_source_expr_2, returns_from_source) =
                     self.evaluate_and_coerce_to_reference_expression(
@@ -1853,9 +1851,6 @@ where 's: 't,
                 };
                 Ok((ExpressionTE::Reference(expr_te), returns_from_source))
             }
-            IExpressionSE::ArgLookup(_) => panic!("implement: evaluate_expression — ArgLookup"),
-            IExpressionSE::RepeaterBlock(_) => panic!("implement: evaluate_expression — RepeaterBlock"),
-            IExpressionSE::RepeaterBlockIterator(_) => panic!("implement: evaluate_expression — RepeaterBlockIterator"),
             IExpressionSE::Tuple(t) => {
                 let (exprs_2, returns_from_elements) =
                     self.evaluate_and_coerce_to_reference_expressions(
@@ -1940,8 +1935,6 @@ where 's: 't,
                 returns.extend(returns_from_callable);
                 Ok((ExpressionTE::Reference(expr_2), returns))
             }
-            IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
-            IExpressionSE::RepeaterPackIterator(_) => panic!("implement: evaluate_expression — RepeaterPackIterator"),
             IExpressionSE::Block(b) => {
                 let mut child_environment = NodeEnvironmentBox::new(nenv.make_child(self.typing_interner, expr_1, None));
                 let child_starting = child_environment.snapshot(self.typing_interner);
@@ -2153,9 +2146,6 @@ where 's: 't,
                 #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
                 Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
             }
-            IExpressionSE::TemplataLoad(_) => {
-                panic!("Unimplemented: evaluate_expression TemplataLoad (see ExpressionCompiler.scala)")
-            }
         }
     }
 /*
@@ -2185,13 +2175,6 @@ where 's: 't,
         case ConstantBoolSE(range, i) => (ConstantBoolTE(i, region), Set())
         case ConstantStrSE(range, s) => (ConstantStrTE(s, region), Set())
         case ConstantFloatSE(range, f) => (ConstantFloatTE(f, region), Set())
-        case ArgLookupSE(range, index) => {
-          val paramCoordRune = nenv.function.params(index).pattern.coordRune.get
-          val paramCoordTemplata = vassertOne(nenv.lookupNearestWithImpreciseName(interner.intern(RuneNameS(paramCoordRune.rune)), Set(TemplataLookupContext)))
-          val CoordTemplataT(paramCoord) = paramCoordTemplata
-          vassert(nenv.functionEnvironment.id.localName.parameters(index) == paramCoord)
-          (ArgLookupTE(index, paramCoord), Set())
-        }
         case FunctionCallSE(range, callLocation, OverloadSetSE(OutsideLoadSE(_, rules, parts)), argsExprs1) => {
           val (argsExprs2, returnsFromArgs) =
             evaluateAndCoerceToReferenceExpressions(

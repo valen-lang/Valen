@@ -57,18 +57,6 @@ override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
-pub struct LoopSE<'s> {
-  pub range: RangeS<'s>,
-  pub body: &'s BlockSE<'s>,
-}
-/*
-case class LoopSE(range: RangeS, body: BlockSE) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-  vpass()
-}
-*/
-#[derive(Debug, PartialEq)]
 pub struct BreakSE<'s> {
   pub range: RangeS<'s>,
 }
@@ -110,18 +98,6 @@ pub struct ExprMutateSE<'s> {
 }
 /*
 case class ExprMutateSE(range: RangeS, mutatee: IExpressionSE, expr: IExpressionSE) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-}
-*/
-#[derive(Debug, PartialEq)]
-pub struct GlobalMutateSE<'s> {
-  pub range: RangeS<'s>,
-  pub name: CodeNameS<'s>,
-  pub expr: &'s IExpressionSE<'s>,
-}
-/*
-case class GlobalMutateSE(range: RangeS, name: CodeNameS, expr: IExpressionSE) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
 }
@@ -268,24 +244,17 @@ override def hashCode(): Int = vcurious()
 pub enum IExpressionSE<'s> {
   Let(LetSE<'s>),
   If(IfSE<'s>),
-  Loop(LoopSE<'s>),
   Break(BreakSE<'s>),
   While(WhileSE<'s>),
   Map(MapSE<'s>),
   ExprMutate(ExprMutateSE<'s>),
-  GlobalMutate(GlobalMutateSE<'s>),
   LocalMutate(LocalMutateSE<'s>),
   Consecutor(ConsecutorSE<'s>),
-  ArgLookup(ArgLookupSE<'s>),
-  RepeaterBlock(RepeaterBlockSE<'s>),
-  RepeaterBlockIterator(RepeaterBlockIteratorSE<'s>),
   Void(VoidSE<'s>),
   Tuple(TupleSE<'s>),
   StaticArrayFromValues(StaticArrayFromValuesSE<'s>),
   StaticArrayFromCallable(StaticArrayFromCallableSE<'s>),
   NewRuntimeSizedArray(NewRuntimeSizedArraySE<'s>),
-  RepeaterPack(RepeaterPackSE<'s>),
-  RepeaterPackIterator(RepeaterPackIteratorSE<'s>),
   Block(&'s BlockSE<'s>),
   Pure(PureSE<'s>),
   Return(ReturnSE<'s>),
@@ -301,7 +270,6 @@ pub enum IExpressionSE<'s> {
   FunctionCall(FunctionCallSE<'s>),
   LocalLoad(LocalLoadSE<'s>),
   OverloadSet(OverloadSetSE<'s>),
-  TemplataLoad(TemplataLoadSE<'s>),
   RuneLookup(RuneLookupSE<'s>),
   Ownershipped(OwnershippedSE<'s>),
 }
@@ -311,24 +279,17 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
     match self {
       IExpressionSE::Let(x) => x.range.clone(),
       IExpressionSE::If(x) => x.range.clone(),
-      IExpressionSE::Loop(x) => x.range.clone(),
       IExpressionSE::Break(x) => x.range.clone(),
       IExpressionSE::While(x) => x.range.clone(),
       IExpressionSE::Map(x) => x.range.clone(),
       IExpressionSE::ExprMutate(x) => x.range.clone(),
-      IExpressionSE::GlobalMutate(x) => x.range.clone(),
       IExpressionSE::LocalMutate(x) => x.range.clone(),
       IExpressionSE::Consecutor(x) => x.range(),
-      IExpressionSE::ArgLookup(x) => x.range.clone(),
-      IExpressionSE::RepeaterBlock(x) => x.range.clone(),
-      IExpressionSE::RepeaterBlockIterator(x) => x.range.clone(),
       IExpressionSE::Void(x) => x.range.clone(),
       IExpressionSE::Tuple(x) => x.range.clone(),
       IExpressionSE::StaticArrayFromValues(x) => x.range.clone(),
       IExpressionSE::StaticArrayFromCallable(x) => x.range.clone(),
       IExpressionSE::NewRuntimeSizedArray(x) => x.range.clone(),
-      IExpressionSE::RepeaterPack(x) => x.range.clone(),
-      IExpressionSE::RepeaterPackIterator(x) => x.range.clone(),
       IExpressionSE::Block(x) => x.range.clone(),
       IExpressionSE::Pure(x) => x.range.clone(),
       IExpressionSE::Return(x) => x.range.clone(),
@@ -344,7 +305,6 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
       IExpressionSE::FunctionCall(x) => x.range.clone(),
       IExpressionSE::LocalLoad(x) => x.range.clone(),
       IExpressionSE::OverloadSet(x) => x.lookup.range.clone(),
-      IExpressionSE::TemplataLoad(x) => x.range.clone(),
       IExpressionSE::RuneLookup(x) => x.range.clone(),
       IExpressionSE::Ownershipped(x) => x.range.clone(),
     }
@@ -399,41 +359,6 @@ vassert(exprs.collect({ case ConsecutorSE(_) => }).isEmpty)
 }
 /* Guardian: disable-all */
 
-#[derive(Debug, PartialEq)]
-pub struct ArgLookupSE<'s> {
-  pub range: RangeS<'s>,
-  pub index: i32,
-}
-/*
-case class ArgLookupSE(range: RangeS, index: Int) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-}
-*/
-#[derive(Debug, PartialEq)]
-pub struct RepeaterBlockSE<'s> {
-  pub range: RangeS<'s>,
-  pub expression: &'s IExpressionSE<'s>,
-}
-/*
- // These things will be separated by semicolons, and all be joined in a block
-case class RepeaterBlockSE(range: RangeS, expression: IExpressionSE) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
- }
-*/
-#[derive(Debug, PartialEq)]
-pub struct RepeaterBlockIteratorSE<'s> {
-  pub range: RangeS<'s>,
-  pub expression: &'s IExpressionSE<'s>,
-}
-/*
-// Results in a pack, represents the differences between the expressions
-case class RepeaterBlockIteratorSE(range: RangeS, expression: IExpressionSE) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-}
-*/
 #[derive(Debug, PartialEq)]
 pub struct ReturnSE<'s> {
   pub range: RangeS<'s>,
@@ -536,30 +461,6 @@ case class NewRuntimeSizedArraySE(
   size: IExpressionSE,
   callable: Option[IExpressionSE]
 ) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-}
-*/
-#[derive(Debug, PartialEq)]
-pub struct RepeaterPackSE<'s> {
-  pub range: RangeS<'s>,
-  pub expression: &'s IExpressionSE<'s>,
-}
-/*
-// This thing will be repeated, separated by commas, and all be joined in a pack
-case class RepeaterPackSE(range: RangeS, expression: IExpressionSE) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-}
-*/
-#[derive(Debug, PartialEq)]
-pub struct RepeaterPackIteratorSE<'s> {
-  pub range: RangeS<'s>,
-  pub expression: &'s IExpressionSE<'s>,
-}
-/*
-// Results in a pack, represents the differences between the elements
-case class RepeaterPackIteratorSE(range: RangeS, expression: IExpressionSE) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
 }
@@ -772,23 +673,6 @@ case class OverloadSetSE(
 }
 */
 
-#[derive(Debug, PartialEq)]
-pub struct TemplataLoadSE<'s> {
-  pub range: RangeS<'s>,
-  pub rules: &'s [IRulexSR<'s>],
-  pub target_ownership: LoadAsP,
-}
-/*
-case class TemplataLoadSE(
-    range: RangeS,
-    rules: Vector[IRulexSR],
-    targetOwnership: LoadAsP
-)  extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious();
-  override def hashCode(): Int = vcurious()
-  vpass()
-}
-*/
 #[derive(Debug, PartialEq)]
 pub struct RuneLookupSE<'s> {
   pub range: RangeS<'s>,

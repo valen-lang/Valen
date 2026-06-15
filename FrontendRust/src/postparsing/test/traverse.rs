@@ -514,7 +514,6 @@ where
       visit_block(pred, out, &x.then_body);
       visit_block(pred, out, &x.else_body);
     }
-    IExpressionSE::Loop(x) => visit_block(pred, out, &x.body),
     IExpressionSE::Break(_) => {}
     IExpressionSE::While(x) => visit_block(pred, out, &x.body),
     IExpressionSE::Map(x) => visit_block(pred, out, &x.body),
@@ -522,7 +521,6 @@ where
       visit_expression(pred, out, x.mutatee);
       visit_expression(pred, out, x.expr);
     }
-    IExpressionSE::GlobalMutate(x) => visit_expression(pred, out, x.expr),
     IExpressionSE::LocalMutate(x) => {
       visit_var_name(pred, out, &x.name);
       visit_expression(pred, out, x.expr);
@@ -532,9 +530,6 @@ where
         visit_expression(pred, out, expr);
       }
     }
-    IExpressionSE::ArgLookup(_) => {}
-    IExpressionSE::RepeaterBlock(x) => visit_expression(pred, out, x.expression),
-    IExpressionSE::RepeaterBlockIterator(x) => visit_expression(pred, out, x.expression),
     IExpressionSE::Void(_) => {}
     IExpressionSE::Tuple(x) => {
       for element in x.elements {
@@ -580,8 +575,6 @@ where
         visit_expression(pred, out, callable);
       }
     }
-    IExpressionSE::RepeaterPack(x) => visit_expression(pred, out, x.expression),
-    IExpressionSE::RepeaterPackIterator(x) => visit_expression(pred, out, x.expression),
     IExpressionSE::Block(x) => visit_block(pred, out, x),
     IExpressionSE::Pure(x) => visit_pure(pred, out, x),
     IExpressionSE::Return(x) => visit_return(pred, out, x),
@@ -605,7 +598,6 @@ where
     }
     IExpressionSE::LocalLoad(x) => visit_var_name(pred, out, &x.name),
     IExpressionSE::OverloadSet(x) => visit_outside_load(pred, out, &x.lookup),
-    IExpressionSE::TemplataLoad(_x) => {}
     IExpressionSE::RuneLookup(x) => visit_rune(pred, out, &x.rune),
     IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
   }

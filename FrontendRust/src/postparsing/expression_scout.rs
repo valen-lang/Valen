@@ -9,7 +9,7 @@ use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
   IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, NewRuntimeSizedArraySE, OutsideLoadSE, OverloadSetSE,
-  OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE, TemplataLoadSE,
+  OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE,
   TupleSE, VoidSE,
 };
 use crate::postparsing::names::ImplicitRuneValS;
