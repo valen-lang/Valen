@@ -3779,6 +3779,53 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
   //}
 
 */
+#[test]
+fn reports_when_if_branches_have_different_kinds() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported func main() int {\n",
+        "  x = if true { 5 } else { 6.0 };\n",
+        "  return 7;\n",
+        "}\n",
+    );
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::CantReconcileBranchesResults { .. } => {}
+        _other => panic!("expected CantReconcileBranchesResults"),
+    }
+}
+
+#[test]
+fn reports_when_if_condition_isnt_boolean() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int { if 3 { return 5; } else { return 7; } }";
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::IfConditionIsntBoolean { .. } => {}
+        _other => panic!("expected IfConditionIsntBoolean"),
+    }
+}
+
 // mig: fn reports_when_mutating_after_moving
 #[test]
 fn reports_when_mutating_after_moving() {

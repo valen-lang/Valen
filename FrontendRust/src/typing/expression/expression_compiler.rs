@@ -1069,9 +1069,7 @@ where 's: 't,
                 let lookup_expr_1 =
                     self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership)?;
                 match lookup_expr_1 {
-                    None => {
-                        panic!("Couldnt find {:?}", name);
-                    }
+                    None => unreachable!("Scala throws CouldntFindIdentifierToLoadT here, but the scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs; Scala's own test was deleted for the same reason (see compiler_tests.rs:3763)"),
                     Some(x) => Ok((x, HashSet::new())),
                 }
             }
@@ -1349,8 +1347,15 @@ where 's: 't,
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition)?;
                 match condition_expr.result().coord {
-                    CoordT { kind: KindT::Bool(_), .. } => {}
-                    _ => panic!("implement: evaluate_expression If — IfConditionIsntBoolean"),
+                    CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+                    actual_type => {
+                        let range_with_parent: Vec<RangeS<'s>> =
+                            once(if_se.condition.range()).chain(parent_ranges.iter().copied()).collect();
+                        return Err(ICompileErrorT::IfConditionIsntBoolean {
+                            range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                            actual_type,
+                        });
+                    }
                 }
 
                 let then_body_se_as_expr: &'s IExpressionSE<'s> =
@@ -1447,8 +1452,11 @@ where 's: 't,
                             _ => {
                                 let range_with_parent: Vec<RangeS<'s>> =
                                     once(if_se.range).chain(parent_ranges.iter().copied()).collect();
-                                let _ = range_with_parent;
-                                panic!("CantReconcileBranchesResults: {:?} vs {:?}", a, b);
+                                return Err(ICompileErrorT::CantReconcileBranchesResults {
+                                    range: self.typing_interner.alloc_slice_from_vec(range_with_parent),
+                                    then_result: uncoerced_then_block_2.result().coord,
+                                    else_result: uncoerced_else_block_2.result().coord,
+                                });
                             }
                         }
                     }
