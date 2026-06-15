@@ -678,11 +678,11 @@ where 's: 't,
                     (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
                     (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
                     (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
-                    _ => panic!("vimpl: unexpected ownership combination in substitute_templatas_in_coord"),
+                    _ => unreachable!("Scala's substituteTemplatasInCoord covers the 5 substantive ownership pairs; remaining Weak-on-substituting-side combinations are degenerate"),
                 };
                 CoordT { ownership: result_ownership, region: result_region, kind: c.coord.kind }
             }
-            _ => panic!("Unimplemented: substitute_templatas_in_coord unexpected templata result"),
+            _ => unreachable!("Scala's substituteTemplatasInCoord match is exhaustive over KindTemplataT/CoordTemplataT only"),
         }
     }
 /*
@@ -795,7 +795,7 @@ where 's: 't,
                 let new_interface = Compiler::substitute_templatas_in_interface(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, i);
                 ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Interface(new_interface) }))
             }
-            KindT::OverloadSet(_) => panic!("Unimplemented: substitute_templatas_in_kind OverloadSet"),
+            KindT::OverloadSet(_) => unreachable!("Scala's substituteTemplatasInKind has no OverloadSet arm; an OverloadSet cannot appear as a substantive kind here"),
         }
     }
 /*
@@ -902,7 +902,7 @@ where 's: 't,
             INameT::LambdaCitizen(lambda_citizen_name_t) => {
                 INameT::LambdaCitizen(lambda_citizen_name_t)
             }
-            _ => panic!("implement: substituteTemplatasInStruct — unexpected local_name kind"),
+            _ => unreachable!("Scala's substituteTemplatasInStruct is exhaustive over AnonymousSubstructNameT/StructNameT/LambdaCitizenNameT"),
         };
         let new_id = interner.intern_id(IdValT {
             package_coord: id.package_coord,
@@ -1298,7 +1298,7 @@ where 's: 't,
                     template_args: new_template_args_ref,
                 }))
             }
-            _ => panic!("implement: substituteTemplatasInInterface — unexpected local_name kind"),
+            _ => unreachable!("Scala's substituteTemplatasInInterface match is exhaustive over InterfaceNameT only"),
         };
         let new_id = interner.intern_id(IdValT {
             package_coord: id.package_coord,
@@ -2228,7 +2228,7 @@ where 's: 't,
                 ITemplataT::Placeholder(_) => { panic!("Unimplemented: pointify_kind PlaceholderTemplataT"); }
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => ownership_if_mutable,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                _ => { panic!("Unimplemented: pointify_kind unexpected mutability"); }
+                _ => unreachable!("Scala's pointify_kind mutability match is exhaustive over Mutable/Immutable/Placeholder"),
             };
         match kind {
             KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: pointify_kind RuntimeSizedArray"); }
@@ -2240,7 +2240,7 @@ where 's: 't,
             KindT::Float(_) => CoordT { ownership: OwnershipT::Share, region, kind },
             KindT::Bool(_) => CoordT { ownership: OwnershipT::Share, region, kind },
             KindT::Str(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            _ => { panic!("Unimplemented: pointify_kind other kind"); }
+            _ => unreachable!("Scala's pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not in Scala"),
         }
     }
 /*
@@ -2778,7 +2778,7 @@ where 's: 't,
                 mutability: match kind_ownership {
                     OwnershipT::Own => MutabilityT::Mutable,
                     OwnershipT::Share => MutabilityT::Immutable,
-                    _ => panic!("create_kind_placeholder_inner: unexpected ownership"),
+                    _ => unreachable!("Scala's create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
                 },
             });
             // coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)

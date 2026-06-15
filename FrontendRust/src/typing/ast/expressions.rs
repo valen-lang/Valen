@@ -197,11 +197,9 @@ pub enum ReferenceExpressionTE<'s, 't> {
     While(&'t WhileTE<'s, 't>),
     Mutate(&'t MutateTE<'s, 't>),
     Restackify(&'t RestackifyTE<'s, 't>),
-    Transmigrate(&'t TransmigrateTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
     Break(&'t BreakTE),
     Block(&'t BlockTE<'s, 't>),
-    Pure(&'t PureTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
     Tuple(&'t TupleTE<'s, 't>),
     StaticArrayFromValues(&'t StaticArrayFromValuesTE<'s, 't>),
@@ -252,11 +250,9 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
             ReferenceExpressionTE::While(e) => e.result(),
             ReferenceExpressionTE::Mutate(e) => e.result(),
             ReferenceExpressionTE::Restackify(e) => e.result(),
-            ReferenceExpressionTE::Transmigrate(e) => e.result(),
             ReferenceExpressionTE::Return(e) => e.result(),
             ReferenceExpressionTE::Break(e) => e.result(),
             ReferenceExpressionTE::Block(e) => e.result(),
-            ReferenceExpressionTE::Pure(e) => e.result(),
             ReferenceExpressionTE::Consecutor(e) => e.result(),
             ReferenceExpressionTE::Tuple(e) => e.result(),
             ReferenceExpressionTE::StaticArrayFromValues(e) => e.result(),
@@ -911,36 +907,6 @@ override def hashCode(): Int = vcurious()
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct TransmigrateTE<'s, 't>
-where 's: 't,
-{
-    pub source_expr: ReferenceExpressionTE<'s, 't>,
-    pub target_region: RegionT,
-}
-/*
-case class TransmigrateTE(
-  sourceExpr: ReferenceExpressionTE,
-  targetRegion: RegionT
-) extends ReferenceExpressionTE {
-  vassert(sourceExpr.kind.isPrimitive)
-*/
-impl<'s, 't> TransmigrateTE<'s, 't> {
-/*
-  override def equals(obj: Any): Boolean = vcurious();
-*/
-/*
-override def hashCode(): Int = vcurious()
-*/
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
-/*
-  override def result = ReferenceResultT(sourceExpr.result.coord.copy(region = targetRegion))
-}
-
-
-*/
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
 pub struct ReturnTE<'s, 't>
 where 's: 't,
 {
@@ -1029,48 +995,6 @@ override def hashCode(): Int = vcurious()
     pub fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
 /*
   override def result = inner.result
-}
-
-*/
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct PureTE<'s, 't>
-where 's: 't,
-{
-    pub newdefault_region: RegionT,
-    pub inner: ReferenceExpressionTE<'s, 't>,
-    pub result_type: CoordT<'s, 't>,
-}
-/*
-// A pure block will:
-// 1. Create a new region (someday possibly with an allocator)
-// 2. Freeze the existing region
-// 3. Run the inner code
-// 4. Un-freeze the existing region
-// 5. Merge (transmigrate) any results from the new region into the existing region
-// 6. Destroy the new region
-case class PureTE(
-//  location: LocationInDenizen,
-//  newDefaultRegionName: IdT[INameT],
-  newdefaultRegion: RegionT,
-//  oldRegionToNewRegion: Vector[(ITemplataT[RegionTemplataType], ITemplataT[RegionTemplataType])],
-  inner: ReferenceExpressionTE,
-  resultType: CoordT
-) extends ReferenceExpressionTE {
-  vpass()
-
-*/
-impl<'s, 't> PureTE<'s, 't> {
-/*
-  override def equals(obj: Any): Boolean = vcurious();
-*/
-/*
-override def hashCode(): Int = vcurious()
-*/
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
-/*
-  override def result: ReferenceResultT = ReferenceResultT(resultType)
 }
 
 */

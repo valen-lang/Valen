@@ -27,11 +27,11 @@ use crate::typing::ast::expressions::{
     DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE, ExpressionTE, ExternFunctionCallTE,
     FunctionCallTE, IfTE, InterfaceFunctionCallTE, InterfaceToInterfaceUpcastTE,
     IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE, LockWeakTE, MutateTE,
-    NewImmRuntimeSizedArrayTE, NewMutRuntimeSizedArrayTE, PopRuntimeSizedArrayTE, PureTE,
+    NewImmRuntimeSizedArrayTE, NewMutRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
     PushRuntimeSizedArrayTE, ReferenceExpressionTE, ReferenceMemberLookupTE, ReinterpretTE,
     RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE, RuntimeSizedArrayLookupTE, SoftLoadTE,
     StaticArrayFromCallableTE, StaticArrayFromValuesTE, StaticSizedArrayLookupTE,
-    TransmigrateTE, TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
+    TupleTE, UnletTE, UpcastTE, VoidLiteralTE, WhileTE,
 };
 use crate::typing::env::environment::IEnvironmentT;
 use crate::typing::env::function_environment_t::ILocalVariableT;
@@ -78,11 +78,9 @@ pub enum NodeRefT<'s, 't> {
     While(&'t WhileTE<'s, 't>),
     Mutate(&'t MutateTE<'s, 't>),
     Restackify(&'t RestackifyTE<'s, 't>),
-    Transmigrate(&'t TransmigrateTE<'s, 't>),
     Return(&'t ReturnTE<'s, 't>),
     Break(&'t BreakTE),
     Block(&'t BlockTE<'s, 't>),
-    Pure(&'t PureTE<'s, 't>),
     Consecutor(&'t ConsecutorTE<'s, 't>),
     Tuple(&'t TupleTE<'s, 't>),
     StaticArrayFromValues(&'t StaticArrayFromValuesTE<'s, 't>),
@@ -551,11 +549,9 @@ fn visit_reference_expression<'s, 't, T, F>(
         ReferenceExpressionTE::While(x) => visit_while(pred, out, x),
         ReferenceExpressionTE::Mutate(x) => visit_mutate(pred, out, x),
         ReferenceExpressionTE::Restackify(x) => visit_restackify(pred, out, x),
-        ReferenceExpressionTE::Transmigrate(x) => visit_transmigrate(pred, out, x),
         ReferenceExpressionTE::Return(x) => visit_return(pred, out, x),
         ReferenceExpressionTE::Break(x) => visit_break(pred, out, x),
         ReferenceExpressionTE::Block(x) => visit_block(pred, out, x),
-        ReferenceExpressionTE::Pure(x) => visit_pure(pred, out, x),
         ReferenceExpressionTE::Consecutor(x) => visit_consecutor(pred, out, x),
         ReferenceExpressionTE::Tuple(x) => visit_tuple(pred, out, x),
         ReferenceExpressionTE::StaticArrayFromValues(x) => {
@@ -752,15 +748,6 @@ where
     visit_reference_expression(pred, out, x.source_expr);
 }
 
-fn visit_transmigrate<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t TransmigrateTE<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::Transmigrate(x));
-    visit_reference_expression(pred, out, x.source_expr);
-}
-
 fn visit_return<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ReturnTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
@@ -785,16 +772,6 @@ where
 {
     collect_if(pred, out, NodeRefT::Block(x));
     visit_reference_expression(pred, out, x.inner);
-}
-
-fn visit_pure<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t PureTE<'s, 't>)
-where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::Pure(x));
-    visit_reference_expression(pred, out, x.inner);
-    visit_coord(pred, out, &x.result_type);
 }
 
 fn visit_consecutor<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConsecutorTE<'s, 't>)

@@ -3515,7 +3515,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, expr_ce)
             }
-            ReferenceExpressionTE::Transmigrate(_) => panic!("Unimplemented: translate_ref_expr Transmigrate"),
             ReferenceExpressionTE::Return(r) => {
                 let (_inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &r.source_expr);
@@ -3537,7 +3536,6 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (inner_it, result_ce)
             }
-            ReferenceExpressionTE::Pure(_) => panic!("Unimplemented: translate_ref_expr Pure"),
             ReferenceExpressionTE::Consecutor(c) => {
                 let result_tt = c.result().coord;
                 let result_it =
