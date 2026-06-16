@@ -268,6 +268,7 @@ override def hashCode(): Int = vcurious()
 impl<'s, 'i> FunctionDefinitionI<'s, 'i> {
     pub fn is_pure(&self) -> bool {
         panic!("Unimplemented: is_pure")
+        // header.isPure
     }
 }
 /*
@@ -303,6 +304,7 @@ case class LocationInFunctionEnvironmentI(path: Vector[Int]) {
 impl<'i> LocationInFunctionEnvironmentI<'i> {
     pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentI<'i> {
         panic!("Unimplemented: add")
+        // LocationInFunctionEnvironmentI(path :+ subLocation)
     }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentI = {
@@ -360,6 +362,7 @@ case class ParameterI(
 impl<'s, 'i> ParameterI<'s, 'i> {
     pub fn same(&self, that: &ParameterI<'_, '_>) -> bool {
         panic!("Unimplemented: same")
+        // name == that.name && virtuality == that.virtuality && tyype == that.tyype
     }
 }
 /*
@@ -409,6 +412,7 @@ case class SignatureI[+R <: IRegionsModeI](id: IdI[R, IFunctionNameI[R]]) {
 impl<'s, 'i> SignatureI<'s, 'i> {
     pub fn param_types(&self) -> Vec<()> {
         panic!("Unimplemented: param_types")
+        // id.localName.parameters
     }
 }
 /*
@@ -533,6 +537,7 @@ case class FunctionHeaderI(
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_extern(&self) -> bool {
         panic!("Unimplemented: is_extern")
+        // attributes.exists({ case ExternI(_) => true case _ => false })
     }
 /*
   def isExtern = attributes.exists({ case ExternI(_) => true case _ => false })
@@ -579,6 +584,9 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 // mig: fn get_virtual_index
     pub fn get_virtual_index(&self) -> Option<i32> {
         panic!("Unimplemented: get_virtual_index")
+        // val indices = params.zipWithIndex.collect({ case (ParameterI(_, Some(AbstractI()), _, _), index) => index })
+        // vassert(indices.size <= 1)
+        // indices.headOption
     }
 /*
   def getVirtualIndex: Option[Int] = {
@@ -616,6 +624,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
 // mig: fn to_signature
     pub fn to_signature(&self) -> SignatureI<'_, '_> {
         panic!("Unimplemented: to_signature")
+        // toPrototype.toSignature
     }
 }
 /*
@@ -643,6 +652,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> where 's: 'i {
 impl<'s, 'i> FunctionHeaderI<'s, 'i> {
     pub fn is_pure(&self) -> bool {
         panic!("Unimplemented: is_pure")
+        // attributes.collectFirst({ case PureI => }).nonEmpty
     }
 }
 /*

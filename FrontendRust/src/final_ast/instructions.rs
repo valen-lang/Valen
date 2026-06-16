@@ -105,7 +105,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
             let src = u.source_expression.result_type();
             CoordH { ownership: src.ownership, location: src.location, kind: KindHT::InterfaceHT(u.target_interface) }
         }
-        ExpressionH::InterfaceToInterfaceUpcastH(_) => panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH"),
+        ExpressionH::InterfaceToInterfaceUpcastH(_) => {
+            panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH");
+            // CoordH(sourceExpression.resultType.ownership, sourceExpression.resultType.location, targetInterface)
+        }
         ExpressionH::LocalStoreH(s) => s.local.type_h,
         ExpressionH::LocalLoadH(l) => {
             let location = match (l.target_ownership, l.local.type_h.location) {
@@ -119,7 +122,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::MemberStoreH(m) => m.result_type,
         ExpressionH::MemberLoadH(m) => m.result_type,
         ExpressionH::NewArrayFromValuesH(n) => n.result_type,
-        ExpressionH::StaticSizedArrayStoreH(_) => panic!("Unimplemented: result_type for StaticSizedArrayStoreH"),
+        ExpressionH::StaticSizedArrayStoreH(_) => {
+            panic!("Unimplemented: result_type for StaticSizedArrayStoreH");
+            // resultType (field)
+        }
         ExpressionH::RuntimeSizedArrayStoreH(r) => r.result_type,
         ExpressionH::RuntimeSizedArrayLoadH(r) => r.result_type,
         ExpressionH::StaticSizedArrayLoadH(s) => s.result_type,
@@ -142,7 +148,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                     OwnershipH::OwnH => OwnershipH::OwnH,
                     OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::MutableBorrowH,
                     OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::MutableShareH,
-                    OwnershipH::WeakH => panic!("MutabilifyH::result_type: WeakH unimplemented (vimpl)"),
+                    OwnershipH::WeakH => {
+                        panic!("MutabilifyH::result_type: WeakH unimplemented (vimpl)");
+                        // vimpl()
+                    }
                 },
                 location,
                 kind,
@@ -155,7 +164,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                     OwnershipH::OwnH => OwnershipH::OwnH,
                     OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::ImmutableBorrowH,
                     OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::ImmutableShareH,
-                    OwnershipH::WeakH => panic!("ImmutabilifyH::result_type: WeakH unimplemented (vimpl)"),
+                    OwnershipH::WeakH => {
+                        panic!("ImmutabilifyH::result_type: WeakH unimplemented (vimpl)");
+                        // vimpl()
+                    }
                 },
                 location,
                 kind,
@@ -168,7 +180,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,
         ExpressionH::StaticArrayFromCallableH(s) => s.result_type,
         ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::DestroyImmRuntimeSizedArrayH(_) => panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH"),
+        ExpressionH::DestroyImmRuntimeSizedArrayH(_) => {
+            panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH");
+            // CoordH(MutableShareH, InlineH, VoidHT())
+        }
         ExpressionH::DestroyMutRuntimeSizedArrayH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
         ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
         ExpressionH::NewStructH(n) => n.result_type,
@@ -179,7 +194,10 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::AsSubtypeH(a) => a.result_type,
         ExpressionH::LockWeakH(l) => l.result_type,
         ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
+        ExpressionH::PreCheckBorrowH(_) => {
+            panic!("Unimplemented: result_type for PreCheckBorrowH");
+            // inner.resultType
+        }
     }
     }
 /*
@@ -208,6 +226,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 // mig: fn expect_interface_access
     pub fn expect_interface_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_interface_access");
+        // resultType match { case CoordH(_, _, x @ InterfaceHT(_)) => this.asInstanceOf[ExpressionH[InterfaceHT]] }
     }
 /*
   def expectInterfaceAccess(): ExpressionH[InterfaceHT] = {
@@ -269,6 +288,7 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
 // mig: fn expect_i64_access
     pub fn expect_i64_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_i64_access");
+        // resultType match { case CoordH(_, _, x @ IntHT(64)) => this.asInstanceOf[ExpressionH[IntHT]] }
     }
 /*
   def expectI64Access(): ExpressionH[IntHT] = {
@@ -2219,6 +2239,7 @@ trait IExpressionH {
 // mig: fn expect_reference_expression
 pub fn expect_reference_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h ReferenceExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_reference_expression");
+    // this match { case r @ ReferenceExpressionH(_) => r; case AddressExpressionH(_) => vfail(...) }
 }
 /*
   def expectReferenceExpression(): ReferenceExpressionH = {
@@ -2231,6 +2252,7 @@ pub fn expect_reference_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h R
 // mig: fn expect_address_expression
 pub fn expect_address_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h AddressExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_address_expression");
+    // this match { case a @ AddressExpressionH(_) => a; case ReferenceExpressionH(_) => vfail(...) }
 }
 /*
   def expectAddressExpression(): AddressExpressionH = {

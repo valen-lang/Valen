@@ -32,8 +32,14 @@ trait CitizenDefinitionT {
 impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
     pub fn template_name(&self) -> IdT<'s, 't> {
         match self {
-            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: template_name Struct"),
-            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: template_name Interface"),
+            CitizenDefinitionT::Struct(s) => {
+                panic!("Unimplemented: template_name Struct");
+                // s.templateName
+            }
+            CitizenDefinitionT::Interface(i) => {
+                panic!("Unimplemented: template_name Interface");
+                // i.templateName
+            }
         }
     }
     /*
@@ -42,7 +48,10 @@ impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
     pub fn generic_param_types(&self, scout_arena: &ScoutArena<'s>) -> Vec<ITemplataType<'s>> {
         match self {
             CitizenDefinitionT::Struct(s) => s.generic_param_types(scout_arena),
-            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: generic_param_types Interface"),
+            CitizenDefinitionT::Interface(i) => {
+                panic!("Unimplemented: generic_param_types Interface");
+                // i.genericParamTypes
+            }
         }
     }
     /*
@@ -59,8 +68,14 @@ impl<'s, 't> CitizenDefinitionT<'s, 't> where 's: 't {
     */
     pub fn default_region(&self) -> RegionT {
         match self {
-            CitizenDefinitionT::Struct(s) => panic!("Unimplemented: default_region Struct"),
-            CitizenDefinitionT::Interface(i) => panic!("Unimplemented: default_region Interface"),
+            CitizenDefinitionT::Struct(s) => {
+                panic!("Unimplemented: default_region Struct");
+                // s.defaultRegion
+            }
+            CitizenDefinitionT::Interface(i) => {
+                panic!("Unimplemented: default_region Interface");
+                // i.defaultRegion
+            }
         }
     }
     /*
@@ -95,6 +110,7 @@ case class StructDefinitionT(
 impl<'s, 't> StructDefinitionT<'s, 't> {
     fn default_region(&self) -> RegionT {
         panic!("Unimplemented: default_region");
+        // RegionT(DefaultRegionT)
     }
 /*
   def defaultRegion: RegionT = RegionT(DefaultRegionT)
@@ -298,12 +314,14 @@ case class InterfaceDefinitionT(
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn default_region(&self) -> RegionT {
         panic!("Unimplemented: default_region");
+        // RegionT(DefaultRegionT)
     }
 /*
   def defaultRegion: RegionT = RegionT(DefaultRegionT)
 */
     fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
         panic!("Unimplemented: generic_param_types");
+        // instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
     }
 /*
   override def genericParamTypes: Vector[ITemplataType] = {
@@ -312,6 +330,7 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
 */
     fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
         panic!("Unimplemented: instantiated_citizen");
+        // instantiatedInterface
     }
 /*
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface

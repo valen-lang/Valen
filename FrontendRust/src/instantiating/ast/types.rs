@@ -156,7 +156,10 @@ object CoordI {
 */
 // mig: fn void
 impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
-  pub fn void() -> CoordI<'s, 'i> { panic!("Unimplemented: void"); }
+  pub fn void() -> CoordI<'s, 'i> {
+    panic!("Unimplemented: void");
+    // CoordI[R](MutableShareI, VoidIT())
+  }
 }
 /*
   def void[R <: IRegionsModeI]: CoordI[R] = CoordI[R](MutableShareI, VoidIT())
@@ -230,12 +233,18 @@ sealed trait KindIT[+R <: IRegionsModeI] {
 */
 // mig: fn is_primitive
 impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
-  pub fn is_primitive(&self) -> bool { panic!("Unimplemented: is_primitive"); }
+  pub fn is_primitive(&self) -> bool {
+    panic!("Unimplemented: is_primitive");
+    // abstract method (each KindIT case overrides; primitives true, citizens/arrays false)
+  }
 /*
   def isPrimitive: Boolean
 */
 // mig: fn expect_citizen
-  pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i> { panic!("Unimplemented: expect_citizen"); }
+  pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i> {
+    panic!("Unimplemented: expect_citizen");
+    // this match { case c : ICitizenIT[R] => c; case _ => vfail() }
+  }
 /*
   def expectCitizen(): ICitizenIT[R] = {
     this match {
@@ -260,7 +269,10 @@ impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
   }
 */
 // mig: fn expect_struct
-  pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> { panic!("Unimplemented: expect_struct"); }
+  pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> {
+    panic!("Unimplemented: expect_struct");
+    // this match { case c @ StructIT(_) => c; case _ => vfail() }
+  }
 }
 /*
   def expectStruct(): StructIT[R] = {

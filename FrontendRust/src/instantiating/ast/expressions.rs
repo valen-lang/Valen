@@ -85,16 +85,16 @@ impl<'s, 'i> ReferenceExpressionIE<'s, 'i> {
             ReferenceExpressionIE::NewMutRuntimeSizedArray(n) => n.result,
             ReferenceExpressionIE::StaticArrayFromCallable(s) => s.result,
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
-            ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
+            ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
             ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
             ReferenceExpressionIE::RuntimeSizedArrayCapacity(r) => r.result(),
             ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
             ReferenceExpressionIE::PopRuntimeSizedArray(p) => p.result,
-            ReferenceExpressionIE::InterfaceToInterfaceUpcast(_) => panic!("RE::result: InterfaceToInterfaceUpcast"),
+            ReferenceExpressionIE::InterfaceToInterfaceUpcast(i) => i.result,
             ReferenceExpressionIE::Upcast(u) => u.result,
             ReferenceExpressionIE::SoftLoad(s) => s.result,
-            ReferenceExpressionIE::Destroy(_) => panic!("RE::result: Destroy"),
-            ReferenceExpressionIE::DestroyImmRuntimeSizedArray(_) => panic!("RE::result: DestroyImmRuntimeSizedArray"),
+            ReferenceExpressionIE::Destroy(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
+            ReferenceExpressionIE::DestroyImmRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
             ReferenceExpressionIE::NewImmRuntimeSizedArray(n) => n.result,
         }
     }
@@ -452,7 +452,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> DiscardIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -643,7 +646,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> ReturnIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, NeverIT(false))
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(false))
@@ -669,7 +675,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl BreakIE {
-	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, NeverIT(true))
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(true))
@@ -797,7 +806,10 @@ case class PreCheckBorrowIE(
 */
 // mig: fn result
 impl<'s, 'i> PreCheckBorrowIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// inner.result
+	}
 }
 /*
   override def result: CoordI[cI] = inner.result
@@ -909,7 +921,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> StaticArrayFromValuesIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// resultReference
+	}
 }
 /*
   override def result: CoordI[cI] = resultReference
@@ -1244,7 +1259,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> ArgLookupIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// coord
+	}
 }
 /*
   override def result: CoordI[cI] = coord
@@ -1284,7 +1302,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> StaticSizedArrayLookupIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// elementType
+	}
 }
 /*
   // See RMLRMO why we just return the element type.
@@ -1325,7 +1346,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> RuntimeSizedArrayLookupIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// elementType
+	}
 }
 /*
   // See RMLRMO why we just return the element type.
@@ -1400,7 +1424,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> ReferenceMemberLookupIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// memberReference
+	}
 }
 /*
   // See RMLRMO why we just return the member type.
@@ -1438,7 +1465,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> AddressMemberLookupIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// memberReference
+	}
 }
 /*
   // See RMLRMO why we just return the member type.
@@ -1790,7 +1820,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -1812,7 +1845,10 @@ case class DestroyMutRuntimeSizedArrayIE(
 */
 // mig: fn result
 impl<'s, 'i> DestroyMutRuntimeSizedArrayIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -1859,7 +1895,10 @@ case class PushRuntimeSizedArrayIE(
 */
 // mig: fn result
 impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -2046,7 +2085,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> DestroyIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
@@ -2095,7 +2137,10 @@ override def hashCode(): Int = vcurious()
 */
 // mig: fn result
 impl<'s, 'i> DestroyImmRuntimeSizedArrayIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> { panic!("Unimplemented: result"); }
+	pub fn result(&self) -> CoordI<'s, 'i> {
+		panic!("Unimplemented: result");
+		// CoordI[cI](MutableShareI, VoidIT())
+	}
 }
 /*
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())

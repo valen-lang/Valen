@@ -97,6 +97,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn typing_pass_locals
     pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i>, VariableIdH<'s, 'h>> {
         panic!("Unimplemented: typing_pass_locals");
+        // inner.typingPassLocals
     }
 /*
   def typingPassLocals: Map[IVarNameI[cI], VariableIdH] = inner.typingPassLocals
@@ -105,6 +106,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn unstackified_vars
     pub fn unstackified_vars(&self) -> &HashSet<VariableIdH<'s, 'h>> {
         panic!("Unimplemented: unstackified_vars");
+        // inner.unstackifiedVars
     }
 /*
   def unstackifiedVars: Set[VariableIdH] = inner.unstackifiedVars
@@ -113,6 +115,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn locals
     pub fn locals(&self) -> &HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>> {
         panic!("Unimplemented: locals");
+        // inner.locals
     }
 /*
   def locals: Map[VariableIdH, Local] = inner.locals
@@ -121,6 +124,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn next_local_id_number
     pub fn next_local_id_number(&self) -> i32 {
         panic!("Unimplemented: next_local_id_number");
+        // inner.nextLocalIdNumber
     }
 /*
   def nextLocalIdNumber: Int = inner.nextLocalIdNumber
@@ -138,6 +142,7 @@ where 's: 'i, 'i: 'h,
 // mig: fn get (Scala overload `get(VariableIdH)`.)
     pub fn get(&self, id: VariableIdH<'s, 'h>) -> Option<Local<'s, 'h>> {
         panic!("Unimplemented: get");
+        // inner.get(id)
     }
 /*
   def get(id: VariableIdH) = inner.get(id)
@@ -441,6 +446,28 @@ where 's: 'h, 's: 'i, 'i: 'h,
 {
     pub fn mangle_func(&self, id: &IdI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_func");
+        // if (id.packageCoord.module.str == "rust") {
+        //   ""
+        // } else {
+        //   val IdI(packageCoord, initSteps, localName) = id
+        //   (localName match {
+        //     case FunctionNameIX(FunctionTemplateNameI(humanName, _), templateArgs, _) => {
+        //       packageCoord.packages.map(_.str + "_").mkString("") +
+        //           initSteps.map(mangleName(_, true)).mkString("") +
+        //           humanName.str +
+        //           (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+        //           templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        //     }
+        //     case ExternFunctionNameI(humanName, templateArgs, _) => {
+        //       packageCoord.packages.map(_.str + "_").mkString("") +
+        //           initSteps.map(mangleName(_, true)).mkString("") +
+        //           humanName.str +
+        //           (if (templateArgs.nonEmpty) "_" + templateArgs.length else "") +
+        //           templateArgs.map("__" + mangleTemplata(_)).mkString("")
+        //     }
+        //     case other => vimpl(other)
+        //   })
+        // }
     }
 /*
   def mangleFunc(id: IdI[cI, IFunctionNameI[cI]]): String = {
@@ -472,6 +499,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 // mig: fn mangle_name
     pub fn mangle_name(&self, name: &INameI<'s, 'i>, stuff_after: bool) -> String {
         panic!("Unimplemented: mangle_name");
+        // ""  (Scala body is currently a stub returning empty string)
     }
 /*
   def mangleName(name: INameI[cI], stuffAfter: Boolean): String = {
@@ -503,6 +531,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 // mig: fn mangle_kind
     pub fn mangle_kind(&self, kind: &KindIT<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_kind");
+        // ""  (Scala body is a stub; commented-out arms would dispatch IntIT(bits) → "i" + bits, others vimpl)
     }
 /*
   def mangleKind(kind: KindIT[cI]): String = {
@@ -517,6 +546,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 // mig: fn mangle_coord
     pub fn mangle_coord(&self, coord: &CoordI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_coord");
+        // ""  (Scala body is a stub; commented-out form would prefix per ownership then mangleKind)
     }
 /*
   def mangleCoord(coord: CoordI[cI]): String = {
@@ -536,6 +566,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 // mig: fn mangle_templata
     pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_templata");
+        // ""  (Scala body is a stub; would dispatch CoordTemplataI → mangleCoord, others vimpl)
     }
 /*
   def mangleTemplata(templata: ITemplataI[cI]): String = {

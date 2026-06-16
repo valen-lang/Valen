@@ -176,6 +176,7 @@ where 's: 't,
         x: (),
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
+        // println("###: " + x)
     }
     /*
       def print(x: => Object) = {
@@ -302,9 +303,21 @@ where 's: 't,
             ITemplataT::InterfaceDefinition(_) => {}
             ITemplataT::StructDefinition(_) => {}
             ITemplataT::ImplDefinition(_) => {}
-            ITemplataT::CoordList(_) => { panic!("implement: get_placeholders_in_templata CoordList"); }
-            ITemplataT::Prototype(_) => { panic!("implement: get_placeholders_in_templata Prototype"); }
-            ITemplataT::Isa(_) => { panic!("implement: get_placeholders_in_templata Isa"); }
+            ITemplataT::CoordList(_) => {
+                panic!("implement: get_placeholders_in_templata CoordList");
+                // coords.foreach(c => getPlaceholdersInKind(accum, c.kind))
+            }
+            ITemplataT::Prototype(_) => {
+                panic!("implement: get_placeholders_in_templata Prototype");
+                // getPlaceholdersInId(accum, prototype.id)
+                // prototype.paramTypes.foreach(c => getPlaceholdersInKind(accum, c.kind))
+                // getPlaceholdersInKind(accum, prototype.returnType.kind)
+            }
+            ITemplataT::Isa(_) => {
+                panic!("implement: get_placeholders_in_templata Isa");
+                // getPlaceholdersInKind(accum, subKind)
+                // getPlaceholdersInKind(accum, superKind)
+            }
             _ => { panic!("implement: get_placeholders_in_templata other"); }
         }
     }
@@ -761,6 +774,8 @@ where 's: 't,
         _struct_tt: StructTT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: struct_is_closure");
+        // val structDef = state.lookupStruct(structTT.id)
+        // structDef.isClosure
     }
     /*
         override def structIsClosure(state: CompilerOutputs, structTT: StructTT): Boolean = {
@@ -1131,6 +1146,14 @@ where 's: 't,
         _exact: bool,
     ) -> StampFunctionSuccess<'s, 't> {
         panic!("Unimplemented: scout_expected_function_for_prototype");
+        // overloadResolver.findFunction(
+        //   env, coutputs, callRange, callLocation, functionName,
+        //   explicitTemplateArgRulesS, positionalExplicitTemplateArgRunesS,
+        //   receivingRuneToExplicitTemplateArgRune, contextRegion,
+        //   args, extraEnvsToLookIn, exact) match {
+        //   case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(callRange, e))
+        //   case Ok(x) => x
+        // }
     }
     /*
         override def scoutExpectedFunctionForPrototype(
@@ -1221,6 +1244,9 @@ where 's: 't,
         _maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         panic!("Unimplemented: generate_function");
+        // generator.generate(
+        //   functionCompilerCore, structCompiler, destructorCompiler, arrayCompiler,
+        //   fullEnv, coutputs, life, callRange, originFunction, paramCoords, maybeRetCoord)
     }
     /*
     override def generateFunction(
@@ -1763,7 +1789,10 @@ where 's: 't,
                     &[],
                     &unchecked.conclusions,
                 ) {
-                    Err(_f) => panic!("implement: check_defining_conclusions_and_resolve error in resolution phase"),
+                    Err(_f) => {
+                        panic!("implement: check_defining_conclusions_and_resolve error in resolution phase");
+                        // throw CompileErrorExceptionT(TypingPassDefiningError(ranges, DefiningResolveConclusionError(f)))
+                    }
                     Ok(c) => c,
                 };
         }
@@ -1976,7 +2005,10 @@ where 's: 't,
                     &[],
                     &[],
                 ) {
-                    Err(_f) => panic!("implement: TypingPassDefiningError from export solve_for_defining"),
+                    Err(_f) => {
+                        panic!("implement: TypingPassDefiningError from export solve_for_defining");
+                        // throw CompileErrorExceptionT(TypingPassDefiningError(ranges, f))
+                    }
                     Ok(c) => c,
                 };
 
@@ -3008,9 +3040,11 @@ where 's: 't,
                             match member {
                                 IStructMemberT::Variadic(_) => {
                                     panic!("implement: ensure_deep_exports — VariadicStructMemberT");
+                                    // vimpl()
                                 }
                                 IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
                                     panic!("implement: ensure_deep_exports — AddressMemberTypeT");
+                                    // vimpl()
                                 }
                                 IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
                                     let member_coord = substituter.substitute_for_coord(coutputs, *unsubstituted_member_coord);
@@ -3194,6 +3228,15 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
+        // functionA.name match {
+        //   case FunctionNameS(StrI("main"), _) => return true
+        //   case _ =>
+        // }
+        // functionA.attributes.exists({
+        //   case ExportS(_) => true
+        //   case ExternS(_) => true
+        //   case _ => false
+        // })
     }
     /*
       // Returns whether we should eagerly compile this and anything it depends on.
@@ -3214,6 +3257,7 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
+        // structA.attributes.exists({ case ExportS(_) => true case _ => false })
     }
     /*
       // Returns whether we should eagerly compile this and anything it depends on.
@@ -3226,6 +3270,7 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
+        // interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
     }
     /*
       // Returns whether we should eagerly compile this and anything it depends on.
@@ -3334,6 +3379,7 @@ where 's: 't,
         concrete_values2: &[KindT<'s, 't>],
     ) -> Vec<ITemplataT<'s, 't>> {
         panic!("Unimplemented: Slab 15 — body migration");
+        // concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
     }
     /*
       def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):

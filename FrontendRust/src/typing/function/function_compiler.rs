@@ -301,6 +301,12 @@ where 's: 't,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
+        // Profiler.frame(() => {
+        //   val FunctionTemplataT(declaringEnv, function) = functionTemplata
+        //   closureOrLightLayer.evaluateTemplatedLightBannerFromCall(
+        //     declaringEnv, coutputs, callingEnv, callRange, callLocation, function,
+        //     alreadySpecifiedTemplateArgs, contextRegion, argTypes)
+        // })
     }
 /*
   def evaluateTemplatedLightFunctionFromCallForPrototype(
@@ -359,7 +365,10 @@ where 's: 't,
                 self.typing_interner);
             let closure_struct_ref: StructTT<'s, 't> = match lookup_result {
                 Some(ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(s) })) => **s,
-                _ => { panic!("Unimplemented: evaluateTemplatedFunctionFromCallForPrototype lookup failed"); }
+                _ => {
+                    panic!("Unimplemented: evaluateTemplatedFunctionFromCallForPrototype lookup failed");
+                    // vassertSome(...) — pattern that would vfail on absence
+                }
             };
 
             let banner = self.evaluate_templated_closure_function_from_call_for_banner(
@@ -424,6 +433,25 @@ where 's: 't,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
+        // Profiler.frame(() => {
+        //   val FunctionTemplataT(env, function) = functionTemplata
+        //   if (function.isLight()) {
+        //     closureOrLightLayer.evaluateTemplatedLightFunctionFromCallForPrototype2(
+        //       env, coutputs, callingEnv, callRange, callLocation, function,
+        //       explicitTemplateArgs, contextRegion, argTypes)
+        //   } else {
+        //     val lambdaCitizenName2 =
+        //       function.name match {
+        //         case LambdaDeclarationNameS(codeLocation) => interner.intern(LambdaCitizenNameT(interner.intern(LambdaCitizenTemplateNameT(nameTranslator.translateCodeLocation(codeLocation)))))
+        //         case _ => vwat()
+        //       }
+        //     val KindTemplataT(closureStructRef @ StructTT(_)) =
+        //       vassertOne(env.lookupNearestWithName(lambdaCitizenName2, Set(TemplataLookupContext)))
+        //     closureOrLightLayer.evaluateTemplatedClosureFunctionFromCallForPrototype(
+        //       env, coutputs, callingEnv, callRange, callLocation, closureStructRef, function,
+        //       explicitTemplateArgs, contextRegion, argTypes)
+        //   }
+        // })
     }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -598,7 +626,9 @@ where 's: 't,
                 let tyype = match coord.ownership {
                     OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
-                    OwnershipT::Weak => panic!("implement: determine_closure_variable_member — ReferenceLocalVariableT WeakT"),
+                    OwnershipT::Weak => {
+                        unreachable!("Scala determineClosureVariableMember ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
+                    }
                 };
                 (variability, tyype)
             }
@@ -610,7 +640,9 @@ where 's: 't,
                 let tyype = match coord.ownership {
                     OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
-                    OwnershipT::Weak => panic!("implement: determine_closure_variable_member — ReferenceClosureVariableT WeakT"),
+                    OwnershipT::Weak => {
+                        unreachable!("Scala determineClosureVariableMember ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
+                    }
                 };
                 (variability, tyype)
             }

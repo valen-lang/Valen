@@ -221,9 +221,18 @@ where 's: 't,
 */
     pub fn translate_name_step(&self, name: INameS<'s>) -> INameT<'s, 't> {
         match name {
-            INameS::LambdaStructDeclaration(_) => panic!("Unimplemented: translate_name_step LambdaStructDeclaration"),
-            INameS::LetName(_) => panic!("Unimplemented: translate_name_step LetNameS"),
-            INameS::ExportAsName(_) => panic!("Unimplemented: translate_name_step ExportAsNameS"),
+            INameS::LambdaStructDeclaration(_) => {
+                panic!("Unimplemented: translate_name_step LambdaStructDeclaration");
+                // interner.intern(LambdaCitizenNameT(interner.intern(LambdaCitizenTemplateNameT(translateCodeLocation(codeLocation)))))
+            }
+            INameS::LetName(_) => {
+                panic!("Unimplemented: translate_name_step LetNameS");
+                // interner.intern(LetNameT(translateCodeLocation(codeLocation)))
+            }
+            INameS::ExportAsName(_) => {
+                panic!("Unimplemented: translate_name_step ExportAsNameS");
+                // interner.intern(ExportAsNameT(translateCodeLocation(codeLocation)))
+            }
             INameS::VarName(v) => panic!("Unimplemented: translate_name_step VarName {:?}", v),
             INameS::TopLevelStructDeclaration(s) => {
                 match self.translate_struct_name(IStructDeclarationNameS::TopLevelStructDeclarationName(*s)) {
@@ -255,7 +264,11 @@ where 's: 't,
                     )
                 )
             }
-            INameS::ImplDeclaration(_) => panic!("Unimplemented: translate_name_step ImplDeclarationNameS"),
+            INameS::ImplDeclaration(_) => {
+                panic!("Unimplemented: translate_name_step ImplDeclarationNameS");
+                // vimpl()
+                // // interner.intern(ImplDeclareNameT(codeLocation))
+            }
             INameS::RuneName(_) => panic!("Unimplemented: translate_name_step RuneNameS"),
             INameS::RuntimeSizedArrayDeclarationName(_) => panic!("Unimplemented: translate_name_step RuntimeSizedArrayDeclarationName"),
             INameS::StaticSizedArrayDeclarationName(_) => panic!("Unimplemented: translate_name_step StaticSizedArrayDeclarationName"),
@@ -263,7 +276,11 @@ where 's: 't,
             INameS::ArbitraryName(_) => panic!("Unimplemented: translate_name_step ArbitraryName"),
             INameS::FunctionDeclaration(fn_decl) => {
                 match fn_decl {
-                    IFunctionDeclarationNameS::LambdaDeclarationName(_) => panic!("Unimplemented: translate_name_step LambdaDeclarationNameS"),
+                    IFunctionDeclarationNameS::LambdaDeclarationName(_) => {
+                        panic!("Unimplemented: translate_name_step LambdaDeclarationNameS");
+                        // vcurious()
+                        // // interner.intern(LambdaTemplateNameT(translateCodeLocation(codeLocation)))
+                    }
                     IFunctionDeclarationNameS::FunctionName(n) => {
                         INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                             human_name: n.name,
@@ -385,6 +402,7 @@ where 's: 't,
             }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", discriminant(&name));
+                // vimpl(name.toString)
             }
         }
     }

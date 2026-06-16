@@ -33,6 +33,7 @@ pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
 */
 pub fn evaluate_location(location: LocationP) -> LocationT {
   panic!("Unimplemented: evaluate_location");
+  // location match { case InlineP => InlineT; case YonderP => YonderT }
 }
 /*
   def evaluateLocation(location: LocationP): LocationT = {
@@ -77,6 +78,7 @@ pub fn evaluate_ownership(ownership: OwnershipP) -> OwnershipT {
 */
 pub fn evaluate_maybe_ownership(maybe_ownership: Option<OwnershipP>) -> Option<OwnershipT> {
   panic!("Unimplemented: evaluate_maybe_ownership");
+  // maybeOwnership.map({ case OwnP => OwnT; case WeakP => WeakT; case ShareP => ShareT })
 }
 /*
   def evaluateMaybeOwnership(maybeOwnership: Option[OwnershipP]): Option[OwnershipT] = {
@@ -89,6 +91,7 @@ pub fn evaluate_maybe_ownership(maybe_ownership: Option<OwnershipP>) -> Option<O
 */
 pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
   panic!("Unimplemented: unevaluate_ownership");
+  // ownership match { case OwnT => OwnP; case BorrowT => BorrowP; case WeakT => WeakP; case ShareT => ShareP }
 }
 /*
   def unevaluateOwnership(ownership: OwnershipT): OwnershipP = {
@@ -102,6 +105,7 @@ pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
 */
 pub fn unevaluate_mutability(mutability: MutabilityT) -> MutabilityP {
   panic!("Unimplemented: unevaluate_mutability");
+  // mutability match { case MutableT => MutableP; case ImmutableT => ImmutableP }
 }
 /*
   def unevaluateMutability(mutability: MutabilityT): MutabilityP = {

@@ -216,6 +216,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 // mig: fn is_empty
     pub fn is_empty(&self) -> bool {
         panic!("Unimplemented: is_empty");
+        // objectsById.isEmpty
     }
 /*
   def isEmpty: Boolean = {
@@ -247,6 +248,9 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 // mig: fn remove
     pub fn remove(&self, alloc_id: AllocationIdV<'v, 'h, 's>) {
         panic!("Unimplemented: remove");
+        // vassert(contains(allocId))
+        // vassert(objectsById(allocId).kind != VoidV)
+        // objectsById.remove(allocId)
     }
 /*
   def remove(allocId: AllocationId): Unit = {
@@ -258,6 +262,13 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 // mig: fn contains
     pub fn contains(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains");
+        // objectsById.get(allocId) match {
+        //   case None => false
+        //   case Some(allocation) => {
+        //     vassert(allocation.kind.tyype.hamut == allocId.tyype.hamut)
+        //     true
+        //   }
+        // }
     }
 /*
   def contains(allocId: AllocationId): Boolean = {
@@ -281,6 +292,9 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
 // mig: fn print_all
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
+        // objectsById.foreach({
+        //   case (id, allocation) => vivemDout.println(id + " (" + allocation.getTotalRefCount(None) + " refs) = " + allocation.kind)
+        // })
     }
 /*
   def printAll(): Unit = {
@@ -389,6 +403,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn get_reference
     pub fn get_reference(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference");
+        // callsById(varAddr.callId).getLocal(varAddr).reference
     }
 /*
   def getReference(varAddr: VariableAddressV, expectedType: CoordH[KindHT]) = {
@@ -690,6 +705,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn increment_reference_hold_count
     pub fn increment_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: increment_reference_hold_count");
+        // incrementObjectRefCount(RegisterHoldToObjectReferrer(expressionId, reference.ownership), reference.allocId)
     }
 /*
   def incrementReferenceHoldCount(expressionId: ExpressionId, reference: ReferenceV) = {
@@ -699,6 +715,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn decrement_reference_hold_count
     pub fn decrement_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: decrement_reference_hold_count");
+        // decrementObjectRefCount(RegisterHoldToObjectReferrer(expressionId, reference.ownership), reference.allocId)
     }
 /*
   def decrementReferenceHoldCount(expressionId: ExpressionId, reference: ReferenceV) = {
@@ -930,6 +947,16 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn get_ref_count
     pub fn get_ref_count(&self, reference: ReferenceV<'v, 'h, 's>) -> i32 {
         panic!("Unimplemented: get_ref_count");
+        // if (reference.actualKind.hamut == VoidHT()) {
+        //   return 1
+        // }
+        // if (reference.ownership == WeakH) {
+        //   vassert(containsLiveOrUndeadObject(reference.allocId))
+        // } else {
+        //   vassert(containsLiveObject(reference.allocId))
+        // }
+        // val allocation = objectsById.get(reference.allocId)
+        // allocation.getRefCount()
     }
 /*
   def getRefCount(reference: ReferenceV): Int = {
@@ -1043,6 +1070,22 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn cast
     pub fn cast(&self, call_id: CallIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: cast");
+        // if (expectedType == targetType) {
+        //   return reference
+        // }
+        // val ReferenceV(actualKind, oldSeenAsType, oldOwnership, oldLocation, objectId) = reference
+        // vassert((oldOwnership == MutableShareH) == (targetType.ownership == MutableShareH))
+        // if (oldSeenAsType.hamut != expectedType.kind) {
+        //   vfail("wot")
+        // }
+        // incrementReferenceRefCount(RegisterToObjectReferrer(callId, targetType.ownership), reference)
+        // decrementReferenceRefCount(RegisterToObjectReferrer(callId, oldOwnership), reference)
+        // ReferenceV(
+        //   actualKind,
+        //   RRKind(targetType.kind),
+        //   targetType.ownership,
+        //   targetType.location,
+        //   objectId)
     }
 /*
   def cast(
@@ -1077,6 +1120,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn is_empty
     pub fn is_empty(&self) -> bool {
         panic!("Unimplemented: is_empty");
+        // objectsById.isEmpty
     }
 /*
   def isEmpty: Boolean = {
@@ -1086,6 +1130,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn print_all
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
+        // objectsById.printAll()
     }
 /*
   def printAll() = {
@@ -1524,6 +1569,9 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn check_reference_register
     pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> ReferenceRegisterV<'v, 'h, 's> {
         panic!("Unimplemented: check_reference_register");
+        // val reg = register.expectReferenceRegister()
+        // checkReference(tyype, reg.reference)
+        // reg
     }
 /*
 
@@ -1628,6 +1676,12 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn check_struct_id
     pub fn check_struct_id(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> AllocationIdV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_id");
+        // val reference = checkReferenceRegister(expectedStructPointerType, register).reference
+        // dereference(reference) match {
+        //   case siv @ StructInstanceV(structDefH, _) => vassert(structDefH.getRef == expectedStructType)
+        //   case _ => vfail("Expected a struct but was " + register)
+        // }
+        // reference.allocId
     }
 /*
   def checkStructId(expectedStructType: StructHT, expectedStructPointerType: CoordH[KindHT], register: RegisterV): AllocationId = {
@@ -1644,6 +1698,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
 // mig: fn check_struct_coord
     pub fn check_struct_coord(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> StructInstanceV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_coord");
+        // val reference = checkReferenceRegister(expectedStructPointerType, register).reference
+        // dereference(reference) match {
+        //   case siv @ StructInstanceV(structDefH, _) => { vassert(structDefH.getRef == expectedStructType); siv }
+        //   case _ => vfail("Expected a struct but was " + register)
+        // }
     }
 /*
   def checkStructCoord(expectedStructType: StructHT, expectedStructPointerType: CoordH[KindHT], register: RegisterV): StructInstanceV = {

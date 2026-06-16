@@ -24,6 +24,8 @@ object Conversions {
 // mig: fn evaluate_code_location
 pub fn evaluate_code_location(loc: CodeLocationS) -> CodeLocation {
     panic!("Unimplemented: evaluate_code_location");
+    // val CodeLocationS(line, col) = loc
+    // finalast.CodeLocation(line, col)
 }
 /*
   def evaluateCodeLocation(loc: CodeLocationS): CodeLocation = {
@@ -79,6 +81,7 @@ pub fn evaluate_variability_templata(mutability: VariabilityI) -> Variability {
 // mig: fn evaluate_location
 pub fn evaluate_location(location: LocationI) -> LocationH {
     panic!("Unimplemented: evaluate_location");
+    // location match { case InlineI => InlineH; case YonderI => YonderH }
 }
 /*
   def evaluateLocation(location: LocationI): LocationH = {
@@ -129,6 +132,17 @@ pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
 // mig: fn unevaluate_templata_type
 pub fn unevaluate_templata_type(tyype: ITemplataType) -> ITemplataType {
     panic!("Unimplemented: unevaluate_templata_type");
+    // tyype match {
+    //   case CoordTemplataType() => CoordTemplataType()
+    //   case KindTemplataType() => KindTemplataType()
+    //   case IntegerTemplataType() => IntegerTemplataType()
+    //   case BooleanTemplataType() => BooleanTemplataType()
+    //   case MutabilityTemplataType() => MutabilityTemplataType()
+    //   case LocationTemplataType() => LocationTemplataType()
+    //   case OwnershipTemplataType() => OwnershipTemplataType()
+    //   case VariabilityTemplataType() => VariabilityTemplataType()
+    //   case TemplateTemplataType(_, _) => vimpl()
+    // }
 }
 /*
   def unevaluateTemplataType()(tyype: ITemplataType): ITemplataType = {

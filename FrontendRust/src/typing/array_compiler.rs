@@ -141,7 +141,11 @@ where 's: 't,
             &mut rule_builder,
             rules_with_implicitly_coercing_lookups_s.to_vec(),
         ) {
-            Err(_e) => panic!("implement: evaluate_static_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT"),
+            Err(_e) => {
+                panic!("implement: evaluate_static_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT");
+                // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
+                // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
+            }
             Ok(()) => {}
         }
         let rules_a = rule_builder;
@@ -369,7 +373,11 @@ where 's: 't,
             &mut rule_builder,
             rules_with_implicitly_coercing_lookups_s.to_vec(),
         ) {
-            Err(_e) => panic!("implement: evaluate_runtime_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT"),
+            Err(_e) => {
+                panic!("implement: evaluate_runtime_sized_array_from_callable — TooManyTypesWithNameT/CouldntFindTypeT");
+                // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
+                // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
+            }
             Ok(()) => {}
         }
         let rules_a = rule_builder;
@@ -411,7 +419,10 @@ where 's: 't,
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
-            Err(_f) => panic!("implement: evaluate_runtime_sized_array_from_callable — TypingPassSolverError"),
+            Err(_f) => {
+                panic!("implement: evaluate_runtime_sized_array_from_callable — TypingPassSolverError");
+                // throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
+            }
             Ok(true) => {}
             Ok(false) => {}
         }
@@ -422,7 +433,10 @@ where 's: 't,
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — TypingPassResolvingError"));
         let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
         match mutability {
-            ITemplataT::Placeholder(_) => panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Placeholder mutability"),
+            ITemplataT::Placeholder(_) => {
+                panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Placeholder mutability");
+                // vimpl()
+            }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
                 let callable_te = match maybe_callable_te {
                     None => return Err(ICompileErrorT::NewImmRSANeedsCallable { range: parent_ranges_t }),
@@ -839,7 +853,10 @@ where 's: 't,
         let mut solver_state = self.make_solver_state(
             envs, coutputs, &rules_without_rune_parent_env_lookups, &rune_a_to_type, parent_ranges, &initial_knowns, &[]);
         match self.incrementally_solve(envs, coutputs, &mut solver_state, |_coutputs, _solver| false) {
-            Err(_f) => panic!("implement: evaluate_static_sized_array_from_values — TypingPassSolverError"),
+            Err(_f) => {
+                panic!("implement: evaluate_static_sized_array_from_values — TypingPassSolverError");
+                // throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
+            }
             Ok(true) => {}
             Ok(false) => {}
         }
@@ -1081,6 +1098,20 @@ where 's: 't,
         context_region: RegionT,
     ) -> DestroyImmRuntimeSizedArrayTE<'s, 't> {
         panic!("Unimplemented: evaluate_destroy_runtime_sized_array_into_callable");
+        // val arrayTT =
+        //   arrTE.result.coord match {
+        //     case CoordT(_, region, s @ contentsRuntimeSizedArrayTT(_, _, _)) => s
+        //     case other => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Destroying a non-array with a callable! Destroying: " + other))
+        //   }
+        // arrayTT.mutability match {
+        //   case PlaceholderTemplataT(_, MutabilityTemplataType()) => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't destroy an array whose mutability we don't know!"))
+        //   case MutabilityTemplataT(ImmutableT) =>
+        //   case MutabilityTemplataT(MutableT) => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't destroy a mutable array with a callable!"))
+        // }
+        // val prototype =
+        //   overloadResolver.getArrayConsumerPrototype(
+        //     coutputs, fate, range, callLocation, callableTE, arrayTT.elementType, contextRegion)
+        // ast.DestroyImmRuntimeSizedArrayTE(arrTE, arrayTT, callableTE, prototype)
     }
 /*
   def evaluateDestroyRuntimeSizedArrayIntoCallable(
@@ -1529,6 +1560,8 @@ where 's: 't,
 */
     fn get_array_size(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
         panic!("Unimplemented: get_array_size");
+        // val IntegerTemplataT(m) = vassertSome(templatas.get(sizeRuneA))
+        // m.toInt
     }
 /*
   private def getArraySize(templatas: Map[IRuneS, ITemplataT[ITemplataType]], sizeRuneA: IRuneS): Int = {

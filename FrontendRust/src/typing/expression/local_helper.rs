@@ -77,7 +77,9 @@ where 's: 't,
     pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
         match target_ownership {
             OwnershipT::Borrow => {}
-            _ => panic!("implement: make_temporary_local_defer non-Borrow target_ownership"),
+            _ => {
+                unreachable!("Scala's makeTemporaryLocal asserts targetOwnership matches BorrowT via an exhaustive-only match (no other arm)");
+            }
         }
         let rlv = self.make_temporary_local(nenv, life, r.result().coord);
         let let_expr_2 = ReferenceExpressionTE::LetAndLend(self.typing_interner.alloc(LetAndLendTE {
@@ -92,7 +94,10 @@ where 's: 't,
             IInDenizenEnvironmentT::Node(snapshot);
         // Until a test forces Result conversion through make_temporary_local_defer.
         let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te)
-            .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through make_temporary_local_defer"));
+            .unwrap_or_else(|_| {
+                panic!("Unimplemented: Result propagation through make_temporary_local_defer")
+                // throw CompileErrorExceptionT — drop() throws CompileErrorException in Scala
+            });
         assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
         DeferTE::new(let_expr_2, destruct_expr_2)
     }
@@ -302,7 +307,9 @@ where 's: 't,
                             AddressExpressionTE::AddressMemberLookup(ref r) => {
                                 panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
                             }
-                            _ => panic!("implement: soft_load OwnT MoveP — unexpected address expr"),
+                            _ => {
+                                unreachable!("Scala's OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE — no catch-all");
+                            }
                         }
                     }
                     LoadAsP::LoadAsBorrow => {

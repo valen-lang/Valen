@@ -579,12 +579,21 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         }
       }
     }
-    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule"),
+    IRulexSR::IsConcrete(_) => {
+      panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule");
+      // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
+    }
     IRulexSR::IsInterface(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))].into_iter().collect(), vec![], HashSet::new())
     }
-    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule"),
-    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule"),
+    IRulexSR::IsStruct(_) => {
+      panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule");
+      // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(rune.rune -> KindTemplataType()), Vector(), Set.empty)
+    }
+    IRulexSR::RefListCompoundMutability(_) => {
+      panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule");
+      // solverState.commitStep[IRuneTypeRuleError](false, Vector(ruleIndex), Map(resultRune.rune -> MutabilityTemplataType(), coordListRune.rune -> PackTemplataType(CoordTemplataType())), Vector(), Set.empty)
+    }
     IRulexSR::CoerceToCoord(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
@@ -597,7 +606,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::Lookup(x) => {
       let actual_lookup_result =
           match env.lookup(x.range.clone(), x.name.clone()) {
-            Err(_e) => panic!("LookupSR solve error path not yet migrated"),
+            Err(_e) => {
+              panic!("LookupSR solve error path not yet migrated");
+              // return Err(RuleError(e))
+            }
             Ok(r) => r,
           };
       let tyype = match actual_lookup_result {
@@ -610,7 +622,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::MaybeCoercingLookup(x) => {
       let actual_lookup_result =
           match env.lookup(x.range.clone(), x.name.clone()) {
-            Err(_e) => panic!("MaybeCoercingLookupSR solve error path not yet migrated"),
+            Err(_e) => {
+              panic!("MaybeCoercingLookupSR solve error path not yet migrated");
+              // return Err(RuleError(e))
+            }
             Ok(r) => r,
           };
       // AFTERM: lookup_rune_type only validates, doesn't conclude runes. Need to add commitStep here.
@@ -621,7 +636,10 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
       let actual_lookup_result =
           match env.lookup(x.range.clone(), lookup_name) {
-            Err(_e) => panic!("RuneParentEnvLookupSR solve error path not yet migrated"),
+            Err(_e) => {
+              panic!("RuneParentEnvLookupSR solve error path not yet migrated");
+              // return Err(RuleError(e))
+            }
             Ok(r) => r,
           };
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
@@ -806,7 +824,10 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
       match &expected_type {
         ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {}
         x if *x == p.tyype => {}
-        _ => panic!("lookup_rune_type Primitive error path not yet migrated"),
+        _ => {
+          panic!("lookup_rune_type Primitive error path not yet migrated");
+          // return Err(RuleError(FoundPrimitiveDidntMatchExpectedType(List(range), expectedType, tyype)))
+        }
       }
     }
     IRuneTypeSolverLookupResult::Templata(t) => {
@@ -823,7 +844,10 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
             Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: PhantomData })),
           }
         }
-        _ => panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated"),
+        _ => {
+          panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated");
+          // return Err(RuleError(FoundTemplataDidntMatchExpectedType(List(range), expectedType, actualType)))
+        }
       }
     }
     IRuneTypeSolverLookupResult::Citizen(c) => {
@@ -836,7 +860,10 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           }
         }
         x if *x == c.tyype => {}
-        _ => panic!("lookup_rune_type Citizen error path not yet migrated"),
+        _ => {
+          panic!("lookup_rune_type Citizen error path not yet migrated");
+          // return Err(RuleError(FoundCitizenDidntMatchExpectedType(List(range), expectedType, tyype)))
+        }
       }
     }
   }
@@ -933,6 +960,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
           match env.lookup(lookup.range.clone(), lookup.name.clone()) {
             Err(_e) => {
               panic!("LookupSR pre-computation error path not yet migrated");
+              // return Err(RuleError(e))
             }
             Ok(result) => {
               let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {
@@ -1233,6 +1261,11 @@ fn sanity_check_conclusion<'s>(
 // mig: fn complex_solve
 fn complex_solve() -> Result<(), ()> {
   panic!("Unimplemented complex_solve");
+  // val stepsAfter = solverState.getSteps().size
+  // vassert(stepsAfter == stepsBefore + 1)
+  // vassert(solverState.ruleIsSolved(solvingRuleIndex))
+  // solverState.sanityCheck()
+  // true // continue
 }
 /*
     val steps = solverState.getSteps().toStream
@@ -1251,6 +1284,11 @@ fn solve<'s>(
   _step_state: (),
 ) -> Result<(), ()> {
   panic!("Unimplemented solve");
+  // if (expectCompleteSolve && unsolvedRunes.nonEmpty) {
+  //   Err(RuneTypeSolveError(range, FailedSolve(steps, solverState.getConclusions().toMap, solverState.getUnsolvedRules(), unsolvedRunes.toVector, SolveIncomplete())))
+  // } else {
+  //   Ok(conclusions)
+  // }
 }
 /*
     if (expectCompleteSolve && unsolvedRunes.nonEmpty) {
@@ -1278,6 +1316,14 @@ fn check_generic_call_without_defaults<'s>(
   _arg_types: &[ITemplataType<'s>],
 ) -> Result<(), ()> {
   panic!("Unimplemented check_generic_call_without_defaults");
+  // paramTypes.zipWithIndex.foreach({ case (paramType, index) =>
+  //   if (index < argTypes.length) {
+  //     val actualType = argTypes(index)
+  //     if (paramType == actualType) { /* match */ }
+  //     else { return Err(GenericCallArgTypeMismatch(range, paramType, actualType, index)) }
+  //   } else { return Err(NotEnoughArgumentsForGenericCall(range, index)) }
+  // })
+  // Ok(())
 }
 /*
   def checkGenericCallWithoutDefaults(

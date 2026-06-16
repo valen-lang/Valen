@@ -75,6 +75,7 @@ trait IEnvironmentT {
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   pub fn to_string(&self) -> String {
     panic!("Unimplemented: to_string");
+    // "#Environment:" + id
   }
   /*
     override def toString: String = {
@@ -188,6 +189,9 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
     lookup_filter: HashSet<ILookupContext>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_all_with_name");
+    // Profiler.frame(() => {
+    //   lookupWithNameInner(nameS, lookupFilter, false)
+    // })
   }
   /*
     def lookupAllWithName(
@@ -678,7 +682,10 @@ pub fn get_imprecise_name<'s, 't>(
     INameT::ForwarderFunctionTemplate(f) => get_imprecise_name(scout_arena, f.inner.into()),
     // Scala: ImplTemplateNameT(_) => vwat() — should never be called for impl entries (they are
     // indexed under ImplImpreciseNameS in TemplatasStore.buildFor, never via getImpreciseName(key)).
-    INameT::ImplTemplate(_) => panic!("Unimplemented or unreachable: ImplTemplateNameT — Scala vwat()"),
+    INameT::ImplTemplate(_) => {
+        panic!("Unimplemented or unreachable: ImplTemplateNameT — Scala vwat()");
+        // vwat()
+    }
     INameT::AnonymousSubstructTemplate(astn) => {
         let inner_name = get_imprecise_name(scout_arena, astn.interface.into());
         inner_name.map(|x| scout_arena.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructTemplateImpreciseName(AnonymousSubstructTemplateImpreciseNameValS { interface_imprecise_name: x })))
@@ -699,7 +706,10 @@ pub fn get_imprecise_name<'s, 't>(
         }
     }
     INameT::AnonymousSubstruct(a) => get_imprecise_name(scout_arena, INameT::AnonymousSubstructTemplate(a.template)),
-    _ => panic!("Unimplemented: get_imprecise_name for {:?}", name_t),
+    _ => {
+        panic!("Unimplemented: get_imprecise_name for {:?}", name_t);
+        // vimpl(other.toString)
+    }
   }
 }
 /*
@@ -768,6 +778,9 @@ pub fn code_locations_match<'s>(
   code_location_b: &CodeLocationS<'s>,
 ) -> bool {
   panic!("Unimplemented: code_locations_match");
+  // val CodeLocationS(lineS, charS) = codeLocationA
+  // val CodeLocationS(line2, char2) = codeLocation2
+  // lineS == line2 && charS == char2
 }
 /*
   def codeLocationsMatch(codeLocationA: CodeLocationS, codeLocation2: CodeLocationS): Boolean = {
@@ -1014,6 +1027,10 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
           }
           IEnvEntryT::Impl(_) => {
             panic!("Unimplemented: add_entries ImplEnvEntry case");
+            // List(
+            //   interner.intern(ImplImpreciseNameS(implA.subCitizenImpreciseName, implA.superInterfaceImpreciseName)) -> entry,
+            //   interner.intern(ImplSubCitizenImpreciseNameS(implA.subCitizenImpreciseName)) -> entry,
+            //   interner.intern(ImplSuperInterfaceImpreciseNameS(implA.superInterfaceImpreciseName)) -> entry)
           }
           IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
             let sub_local_name = match isa.sub_kind {
@@ -1290,6 +1307,7 @@ override def hashCode(): Int = hash;
 impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
+    // vimpl()
   }
   /*
     override def templatas: TemplatasStore = {
@@ -1432,6 +1450,7 @@ case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
+    // templateId
   }
   /*
     override def denizenId: IdT[INameT] = templateId
@@ -1439,6 +1458,7 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
+    // templateId
   }
   /*
     override def denizenTemplateId: IdT[ITemplateNameT] = templateId
@@ -1648,6 +1668,7 @@ case class ExportEnvironmentT(
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
+    // this
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
@@ -1655,6 +1676,7 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_id
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
+    // id
   }
   /*
     override def denizenId: IdT[INameT] = id
@@ -1662,6 +1684,7 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
+    // templateId
   }
   /*
     override def denizenTemplateId: IdT[ITemplateNameT] = templateId
@@ -1674,6 +1697,8 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // EnvironmentHelper.lookupWithNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     override def lookupWithNameInner(
@@ -1752,6 +1777,7 @@ case class ExternEnvironmentT(
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
+    // this
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
@@ -1759,6 +1785,7 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_id
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
+    // id
   }
   /*
     override def denizenId: IdT[INameT] = id
@@ -1766,6 +1793,7 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
+    // templateId
   }
   /*
     override def denizenTemplateId: IdT[ITemplateNameT] = templateId
@@ -1778,6 +1806,8 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // EnvironmentHelper.lookupWithNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     override def lookupWithNameInner(
@@ -1798,6 +1828,8 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    // EnvironmentHelper.lookupWithImpreciseNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     override def lookupWithImpreciseNameInner(
@@ -1845,6 +1877,7 @@ case class GeneralEnvironmentT[+T <: INameT](
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
+    // id
   }
   /*
     override def denizenId: IdT[INameT] = id
@@ -1852,6 +1885,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 // mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
+    // templateId
   }
   /*
     override def denizenTemplateId: IdT[ITemplateNameT] = templateId
@@ -1885,6 +1919,8 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // EnvironmentHelper.lookupWithNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     override def lookupWithNameInner(

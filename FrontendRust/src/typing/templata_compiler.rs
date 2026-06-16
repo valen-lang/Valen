@@ -527,6 +527,8 @@ where 's: 't,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
+        // val IdT(packageCoord, initSteps, last) = id
+        // IdT(packageCoord, initSteps, last.template)
     }
 /*
   def getExportTemplate(id: IdT[ExportNameT]): IdT[ExportTemplateNameT] = {
@@ -542,6 +544,8 @@ where 's: 't,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
+        // val IdT(packageCoord, initSteps, last) = id
+        // IdT(packageCoord, initSteps, last.template)
     }
 /*
   def getExternTemplate(id: IdT[ExternNameT]): IdT[ExternTemplateNameT] = {
@@ -1163,6 +1167,14 @@ where 's: 't,
         impl_id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
+        // val IdT(packageCoord, initSteps, last) = implId
+        // val substitutedImplId = IdT(packageCoord, initSteps, last match {
+        //   case ImplNameT(template, templateArgs, subCitizen) => interner.intern(ImplNameT(template,
+        //     templateArgs.map(t => substituteTemplatasInTemplata(...)),
+        //     expectKindTemplata(substituteTemplatasInKind(...)).kind.expectCitizen()))
+        //   case other => vimpl(other)
+        // })
+        // // ... addInstantiationBounds, return substitutedImplId
     }
 /*
   def substituteTemplatasInImplId[T <: IImplNameT](
@@ -1382,6 +1394,7 @@ where 's: 't,
             ITemplataT::Boolean(_) => templata,
             ITemplataT::Prototype(p) => {
                 panic!("Unimplemented: substitute_templatas_in_templata Prototype");
+                // PrototypeTemplataT(substituteTemplatasInPrototype(...))
             }
             _ => panic!("vimpl: substitute_templatas_in_templata unexpected templata"),
         }
@@ -1537,6 +1550,17 @@ where 's: 't,
         original: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
+        // val IdT(packageCoord, initSteps, funcName) = original
+        // val substitutedTemplateArgs =
+        //   funcName.templateArgs.map((templata: ITemplataT[ITemplataType]) => substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, templata))
+        // val substitutedParams =
+        //   funcName.parameters.map((coord: CoordT) => substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, coord))
+        // val substitutedFuncName = funcName.template.makeFunctionName(interner, keywords, substitutedTemplateArgs, substitutedParams)
+        // val newId = IdT(packageCoord, initSteps, substitutedFuncName)
+        // coutputs.addInstantiationBounds(
+        //   sanityCheck, interner, originalCallingDenizenId, newId,
+        //   InstantiationBoundArgumentsT.make(Map(), Map(), Map()))
+        // newId
     }
 }
 /*
@@ -1644,6 +1668,7 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
         interface_tt: InterfaceTT<'s, 't>,
     ) -> InterfaceTT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
+        // Compiler.substituteTemplatasInInterface(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, interfaceTT)
     }
     /* Guardian: disable-all */
     pub fn substitute_for_templata(
@@ -1688,6 +1713,7 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
         impl_id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
+        // Compiler.substituteTemplatasInImplId(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, implId)
     }
 }
 /*
@@ -2225,14 +2251,23 @@ where 's: 't,
         let mutability = self.get_mutability(coutputs, kind);
         let ownership =
             match mutability {
-                ITemplataT::Placeholder(_) => { panic!("Unimplemented: pointify_kind PlaceholderTemplataT"); }
+                ITemplataT::Placeholder(_) => {
+                    panic!("Unimplemented: pointify_kind PlaceholderTemplataT");
+                    // vimpl()
+                }
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => ownership_if_mutable,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
                 _ => unreachable!("Scala's pointify_kind mutability match is exhaustive over Mutable/Immutable/Placeholder"),
             };
         match kind {
-            KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: pointify_kind RuntimeSizedArray"); }
-            KindT::StaticSizedArray(_) => { panic!("Unimplemented: pointify_kind StaticSizedArray"); }
+            KindT::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: pointify_kind RuntimeSizedArray");
+                // CoordT(ownership, region, a)
+            }
+            KindT::StaticSizedArray(_) => {
+                panic!("Unimplemented: pointify_kind StaticSizedArray");
+                // CoordT(ownership, region, a)
+            }
             KindT::Struct(_) => CoordT { ownership, region, kind },
             KindT::Interface(_) => CoordT { ownership, region, kind },
             KindT::Void(_) => CoordT { ownership: OwnershipT::Share, region, kind },
@@ -2438,7 +2473,10 @@ where 's: 't,
             ITemplataT::Coord(_) => { panic!("vcurious"); }
             ITemplataT::StructDefinition(_) => { panic!("vcurious"); }
             ITemplataT::InterfaceDefinition(_) => { panic!("vcurious"); }
-            _ => { panic!("Unimplemented: coerce_to_coord for {:?}", templata); }
+            _ => {
+                panic!("Unimplemented: coerce_to_coord for {:?}", templata);
+                // vfail("Can't coerce a " + templata.tyype + " to be a coord!")
+            }
         }
     }
 /*

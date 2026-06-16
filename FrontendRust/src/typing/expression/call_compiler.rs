@@ -344,6 +344,7 @@ where 's: 't,
                 CoordT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
                 CoordT { ownership: OwnershipT::Own, .. } => {
                     panic!("Unimplemented: evaluate_custom_call OwnT makeTemporaryLocal");
+                    // localHelper.makeTemporaryLocal(coutputs, nenv, range, callLocation, life, contextRegion, givenCallableUnborrowedExpr2, BorrowT)
                 }
                 _ => { panic!("Unimplemented: evaluate_custom_call unexpected ownership"); }
             };
@@ -510,6 +511,7 @@ where 's: 't,
             } else {
                 if !exact {
                     panic!("implement: checkTypes non-exact isTypeConvertible");
+                    // val isConvertible = templataCompiler.isTypeConvertible(...) — handle false branch
                 } else {
                     match args_head.kind {
                         KindT::Never(_) => {

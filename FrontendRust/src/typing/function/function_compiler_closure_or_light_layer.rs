@@ -191,6 +191,10 @@ where 's: 't,
         arg_types: Vec<CoordT>,
     ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_prototype");
+        // val (variables, entries) = makeClosureVariablesAndEntries(coutputs, callingEnv.denizenTemplateId, closureStructRef)
+        // val name = outerEnv.id.addStep(nameTranslator.translateGenericTemplateFunctionName(function.name, argTypes))
+        // val newEnv = BuildingFunctionEnvironmentWithClosuredsT(outerEnv.globalEnv, outerEnv, name, TemplatasStore(name, Map(), Map()).addEntries(interner, entries), function, variables, false)
+        // ordinaryOrTemplatedLayer.evaluateTemplatedFunctionFromCallForPrototype(newEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
     }
 /*
   // Per @LAGTNGZ, each call site reaches here with its own argTypes, producing a distinct LambdaCallFunctionTemplateNameT.
@@ -235,6 +239,10 @@ where 's: 't,
         arg_types: Vec<CoordT>,
     ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype2");
+        // checkNotClosure(function)
+        // val outerEnvId = parentEnv.id.addStep(nameTranslator.translateGenericTemplateFunctionName(function.name, argTypes))
+        // val outerEnv = makeEnvWithoutClosureStuff(parentEnv, function, outerEnvId, false)
+        // ordinaryOrTemplatedLayer.evaluateTemplatedFunctionFromCallForPrototype(outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, argTypes)
     }
 /*
   def evaluateTemplatedLightFunctionFromCallForPrototype2(
@@ -628,6 +636,10 @@ where 's: 't,
         arg_types: Vec<CoordT>,
     ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
+        // val outerEnvId = parentEnv.id.addStep(nameTranslator.translateGenericFunctionName(function.name))
+        // val outerEnv = makeEnvWithoutClosureStuff(parentEnv, function, outerEnvId, false)
+        // ordinaryOrTemplatedLayer.evaluateTemplatedFunctionFromCallForBanner(
+        //   outerEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
     }
 /*
   def evaluateTemplatedFunctionFromCallForBanner(
@@ -737,7 +749,10 @@ where 's: 't,
                             coord: substituter.substitute_for_coord(coutputs, *reference),
                         })
                     }
-                    IStructMemberT::Variadic(_) => panic!("implement: make_closure_variables_and_entries — VariadicStructMemberT"),
+                    IStructMemberT::Variadic(_) => {
+                        panic!("implement: make_closure_variables_and_entries — VariadicStructMemberT");
+                        // vimpl()
+                    }
                 }
             }).collect();
         let entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = vec![

@@ -246,6 +246,7 @@ where 's: 't,
     */
     pub fn count_denizens(&self) -> i32 {
         panic!("Unimplemented: Slab 10 — body migration");
+        // signatureToFunction.size + structTemplateNameToDefinition.size + interfaceTemplateNameToDefinition.size
     }
     /*
       def countDenizens(): Int = {
@@ -619,6 +620,7 @@ where 's: 't,
         // }
         if let Some(_old_function_range) = self.function_declared_names.get(name) {
             panic!("implement CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))");
+            // throw CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))
         }
         // functionDeclaredNames.put(name, callRanges.head)
         self.function_declared_names.insert(*name, call_ranges[0]);
@@ -807,6 +809,7 @@ where 's: 't,
                     }
                     IStructMemberT::Variadic(_) => {
                         panic!("implement: immutable struct with variadic members");
+                        // vimpl()
                     }
                 }
             });

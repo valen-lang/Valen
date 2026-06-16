@@ -125,7 +125,10 @@ where 's: 't,
         let impl_template_name: IImplTemplateNameT<'s, 't> = self.translate_impl_name(impl_a.name);
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
-            IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in resolve_impl"),
+            IImplTemplateNameT::ImplBoundTemplate(_) => {
+                panic!("Unimplemented: ImplBoundTemplate in resolve_impl");
+                // vimpl()
+            }
             IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
@@ -175,7 +178,10 @@ where 's: 't,
             &call_site_rules,
             &[impl_a.sub_citizen_rune.rune],
             &mut solver_state,
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in resolve_impl"))
+        ).unwrap_or_else(|_e| {
+            panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in resolve_impl")
+            // (Scala returns checkResolvingConclusionsAndResolve's result directly; no Err-handler arm)
+        })
     }
 /*
   def resolveImpl(
@@ -262,7 +268,10 @@ where 's: 't,
         let impl_template_name: IImplTemplateNameT<'s, 't> = self.translate_impl_name(impl_a.name);
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
-            IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in partial_resolve_impl"),
+            IImplTemplateNameT::ImplBoundTemplate(_) => {
+                panic!("Unimplemented: ImplBoundTemplate in partial_resolve_impl");
+                // vimpl()
+            }
             IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
@@ -373,7 +382,10 @@ where 's: 't,
         let impl_template_name: IImplTemplateNameT<'s, 't> = self.translate_impl_name(impl_a.name);
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
-            IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in compile_impl"),
+            IImplTemplateNameT::ImplBoundTemplate(_) => {
+                panic!("Unimplemented: ImplBoundTemplate in compile_impl");
+                // vimpl()
+            }
             IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
@@ -1262,7 +1274,10 @@ where 's: 't,
                     impl_templata.impl_.generic_params.iter().map(|p| *conclusions.get(&p.rune.rune).unwrap()).collect();
                 let impl_template_name: INameT<'s, 't> = match self.translate_impl_name(impl_templata.impl_.name) {
                     IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
-                    IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in isParent"),
+                    IImplTemplateNameT::ImplBoundTemplate(_) => {
+                        panic!("Unimplemented: ImplBoundTemplate in isParent");
+                        // vimpl()
+                    }
                     IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
                 };
                 let impl_template_id = impl_templata.env.id().add_step(self.typing_interner, impl_template_name);

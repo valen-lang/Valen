@@ -342,6 +342,8 @@ case class FloatT() extends KindT {
 */
 fn unapply_contents_static_sized_array_tt() {
   panic!("Unimplemented: unapply_contents_static_sized_array_tt");
+  // val IdT(_, _, StaticSizedArrayNameT(_, size, variability, RawArrayNameT(mutability, coord, selfRegion))) = ssa.name
+  // Some((size, mutability, variability, coord, selfRegion))
 }
 /*
 object contentsStaticSizedArrayTT {
@@ -412,6 +414,8 @@ impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
 */
 fn unapply_contents_runtime_sized_array_tt() {
   panic!("Unimplemented: unapply_contents_runtime_sized_array_tt");
+  // val IdT(_, _, RuntimeSizedArrayNameT(_, RawArrayNameT(mutability, coord, selfRegion))) = rsa.name
+  // Some((mutability, coord, selfRegion))
 }
 /*
 object contentsRuntimeSizedArrayTT {
@@ -471,6 +475,7 @@ pub struct RuntimeSizedArrayTTValT<'s, 't> {
 
 fn unapply_i_citizen_tt() {
   panic!("Unimplemented: unapply_i_citizen_tt");
+  // Some(self.id)
 }
 /*
 object ICitizenTT {

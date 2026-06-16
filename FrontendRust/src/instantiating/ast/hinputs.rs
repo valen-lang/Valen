@@ -84,6 +84,7 @@ case class HinputsI(
 impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn to_string(&self) -> String {
         panic!("Unimplemented: to_string")
+        // "HinputsI#()"
     }
 // mig: fn lookup_function (humanName: String overload)
     pub fn lookup_function_by_str(&self, human_name: &str) -> &'i FunctionDefinitionI<'s, 'i> {
@@ -159,6 +160,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _citizen_id: &IdI<'s, 'i>,
     ) -> ICitizenDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_citizen")
+        // vassertOne(structs.find(_.instantiatedCitizen.id == citizenId) ++ interfaces.find(_.instantiatedCitizen.id == citizenId))
     }
 /*
   def lookupCitizen(citizenId: IdI[cI, ICitizenNameI[cI]]): CitizenDefinitionI = {
@@ -173,6 +175,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _struct_template_name: &IStructTemplateNameI<'s, 'i>,
     ) -> &'i StructDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_struct_by_template")
+        // vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
     }
 /*
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameI[cI]): StructDefinitionI = {
@@ -186,6 +189,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _interface_template_name: &IInterfaceTemplateNameI<'s, 'i>,
     ) -> &'i InterfaceDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_interface_by_template")
+        // vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
     }
 /*
   def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameI[cI]): InterfaceDefinitionI = {
@@ -199,6 +203,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _impl_template_name: &IImplTemplateNameI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl_by_template")
+        // vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
     }
 /*
   def lookupImplByTemplate(implTemplateName: IImplTemplateNameI[cI]): EdgeI = {
@@ -212,6 +217,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _impl_id: &IdI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_edge")
+        // vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
     }
 /*
   def lookupEdge(implId: IdI[cI, IImplNameI[cI]]): EdgeI = {
@@ -260,6 +266,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _func_template_name: &IFunctionTemplateNameI<'s, 'i>,
     ) -> Option<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: lookup_function_by_template")
+        // functions.find(_.header.id.localName.template == funcTemplateName).headOption
     }
 /*
   def lookupFunction(funcTemplateName: IFunctionTemplateNameI[cI]): Option[FunctionDefinitionI] = {
@@ -273,6 +280,13 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _human_name: &str,
     ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_function")
+        // val matches = functions.filter(f => f.header.id.localName match {
+        //   case FunctionNameIX(n, _, _) if n.humanName.str == humanName => true
+        //   case _ => false
+        // })
+        // if (matches.size == 0) vfail("Function \"" + humanName + "\" not found!")
+        // else if (matches.size > 1) vfail("Multiple found!")
+        // matches.head
     }
 /*
   def lookupFunction(humanName: String): FunctionDefinitionI = {
@@ -333,6 +347,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _interface_it: &IdI<'s, 'i>,
     ) -> &'i EdgeI<'s, 'i> {
         panic!("Unimplemented: lookup_impl")
+        // vassertSome(vassertSome(interfaceToSubCitizenToEdge.get(interfaceIT)).get(subCitizenIT))
     }
 /*
   def lookupImpl(
@@ -351,6 +366,13 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _human_name: &str,
     ) -> &'i InterfaceDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_interface_by_name")
+        // val matches = interfaces.filter(s => s.instantiatedCitizen.id.localName match {
+        //   case InterfaceNameI(InterfaceTemplateNameI(n), _) if n.str == humanName => true
+        //   case _ => false
+        // })
+        // if (matches.size == 0) vfail("Interface \"" + humanName + "\" not found!")
+        // else if (matches.size > 1) vfail("Multiple found!")
+        // matches.head
     }
 /*
   def lookupInterface(humanName: String): InterfaceDefinitionI = {
@@ -375,6 +397,11 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         _human_name: &str,
     ) -> &'i FunctionDefinitionI<'s, 'i> {
         panic!("Unimplemented: lookup_user_function")
+        // val matches = functions.filter(f => simpleNameI.unapply(f.header.id).contains(humanName))
+        //                          .filter(_.header.isUserFunction)
+        // if (matches.size == 0) vfail("Not found!")
+        // else if (matches.size > 1) vfail("Multiple found!")
+        // matches.head
     }
 /*
   def lookupUserFunction(humanName: String): FunctionDefinitionI = {
@@ -418,6 +445,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         &self,
     ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_non_extern_functions")
+        // functions.filter(!_.header.isExtern)
     }
 /*
   def getAllNonExternFunctions: Iterable[FunctionDefinitionI] = {
@@ -430,6 +458,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
         &self,
     ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_user_functions")
+        // functions.filter(_.header.isUserFunction)
     }
 }
 /*

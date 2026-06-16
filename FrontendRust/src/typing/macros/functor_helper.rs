@@ -42,6 +42,7 @@ where 's: 't,
         drop_function: PrototypeTemplataT<'s, 't>,
     ) -> ReinterpretTE<'s, 't> {
         panic!("Unimplemented: get_functor_for_prototype");
+        // vfail()
     }
 /*
   def getFunctorForPrototype(

@@ -325,7 +325,10 @@ where 's: 't,
                 let ownership = match mutability {
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability"),
+                    ITemplataT::Placeholder(_) => {
+                        panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability");
+                        // vimpl()
+                    }
                     _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
@@ -346,6 +349,33 @@ where 's: 't,
             }
             Some(IVariableT::ReferenceClosure(_)) => {
                 panic!("implement: evaluate_addressible_lookup_for_mutate — ReferenceClosureVariableT");
+                // val closuredVarsStructId = closuredVarsStructRef.id
+                // val closuredVarsStructTemplateId =
+                //   TemplataCompiler.getStructTemplate(closuredVarsStructId)
+                // val closuredVarsStructTemplateName =
+                //   closuredVarsStructTemplateId.localName match {
+                //     case n @ LambdaCitizenTemplateNameT(_) => n
+                //     case _ => vwat()
+                //   }
+                //
+                // val mutability = Compiler.getMutability(coutputs, closuredVarsStructRef)
+                // val ownership =
+                //   mutability match {
+                //     case MutabilityTemplataT(MutableT) => BorrowT
+                //     case MutabilityTemplataT(ImmutableT) => ShareT
+                //     case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
+                //   }
+                // val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
+                // val borrowExpr =
+                //   localHelper.borrowSoftLoad(
+                //     coutputs,
+                //     LocalLookupTE(
+                //       loadRange,
+                //       ReferenceLocalVariableT(interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation)), FinalT, closuredVarsStructRefCoord)))
+                //
+                // val lookup =
+                //   ast.ReferenceMemberLookupTE(loadRange, borrowExpr, varName, tyype, variability)
+                // Some(lookup)
             }
             None => None,
         }
@@ -474,7 +504,10 @@ where 's: 't,
                 let ownership = match mutability {
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability"),
+                    ITemplataT::Placeholder(_) => {
+                        panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability");
+                        // vimpl()
+                    }
                     _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
@@ -504,7 +537,10 @@ where 's: 't,
                 let ownership = match mutability {
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability"),
+                    ITemplataT::Placeholder(_) => {
+                        panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability");
+                        // vimpl()
+                    }
                     _ => unreachable!("Scala's ReferenceClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
@@ -641,7 +677,10 @@ where 's: 't,
         let lookup_expressions2: Vec<ExpressionTE<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
                 match member {
-                    IStructMemberT::Variadic(_) => panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)"),
+                    IStructMemberT::Variadic(_) => {
+                        panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)");
+                        // vwat() // closures cant contain variadic members
+                    }
                     IStructMemberT::Normal(NormalStructMemberT { name: member_name, tyype, .. }) => {
                         let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
                             .unwrap_or_else(|_| panic!("evaluate_addressible_lookup error"))
@@ -670,7 +709,10 @@ where 's: 't,
             match closure_struct_def.mutability {
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                ITemplataT::Placeholder(_) => { panic!("Unimplemented: make_closure_struct_construct_expression PlaceholderTemplataT"); }
+                ITemplataT::Placeholder(_) => {
+                    panic!("Unimplemented: make_closure_struct_construct_expression PlaceholderTemplataT");
+                    // vimpl()
+                }
                 _ => unreachable!("Scala's closure-struct mutability match has no catch-all"),
             };
         let struct_ref = self.typing_interner.alloc(closure_struct_ref);
@@ -917,6 +959,8 @@ where 's: 't,
                             uncasted_inner_expr_2.result().coord, return_type) {
                             false => {
                                 panic!("implement: evaluate_expression ReturnSE — CouldntConvertForReturnT");
+                                // throw CompileErrorExceptionT(
+                                //   CouldntConvertForReturnT(range :: parentRanges, returnType, uncastedInnerExpr2.result.coord))
                             }
                             true => {
                                 self.convert(
@@ -1003,6 +1047,9 @@ where 's: 't,
                         rune_to_initially_known_type,
                     ).unwrap_or_else(|_e| {
                         panic!("implement: LetSE — HigherTypingInferError");
+                        // throw CompileErrorExceptionT(HigherTypingInferError(
+                        //   range ::
+                        //       parentRanges, e))
                     });
 
                 let result_te = self.infer_and_translate_pattern(
@@ -1214,12 +1261,16 @@ where 's: 't,
                                 }
                                 LoadAsP::Use => {
                                     panic!("implement: Ownershipped OwnT UseP (vcurious)");
+                                    // vcurious()
                                 }
                             }
                         }
                         OwnershipT::Borrow => {
                             match ownershipped.target_ownership {
-                                LoadAsP::Move => panic!("implement: Ownershipped BorrowT MoveP (vcurious)"),
+                                LoadAsP::Move => {
+                                    panic!("implement: Ownershipped BorrowT MoveP (vcurious)");
+                                    // vcurious() // Can we even coerce to an owning reference?
+                                }
                                 LoadAsP::LoadAsBorrow => source_te,
                                 LoadAsP::LoadAsWeak => {
                                     let range_with_parent: Vec<RangeS<'s>> =
@@ -1231,6 +1282,12 @@ where 's: 't,
                         }
                         OwnershipT::Weak => {
                             panic!("implement: Ownershipped WeakT");
+                            // loadAsP match {
+                            //   case MoveP => vcurious() // Can we even coerce to an owning reference?
+                            //   case LoadAsBorrowP => vimpl()
+                            //   case LoadAsWeakP => sourceTE
+                            //   case UseP => sourceTE
+                            // }
                         }
                         OwnershipT::Share => {
                             match ownershipped.target_ownership {
@@ -1244,6 +1301,7 @@ where 's: 't,
                                 }
                                 LoadAsP::LoadAsWeak => {
                                     panic!("implement: Ownershipped ShareT LoadAsWeakP");
+                                    // vfail()
                                 }
                                 LoadAsP::Use => source_te,
                             }
@@ -1424,6 +1482,7 @@ where 's: 't,
 
                 if then_continues && else_continues && uncoerced_then_block_2.result().coord.ownership != uncoerced_else_block_2.result().coord.ownership {
                     panic!("implement: evaluate_expression If — CantReconcileBranchesResults ownership mismatch");
+                    // throw CompileErrorExceptionT(CantReconcileBranchesResults(range :: parentRanges, uncoercedThenBlock2.result.coord, uncoercedElseBlock2.result.coord))
                 }
 
                 let common_type = match (uncoerced_then_block_2.result().coord.kind, uncoerced_else_block_2.result().coord.kind) {
@@ -1534,6 +1593,7 @@ where 's: 't,
                         }
                     } else {
                         panic!("implement: evaluate_expression If — vfail branch");
+                        // vfail()
                     }
                 }
 
@@ -1788,7 +1848,10 @@ where 's: 't,
                                         member_name: rml.member_name,
                                     });
                                 }
-                                _ => panic!("implement: ExprMutate ReferenceMemberLookup non-struct kind"),
+                                _ => {
+                                    panic!("implement: ExprMutate ReferenceMemberLookup non-struct kind");
+                                    // vimpl(structExpr.kind.toString)
+                                }
                             }
                         }
                         AddressExpressionTE::RuntimeSizedArrayLookup(rsal) => {
@@ -1805,7 +1868,10 @@ where 's: 't,
                                 coord: ssal.array_expr.result().coord,
                             });
                         }
-                        _ => panic!("implement: ExprMutate non-varying variability unexpected arm"),
+                        _ => {
+                            panic!("implement: ExprMutate non-varying variability unexpected arm");
+                            // case x => vimpl(x.toString)
+                        }
                     }
                 }
                 let range_with_parent: Vec<RangeS<'s>> =
@@ -1984,7 +2050,11 @@ where 's: 't,
                 }
                 Ok((ExpressionTE::Reference(block_2), returns_from_exprs))
             }
-            IExpressionSE::Pure(_) => panic!("implement: evaluate_expression — Pure"),
+            IExpressionSE::Pure(_) => {
+                panic!("implement: evaluate_expression — Pure");
+                // evaluateAndCoerceToReferenceExpression(
+                //   coutputs, nenv, life + 0, parentRanges, outerCallLocation, region, inner)
+            }
             IExpressionSE::ConstantStr(c) => {
                 let result = ReferenceExpressionTE::ConstantStr(self.typing_interner.alloc(ConstantStrTE {
                     value: c.value,
@@ -2016,8 +2086,14 @@ where 's: 't,
                         let destination_locals: Vec<ReferenceLocalVariableT<'s, 't>> = struct_def.members.iter().enumerate().map(|(index, m)| {
                             let unsubstituted_coord = match m {
                                 IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
-                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: Destruct — AddressMemberTypeT"),
-                                IStructMemberT::Variadic(_) => panic!("implement: Destruct — VariadicStructMemberT"),
+                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                                    panic!("implement: Destruct — AddressMemberTypeT");
+                                    // vimpl()
+                                }
+                                IStructMemberT::Variadic(_) => {
+                                    panic!("implement: Destruct — VariadicStructMemberT");
+                                    // vimpl()
+                                }
                             };
                             let reference = substituter.substitute_for_coord(coutputs, unsubstituted_coord);
                             self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + index as i32), reference)
@@ -2028,7 +2104,10 @@ where 's: 't,
                             destination_reference_variables: self.typing_interner.alloc_slice_from_vec(destination_locals),
                         }))
                     }
-                    KindT::Interface(_) => panic!("implement: evaluate_expression Destruct — Interface"),
+                    KindT::Interface(_) => {
+                        panic!("implement: evaluate_expression Destruct — Interface");
+                        // destructorCompiler.drop(nenv.snapshot, coutputs, range :: parentRanges, outerCallLocation, region, innerExpr2)
+                    }
                     _ => panic!("vfail: Can't destruct type: {:?}", inner_expr_2.result().coord.kind),
                 };
                 Ok((ExpressionTE::Reference(destroy_2), returns_from_array_expr))
@@ -2037,10 +2116,30 @@ where 's: 't,
                 let name = self.translate_var_name_step(unlet_se.name);
                 let local = match nenv.get_variable(name, self.typing_interner) {
                     Some(IVariableT::ReferenceLocal(rlv)) => ILocalVariableT::Reference(rlv),
-                    Some(IVariableT::AddressibleLocal(_)) => panic!("implement: Unlet — AddressibleLocal"),
-                    Some(IVariableT::AddressibleClosure(_)) => panic!("implement: Unlet — AddressibleClosure (not a local)"),
-                    Some(IVariableT::ReferenceClosure(_)) => panic!("implement: Unlet — ReferenceClosure (not a local)"),
-                    None => panic!("implement: Unlet — No local with name"),
+                    Some(IVariableT::AddressibleLocal(_)) => {
+                        panic!("implement: Unlet — AddressibleLocal");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(
+                        //   range ::
+                        //     parentRanges, "Can't unlet local: " + name))
+                    }
+                    Some(IVariableT::AddressibleClosure(_)) => {
+                        panic!("implement: Unlet — AddressibleClosure (not a local)");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(
+                        //   range ::
+                        //     parentRanges, "Can't unlet local: " + name))
+                    }
+                    Some(IVariableT::ReferenceClosure(_)) => {
+                        panic!("implement: Unlet — ReferenceClosure (not a local)");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(
+                        //   range ::
+                        //     parentRanges, "Can't unlet local: " + name))
+                    }
+                    None => {
+                        panic!("implement: Unlet — No local with name");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(
+                        //   range :: parentRanges,
+                        //   "No local with name: " + name))
+                    }
                 };
                 let result_expr = self.unlet_local_without_dropping(nenv, &local);
                 // This will likely be dropped, as theyre probably not doing anything with it.
@@ -2147,18 +2246,26 @@ where 's: 't,
                 let templata_from_env = match templatas_from_env.as_slice() {
                     [ITemplataT::Boolean(_value)] => {
                         panic!("implement: evaluate_expression OverloadSet — BooleanTemplataT")
+                        // ConstantBoolTE(value, region)
                     }
                     [ITemplataT::Integer(_value)] => {
                         panic!("implement: evaluate_expression OverloadSet — IntegerTemplataT")
+                        // ConstantIntTE(
+                        //   IntegerTemplataT(value),
+                        //   32,
+                        //   region)
                     }
                     [ITemplataT::Placeholder(_t)] => {
                         panic!("implement: evaluate_expression OverloadSet — PlaceholderTemplataT IntegerTemplataType")
+                        // ConstantIntTE(PlaceholderTemplataT(name, IntegerTemplataType()), 32, region)
                     }
                     _ if !templatas_from_env.is_empty() && templatas_from_env.iter().all(|t| matches!(t, ITemplataT::Function(_))) => {
                         panic!("implement: evaluate_expression OverloadSet — all functions")
+                        // newGlobalFunctionGroupExpression(nenv.snapshot, coutputs, region, name)
                     }
                     _ if templatas_from_env.len() > 1 => {
-                        unreachable!("Scala throws RangedInternalErrorT \"Found too many different things named\" here; defensive check with no Scala test coverage and no Vale program known to trigger it")
+                        panic!("implement: evaluate_expression OverloadSet — too many results");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, "Found too many different things named \"" + name + "\" in env:\n" + things.map("\n" + _)))
                     }
                     [] => {
                         return Err(ICompileErrorT::CouldntFindIdentifierToLoadT {
@@ -3298,6 +3405,26 @@ where 's: 't,
         generator_type: CoordT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
+        // if (generatorPrototype.returnType != elementCoord) {
+        //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator return type doesn't agree with array element type!"))
+        // }
+        // if (generatorPrototype.paramTypes.size != 2) {
+        //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator must take in 2 args!"))
+        // }
+        // if (generatorPrototype.paramTypes(0) != generatorType) {
+        //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Generator first param doesn't agree with generator expression's result!"))
+        // }
+        // generatorPrototype.paramTypes(1) match {
+        //   case CoordT(ShareT, _, IntT.i32) =>
+        //   case _ => {
+        //     throw CompileErrorExceptionT(
+        //       RangedInternalErrorT(range, "Generator must take in an integer as its second param!"))
+        //   }
+        // }
+        // if (arrayMutability == ImmutableT &&
+        //   Compiler.getMutability(coutputs, elementCoord.kind) == MutabilityTemplataT(MutableT)) {
+        //   throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't have an immutable array of mutable elements!"))
+        // }
     }
 /*
   private def checkArray(
@@ -3797,15 +3924,25 @@ where 's: 't,
         match undecayed_unborrowed_container_expr_2 {
             ExpressionTE::Address(a) => {
                 panic!("implement: dot_borrow — AddressExpressionTE arm (borrow_soft_load)");
+                // localHelper.borrowSoftLoad(coutputs, a)
             }
             ExpressionTE::Reference(r) => {
                 let unborrowed_container_expr_2 = r; // decaySoloPack(nenv, life + 0, r)
                 match unborrowed_container_expr_2.result().coord.ownership {
                     OwnershipT::Own => {
                         panic!("implement: dot_borrow — OwnT arm (makeTemporaryLocal)");
+                        // localHelper.makeTemporaryLocal(
+                        //   coutputs,
+                        //   nenv,
+                        //   range,
+                        //   callLocation,
+                        //   life + 1,
+                        //   contextRegion,
+                        //   unborrowedContainerExpr2,
+                        //   BorrowT)
                     }
                     OwnershipT::Borrow | OwnershipT::Share => unborrowed_container_expr_2,
-                    OwnershipT::Weak => panic!("implement: dot_borrow — WeakT arm"),
+                    OwnershipT::Weak => unreachable!("Scala dotBorrow has no WeakT arm — only OwnT and BorrowT|ShareT"),
                 }
             }
         }

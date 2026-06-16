@@ -26,7 +26,10 @@ import scala.collection.immutable.List
 object ITemplataI {
 */
 // mig: fn expect_coord
-pub fn expect_coord<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> { panic!("Unimplemented: expect_coord"); }
+pub fn expect_coord<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
+    panic!("Unimplemented: expect_coord");
+    // templata match { case t @ CoordTemplataI(_, _) => t; case other => vfail(other) }
+}
 /*
   def expectCoord[R <: IRegionsModeI](templata: ITemplataI[R]): ITemplataI[R] = {
     templata match {
@@ -96,7 +99,10 @@ pub fn expect_variability_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> Vari
   }
 */
 // mig: fn expect_kind
-pub fn expect_kind<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> { panic!("Unimplemented: expect_kind"); }
+pub fn expect_kind<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
+    panic!("Unimplemented: expect_kind");
+    // templata match { case t @ KindTemplataI(_) => t; case _ => vfail() }
+}
 /*
   def expectKind[R <: IRegionsModeI](templata: ITemplataI[R]): ITemplataI[R] = {
     templata match {
@@ -106,7 +112,10 @@ pub fn expect_kind<'s, 'i>(templata: ITemplataI<'s, 'i>) -> ITemplataI<'s, 'i> {
   }
 */
 // mig: fn expect_kind_templata
-pub fn expect_kind_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> KindTemplataI<'s, 'i> { panic!("Unimplemented: expect_kind_templata"); }
+pub fn expect_kind_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> KindTemplataI<'s, 'i> {
+    panic!("Unimplemented: expect_kind_templata");
+    // templata match { case t @ KindTemplataI(_) => t; case _ => vfail() }
+}
 /*
   def expectKindTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): KindTemplataI[R] = {
     templata match {
@@ -116,7 +125,10 @@ pub fn expect_kind_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> KindTemplat
   }
 */
 // mig: fn expect_region_templata
-pub fn expect_region_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> RegionT { panic!("Unimplemented: expect_region_templata"); }
+pub fn expect_region_templata<'s, 'i>(templata: ITemplataI<'s, 'i>) -> RegionT {
+    panic!("Unimplemented: expect_region_templata");
+    // templata match { case t @ RegionTemplataI(_) => t; case _ => vfail() }
+}
 /*
   def expectRegionTemplata[R <: IRegionsModeI](templata: ITemplataI[R]): RegionTemplataI[R] = {
     templata match {
@@ -159,7 +171,10 @@ sealed trait ITemplataI[+R <: IRegionsModeI] {
 */
 // mig: fn expect_coord_templata
 impl<'s, 'i> ITemplataI<'s, 'i> {
-  pub fn expect_coord_templata(&self) -> CoordTemplataI<'s, 'i> { panic!("Unimplemented: expect_coord_templata"); }
+  pub fn expect_coord_templata(&self) -> CoordTemplataI<'s, 'i> {
+    panic!("Unimplemented: expect_coord_templata");
+    // this match { case c@CoordTemplataI(_, _) => c; case other => vwat(other) }
+  }
 /*
   def expectCoordTemplata(): CoordTemplataI[R] = {
     this match {
@@ -169,7 +184,10 @@ impl<'s, 'i> ITemplataI<'s, 'i> {
   }
 */
 // mig: fn expect_region_templata
-  pub fn expect_region_templata(&self) -> RegionT { panic!("Unimplemented: expect_region_templata"); }
+  pub fn expect_region_templata(&self) -> RegionT {
+    panic!("Unimplemented: expect_region_templata");
+    // this match { case c@RegionTemplataI(_) => c; case other => vwat(other) }
+  }
 }
 /*
   def expectRegionTemplata(): RegionTemplataI[R] = {
@@ -289,7 +307,10 @@ case class FunctionTemplataI[+R <: IRegionsModeI](
 */
 // mig: fn get_template_name
 impl<'s, 'i> FunctionTemplataI<'s, 'i> {
-  pub fn get_template_name(&self) -> IdI<'s, 'i> { panic!("Unimplemented: get_template_name"); }
+  pub fn get_template_name(&self) -> IdI<'s, 'i> {
+    panic!("Unimplemented: get_template_name");
+    // vimpl()
+  }
 }
 /*
   def getTemplateName(): IdI[R, INameI[R]] = vimpl()

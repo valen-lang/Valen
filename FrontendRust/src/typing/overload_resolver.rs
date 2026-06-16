@@ -442,15 +442,21 @@ where 's: 't,
             match candidate {
                 ITemplataT::Kind(KindTemplataT { kind: KindT::OverloadSet(_) }) => {
                     panic!("implement: get_candidate_banners_inner OverloadSet");
+                    // getCandidateBannersInner(overloadsEnv, coutputs, range, nameInOverloadsEnv, searchedEnvs, results)
                 }
                 ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(_) }) => {
                     panic!("implement: get_candidate_banners_inner Struct");
+                    // val structEnv = coutputs.getOuterEnvForType(range, TemplataCompiler.getStructTemplate(sr.id))
+                    // getCandidateBannersInner(structEnv, coutputs, range, interner.intern(CodeNameS(keywords.underscoresCall)), searchedEnvs, results)
                 }
                 ITemplataT::Kind(KindTemplataT { kind: KindT::Interface(_) }) => {
                     panic!("implement: get_candidate_banners_inner Interface");
+                    // val interfaceEnv = coutputs.getOuterEnvForType(range, TemplataCompiler.getInterfaceTemplate(sr.id))
+                    // getCandidateBannersInner(interfaceEnv, coutputs, range, interner.intern(CodeNameS(keywords.underscoresCall)), searchedEnvs, results)
                 }
                 ITemplataT::ExternFunction(_) => {
                     panic!("implement: get_candidate_banners_inner ExternFunction");
+                    // results.add(HeaderCalleeCandidate(header))
                 }
                 ITemplataT::Prototype(proto_templata) => {
                     assert!(coutputs.get_instantiation_bounds(self.typing_interner, proto_templata.prototype.id).is_some());

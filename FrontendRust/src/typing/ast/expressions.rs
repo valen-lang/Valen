@@ -80,8 +80,14 @@ impl<'s, 't> IExpressionResultT<'s, 't> where 's: 't {
     */
     pub fn kind(&self) -> KindT<'s, 't> {
         match self {
-            IExpressionResultT::Reference(r) => panic!("Unimplemented: kind Reference"),
-            IExpressionResultT::Address(a) => panic!("Unimplemented: kind Address"),
+            IExpressionResultT::Reference(r) => {
+                panic!("Unimplemented: kind Reference");
+                // r.kind (= coord.kind)
+            }
+            IExpressionResultT::Address(a) => {
+                panic!("Unimplemented: kind Address");
+                // a.kind (= coord.kind)
+            }
         }
     }
     /*
@@ -102,11 +108,17 @@ impl<'s, 't> AddressResultT<'s, 't> {
 /*
   override def hashCode(): Int = vcurious()
 */
-    fn underlying_coord(&self) -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
+    fn underlying_coord(&self) -> CoordT<'s, 't> {
+        panic!("Unimplemented: underlying_coord");
+        // coord
+    }
 /*
   override def underlyingCoord: CoordT = coord
 */
-    fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
+    fn kind(&self) -> KindT<'s, 't> {
+        panic!("Unimplemented: kind");
+        // coord.kind
+    }
 /*
   override def kind = coord.kind
 }
@@ -129,7 +141,10 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 /*
   override def underlyingCoord: CoordT = coord
 */
-    fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
+    fn kind(&self) -> KindT<'s, 't> {
+        panic!("Unimplemented: kind");
+        // coord.kind
+    }
 /*
   override def kind = coord.kind
 }
@@ -162,8 +177,14 @@ impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
     */
     pub fn kind(&self) -> KindT<'s, 't> {
         match self {
-            ExpressionTE::Reference(e) => panic!("Unimplemented: kind Reference"),
-            ExpressionTE::Address(e) => panic!("Unimplemented: kind Address"),
+            ExpressionTE::Reference(e) => {
+                panic!("Unimplemented: kind Reference");
+                // e.result.kind
+            }
+            ExpressionTE::Address(e) => {
+                panic!("Unimplemented: kind Address");
+                // e.result.kind
+            }
         }
     }
     /*
@@ -327,17 +348,24 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
     */
     pub fn kind(&self) -> KindT<'s, 't> {
         panic!("Unimplemented: kind");
+        // result.coord.kind
     }
     /*
       override def kind = result.coord.kind
     */
     pub fn range(&self) -> RangeS<'s> {
         match self {
-            AddressExpressionTE::LocalLookup(e) => panic!("Unimplemented: range LocalLookup"),
+            AddressExpressionTE::LocalLookup(e) => {
+                panic!("Unimplemented: range LocalLookup");
+                // e.range
+            }
             AddressExpressionTE::StaticSizedArrayLookup(e) => e.range,
             AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.range,
             AddressExpressionTE::ReferenceMemberLookup(e) => e.range,
-            AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: range AddressMemberLookup"),
+            AddressExpressionTE::AddressMemberLookup(e) => {
+                panic!("Unimplemented: range AddressMemberLookup");
+                // e.range
+            }
         }
     }
     /*
@@ -1079,7 +1107,10 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
       case None => exprs.last.result
     }
 */
-    fn last_reference_expr(&self) -> &ReferenceExpressionTE<'s, 't> { panic!("Unimplemented: last_reference_expr"); }
+    fn last_reference_expr(&self) -> &ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: last_reference_expr");
+        // exprs.last
+    }
 /*
   def lastReferenceExpr = exprs.last
 }
@@ -1173,7 +1204,10 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 /*
 override def hashCode(): Int = vcurious()
 */
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        panic!("Unimplemented: result");
+        // ReferenceResultT(CoordT(ShareT, array.result.coord.region, IntT.i32))
+    }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, array.result.coord.region, IntT.i32))
 }
@@ -1995,7 +2029,10 @@ override def hashCode(): Int = vcurious()
         let ownership = match self.array_type.mutability() {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => panic!("Unimplemented: StaticArrayFromCallableTE result PlaceholderTemplataT"),
+            ITemplataT::Placeholder(_) => {
+                panic!("Unimplemented: StaticArrayFromCallableTE result PlaceholderTemplataT");
+                // vimpl()
+            }
             _ => panic!("vwat"),
         };
         ReferenceResultT { coord: CoordT { ownership, region: self.region, kind: KindT::StaticSizedArray(self.array_type) } }
@@ -2271,7 +2308,14 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
 /*
 override def hashCode(): Int = vcurious()
 */
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        panic!("Unimplemented: result");
+        // ReferenceResultT(
+        //   CoordT(
+        //     innerExpr.result.coord.ownership,
+        //     innerExpr.result.coord.region,
+        //     targetInterface))
+    }
 /*
   def result: ReferenceResultT = {
     ReferenceResultT(
@@ -2487,7 +2531,10 @@ impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        panic!("Unimplemented: result");
+        // ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
 }
@@ -2569,7 +2616,13 @@ override def hashCode(): Int = vcurious()
 object referenceExprResultStructName {
 */
 }
-fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<StrI<'s>> { panic!("Unimplemented: unapply"); }
+fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<StrI<'s>> {
+    panic!("Unimplemented: unapply");
+    // expr.result.coord.kind match {
+    //   case StructTT(IdT(_, _, StructNameT(StructTemplateNameT(name), _))) => Some(name)
+    //   case _ => None
+    // }
+}
 /*
   def unapply(expr: ReferenceExpressionTE): Option[StrI] = {
     expr.result.coord.kind match {
@@ -2581,7 +2634,10 @@ fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ReferenceExpressionT
 
 object referenceExprResultKind {
 */
-fn reference_expr_result_kind_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<KindT<'s, 't>> { panic!("Unimplemented: unapply"); }
+fn reference_expr_result_kind_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<KindT<'s, 't>> {
+    panic!("Unimplemented: unapply");
+    // Some(expr.result.coord.kind)
+}
 /*
   def unapply(expr: ReferenceExpressionTE): Option[KindT] = {
     Some(expr.result.coord.kind)

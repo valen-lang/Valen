@@ -256,7 +256,11 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     &mut rule_builder,
                     rules_with_implicitly_coercing_lookups_s.to_vec(),
                 ) {
-                    Err(_e) => panic!("implement: infer_and_translate_pattern — explicifyLookups error"),
+                    Err(_e) => {
+                        panic!("implement: infer_and_translate_pattern — explicifyLookups error");
+                        // case Err(RuneTypingTooManyMatchingTypes(range, name)) => throw CompileErrorExceptionT(TooManyTypesWithNameT(range :: parentRanges, name))
+                        // case Err(RuneTypingCouldntFindType(range, name)) => throw CompileErrorExceptionT(CouldntFindTypeT(range :: parentRanges, name))
+                    }
                     Ok(()) => {}
                 }
                 let rules_a = rule_builder;
@@ -320,6 +324,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                         &[],
                     ).unwrap_or_else(|_f| {
                         panic!("implement: infer_and_translate_pattern — TypingPassDefiningError");
+                        // throw CompileErrorExceptionT(TypingPassDefiningError(pattern.range :: parentRanges, f))
                     });
 
                 nenv.add_entries(
@@ -604,7 +609,9 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             region,
                             after_sub_pattern_success_continuation)]
                     }
-                    OwnershipT::Weak => panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure weak"),
+                    OwnershipT::Weak => {
+                        unreachable!("Scala's ownership match has only OwnT and BorrowT|ShareT — Weak is a Rust-side exhaustiveness arm with no Scala counterpart");
+                    }
                 }
             }
         };
@@ -770,10 +777,14 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             KindT::StaticSizedArray(static_sized_array_t) => {
                 let size_templata = static_sized_array_t.size();
                 let size = match size_templata {
-                    ITemplataT::Placeholder(_) => panic!("implement: destructureOwning StaticSizedArray — RangedInternalErrorT: Can't create static sized array by values, can't guarantee size is correct!"),
+                    ITemplataT::Placeholder(_) => {
+                        panic!("implement: destructureOwning StaticSizedArray — RangedInternalErrorT: Can't create static sized array by values, can't guarantee size is correct!");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Can't create static sized array by values, can't guarantee size is correct!"))
+                    }
                     ITemplataT::Integer(size) => {
                         if size != list_of_maybe_destructure_member_patterns.len() as i64 {
                             panic!("implement: destructureOwning StaticSizedArray — RangedInternalErrorT: Wrong num exprs!");
+                            // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Wrong num exprs!"))
                         }
                         size
                     }
@@ -798,6 +809,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 }
                 if element_locals.len() != list_of_maybe_destructure_member_patterns.len() {
                     panic!("implement: destructureOwning StaticSizedArray — WrongNumberOfDestructuresError");
+                    // throw CompileErrorExceptionT(WrongNumberOfDestructuresError(parentRanges, ...))
                 }
                 let live_capture_locals_slice = self.typing_interner.alloc_slice_from_vec(live_capture_locals);
                 let element_locals_slice = self.typing_interner.alloc_slice_from_vec(
@@ -812,12 +824,16 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             KindT::RuntimeSizedArray(_) => {
                 if !list_of_maybe_destructure_member_patterns.is_empty() {
                     panic!("implement: destructureOwning RuntimeSizedArray — RangedInternalErrorT: Can only destruct RSA with zero destructure targets.");
+                    // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Can only destruct RSA with zero destructure targets."))
                 }
                 ReferenceExpressionTE::DestroyMutRuntimeSizedArray(self.typing_interner.alloc(DestroyMutRuntimeSizedArrayTE {
                     array_expr: input_expr,
                 }))
             }
-            _ => panic!("implement: destructureOwning — non-struct kind"),
+            _ => {
+                panic!("implement: destructureOwning — non-struct kind");
+                // vfail("impl!")
+            }
         }
     }
 /*
@@ -1006,7 +1022,10 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     KindT::StaticSizedArray(static_sized_array_t) => {
                         self.load_from_static_sized_array(head_maybe_destructure_member_pattern.range, *static_sized_array_t, expected_container_coord, expected_container_coord.ownership, container_aliasing_expr_te, member_index)
                     }
-                    _ => panic!("implement: iterate_destructure_non_owning_and_maybe_continue — unknown container kind"),
+                    _ => {
+                        panic!("implement: iterate_destructure_non_owning_and_maybe_continue — unknown container kind");
+                        // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Unknown type to destructure: " + other))
+                    }
                 };
                 let member_ownership_in_struct = member_addr_expr_te.result().coord.ownership;
                 let coerce_to_ownership = self.load_result_ownership(member_ownership_in_struct);
@@ -1163,8 +1182,14 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             .map(|(i, member)| {
                 let unsubstituted_member_coord = match member {
                     IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
-                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: translateDestroyStructInnerAndMaybeContinue — AddressMemberTypeT"),
-                    IStructMemberT::Variadic(_) => panic!("implement: translateDestroyStructInnerAndMaybeContinue — VariadicStructMemberT"),
+                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                        panic!("implement: translateDestroyStructInnerAndMaybeContinue — AddressMemberTypeT");
+                        // vimpl()
+                    }
+                    IStructMemberT::Variadic(_) => {
+                        panic!("implement: translateDestroyStructInnerAndMaybeContinue — VariadicStructMemberT");
+                        // vimpl()
+                    }
                 };
                 let member_type = substituter.substitute_for_coord(coutputs, unsubstituted_member_coord);
                 self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + i as i32), member_type)
@@ -1411,8 +1436,14 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         let member = &struct_def_t.members[index as usize];
         let (variability, unsubstituted_member_coord) = match member {
             IStructMemberT::Normal(NormalStructMemberT { variability, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => (*variability, *reference),
-            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: load_from_struct — AddressMemberTypeT"),
-            IStructMemberT::Variadic(_) => panic!("implement: load_from_struct — VariadicStructMemberT"),
+            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                panic!("implement: load_from_struct — AddressMemberTypeT");
+                // vimpl()
+            }
+            IStructMemberT::Variadic(_) => {
+                panic!("implement: load_from_struct — VariadicStructMemberT");
+                // vimpl()
+            }
         };
         let instantiation_bounds = coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id).unwrap();
         let member_type = self.get_placeholder_substituter(

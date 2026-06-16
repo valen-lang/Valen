@@ -84,6 +84,7 @@ where 's: 't,
         block_1: &'s BlockSE<'s>,
     ) -> (&'t BlockTE<'s, 't>, HashSet<IVarNameT<'s, 't>>, HashSet<IVarNameT<'s, 't>>, HashSet<CoordT<'s, 't>>) {
         panic!("Unimplemented: Slab 15 — body migration");
+        // evaluateBlockStatements with child fate, BlockTE wrap, return effect sets via getEffectsSince
     }
 /*
   // This is NOT USED FOR EVERY BLOCK!

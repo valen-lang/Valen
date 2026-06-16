@@ -195,6 +195,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_struct_by_template
     pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template");
+        // vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
     }
     /*
       def lookupStructByTemplate(structTemplateName: IStructTemplateNameT): StructDefinitionT = {
@@ -204,6 +205,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_interface_by_template
     pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template");
+        // vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
     }
     /*
       def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameT): InterfaceDefinitionT = {
@@ -213,6 +215,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_impl_by_template
     pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT<'s, 't> {
         panic!("Unimplemented: lookup_impl_by_template");
+        // vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
     }
     /*
       def lookupImplByTemplate(implTemplateName: IImplTemplateNameT): EdgeT = {
@@ -222,6 +225,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_interface
     pub fn lookup_interface(&self, interface_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface");
+        // vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
     }
     /*
       def lookupInterface(interfaceId: IdT[IInterfaceNameT]): InterfaceDefinitionT = {
@@ -255,6 +259,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_struct_by_template_id
     pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template_id");
+        // vassertSome(structs.find(_.templateName == structTemplateId))
     }
     /*
       def lookupStructByTemplateId(structTemplateId: IdT[IStructTemplateNameT]): StructDefinitionT = {
@@ -264,6 +269,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_interface_by_template_id
     pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template_id");
+        // vassertSome(interfaces.find(_.templateName == interfaceTemplateId))
     }
     /*
       def lookupInterfaceByTemplateId(interfaceTemplateId: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
@@ -273,6 +279,10 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_citizen_by_template_id
     pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT<'s, 't>) -> CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_citizen_by_template_id");
+        // interfaceTemplateId match {
+        //   case IdT(packageCoord, initSteps, t: IStructTemplateNameT) => lookupStructByTemplateId(IdT(packageCoord, initSteps, t))
+        //   case IdT(packageCoord, initSteps, t: IInterfaceTemplateNameT) => lookupInterfaceByTemplateId(IdT(packageCoord, initSteps, t))
+        // }
     }
     /*
       def lookupCitizenByTemplateId(interfaceTemplateId: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
@@ -335,6 +345,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_function
     pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_function_by_template");
+        // functions.find(_.header.id.localName.template == funcTemplateName).headOption
     }
     /*
       def lookupFunction(funcTemplateName: IFunctionTemplateNameT): Option[FunctionDefinitionT] = {
@@ -455,6 +466,11 @@ impl<'s, 't> HinputsT<'s, 't> {
     // mig: fn lookup_user_function
     pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_user_function");
+        // val matches = functions.filter(f => simpleNameT.unapply(f.header.id).contains(humanName))
+        //                          .filter(_.header.isUserFunction)
+        // if (matches.size == 0) vfail("Not found!")
+        // else if (matches.size > 1) vfail("Multiple found!")
+        // matches.head
     }
     /*
       def lookupUserFunction(humanName: String): FunctionDefinitionT = {

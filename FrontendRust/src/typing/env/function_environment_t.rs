@@ -102,6 +102,21 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
+    // if (isRootCompilingDenizen) {
+    //   this
+    // } else {
+    //   parentEnv match {
+    //     case PackageEnvironmentT(_, _, _) => vwat()
+    //     case _ => {
+    //       parentEnv match {
+    //         case parentInDenizenEnv : IInDenizenEnvironmentT => {
+    //           parentInDenizenEnv.rootCompilingDenizenEnv
+    //         }
+    //         case _ => vwat()
+    //       }
+    //     }
+    //   }
+    // }
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
@@ -132,6 +147,8 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // EnvironmentHelper.lookupWithNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -229,6 +246,21 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s,
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
+    // if (isRootCompilingDenizen) {
+    //   this
+    // } else {
+    //   parentEnv match {
+    //     case PackageEnvironmentT(_, _, _) => vwat()
+    //     case _ => {
+    //       parentEnv match {
+    //         case parentInDenizenEnv : IInDenizenEnvironmentT => {
+    //           parentInDenizenEnv.rootCompilingDenizenEnv
+    //         }
+    //         case _ => vwat()
+    //       }
+    //     }
+    //   }
+    // }
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
@@ -259,6 +291,8 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> wh
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // EnvironmentHelper.lookupWithNameInner(
+    //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -375,6 +409,7 @@ impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
+    // parentEnv.rootCompilingDenizenEnv
   }
   /*
     override def denizenTemplateId: IdT[ITemplateNameT] = parentFunctionEnv.denizenTemplateId
@@ -400,6 +435,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn function
   pub fn function(&self) -> &'s FunctionA<'s> {
     panic!("Unimplemented: function");
+    // parentFunctionEnv.function
   }
   /*
     def function = parentFunctionEnv.function
@@ -466,6 +502,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn parent_env
   pub fn parent_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: parent_env");
+    // parentNodeEnv.getOrElse(parentFunctionEnv)
   }
   /*
     def parentEnv: IInDenizenEnvironmentT = {
@@ -508,6 +545,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_all_locals
   pub fn get_all_locals(&self) -> Vec<ILocalVariableT<'s, 't>> {
     panic!("Unimplemented: get_all_locals");
+    // declaredLocals.collect({ case i : ILocalVariableT => i })
   }
   /*
     def getAllLocals(): Vector[ILocalVariableT] = {
@@ -526,6 +564,8 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn add_variables
   pub fn add_variables(&self, new_vars: &[IVariableT<'s, 't>]) -> &'t NodeEnvironmentT<'s, 't> {
     panic!("Unimplemented: add_variables");
+    // NodeEnvironmentT(parentFunctionEnv, parentNodeEnv, node, life, templatas,
+    //   declaredLocals ++ newVars, unstackifiedLocals, restackifiedLocals, defaultRegion)
   }
   /*
     def addVariables(newVars: Vector[IVariableT]): NodeEnvironmentT = {
@@ -544,6 +584,8 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn add_variable
   pub fn add_variable(&self, new_var: IVariableT<'s, 't>) -> &'t NodeEnvironmentT<'s, 't> {
     panic!("Unimplemented: add_variable");
+    // NodeEnvironmentT(parentFunctionEnv, parentNodeEnv, node, life, templatas,
+    //   declaredLocals :+ newVar, unstackifiedLocals, restackifiedLocals, defaultRegion)
   }
   /*
     def addVariable(newVar: IVariableT): NodeEnvironmentT = {
@@ -562,6 +604,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_all_restackified_locals
   pub fn get_all_restackified_locals(&self) -> Vec<IVarNameT<'s, 't>> {
     panic!("Unimplemented: get_all_restackified_locals");
+    // restackifiedLocals.toVector
   }
   /*
     def getAllRestackifiedLocals(): Vector[IVarNameT] = {
@@ -571,6 +614,13 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn mark_local_unstackified
   pub fn mark_local_unstackified(&self, new_unstackified: IVarNameT<'s, 't>) -> &'t NodeEnvironmentT<'s, 't> {
     panic!("Unimplemented: mark_local_unstackified");
+    // vassert(getAllLocals().exists(_.name == newUnstackified))
+    // vassert(!getAllUnstackifiedLocals().contains(newUnstackified))
+    // if (getAllRestackifiedLocals().contains(newUnstackified)) {
+    //   NodeEnvironmentT(..., declaredLocals, unstackifiedLocals, restackifiedLocals - newUnstackified, defaultRegion)
+    // } else {
+    //   NodeEnvironmentT(..., declaredLocals, unstackifiedLocals + newUnstackified, restackifiedLocals, defaultRegion)
+    // }
   }
   /*
     def markLocalUnstackified(newUnstackified: IVarNameT): NodeEnvironmentT = {
@@ -609,6 +659,13 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn mark_local_restackified
   pub fn mark_local_restackified(&self, new_restackified: IVarNameT<'s, 't>) -> &'t NodeEnvironmentT<'s, 't> {
     panic!("Unimplemented: mark_local_restackified");
+    // vassert(getAllLocals().exists(_.name == newRestackified))
+    // vassert(!getAllRestackifiedLocals().contains(newRestackified))
+    // if (getAllUnstackifiedLocals().contains(newRestackified)) {
+    //   NodeEnvironmentT(..., declaredLocals, unstackifiedLocals - newRestackified, restackifiedLocals, defaultRegion)
+    // } else {
+    //   NodeEnvironmentT(..., declaredLocals, unstackifiedLocals, restackifiedLocals + newRestackified, defaultRegion)
+    // }
   }
   /*
     def markLocalRestackified(newRestackified: IVarNameT): NodeEnvironmentT = {
@@ -783,6 +840,16 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     entry: IEnvEntryT<'s, 't>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
     panic!("Unimplemented: add_entry");
+    // NodeEnvironmentT(
+    //   parentFunctionEnv,
+    //   parentNodeEnv,
+    //   node,
+    //   life,
+    //   templatas.addEntry(interner, name, entry),
+    //   declaredLocals,
+    //   unstackifiedLocals,
+    //   restackifiedLocals,
+    //   defaultRegion)
   }
   /*
     def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): NodeEnvironmentT = {
@@ -974,6 +1041,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 // mig: fn node
   pub fn node(&self) -> &'s IExpressionSE<'s> {
     panic!("Unimplemented: node");
+    // nodeEnvironment.node
   }
 /*
   def node: IExpressionSE = nodeEnvironment.node
@@ -988,6 +1056,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 // mig: fn global_env
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     panic!("Unimplemented: global_env");
+    // nodeEnvironment.globalEnv
   }
 /*
   def globalEnv: GlobalEnvironment = nodeEnvironment.globalEnv
@@ -1009,6 +1078,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 // mig: fn function
   pub fn function(&self) -> &'s FunctionA<'s> {
     panic!("Unimplemented: function");
+    // nodeEnvironment.function
   }
 /*
   def function = nodeEnvironment.function
@@ -1132,6 +1202,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     _lookup_filter: &HashSet<ILookupContext>,
   ) -> Option<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_nearest_with_name");
+    // nodeEnvironment.lookupNearestWithName(nameS, lookupFilter)
   }
 /*
   def lookupNearestWithName(
@@ -1164,6 +1235,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     _lookup_filter: &HashSet<ILookupContext>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_all_with_name");
+    // nodeEnvironment.lookupAllWithName(nameS, lookupFilter)
   }
 /*
   def lookupAllWithName( nameS: INameT, lookupFilter: Set[ILookupContext]): Iterable[ITemplataT[ITemplataType]] = {
@@ -1179,6 +1251,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     _interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    // nodeEnvironment.lookupWithImpreciseNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 /*
   private[env] def lookupWithImpreciseNameInner( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
@@ -1193,6 +1266,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     _get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_name_inner");
+    // nodeEnvironment.lookupWithNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 /*
   private[env] def lookupWithNameInner( nameS: INameT, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
@@ -1224,6 +1298,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     _entry: IEnvEntryT<'s, 't>,
   ) {
     panic!("Unimplemented: add_entry");
+    // nodeEnvironment = nodeEnvironment.addEntry(interner, name, entry)
   }
 /*
   def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): Unit = {
@@ -1394,6 +1469,17 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     entry: IEnvEntryT<'s, 't>,
   ) -> &'t FunctionEnvironmentT<'s, 't> {
     panic!("Unimplemented: add_entry");
+    // FunctionEnvironmentT(
+    //   globalEnv,
+    //   parentEnv,
+    //   templateId,
+    //   id,
+    //   templatas.addEntry(interner, name, entry),
+    //   function,
+    //   maybeReturnType,
+    //   closuredLocals,
+    //   isRootCompilingDenizen,
+    //   defaultRegion)
   }
   /*
     def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): FunctionEnvironmentT = {
@@ -1417,6 +1503,9 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
   ) -> &'t FunctionEnvironmentT<'s, 't> {
     panic!("Unimplemented: add_entries");
+    // FunctionEnvironmentT(globalEnv, parentEnv, templateId, id,
+    //   templatas.addEntries(interner, newEntries),
+    //   function, maybeReturnType, closuredLocals, isRootCompilingDenizen, defaultRegion)
   }
   /*
     def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): FunctionEnvironmentT = {
@@ -1489,6 +1578,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
       match &self.parent_env {
         IEnvironmentT::Node(_node_env) => {
           panic!("implement: make_child_node_environment — NodeEnvironmentT parent");
+          // (declaredLocals, unstackifiedLocals, restackifiedLocals)
         }
         _ => (Vec::new(), Vec::new(), Vec::new()),
       };
@@ -1531,6 +1621,11 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_closured_declared_locals
   pub fn get_closured_declared_locals(&self) -> Vec<IVariableT<'s, 't>> {
     panic!("Unimplemented: get_closured_declared_locals");
+    // parentEnv match {
+    //   case n @ NodeEnvironmentT(_, _, _, _, _, _, _, _, _) => n.declaredLocals
+    //   case f @ FunctionEnvironmentT(_, _, _, _, _, _, _, _, _, _) => f.getClosuredDeclaredLocals()
+    //   case _ => Vector()
+    // }
   }
   /*
     def getClosuredDeclaredLocals(): Vector[IVariableT] = {

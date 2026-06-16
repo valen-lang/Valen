@@ -57,6 +57,31 @@ case class IdT[+T <: INameT](
 impl<'s, 't> IdT<'s, 't> {
     pub fn new() -> Self {
         panic!("Unimplemented IdT new");
+        // this match {
+        //   case _ =>
+        // }
+        // initSteps.foreach({
+        //   case KindPlaceholderNameT(_) => vfail()
+        //   case KindPlaceholderTemplateNameT(_, _) => vfail()
+        //   case _ =>
+        // })
+        // localName match {
+        //   case KindPlaceholderNameT(_) => {
+        //     initSteps.last match {
+        //       case _ : ITemplateNameT =>
+        //       case OverrideDispatcherNameT(_, _, _) => {
+        //         initSteps.init.last match {
+        //           case _ : ITemplateNameT =>
+        //           case other => vfail(other)
+        //         }
+        //       }
+        //       case other => vfail(other)
+        //     }
+        //   }
+        //   case _ =>
+        // }
+        // vassert(initSteps.collectFirst({ case PackageTopLevelNameT() => }).isEmpty)
+        // vcurious(initSteps.distinct == initSteps)
     }
     /*
       this match {
@@ -106,6 +131,7 @@ impl<'s, 't> IdT<'s, 't> {
     */
     fn package_id() {
         panic!("Unimplemented IdT package ID");
+        // IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
     }
     /*
       def packageId(interner: Interner): IdT[PackageTopLevelNameT] = {
@@ -432,6 +458,7 @@ impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
       }
       IFunctionTemplateNameT::ConstructorTemplate(_) => {
         panic!("Unimplemented: make_function_name for ConstructorTemplate")
+        // (ConstructorTemplateNameT has no humanName; no equivalent FunctionNameT mapping)
       }
       IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(tmpl) => {
         interner.intern_name(INameValT::AnonymousSubstructConstructor(AnonymousSubstructConstructorNameValT {
@@ -543,8 +570,14 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
             IInstantiationNameT::Export(_) => &[],
             IInstantiationNameT::Impl(x) => x.template_args,
             IInstantiationNameT::ImplBound(x) => x.template_args,
-            IInstantiationNameT::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
-            IInstantiationNameT::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
+            IInstantiationNameT::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+            }
+            IInstantiationNameT::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+            }
             IInstantiationNameT::KindPlaceholder(_) => &[],
             IInstantiationNameT::OverrideDispatcher(x) => x.template_args,
             IInstantiationNameT::OverrideDispatcherCase(x) => x.independent_impl_template_args,
@@ -589,7 +622,10 @@ impl<'s, 't> IFunctionNameT<'s, 't> where 's: 't {
     pub fn template(&self) -> IFunctionTemplateNameT<'s, 't> {
         match self {
             IFunctionNameT::OverrideDispatcher(x) => IFunctionTemplateNameT::OverrideDispatcherTemplate(x.template),
-            IFunctionNameT::ExternFunction(_) => panic!("Unimplemented: template on ExternFunctionNameT (Scala: override def template = ExternFunctionTemplateNameT(humanName) — needs interner)"),
+            IFunctionNameT::ExternFunction(_) => {
+                panic!("Unimplemented: template on ExternFunctionNameT");
+                // this
+            }
             IFunctionNameT::Function(x) => IFunctionTemplateNameT::FunctionTemplate(x.template),
             IFunctionNameT::ForwarderFunction(x) => IFunctionTemplateNameT::ForwarderFunctionTemplate(x.template),
             IFunctionNameT::FunctionBound(x) => IFunctionTemplateNameT::FunctionBoundTemplate(x.template),
@@ -856,8 +892,14 @@ impl<'s, 't> ISubKindNameT<'s, 't> where 's: 't {
 */
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
-            ISubKindNameT::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
-            ISubKindNameT::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
+            ISubKindNameT::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+            }
+            ISubKindNameT::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+            }
             ISubKindNameT::KindPlaceholder(_) => &[],
             ISubKindNameT::Struct(x) => x.template_args,
             ISubKindNameT::Interface(x) => x.template_args,
@@ -901,8 +943,14 @@ impl<'s, 't> ICitizenNameT<'s, 't> where 's: 't {
 */
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
-            ICitizenNameT::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
-            ICitizenNameT::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
+            ICitizenNameT::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+            }
+            ICitizenNameT::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+            }
             ICitizenNameT::Struct(x) => x.template_args,
             ICitizenNameT::Interface(x) => x.template_args,
             ICitizenNameT::LambdaCitizen(_) => &[],

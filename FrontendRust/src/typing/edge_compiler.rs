@@ -145,7 +145,10 @@ where 's: 't,
                                     overriding_citizen_template_id,
                                     *abstract_function_prototype,
                                     *abstract_index,
-                                ).unwrap_or_else(|_| panic!("implement: ICompileErrorT from look_for_override in compile_i_tables"));
+                                ).unwrap_or_else(|_| {
+                                    panic!("implement: ICompileErrorT from look_for_override in compile_i_tables")
+                                    // throw CompileErrorExceptionT(e)
+                                });
                                 (abstract_function_prototype.id, self.typing_interner.alloc(overrride))
                             }).collect();
                         let overriding_citizen = overriding_impl.sub_citizen;

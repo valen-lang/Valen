@@ -658,7 +658,10 @@ where 's: 't,
                 IFunctionAttributeS::UserFunction(_) => IFunctionAttributeT::UserFunction,
                 IFunctionAttributeS::Pure(_) => IFunctionAttributeT::Pure,
                 IFunctionAttributeS::Additive(_) => IFunctionAttributeT::Additive,
-                _ => panic!("implement: translate other function attributes"),
+                _ => {
+                    panic!("implement: translate other function attributes");
+                    // case other => vimpl(other)
+                }
             }
         }).collect()
     }
@@ -864,7 +867,10 @@ where 's: 't,
             match attr {
                 IFunctionAttributeS::UserFunction(_) => IFunctionAttributeT::UserFunction,
                 IFunctionAttributeS::Extern(extern_s) => IFunctionAttributeT::Extern(ExternT { package_coord: *extern_s.package_coord }),
-                _ => panic!("implement: translateFunctionAttributes {:?}", attr),
+                _ => {
+                    panic!("implement: translateFunctionAttributes {:?}", attr);
+                    // case other => vimpl(other)
+                }
             }
         }).collect()
     }

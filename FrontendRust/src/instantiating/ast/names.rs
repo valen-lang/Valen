@@ -58,7 +58,10 @@ case class IdI[+R <: IRegionsModeI, +I <: INameI[R]](
 // mig: fn package_id
 // (was cfg-gated)
 impl<'s, 'i> IdI<'s, 'i> {
-    pub fn package_id(&self) -> IdI<'s, 'i> { panic!("Unimplemented: package_id"); }
+    pub fn package_id(&self) -> IdI<'s, 'i> {
+        panic!("Unimplemented: package_id");
+        // IdI(packageCoord, Vector(), PackageTopLevelNameI())
+    }
 /*
   def packageId: IdI[R, PackageTopLevelNameI[R]] = {
     IdI(packageCoord, Vector(), PackageTopLevelNameI())
@@ -67,7 +70,11 @@ impl<'s, 'i> IdI<'s, 'i> {
 */
 // mig: fn init_id
 // (was cfg-gated)
-    pub fn init_id(&self) -> IdI<'s, 'i> { panic!("Unimplemented: init_id"); }
+    pub fn init_id(&self) -> IdI<'s, 'i> {
+        panic!("Unimplemented: init_id");
+        // if (initSteps.isEmpty) IdI(packageCoord, Vector(), PackageTopLevelNameI())
+        // else IdI(packageCoord, initSteps.init, initSteps.last)
+    }
 }
 /*
   def initId: IdI[R, INameI[R]] = {
@@ -104,7 +111,13 @@ impl<'s, 'i> IdI<'s, 'i> {
 // mig: fn steps
 // (was cfg-gated)
 impl<'s, 'i> IdI<'s, 'i> {
-    pub fn steps(&self) -> &'i[INameI<'s, 'i>] { panic!("Unimplemented: steps"); }
+    pub fn steps(&self) -> &'i[INameI<'s, 'i>] {
+        panic!("Unimplemented: steps");
+        // localName match {
+        //   case PackageTopLevelNameI() => initSteps
+        //   case _ => initSteps :+ localName
+        // }
+    }
 }
 /*
   def steps: Vector[INameI[R]] = {
@@ -441,12 +454,21 @@ impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
             IInstantiationNameI::Export(_) => &[],
             IInstantiationNameI::Impl(x) => x.template_args,
             IInstantiationNameI::ImplBound(x) => x.template_args,
-            IInstantiationNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
-            IInstantiationNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            IInstantiationNameI::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(IntegerTemplataI(size), MutabilityTemplataI(arr.mutability), VariabilityTemplataI(variability), arr.elementType)
+            }
+            IInstantiationNameI::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(MutabilityTemplataI(arr.mutability), arr.elementType)
+            }
             IInstantiationNameI::OverrideDispatcher(x) => x.template_args,
             IInstantiationNameI::OverrideDispatcherCase(x) => x.independent_impl_template_args,
             IInstantiationNameI::Extern(_) => &[],
-            IInstantiationNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
+            IInstantiationNameI::ExternFunction(_) => {
+                panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)");
+                // ExternFunctionNameI.templateArgs
+            }
             IInstantiationNameI::Function(x) => x.template_args,
             IInstantiationNameI::ForwarderFunction(f) => f.inner.template_args(),
             IInstantiationNameI::FunctionBound(x) => x.template_args,
@@ -552,7 +574,10 @@ impl<'s, 'i> IFunctionNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
             IFunctionNameI::OverrideDispatcher(x) => x.template_args,
-            IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)"),
+            IFunctionNameI::ExternFunction(_) => {
+                panic!("Unimplemented: template_args on ExternFunctionNameI (Scala: templateArgs field)");
+                // ExternFunctionNameI.templateArgs
+            }
             IFunctionNameI::Function(x) => x.template_args,
             IFunctionNameI::ForwarderFunction(f) => f.inner.template_args(),
             IFunctionNameI::FunctionBound(x) => x.template_args,
@@ -564,7 +589,10 @@ impl<'s, 'i> IFunctionNameI<'s, 'i> where 's: 'i {
     pub fn template(&self) -> IFunctionTemplateNameI<'s, 'i> {
         match self {
             IFunctionNameI::OverrideDispatcher(x) => IFunctionTemplateNameI::OverrideDispatcherTemplate(&x.template),
-            IFunctionNameI::ExternFunction(_) => panic!("Unimplemented: template on ExternFunctionNameI (Scala: override def template = ExternFunctionTemplateNameI(humanName) — needs interner)"),
+            IFunctionNameI::ExternFunction(_) => {
+                panic!("Unimplemented: template on ExternFunctionNameI");
+                // this
+            }
             IFunctionNameI::Function(x) => IFunctionTemplateNameI::FunctionTemplate(&x.template),
             IFunctionNameI::ForwarderFunction(x) => IFunctionTemplateNameI::ForwarderFunctionTemplate(&x.template),
             IFunctionNameI::FunctionBound(x) => IFunctionTemplateNameI::FunctionBoundTemplate(&x.template),
@@ -842,8 +870,14 @@ sealed trait ISubKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
 impl<'s, 'i> ISubKindNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
-            ISubKindNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
-            ISubKindNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ISubKindNameI::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(IntegerTemplataI(size), MutabilityTemplataI(arr.mutability), VariabilityTemplataI(variability), arr.elementType)
+            }
+            ISubKindNameI::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(MutabilityTemplataI(arr.mutability), arr.elementType)
+            }
             ISubKindNameI::Struct(x) => x.template_args,
             ISubKindNameI::Interface(x) => x.template_args,
             ISubKindNameI::LambdaCitizen(_) => &[],
@@ -904,8 +938,14 @@ sealed trait ICitizenNameI[+R <: IRegionsModeI] extends ISubKindNameI[R] {
 impl<'s, 'i> ICitizenNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
         match self {
-            ICitizenNameI::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)"),
-            ICitizenNameI::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)"),
+            ICitizenNameI::StaticSizedArray(_) => {
+                panic!("Unimplemented: template_args on StaticSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(IntegerTemplataI(size), MutabilityTemplataI(arr.mutability), VariabilityTemplataI(variability), arr.elementType)
+            }
+            ICitizenNameI::RuntimeSizedArray(_) => {
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameI (computed: needs interner to allocate slice)");
+                // Vector(MutabilityTemplataI(arr.mutability), arr.elementType)
+            }
             ICitizenNameI::Struct(x) => x.template_args,
             ICitizenNameI::Interface(x) => x.template_args,
             ICitizenNameI::LambdaCitizen(_) => &[],

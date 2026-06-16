@@ -522,7 +522,10 @@ where 's: 't,
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
-                other => panic!("implement unexpected templata in evaluateFunctionParamTypes: {:?}", other),
+                other => {
+                    panic!("implement unexpected templata in evaluateFunctionParamTypes: {:?}", other);
+                    // case other => vimpl(other)
+                }
             }
         }).collect()
     }
@@ -564,7 +567,10 @@ where 's: 't,
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
-                other => panic!("implement unexpected templata in assembleFunctionParams: {:?}", other),
+                other => {
+                    panic!("implement unexpected templata in assembleFunctionParams: {:?}", other);
+                    // case other => vimpl(other)
+                }
             };
 
             //   val maybeVirtuality = evaluateMaybeVirtuality(env, coutputs, parentRanges, coord.kind, param1.virtuality)
@@ -643,7 +649,10 @@ where 's: 't,
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
                 Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
-                other => panic!("implement vwat in getMaybeReturnType: {:?}", other),
+                other => {
+                    panic!("implement vwat in getMaybeReturnType: {:?}", other);
+                    // case other => vwat(other)
+                }
             }
         })
     }
@@ -671,6 +680,15 @@ where 's: 't,
         function_templata: &FunctionTemplataT<'s, 't>,
     ) -> FunctionBannerT<'s, 't> {
         panic!("Unimplemented: get_generic_function_banner_from_call");
+        // val function1 = functionTemplata.function
+        // function1.runeToType.keySet.foreach(templateParam => {
+        //   vassert(runedEnv.lookupNearestWithImpreciseName(interner.intern(RuneNameS(templateParam)), Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty);
+        // })
+        // val params2 = assembleFunctionParams(runedEnv, coutputs, callRange, function1.params)
+        // val maybeReturnType = getMaybeReturnType(runedEnv, function1.maybeRetCoordRune.map(_.rune))
+        // val namedEnv = makeNamedEnv(runedEnv, params2.map(_.tyype), maybeReturnType)
+        // val banner = ast.FunctionBannerT(Some(functionTemplata), namedEnv.id)
+        // banner
     }
 
 /*

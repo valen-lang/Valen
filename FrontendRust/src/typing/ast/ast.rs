@@ -342,7 +342,10 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> FunctionDefinitionT<'s, 't> {
-    fn is_pure(&self) -> bool { panic!("Unimplemented: is_pure"); }
+    fn is_pure(&self) -> bool {
+        panic!("Unimplemented: is_pure");
+        // header.isPure
+    }
 /*
   def isPure: Boolean = header.isPure
 }
@@ -350,7 +353,10 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> {
 object getFunctionLastName {
 */
 }
-fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) -> Option<&'t IFunctionNameT<'s, 't>> { panic!("Unimplemented: unapply"); }
+fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) -> Option<&'t IFunctionNameT<'s, 't>> {
+    panic!("Unimplemented: unapply");
+    // Some(f.header.id.localName)
+}
 /*
   def unapply(f: FunctionDefinitionT): Option[IFunctionNameT] = Some(f.header.id.localName)
 }
@@ -379,7 +385,10 @@ impl<'t> LocationInFunctionEnvironmentT<'t> {
     LocationInFunctionEnvironmentT(path :+ subLocation)
   }
 */
-    fn to_string(&self) -> String { panic!("Unimplemented: to_string"); }
+    fn to_string(&self) -> String {
+        panic!("Unimplemented: to_string");
+        // path.mkString(".")
+    }
 /*
   override def toString: String = path.mkString(".")
 }
@@ -416,7 +425,10 @@ impl<'s, 't> ParameterT<'s, 't> {
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-    fn same(&self, that: &ParameterT<'s, 't>) -> bool { panic!("Unimplemented: same"); }
+    fn same(&self, that: &ParameterT<'s, 't>) -> bool {
+        panic!("Unimplemented: same");
+        // name == that.name && virtuality == that.virtuality && tyype == that.tyype
+    }
 /*
   def same(that: ParameterT): Boolean = {
     name == that.name &&
@@ -563,7 +575,10 @@ impl<'s, 't> SignatureT<'s, 't> {
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
+    fn param_types(&self) -> Vec<CoordT<'s, 't>> {
+        panic!("Unimplemented: param_types");
+        // id.localName.parameters
+    }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 }
@@ -638,7 +653,10 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 //  Option[(FullNameT[IFunctionNameT], Vector[ParameterT])] =
 //    Some(templateName, params)
 */
-    fn to_string(&self) -> String { panic!("Unimplemented: to_string"); }
+    fn to_string(&self) -> String {
+        panic!("Unimplemented: to_string");
+        // "FunctionBanner2#(" + name + ")"
+    }
 /*
   override def toString: String = {
     // # is to signal that we override this
@@ -815,7 +833,10 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 
   vassert(id.localName.parameters == paramTypes)
 */
-    fn is_extern(&self) -> bool { panic!("Unimplemented: is_extern"); }
+    fn is_extern(&self) -> bool {
+        panic!("Unimplemented: is_extern");
+        // attributes.exists({ case ExternT(_) => true case _ => false })
+    }
 /*
   def isExtern = attributes.exists({ case ExternT(_) => true case _ => false })
 */
@@ -918,19 +939,28 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     toPrototype.toSignature
   }
 */
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
+    fn param_types(&self) -> Vec<CoordT<'s, 't>> {
+        panic!("Unimplemented: param_types");
+        // id.localName.parameters
+    }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
 }
-fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
+fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> {
+    panic!("Unimplemented: unapply");
+    // Some(id, params, returnType)
+}
 /*
   def unapply(arg: FunctionHeaderT): Option[(IdT[IFunctionNameT], Vector[ParameterT], CoordT)] = {
     Some(id, params, returnType)
   }
 */
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn is_pure(&self) -> bool { panic!("Unimplemented: is_pure"); }
+    fn is_pure(&self) -> bool {
+        panic!("Unimplemented: is_pure");
+        // attributes.collectFirst({ case PureT => }).nonEmpty
+    }
 /*
   def isPure: Boolean = {
     attributes.collectFirst({ case PureT => }).nonEmpty

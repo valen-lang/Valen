@@ -846,6 +846,7 @@ pub fn sanity_check_conclusion<'s, 't>(
     conclusion: ITemplataT<'s, 't>,
 ) {
     panic!("Unimplemented: sanity_check_conclusion");
+    // delegate.sanityCheckConclusion(env, state, rune, conclusion)
 }
 /*
   def sanityCheckConclusion(delegate: IInfererDelegate, env: InferEnv, state: CompilerOutputs, rune: IRuneS, conclusion: ITemplataT[ITemplataType]): Unit = {
@@ -1324,7 +1325,7 @@ where 's: 't,
                             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) | ITemplataT::Placeholder(PlaceholderTemplataT { .. }) => {
                                 CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind }
                             }
-                            other => panic!("implement: CoordComponents unexpected mutability {:?}", other),
+                            other => unreachable!("CoordComponents: get_mutability always returns Mutability or Placeholder; got {:?}", other),
                         };
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         let mut conclusions = HashMap::new();
@@ -1360,7 +1361,11 @@ where 's: 't,
                 }
             }
             //     case PrototypeComponentsSR(...) =>
-            IRulexSR::PrototypeComponents(_) => { panic!("Unimplemented: solve_rule PrototypeComponents"); }
+            IRulexSR::PrototypeComponents(_) => {
+                panic!("Unimplemented: solve_rule PrototypeComponents");
+                // val PrototypeTemplataT(prototype) = vassertSome(solverState.getConclusion(resultRune.rune))
+                // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(ownershipRune.rune -> CoordListTemplataT(prototype.paramTypes), kindRune.rune -> CoordTemplataT(prototype.returnType)), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+            }
             //     case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
             IRulexSR::Resolve(resolve) => {
                 // If we're here, then we're resolving a prototype.
@@ -1468,11 +1473,11 @@ where 's: 't,
             IRulexSR::DefinitionFunc(def_func) => {
                 let param_coords = match solver_state.get_conclusion(&def_func.params_list_rune.rune).expect("DefinitionFunc paramListRune has no conclusion") {
                     ITemplataT::CoordList(cl) => cl.coords,
-                    _ => panic!("implement: solve_rule DefinitionFunc non-CoordList paramList"),
+                    _ => unreachable!("DefinitionFunc: paramListRune is statically typed CoordList (Scala destructures `val CoordListTemplataT(_) = …`)"),
                 };
                 let return_type = match solver_state.get_conclusion(&def_func.return_rune.rune).expect("DefinitionFunc returnRune has no conclusion") {
                     ITemplataT::Coord(ct) => ct.coord,
-                    _ => panic!("implement: solve_rule DefinitionFunc non-Coord return"),
+                    _ => unreachable!("DefinitionFunc: returnRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)"),
                 };
                 let new_prototype = self.assemble_prototype(env, state, def_func.range, def_func.name, param_coords, return_type);
                 let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: new_prototype }));
@@ -1480,7 +1485,10 @@ where 's: 't,
                 conclusions.insert(def_func.result_rune.rune, new_templata);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => { panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping"); }
+                    Err(_e) => {
+                        panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping");
+                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    }
                 }
             }
             //     case CallSiteCoordIsaSR(...) =>
@@ -1674,7 +1682,10 @@ where 's: 't,
                             }
                         }
                     }
-                    Some(_other) => { panic!("implement: solve_rule CoordSend unexpected receiver conclusion"); }
+                    Some(_other) => {
+                        panic!("implement: solve_rule CoordSend unexpected receiver conclusion");
+                        // vwat(other)
+                    }
                 }
             }
             //     case OneOfSR(...) =>
@@ -1696,17 +1707,61 @@ where 's: 't,
                 }
             }
             //     case IsConcreteSR(...) =>
-            IRulexSR::IsConcrete(_) => { panic!("Unimplemented: solve_rule IsConcrete"); }
+            IRulexSR::IsConcrete(_) => {
+                panic!("Unimplemented: solve_rule IsConcrete");
+                // val templata = vassertSome(solverState.getConclusion(rune.rune))
+                // templata match {
+                //   case KindTemplataT(kind) => {
+                //     kind match {
+                //       case InterfaceTT(_) => {
+                //         Err(KindIsNotConcrete(kind))
+                //       }
+                //       case _ => {
+                //         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+                //       }
+                //     }
+                //   }
+                //   case _ => vwat() // Should be impossible, all template rules are type checked
+                // }
+            }
             //     case IsInterfaceSR(...) =>
-            IRulexSR::IsInterface(_) => { panic!("Unimplemented: solve_rule IsInterface"); }
+            IRulexSR::IsInterface(_) => {
+                panic!("Unimplemented: solve_rule IsInterface");
+                // val templata = vassertSome(solverState.getConclusion(rune.rune))
+                // templata match {
+                //   case KindTemplataT(kind) => {
+                //     kind match {
+                //       case InterfaceTT(_) => {
+                //         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+                //       }
+                //       case _ => Err(KindIsNotInterface(kind))
+                //     }
+                //   }
+                //   case _ => vwat() // Should be impossible, all template rules are type checked
+                // }
+            }
             //     case IsStructSR(...) =>
-            IRulexSR::IsStruct(_) => { panic!("Unimplemented: solve_rule IsStruct"); }
+            IRulexSR::IsStruct(_) => {
+                panic!("Unimplemented: solve_rule IsStruct");
+                // val templata = vassertSome(solverState.getConclusion(rune.rune))
+                // templata match {
+                //   case KindTemplataT(kind) => {
+                //     kind match {
+                //       case StructTT(_) => {
+                //         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+                //       }
+                //       case _ => Err(KindIsNotStruct(kind))
+                //     }
+                //   }
+                //   case _ => vwat() // Should be impossible, all template rules are type checked
+                // }
+            }
             //     case CoerceToCoordSR(...) =>
             IRulexSR::CoerceToCoord(r) => {
                 match solver_state.get_conclusion(&r.kind_rune.rune) {
                     None => {
-                        let coord_templata = solver_state.get_conclusion(&r.coord_rune.rune).unwrap_or_else(|| panic!("implement: solve_rule CoerceToCoord no coord conclusion either"));
-                        let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => panic!("implement: solve_rule CoerceToCoord coord conclusion not CoordTemplataT") };
+                        let coord_templata = solver_state.get_conclusion(&r.coord_rune.rune).expect("vassertSome: CoerceToCoord coordRune unsolved");
+                        let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)") };
                         match coord.ownership {
                             OwnershipT::Own | OwnershipT::Share => {
                                 let mut conclusions = HashMap::new();
@@ -1731,7 +1786,10 @@ where 's: 't,
                         conclusions.insert(r.coord_rune.rune, coerced);
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
-                            Err(_e) => { panic!("Unimplemented: solve_rule CoerceToCoord InternalSolverError wrapping"); }
+                            Err(_e) => {
+                                panic!("Unimplemented: solve_rule CoerceToCoord InternalSolverError wrapping");
+                                // Err(InternalSolverError(range :: env.parentRanges, e))
+                            }
                         }
                     }
                 }
@@ -1743,7 +1801,10 @@ where 's: 't,
                 conclusions.insert(r.rune.rune, templata);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => { panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping"); }
+                    Err(_e) => {
+                        panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping");
+                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    }
                 }
             }
             //     case LookupSR(...) =>
@@ -1757,7 +1818,10 @@ where 's: 't,
                 conclusions.insert(r.rune.rune, result);
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                     Ok(_) => Ok(()),
-                    Err(_e) => { panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping"); }
+                    Err(_e) => {
+                        panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping");
+                        // Err(InternalSolverError(range :: env.parentRanges, e))
+                    }
                 }
             }
             //     case RuneParentEnvLookupSR(...) =>
@@ -1772,7 +1836,7 @@ where 's: 't,
             IRulexSR::Augment(augment) => {
                 match solver_state.get_conclusion(&augment.result_rune.rune) {
                     Some(outer_coord_templata) => {
-                        let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => panic!("implement: solve_rule Augment outerCoordRune not CoordTemplataT") };
+                        let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("Augment: outerCoordRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)") };
                         let inner_ownership = match augment.ownership {
                             None => outer_coord.ownership,
                             Some(augment_ownership) => {
@@ -1787,7 +1851,7 @@ where 's: 't,
                                         OwnershipT::Own
                                     }
                                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => outer_coord.ownership,
-                                    _ => panic!("implement: solve_rule Augment Some unexpected mutability"),
+                                    _ => unreachable!("Augment Some-branch: get_mutability returns Mutability or Placeholder; Scala matches Placeholder/Mutable vs Immutable exhaustively"),
                                 }
                             }
                         };
@@ -1831,7 +1895,7 @@ where 's: 't,
                                         }
                                         evaluate_ownership(augment_ownership)
                                     }
-                                    _ => { panic!("implement: solve_rule Augment unexpected mutability"); }
+                                    _ => unreachable!("Augment None-branch: get_mutability returns Mutability or Placeholder; Scala matches Immutable/Placeholder/Mutable exhaustively"),
                                 }
                             }
                         };
@@ -1843,6 +1907,7 @@ where 's: 't,
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 panic!("implement: solve_rule Augment InternalSolverError wrapping");
+                                // Err(InternalSolverError(range :: env.parentRanges, e))
                             }
                         }
                     }
@@ -1855,7 +1920,7 @@ where 's: 't,
                         let members: Vec<CoordT<'s, 't>> = pack.members.iter().map(|member_rune| {
                             match solver_state.get_conclusion(&member_rune.rune).expect("Pack member rune has no conclusion") {
                                 ITemplataT::Coord(ct) => ct.coord,
-                                _ => panic!("implement: solve_rule Pack member non-Coord templata"),
+                                _ => unreachable!("Pack: each member rune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)"),
                             }
                         }).collect();
                         let members_slice = self.typing_interner.alloc_slice_from_vec(members);
@@ -1864,7 +1929,10 @@ where 's: 't,
                         conclusions.insert(pack.result_rune.rune, ITemplataT::CoordList(coord_list));
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
-                            Err(_e) => { panic!("implement: solve_rule Pack None InternalSolverError wrapping"); }
+                            Err(_e) => {
+                                panic!("implement: solve_rule Pack None InternalSolverError wrapping");
+                                // Err(InternalSolverError(range :: env.parentRanges, e))
+                            }
                         }
                     }
                     Some(ITemplataT::CoordList(coord_list_templata)) => {
@@ -1875,10 +1943,13 @@ where 's: 't,
                         }).collect();
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], HashSet::new()) {
                             Ok(_) => Ok(()),
-                            Err(_e) => { panic!("implement: solve_rule Pack Some InternalSolverError wrapping"); }
+                            Err(_e) => {
+                                panic!("implement: solve_rule Pack Some InternalSolverError wrapping");
+                                // Err(InternalSolverError(range :: env.parentRanges, e))
+                            }
                         }
                     }
-                    Some(_other) => { panic!("implement: solve_rule Pack unexpected result conclusion type"); }
+                    Some(_other) => unreachable!("Pack: result rune is statically typed CoordList; Scala only matches Some(CoordListTemplataT(_))"),
                 }
             }
             //     case CallSR(range, resultRune, templateRune, argRunes) => {
@@ -1888,8 +1959,13 @@ where 's: 't,
                 self.solve_call_rule(state, &env, solver_state, rule_index, r.range, r.result_rune, r.template_rune, r.args)
             }
             //     case RefListCompoundMutabilitySR(...) =>
-            IRulexSR::RefListCompoundMutability(_) => { panic!("Unimplemented: solve_rule RefListCompoundMutability"); }
-            other => panic!("Unimplemented: solve_rule {:?}", other),
+            IRulexSR::RefListCompoundMutability(_) => {
+                panic!("Unimplemented: solve_rule RefListCompoundMutability");
+                // val CoordListTemplataT(coords) = vassertSome(solverState.getConclusion(coordListRune.rune))
+                // val mutability = if (coords.forall(_.ownership == ShareT)) MutabilityTemplataT(ImmutableT) else MutabilityTemplataT(MutableT)
+                // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> mutability), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+            }
+            other => unreachable!("solve_rule: {:?} — MaybeCoercingLookup/MaybeCoercingCall/IndexList are desugared before reaching the typing-pass solver", other),
         }
     }
 /*
@@ -2568,7 +2644,10 @@ where 's: 't,
                             }
                         }
                     }
-                    ITemplataT::Kind(_kt) => { panic!("Unimplemented: solve_call_rule None Kind"); }
+                    ITemplataT::Kind(_kt) => {
+                        panic!("Unimplemented: solve_call_rule None Kind");
+                        // solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> kt), Vector(), Set.empty) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+                    }
                     other => panic!("vimpl: solve_call_rule None {:?}", other),
                 }
             }

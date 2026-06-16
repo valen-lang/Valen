@@ -107,7 +107,10 @@ pub enum IResolveOutcome<'s, 't, T> {
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
 */
-fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> { panic!("Unimplemented: expect"); }
+fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> {
+    panic!("Unimplemented: expect");
+    // abstract method — see ResolveSuccess.expect / ResolveFailure.expect
+}
 /*
   def expect(): ResolveSuccess[T]
 }
@@ -120,6 +123,7 @@ pub struct ResolveSuccess<'s, 't, T> {
 impl<'s, 't, T> ResolveSuccess<'s, 't, T> {
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
+    // this
 }
 /*
 case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
@@ -138,6 +142,7 @@ pub struct ResolveFailure<'s, 't, T> {
 impl<'s, 't, T> ResolveFailure<'s, 't, T> {
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
+    // throw CompileErrorExceptionT(TypingPassResolvingError(range, x))
 }
 /*
 case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) extends IResolveOutcome[T] {
@@ -599,6 +604,9 @@ object StructCompiler {
         member_types: &[CoordT<'s, 't>],
     ) -> MutabilityT {
         panic!("Unimplemented: Slab 15 — body migration");
+        // val membersOwnerships = memberTypes2.map(_.ownership)
+        // val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
+        // if (allMembersImmutable) ImmutableT else MutableT
     }
     /*
       def getCompoundTypeMutability(memberTypes2: Vector[CoordT])

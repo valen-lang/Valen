@@ -53,6 +53,18 @@ where 's: 't,
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), ICompileErrorT<'s, 't>> {
         panic!("Unimplemented: generate_function_body_rsa_drop_into");
+        // val header =
+        //   FunctionHeaderT(env.id, Vector.empty, paramCoords, maybeRetCoord.get, Some(env.templata))
+        // val fate = FunctionEnvironmentBoxT(env)
+        // val body =
+        //   BlockTE(
+        //     ReturnTE(
+        //       arrayCompiler.evaluateDestroyRuntimeSizedArrayIntoCallable(
+        //         coutputs, fate, callRange, callLocation,
+        //         ArgLookupTE(0, paramCoords(0).tyype),
+        //         ArgLookupTE(1, paramCoords(1).tyype),
+        //         RegionT(DefaultRegionT))))
+        // (header, body)
     }
 /*
   def generateFunctionBody(

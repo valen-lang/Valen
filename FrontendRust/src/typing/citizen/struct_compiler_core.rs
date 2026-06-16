@@ -185,11 +185,15 @@ where 's: 't,
                 let struct_name_s = match &struct_a.name {
                     IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
                         INameS::TopLevelStructDeclaration(n),
-                    other => panic!("implement: struct_name_s for non-TopLevelStructDeclarationName: {:?}", other),
+                    other => {
+                        panic!("implement: struct_name_s for non-TopLevelStructDeclarationName: {:?}", other);
+                        // case other => vimpl(other)
+                    }
                 };
                 match member {
                     IStructMemberT::Variadic(_) => {
                         panic!("implement: immutable variadic struct member check");
+                        // vimpl()
                     }
                     IStructMemberT::Normal(NormalStructMemberT { variability, tyype, .. }) => {
                         if *variability == VariabilityT::Varying {
@@ -610,14 +614,20 @@ where 's: 't,
             self.typing_interner,
         ) {
             Some(t) => t,
-            None => panic!("Unimplemented: make_struct_member type not found"),
+            None => {
+                panic!("Unimplemented: make_struct_member type not found");
+                // vassertOne(...)
+            }
         };
         let variability_t = evaluate_variability(member.variability());
         match member {
             IStructMemberS::NormalStructMember(n) => {
                 let coord = match type_templata {
                     ITemplataT::Coord(c) => c.coord,
-                    _ => panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS"),
+                    _ => {
+                        panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS");
+                        // val CoordTemplataT(coord) = typeTemplata  // pattern-destructure that vfails otherwise
+                    }
                 };
                 IStructMemberT::Normal(NormalStructMemberT {
                     name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name})),
@@ -625,7 +635,10 @@ where 's: 't,
                     tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                 })
             }
-            IStructMemberS::VariadicStructMember(_) => panic!("Unimplemented: make_struct_member VariadicStructMemberS"),
+            IStructMemberS::VariadicStructMember(_) => {
+                panic!("Unimplemented: make_struct_member VariadicStructMemberS");
+                // vimpl()
+            }
         }
     }
 /*

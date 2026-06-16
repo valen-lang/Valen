@@ -104,6 +104,41 @@ where 's: 't,
         args: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
+        // val function = outerEnv.function
+        // checkClosureConcernsHandled(outerEnv)
+        // val callSiteRules = TemplataCompiler.assembleCallSiteRules(function.rules)
+        // val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
+        // val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) =
+        //   inferCompiler.solveForDefining(
+        //     InferEnv(originalCallingEnv, callRange, callLocation, outerEnv, contextRegion),
+        //     coutputs, callSiteRules, function.runeToType, callRange, callLocation,
+        //     assembleKnownTemplatas(function, explicitTemplateArgs), initialSends, Vector()
+        //   ) match {
+        //     case Err(e) => throw CompileErrorExceptionT(TypingPassDefiningError(callRange, e))
+        //     case Ok(i) => (i)
+        //   }
+        // val runedEnv =
+        //   addRunedDataToNearEnv(
+        //     outerEnv, function.genericParameters.map(_.rune.rune), inferredTemplatas,
+        //     instantiationBoundParams.runeToCitizenRuneToReachablePrototype.values.flatMap(_.citizenRuneToReachablePrototype.values).toVector.map(PrototypeTemplataT(_)))
+        // val header =
+        //   middleLayer.getOrEvaluateFunctionForHeader(
+        //     outerEnv, runedEnv, coutputs, callRange, callLocation, function, instantiationBoundParams)
+        // // Lambdas cant have bounds, right?
+        // vcurious(instantiationBoundParams.runeToBoundPrototype.isEmpty)
+        // vcurious(instantiationBoundParams.runeToCitizenRuneToReachablePrototype.isEmpty)
+        // vcurious(instantiationBoundParams.runeToBoundImpl.isEmpty)
+        // val instantiationBoundArgs =
+        //   InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT](
+        //     instantiationBoundParams.runeToBoundPrototype,
+        //     instantiationBoundParams.runeToCitizenRuneToReachablePrototype.map({ case (x, InstantiationReachableBoundArgumentsT(y)) =>
+        //       x -> InstantiationReachableBoundArgumentsT[IFunctionNameT](y)
+        //     }),
+        //     instantiationBoundParams.runeToBoundImpl)
+        // coutputs.addInstantiationBounds(
+        //   opts.globalOptions.sanityCheck, interner, outerEnv.denizenTemplateId,
+        //   header.id, instantiationBoundArgs)
+        // EvaluateFunctionSuccess(PrototypeTemplataT(header.toPrototype), inferredTemplatas, instantiationBoundArgs)
     }
 
 /*

@@ -110,7 +110,10 @@ where 's: 't,
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &header_rune_to_type_map,
             call_range, call_location, struct_a.generic_parameters, &initial_knowns, &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")) {
+        ).unwrap_or_else(|_e| {
+            panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")
+            // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
+        }) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
                 range: call_range.to_vec(),
@@ -540,7 +543,10 @@ where 's: 't,
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &rune_to_type_map,
             call_range, call_location, interface_a.generic_parameters, &initial_knowns, &[],
-        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")) {
+        ).unwrap_or_else(|_e| {
+            panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")
+            // throw CompileErrorExceptionT(typing.TypingPassSolverError(callRange, e))
+        }) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
                 range: call_range.to_vec(),
@@ -691,11 +697,17 @@ where 's: 't,
                 }
             }
         }) {
-            Err(_f) => panic!("Unimplemented: TypingPassSolverError in compile_struct_layer"),
+            Err(_f) => {
+                panic!("Unimplemented: TypingPassSolverError in compile_struct_layer");
+                // throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, f))
+            }
             Ok(_) => {}
         }
         let inferences = match self.interpret_results(&all_rune_to_type, &mut solver) {
-            Err(_e) => panic!("Unimplemented: TypingPassSolverError in compile_struct_layer interpretResults"),
+            Err(_e) => {
+                panic!("Unimplemented: TypingPassSolverError in compile_struct_layer interpretResults");
+                // throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, e))
+            }
             Ok(conclusions) => conclusions,
         };
         let unchecked_defining_conclusions = UncheckedDefiningConclusions {
@@ -900,11 +912,17 @@ where 's: 't,
                 }
             }
         }) {
-            Err(_f) => panic!("Unimplemented: TypingPassSolverError in compile_interface_layer"),
+            Err(_f) => {
+                panic!("Unimplemented: TypingPassSolverError in compile_interface_layer");
+                // throw CompileErrorExceptionT(typing.TypingPassSolverError(interfaceA.range :: parentRanges, f))
+            }
             Ok(_) => {}
         }
         let inferences = match self.interpret_results(&rune_to_type, &mut solver) {
-            Err(_e) => panic!("Unimplemented: TypingPassSolverError in compile_interface_layer interpretResults"),
+            Err(_e) => {
+                panic!("Unimplemented: TypingPassSolverError in compile_interface_layer interpretResults");
+                // throw CompileErrorExceptionT(typing.TypingPassSolverError(interfaceA.range :: parentRanges, e))
+            }
             Ok(conclusions) => conclusions,
         };
         let unchecked_defining_conclusions = UncheckedDefiningConclusions {
@@ -1085,7 +1103,10 @@ where 's: 't,
             INameT::StructTemplate(r) => IStructTemplateNameT::StructTemplate(r),
             INameT::AnonymousSubstructTemplate(r) => IStructTemplateNameT::AnonymousSubstructTemplate(r),
             INameT::LambdaCitizenTemplate(r) => IStructTemplateNameT::LambdaCitizenTemplate(r),
-            _ => panic!("Unimplemented: assemble_struct_name non-struct local_name"),
+            _ => {
+                panic!("Unimplemented: assemble_struct_name non-struct local_name");
+                // vimpl()
+            }
         };
         let new_local_name = struct_template_name.make_struct_name(self.typing_interner, template_args);
         let steps = template_name.steps();
@@ -1112,7 +1133,10 @@ where 's: 't,
     ) -> IdT<'s, 't> {
         let interface_template_name = match template_name.local_name {
             INameT::InterfaceTemplate(r) => IInterfaceTemplateNameT::InterfaceTemplate(r),
-            _ => panic!("Unimplemented: assemble_interface_name non-interface local_name"),
+            _ => {
+                panic!("Unimplemented: assemble_interface_name non-interface local_name");
+                // vimpl()
+            }
         };
         let new_local_name = interface_template_name.make_interface_name(self.typing_interner, template_args);
         let steps = template_name.steps();

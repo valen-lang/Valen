@@ -122,6 +122,10 @@ object NameHammer {
 // mig: fn translate_code_location (object NameHammer free function)
 pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
     panic!("Unimplemented: translate_code_location");
+    // val CodeLocationS(fileCoord, offset) = location
+    // VonObject("CodeLocation", None, Vector(
+    //   VonMember("file", translateFileCoordinate(fileCoord)),
+    //   VonMember("offset", VonInt(offset))))
 }
 /*
   def translateCodeLocation(location: CodeLocationS): VonObject = {
@@ -138,6 +142,14 @@ pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
 // mig: fn translate_file_coordinate (object NameHammer free function)
 pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
     panic!("Unimplemented: translate_file_coordinate");
+    // val FileCoordinate(PackageCoordinate(module, paackage), filename) = coord
+    // VonObject(
+    //   "FileCoordinate",
+    //   None,
+    //   Vector(
+    //     VonMember("module", VonStr(module.str)),
+    //     VonMember("paackage", VonArray(None, paackage.map(_.str).map(VonStr).toVector)),
+    //     VonMember("filename", VonStr(filename))))
 }
 /*
   def translateFileCoordinate(coord: FileCoordinate): VonObject = {
@@ -236,7 +248,10 @@ where 's: 'i, 'i: 'h,
             name: f.human_name,
             template_args: interner.alloc_slice_from_vec(f.template_args.iter().map(|t| simplify_templata(interner, scout_arena, t)).collect()),
         },
-        other => panic!("simplify_name: unimplemented variant {:?}", discriminant(other)),
+        other => {
+            panic!("simplify_name: unimplemented variant {:?}", discriminant(other));
+            // case other => vimpl(other)
+        }
     }
 }
 /*
@@ -263,7 +278,10 @@ where 's: 'i, 'i: 'h,
 {
     match templata {
         ITemplataI::Coord(c) => simplify_coord(interner, scout_arena, &c.coord),
-        other => panic!("simplify_templata: unimplemented variant {:?}", discriminant(other)),
+        other => {
+            panic!("simplify_templata: unimplemented variant {:?}", discriminant(other));
+            // case other => vimpl(other)
+        }
     }
 }
 /*
@@ -288,7 +306,10 @@ where 's: 'i, 'i: 'h,
             let name = scout_arena.intern_str("str");
             SimpleId { steps: interner.alloc_slice_from_vec(vec![SimpleIdStep { name, template_args: &[] }]) }
         }
-        other => panic!("simplify_kind: unimplemented variant {:?}", discriminant(other)),
+        other => {
+            panic!("simplify_kind: unimplemented variant {:?}", discriminant(other));
+            // case other => vimpl(other)
+        }
     }
 }
 /*

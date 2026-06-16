@@ -103,6 +103,11 @@ pub fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't
 */
 fn expect_coord<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_coord");
+  // templata match {
+  //   case t @ CoordTemplataT(_) => t
+  //   case PlaceholderTemplataT(idT, CoordTemplataType()) => PlaceholderTemplataT(idT, CoordTemplataType())
+  //   case other => vfail(other)
+  // }
 }
 /*
   def expectCoord(templata: ITemplataT[ITemplataType]): ITemplataT[CoordTemplataType] = {
@@ -133,6 +138,7 @@ pub fn expect_coord_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> CoordTempl
 */
 fn expect_prototype_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> PrototypeTemplataT<'s, 't> {
   panic!("Unimplemented: expect_prototype_templata");
+  // templata match { case t@PrototypeTemplataT(_) => t; case other => vfail(other) }
 }
 /*
   def expectPrototypeTemplata(templata: ITemplataT[ITemplataType]): PrototypeTemplataT[IFunctionNameT] = {
@@ -145,6 +151,7 @@ fn expect_prototype_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> PrototypeT
 */
 fn expect_integer_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> IntegerTemplataT {
   panic!("Unimplemented: expect_integer_templata");
+  // templata match { case t @ IntegerTemplataT(_) => t; case _ => vfail() }
 }
 /*
   def expectIntegerTemplata(templata: ITemplataT[ITemplataType]): IntegerTemplataT = {
@@ -157,6 +164,7 @@ fn expect_integer_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> IntegerTempl
 */
 fn expect_mutability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> MutabilityTemplataT {
   panic!("Unimplemented: expect_mutability_templata");
+  // templata match { case t @ MutabilityTemplataT(_) => t; case _ => vfail() }
 }
 /*
   def expectMutabilityTemplata(templata: ITemplataT[ITemplataType]): MutabilityTemplataT = {
@@ -169,6 +177,7 @@ fn expect_mutability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> Mutabilit
 */
 fn expect_variability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_variability_templata");
+  // templata match { case t @ VariabilityTemplataT(_) => t; case _ => vfail() }
 }
 /*
   def expectVariabilityTemplata(templata: ITemplataT[ITemplataType]): ITemplataT[VariabilityTemplataType] = {
@@ -181,6 +190,11 @@ fn expect_variability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplat
 */
 fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind");
+  // templata match {
+  //   case t @ KindTemplataT(_) => t
+  //   case PlaceholderTemplataT(idT, KindTemplataType()) => PlaceholderTemplataT(idT, KindTemplataType())
+  //   case _ => vfail()
+  // }
 }
 /*
   def expectKind(templata: ITemplataT[ITemplataType]): ITemplataT[KindTemplataType] = {
@@ -194,6 +208,7 @@ fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
 */
 fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind_templata");
+  // templata match { case t @ KindTemplataT(_) => t; case _ => vfail() }
 }
 /*
   def expectKindTemplata(templata: ITemplataT[ITemplataType]): KindTemplataT = {
@@ -246,7 +261,10 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::Isa(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
       ITemplataT::ImplDefinition(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
       ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
-      ITemplataT::CoordList(_) => panic!("Unimplemented: tyype on CoordList"),
+      ITemplataT::CoordList(_) => {
+        panic!("Unimplemented: tyype on CoordList");
+        // override def tyype = PackTemplataType(CoordTemplataType())
+      }
       ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
         param_types: scout_arena.alloc_slice_copy(&[
           ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
@@ -263,14 +281,20 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
         ]),
         return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
       }),
-      ITemplataT::Function(_) => panic!("Unimplemented: tyype on Function"),
+      ITemplataT::Function(_) => {
+        panic!("Unimplemented: tyype on Function");
+        // vfail()
+      }
       // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
       // In Compiler, StructTemplatas are templates, even if they have zero arguments.
       ITemplataT::StructDefinition(s) => ITemplataType::TemplateTemplataType(s.origin_struct.tyype),
       // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
       // In Compiler, InterfaceTemplatas are templates, even if they have zero arguments.
       ITemplataT::InterfaceDefinition(i) => ITemplataType::TemplateTemplataType(i.origin_interface.tyype),
-      ITemplataT::ExternFunction(_) => panic!("Unimplemented: tyype on ExternFunction"),
+      ITemplataT::ExternFunction(_) => {
+        panic!("Unimplemented: tyype on ExternFunction");
+        // vfail()
+      }
     }
   }
 }

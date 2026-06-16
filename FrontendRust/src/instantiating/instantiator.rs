@@ -440,7 +440,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                                     template: ExportTemplateNameI { code_loc: *code_loc },
                                 })
                             }
-                            _ => panic!("Unimplemented: translate_method kind_exports translateId closure"),
+                            _ => {
+                                panic!("Unimplemented: translate_method kind_exports translateId closure");
+                                // case other => vimpl(other)
+                            }
                         }
                     });
                 let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
@@ -476,7 +479,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                                     template: ExportTemplateNameI { code_loc: *code_loc },
                                 })
                             }
-                            _ => panic!("Unimplemented: translate_method function_exports translateId closure"),
+                            _ => {
+                                panic!("Unimplemented: translate_method function_exports translateId closure");
+                                // case other => vimpl(other)
+                            }
                         }
                     });
                 let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
@@ -525,7 +531,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                                         template: ExternTemplateNameI { code_loc: *code_loc },
                                     })
                                 }
-                                _ => panic!("Unimplemented: translate_method function_externs translateId closure"),
+                                _ => {
+                                    panic!("Unimplemented: translate_method function_externs translateId closure");
+                                    // case other => vimpl(other)
+                                }
                             }
                         });
                     let substitutions = self.assemble_placeholder_map(extern_placeholdered_id_t, &extern_id);
@@ -900,6 +909,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_export_name
     pub fn translate_export_name(_denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _perspective_region_t: &RegionT, _export_name_t: &ExportNameT<'s, 't>) -> ExportNameI<'s> {
         panic!("Unimplemented: translate_export_name");
+        // val ExportNameT(ExportTemplateNameT(codeLoc), _) = exportNameT
+        // ExportNameI(
+        //   ExportTemplateNameI(codeLoc),
+        //   RegionTemplataI(0))
     }
 /*
   def translateExportName(
@@ -918,6 +931,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_export_template_name
     pub fn translate_export_template_name(_export_template_name_t: &ExportTemplateNameT<'s>) -> ExportTemplateNameI<'s> {
         panic!("Unimplemented: translate_export_template_name");
+        // val ExportTemplateNameT(codeLoc) = exportTemplateNameT
+        // ExportTemplateNameI(codeLoc)
     }
 /*
   def translateExportTemplateName(exportTemplateNameT: ExportTemplateNameT): ExportTemplateNameI[sI] = {
@@ -928,6 +943,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_name
     pub fn translate_name(_t: &INameT<'s, 't>) -> INameI<'s, 'i> {
         panic!("Unimplemented: translate_name");
+        // vimpl()
     }
 /*
   def translateName(t: INameT): INameI[sI] = {
@@ -1061,6 +1077,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn assemble_callee_denizen_function_bounds
     pub fn assemble_callee_denizen_function_bounds(_callee_rune_to_receiver_bound_t: &IndexMap<IRuneS<'s>, IdT<'s, 't>>, _callee_rune_to_supplied_prototype: &IndexMap<IRuneS<'s>, PrototypeI<'s, 'i>>) -> IndexMap<IdT<'s, 't>, PrototypeI<'s, 'i>> {
         panic!("Unimplemented: assemble_callee_denizen_function_bounds");
+        // calleeRuneToSuppliedPrototype.map({ case (calleeRune, suppliedFunctionT) =>
+        //   vassertSome(calleeRuneToReceiverBoundT.get(calleeRune)) -> suppliedFunctionT
+        // })
     }
 /*
   def assembleCalleeDenizenFunctionBounds(
@@ -1077,6 +1096,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn assemble_callee_denizen_impl_bounds
     pub fn assemble_callee_denizen_impl_bounds(_callee_rune_to_receiver_bound_t: &IndexMap<IRuneS<'s>, IdT<'s, 't>>, _callee_rune_to_supplied_impl: &IndexMap<IRuneS<'s>, IdI<'s, 'i>>) -> IndexMap<IdT<'s, 't>, IdI<'s, 'i>> {
         panic!("Unimplemented: assemble_callee_denizen_impl_bounds");
+        // calleeRuneToSuppliedImpl.map({ case (calleeRune, suppliedFunctionT) =>
+        //   vassertSome(calleeRuneToReceiverBoundT.get(calleeRune)) -> suppliedFunctionT
+        // })
     }
 /*
   def assembleCalleeDenizenImplBounds(
@@ -1197,6 +1219,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn find_impl
     pub fn find_impl(&self, _impl_id: &IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
         panic!("Unimplemented: find_impl");
+        // vassertOne(
+        //   hinputs.interfaceToSubCitizenToEdge.values.flatMap(subCitizenToEdge => {
+        //     subCitizenToEdge.values.filter(edge => {
+        //       TemplataCompiler.getSuperTemplate(edge.edgeId) ==
+        //           TemplataCompiler.getSuperTemplate(implId)
+        //     })
+        //   }))
     }
 /*
   private def findImpl(hinputs: HinputsT, implId: IdT[IImplNameT]): EdgeT = {
@@ -2152,7 +2181,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 };
                 (member_it, member)
             }
-            IStructMemberT::Variadic(_) => panic!("Unimplemented: translate_struct_member Variadic"),
+            IStructMemberT::Variadic(_) => {
+                panic!("Unimplemented: translate_struct_member Variadic");
+                // case VariadicStructMemberT(name, tyype) => vimpl()
+            }
         }
     }
 /*
@@ -2872,7 +2904,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IFunctionAttributeT::UserFunction => IFunctionAttributeI::UserFunctionI,
             IFunctionAttributeT::Pure => IFunctionAttributeI::PureI,
             IFunctionAttributeT::Extern(e) => IFunctionAttributeI::ExternI(ExternI { package_coord: e.package_coord }),
-            _ => panic!("Unimplemented: translate_function_attribute other"),
+            _ => {
+                panic!("Unimplemented: translate_function_attribute other");
+                // case other => vimpl(other)
+            }
         }
     }
 /*
@@ -3580,7 +3615,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (result_it, result_ce)
             }
-            ReferenceExpressionTE::ArraySize(_) => panic!("Unimplemented: translate_ref_expr ArraySize"),
+            ReferenceExpressionTE::ArraySize(_) => {
+                panic!("Unimplemented: translate_ref_expr ArraySize");
+                // case other => vimpl(other)
+            }
             ReferenceExpressionTE::IsSameInstance(isi) => {
                 let IsSameInstanceTE { left, right } = **isi;
                 let (_left_it, left_ce) =
@@ -3719,7 +3757,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (return_coord, result_ce)
             }
-            ReferenceExpressionTE::Reinterpret(_) => panic!("Unimplemented: translate_ref_expr Reinterpret"),
+            ReferenceExpressionTE::Reinterpret(_) => {
+                panic!("Unimplemented: translate_ref_expr Reinterpret");
+                // case other => vimpl(other)
+            }
             ReferenceExpressionTE::Construct(c) => {
                 let ConstructTE { struct_tt, result_reference, args } = **c;
                 let result_it = self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &result_reference).coord;
@@ -3860,7 +3901,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (element_it, result_ce)
             }
-            ReferenceExpressionTE::InterfaceToInterfaceUpcast(_) => panic!("Unimplemented: translate_ref_expr InterfaceToInterfaceUpcast"),
+            ReferenceExpressionTE::InterfaceToInterfaceUpcast(_) => {
+                panic!("Unimplemented: translate_ref_expr InterfaceToInterfaceUpcast");
+                // case other => vimpl(other)
+            }
             ReferenceExpressionTE::Upcast(u) => {
                 let UpcastTE { inner_expr: inner_expr_unsubstituted, target_super_kind, impl_name: untranslated_impl_id } = *u;
                 let impl_id = self.translate_impl_id(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &untranslated_impl_id);
@@ -3918,7 +3962,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 }));
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) }, result_ce)
             }
-            ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray"),
+            ReferenceExpressionTE::DestroyImmRuntimeSizedArray(_) => {
+                panic!("Unimplemented: translate_ref_expr DestroyImmRuntimeSizedArray");
+                // case DestroyImmRuntimeSizedArrayTE(arrayExpr, arrayType, consumer, consumerMethod) => DestroyImmRuntimeSizedArrayIE(...)
+            }
             ReferenceExpressionTE::NewImmRuntimeSizedArray(nrsa_t) => {
                 let NewImmRuntimeSizedArrayTE { array_type, region: _, size_expr, generator, generator_method } = **nrsa_t;
                 let rsa_it = self.translate_runtime_sized_array(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, array_type);
@@ -4773,6 +4820,21 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn maybe_immutabilify
     pub fn maybe_immutabilify(_inner_ie: &ReferenceExpressionIE<'s, 'i>) -> ReferenceExpressionIE<'s, 'i> {
         panic!("Unimplemented: maybe_immutabilify");
+        // innerIE.result.kind match {
+        //   case x if x.isPrimitive => return innerIE
+        //   case _ =>
+        // }
+        // innerIE match {
+        //   case SoftLoadIE(expr, MutableBorrowI, result) => return SoftLoadIE(expr, ImmutableBorrowI, result.copy(ownership = ImmutableBorrowI))
+        //   case SoftLoadIE(expr, MutableShareI, result) => return SoftLoadIE(expr, ImmutableShareI, result.copy(ownership = ImmutableShareI))
+        //   case _ =>
+        // }
+        // innerIE.result.ownership match {
+        //   case OwnI => innerIE
+        //   case ImmutableBorrowI | ImmutableShareI => innerIE
+        //   case MutableBorrowI => ImmutabilifyIE(innerIE, innerIE.result.copy(ownership = ImmutableBorrowI))
+        //   case MutableShareI => ImmutabilifyIE(innerIE, innerIE.result.copy(ownership = ImmutableShareI))
+        // }
     }
 /*
   private def maybeImmutabilify(innerIE: ReferenceExpressionIE): ReferenceExpressionIE = {
@@ -4806,6 +4868,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn run_in_new_pure_region
     pub fn run_in_new_pure_region<T>(_denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _denizen_template_name: &IdT<'s, 't>, _new_default_region_t: &ITemplataT<'s, 't>, _run: impl Fn(&IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, &RegionT) -> T) -> T {
         panic!("Unimplemented: run_in_new_pure_region");
+        // val newDefaultRegionNameT = RegionT(DefaultRegionT)
+        // val newPerspectiveRegionT = newDefaultRegionNameT
+        // val newDefaultRegion = RegionT(DefaultRegionT)
+        // run(substitutions, newPerspectiveRegionT)
     }
 /*
   private def runInNewPureRegion[T](
@@ -5196,6 +5262,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_citizen_name
     pub fn translate_citizen_name(&self, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _perspective_region_t: &RegionT, _t: &ICitizenNameT<'s, 't>) -> ICitizenNameI<'s, 'i> {
         panic!("Unimplemented: translate_citizen_name");
+        // t match {
+        //   case s : IStructNameT => translateStructName(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, s)
+        //   case i : IInterfaceNameT => translateInterfaceName(denizenName, denizenBoundToDenizenCallerSuppliedThing,substitutions, perspectiveRegionT, i)
+        // }
     }
 /*
   def translateCitizenName(
@@ -5214,6 +5284,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_id
     pub fn translate_id_from_substitutions(_substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _perspective_region_t: &RegionT, _id: &IdT<'s, 't>) -> IdI<'s, 'i> {
         panic!("Unimplemented: translate_id_from_substitutions");
+        // id match {
+        //   case other => vimpl(other)
+        // }
     }
 /*
   def translateId(
@@ -5229,6 +5302,11 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_citizen_id
     pub fn translate_citizen_id(&self, _monouts: &mut InstantiatedOutputsI<'s, 't, 'i>, _denizen_name: &IdT<'s, 't>, _denizen_bound_to_denizen_caller_supplied_thing: &DenizenBoundToDenizenCallerBoundArgI<'s, 't, 'i>, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _perspective_region_t: &RegionT, _citizen_id_t: &IdT<'s, 't>, _instantiation_bound_args: &InstantiationBoundArgumentsI<'s, 'i>) -> IdI<'s, 'i> {
         panic!("Unimplemented: translate_citizen_id");
+        // id match {
+        //   case IdT(module, steps, last : IStructNameT) => translateStructId(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, IdT(module, steps, last), instantiationBoundArgs)
+        //   case IdT(module, steps, last : IInterfaceNameT) => translateInterfaceId(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, IdT(module, steps, last), instantiationBoundArgs)
+        //   case other => vimpl(other)
+        // }
     }
 /*
   def translateCitizenId(
@@ -5582,6 +5660,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_placeholder
     pub fn translate_placeholder(&self, _substitutions: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>, _t: &KindPlaceholderT<'s, 't>) -> KindIT<'s, 'i> {
         panic!("Unimplemented: translate_placeholder");
+        // val newSubstitutingTemplata = vassertSome(substitutions.get(t.id))
+        // ITemplataI.expectKindTemplata(newSubstitutingTemplata).kind
     }
 /*
   def translatePlaceholder(
@@ -5862,13 +5942,25 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 *_substitutions.get(&n).expect("translate_templata Placeholder: substitution missing")
             }
             ITemplataT::Integer(value) => ITemplataI::Integer(IntegerTemplataI { value: *value }),
-            ITemplataT::Boolean(_) => panic!("Unimplemented: translate_templata Boolean"),
-            ITemplataT::String(_) => panic!("Unimplemented: translate_templata String"),
+            ITemplataT::Boolean(_) => {
+                panic!("Unimplemented: translate_templata Boolean");
+                // case BooleanTemplataT(value) => BooleanTemplataI(value)
+            }
+            ITemplataT::String(_) => {
+                panic!("Unimplemented: translate_templata String");
+                // case StringTemplataT(value) => StringTemplataI(value)
+            }
             ITemplataT::Coord(c) => ITemplataI::Coord(self.translate_coord(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &c.coord)),
             ITemplataT::Mutability(m) => ITemplataI::Mutability(MutabilityTemplataI { mutability: Self::translate_mutability(&m.mutability) }),
             ITemplataT::Variability(v) => ITemplataI::Variability(VariabilityTemplataI { variability: Self::translate_variability(&v.variability) }),
-            ITemplataT::Kind(_) => panic!("Unimplemented: translate_templata Kind"),
-            _ => panic!("Unimplemented: translate_templata other"),
+            ITemplataT::Kind(_) => {
+                panic!("Unimplemented: translate_templata Kind");
+                // case KindTemplataT(kind) => KindTemplataI(translateKind(...))
+            }
+            _ => {
+                panic!("Unimplemented: translate_templata other");
+                // case other => vimpl(other)
+            }
         };
         result
     }
@@ -5924,7 +6016,10 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             IVarNameT::IterationOption(IterationOptionNameT { range, .. }) => IVarNameI::IterationOption(interner.intern_iteration_option_name_si(IterationOptionNameI { range: *range })),
             IVarNameT::MagicParam(MagicParamNameT { code_location2, .. }) => IVarNameI::MagicParam(interner.intern_magic_param_name_si(MagicParamNameI { code_location_2: *code_location2 })),
             IVarNameT::Self_(_) => IVarNameI::Self_(interner.intern_self_name_si(SelfNameI)),
-            _ => panic!("Unimplemented: translate_var_name other"),
+            _ => {
+                panic!("Unimplemented: translate_var_name other");
+                // case other => vimpl(other)
+            }
         }
     }
 /*
@@ -6039,8 +6134,18 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                         parameters: self.interner.alloc_slice_from_vec(param_types.iter().map(|p| self.translate_coord(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, p).coord).collect::<Vec<_>>()),
                     }))
             }
-            IFunctionNameT::OverrideDispatcher(_) => panic!("Unimplemented: translate_function_name OverrideDispatcher"),
-            _other => panic!("Unimplemented: translate_function_name other"),
+            IFunctionNameT::OverrideDispatcher(_) => {
+                panic!("Unimplemented: translate_function_name OverrideDispatcher");
+                // OverrideDispatcherNameI(
+                //   OverrideDispatcherTemplateNameI(
+                //     translateId[IImplTemplateNameT, IImplTemplateNameI[sI]](implTemplateId, translateImplTemplateName)),
+                //   templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)),
+                //   paramTypes.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
+            }
+            _other => {
+                panic!("Unimplemented: translate_function_name other");
+                // case other => vimpl(other)
+            }
         }
     }
 /*
@@ -6133,7 +6238,12 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     sub_citizen: sub_citizen_i,
                 }))
             }
-            IImplNameT::ImplBound(_) => panic!("Unimplemented: translate_impl_name ImplBound"),
+            IImplNameT::ImplBound(_) => {
+                panic!("Unimplemented: translate_impl_name ImplBound");
+                // ImplBoundNameI(
+                //   ImplBoundTemplateNameI(codeLocationS),
+                //   templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)))
+            }
             IImplNameT::AnonymousSubstructImpl(n) => {
                 let AnonymousSubstructImplNameT { template, template_args, sub_citizen, .. } = **n;
                 let AnonymousSubstructImplTemplateNameT { interface, .. } = *template;
@@ -6204,6 +6314,14 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 // mig: fn translate_impl_template_name
     pub fn translate_impl_template_name(_name: &IImplTemplateNameT<'s, 't>) -> IImplTemplateNameI<'s, 'i> {
         panic!("Unimplemented: translate_impl_template_name");
+        // name match {
+        //   case ImplTemplateNameT(codeLocationS) => ImplTemplateNameI(codeLocationS)
+        //   case ImplBoundTemplateNameT(codeLocationS) => ImplBoundTemplateNameI(codeLocationS)
+        //   case AnonymousSubstructImplTemplateNameT(interface) => {
+        //     AnonymousSubstructImplTemplateNameI(
+        //       translateInterfaceTemplateName(interface))
+        //   }
+        // }
     }
 /*
   def translateImplTemplateName(
