@@ -1,6 +1,4 @@
-/*
-Guardian: disable-all
-*/
+
 
 // AFTERM: figure out how to deduplicate all the common code across these interners
 // (ParseArena, ScoutArena, and future TypingArena all share string/coord interning)

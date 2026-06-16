@@ -26,14 +26,7 @@ pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> S
   )
 }
 
-/*
 
-package dev.vale
-
-import scala.collection.mutable.ArrayBuffer
-
-object SourceCodeUtils {
-*/
 // mig: fn humanize_package
 pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
@@ -43,12 +36,7 @@ pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String 
   }
   result
 }
-/*
-  def humanizePackage(packageCoord: PackageCoordinate): String = {
-    val PackageCoordinate(module, packages) = packageCoord
-    module.str + packages.map("." + _.str).mkString("")
-  }
-*/
+
 // mig: fn humanize_file
 pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
   format!(
@@ -57,12 +45,7 @@ pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
     coordinate.filepath.as_str()
   )
 }
-/*
-  def humanizeFile(coordinate: FileCoordinate): String = {
-    val FileCoordinate(packageCoord, filepath) = coordinate
-    humanizePackage(packageCoord) + ":" + filepath
-  }
-*/
+
 // mig: fn humanize_pos
 pub fn humanize_pos_code_map<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -77,48 +60,12 @@ pub fn humanize_pos_code_map<'a, 'b>(
     .expect("humanize_pos_code_map: coordinate not found in code map");
   humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
 }
-/*
-  def humanizePos(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  String = {
-    val CodeLocationS(file, pos) = codeLocationS
-//    if (file.isInternal) {
-//      return humanizeFile(file)
-//    }
 
-    if (codeLocationS.offset < 0) {
-      return humanizeFile(file) + ":" + codeLocationS.offset.toString
-    }
-
-    val source = filenamesAndSources(file)
-
-    humanizePos(humanizeFile(file), source, pos)
-  }
-*/
 // mig: fn humanize_pos
 pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
   humanize_pos_path(&file_path.display().to_string(), source, pos)
 }
-/*
-  def humanizePos(
-    humanizedFilePath: String,
-    source: String,
-    pos: Int):
-  String = {
-    var line = 0
-    var lineBegin = 0
-    var i = 0
-    while (i < pos) {
-      if (source(i) == '\n') {
-        lineBegin = i + 1
-        line = line + 1
-      }
-      i = i + 1
-    }
-    humanizedFilePath + ":" + (line + 1) + ":" + (i - lineBegin + 1)
-  }
-*/
+
 // mig: fn next_thing_and_rest_of_line
 fn next_thing_and_rest_of_line_code_map<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
@@ -127,14 +74,7 @@ fn next_thing_and_rest_of_line_code_map<'a>(
 ) -> String {
   panic!("Unimplemented: next_thing_and_rest_of_line");
 }
-/*
-  def nextThingAndRestOfLine(
-      filenamesAndSources: FileCoordinateMap[String],
-      file: FileCoordinate,
-      position: Int): String = {
-    nextThingAndRestOfLine(filenamesAndSources(file), position)
-  }
-*/
+
 // mig: fn next_thing_and_rest_of_line
 pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
   let remaining = &source[pos..];
@@ -145,14 +85,7 @@ pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
     .trim()
     .to_string()
 }
-/*
-  def nextThingAndRestOfLine(
-    text: String,
-    position: Int): String = {
-    // TODO: can optimize this
-    text.slice(position, text.length).trim().split("\\n")(0).trim()
-  }
-*/
+
 // mig: fn line_begin
 fn line_begin<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
@@ -160,14 +93,7 @@ fn line_begin<'a>(
 ) -> CodeLocationS<'a> {
   panic!("Unimplemented: line_begin");
 }
-/*
-  def lineBegin(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  CodeLocationS = {
-    lineRangeContaining(filenamesAndSources, codeLocationS).begin
-  }
-*/
+
 // mig: fn line_range_containing
 pub fn line_range_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -207,35 +133,7 @@ pub fn line_range_containing<'a, 'b>(
   }
   panic!("line_range_containing: offset beyond text");
 }
-/*
-  def lineRangeContaining(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  RangeS = {
-    val CodeLocationS(file, offset) = codeLocationS
-    if (offset < 0) {
-      return RangeS(CodeLocationS(file, -1), CodeLocationS(file, 0))
-    }
-    val text = filenamesAndSources(file)
-    // TODO: can optimize this perhaps
-    var lineBegin = 0;
-    while (lineBegin < text.length) {
-      val lineEnd =
-        text.indexOf('\n', lineBegin) match {
-          case -1 => return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, text.length))
-          case other => other
-        }
-      if (lineBegin <= offset && offset <= lineEnd) {
-        return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineEnd))
-      }
-      lineBegin = lineEnd + 1
-    }
-    if (offset == text.length) {
-      return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineBegin))
-    }
-    vfail()
-  }
-*/
+
 // mig: fn lines_between
 pub fn lines_between<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -273,40 +171,7 @@ pub fn lines_between<'a, 'b>(
   }
   result
 }
-/*
-  // Includes the line containing the begin and end code locs.
-  def linesBetween(
-    filenamesAndSources: FileCoordinateMap[String],
-    beginCodeLoc: CodeLocationS,
-    endCodeLoc: CodeLocationS):
-  Vector[RangeS] = {
-    vassert(beginCodeLoc.file == endCodeLoc.file)
-    vassert(beginCodeLoc.offset <= endCodeLoc.offset)
 
-    val CodeLocationS(file, offset) = beginCodeLoc
-    if (file.isInternal) {
-      return Vector()
-    }
-    val result = ArrayBuffer[(Int, Int)]()
-
-    var RangeS(CodeLocationS(_, lineBegin), CodeLocationS(_, lineEnd)) =
-      lineRangeContaining(filenamesAndSources, beginCodeLoc)
-    result += ((lineBegin, lineEnd))
-    val text = filenamesAndSources(file)
-    while (lineBegin < endCodeLoc.offset && lineBegin < text.length) {
-      lineEnd =
-        text.indexOf('\n', lineBegin) match {
-          case -1 => text.length
-          case other => other
-        }
-      result += ((lineBegin, lineEnd))
-      lineBegin = lineEnd + 1
-    }
-    result.map({ case (begin, end) =>
-      RangeS(CodeLocationS(file, begin), CodeLocationS(file, end))
-    }).toVector
-  }
-*/
 // mig: fn line_containing
 pub fn line_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -323,20 +188,5 @@ pub fn line_containing<'a, 'b>(
   let end = range.end.offset as usize;
   text[begin..end].to_string()
 }
-/*
-  def lineContaining(
-      filenamesAndSources: FileCoordinateMap[String],
-      codeLocationS: CodeLocationS):
-  String = {
-    if (codeLocationS.file.isInternal) {
-      return humanizeFile(codeLocationS.file)
-    }
-    var RangeS(CodeLocationS(_, lineBegin), CodeLocationS(_, lineEnd)) =
-        lineRangeContaining(filenamesAndSources, codeLocationS)
-    val text = filenamesAndSources(codeLocationS.file)
-    text.substring(lineBegin, lineEnd)
-  }
-*/
-/*
-}
-*/
+
+

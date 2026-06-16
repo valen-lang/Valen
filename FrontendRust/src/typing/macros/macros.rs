@@ -15,24 +15,7 @@ use crate::typing::names::names::IdT;
 use crate::higher_typing::ast::StructA;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::higher_typing::ast::InterfaceA;
-/*
-package dev.vale.typing.macros
 
-import dev.vale.{RangeS, StrI}
-import dev.vale.typing.CompilerOutputs
-import dev.vale.typing.ast.{FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT}
-import dev.vale.typing.env.{FunctionEnvironmentT, IEnvEntry}
-import dev.vale.typing.names.{INameT, IdT}
-import dev.vale.typing.types._
-import dev.vale.RangeS
-import dev.vale.highertyping.{FunctionA, ImplA, InterfaceA, StructA}
-import dev.vale.postparsing.{LocationInDenizen, MutabilityTemplataType}
-import dev.vale.typing.ast._
-import dev.vale.typing.env.IEnvEntry
-import dev.vale.typing.names.CitizenTemplateNameT
-import dev.vale.typing.templata.ITemplataT
-import dev.vale.typing.types.InterfaceTT
-*/
 
 // Dispatch-tag enum replacing Scala's IFunctionBodyMacro trait; bodies live as
 // Compiler::generate_function_body_<suffix> methods.
@@ -54,10 +37,7 @@ pub enum FunctionBodyMacro {
     SsaLen,
     SsaDropInto,
 }
-/*
-trait IFunctionBodyMacro {
-//  def generatorId: String
-*/
+
 impl FunctionBodyMacro {
     pub fn generate_function_body<'s, 'ctx, 't>(
         &self,
@@ -92,32 +72,16 @@ impl FunctionBodyMacro {
             FunctionBodyMacro::SsaDropInto => compiler.generate_function_body_ssa_drop_into(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
         }
     }
-    /*
-  def generateFunctionBody(
-    env: FunctionEnvironmentT,
-    coutputs: CompilerOutputs,
-    generatorId: StrI,
-    life: LocationInFunctionEnvironmentT,
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    originFunction: Option[FunctionA],
-    paramCoords: Vector[ParameterT],
-    maybeRetCoord: Option[CoordT]):
-  (FunctionHeaderT, ReferenceExpressionTE)
-*/
+    
 }
-/*
-}
-*/
+
 // Dispatch-tag enum replacing Scala's IOnStructDefinedMacro trait; bodies live on impl Compiler.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnStructDefinedMacro {
     StructConstructor,
     StructDrop,
 }
-/*
-trait IOnStructDefinedMacro {
-*/
+
 impl OnStructDefinedMacro {
     pub fn get_struct_sibling_entries<'s, 'ctx, 't>(
         &self,
@@ -132,25 +96,17 @@ impl OnStructDefinedMacro {
             OnStructDefinedMacro::StructDrop => compiler.get_struct_sibling_entries_struct_drop(struct_name, struct_a),
         }
     }
-    /*
-  def getStructSiblingEntries(
-    structName: IdT[INameT], structA: StructA):
-  Vector[(IdT[INameT], IEnvEntry)]
-*/
-    /* Guardian: disable-all */
+    
+    
 }
-/*
-}
-*/
+
 // Dispatch-tag enum replacing Scala's IOnInterfaceDefinedMacro trait; bodies live on impl Compiler.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnInterfaceDefinedMacro {
     AnonymousInterface,
     InterfaceDrop,
 }
-/*
-trait IOnInterfaceDefinedMacro {
-*/
+
 impl OnInterfaceDefinedMacro {
     pub fn get_interface_sibling_entries<'s, 'ctx, 't>(
         &self,
@@ -165,23 +121,12 @@ impl OnInterfaceDefinedMacro {
             OnInterfaceDefinedMacro::InterfaceDrop => compiler.get_interface_sibling_entries_interface_drop(interface_name, interface_a),
         }
     }
-    /*
-  def getInterfaceSiblingEntries(
-    interfaceName: IdT[INameT], interfaceA: InterfaceA):
-  Vector[(IdT[INameT], IEnvEntry)]
-*/
-    /* Guardian: disable-all */
+    
+    
 }
-/*
-}
-*/
+
 // Dispatch-tag enum replacing Scala's IOnImplDefinedMacro trait; bodies live on impl Compiler.
 // (No concrete implementors in the current codebase — Scala initializes this map empty.)
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnImplDefinedMacro {}
-/*
-trait IOnImplDefinedMacro {
-  def getImplSiblingEntries(implName: IdT[INameT], implA: ImplA):
-  Vector[(IdT[INameT], IEnvEntry)]
-}
-*/
+

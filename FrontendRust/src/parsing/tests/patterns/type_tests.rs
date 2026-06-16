@@ -1,20 +1,4 @@
-/*
-package dev.vale.parsing.patterns
 
-import dev.vale.{Collector, StrI, parsing}
-import dev.vale.parsing.{PatternParser, TestParseUtils}
-import dev.vale.parsing.ast.{AnonymousRunePT, BorrowP, CallPT, FinalP, IgnoredLocalNameDeclarationP, ImmutableP, IntPT, InterpretedPT, MutabilityPT, MutableP, NameOrRunePT, NameP, PatternPP, StaticSizedArrayPT, TuplePT, VariabilityPT, VaryingP, WeakP}
-import dev.vale.parsing.ast.Patterns.{fromEnv, withType}
-import dev.vale.parsing._
-import dev.vale.parsing.ast._
-import org.scalatest._
-
-class TypeTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): PatternPP = {
-    compilePattern(code)
-//    compile(new PatternParser().parsePattern(_), code)
-  }
-*/
 use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
@@ -52,12 +36,7 @@ fn ignoring_name() {
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("Ignoring name") {
-    compile("_ int") shouldHave { case fromEnv("int") => }
-  }
 
-*/
 #[test]
 fn static_sized_array() {
   let parse_bump = Bump::new();
@@ -86,19 +65,7 @@ fn static_sized_array() {
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15a") {
-    compile("_ [#3]MutableStruct") shouldHave {
-      case withType(
-          StaticSizedArrayPT(_,
-              MutabilityPT(_,MutableP),
-              VariabilityPT(_,FinalP),
-              IntPT(_,3),
-              NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
-    }
-  }
 
-*/
 #[test]
 fn static_sized_array_with_imm() {
   let parse_bump = Bump::new();
@@ -127,19 +94,7 @@ fn static_sized_array_with_imm() {
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15b") {
-    compile("_ [#3]<imm>MutableStruct") shouldHave {
-      case withType(
-        StaticSizedArrayPT(_,
-          MutabilityPT(_,ImmutableP),
-          VariabilityPT(_,FinalP),
-          IntPT(_,3),
-          NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
-    }
-  }
 
-*/
 #[test]
 fn static_sized_array_with_imm_and_vary() {
   let parse_bump = Bump::new();
@@ -168,19 +123,7 @@ fn static_sized_array_with_imm_and_vary() {
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15c") {
-    compile("_ [#3]<imm, vary>MutableStruct") shouldHave {
-      case withType(
-      StaticSizedArrayPT(_,
-      MutabilityPT(_,ImmutableP),
-      VariabilityPT(_,VaryingP),
-      IntPT(_,3),
-      NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
-    }
-  }
 
-*/
 #[test]
 fn runtime_sized_array() {
   let parse_bump = Bump::new();
@@ -204,19 +147,7 @@ fn runtime_sized_array() {
   assert_templex_name(rsa.element, "int");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15d") {
-    compile("_ #[]int") shouldHave {
-      case withType(
-        RuntimeSizedArrayPT(_,
-          MutabilityPT(_,ImmutableP),
-          NameOrRunePT(NameP(_, StrI("int"))))) =>
-    }
-  }
 
-
-
-*/
 #[test]
 fn sequence_type() {
   let parse_bump = Bump::new();
@@ -235,17 +166,7 @@ fn sequence_type() {
   assert_templex_name(bool_t, "bool");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("Sequence type") {
-    compile("_ (int, bool)") shouldHave {
-      case withType(
-          TuplePT(_,
-            Vector(
-              NameOrRunePT(NameP(_, StrI("int"))),
-              NameOrRunePT(NameP(_, StrI("bool")))))) =>
-    }
-  }
-*/
+
 #[test]
 fn static_sized_array_with_borrow() {
   let parse_bump = Bump::new();
@@ -277,24 +198,7 @@ fn static_sized_array_with_borrow() {
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15") {
-    compile("_ &[#3]MutableStruct") shouldHave {
-      case PatternPP(_,
-        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
-        Some(
-          InterpretedPT(_,
-            Some(OwnershipPT(_, BorrowP)),
-            None,
-            StaticSizedArrayPT(_,
-              MutabilityPT(_,MutableP),
-              VariabilityPT(_,FinalP),
-              IntPT(_,3),
-              NameOrRunePT(NameP(_, StrI("MutableStruct")))))),
-        None) =>
-    }
-  }
-*/
+
 #[test]
 fn static_sized_array_with_weak() {
   let parse_bump = Bump::new();
@@ -320,24 +224,7 @@ fn static_sized_array_with_weak() {
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15m") {
-    compile("_ &&[#3]<_, _>MutableStruct") shouldHave {
-      case PatternPP(_,
-        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
-        Some(
-          InterpretedPT(_,
-            Some(OwnershipPT(_, WeakP)),
-            None,
-            StaticSizedArrayPT(_,
-              AnonymousRunePT(_),
-              AnonymousRunePT(_),
-              IntPT(_,3),
-              NameOrRunePT(NameP(_, StrI("MutableStruct")))))),
-        None) =>
-    }
-  }
-*/
+
 #[test]
 fn call_type() {
   let parse_bump = Bump::new();
@@ -359,22 +246,4 @@ fn call_type() {
   assert_templex_name(int_type, "int");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("15z") {
-    compile("_ MyOption<MyList<int>>") shouldHave {
-      case PatternPP(_,
-        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
-        Some(
-          CallPT(
-            _,
-            NameOrRunePT(NameP(_, StrI("MyOption"))),
-            Vector(
-              CallPT(_,
-                NameOrRunePT(NameP(_, StrI("MyList"))),
-                Vector(
-                  NameOrRunePT(NameP(_, StrI("int")))))))),
-        None) =>
-    }
-  }
-}
-*/
+

@@ -23,38 +23,14 @@ use crate::postparsing::ast::ProgramS;
 use crate::postparsing::post_parser::ICompileErrorS;
 use std::marker::PhantomData;
 
-/*
-package dev.vale.typing
 
-import dev.vale.highertyping.{HigherTypingCompilation, ICompileErrorA, ProgramA}
-import dev.vale.options.GlobalOptions
-import dev.vale.parsing.ast.FileP
-import dev.vale.postparsing._
-import dev.vale.{Err, FileCoordinateMap, IPackageResolver, Ok, PackageCoordinate, PackageCoordinateMap, Result, vcurious, vfail}
-import dev.vale._
-import dev.vale.highertyping._
-import dev.vale.lexing.{FailedParse, RangeL}
-import dev.vale.postparsing.ICompileErrorS
-
-import scala.collection.immutable.{List, ListMap, Map, Set}
-import scala.collection.mutable
-*/
 /// Miscellaneous (see @TFITCX)
 pub struct TypingPassOptions {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub tree_shaking_enabled: bool,
 }
-/*
-case class TypingPassOptions(
-  globalOptions: GlobalOptions = GlobalOptions(),
-  debugOut: (=> String) => Unit = DefaultPrintyThing.print,
-  treeShakingEnabled: Boolean = true
-) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-*/
+
 
 /// Miscellaneous (see @TFITCX)
 pub struct TypingPassCompilation<'s, 'ctx, 't, 'p>
@@ -67,14 +43,7 @@ where 's: 't,
   options: TypingPassOptions,
   pub typing_interner: &'ctx TypingInterner<'s, 't>,
 }
-/*
-class TypingPassCompilation(
-  val interner: Interner,
-  val keywords: Keywords,
-  packagesToBuild: Vector[PackageCoordinate],
-  packageToContentsResolver: IPackageResolver[Map[String, String]],
-  options: TypingPassOptions = TypingPassOptions()) {
-*/
+
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
@@ -115,43 +84,28 @@ where 's: 't,
       typing_interner,
     }
   }
-  /*
-    var higherTypingCompilation =
-      new HigherTypingCompilation(
-        options.globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
-    var hinputsCache: Option[HinputsT] = None
-  */
+  
 
 pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_code_map()
 }
-/*
-  def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = higherTypingCompilation.getCodeMap()
-*/
+
 pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
   self.higher_typing_compilation.get_parseds()
 }
-/*
-  def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = higherTypingCompilation.getParseds()
-*/
+
 pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_vpst_map()
 }
-/*
-  def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = higherTypingCompilation.getVpstMap()
-*/
+
 pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
   self.higher_typing_compilation.get_scoutput()
 }
-/*
-  def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = higherTypingCompilation.getScoutput()
-*/
+
 pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
   self.higher_typing_compilation.get_astrouts()
 }
-/*
-  def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = higherTypingCompilation.getAstrouts()
-*/
+
 pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
   if self.hinputs_cache.is_some() {
     return Ok(self.hinputs_cache.as_ref().unwrap());
@@ -167,64 +121,22 @@ pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErro
     }
   }
 }
-  /*
-    def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = {
-      hinputsCache match {
-        case Some(coutputs) => Ok(coutputs)
-        case None => {
-          val compiler =
-            new Compiler(
-              options,
-              interner,
-              keywords)
-          compiler.evaluate(getCodeMap().getOrDie(), higherTypingCompilation.expectAstrouts()) match {
-            case Err(e) => Err(e)
-            case Ok(hinputs) => {
-              hinputsCache = Some(hinputs)
-              Ok(hinputs)
-            }
-          }
-        }
-      }
-    }
-  */
+  
 pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
-/*
-  def expectCompilerOutputs(): HinputsT = {
-    getCompilerOutputs() match {
-*/
+
   match self.get_compiler_outputs() {
-/*
-      case Err(err) => {
-        val codeMap = getCodeMap().getOrDie()
-        val errorText =
-          CompilerErrorHumanizer.humanize(
-            true,
-            SourceCodeUtils.humanizePos(codeMap, _),
-            SourceCodeUtils.linesBetween(codeMap, _, _),
-            SourceCodeUtils.lineRangeContaining(codeMap, _),
-            SourceCodeUtils.lineContaining(codeMap, _),
-            err)
-        vfail(errorText)
-      }
-*/
+
     Err(_err) => panic!("Not yet implemented: CompilerErrorHumanizer.humanize"),
-/*
-      case Ok(x) => x
-    }
-  }
-}
-*/
+
     Ok(x) => x,
   }
 }
-  /*
-  */
+  
   // Rust adaptation: `&self` read of the already-computed compiler outputs, so a caller can borrow it
   // alongside another field of this struct in one expression (`&mut expect_compiler_outputs` would
   // conflict). Caller must have run `expect_compiler_outputs` first.
   pub fn cached_compiler_outputs(&self) -> &HinputsT<'s, 't> {
     self.hinputs_cache.as_ref().expect("compiler outputs not computed")
   }
-  /* Guardian: disable-all */
+  
 }

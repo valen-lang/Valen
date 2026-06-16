@@ -1,4 +1,4 @@
-/* Guardian: disable-all */
+
 // Mirrors src/instantiating/instantiating_interner.rs (per Slab 17 plan).
 //
 // Scaled down from instantiating's 3-region-mode (sI/nI/cI) design to a

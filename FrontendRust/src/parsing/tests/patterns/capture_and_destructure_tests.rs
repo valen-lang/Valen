@@ -1,19 +1,4 @@
-/*
-package dev.vale.parsing.patterns
 
-import dev.vale.{Collector, StrI, vimpl}
-import dev.vale.parsing.ast.{DestinationLocalP, DestructureP, LocalNameDeclarationP, NameOrRunePT, NameP, PatternPP, TuplePT}
-import dev.vale.parsing._
-import dev.vale.parsing.ast.Patterns.capturedWithType
-import dev.vale.parsing.ast.{DestructureP, LocalNameDeclarationP, NameOrRunePT, NameP, PatternPP, TuplePT}
-import org.scalatest._
-
-class CaptureAndDestructureTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): PatternPP = {
-    compilePattern(code)
-//    compile(x => new PatternParser().parsePattern(x), code)
-  }
-*/
 use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
@@ -40,20 +25,7 @@ fn capture_with_destructure_with_type_inside() {
   assert_templex_name(b_pattern.templex.as_ref().unwrap(), "bool");
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Capture with destructure with type inside") {
-    compile("a [a int, b bool]") shouldHave {
-      case PatternPP(_,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-          None,
-          Some(
-          DestructureP(_,
-            Vector(
-              capturedWithType("a", NameOrRunePT(NameP(_, StrI("int")))),
-              capturedWithType("b", NameOrRunePT(NameP(_, StrI("bool")))))))) =>
-    }
-  }
-*/
+
 #[test]
 fn capture_with_empty_sequence_type() {
   let parse_bump = Bump::new();
@@ -65,13 +37,7 @@ fn capture_with_empty_sequence_type() {
   assert!(tuple.elements.is_empty());
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("capture with empty sequence type") {
-    compile("a ()") shouldHave {
-      case capturedWithType("a", TuplePT(_,Vector())) =>
-    }
-  }
-*/
+
 #[test]
 fn empty_destructure() {
   let parse_bump = Bump::new();
@@ -83,12 +49,7 @@ fn empty_destructure() {
   let destructure = pattern.destructure.as_ref().unwrap();
   assert!(destructure.patterns.is_empty());
 }
-/*
-  test("empty destructure") {
-    compilePattern("[]") shouldHave
-      { case PatternPP(_,None,None,Some(DestructureP(_,Vector()))) => }
-  }
-*/
+
 #[test]
 fn capture_with_empty_destructure() {
   // Needs the space between the braces, see https://github.com/ValeLang/Vale/issues/434
@@ -101,14 +62,7 @@ fn capture_with_empty_destructure() {
   let destructure = pattern.destructure.as_ref().unwrap();
   assert!(destructure.patterns.is_empty());
 }
-/*
-  test("capture with empty destructure") {
-    // Needs the space between the braces, see https://github.com/ValeLang/Vale/issues/434
-    compile("a [ ]") shouldHave {
-      case PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),None,Some(DestructureP(_,Vector()))) =>
-    }
-  }
-*/
+
 #[test]
 fn destructure_with_nested_atom() {
   let parse_bump = Bump::new();
@@ -123,16 +77,4 @@ fn destructure_with_nested_atom() {
   assert_templex_name(b_pattern.templex.as_ref().unwrap(), "int");
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Destructure with nested atom") {
-    compile("a [b int]") shouldHave {
-      case PatternPP(_,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-          None,
-          Some(
-            DestructureP(_,
-              Vector(capturedWithType("b", NameOrRunePT(NameP(_, StrI("int")))))))) =>
-    }
-  }
-}
-*/
+

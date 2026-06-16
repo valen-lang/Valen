@@ -23,46 +23,14 @@ use crate::postparsing::post_parser::ICompileErrorS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::hinputs_t::HinputsT;
 
-/*
-package dev.vale.passmanager
 
-import dev.vale.finalast.ProgramH
-import dev.vale.options.GlobalOptions
-import dev.vale.parsing.ast.FileP
-import dev.vale.postparsing._
-import dev.vale.{Builtins, Err, FileCoordinate, FileCoordinateMap, IPackageResolver, Interner, Keywords, Ok, PackageCoordinate, PackageCoordinateMap, Profiler, Result, vassert, vassertSome, vcurious, vfail, vimpl, vwat}
-import dev.vale.highertyping.ICompileErrorA
-import PassManager.SourceInput
-import dev.vale.highertyping.{ICompileErrorA, ProgramA}
-import dev.vale.instantiating.ast.HinputsI
-import dev.vale.lexing.{FailedParse, RangeL}
-import dev.vale.simplifying._
-import dev.vale.typing.{HinputsT, ICompileErrorT}
-import dev.vale.instantiating.ast.HinputsI
-import dev.vale.postparsing.PostParser
-import dev.vale.simplifying._
-import dev.vale.typing.ICompileErrorT
-import dev.vale.testvm.ReferenceV
-
-import scala.collection.immutable.List
-*/
 
 // From FullCompilation.scala lines 23-28: FullCompilationOptions
 pub struct FullCompilationOptions {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
 }
-/*
-case class FullCompilationOptions(
-  globalOptions: GlobalOptions = GlobalOptions(false, true, true, false, false),
-  debugOut: (=> String) => Unit = (x => {
-    println("##: " + x)
-  }),
-) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-*/
+
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
 pub struct FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
@@ -74,14 +42,7 @@ where
 {
   pub hammer_compilation: HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>,
 }
-/*
-class FullCompilation(
-  interner: Interner,
-  keywords: Keywords,
-  packagesToBuild: Vector[PackageCoordinate],
-  packageToContentsResolver: IPackageResolver[Map[String, String]],
-  options: FullCompilationOptions = FullCompilationOptions()) {
-*/
+
 
 impl<'s, 'h, 'ctx, 't, 'i, 'p> FullCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where
@@ -122,18 +83,7 @@ where
     );
     FullCompilation { hammer_compilation }
   }
-/*
-  var hammerCompilation =
-    new HammerCompilation(
-      interner,
-      keywords,
-      packagesToBuild,
-      packageToContentsResolver,
-      HammerCompilationOptions(
-        options.debugOut,
-        options.globalOptions))
 
-*/
 
 }
 
@@ -144,72 +94,53 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'i: 'h,
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.hammer_compilation.get_code_map()
   }
-/*
-  def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getCodeMap()
-*/
+
 
 // mig: fn get_parseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.hammer_compilation.get_parseds()
   }
-/*
-  def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = hammerCompilation.getParseds()
-*/
+
 
 // mig: fn get_vpst_map
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.hammer_compilation.get_vpst_map()
   }
-/*
-  def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = hammerCompilation.getVpstMap()
-*/
+
 
 // mig: fn get_scoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.hammer_compilation.get_scoutput()
   }
-/*
-  def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = hammerCompilation.getScoutput()
-*/
+
 
 // mig: fn get_astrouts
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.hammer_compilation.get_astrouts()
   }
-/*
-  def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = hammerCompilation.getAstrouts()
-*/
+
 
 // mig: fn get_compiler_outputs
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.hammer_compilation.get_compiler_outputs()
   }
-/*
-  def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = hammerCompilation.getCompilerOutputs()
-*/
+
 
 // mig: fn expect_compiler_outputs
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.hammer_compilation.expect_compiler_outputs()
   }
-/*
-  def expectCompilerOutputs(): HinputsT = hammerCompilation.expectCompilerOutputs()
-*/
+
 
 // mig: fn get_hamuts
   pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
     self.hammer_compilation.get_hamuts()
   }
-/*
-  def getHamuts(): ProgramH = hammerCompilation.getHamuts()
-*/
+
 
 // mig: fn get_monouts
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.hammer_compilation.get_monouts()
   }
 }
-/*
-  def getMonouts(): HinputsI = hammerCompilation.getMonouts()
-}
-*/
+

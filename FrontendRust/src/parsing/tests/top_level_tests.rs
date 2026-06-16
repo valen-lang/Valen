@@ -10,26 +10,7 @@ use crate::lexing::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
-/*
-package dev.vale.parsing
 
-import dev.vale.{Collector, Interner, StrI, vassertOne, vassertSome}
-import dev.vale.parsing.ast.{BlockPE, CallPT, ExportAsP, FileP, FunctionP, ImportP, NameOrRunePT, NameP, RegionRunePT, TopLevelExportAsP, TopLevelFunctionP, TopLevelImportP, TopLevelStructP, VoidPE}
-import dev.vale.lexing.{BadStartOfStatementError, IParseError, Lexer, UnrecognizedDenizenError}
-import dev.vale.options.GlobalOptions
-import org.scalatest._
-
-
-
-class TopLevelTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  def compile(code: String): FileP = {
-    compileFile(code).getOrDie()
-  }
-
-  def compileForError(code: String): IParseError = {
-    compileFile(code).expectErr().error
-  }
-*/
 #[test]
 fn function_then_struct() {
   let parse_bump = Bump::new();
@@ -42,18 +23,7 @@ fn function_then_struct() {
   ));
   assert!(matches!(program.denizens[1], IDenizenP::TopLevelStruct(_)));
 }
-/*
-  test("Function then struct") {
-    val program = compile(
-      """
-        |exported func main() int {}
-        |
-        |struct mork { }
-        |""".stripMargin)
-    program.denizens(0) match { case TopLevelFunctionP(_) => }
-    program.denizens(1) match { case TopLevelStructP(_) => }
-  }
-*/
+
 #[test]
 fn ellipses_ignored() {
   let parse_bump = Bump::new();
@@ -71,22 +41,7 @@ fn ellipses_ignored() {
   compile(&parse_arena, &keywords, "struct Moo {} ... ");
   compile(&parse_arena, &keywords, "struct Moo {...}");
 }
-/*
-  test("Ellipses ignored") {
-    // Unicode … symbol is treated as an expression by the parser
-    compile("""exported func main() int {x = …;}""".stripMargin)
-    compile("""exported func main() int {set x = …;}""".stripMargin)
 
-    // Three dots is treated as a comment
-    compile("""exported func main(...) int {}""".stripMargin)
-    compile("""exported func main() ... {}""".stripMargin)
-    compile("""exported func main() int {} ... """.stripMargin)
-    compile("""exported func main() int {...}""".stripMargin)
-    compile("""exported func main() int {moo(...)}""".stripMargin)
-    compile("""struct Moo {} ... """.stripMargin)
-    compile("""struct Moo {...}""".stripMargin)
-  }
-*/
 #[test]
 fn comments_ignored() {
   let parse_bump = Bump::new();
@@ -165,57 +120,7 @@ fn comments_ignored() {
         "#,
   );
 }
-/*
-  test("Comments ignored") {
-    compile(
-      """
-        |exported func main(
-        |        // moo
-        |) int {}
-        |""".stripMargin)
-    compile(
-      """
-        |exported func main()
-        |        // moo
-        |{}
-        |""".stripMargin)
-    compile(
-      """
-        |exported func main() int {}
-        |        // moo
-        |""".stripMargin)
-    compile(
-      """
-        |exported func main() int {
-        |        // moo
-        |}
-        |""".stripMargin)
-    compile(
-      """
-        |exported func main() int {
-        |  moo(
-        |        // moo
-        |  )
-        |}
-        |""".stripMargin)
-    compile(
-      """
-        |struct Moo {}
-        |        // moo
-        |""".stripMargin)
-    compile(
-      """
-        |struct Moo {
-        |        // moo
-        |}
-        |""".stripMargin)
-    compile(
-      """
-        |struct Moo {
-        |}
-        |// moo""".stripMargin)
-  }
-*/
+
 #[test]
 fn function_containing_if() {
   let parse_bump = Bump::new();
@@ -234,18 +139,7 @@ fn function_containing_if() {
   assert!(main.body.is_some());
 }
 
-/*
-//  test("Function containing if") {
-//    val program = compile(
-//      """
-//        |func main() int {
-//        |  if true { 3 } else { 4 }
-//        |}
-//        |""".stripMargin)
-//    val main = program.lookupFunction("main")
-//    main.body.get
-//  }
-*/
+
 #[test]
 fn reports_unrecognized_at_top_level() {
   let parse_bump = Bump::new();
@@ -261,18 +155,7 @@ fn reports_unrecognized_at_top_level() {
   );
   assert!(matches!(err, ParseError::UnrecognizedDenizenError(_)));
 }
-/*
-  test("Reports unrecognized at top level") {
-    val code =
-      """func main(){}
-        |blort
-        |""".stripMargin
-    val err = compileForError(code)
-    err match {
-      case UnrecognizedDenizenError(_) =>
-    }
-  }
-*/
+
 // lol
 #[test]
 fn funky_function() {
@@ -288,13 +171,7 @@ fn funky_function() {
   );
   find_func_named(&program, "main");
 }
-/*
-  // lol
-  test("Funky function") {
-    compile("funky main() { }")
-    // MIGALLOW: Rust is looking for the main func
-  }
-*/
+
 #[test]
 fn empty() {
   let parse_bump = Bump::new();
@@ -320,19 +197,7 @@ fn empty() {
     })
   ));
 }
-/*
-  // To support the examples on the site for the syntax highlighter
-  test("empty") {
-    val program = compile("func foo() { ... }")
-    program.denizens(0) match {
-      case TopLevelFunctionP(
-      FunctionP(_,
-      _,
-      Some(BlockPE(_,None,None,VoidPE(_))))) =>
-    }
-    // MIGALLOW: It's okay that Rust isnt checking for None and None in BlockPE
-  }
-*/
+
 #[test]
 fn exporting_int() {
   let parse_bump = Bump::new();
@@ -347,14 +212,7 @@ fn exporting_int() {
   }))
   );
 }
-/*
-  test("exporting int") {
-    val program = compile("export int as NumberThing;")
-    program.denizens(0) match {
-      case TopLevelExportAsP(ExportAsP(_,NameOrRunePT(NameP(_, StrI("int"))),NameP(_, StrI("NumberThing")))) =>
-    }
-  }
-*/
+
 #[test]
 fn exporting_imm_array_1() {
   let parse_bump = Bump::new();
@@ -369,14 +227,7 @@ fn exporting_imm_array_1() {
   );
 }
 
-/*
-  test("exporting imm array 1") {
-    val program = compile("export []<mut>int as IntArray;")
-    program.denizens(0) match {
-      case TopLevelExportAsP(ExportAsP(_,_,NameP(_, StrI("IntArray")))) =>
-    }
-  }
-*/
+
 #[test]
 fn exporting_imm_array_2() {
   let parse_bump = Bump::new();
@@ -391,14 +242,7 @@ fn exporting_imm_array_2() {
   );
 }
 
-/*
-  test("exporting imm array 2") {
-    val program = compile("export #[]int as IntArray;")
-    program.denizens(0) match {
-      case TopLevelExportAsP(ExportAsP(_,_,NameP(_, StrI("IntArray")))) =>
-    }
-  }
-*/
+
 #[test]
 fn import_wildcard() {
   let parse_bump = Bump::new();
@@ -415,14 +259,7 @@ fn import_wildcard() {
   );
 }
 
-/*
-  test("import wildcard") {
-    val program = compile("import somemodule.*;")
-    program.denizens(0) match {
-      case TopLevelImportP(ImportP(_, NameP(_, StrI("somemodule")), Vector(), NameP(_, StrI("*")))) =>
-    }
-  }
-*/
+
 #[test]
 fn import_just_module_and_thing() {
   let parse_bump = Bump::new();
@@ -439,14 +276,7 @@ fn import_just_module_and_thing() {
   );
 }
 
-/*
-  test("import just module and thing") {
-    val program = compile("import somemodule.List;")
-    program.denizens(0) match {
-      case TopLevelImportP(ImportP(_, NameP(_, StrI("somemodule")), Vector(), NameP(_, StrI("List")))) =>
-    }
-  }
-*/
+
 #[test]
 fn full_import() {
   let parse_bump = Bump::new();
@@ -462,14 +292,7 @@ fn full_import() {
   }))
   );
 }
-/*
-  test("full import") {
-    val program = compile("import somemodule.subpackage.List;")
-    program.denizens(0) match {
-      case TopLevelImportP(ImportP(_, NameP(_, StrI("somemodule")), Vector(NameP(_, StrI("subpackage"))), NameP(_, StrI("List")))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn return_with_region_generics() {
@@ -488,20 +311,7 @@ fn return_with_region_generics() {
     _ => panic!("Expected return type IDesire<r', i'>"),
   }
 }
-/*
-  test("Return with region generics") {
-    val program = compile(
-      """
-        |func strongestDesire() IDesire<r', i'> { }
-        |""".stripMargin)
-    val func = program.lookupFunction("strongestDesire")
-    vassertSome(func.header.ret.retType) match {
-      case CallPT(_,
-        NameOrRunePT(NameP(_,StrI("IDesire"))),
-        Vector(RegionRunePT(_,Some(NameP(_,StrI("r")))), RegionRunePT(_,Some(NameP(_,StrI("i")))))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn bad_start_of_statement() {
@@ -529,24 +339,4 @@ fn bad_start_of_statement() {
   );
   assert!(matches!(err, ParseError::BadStartOfStatementError(_)));
 }
-/*
-  test("Bad start of statement") {
-    compileForError(
-      """
-        |func doCivicDance(virtual this Car) {
-        |  )
-        |}
-        """.stripMargin) match {
-      case BadStartOfStatementError(_) =>
-    }
-    compileForError(
-      """
-        |func doCivicDance(virtual this Car) {
-        |  ]
-        |}
-        """.stripMargin) match {
-      case BadStartOfStatementError(_) =>
-    }
-  }
-}
-*/
+

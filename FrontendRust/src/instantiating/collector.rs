@@ -13,7 +13,7 @@
 // `all(root, pred)` mirrors Scala's `Collector.all`: walk the whole tree, push every `pred` match.
 // `only(root, pred)` mirrors `Collector.only`: exactly one match or panic. Predicates narrow the wide
 // `NodeRefI` (e.g. `NodeRefI::Templata(ITemplataI::Coord(_))`) the same way Rust matches everywhere.
-/* Guardian: disable-all */
+
 
 use crate::instantiating::ast::names::*;
 use crate::instantiating::ast::types::*;

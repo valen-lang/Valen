@@ -1,21 +1,6 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::patterns::destructure_parser_tests
 
-/*
-package dev.vale.parsing.patterns
 
-import dev.vale.{Collector, StrI}
-import dev.vale.parsing.ast.{DestinationLocalP, DestructureP, IgnoredLocalNameDeclarationP, LocalNameDeclarationP, NameOrRunePT, NameP, PatternPP}
-import dev.vale.parsing.ast.Patterns._
-import dev.vale.parsing._
-import dev.vale.Collector
-import org.scalatest._
-
-class DestructureParserTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): PatternPP = {
-    compilePattern(code)
-//    compile(new PatternParser().parsePattern(_), code)
-  }
-*/
 use bumpalo::Bump;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::parse_arena::ParseArena;
@@ -34,13 +19,7 @@ where
 {
   compile_pattern_expect(parse_arena, keywords, code)
 }
-/*
-  test("Only empty destructure") {
-    compile("[]") shouldHave {
-      case withDestructure(Vector()) =>
-    }
-  }
-*/
+
 #[test]
 fn only_empty_destructure() {
   let parse_bump = Bump::new();
@@ -67,13 +46,7 @@ fn one_element_destructure() {
   assert!(a_pattern.templex.is_none());
   assert!(a_pattern.destructure.is_none());
 }
-/*
-  test("One element destructure") {
-    compile("[a]") shouldHave {
-      case withDestructure(Vector(capture("a"))) =>
-    }
-  }
-*/
+
 #[test]
 fn one_typed_element_destructure() {
   let parse_bump = Bump::new();
@@ -94,13 +67,7 @@ fn one_typed_element_destructure() {
   assert_templex_name(inner_pattern.templex.as_ref().unwrap(), "A");
   assert!(inner_pattern.destructure.is_none());
 }
-/*
-  test("One typed element destructure") {
-    compile("[ _ A ]") shouldHave {
-      case withDestructure(Vector(withType(NameOrRunePT(NameP(_, StrI("A")))))) =>
-    }
-  }
-*/
+
 #[test]
 fn only_two_element_destructure() {
   let parse_bump = Bump::new();
@@ -118,13 +85,7 @@ fn only_two_element_destructure() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Only two-element destructure") {
-    compile("[a, b]") shouldHave {
-      case withDestructure(Vector(capture("a"), capture("b"))) =>
-    }
-  }
-*/
+
 #[test]
 fn two_element_destructure_with_ignore() {
   let parse_bump = Bump::new();
@@ -147,15 +108,7 @@ fn two_element_destructure_with_ignore() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Two-element destructure with ignore") {
-    compile("[_, b]") shouldHave {
-      case PatternPP(_,
-          None,None,
-          Some(DestructureP(_,Vector(PatternPP(_,Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)), None, None), capture("b"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn capture_with_destructure() {
   let parse_bump = Bump::new();
@@ -173,16 +126,7 @@ fn capture_with_destructure() {
   assert!(y_pattern.templex.is_none());
   assert!(y_pattern.destructure.is_none());
 }
-/*
-  test("Capture with destructure") {
-    compile("a [x, y]") shouldHave {
-      case PatternPP(_,
-        Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-        None,
-        Some(DestructureP(_,Vector(capture("x"), capture("y"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn type_with_destructure() {
   let parse_bump = Bump::new();
@@ -200,16 +144,7 @@ fn type_with_destructure() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Type with destructure") {
-    compile("A[a, b]") shouldHave {
-      case PatternPP(_,
-        None,
-        Some(NameOrRunePT(NameP(_, StrI("A")))),
-        Some(DestructureP(_,Vector(capture("a"), capture("b"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn capture_and_type_with_destructure() {
   let parse_bump = Bump::new();
@@ -227,16 +162,7 @@ fn capture_and_type_with_destructure() {
   assert!(y_pattern.templex.is_none());
   assert!(y_pattern.destructure.is_none());
 }
-/*
-  test("Capture and type with destructure") {
-    compile("a A[x, y]") shouldHave {
-      case PatternPP(_,
-        Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-        Some(NameOrRunePT(NameP(_, StrI("A")))),
-        Some(DestructureP(_,Vector(capture("x"), capture("y"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn capture_with_types_inside() {
   let parse_bump = Bump::new();
@@ -266,16 +192,7 @@ fn capture_with_types_inside() {
   assert_templex_name(bool_pattern.templex.as_ref().unwrap(), "bool");
   assert!(bool_pattern.destructure.is_none());
 }
-/*
-  test("Capture with types inside") {
-    compile("a [_ int, _ bool]") shouldHave {
-      case PatternPP(_,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-          None,
-          Some(DestructureP(_,Vector(fromEnv("int"), fromEnv("bool"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn destructure_with_type_inside() {
   let parse_bump = Bump::new();
@@ -293,16 +210,7 @@ fn destructure_with_type_inside() {
   assert_templex_name(b_pattern.templex.as_ref().unwrap(), "bool");
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Destructure with type inside") {
-    compile("[a int, b bool]") shouldHave {
-      case withDestructure(
-      Vector(
-          capturedWithType("a", NameOrRunePT(NameP(_, StrI("int")))),
-          capturedWithType("b", NameOrRunePT(NameP(_, StrI("bool")))))) =>
-    }
-  }
-*/
+
 #[test]
 fn nested_destructures_a() {
   let parse_bump = Bump::new();
@@ -327,19 +235,7 @@ fn nested_destructures_a() {
   assert!(c_pattern.templex.is_none());
   assert!(c_pattern.destructure.is_none());
 }
-/*
-  test("Nested destructures A") {
-    compile("[a, [b, c]]") shouldHave {
-      case withDestructure(
-        Vector(
-          capture("a"),
-          withDestructure(
-          Vector(
-            capture("b"),
-            capture("c"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn nested_destructures_b() {
   let parse_bump = Bump::new();
@@ -361,18 +257,7 @@ fn nested_destructures_b() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Nested destructures B") {
-    compile("[[a], b]") shouldHave {
-      case withDestructure(
-      Vector(
-          withDestructure(
-          Vector(
-            capture("a"))),
-          capture("b"))) =>
-    }
-  }
-*/
+
 #[test]
 fn nested_destructures_c() {
   let parse_bump = Bump::new();
@@ -395,17 +280,4 @@ fn nested_destructures_c() {
   assert!(a_pattern.templex.is_none());
   assert!(a_pattern.destructure.is_none());
 }
-/*
-  test("Nested destructures C") {
-    compile("[[[a]]]") shouldHave {
-      case withDestructure(
-      Vector(
-          withDestructure(
-          Vector(
-            withDestructure(
-            Vector(
-              capture("a"))))))) =>
-    }
-  }
-}
-*/
+

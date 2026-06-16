@@ -27,9 +27,7 @@ where
       .or_else(|| self.fallback.resolve(package_coord))
   }
 }
-/*
-Guardian: disable-all
-*/
+
 
 /// Implement IPackageResolver for function pointers (for lambda-style resolvers)
 impl<'a, T, F> IPackageResolver<'a, T> for F
@@ -40,17 +38,9 @@ where
     self(package_coord)
   }
 }
-/*
-Guardian: disable-all
-*/
 
-/*
-package dev.vale
 
-import scala.collection.immutable.List
-import scala.collection.mutable
 
-*/
 // mig: struct FileCoordinate
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
@@ -60,15 +50,7 @@ pub struct FileCoordinate<'a> {
 // mig: impl FileCoordinate
 // compareTo and compare methods were commented out in Scala (ordering not implemented)
 impl<'a> FileCoordinate<'a> {
-/*
-case class FileCoordinate(packageCoordinate: PackageCoordinate, filepath: String) extends IInterning {
-  def isInternal = packageCoordinate.isInternal
-  def isTest(): Boolean = packageCoordinate.isTest && filepath == "test.vale"
-//  def compareTo(that: FileCoordinate) = FileCoordinate.compare(this, that)
-}
 
-object FileCoordinate {// extends Ordering[FileCoordinate] {
-*/
   pub fn is_internal(&self) -> bool {
     self.package_coord.is_internal()
   }
@@ -88,26 +70,7 @@ object FileCoordinate {// extends Ordering[FileCoordinate] {
     let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
     *scout_arena.intern_file_coordinate(package_coord, "test.vale")
   }
-/*
-  def test(interner: Interner): FileCoordinate = {
-    interner.intern(FileCoordinate(
-      interner.intern(PackageCoordinate(
-        interner.intern(StrI("test")),
-        Vector.empty)),
-      "test.vale"))
-  }
 
-//  override def compare(a: FileCoordinate, b: FileCoordinate):Int = {
-//    val diff = a.packageCoordinate.compareTo(b.packageCoordinate)
-//    if (diff != 0) {
-//      diff
-//    } else {
-//      a.filepath.compareTo(b.filepath)
-//    }
-//  }
-}
-
-*/
 }
 // mig: struct PackageCoordinate
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -118,13 +81,7 @@ pub struct PackageCoordinate<'a> {
 // mig: impl PackageCoordinate
 // compareTo and compare methods were commented out in Scala (ordering not implemented)
 impl<'a> PackageCoordinate<'a> {
-/*
-case class PackageCoordinate(module: StrI, packages: Vector[StrI]) extends IInterning {
-  def isInternal = module.str == ""
-  def isTest = module.str == "test" && packages == Vector()
 
-//  def compareTo(that: PackageCoordinate) = PackageCoordinate.compare(this, that)
-*/
   pub fn is_internal(&self) -> bool {
     self.module == ""
   }
@@ -159,18 +116,7 @@ case class PackageCoordinate(module: StrI, packages: Vector[StrI]) extends IInte
     // VA: types (PackageCoordinate, FileCoordinate) should always go through an arena intern method;
     // VA: raw bump is only for internal data structures (ArenaIndexMap). This method has zero callers.
   }
-/*
-  def parent(interner: Interner): Option[PackageCoordinate] = {
-    if (packages.isEmpty) {
-      None
-    } else {
-      Some(interner.intern(PackageCoordinate(module, packages.init)))
-    }
-  }
-}
 
-object PackageCoordinate {// extends Ordering[PackageCoordinate] {
-*/
 // mig: fn test_tld
   pub fn test_tld<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
@@ -181,9 +127,7 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
   {
     parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[])
   }
-/*
-  def TEST_TLD(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(interner.intern(StrI("test")), Vector.empty))
-*/
+
 // mig: fn builtin
   pub fn builtin<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
@@ -194,9 +138,7 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
   {
     parse_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
-/*
-  def BUILTIN(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(keywords.emptyString, Vector.empty))
-*/
+
 // mig: fn internal
   pub fn internal(
     scout_arena: &ScoutArena<'a>,
@@ -204,26 +146,7 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
   ) -> PackageCoordinate<'a> {
     *scout_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
-/*
-  def internal(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(keywords.emptyString, Vector.empty))
-//
-//  override def compare(a: PackageCoordinate, b: PackageCoordinate):Int = {
-//    val lenDiff = a.packages.length - b.packages.length
-//    if (lenDiff != 0) {
-//      return lenDiff
-//    }
-//    a.packages.zip(b.packages).foreach({ case (stepA, stepB) =>
-//      val stepDiff = stepA.uid - stepB.uid
-//      if (stepDiff != 0L) {
-//        return U.sign(stepDiff)
-//      }
-//    })
-//    return U.sign(a.module.uid - b.module.uid)
-//  }
-}
 
-object FileCoordinateMap {
-*/
 }
 // Realizes Scala's case-class auto-toString for PackageCoordinate:
 //   PackageCoordinate(<module>,Vector(<pkg1>, <pkg2>, ...))
@@ -243,12 +166,10 @@ impl<'a> Display for PackageCoordinate<'a> {
     write!(f, "))")
   }
 }
-/* Guardian: disable-all */
+
 // mig: const TEST_MODULE
 const TEST_MODULE: &str = "test";
-/*
-  val TEST_MODULE = "test"
-*/
+
 // mig: fn simple
 pub fn simple<'a, T: Clone>(
     file_coord: &'a FileCoordinate<'a>,
@@ -258,13 +179,7 @@ pub fn simple<'a, T: Clone>(
     result.put(file_coord, contents);
     result
   }
-/*
-  def simple[T](fileCoord: FileCoordinate, contents: T): FileCoordinateMap[T] = {
-    val result = new FileCoordinateMap[T]()
-    result.put(fileCoord, contents)
-    result
-  }
-*/
+
 // mig: fn test
 pub fn test<'a, C: Clone>(
     scout_arena: &ScoutArena<'a>,
@@ -278,18 +193,7 @@ pub fn test<'a, C: Clone>(
     result.put(file_coord, contents);
     result
   }
-/*
-  def test[T](interner: Interner, contents: T): FileCoordinateMap[T] = {
-    val result = new FileCoordinateMap[T]()
-    result.put(
-      interner.intern(FileCoordinate(
-        interner.intern(PackageCoordinate(
-          interner.intern(StrI(TEST_MODULE)), Vector.empty)),
-        "test.vale")),
-      contents)
-    result
-  }
-*/
+
 // mig: fn test
 pub fn test_from_vec<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
@@ -301,11 +205,7 @@ pub fn test_from_vec<'a, T: Clone>(
     }
     test_from_map(parse_arena, map)
   }
-/*
-  def test[T](interner: Interner, contents: Vector[T]): FileCoordinateMap[T] = {
-    test(interner, contents.zipWithIndex.map({ case (code, index) => (index + ".vale", code) }).toMap)
-  }
-*/
+
 // mig: fn test
 pub fn test_from_map<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
@@ -319,22 +219,7 @@ pub fn test_from_map<'a, T: Clone>(
     }
     result
   }
-/*
-  def test[T](interner: Interner, contents: Map[String, T]): FileCoordinateMap[T] = {
-    val result = new FileCoordinateMap[T]()
-    contents.foreach({ case (filepath, contents) =>
-      result.put(
-        interner.intern(FileCoordinate(
-          interner.intern(PackageCoordinate(
-            interner.intern(StrI(TEST_MODULE)), Vector.empty)),
-          filepath)),
-        contents)
-    })
-    result
-  }
-}
 
-*/
 // mig: struct FileCoordinateMap
 #[derive(Clone, Debug)]
 pub struct FileCoordinateMap<'a, Contents> {
@@ -344,16 +229,7 @@ pub struct FileCoordinateMap<'a, Contents> {
 // mig: impl FileCoordinateMap
 // mergeNonOverlapping was commented out in Scala (not yet needed)
 impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
-/*
-class FileCoordinateMap[Contents](
-  val packageCoordToFileCoords: mutable.Map[PackageCoordinate, Vector[FileCoordinate]] =
-    mutable.HashMap[PackageCoordinate, Vector[FileCoordinate]](),
-  val fileCoordToContents: mutable.Map[FileCoordinate, Contents] =
-    mutable.HashMap[FileCoordinate, Contents]()
-) extends IPackageResolver[Map[String, Contents]] {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-*/
+
   pub fn new() -> Self {
     FileCoordinateMap {
       package_coord_to_file_coords: HashMap::new(),
@@ -373,14 +249,7 @@ override def hashCode(): Int = vcurious()
       .get(coord)
       .expect("FileCoordinateMap::apply - coordinate not found")
   }
-/*
-  def apply(coord: FileCoordinate): Contents = {
-    vassertSome(fileCoordToContents.get(coord))
-  }
 
-  // This is different from put in that we can hand in an empty map here.
-  // It's the only way to have an empty package in the FileCoordinateMap.
-*/
   pub fn get_by_value(&self, coord: &FileCoordinate<'_>) -> Option<&Contents> {
     self.file_coord_to_contents.iter()
       .find(|(k, _)| k.eq_by_value(coord))
@@ -405,18 +274,7 @@ override def hashCode(): Int = vcurious()
       self.file_coord_to_contents.insert(file_coord, contents);
     }
   }
-/*
-  def putPackage(
-    interner: Interner,
-    packageCoord: PackageCoordinate,
-    newFileCoordToContents: Map[FileCoordinate, Contents]):
-  Unit = {
-    packageCoordToFileCoords.put(packageCoord, newFileCoordToContents.keys.toVector)
-    newFileCoordToContents.foreach({ case (fileCoord, contents) =>
-      fileCoordToContents.put(fileCoord, contents)
-    })
-  }
-*/
+
 // mig: fn put
   pub fn put(&mut self, file_coord: &'a FileCoordinate<'a>, contents: Contents) {
     assert!(
@@ -435,15 +293,7 @@ override def hashCode(): Int = vcurious()
       .or_insert_with(Vec::new);
     file_coords.push(file_coord);
   }
-/*
-  def put(fileCoord: FileCoordinate, contents: Contents): Unit = {
-    vassert(!fileCoordToContents.contains(fileCoord))
-    fileCoordToContents.put(fileCoord, contents)
-    packageCoordToFileCoords.put(
-      fileCoord.packageCoordinate,
-      packageCoordToFileCoords.getOrElse(fileCoord.packageCoordinate, Vector()) :+ fileCoord)
-  }
-*/
+
 // mig: fn map
   pub fn map<T, F>(&self, func: F) -> FileCoordinateMap<'a, T>
   where
@@ -459,15 +309,7 @@ override def hashCode(): Int = vcurious()
       file_coord_to_contents: result_file_coord_to_contents,
     }
   }
-/*
-  def map[T](func: (FileCoordinate, Contents) => T): FileCoordinateMap[T] = {
-    val resultFileCoordToContents = mutable.HashMap[FileCoordinate, T]()
-    fileCoordToContents.foreach({ case (fileCoord, contents) =>
-      resultFileCoordToContents.put(fileCoord, func(fileCoord, contents))
-    })
-    new FileCoordinateMap(packageCoordToFileCoords, resultFileCoordToContents)
-  }
-*/
+
 // mig: fn flat_map
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where
@@ -479,13 +321,7 @@ override def hashCode(): Int = vcurious()
       .map(|(file_coord, contents)| func(file_coord, contents))
       .collect()
   }
-/*
-  def flatMap[T](func: (FileCoordinate, Contents) => T): Iterable[T] = {
-    fileCoordToContents.map({ case (fileCoord, contents) =>
-      func(fileCoord, contents)
-    })
-  }
-*/
+
 // mig: fn expect_one
   pub fn expect_one(&self) -> &Contents {
     assert!(
@@ -494,35 +330,7 @@ override def hashCode(): Int = vcurious()
     );
     self.file_coord_to_contents.values().next().unwrap()
   }
-/*
-  def expectOne(): Contents = {
-    vassertOne(fileCoordToContents.values)
-  }
 
-//  def mergeNonOverlapping(that: FileCoordinateMap[Contents]): FileCoordinateMap[Contents] = {
-//    val result =
-//      FileCoordinateMap(
-//        this.packageCoordToFileCoords ++ that.packageCoordToFileCoords,
-//        this.fileCoordToContents ++ that.fileCoordToContents)
-//    vassert(
-//      result.packageCoordToFileCoords.size ==
-//        this.packageCoordToFileCoords.size + that.packageCoordToFileCoords.size)
-//    vassert(
-//      result.fileCoordToContents.size ==
-//        this.fileCoordToContents.size + that.fileCoordToContents.size)
-//    result
-////      (this.fileCoordToContents.keySet ++ that.fileCoordToContents.keySet).map(fileCoord => {
-////        val contents =
-////          (this.fileCoordToContents.get(fileCoord).toList ++ that.fileCoordToContents.get(fileCoord).toList) match {
-////            case List(_, _) => vfail()
-////            case List(only) => only
-////            case List() => vwat()
-////          }
-////        fileCoord -> contents
-////      }).toMap)
-//  }
-
-*/
 // mig: fn resolve
   pub fn resolve(
     &self,
@@ -544,22 +352,7 @@ override def hashCode(): Int = vcurious()
           .collect()
       })
   }
-/*
-  def resolve(packageCoord: PackageCoordinate): Option[Map[String, Contents]] = {
-    Profiler.frame(() => {
-      packageCoordToFileCoords
-        .get(packageCoord)
-        .map(fileCoords => {
-          fileCoords.map(fileCoord => {
-            fileCoord.filepath -> vassertSome(fileCoordToContents.get(fileCoord))
-          }).toMap
-        })
-    })
-  }
-}
 
-object PackageCoordinateMap {
-*/
 }
 // mig: fn compose_resolvers
 pub fn compose_resolvers<'a, Contents>(
@@ -572,18 +365,7 @@ pub fn compose_resolvers<'a, Contents>(
     None => resolver_b(package_coord),
   }
 }
-/*
-  def composeResolvers[Contents](
-    resolverA: PackageCoordinate => Option[Map[String, Contents]],
-    resolverB: PackageCoordinate => Map[String, Contents])
-    (packageCoord: PackageCoordinate):
-  Map[String, Contents] = {
-    resolverA(packageCoord) match {
-      case Some(result) => result
-      case None => resolverB(packageCoord)
-    }
-  }
-*/
+
 // mig: fn compose_map_and_resolver
 pub fn compose_map_and_resolver<'a, Contents>(
   files: &FileCoordinateMap<'a, Contents>,
@@ -598,33 +380,13 @@ where
     None => then_resolver(package_coord),
   }
 }
-/*
-  def composeMapAndResolver[Contents](
-    files: FileCoordinateMap[Contents],
-    thenResolver: PackageCoordinate => Map[String, Contents])
-    (packageCoord: PackageCoordinate):
-  Map[String, Contents] = {
-    files.resolve(packageCoord) match {
-      case Some(filenameToContents) => {
-        return filenameToContents
-      }
-      case None =>
-    }
-    thenResolver(packageCoord)
-  }
-}
 
-*/
 // mig: trait IPackageResolver
 pub trait IPackageResolver<'a, T> {
-/*
-trait IPackageResolver[T] {
-*/
+
 // mig: fn resolve
   fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<T>;
-/*
-  def resolve(packageCoord: PackageCoordinate): Option[T]
-*/
+
 // mig: fn or
   fn or<F>(self, fallback: F) -> OrResolver<Self, F>
   where
@@ -636,10 +398,7 @@ trait IPackageResolver[T] {
       fallback,
     }
   }
-/*
-  def or(fallback: IPackageResolver[T]): IPackageResolver[T] =
-    x => innerOr(fallback, x)
-*/
+
 // mig: fn inner_or
   fn inner_or(
     &self,
@@ -654,16 +413,7 @@ trait IPackageResolver[T] {
       None => fallback.resolve(package_coord),
     }
   }
-/*
-  def innerOr(fallback: IPackageResolver[T], packageCoord: PackageCoordinate): Option[T] = {
-    resolve(packageCoord) match {
-      case Some(x) => Some(x)
-      case None => fallback.resolve(packageCoord)
-    }
-  }
-}
 
-*/
 }
 
 impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>>
@@ -680,14 +430,7 @@ pub struct PackageCoordinateMap<'a, Contents> {
 }
 // mig: impl PackageCoordinateMap
 impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
-/*
-case class PackageCoordinateMap[Contents](
-  packageCoordToContents: mutable.HashMap[PackageCoordinate, Contents] =
-    mutable.HashMap[PackageCoordinate, Contents]()) {
 
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-*/
   pub fn new() -> Self {
     PackageCoordinateMap {
       package_coord_to_contents: HashMap::new(),
@@ -698,20 +441,12 @@ override def hashCode(): Int = vcurious()
   pub fn put(&mut self, package_coord: &'a PackageCoordinate<'a>, contents: Contents) {
     self.package_coord_to_contents.insert(package_coord, contents);
   }
-/*
-  def put(packageCoord: PackageCoordinate, contents: Contents): Unit = {
-    packageCoordToContents.put(packageCoord, contents)
-  }
-*/
+
 // mig: fn get
   pub fn get(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<&Contents> {
     self.package_coord_to_contents.get(package_coord)
   }
-/*
-  def get(packageCoord: PackageCoordinate): Option[Contents] = {
-    packageCoordToContents.get(packageCoord)
-  }
-*/
+
 // mig: fn expect_one
   pub fn expect_one(&self) -> &Contents {
     assert!(
@@ -720,11 +455,7 @@ override def hashCode(): Int = vcurious()
     );
     self.package_coord_to_contents.values().next().unwrap()
   }
-/*
-  def expectOne(): Contents = {
-    vassertOne(packageCoordToContents.values)
-  }
-*/
+
 // mig: fn map
   pub fn map<T, F>(&self, func: F) -> PackageCoordinateMap<'a, T>
   where
@@ -737,15 +468,7 @@ override def hashCode(): Int = vcurious()
     }
     result
   }
-/*
-  def map[T](func: (PackageCoordinate, Contents) => T): PackageCoordinateMap[T] = {
-    val result = new PackageCoordinateMap[T]()
-    packageCoordToContents.foreach({ case (packageCoord, contents) =>
-      result.put(packageCoord, func(packageCoord, contents))
-    })
-    result
-  }
-*/
+
 // mig: fn flat_map
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where
@@ -757,13 +480,5 @@ override def hashCode(): Int = vcurious()
       .map(|(package_coord, contents)| func(package_coord, contents))
       .collect()
   }
-/*
-  def flatMap[T](func: (PackageCoordinate, Contents) => T): Iterable[T] = {
-    packageCoordToContents.map({ case (packageCoord, contents) =>
-      func(packageCoord, contents)
-    })
-  }
-}
 
-*/
 }

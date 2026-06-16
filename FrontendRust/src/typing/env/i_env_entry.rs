@@ -5,18 +5,7 @@ use std::hash::Hasher;
 use std::mem::discriminant;
 use std::ptr::eq;
 
-/*
-package dev.vale.typing.env
 
-import dev.vale.highertyping.{FunctionA, ImplA, InterfaceA, StructA}
-import dev.vale.typing.templata.ITemplataT
-import dev.vale.vpass
-import dev.vale.highertyping.FunctionA
-import dev.vale.postparsing.ITemplataType
-import dev.vale.typing.templata.IContainer
-import dev.vale.typing.types.InterfaceTT
-import dev.vale.vpass
-*/
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, Debug)]
@@ -29,9 +18,7 @@ where 's: 't,
   Impl(&'s ImplA<'s>),
   Templata(ITemplataT<'s, 't>),
 }
-/*
-sealed trait IEnvEntry
-*/
+
 
 // FunctionA/StructA/InterfaceA/ImplA are arena-allocated (ATDCX) and don't
 // derive PartialEq/Eq/Hash. Compare/hash those variants by pointer identity;
@@ -49,7 +36,7 @@ where 's: 't,
       _ => false,
     }
   }
-  /* Guardian: disable-all */
+  
 }
 
 impl<'s, 't> Eq for IEnvEntryT<'s, 't> where 's: 't {}
@@ -66,34 +53,10 @@ where 's: 't,
       IEnvEntryT::Templata(t) => t.hash(state),
     }
   }
-  /* Guardian: disable-all */
+  
 }
-/*
-// We dont have the unevaluatedContainers in here because see TMRE
-case class FunctionEnvEntry(function: FunctionA) extends IEnvEntry {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-}
-*/
-/*
-case class ImplEnvEntry(impl: ImplA) extends IEnvEntry {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
-/*
-case class StructEnvEntry(struct: StructA) extends IEnvEntry {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
-/*
-case class InterfaceEnvEntry(interface: InterfaceA) extends IEnvEntry {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
-/*
-case class TemplataEnvEntry(templata: ITemplataT[ITemplataType]) extends IEnvEntry {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-  vpass()
-}
-*/
+
+
+
+
+

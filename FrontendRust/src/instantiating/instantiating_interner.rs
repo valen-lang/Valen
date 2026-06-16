@@ -1,4 +1,4 @@
-/* Guardian: disable-all */
+
 // Mirrors src/typing/typing_interner.rs (per architect decision Slab 16a/16b).
 //
 // Scala had a single `Interner` shared across passes that used `HashMap[T, T]`

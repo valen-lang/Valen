@@ -10,11 +10,7 @@ pub struct GlobalOptions {
 
 // mig: impl GlobalOptions
 impl GlobalOptions {
-  /*
-  package dev.vale.options
-
-  object GlobalOptions {
-  */
+  
   // mig: fn apply
   pub fn apply() -> GlobalOptions {
     GlobalOptions {
@@ -25,16 +21,7 @@ impl GlobalOptions {
       debug_output: false,
     }
   }
-  /*
-    def apply(): GlobalOptions = {
-      GlobalOptions(
-        sanityCheck = false,
-        useOverloadIndex = false,
-        useOptimizedSolver = true,
-        verboseErrors = false,
-        debugOutput = false)
-    }
-  */
+  
   // mig: fn test
   pub fn test() -> GlobalOptions {
     GlobalOptions {
@@ -45,19 +32,7 @@ impl GlobalOptions {
       debug_output: true,
     }
   }
-  /*
-    def test(): GlobalOptions = {
-      GlobalOptions(true, false, true, true, true)
-    }
-  }
-  */
+  
 }
 
-/*
-case class GlobalOptions(
-  sanityCheck: Boolean,
-  useOverloadIndex: Boolean,
-  useOptimizedSolver: Boolean,
-  verboseErrors: Boolean,
-  debugOutput: Boolean)
-*/
+

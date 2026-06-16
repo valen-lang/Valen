@@ -24,37 +24,9 @@ use crate::postparsing::ast::ICitizenAttributeS;
 use crate::typing::templata::conversions::evaluate_mutability;
 use std::collections::HashMap;
 
-/*
-package dev.vale.typing.citizen
 
-import dev.vale.highertyping.FunctionA
-import dev.vale._
-import dev.vale.postparsing._
-import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.typing.ast.{FunctionHeaderT, PrototypeT}
-import dev.vale.typing.env.IInDenizenEnvironmentT
-import dev.vale.typing._
-import dev.vale.typing.names._
-import dev.vale.typing.templata._
-import dev.vale.typing.types._
-import dev.vale.highertyping._
-import dev.vale.typing.types._
-import dev.vale.typing.templata._
-import dev.vale.parsing._
-import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.postparsing.rules._
-import dev.vale.typing.env._
-import dev.vale.typing.function._
-import dev.vale.typing.ast._
-import dev.vale.typing.templata.ITemplataT.expectMutability
 
-import scala.collection.immutable.List
-import scala.collection.mutable
-*/
 
-/*
-// See ODMFRC.
-*/
 pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s, 't>,
     pub ranges: Vec<RangeS<'s>>,
@@ -62,59 +34,22 @@ pub struct UncheckedDefiningConclusions<'s, 't> {
     pub definition_rules: Vec<IRulexSR<'s>>,
     pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
-/*
-case class UncheckedDefiningConclusions(
-    envs: InferEnv,
-    ranges: List[RangeS],
-    callLocation: LocationInDenizen,
-    definitionRules: Vector[IRulexSR],
-    conclusions: Map[IRuneS, ITemplataT[ITemplataType]])
-*/
+
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
-/*
-trait IStructCompilerDelegate {
-*/
-/*
-  def evaluateGenericFunctionFromNonCallForHeader(
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-    callLocation: LocationInDenizen,
-    functionTemplata: FunctionTemplataT):
-  FunctionHeaderT
-*/
-/*
-  def scoutExpectedFunctionForPrototype(
-    env: IInDenizenEnvironmentT,
-    coutputs: CompilerOutputs,
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    functionName: IImpreciseNameS,
-    explicitTemplateArgRulesS: Vector[IRulexSR],
-    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
-    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
-    contextRegion: RegionT,
-    args: Vector[CoordT],
-    extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
-    exact: Boolean):
-  StampFunctionSuccess
-}
-*/
+
+
+
 
 pub enum IResolveOutcome<'s, 't, T> {
     ResolveSuccess(ResolveSuccess<'s, 't, T>),
     ResolveFailure(ResolveFailure<'s, 't, T>),
 }
-/*
-sealed trait IResolveOutcome[+T <: KindT] {
-*/
+
 fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
     // abstract method — see ResolveSuccess.expect / ResolveFailure.expect
 }
-/*
-  def expect(): ResolveSuccess[T]
-}
-*/
+
 
 pub struct ResolveSuccess<'s, 't, T> {
     pub kind: T,
@@ -125,14 +60,9 @@ fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
     // this
 }
-/*
-case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
-*/
+
 }
-/*
-  override def expect(): ResolveSuccess[T] = this
-}
-*/
+
 #[derive(Debug)]
 pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
@@ -144,29 +74,10 @@ fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
     // throw CompileErrorExceptionT(TypingPassResolvingError(range, x))
 }
-/*
-case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) extends IResolveOutcome[T] {
-*/
+
 }
-/*
-  override def expect(): ResolveSuccess[T] = {
-    throw CompileErrorExceptionT(TypingPassResolvingError(range, x))
-  }
-}
-*/
-/*
-class StructCompiler(
-    opts: TypingPassOptions,
-    interner: Interner,
-    keywords: Keywords,
-    nameTranslator: NameTranslator,
-    templataCompiler: TemplataCompiler,
-    inferCompiler: InferCompiler,
-    delegate: IStructCompilerDelegate) {
-  val templateArgsLayer =
-    new StructCompilerGenericArgsLayer(
-      opts, interner, keywords, nameTranslator, templataCompiler, inferCompiler, delegate)
-*/
+
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -181,21 +92,7 @@ where 's: 't,
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
         self.resolve_struct_layer(coutputs, calling_env, call_range, call_location, struct_templata, uncoerced_template_args)
     }
-/*
-  def resolveStruct(
-    coutputs: CompilerOutputs,
-    callingEnv: IInDenizenEnvironmentT, // See CSSNCE
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    structTemplata: StructDefinitionTemplataT,
-    uncoercedTemplateArgs: Vector[ITemplataT[ITemplataType]]):
-  IResolveOutcome[StructTT] = {
-    Profiler.frame(() => {
-      templateArgsLayer.resolveStruct(
-        coutputs, callingEnv, callRange, callLocation, structTemplata, uncoercedTemplateArgs)
-    })
-  }
-*/
+
     pub fn precompile_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -250,55 +147,7 @@ where 's: 't,
         let outer_env_ref = IInDenizenEnvironmentT::Citizen(outer_env);
         coutputs.declare_type_outer_env(struct_template_id, outer_env_ref);
     }
-/*
-  def precompileStruct(
-    coutputs: CompilerOutputs,
-    structTemplata: StructDefinitionTemplataT):
-  Unit = {
-    val StructDefinitionTemplataT(declaringEnv, structA) = structTemplata
 
-    val structTemplateId = templataCompiler.resolveStructTemplate(structTemplata)
-
-    coutputs.declareType(structTemplateId)
-
-    structA.maybePredictedMutability match {
-      case None =>
-      case Some(predictedMutability) => {
-        coutputs.declareTypeMutability(
-          structTemplateId,
-          MutabilityTemplataT(Conversions.evaluateMutability(predictedMutability)))
-      }
-    }
-
-    // We declare the struct's outer environment this early because of MDATOEF.
-    val outerEnv =
-      CitizenEnvironmentT(
-        declaringEnv.globalEnv,
-        declaringEnv,
-        structTemplateId,
-        structTemplateId,
-        TemplatasStore(structTemplateId, Map(), Map())
-          .addEntries(
-            interner,
-            // Internal methods declared inside the struct body (see IMRFDI). Mirrors the
-            // interface registration below: the struct's outer env is the single home for
-            // its internal methods, and lookups from per-instantiation envs walk up to find
-            // them.
-            structA.internalMethods
-              .map(internalMethod => {
-                val functionName = nameTranslator.translateGenericFunctionName(internalMethod.name)
-                (functionName -> FunctionEnvEntry(internalMethod))
-              }) ++
-            // Merge in any things from the global environment that say they're part of this
-            // structs's namespace (see IMRFDI and CODME).
-            // StructFreeMacro will put a free function here.
-            declaringEnv.globalEnv.nameToTopLevelEnvironment
-              .get(structTemplateId.addStep(interner.intern(PackageTopLevelNameT())))
-              .toVector
-              .flatMap(_.entriesByNameT)))
-    coutputs.declareTypeOuterEnv(structTemplateId, outerEnv)
-  }
-*/
     pub fn precompile_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -372,58 +221,7 @@ where 's: 't,
         let outer_env_ref = IInDenizenEnvironmentT::Citizen(outer_env);
         coutputs.declare_type_outer_env(interface_template_id, outer_env_ref);
     }
-/*
-  def precompileInterface(
-    coutputs: CompilerOutputs,
-    interfaceTemplata: InterfaceDefinitionTemplataT):
-  Unit = {
-    val InterfaceDefinitionTemplataT(declaringEnv, interfaceA) = interfaceTemplata
 
-    val interfaceTemplateId = templataCompiler.resolveInterfaceTemplate(interfaceTemplata)
-
-    coutputs.declareType(interfaceTemplateId)
-
-    interfaceA.maybePredictedMutability match {
-      case None =>
-      case Some(predictedMutability) => {
-        coutputs.declareTypeMutability(
-          interfaceTemplateId,
-          MutabilityTemplataT(Conversions.evaluateMutability(predictedMutability)))
-      }
-    }
-
-    // We do this here because we might compile a virtual function somewhere before we compile the interface.
-    // The virtual function will need to know if the type is sealed to know whether it's allowed to be
-    // virtual on this interface.
-    coutputs.declareTypeSealed(interfaceTemplateId, interfaceA.attributes.contains(SealedS))
-
-
-    // We declare the interface's outer environment this early because of MDATOEF.
-    val outerEnv =
-      CitizenEnvironmentT(
-        declaringEnv.globalEnv,
-        declaringEnv,
-        interfaceTemplateId,
-        interfaceTemplateId,
-        TemplatasStore(interfaceTemplateId, Map(), Map())
-          .addEntries(
-            interner,
-            // TODO: Take those internal methods that were defined inside the interface, and move them to
-            // just be name-prefixed like Free is, see IMRFDI.
-            interfaceA.internalMethods
-              .map(internalMethod => {
-                val functionName = nameTranslator.translateGenericFunctionName(internalMethod.name)
-                (functionName -> FunctionEnvEntry(internalMethod))
-              }) ++
-              // Merge in any things from the global environment that say they're part of this
-              // interface's namespace (see IMRFDI and CODME).
-              declaringEnv.globalEnv.nameToTopLevelEnvironment
-                .get(interfaceTemplateId.addStep(interner.intern(PackageTopLevelNameT())))
-                .toVector
-                .flatMap(_.entriesByNameT)))
-    coutputs.declareTypeOuterEnv(interfaceTemplateId, outerEnv)
-  }
-*/
     pub fn compile_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -433,20 +231,7 @@ where 's: 't,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         self.compile_struct_layer(coutputs, parent_ranges, call_location, struct_templata)
     }
-/*
-  def compileStruct(
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-    callLocation: LocationInDenizen,
-    structTemplata: StructDefinitionTemplataT):
-  UncheckedDefiningConclusions = {
-    Profiler.frame(() => {
-      templateArgsLayer.compileStruct(coutputs, parentRanges, callLocation, structTemplata)
-    })
-  }
 
-  // See SFWPRL for how this is different from resolveInterface.
-*/
     pub fn predict_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -458,23 +243,7 @@ where 's: 't,
     ) -> InterfaceTT<'s, 't> {
         self.predict_interface_layer(coutputs, calling_env, call_range, call_location, interface_templata, uncoerced_template_args)
     }
-/*
-  def predictInterface(
-    coutputs: CompilerOutputs,
-    callingEnv: IInDenizenEnvironmentT, // See CSSNCE
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    // We take the entire templata (which includes environment and parents) so we can incorporate
-    // their rules as needed
-    interfaceTemplata: InterfaceDefinitionTemplataT,
-    uncoercedTemplateArgs: Vector[ITemplataT[ITemplataType]]):
-  (InterfaceTT) = {
-    templateArgsLayer.predictInterface(
-      coutputs, callingEnv, callRange, callLocation, interfaceTemplata, uncoercedTemplateArgs)
-  }
 
-  // See SFWPRL for how this is different from resolveStruct.
-*/
     pub fn predict_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -486,21 +255,7 @@ where 's: 't,
     ) -> StructTT<'s, 't> {
         self.predict_struct_layer(coutputs, calling_env, call_range, call_location, struct_templata, uncoerced_template_args)
     }
-/*
-  def predictStruct(
-    coutputs: CompilerOutputs,
-    callingEnv: IInDenizenEnvironmentT, // See CSSNCE
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    // We take the entire templata (which includes environment and parents) so we can incorporate
-    // their rules as needed
-    structTemplata: StructDefinitionTemplataT,
-    uncoercedTemplateArgs: Vector[ITemplataT[ITemplataType]]):
-  (StructTT) = {
-    templateArgsLayer.predictStruct(
-      coutputs, callingEnv, callRange, callLocation, structTemplata, uncoercedTemplateArgs)
-  }
-*/
+
     pub fn resolve_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -512,24 +267,7 @@ where 's: 't,
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
         self.resolve_interface_layer(coutputs, calling_env, call_range, call_location, interface_templata, uncoerced_template_args)
     }
-/*
-  def resolveInterface(
-    coutputs: CompilerOutputs,
-    callingEnv: IInDenizenEnvironmentT, // See CSSNCE
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    // We take the entire templata (which includes environment and parents) so we can incorporate
-    // their rules as needed
-    interfaceTemplata: InterfaceDefinitionTemplataT,
-    uncoercedTemplateArgs: Vector[ITemplataT[ITemplataType]]):
-  IResolveOutcome[InterfaceTT] = {
-    val success =
-      templateArgsLayer.resolveInterface(
-        coutputs, callingEnv, callRange, callLocation, interfaceTemplata, uncoercedTemplateArgs)
 
-    success
-  }
-*/
     pub fn compile_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -539,21 +277,7 @@ where 's: 't,
     ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         self.compile_interface_layer(coutputs, parent_ranges, call_location, interface_templata)
     }
-/*
-  def compileInterface(
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-    callLocation: LocationInDenizen,
-    // We take the entire templata (which includes environment and parents) so we can incorporate
-    // their rules as needed
-    interfaceTemplata: InterfaceDefinitionTemplataT):
-  UncheckedDefiningConclusions = {
-    templateArgsLayer.compileInterface(
-      coutputs, parentRanges, callLocation, interfaceTemplata)
-  }
 
-  // Makes a struct to back a closure
-*/
     pub fn make_closure_understruct(
         &self,
         containing_function_env: &'t NodeEnvironmentT<'s, 't>,
@@ -567,38 +291,8 @@ where 's: 't,
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }
-/*
-  def makeClosureUnderstruct(
-    containingFunctionEnv: NodeEnvironmentT,
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-    callLocation: LocationInDenizen,
-    name: IFunctionDeclarationNameS,
-    functionS: FunctionA,
-    members: Vector[NormalStructMemberT]):
-  (StructTT, MutabilityT, FunctionTemplataT) = {
-//    Profiler.reentrant("StructCompiler-makeClosureUnderstruct", name.codeLocation.toString, () => {
-      templateArgsLayer.makeClosureUnderstruct(containingFunctionEnv, coutputs, parentRanges, callLocation, name, functionS, members)
-//    })
-  }
 
-//  def getMemberCoords(coutputs: CompilerOutputs, structTT: StructTT): Vector[CoordT] = {
-//    coutputs.lookupStruct(structTT).members.map(_.tyype).map({
-//      case ReferenceMemberTypeT(coord) => coord
-//      case AddressMemberTypeT(_) => {
-//        // At time of writing, the only one who calls this is the inferer, who wants to know so it
-//        // can match incoming arguments into a destructure. Can we even destructure things with
-//        // addressible members?
-//        vcurious()
-//      }
-//    })
-//  }
 
-}
-*/
-/*
-object StructCompiler {
-*/
     pub fn get_compound_type_mutability(
         &self,
         member_types: &[CoordT<'s, 't>],
@@ -608,14 +302,7 @@ object StructCompiler {
         // val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
         // if (allMembersImmutable) ImmutableT else MutableT
     }
-    /*
-      def getCompoundTypeMutability(memberTypes2: Vector[CoordT])
-      : MutabilityT = {
-        val membersOwnerships = memberTypes2.map(_.ownership)
-        val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
-        if (allMembersImmutable) ImmutableT else MutableT
-      }
-    */
+    
     pub fn struct_compiler_get_mutability(
         &self,
         sanity_check: bool,
@@ -635,28 +322,6 @@ object StructCompiler {
         let result = transformer.substitute_for_templata(coutputs, definition.mutability);
         result
     }
-    /* Guardian: disable-all */
-    /*
-      def getMutability(
-        sanityCheck: Boolean,
-        interner: Interner,
-        keywords: Keywords,
-        coutputs: CompilerOutputs,
-        originalCallingDenizenId: IdT[ITemplateNameT],
-        region: RegionT,
-        structTT: StructTT,
-        boundArgumentsSource: IBoundArgumentsSource):
-      ITemplataT[MutabilityTemplataType] = {
-        val definition = coutputs.lookupStruct(structTT.id)
-        val transformer =
-          TemplataCompiler.getPlaceholderSubstituter(
-            sanityCheck,
-            interner, keywords,
-            originalCallingDenizenId,
-            structTT.id, boundArgumentsSource)
-        val result = transformer.substituteForTemplata(coutputs, definition.mutability)
-        ITemplataT.expectMutability(result)
-      }
-    }
-    */
+    
+    
 }

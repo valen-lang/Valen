@@ -1,22 +1,6 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::rule_tests
 
-/*
-package dev.vale.parsing.rules
 
-import dev.vale.{Collector, StrI}
-import dev.vale.parsing.ast.{AnonymousRunePT, BuiltinCallPR, ComponentsPR, EqualsPR, IRulexPR, NameOrRunePT, NameP, FuncPT, PrototypeTypePR, TemplexPR}
-import dev.vale.parsing.templex.TemplexParser
-import dev.vale.parsing._
-import dev.vale.parsing.ast.PatternPP
-import dev.vale.Collector
-import org.scalatest._
-
-class RuleTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): IRulexPR = {
-    compileRulex(code)
-//    compile(new TemplexParser().parseRule(_), code)
-  }
-*/
 use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
@@ -91,22 +75,7 @@ fn relations() {
     assert_templex_name(func.return_type, "int");
   }
 }
-/*
-  test("Relations") {
-    compile("implements(MyObject, IObject)") shouldHave {
-      case BuiltinCallPR(_, NameP(_, StrI("implements")),Vector(TemplexPR(NameOrRunePT(NameP(_, StrI("MyObject")))), TemplexPR(NameOrRunePT(NameP(_, StrI("IObject")))))) =>
-    }
-    compile("implements(R, IObject)") shouldHave {
-        case BuiltinCallPR(_, NameP(_, StrI("implements")),Vector(TemplexPR(NameOrRunePT(NameP(_, StrI("R")))), TemplexPR(NameOrRunePT(NameP(_, StrI("IObject")))))) =>
-    }
-    compile("implements(MyObject, T)") shouldHave {
-        case BuiltinCallPR(_, NameP(_, StrI("implements")),Vector(TemplexPR(NameOrRunePT(NameP(_, StrI("MyObject")))), TemplexPR(NameOrRunePT(NameP(_, StrI("T")))))) =>
-    }
-    compile("exists(func +(T)int)") shouldHave {
-        case BuiltinCallPR(_, NameP(_, StrI("exists")), Vector(TemplexPR(FuncPT(_,NameP(_, StrI("+")), _, Vector(NameOrRunePT(NameP(_, StrI("T")))), NameOrRunePT(NameP(_, StrI("int"))))))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn super_complicated() {
@@ -115,11 +84,7 @@ fn super_complicated() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   compile(&parse_arena, &keywords, "C = any([#I]X, [#N]T)");
 }
-/*
-  test("Super complicated") {
-    compile("C = any([#I]X, [#N]T)") // succeeds
-  }
-*/
+
 
 #[test]
 fn destructure_prototype() {
@@ -136,17 +101,7 @@ fn destructure_prototype() {
   assert_templex_name(cast!(t_, IRulexPR::Templex), "T");
   assert_templex_name(cast!(equals.right, IRulexPR::Templex), "moo");
 }
-/*
-  test("destructure prototype") {
-    compile("Prot[_, _, T] = moo") shouldHave {
-      case EqualsPR(_,
-        ComponentsPR(_,
-          PrototypeTypePR,
-          Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(NameOrRunePT(NameP(_, StrI("T")))))),
-        TemplexPR(NameOrRunePT(NameP(_, StrI("moo"))))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn func() {
@@ -159,18 +114,7 @@ fn func() {
   assert!(func.parameters.is_empty());
   assert_templex_name(func.return_type, "T");
 }
-/*
-  test("func") {
-    compile("func moo()T") shouldHave {
-      case TemplexPR(
-        FuncPT(_,
-          NameP(_,StrI("moo")),
-          _,
-          Vector(),
-          NameOrRunePT(NameP(_,StrI("T"))))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn prototype_with_coords() {
@@ -192,16 +136,4 @@ fn prototype_with_coords() {
   assert_templex_name(cast!(bool_, IRulexPR::Templex), "bool");
   cast!(cast!(third_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
 }
-/*
-  test("prototype with coords") {
-    compile("Prot[_, pack(int, bool), _]") shouldHave {
-      case ComponentsPR(_,
-        PrototypeTypePR,
-        Vector(
-          TemplexPR(AnonymousRunePT(_)),
-          BuiltinCallPR(_,NameP(_, StrI("pack")),Vector(TemplexPR(NameOrRunePT(NameP(_, StrI("int")))), TemplexPR(NameOrRunePT(NameP(_, StrI("bool")))))),
-          TemplexPR(AnonymousRunePT(_)))) =>
-    }
-  }
-}
-*/
+

@@ -9,14 +9,7 @@ use crate::utils::code_hierarchy::test_from_vec;
 use std::collections::HashMap;
 use crate::utils::code_hierarchy::IPackageResolver;
 
-/*
-package dev.vale.highertyping
 
-import dev.vale.{FileCoordinateMap, Keywords, PackageCoordinate, Tests, _}
-import dev.vale.options.GlobalOptions
-
-object HigherTypingTestCompilation {
-*/
 // mig: fn test
 pub fn test<'s, 'ctx, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
@@ -43,17 +36,4 @@ pub fn test<'s, 'ctx, 'p>(
         GlobalOptions::test(),
     )
 }
-/*
-  def test(code: String*): HigherTypingCompilation = {
-    val interner = new Interner()
-    val keywords = new Keywords(interner)
-    new HigherTypingCompilation(
-      GlobalOptions.test(),
-      interner,
-      keywords,
-      Vector(PackageCoordinate.TEST_TLD(interner, keywords)),
-      FileCoordinateMap.test(interner, code.toVector)
-        .or(Tests.getPackageToResourceResolver))
-  }
-}
-*/
+

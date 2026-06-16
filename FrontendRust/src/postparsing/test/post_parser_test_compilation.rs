@@ -6,14 +6,7 @@ use crate::scout_arena::ScoutArena;
 use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 
-/*
-package dev.vale.postparsing
 
-import dev.vale.{FileCoordinateMap, Interner, Keywords, PackageCoordinate}
-import dev.vale.options.GlobalOptions
-
-object PostParserTestCompilation {
-*/
 // mig: fn test
 pub fn test<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
@@ -48,17 +41,5 @@ where 'p: 's,
     global_options,
   )
 }
-/*
-  def test(code: String, interner: Interner = new Interner()): ScoutCompilation = {
-    val keywords = new Keywords(interner)
-    new ScoutCompilation(
-      GlobalOptions(true, true, true, false, false),
-      interner,
-      keywords,
-      Vector(PackageCoordinate.TEST_TLD(interner, keywords)),
-      FileCoordinateMap.test(interner, Vector(code)))
-  }
-*/
-/*
-}
-*/
+
+

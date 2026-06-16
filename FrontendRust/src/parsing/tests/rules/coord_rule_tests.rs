@@ -1,21 +1,6 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::coord_rule_tests
 
-/*
-package dev.vale.parsing.rules
 
-import dev.vale.{Collector, Interner, StrI}
-import dev.vale.parsing.ast.{AnonymousRunePT, ComponentsPR, CoordTypePR, EqualsPR, IRulexPR, KindTypePR, MutabilityPT, MutableP, NameOrRunePT, NameP, OwnP, OwnershipPT, TemplexPR, TuplePT, TypedPR}
-import dev.vale.parsing.templex.TemplexParser
-import dev.vale.parsing._
-import dev.vale.parsing.ast.PatternPP
-import org.scalatest._
-
-class CoordRuleTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): IRulexPR = {
-    compileRulex(code)
-//    compile(new TemplexParser(interner).parseRule(_), code)
-  }
-*/
 use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
@@ -44,14 +29,7 @@ fn empty_coord_rule() {
   assert!(typed.rune.is_none());
   assert_eq!(typed.tyype, ITypePR::CoordType);
 }
-/*
-  test("Empty Coord rule") {
-    // MIGALLOW: Not searching deeply
-    compile("_ Ref") shouldHave {
-      case TypedPR(_,None,CoordTypePR) =>
-    }
-  }
-*/
+
 
 #[test]
 fn coord_with_rune() {
@@ -63,14 +41,7 @@ fn coord_with_rune() {
   assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
 }
-/*
-  test("Coord with rune") {
-    // MIGALLOW: Not searching deeply
-    compile("T Ref") shouldHave {
-      case TypedPR(_,Some(NameP(_, StrI("T"))),CoordTypePR) =>
-    }
-  }
-*/
+
 #[test]
 fn coord_with_destructure_only() {
   let parse_bump = Bump::new();
@@ -84,14 +55,7 @@ fn coord_with_destructure_only() {
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
 }
-/*
-  test("Coord with destructure only") {
-    // MIGALLOW: Not searching deeply
-    compile("Ref[_, _, _]") shouldHave {
-      case ComponentsPR(_,CoordTypePR,Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn coord_with_rune_and_destructure() {
@@ -120,20 +84,7 @@ fn coord_with_rune_and_destructure() {
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
 }
-/*
-  test("Coord with rune and destructure") {
-    // MIGALLOW: Not searching deeply
-    compile("T = Ref[_, _, _]") shouldHave {
-      case ComponentsPR(_,CoordTypePR,Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)))) =>
-    }
-    // MIGALLOW: Not searching deeply
-    compile("T = Ref[own, _, _]") shouldHave {
-        case ComponentsPR(_,
-          CoordTypePR,
-          Vector(TemplexPR(OwnershipPT(_,OwnP)), TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)))) =>
-    }
-  }
-*/
+
 #[test]
 fn coord_matches_plain_int() {
   // Coord can do this because I want to be able to say:
@@ -154,24 +105,7 @@ fn coord_matches_plain_int() {
   let templex = cast!(rule, IRulexPR::Templex);
   assert_templex_name(&templex, "int");
 }
-/*
-  test("Coord matches plain Int") {
-    // Coord can do this because I want to be able to say:
-    //   func moo
-    //   where #T = (Int):Void
-    //   (a: #T)
-    // instead of:
-    //   func moo
-    //   rules(
-    //     Ref#T[_, Ref[_, Int]]:Ref[_, Void]))
-    //   (a: #T)
-    // MIGALLOW: Different comment
-    compile("int") shouldHave {
-      case TemplexPR(NameOrRunePT(NameP(_, StrI("int")))) =>
-    }
-    // MIGALLOW: Not searching deeply
-  }
-*/
+
 #[test]
 fn coord_with_int_in_kind_rule() {
   let parse_bump = Bump::new();
@@ -185,16 +119,7 @@ fn coord_with_int_in_kind_rule() {
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert_templex_name(cast!(third, IRulexPR::Templex), "int");
 }
-/*
-  test("Coord with Int in kind rule") {
-    // MIGALLOW: Not searching deeply
-    compile("Ref[_, _, int]") shouldHave {
-      case ComponentsPR(_,
-          CoordTypePR,
-          Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(NameOrRunePT(NameP(_, StrI("int")))))) =>
-    }
-  }
-*/
+
 
 #[test]
 fn coord_with_specific_kind_rule() {
@@ -213,20 +138,7 @@ fn coord_with_specific_kind_rule() {
   let mutability = cast!(cast!(mutability_rule, IRulexPR::Templex), ITemplexPT::Mutability);
   assert_eq!(mutability.1, MutabilityP::Mutable);
 }
-/*
-  test("Coord with specific Kind rule") {
-    // MIGALLOW: Not searching deeply
-    compile("Ref[_, _, Kind[mut]]") shouldHave {
-      case ComponentsPR(_,
-          CoordTypePR,
-          Vector(
-            TemplexPR(AnonymousRunePT(_)),
-            TemplexPR(AnonymousRunePT(_)),
-            ComponentsPR(_,
-              KindTypePR,Vector(TemplexPR(MutabilityPT(_,MutableP)))))) =>
-    }
-  }
-*/
+
 #[test]
 fn coord_with_value() {
   let parse_bump = Bump::new();
@@ -239,16 +151,7 @@ fn coord_with_value() {
   assert_eq!(typed.tyype, ITypePR::CoordType);
   assert_templex_name(cast!(equals.right, IRulexPR::Templex), "int");
 }
-/*
-  test("Coord with value") {
-    // MIGALLOW: Not searching deeply
-    compile("T Ref = int") shouldHave {
-      case EqualsPR(_,
-          TypedPR(_,Some(NameP(_, StrI("T"))),CoordTypePR),
-          TemplexPR(NameOrRunePT(NameP(_, StrI("int"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn coord_with_destructure_and_value() {
   let parse_bump = Bump::new();
@@ -264,16 +167,7 @@ fn coord_with_destructure_and_value() {
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert_templex_name(cast!(equals.right, IRulexPR::Templex), "int");
 }
-/*
-  test("Coord with destructure and value") {
-    // MIGALLOW: Not searching deeply
-    compile("Ref[_, _, _] = int") shouldHave {
-      case EqualsPR(_,
-          ComponentsPR(_,CoordTypePR,Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)))),
-          TemplexPR(NameOrRunePT(NameP(_, StrI("int"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn coord_with_sequence_in_value_spot() {
   let parse_bump = Bump::new();
@@ -289,18 +183,7 @@ fn coord_with_sequence_in_value_spot() {
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");
 }
-/*
-  test("Coord with sequence in value spot") {
-    // MIGALLOW: Not searching deeply
-    compile("T Ref = (int, bool)") shouldHave {
-      case EqualsPR(_,
-          TypedPR(_,Some(NameP(_, StrI("T"))),CoordTypePR),
-          TemplexPR(
-            TuplePT(_,
-              Vector(NameOrRunePT(NameP(_, StrI("int"))), NameOrRunePT(NameP(_, StrI("bool"))))))) =>
-    }
-  }
-*/
+
 #[test]
 fn lone_tuple_is_sequence() {
   let parse_bump = Bump::new();
@@ -312,14 +195,4 @@ fn lone_tuple_is_sequence() {
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");
 }
-/*
-  test("Lone tuple is sequence") {
-    // MIGALLOW: Not searching deeply
-    compile("(int, bool)") shouldHave {
-      case TemplexPR(
-          TuplePT(_,
-            Vector(NameOrRunePT(NameP(_, StrI("int"))), NameOrRunePT(NameP(_, StrI("bool")))))) =>
-        }
-  }
-}
-*/
+

@@ -80,4 +80,4 @@ fn testvale_full_file_parses() {
   let _ = compile_file(&parse_arena, &keywords, &code)
     .unwrap_or_else(|e| panic!("testvale.vale failed to parse: {:?}", e));
 }
-/* Guardian: disable-all */
+

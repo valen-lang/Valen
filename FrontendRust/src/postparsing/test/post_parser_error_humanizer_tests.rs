@@ -14,17 +14,7 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::Keywords;
 
-/*
-package dev.vale.postparsing
 
-import dev.vale.{CodeLocationS, Err, FileCoordinateMap, Interner, Ok, RangeS, SourceCodeUtils, StrI, vassert, vfail}
-import dev.vale.options.GlobalOptions
-import dev.vale.parsing._
-import dev.vale.postparsing.rules._
-import org.scalatest._
-
-class PostParserErrorHumanizerTests extends FunSuite with Matchers {
-*/
 fn compile<'s, 'ctx, 'p>(
   _scout_arena: &'ctx ScoutArena<'s>,
   _keywords: &'ctx Keywords<'s>,
@@ -34,24 +24,7 @@ fn compile<'s, 'ctx, 'p>(
 {
   panic!("Unimplemented: compile");
 }
-/*
-  private def compile(code: String): ProgramS = {
-    val interner = new Interner()
-    PostParserTestCompilation.test(code).getScoutput() match {
-      case Err(e) => {
-        val codeMap = FileCoordinateMap.test(interner, code)
-        vfail(
-          PostParserErrorHumanizer.humanize(
-            SourceCodeUtils.humanizePos(codeMap, _),
-            SourceCodeUtils.linesBetween(codeMap, _, _),
-            SourceCodeUtils.lineRangeContaining(codeMap, _),
-            SourceCodeUtils.lineContaining(codeMap, _),
-            e))
-      }
-      case Ok(t) => t.expectOne()
-  }
-}
-*/
+
 fn compile_for_error<'s, 'ctx, 'p>(
   _scout_arena: &'ctx ScoutArena<'s>,
   _keywords: &'ctx Keywords<'s>,
@@ -61,14 +34,7 @@ fn compile_for_error<'s, 'ctx, 'p>(
 {
   panic!("Unimplemented: compile_for_error");
 }
-/*
-  private def compileForError(code: String): ICompileErrorS = {
-    PostParserTestCompilation.test(code).getScoutput() match {
-      case Err(e) => e
-      case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
-  }
-}
-*/
+
 #[test]
 fn humanize_errors() {
   let scout_bump = Bump::new();
@@ -93,29 +59,3 @@ fn humanize_errors() {
   let err3 = ICompileErrorS::ExternHasBodyS(ExternHasBodyS { range: tz.clone() });
   assert!(!humanize(humanize_pos, lines_between_fn, line_range_containing_fn, line_containing_fn, &err3).is_empty());
 }
-/*
-  test("Humanize errors") {
-    val interner = new Interner()
-    val codeMap = FileCoordinateMap.test(interner, "blah blah blah\nblah blah blah")
-    val tz = RangeS.testZero(interner)
-
-    val humanizePos = (x: CodeLocationS) => SourceCodeUtils.humanizePos(codeMap, x)
-    val linesBetween = (x: CodeLocationS, y: CodeLocationS) => SourceCodeUtils.linesBetween(codeMap, x, y)
-    val lineRangeContaining = (x: CodeLocationS) => SourceCodeUtils.lineRangeContaining(codeMap, x)
-    val lineContaining = (x: CodeLocationS) => SourceCodeUtils.lineContaining(codeMap, x)
-
-    vassert(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining,
-      VariableNameAlreadyExists(tz, CodeVarNameS(interner.intern(StrI("Spaceship")))))
-      .nonEmpty)
-    vassert(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining,
-      InterfaceMethodNeedsSelf(tz))
-      .nonEmpty)
-    vassert(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining,
-      ForgotSetKeywordError(tz))
-      .nonEmpty)
-    vassert(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining,
-      ExternHasBody(tz))
-      .nonEmpty)
-  }
-}
-*/

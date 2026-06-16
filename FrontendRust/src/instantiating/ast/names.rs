@@ -10,18 +10,7 @@ use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::typing::types::types::CoordT;
 use std::marker::PhantomData;
 
-/*
-package dev.vale.instantiating.ast
 
-import dev.vale._
-import dev.vale.instantiating.ast.ITemplataI._
-import dev.vale.postparsing._
-import dev.vale.typing.types.CoordT
-
-// Scout's/Astronomer's name parts correspond to where they are in the source code,
-// but Compiler's correspond more to what packages and stamped functions / structs
-// they're in. See TNAD.
-*/
 // mig: struct IdI
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdI<'s, 'i> {
@@ -30,31 +19,10 @@ pub struct IdI<'s, 'i> {
     pub local_name: INameI<'s, 'i>,
 }
 // mig: impl IdI
-/*
-case class IdI[+R <: IRegionsModeI, +I <: INameI[R]](
-  packageCoord: PackageCoordinate,
-  initSteps: Vector[INameI[R]],
-  localName: I
-) {
-  // PackageTopLevelName2 is just here because names have to have a last step.
-  vassert(initSteps.collectFirst({ case PackageTopLevelNameI() => }).isEmpty)
 
-  vcurious(initSteps.distinct == initSteps)
-
-*/
 // mig: fn eq (realized-by-impl PartialEq)
 // (Realized by `impl PartialEq for IdI` above.)
-/*
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case IdI(thatPackageCoord, thatInitSteps, thatLast) => {
-        packageCoord == thatPackageCoord && initSteps == thatInitSteps && localName == thatLast
-      }
-      case _ => false
-    }
-  }
 
-*/
 // mig: fn package_id
 // (was cfg-gated)
 impl<'s, 'i> IdI<'s, 'i> {
@@ -62,12 +30,7 @@ impl<'s, 'i> IdI<'s, 'i> {
         panic!("Unimplemented: package_id");
         // IdI(packageCoord, Vector(), PackageTopLevelNameI())
     }
-/*
-  def packageId: IdI[R, PackageTopLevelNameI[R]] = {
-    IdI(packageCoord, Vector(), PackageTopLevelNameI())
-  }
 
-*/
 // mig: fn init_id
 // (was cfg-gated)
     pub fn init_id(&self) -> IdI<'s, 'i> {
@@ -76,16 +39,7 @@ impl<'s, 'i> IdI<'s, 'i> {
         // else IdI(packageCoord, initSteps.init, initSteps.last)
     }
 }
-/*
-  def initId: IdI[R, INameI[R]] = {
-    if (initSteps.isEmpty) {
-      IdI(packageCoord, Vector(), PackageTopLevelNameI())
-    } else {
-      IdI(packageCoord, initSteps.init, initSteps.last)
-    }
-  }
 
-*/
 // mig: fn init_non_package_id
 // (was cfg-gated)
 impl<'s, 'i> IdI<'s, 'i> {
@@ -98,16 +52,7 @@ impl<'s, 'i> IdI<'s, 'i> {
         }
     }
 }
-/*
-  def initNonPackageId(): Option[IdI[R, INameI[R]]] = {
-    if (initSteps.isEmpty) {
-      None
-    } else {
-      Some(IdI(packageCoord, initSteps.init, initSteps.last))
-    }
-  }
 
-*/
 // mig: fn steps
 // (was cfg-gated)
 impl<'s, 'i> IdI<'s, 'i> {
@@ -119,29 +64,13 @@ impl<'s, 'i> IdI<'s, 'i> {
         // }
     }
 }
-/*
-  def steps: Vector[INameI[R]] = {
-    localName match {
-      case PackageTopLevelNameI() => initSteps
-      case _ => initSteps :+ localName
-    }
-  }
-}
 
-object INameI {
-*/
 // mig: fn add_step
 // (was cfg-gated)
 pub fn add_step<'s, 'i>(old: &IdI<'s, 'i>, new_last: INameI<'s, 'i>) -> IdI<'s, 'i> {
     IdI { package_coord: old.package_coord, init_steps: old.init_steps, local_name: new_last }
 }
-/*
-  def addStep[R <: IRegionsModeI, I <: INameI[R], Y <: INameI[R]](old: IdI[R, I], newLast: Y): IdI[R, Y] = {
-    IdI[R, Y](old.packageCoord, old.steps, newLast)
-  }
-}
 
-*/
 // mig: enum INameI
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -301,9 +230,7 @@ pub enum INameValI<'s, 'i> {
 }
 
 // mig: impl INameI
-/*
-sealed trait INameI[+R <: IRegionsModeI]
-*/
+
 // mig: enum ITemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -331,9 +258,7 @@ pub enum ITemplateNameI<'s, 'i> {
     AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
 }
 // mig: impl ITemplateNameI
-/*
-sealed trait ITemplateNameI[+R <: IRegionsModeI] extends INameI[R]
-*/
+
 // Rust-only narrowing INameI -> ITemplateNameI (mirrors T-side TryFrom<INameT>). No Scala counterpart.
 impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ITemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -378,11 +303,7 @@ pub enum IFunctionTemplateNameI<'s, 'i> {
     AnonymousSubstructConstructorTemplate(&'i AnonymousSubstructConstructorTemplateNameI<'s, 'i>),
 }
 // mig: impl IFunctionTemplateNameI
-/*
-sealed trait IFunctionTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R] {
-//  def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI
-}
-*/
+
 // Rust-only widening IFunctionTemplateNameI -> INameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> From<IFunctionTemplateNameI<'s, 'i>> for INameI<'s, 'i> {
     fn from(t: IFunctionTemplateNameI<'s, 'i>) -> Self {
@@ -398,7 +319,7 @@ impl<'s, 'i> From<IFunctionTemplateNameI<'s, 'i>> for INameI<'s, 'i> {
         }
     }
 }
-/* */
+
 // Rust-only narrowing INameI -> IFunctionTemplateNameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IFunctionTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -441,12 +362,7 @@ pub enum IInstantiationNameI<'s, 'i> {
     AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl IInstantiationNameI
-/*
-sealed trait IInstantiationNameI[+R <: IRegionsModeI] extends INameI[R] {
-  def template: ITemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self, interner: &InstantiatingInterner<'s, 'i>) -> &'i [ITemplataI<'s, 'i>] {
@@ -482,7 +398,7 @@ impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
         }
     }
 }
-/* */
+
 // mig: fn template
 impl<'s, 'i> IInstantiationNameI<'s, 'i> where 's: 'i {
     pub fn template(&self) -> ITemplateNameI<'s, 'i> {
@@ -562,13 +478,7 @@ pub enum IFunctionNameI<'s, 'i> {
     AnonymousSubstructConstructor(&'i AnonymousSubstructConstructorNameI<'s, 'i>),
 }
 // mig: impl IFunctionNameI
-/*
-sealed trait IFunctionNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
-  def template: IFunctionTemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-  def parameters: Vector[CoordI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> IFunctionNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -652,9 +562,7 @@ pub enum ISuperKindTemplateNameI<'s, 'i> {
     InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
 }
 // mig: impl ISuperKindTemplateNameI
-/*
-sealed trait ISuperKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R]
-*/
+
 // mig: enum ISubKindTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -668,9 +576,7 @@ pub enum ISubKindTemplateNameI<'s, 'i> {
     AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
 }
 // mig: impl ISubKindTemplateNameI
-/*
-sealed trait ISubKindTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R]
-*/
+
 // mig: enum ICitizenTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -684,11 +590,7 @@ pub enum ICitizenTemplateNameI<'s, 'i> {
     AnonymousSubstructTemplate(&'i AnonymousSubstructTemplateNameI<'s, 'i>),
 }
 // mig: impl ICitizenTemplateNameI
-/*
-sealed trait ICitizenTemplateNameI[+R <: IRegionsModeI] extends ISubKindTemplateNameI[R] {
-//  def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI
-}
-*/
+
 // mig: enum IStructTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -737,7 +639,7 @@ impl<'s, 'i> TryFrom<INameI<'s, 'i>> for ICitizenTemplateNameI<'s, 'i> where 's:
         }
     }
 }
-/* */
+
 // Rust-only widening IInterfaceTemplateNameI -> ICitizenTemplateNameI
 // (IInterfaceTemplateNameI <: ICitizenTemplateNameI). Rust-only (no Scala counterpart — Scala uses subtyping).
 impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for ICitizenTemplateNameI<'s, 'i> {
@@ -747,7 +649,7 @@ impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for ICitizenTemplateNameI<'s,
         }
     }
 }
-/* */
+
 // Rust-only narrowing ICitizenTemplateNameI -> IStructTemplateNameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IStructTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -760,7 +662,7 @@ impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IStructTemplateNameI<'s,
         }
     }
 }
-/* */
+
 // Rust-only narrowing ICitizenTemplateNameI -> IInterfaceTemplateNameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IInterfaceTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -771,7 +673,7 @@ impl<'s, 'i> TryFrom<ICitizenTemplateNameI<'s, 'i>> for IInterfaceTemplateNameI<
         }
     }
 }
-/* */
+
 // Rust-only narrowing INameI -> IStructTemplateNameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IStructTemplateNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -785,15 +687,7 @@ impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IStructTemplateNameI<'s, 'i> where 's: 
     }
 }
 // mig: impl IStructTemplateNameI
-/*
-sealed trait IStructTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateNameI[R] {
-//  def makeStructName(templateArgs: Vector[ITemplataI[R]]): IStructNameI
-//  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]):
-//  ICitizenNameI = {
-//    makeStructName(templateArgs)
-//  }
-}
-*/
+
 // mig: enum IInterfaceTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -802,11 +696,7 @@ pub enum IInterfaceTemplateNameI<'s, 'i> {
     InterfaceTemplate(&'i InterfaceTemplateNameI<'s>),
 }
 // mig: impl IInterfaceTemplateNameI
-/*
-sealed trait IInterfaceTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateNameI[R] with ISuperKindTemplateNameI[R] {
-//  def makeInterfaceName(templateArgs: Vector[ITemplataI[R]]): IInterfaceNameI
-}
-*/
+
 // mig: enum ISuperKindNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -815,12 +705,7 @@ pub enum ISuperKindNameI<'s, 'i> {
     Interface(&'i InterfaceNameI<'s, 'i>),
 }
 // mig: impl ISuperKindNameI
-/*
-sealed trait ISuperKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
-  def template: ISuperKindTemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> ISuperKindNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -860,12 +745,7 @@ pub enum ISubKindNameI<'s, 'i> {
     AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl ISubKindNameI
-/*
-sealed trait ISubKindNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
-  def template: ISubKindTemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> ISubKindNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -928,12 +808,7 @@ pub enum ICitizenNameI<'s, 'i> {
     AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl ICitizenNameI
-/*
-sealed trait ICitizenNameI[+R <: IRegionsModeI] extends ISubKindNameI[R] {
-  def template: ICitizenTemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> ICitizenNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -1007,12 +882,7 @@ pub enum IStructNameI<'s, 'i> {
     AnonymousSubstruct(&'i AnonymousSubstructNameI<'s, 'i>),
 }
 // mig: impl IStructNameI
-/*
-sealed trait IStructNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with ISubKindNameI[R] {
-  override def template: IStructTemplateNameI[R]
-  override def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> IStructNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -1067,7 +937,7 @@ impl<'s, 'i> From<IStructNameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: 'i {
         }
     }
 }
-/* Guardian: disable-all */
+
 // Rust-only widening IInterfaceNameI -> ICitizenNameI (mirrors Scala `IInterfaceNameI extends
 // ICitizenNameI` subtyping; same family as the IStructNameI widening just above). No Scala counterpart.
 impl<'s, 'i> From<IInterfaceNameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: 'i {
@@ -1077,7 +947,7 @@ impl<'s, 'i> From<IInterfaceNameI<'s, 'i>> for ICitizenNameI<'s, 'i> where 's: '
         }
     }
 }
-/* Guardian: disable-all */
+
 // Rust-only widening IStructTemplateNameI -> INameI (mirrors Scala `IStructTemplateNameI extends
 // ITemplateNameI extends INameI`; needed so humanize_name can recurse on a struct name's `template`
 // without inline matching at the call site). No Scala counterpart.
@@ -1090,7 +960,7 @@ impl<'s, 'i> From<IStructTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i 
         }
     }
 }
-/* Guardian: disable-all */
+
 // Rust-only widening IInterfaceTemplateNameI -> INameI. No Scala counterpart.
 impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
     fn from(name: IInterfaceTemplateNameI<'s, 'i>) -> Self {
@@ -1099,7 +969,7 @@ impl<'s, 'i> From<IInterfaceTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 
         }
     }
 }
-/* Guardian: disable-all */
+
 // Rust-only widening ICitizenTemplateNameI -> INameI. No Scala counterpart.
 impl<'s, 'i> From<ICitizenTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
     fn from(name: ICitizenTemplateNameI<'s, 'i>) -> Self {
@@ -1113,7 +983,7 @@ impl<'s, 'i> From<ICitizenTemplateNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i
         }
     }
 }
-/* Guardian: disable-all */
+
 // mig: enum IInterfaceNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -1122,12 +992,7 @@ pub enum IInterfaceNameI<'s, 'i> {
     Interface(&'i InterfaceNameI<'s, 'i>),
 }
 // mig: impl IInterfaceNameI
-/*
-sealed trait IInterfaceNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] with ISubKindNameI[R] with ISuperKindNameI[R] {
-  override def template: IInterfaceTemplateNameI[R]
-  override def templateArgs: Vector[ITemplataI[R]]
-}
-*/
+
 // mig: fn template_args
 impl<'s, 'i> IInterfaceNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -1173,11 +1038,7 @@ pub enum IImplTemplateNameI<'s, 'i> {
     AnonymousSubstructImplTemplate(&'i AnonymousSubstructImplTemplateNameI<'s, 'i>),
 }
 // mig: impl IImplTemplateNameI
-/*
-sealed trait IImplTemplateNameI[+R <: IRegionsModeI] extends ITemplateNameI[R] {
-//  def makeImplName(templateArgs: Vector[ITemplataI[R]], subCitizen: ICitizenIT): IImplNameI
-}
-*/
+
 // mig: enum IImplNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -1188,12 +1049,7 @@ pub enum IImplNameI<'s, 'i> {
     AnonymousSubstructImpl(&'i AnonymousSubstructImplNameI<'s, 'i>),
 }
 // mig: impl IImplNameI
-/*
-sealed trait IImplNameI[+R <: IRegionsModeI] extends IInstantiationNameI[R] {
-  def template: IImplTemplateNameI[R]
-}
 
-*/
 // mig: fn template_args
 impl<'s, 'i> IImplNameI<'s, 'i> where 's: 'i {
     pub fn template_args(&self) -> &'i [ITemplataI<'s, 'i>] {
@@ -1245,9 +1101,7 @@ pub enum IRegionNameI<'s, 'i> {
     _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl IRegionNameI
-/*
-sealed trait IRegionNameI[+R <: IRegionsModeI] extends INameI[R]
-*/
+
 // mig: struct RegionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1255,17 +1109,13 @@ sealed trait IRegionNameI[+R <: IRegionsModeI] extends INameI[R]
 pub struct RegionNameI<'s> {
     pub rune: IRuneS<'s>,
 }
-/*
-case class RegionNameI[+R <: IRegionsModeI](rune: IRuneS) extends IRegionNameI[R]
-*/
+
 // mig: struct DenizenDefaultRegionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct DenizenDefaultRegionNameI;
-/*
-case class DenizenDefaultRegionNameI[+R <: IRegionsModeI]() extends IRegionNameI[R]
-*/
+
 // mig: struct ExportTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1273,9 +1123,7 @@ case class DenizenDefaultRegionNameI[+R <: IRegionsModeI]() extends IRegionNameI
 pub struct ExportTemplateNameI<'s> {
     pub code_loc: CodeLocationS<'s>,
 }
-/*
-case class ExportTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) extends ITemplateNameI[R]
-*/
+
 // mig: struct ExportNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1283,15 +1131,7 @@ case class ExportTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) exte
 pub struct ExportNameI<'s> {
     pub template: ExportTemplateNameI<'s>,
 }
-/*
-case class ExportNameI[+R <: IRegionsModeI](
-  template: ExportTemplateNameI[R],
-  region: RegionTemplataI[R]
-) extends IInstantiationNameI[R] {
-  override def templateArgs: Vector[ITemplataI[R]] = Vector(region)
-}
 
-*/
 // mig: struct ExternTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1299,9 +1139,7 @@ case class ExportNameI[+R <: IRegionsModeI](
 pub struct ExternTemplateNameI<'s> {
     pub code_loc: CodeLocationS<'s>,
 }
-/*
-case class ExternTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) extends ITemplateNameI[R]
-*/
+
 // mig: struct ExternNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1309,15 +1147,7 @@ case class ExternTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) exte
 pub struct ExternNameI<'s> {
     pub template: ExternTemplateNameI<'s>,
 }
-/*
-case class ExternNameI[+R <: IRegionsModeI](
-  template: ExternTemplateNameI[R],
-  region: RegionTemplataI[R]
-) extends IInstantiationNameI[R] {
-  override def templateArgs: Vector[ITemplataI[R]] = Vector(region)
-}
 
-*/
 // mig: struct ImplTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1325,14 +1155,7 @@ case class ExternNameI[+R <: IRegionsModeI](
 pub struct ImplTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class ImplTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocationS) extends IImplTemplateNameI[R] {
-  vpass()
-//  override def makeImplName(templateArgs: Vector[ITemplataI[R]], subCitizen: ICitizenIT): ImplNameI = {
-//    ImplNameI(this, templateArgs, subCitizen)
-//  }
-}
-*/
+
 // mig: struct ImplNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1342,18 +1165,7 @@ pub struct ImplNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
     pub sub_citizen: ICitizenIT<'s, 'i>,
 }
-/*
-case class ImplNameI[+R <: IRegionsModeI](
-  template: IImplTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  // The instantiator wants this so it can know the struct type up-front before monomorphizing the
-  // whole impl, so it can hoist some bounds out of the struct, like NBIFP.
-  subCitizen: ICitizenIT[R]
-) extends IImplNameI[R] {
-  vpass()
-}
 
-*/
 // mig: struct ImplBoundTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1361,13 +1173,7 @@ case class ImplNameI[+R <: IRegionsModeI](
 pub struct ImplBoundTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class ImplBoundTemplateNameI[+R <: IRegionsModeI](codeLocationS: CodeLocationS) extends IImplTemplateNameI[R] {
-//  override def makeImplName(templateArgs: Vector[ITemplataI[R]], subCitizen: ICitizenIT): ImplBoundNameI = {
-//    ImplBoundNameI(this, templateArgs)
-//  }
-}
-*/
+
 // mig: struct ImplBoundNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1377,22 +1183,7 @@ pub struct ImplBoundNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
-/*
-case class ImplBoundNameI[+R <: IRegionsModeI](
-  template: ImplBoundTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]]
-) extends IImplNameI[R] {
 
-}
-
-//// The name of an impl that is subclassing some interface. To find all impls subclassing an interface,
-//// look for this name.
-//case class ImplImplementingSuperInterfaceNameI[+R <: IRegionsModeI](superInterface: FullNameI[IInterfaceTemplateNameI]) extends IImplTemplateNameI
-//// The name of an impl that is augmenting some sub citizen. To find all impls subclassing an interface,
-//// look for this name.
-//case class ImplAugmentingSubCitizenNameI[+R <: IRegionsModeI](subCitizen: FullNameI[ICitizenTemplateNameI]) extends IImplTemplateNameI
-
-*/
 // mig: struct LetNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1400,9 +1191,7 @@ case class ImplBoundNameI[+R <: IRegionsModeI](
 pub struct LetNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class LetNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends INameI[R]
-*/
+
 // mig: struct ExportAsNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1410,9 +1199,7 @@ case class LetNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends IN
 pub struct ExportAsNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class ExportAsNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends INameI[R]
-*/
+
 // mig: struct RawArrayNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1423,15 +1210,7 @@ pub struct RawArrayNameI<'s, 'i> {
     pub self_region: RegionT,
 }
 
-/*
-case class RawArrayNameI[+R <: IRegionsModeI](
-  mutability: MutabilityI,
-  elementType: CoordTemplataI[R],
-  selfRegion: RegionTemplataI[R]
-) extends INameI[R] {
-}
 
-*/
 // mig: struct ReachablePrototypeNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1439,28 +1218,13 @@ case class RawArrayNameI[+R <: IRegionsModeI](
 pub struct ReachablePrototypeNameI {
     pub num: i32,
 }
-/*
-case class ReachablePrototypeNameI[+R <: IRegionsModeI](num: Int) extends INameI[R]
-*/
+
 // mig: struct StaticSizedArrayTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct StaticSizedArrayTemplateNameI;
-/*
-case class StaticSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitizenTemplateNameI[R] {
-//  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI = {
-//    vassert(templateArgs.size == 5)
-//    val size = expectIntegerTemplata(templateArgs(0)).value
-//    val mutability = expectMutabilityTemplata(templateArgs(1)).mutability
-//    val variability = expectVariabilityTemplata(templateArgs(2)).variability
-//    val elementType = expectCoordTemplata(templateArgs(3)).coord
-//    val selfRegion = expectRegionTemplata(templateArgs(4))
-//    StaticSizedArrayNameI(this, size, variability, RawArrayNameI(mutability, elementType, selfRegion))
-//  }
-}
 
-*/
 // mig: struct StaticSizedArrayNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1472,47 +1236,19 @@ pub struct StaticSizedArrayNameI<'s, 'i> {
     pub arr: RawArrayNameI<'s, 'i>,
 }
 
-/*
-case class StaticSizedArrayNameI[+R <: IRegionsModeI](
-  template: StaticSizedArrayTemplateNameI[R],
-  size: Long,
-  variability: VariabilityI,
-  arr: RawArrayNameI[R]
-) extends ICitizenNameI[R] {
 
-*/
 // mig: fn template_args
 // (was cfg-gated)
 impl<'s, 'i> StaticSizedArrayNameI<'s, 'i> {
     pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i>] { panic!("Unimplemented: template_args"); }
 }
-/*
-  override def templateArgs: Vector[ITemplataI[R]] = {
-    Vector(
-      IntegerTemplataI(size),
-      MutabilityTemplataI(arr.mutability),
-      VariabilityTemplataI(variability),
-      arr.elementType)
-  }
-}
-*/
+
 // mig: struct RuntimeSizedArrayTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct RuntimeSizedArrayTemplateNameI;
-/*
-case class RuntimeSizedArrayTemplateNameI[+R <: IRegionsModeI]() extends ICitizenTemplateNameI[R] {
-//  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI = {
-//    vassert(templateArgs.size == 3)
-//    val mutability = expectMutabilityTemplata(templateArgs(0)).mutability
-//    val elementType = expectCoordTemplata(templateArgs(1)).coord
-//    val region = expectRegionTemplata(templateArgs(2))
-//    RuntimeSizedArrayNameI(this, RawArrayNameI(mutability, elementType, region))
-//  }
-}
 
-*/
 // mig: struct RuntimeSizedArrayNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1521,26 +1257,13 @@ pub struct RuntimeSizedArrayNameI<'s, 'i> {
     pub template: RuntimeSizedArrayTemplateNameI,
     pub arr: RawArrayNameI<'s, 'i>,
 }
-/*
-case class RuntimeSizedArrayNameI[+R <: IRegionsModeI](
-  template: RuntimeSizedArrayTemplateNameI[R],
-  arr: RawArrayNameI[R]
-) extends ICitizenNameI[R] {
-*/
+
 // mig: fn template_args
 // (was cfg-gated)
 impl<'s, 'i> RuntimeSizedArrayNameI<'s, 'i> {
     pub fn template_args(&self) -> &'i[ITemplataI<'s, 'i>] { panic!("Unimplemented: template_args"); }
 }
-/*
-  override def templateArgs: Vector[ITemplataI[R]] = {
-    Vector(
-      MutabilityTemplataI(arr.mutability),
-      arr.elementType)
-  }
-}
-// See NNSPAFOC.
-*/
+
 // mig: struct OverrideDispatcherTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1548,21 +1271,7 @@ impl<'s, 'i> RuntimeSizedArrayNameI<'s, 'i> {
 pub struct OverrideDispatcherTemplateNameI<'s, 'i> {
     pub impl_id: IdI<'s, 'i>,
 }
-/*
-case class OverrideDispatcherTemplateNameI[+R <: IRegionsModeI](
-  implId: IdI[R, IImplTemplateNameI[R]]
-) extends IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(
-//    interner: Interner,
-//    keywords: Keywords,
-//    templateArgs: Vector[ITemplataI[R]],
-//    params: Vector[CoordI]):
-//  OverrideDispatcherNameI = {
-//    interner.intern(OverrideDispatcherNameI(this, templateArgs, params))
-//  }
-}
 
-*/
 // mig: struct OverrideDispatcherNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1573,17 +1282,7 @@ pub struct OverrideDispatcherNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class OverrideDispatcherNameI[+R <: IRegionsModeI](
-  template: OverrideDispatcherTemplateNameI[R],
-  // This will have placeholders in it after the typing pass.
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R] {
-  vpass()
-}
 
-*/
 // mig: struct OverrideDispatcherCaseNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1592,17 +1291,7 @@ pub struct OverrideDispatcherCaseNameI<'s, 'i> {
     pub independent_impl_template_args: &'i[ITemplataI<'s, 'i>],
 }
 
-/*
-case class OverrideDispatcherCaseNameI[+R <: IRegionsModeI](
-  // These are the templatas for the independent runes from the impl, like the <ZZ> for Milano, see
-  // OMCNAGP.
-  independentImplTemplateArgs: Vector[ITemplataI[R]]
-) extends ITemplateNameI[R] with IInstantiationNameI[R] {
-  override def template: ITemplateNameI[R] = this
-  override def templateArgs: Vector[ITemplataI[R]] = independentImplTemplateArgs
-}
 
-*/
 // mig: struct CaseFunctionFromImplNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1613,17 +1302,7 @@ pub struct CaseFunctionFromImplNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class CaseFunctionFromImplNameI[+R <: IRegionsModeI](
-    template: CaseFunctionFromImplTemplateNameI[R],
-    // This will have placeholders in it after the typing pass.
-    templateArgs: Vector[ITemplataI[R]],
-    parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R] {
-  vpass()
-}
 
-*/
 // mig: struct CaseFunctionFromImplTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1634,16 +1313,7 @@ pub struct CaseFunctionFromImplTemplateNameI<'s> {
     pub rune_in_citizen: IRuneS<'s>,
 }
 
-/*
-case class CaseFunctionFromImplTemplateNameI[+R <: IRegionsModeI](
-    humanName: StrI,
-    runeInImpl: IRuneS,
-    runeInCitizen: IRuneS
-) extends IFunctionTemplateNameI[R] {
-  vpass()
-}
 
-*/
 // mig: enum IVarNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -1668,9 +1338,7 @@ pub enum IVarNameI<'s, 'i> {
     Self_(&'i SelfNameI),
 }
 // mig: impl IVarNameI
-/*
-sealed trait IVarNameI[+R <: IRegionsModeI] extends INameI[R]
-*/
+
 // Rust-only narrowing INameI -> IVarNameI (mirrors T-side). No Scala counterpart.
 impl<'s, 'i> TryFrom<INameI<'s, 'i>> for IVarNameI<'s, 'i> where 's: 'i {
     type Error = ();
@@ -1722,7 +1390,7 @@ impl<'s, 'i> From<IVarNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
         }
     }
 }
-/* Guardian: disable-all */
+
 // mig: struct TypingPassBlockResultVarNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1730,17 +1398,13 @@ impl<'s, 'i> From<IVarNameI<'s, 'i>> for INameI<'s, 'i> where 's: 'i {
 pub struct TypingPassBlockResultVarNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
-/*
-case class TypingPassBlockResultVarNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
-*/
+
 // mig: struct TypingPassFunctionResultVarNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct TypingPassFunctionResultVarNameI;
-/*
-case class TypingPassFunctionResultVarNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
-*/
+
 // mig: struct TypingPassTemporaryVarNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1748,9 +1412,7 @@ case class TypingPassFunctionResultVarNameI[+R <: IRegionsModeI]() extends IVarN
 pub struct TypingPassTemporaryVarNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
-/*
-case class TypingPassTemporaryVarNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
-*/
+
 // mig: struct TypingPassPatternMemberNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1758,9 +1420,7 @@ case class TypingPassTemporaryVarNameI[+R <: IRegionsModeI](life: LocationInFunc
 pub struct TypingPassPatternMemberNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
-/*
-case class TypingPassPatternMemberNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
-*/
+
 // mig: struct TypingIgnoredParamNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1768,9 +1428,7 @@ case class TypingPassPatternMemberNameI[+R <: IRegionsModeI](life: LocationInFun
 pub struct TypingIgnoredParamNameI {
     pub num: i32,
 }
-/*
-case class TypingIgnoredParamNameI[+R <: IRegionsModeI](num: Int) extends IVarNameI[R]
-*/
+
 // mig: struct TypingPassPatternDestructureeNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1778,9 +1436,7 @@ case class TypingIgnoredParamNameI[+R <: IRegionsModeI](num: Int) extends IVarNa
 pub struct TypingPassPatternDestructureeNameI<'i> {
     pub life: LocationInFunctionEnvironmentI<'i>,
 }
-/*
-case class TypingPassPatternDestructureeNameI[+R <: IRegionsModeI](life: LocationInFunctionEnvironmentI) extends IVarNameI[R]
-*/
+
 // mig: struct UnnamedLocalNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1788,9 +1444,7 @@ case class TypingPassPatternDestructureeNameI[+R <: IRegionsModeI](life: Locatio
 pub struct UnnamedLocalNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class UnnamedLocalNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends IVarNameI[R]
-*/
+
 // mig: struct ClosureParamNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1798,9 +1452,7 @@ case class UnnamedLocalNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) e
 pub struct ClosureParamNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-/*
-case class ClosureParamNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) extends IVarNameI[R]
-*/
+
 // mig: struct ConstructingMemberNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1808,9 +1460,7 @@ case class ClosureParamNameI[+R <: IRegionsModeI](codeLocation: CodeLocationS) e
 pub struct ConstructingMemberNameI<'s> {
     pub name: StrI<'s>,
 }
-/*
-case class ConstructingMemberNameI[+R <: IRegionsModeI](name: StrI) extends IVarNameI[R]
-*/
+
 // mig: struct WhileCondResultNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1818,9 +1468,7 @@ case class ConstructingMemberNameI[+R <: IRegionsModeI](name: StrI) extends IVar
 pub struct WhileCondResultNameI<'s> {
     pub range: RangeS<'s>,
 }
-/*
-case class WhileCondResultNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R]
-*/
+
 // mig: struct IterableNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1828,9 +1476,7 @@ case class WhileCondResultNameI[+R <: IRegionsModeI](range: RangeS) extends IVar
 pub struct IterableNameI<'s> {
     pub range: RangeS<'s>,
 }
-/*
-case class IterableNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R] {  }
-*/
+
 // mig: struct IteratorNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1838,9 +1484,7 @@ case class IterableNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R
 pub struct IteratorNameI<'s> {
     pub range: RangeS<'s>,
 }
-/*
-case class IteratorNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R] {  }
-*/
+
 // mig: struct IterationOptionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1848,9 +1492,7 @@ case class IteratorNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R
 pub struct IterationOptionNameI<'s> {
     pub range: RangeS<'s>,
 }
-/*
-case class IterationOptionNameI[+R <: IRegionsModeI](range: RangeS) extends IVarNameI[R] {  }
-*/
+
 // mig: struct MagicParamNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1858,9 +1500,7 @@ case class IterationOptionNameI[+R <: IRegionsModeI](range: RangeS) extends IVar
 pub struct MagicParamNameI<'s> {
     pub code_location_2: CodeLocationS<'s>,
 }
-/*
-case class MagicParamNameI[+R <: IRegionsModeI](codeLocation2: CodeLocationS) extends IVarNameI[R]
-*/
+
 // mig: struct CodeVarNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1868,10 +1508,7 @@ case class MagicParamNameI[+R <: IRegionsModeI](codeLocation2: CodeLocationS) ex
 pub struct CodeVarNameI<'s> {
     pub name: StrI<'s>,
 }
-/*
-case class CodeVarNameI[+R <: IRegionsModeI](name: StrI) extends IVarNameI[R]
-// We dont use CodeVarName2(0), CodeVarName2(1) etc because we dont want the user to address these members directly.
-*/
+
 // mig: struct AnonymousSubstructMemberNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1879,9 +1516,7 @@ case class CodeVarNameI[+R <: IRegionsModeI](name: StrI) extends IVarNameI[R]
 pub struct AnonymousSubstructMemberNameI {
     pub index: i32,
 }
-/*
-case class AnonymousSubstructMemberNameI[+R <: IRegionsModeI](index: Int) extends IVarNameI[R]
-*/
+
 // mig: struct PrimitiveNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1889,18 +1524,13 @@ case class AnonymousSubstructMemberNameI[+R <: IRegionsModeI](index: Int) extend
 pub struct PrimitiveNameI<'s> {
     pub human_name: StrI<'s>,
 }
-/*
-case class PrimitiveNameI[+R <: IRegionsModeI](humanName: StrI) extends INameI[R]
-// Only made in typingpass
-*/
+
 // mig: struct PackageTopLevelNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct PackageTopLevelNameI;
-/*
-case class PackageTopLevelNameI[+R <: IRegionsModeI]() extends INameI[R]
-*/
+
 // mig: struct ProjectNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1908,9 +1538,7 @@ case class PackageTopLevelNameI[+R <: IRegionsModeI]() extends INameI[R]
 pub struct ProjectNameI<'s> {
     pub name: StrI<'s>,
 }
-/*
-case class ProjectNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
-*/
+
 // mig: struct PackageNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1918,9 +1546,7 @@ case class ProjectNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
 pub struct PackageNameI<'s> {
     pub name: StrI<'s>,
 }
-/*
-case class PackageNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
-*/
+
 // mig: struct RuneNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1928,12 +1554,7 @@ case class PackageNameI[+R <: IRegionsModeI](name: StrI) extends INameI[R]
 pub struct RuneNameI<'s> {
     pub rune: IRuneS<'s>,
 }
-/*
-case class RuneNameI[+R <: IRegionsModeI](rune: IRuneS) extends INameI[R]
 
-// This is the name of a function that we're still figuring out in the function typingpass.
-// We have its closured variables, but are still figuring out its template args and params.
-*/
 // mig: struct BuildingFunctionNameWithClosuredsI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1942,16 +1563,7 @@ pub struct BuildingFunctionNameWithClosuredsI<'s, 'i> {
     pub template_name: IFunctionTemplateNameI<'s, 'i>,
 }
 
-/*
-case class BuildingFunctionNameWithClosuredsI[+R <: IRegionsModeI](
-  templateName: IFunctionTemplateNameI[R],
-) extends INameI[R] {
 
-
-
-}
-
-*/
 // mig: struct ExternFunctionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1961,16 +1573,7 @@ pub struct ExternFunctionNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
     pub parameters: &'i[CoordI<'s, 'i>],
 }
-/*
-case class ExternFunctionNameI[+R <: IRegionsModeI](
-  humanName: StrI,
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R] with IFunctionTemplateNameI[R] {
-  override def template: IFunctionTemplateNameI[R] = this
-}
 
-*/
 // mig: struct FunctionNameIX
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1981,14 +1584,7 @@ pub struct FunctionNameIX<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class FunctionNameIX[+R <: IRegionsModeI](
-  template: FunctionTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R]
 
-*/
 // mig: struct ForwarderFunctionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -1998,16 +1594,7 @@ pub struct ForwarderFunctionNameI<'s, 'i> {
     pub inner: IFunctionNameI<'s, 'i>,
 }
 
-/*
-case class ForwarderFunctionNameI[+R <: IRegionsModeI](
-  template: ForwarderFunctionTemplateNameI[R],
-  inner: IFunctionNameI[R]
-) extends IFunctionNameI[R] {
-  override def templateArgs: Vector[ITemplataI[R]] = inner.templateArgs
-  override def parameters: Vector[CoordI[R]] = inner.parameters
-}
 
-*/
 // mig: struct FunctionBoundTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2016,18 +1603,7 @@ pub struct FunctionBoundTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
 
-/*
-case class FunctionBoundTemplateNameI[+R <: IRegionsModeI](
-  humanName: StrI,
-  // We used to have a CodeLocation here, but took it out because we want to merge duplicate bounds, see MFBFDP.
-  //   codeLocation: CodeLocationS
-) extends INameI[R] with IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): FunctionBoundNameI = {
-//    interner.intern(FunctionBoundNameI(this, templateArgs, params))
-//  }
-}
 
-*/
 // mig: struct FunctionBoundNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2038,14 +1614,7 @@ pub struct FunctionBoundNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class FunctionBoundNameI[+R <: IRegionsModeI](
-  template: FunctionBoundTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R]
 
-*/
 // mig: struct ReachableFunctionTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2054,12 +1623,7 @@ pub struct ReachableFunctionTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
 
-/*
-case class ReachableFunctionTemplateNameI[+R <: IRegionsModeI](
-    humanName: StrI
-) extends INameI[R] with IFunctionTemplateNameI[R]
 
-*/
 // mig: struct ReachableFunctionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2070,14 +1634,7 @@ pub struct ReachableFunctionNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class ReachableFunctionNameI[+R <: IRegionsModeI](
-    template: ReachableFunctionTemplateNameI[R],
-    templateArgs: Vector[ITemplataI[R]],
-    parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R]
 
-*/
 // mig: struct FunctionTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2087,18 +1644,7 @@ pub struct FunctionTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 
-/*
-case class FunctionTemplateNameI[+R <: IRegionsModeI](
-    humanName: StrI,
-    codeLocation: CodeLocationS
-) extends INameI[R] with IFunctionTemplateNameI[R] {
-  vpass()
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(FunctionNameI(this, templateArgs, params))
-//  }
-}
 
-*/
 // Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
 // mig: struct LambdaCallFunctionTemplateNameI
 /// Temporary state
@@ -2109,20 +1655,7 @@ pub struct LambdaCallFunctionTemplateNameI<'s, 'i> {
     pub param_types: &'i[CoordI<'s, 'i>],
 }
 
-/*
-// Per @LAGTNGZ, paramTypes stays baked in (specialization happened earlier).
-case class LambdaCallFunctionTemplateNameI[+R <: IRegionsModeI](
-  codeLocation: CodeLocationS,
-  paramTypes: Vector[CoordI[R]]
-) extends INameI[R] with IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
-//    // Post instantiator, the params will be real, but our template paramTypes will still be placeholders
-//    // vassert(params == paramTypes)
-//    interner.intern(LambdaCallFunctionNameI(this, templateArgs, params))
-//  }
-}
 
-*/
 // mig: struct LambdaCallFunctionNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2133,14 +1666,7 @@ pub struct LambdaCallFunctionNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class LambdaCallFunctionNameI[+R <: IRegionsModeI](
-  template: LambdaCallFunctionTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R]
 
-*/
 // mig: struct ForwarderFunctionTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2150,55 +1676,7 @@ pub struct ForwarderFunctionTemplateNameI<'s, 'i> {
     pub index: i32,
 }
 
-/*
-case class ForwarderFunctionTemplateNameI[+R <: IRegionsModeI](
-  inner: IFunctionTemplateNameI[R],
-  index: Int
-) extends INameI[R] with IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(ForwarderFunctionNameI(this, inner.makeFunctionName(keywords, templateArgs, params)))//, index))
-//  }
-}
 
-
-//case class AbstractVirtualDropFunctionTemplateNameI[+R <: IRegionsModeI](
-//  implName: INameI[R]
-//) extends INameI[R] with IFunctionTemplateNameI {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(
-//      AbstractVirtualDropFunctionNameI(implName, templateArgs, params))
-//  }
-//}
-
-//case class AbstractVirtualDropFunctionNameI[+R <: IRegionsModeI](
-//  implName: INameI[R],
-//  templateArgs: Vector[ITemplata[ITemplataType]],
-//  parameters: Vector[CoordI]
-//) extends INameI[R] with IFunctionNameI
-
-//case class OverrideVirtualDropFunctionTemplateNameI[+R <: IRegionsModeI](
-//  implName: INameI[R]
-//) extends INameI[R] with IFunctionTemplateNameI {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(
-//      OverrideVirtualDropFunctionNameI(implName, templateArgs, params))
-//  }
-//}
-
-//case class OverrideVirtualDropFunctionNameI[+R <: IRegionsModeI](
-//  implName: INameI[R],
-//  templateArgs: Vector[ITemplata[ITemplataType]],
-//  parameters: Vector[CoordI]
-//) extends INameI[R] with IFunctionNameI
-
-//case class LambdaTemplateNameI[+R <: IRegionsModeI](
-//  codeLocation: CodeLocationS
-//) extends INameI[R] with IFunctionTemplateNameI {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(FunctionNameI(interner.intern(FunctionTemplateNameI(keywords.underscoresCall, codeLocation)), templateArgs, params))
-//  }
-//}
-*/
 // mig: struct ConstructorTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2207,75 +1685,19 @@ pub struct ConstructorTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 
-/*
-case class ConstructorTemplateNameI[+R <: IRegionsModeI](
-  codeLocation: CodeLocationS
-) extends INameI[R] with IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = vimpl()
-}
 
-//case class FreeTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) extends INameI[R] with IFunctionTemplateNameI {
-//  vpass()
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    params match {
-//      case Vector(coord) => {
-//        interner.intern(FreeNameI(this, templateArgs, coord))
-//      }
-//      case other => vwat(other)
-//    }
-//  }
-//}
-//case class FreeNameI[+R <: IRegionsModeI](
-//  template: FreeTemplateNameI,
-//  templateArgs: Vector[ITemplata[ITemplataType]],
-//  coordT: CoordI
-//) extends IFunctionNameI {
-//  override def parameters: Vector[CoordI] = Vector(coordI)
-//}
-
-//// See NSIDN for why we have these virtual names
-//case class AbstractVirtualFreeTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) extends INameI[R] with IFunctionTemplateNameI {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    val Vector(CoordI(ShareI, kind)) = params
-//    interner.intern(AbstractVirtualFreeNameI(templateArgs, kind))
-//  }
-//}
-//// See NSIDN for why we have these virtual names
-//case class AbstractVirtualFreeNameI[+R <: IRegionsModeI](templateArgs: Vector[ITemplata[ITemplataType]], param: KindI) extends IFunctionNameI {
-//  override def parameters: Vector[CoordI] = Vector(CoordI(ShareI, param))
-//}
-//
-//// See NSIDN for why we have these virtual names
-//case class OverrideVirtualFreeTemplateNameI[+R <: IRegionsModeI](codeLoc: CodeLocationS) extends INameI[R] with IFunctionTemplateNameI {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordI]): IFunctionNameI = {
-//    val Vector(CoordI(ShareI, kind)) = params
-//    interner.intern(OverrideVirtualFreeNameI(templateArgs, kind))
-//  }
-//}
-//// See NSIDN for why we have these virtual names
-//case class OverrideVirtualFreeNameI[+R <: IRegionsModeI](templateArgs: Vector[ITemplata[ITemplataType]], param: KindI) extends IFunctionNameI {
-//  override def parameters: Vector[CoordI] = Vector(CoordI(ShareI, param))
-//}
-
-// Vale has no Self, its just a convenient first name parameter.
-// See also SelfNameS.
-*/
 // mig: struct SelfNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct SelfNameI;
-/*
-case class SelfNameI[+R <: IRegionsModeI]() extends IVarNameI[R]
-*/
+
 // mig: struct ArbitraryNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct ArbitraryNameI;
-/*
-case class ArbitraryNameI[+R <: IRegionsModeI]() extends INameI[R]
-*/
+
 // mig: enum CitizenNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -2284,26 +1706,10 @@ pub enum CitizenNameI<'s, 'i> {
     _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl CitizenNameI
-/*
-sealed trait CitizenNameI[+R <: IRegionsModeI] extends ICitizenNameI[R] {
-  def template: ICitizenTemplateNameI[R]
-  def templateArgs: Vector[ITemplataI[R]]
-}
 
-object CitizenNameI {
-*/
 // mig: fn unapply (realized-by-TryFrom)
 // (Realized via `impl TryFrom<Wide> for Narrow` or inline match.)
-/*
-  def unapply[R <: IRegionsModeI](c: CitizenNameI[R]): Option[(ICitizenTemplateNameI[R], Vector[ITemplataI[R]])] = {
-    c match {
-      case StructNameI(template, templateArgs) => Some((template, templateArgs))
-      case InterfaceNameI(template, templateArgs) => Some((template, templateArgs))
-    }
-  }
-}
 
-*/
 // mig: struct StructNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2313,15 +1719,7 @@ pub struct StructNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
-/*
-case class StructNameI[+R <: IRegionsModeI](
-  template: IStructTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]]
-) extends IStructNameI[R] with CitizenNameI[R] {
-  vpass()
-}
 
-*/
 // mig: struct InterfaceNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2331,15 +1729,7 @@ pub struct InterfaceNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
-/*
-case class InterfaceNameI[+R <: IRegionsModeI](
-  template: IInterfaceTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]]
-) extends IInterfaceNameI[R] with CitizenNameI[R] {
-  vpass()
-}
 
-*/
 // Per @LAGTNGZ, closure struct isn't parameterized; one struct corresponds to many LambdaCallFunctionNameIs.
 // mig: struct LambdaCitizenTemplateNameI
 /// Temporary state
@@ -2349,18 +1739,7 @@ pub struct LambdaCitizenTemplateNameI<'s> {
     pub code_location: CodeLocationS<'s>,
 }
 
-/*
-// Per @LAGTNGZ, closure struct isn't parameterized; one struct corresponds to many LambdaCallFunctionNameIs.
-case class LambdaCitizenTemplateNameI[+R <: IRegionsModeI](
-  codeLocation: CodeLocationS
-) extends IStructTemplateNameI[R] {
-//  override def makeStructName(templateArgs: Vector[ITemplataI[R]]): IStructNameI = {
-//    vassert(templateArgs.isEmpty)
-//    interner.intern(LambdaCitizenNameI(this))
-//  }
-}
 
-*/
 // mig: struct LambdaCitizenNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2369,15 +1748,7 @@ pub struct LambdaCitizenNameI<'s> {
     pub template: LambdaCitizenTemplateNameI<'s>,
 }
 
-/*
-case class LambdaCitizenNameI[+R <: IRegionsModeI](
-  template: LambdaCitizenTemplateNameI[R]
-) extends IStructNameI[R] {
-  def templateArgs: Vector[ITemplataI[R]] = Vector.empty
-  vpass()
-}
 
-*/
 // mig: enum CitizenTemplateNameI
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -2386,22 +1757,7 @@ pub enum CitizenTemplateNameI<'s, 'i> {
     _Phantom(PhantomData<(&'s (), &'i ())>),
 }
 // mig: impl CitizenTemplateNameI
-/*
-sealed trait CitizenTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateNameI[R] {
-  def humanName: StrI
-  // We don't include a CodeLocation here because:
-  // - There's no struct overloading, so there should only ever be one, we don't have to disambiguate
-  //   with code locations
-  // - It makes it easier to determine the CitizenTemplateNameI from a CitizenNameI which doesn't
-  //   remember its code location.
-  //codeLocation: CodeLocationS
 
-//  override def makeCitizenName(templateArgs: Vector[ITemplata[ITemplataType]]): ICitizenNameI = {
-//    interner.intern(CitizenNameI(this, templateArgs))
-//  }
-}
-
-*/
 // mig: struct StructTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2409,24 +1765,7 @@ sealed trait CitizenTemplateNameI[+R <: IRegionsModeI] extends ICitizenTemplateN
 pub struct StructTemplateNameI<'s> {
     pub human_name: StrI<'s>,
 }
-/*
-case class StructTemplateNameI[+R <: IRegionsModeI](
-  humanName: StrI,
-  // We don't include a CodeLocation here because:
-  // - There's no struct overloading, so there should only ever be one, we don't have to disambiguate
-  //   with code locations
-  // - It makes it easier to determine the StructTemplateNameI from a StructNameI which doesn't
-  //   remember its code location.
-  //   (note from later: not sure this is true anymore, since StructNameI contains a StructTemplateNameI)
-  //codeLocation: CodeLocationS
-) extends IStructTemplateNameI[R] with CitizenTemplateNameI[R] {
-  vpass()
 
-//  override def makeStructName(templateArgs: Vector[ITemplataI[R]]): IStructNameI = {
-//    interner.intern(StructNameI(this, templateArgs))
-//  }
-}
-*/
 // mig: struct InterfaceTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2434,33 +1773,13 @@ case class StructTemplateNameI[+R <: IRegionsModeI](
 pub struct InterfaceTemplateNameI<'s> {
     pub human_namee: StrI<'s>,
 }
-/*
-case class InterfaceTemplateNameI[+R <: IRegionsModeI](
-  humanNamee: StrI,
-  // We don't include a CodeLocation here because:
-  // - There's no struct overloading, so there should only ever be one, we don't have to disambiguate
-  //   with code locations
-  // - It makes it easier to determine the InterfaceTemplateNameI from a InterfaceNameI which doesn't
-  //   remember its code location.
-  //codeLocation: CodeLocationS
-) extends IInterfaceTemplateNameI[R] with CitizenTemplateNameI[R] with ICitizenTemplateNameI[R] {
-*/
+
 // mig: fn human_name
 // (was cfg-gated)
 impl<'s> InterfaceTemplateNameI<'s> {
     pub fn human_name(&self) -> StrI<'s> { panic!("Unimplemented: human_name"); }
 }
-/*
-  override def humanName = humanNamee
-//  override def makeInterfaceName(templateArgs: Vector[ITemplataI[R]]): IInterfaceNameI = {
-//    interner.intern(InterfaceNameI(this, templateArgs))
-//  }
-//  override def makeCitizenName(templateArgs: Vector[ITemplataI[R]]): ICitizenNameI = {
-//    makeInterfaceName(templateArgs)
-//  }
-}
 
-*/
 // mig: struct AnonymousSubstructImplTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2468,15 +1787,7 @@ impl<'s> InterfaceTemplateNameI<'s> {
 pub struct AnonymousSubstructImplTemplateNameI<'s, 'i> {
     pub interface: IInterfaceTemplateNameI<'s, 'i>,
 }
-/*
-case class AnonymousSubstructImplTemplateNameI[+R <: IRegionsModeI](
-  interface: IInterfaceTemplateNameI[R]
-) extends IImplTemplateNameI[R] {
-//  override def makeImplName(templateArgs: Vector[ITemplataI[R]], subCitizen: ICitizenIT): IImplNameI = {
-//    AnonymousSubstructImplNameI(this, templateArgs, subCitizen)
-//  }
-}
-*/
+
 // mig: struct AnonymousSubstructImplNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2487,15 +1798,7 @@ pub struct AnonymousSubstructImplNameI<'s, 'i> {
     pub sub_citizen: ICitizenIT<'s, 'i>,
 }
 
-/*
-case class AnonymousSubstructImplNameI[+R <: IRegionsModeI](
-  template: AnonymousSubstructImplTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  subCitizen: ICitizenIT[R]
-) extends IImplNameI[R]
 
-
-*/
 // mig: struct AnonymousSubstructTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2503,17 +1806,7 @@ case class AnonymousSubstructImplNameI[+R <: IRegionsModeI](
 pub struct AnonymousSubstructTemplateNameI<'s, 'i> {
     pub interface: IInterfaceTemplateNameI<'s, 'i>,
 }
-/*
-case class AnonymousSubstructTemplateNameI[+R <: IRegionsModeI](
-  // This happens to be the same thing that appears before this AnonymousSubstructNameI in a FullNameT.
-  // This is really only here to help us calculate the imprecise name for this thing.
-  interface: IInterfaceTemplateNameI[R]
-) extends IStructTemplateNameI[R] {
-//  override def makeStructName(templateArgs: Vector[ITemplataI[R]]): IStructNameI = {
-//    interner.intern(AnonymousSubstructNameI(this, templateArgs))
-//  }
-}
-*/
+
 // mig: struct AnonymousSubstructConstructorTemplateNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2522,16 +1815,7 @@ pub struct AnonymousSubstructConstructorTemplateNameI<'s, 'i> {
     pub substruct: ICitizenTemplateNameI<'s, 'i>,
 }
 
-/*
-case class AnonymousSubstructConstructorTemplateNameI[+R <: IRegionsModeI](
-  substruct: ICitizenTemplateNameI[R]
-) extends IFunctionTemplateNameI[R] {
-//  override def makeFunctionName(keywords: Keywords, templateArgs: Vector[ITemplataI[R]], params: Vector[CoordI]): IFunctionNameI = {
-//    interner.intern(AnonymousSubstructConstructorNameI(this, templateArgs, params))
-//  }
-}
 
-*/
 // mig: struct AnonymousSubstructConstructorNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2542,14 +1826,7 @@ pub struct AnonymousSubstructConstructorNameI<'s, 'i> {
     pub parameters: &'i[CoordI<'s, 'i>],
 }
 
-/*
-case class AnonymousSubstructConstructorNameI[+R <: IRegionsModeI](
-  template: AnonymousSubstructConstructorTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]],
-  parameters: Vector[CoordI[R]]
-) extends IFunctionNameI[R]
 
-*/
 // mig: struct AnonymousSubstructNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -2559,39 +1836,17 @@ pub struct AnonymousSubstructNameI<'s, 'i> {
     pub template_args: &'i[ITemplataI<'s, 'i>],
 }
 
-/*
-case class AnonymousSubstructNameI[+R <: IRegionsModeI](
-  // This happens to be the same thing that appears before this AnonymousSubstructNameI in a FullNameT.
-  // This is really only here to help us calculate the imprecise name for this thing.
-  template: AnonymousSubstructTemplateNameI[R],
-  templateArgs: Vector[ITemplataI[R]]
-) extends IStructNameI[R] {
 
-}
-//case class AnonymousSubstructImplNameI[+R <: IRegionsModeI]() extends INameI[R] {
-//
-//}
-
-*/
 // mig: struct ResolvingEnvNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct ResolvingEnvNameI;
 
-/*
-case class ResolvingEnvNameI[+R <: IRegionsModeI]() extends INameI[R] {
-  vpass()
-}
 
-*/
 // mig: struct CallEnvNameI
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 // (was cfg-gated)
 pub struct CallEnvNameI;
-/*
-case class CallEnvNameI[+R <: IRegionsModeI]() extends INameI[R] {
-  vpass()
-}
-*/
+

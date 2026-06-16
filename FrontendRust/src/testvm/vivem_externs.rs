@@ -14,28 +14,13 @@ use crate::testvm::vivem::PanicExceptionV;
 use crate::testvm::vivem::VmRuntimeErrorV;
 use std::marker::PhantomData;
 
-/*
-package dev.vale.testvm
 
-import dev.vale.finalast._
-import dev.vale.{vassert, vfail}
-
-import java.lang.ArithmeticException
-import dev.vale.vfail
-
-object VivemExterns {
-*/
 // mig: fn panic
 pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 0);
     Err(VmRuntimeErrorV::PanicException(PanicExceptionV))
 }
-/*
-  def panic(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 0)
-    throw new PanicException()
-  }
-*/
+
 // mig: fn add_float_float
 pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -48,18 +33,7 @@ pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
         _ => panic!("add_float_float: non-FloatV args"),
     })
 }
-/*
-  def addFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(aValue + bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn multiply_float_float
 pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -72,18 +46,7 @@ pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
         _ => panic!("multiply_float_float: non-FloatV args"),
     })
 }
-/*
-  def multiplyFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(aValue * bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn divide_float_float
 pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -96,18 +59,7 @@ pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h
         _ => panic!("divide_float_float: non-FloatV args"),
     })
 }
-/*
-  def divideFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(aValue / bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn subtract_float_float
 pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -120,18 +72,7 @@ pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
         _ => panic!("subtract_float_float: non-FloatV args"),
     })
 }
-/*
-  def subtractFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(aValue - bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn add_str_str
 pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
@@ -147,18 +88,7 @@ pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, 
     let interned = memory.scout_arena.intern_str(&concat);
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
-/*
-  def addStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 6)
-    val StrV(aStr) = memory.dereference(args(0))
-    val IntV(aBegin, 32) = memory.dereference(args(1))
-    val IntV(aLength, 32) = memory.dereference(args(2))
-    val StrV(bStr) = memory.dereference(args(3))
-    val IntV(bBegin, 32) = memory.dereference(args(4))
-    val IntV(bLength, 32) = memory.dereference(args(5))
-    memory.addAllocationForReturn(MutableShareH, YonderH, StrV(aStr.substring(aBegin.toInt, aBegin.toInt + aLength.toInt) + bStr.substring(bBegin.toInt, bBegin.toInt + bLength.toInt)))
-  }
-*/
+
 // mig: fn getch
 pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.is_empty());
@@ -166,14 +96,7 @@ pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
     let code = if next.0.is_empty() { 0i64 } else { next.0.chars().next().unwrap() as i64 };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: code, bits: 32, _phantom: PhantomData })))
 }
-/*
-  def getch(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.isEmpty)
-    val next = memory.stdin()
-    val code = if (next.isEmpty) { 0 } else { next.charAt(0).charValue().toInt }
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(code, 32))
-  }
-*/
+
 // mig: fn less_than_float
 pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -186,32 +109,10 @@ pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
         _ => panic!("less_than_float: non-FloatV args"),
     })
 }
-/*
-  def lessThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue < bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn greater_than_float
 pub fn greater_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_float"); }
-/*
-  def greaterThanFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue > bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn eq_float_float
 pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -224,18 +125,7 @@ pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
         _ => panic!("eq_float_float: non-FloatV args"),
     })
 }
-/*
-  def eqFloatFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (FloatV(aValue), FloatV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue == bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn eq_str_str
 pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
@@ -250,19 +140,7 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     let result_eq = &left_str.0[left_str_start as usize .. left_str_len as usize] == &right_str.0[right_str_start as usize .. right_str_len as usize];
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: result_eq, _phantom: PhantomData })))
 }
-/*
-  def eqStrStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 6)
-    val StrV(leftStr) = memory.dereference(args(0))
-    val IntV(leftStrStart, 32) = memory.dereference(args(1))
-    val IntV(leftStrLen, 32) = memory.dereference(args(2))
-    val StrV(rightStr) = memory.dereference(args(3))
-    val IntV(rightStrStart, 32) = memory.dereference(args(4))
-    val IntV(rightStrLen, 32) = memory.dereference(args(5))
-    val result = BoolV(leftStr.slice(leftStrStart.toInt, leftStrLen.toInt) == rightStr.slice(rightStrStart.toInt, rightStrLen.toInt))
-    memory.addAllocationForReturn(MutableShareH, InlineH, result)
-  }
-*/
+
 // mig: fn eq_bool_bool
 pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -275,46 +153,13 @@ pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!("eq_bool_bool: non-BoolV args"),
     })
 }
-/*
-  def eqBoolBool(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (BoolV(aValue), BoolV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue == bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn and
 pub fn and<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: and"); }
-/*
-  def and(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (BoolV(aValue), BoolV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue && bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn or
 pub fn or<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: or"); }
-/*
-  def or(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (BoolV(aValue), BoolV(bValue)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue || bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn not
 pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -324,13 +169,7 @@ pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: !value, _phantom: PhantomData })))
 }
-/*
-  def not(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val BoolV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(!value))
-  }
-*/
+
 // mig: fn sqrt
 pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -340,13 +179,7 @@ pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: value.sqrt(), _phantom: PhantomData })))
 }
-/*
-  def sqrt(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val FloatV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(Math.sqrt(value).toFloat))
-  }
-*/
+
 // mig: fn str_length
 pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -356,13 +189,7 @@ pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: value.0.len() as i64, bits: 32, _phantom: PhantomData })))
 }
-/*
-  def strLength(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val StrV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(value.length, 32))
-  }
-*/
+
 // mig: fn cast_float_str
 pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -373,13 +200,7 @@ pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
     let interned = memory.scout_arena.intern_str(&value.to_string());
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
-/*
-  def castFloatStr(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val FloatV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, YonderH, StrV(value.toString))
-  }
-*/
+
 // mig: fn negate_float
 pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -389,13 +210,7 @@ pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: -value, _phantom: PhantomData })))
 }
-/*
-  def negateFloat(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val FloatV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(-value))
-  }
-*/
+
 // mig: fn print
 pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 3);
@@ -416,16 +231,7 @@ pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
     (memory.stdout)(substring_interned);
     Ok(memory.make_void())
 }
-/*
-  def print(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 3)
-    val StrV(aStr) = memory.dereference(args(0))
-    val IntV(aBegin, 32) = memory.dereference(args(1))
-    val IntV(aLength, 32) = memory.dereference(args(2))
-    memory.stdout(aStr.substring(aBegin.toInt, aBegin.toInt + aLength.toInt))
-    memory.makeVoid()
-  }
-*/
+
 // mig: fn add_i32
 pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -438,18 +244,7 @@ pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
         _ => panic!("add_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def addI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue.toInt + bValue.toInt, 32))
-      }
-    }
-  }
-*/
+
 // mig: fn multiply_i32
 pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -462,18 +257,7 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!("multiply_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def multiplyI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue.toInt * bValue.toInt, 32))
-      }
-    }
-  }
-*/
+
 // mig: fn divide_i32
 pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -486,18 +270,7 @@ pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
         _ => panic!("divide_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def divideI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue.toInt / bValue.toInt, 32))
-      }
-    }
-  }
-*/
+
 // mig: fn mod_i32
 pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -510,22 +283,7 @@ pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
         _ => panic!("mod_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def modI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        try {
-          memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue.toInt % bValue.toInt, 32))
-        } catch {
-          case _ : ArithmeticException => vfail()
-        }
-      }
-    }
-  }
-*/
+
 // mig: fn subtract_i32
 pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -538,18 +296,7 @@ pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!("subtract_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def subtractI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue.toInt - bValue.toInt, 32))
-      }
-    }
-  }
-*/
+
 // mig: fn less_than_i32
 pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -562,18 +309,7 @@ pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>
         _ => panic!("less_than_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def lessThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue < bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn less_than_or_eq_i32
 pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -586,18 +322,7 @@ pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
         _ => panic!("less_than_or_eq_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def lessThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue <= bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn greater_than_i32
 pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -610,18 +335,7 @@ pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 
         _ => panic!("greater_than_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def greaterThanI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue > bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn greater_than_or_eq_i32
 pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -634,18 +348,7 @@ pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v
         _ => panic!("greater_than_or_eq_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def greaterThanOrEqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue >= bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn eq_i32
 pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -658,18 +361,7 @@ pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args:
         _ => panic!("eq_i32: non-IntV(_, 32) args"),
     })
 }
-/*
-  def eqI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 32), IntV(bValue, 32)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue == bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn cast_i32_str
 pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -680,13 +372,7 @@ pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let interned = memory.scout_arena.intern_str(&value.to_string());
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
-/*
-  def castI32Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val IntV(value, 32) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, YonderH, StrV(value.toString))
-  }
-*/
+
 // mig: fn cast_float_i32
 pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -696,13 +382,7 @@ pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: value as i32 as i64, bits: 32, _phantom: PhantomData })))
 }
-/*
-  def castFloatI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val FloatV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(value.toInt, 32))
-  }
-*/
+
 // mig: fn cast_i32_float
 pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -712,27 +392,10 @@ pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
     };
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: value as f64, _phantom: PhantomData })))
 }
-/*
-  def castI32Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val IntV(value, 32) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(value.toFloat))
-  }
-*/
+
 // mig: fn add_i64
 pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
-/*
-  def addI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue + bValue, 64))
-      }
-    }
-  }
-*/
+
 // mig: fn multiply_i64
 pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -745,18 +408,7 @@ pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!("multiply_i64: non-IntV(_, 64) args"),
     })
 }
-/*
-  def multiplyI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue * bValue, 64))
-      }
-    }
-  }
-*/
+
 // mig: fn divide_i64
 pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -769,18 +421,7 @@ pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
         _ => panic!("divide_i64: non-IntV(_, 64) args"),
     })
 }
-/*
-  def divideI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue / bValue, 64))
-      }
-    }
-  }
-*/
+
 // mig: fn truncate_i64_to_i32
 pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -791,32 +432,10 @@ pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
     let result = value & 0xFFFFFFFFi64;
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: result, bits: 32, _phantom: PhantomData })))
 }
-/*
-  def truncateI64ToI32(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val IntV(value, 64) = memory.dereference(args(0))
-    val result = value & 0xFFFFFFFFL
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(result, 32))
-  }
-*/
+
 // mig: fn mod_i64
 pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
-/*
-  def modI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        try {
-          memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue % bValue, 64))
-        } catch {
-          case _ : ArithmeticException => vfail()
-        }
-      }
-    }
-  }
-*/
+
 // mig: fn subtract_i64
 pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -829,88 +448,22 @@ pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!("subtract_i64: non-IntV(_, 64) args"),
     })
 }
-/*
-  def subtractI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, IntV(aValue - bValue, 64))
-      }
-    }
-  }
-*/
+
 // mig: fn less_than_i64
 pub fn less_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_i64"); }
-/*
-  def lessThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue < bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn less_than_or_eq_i64
 pub fn less_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: less_than_or_eq_i64"); }
-/*
-  def lessThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue <= bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn greater_than_i64
 pub fn greater_than_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_i64"); }
-/*
-  def greaterThanI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue > bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn greater_than_or_eq_i64
 pub fn greater_than_or_eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: greater_than_or_eq_i64"); }
-/*
-  def greaterThanOrEqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue >= bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn eq_i64
 pub fn eq_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: eq_i64"); }
-/*
-  def eqI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 2)
-    val aKind = memory.dereference(args(0))
-    val bKind = memory.dereference(args(1))
-    (aKind, bKind) match {
-      case (IntV(aValue, 64), IntV(bValue, 64)) => {
-        memory.addAllocationForReturn(MutableShareH, InlineH, BoolV(aValue == bValue))
-      }
-    }
-  }
-*/
+
 // mig: fn cast_i64_str
 pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -921,31 +474,13 @@ pub fn cast_i64_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let interned = memory.scout_arena.intern_str(&value.to_string());
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
-/*
-  def castI64Str(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val IntV(value, 64) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, YonderH, StrV(value.toString))
-  }
-*/
+
 // mig: fn cast_float_i64
 pub fn cast_float_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_float_i64"); }
-/*
-  def castFloatI64(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val FloatV(value) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(value.toInt, 64))
-  }
-*/
+
 // mig: fn cast_i64_float
 pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: cast_i64_float"); }
-/*
-  def castI64Float(memory: AdapterForExterns, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    val IntV(value, 64) = memory.dereference(args(0))
-    memory.addAllocationForReturn(MutableShareH, InlineH, FloatV(value.toFloat))
-  }
-*/
+
 // mig: fn new_vec
 pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 0);
@@ -955,16 +490,7 @@ pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prot
     };
     Ok(memory.new_opaque(opaque_coord))
 }
-/*
-  def newVec(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 0)
-    val opaqueCoord =
-      prototype.returnType match {
-        case CoordH(own, loc, s @ OpaqueHT(_, _, _)) => CoordH(own, loc, s)
-      }
-    memory.newOpaque(opaqueCoord)
-  }
-*/
+
 // mig: fn new_vec_with_capacity
 pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 1);
@@ -979,21 +505,7 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v,
     };
     Ok(memory.new_opaque(opaque_coord))
 }
-/*
-  def newVecWithCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    // This whole function only exists for testing purposes
-    memory.dereference(args(0)) match {
-      case IntV(42, 64) =>
-    }
 
-    val opaqueCoord =
-      prototype.returnType match {
-        case CoordH(own, loc, s@OpaqueHT(_, _, _)) => CoordH(own, loc, s)
-      }
-    memory.newOpaque(opaqueCoord)
-  }
-*/
 // mig: fn vec_capacity
 pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, _prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 1);
@@ -1004,16 +516,4 @@ pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     // This whole function just exists for testing, there are some tests that feed 42 in to newVecWithCapacity
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: 42, bits: 64, _phantom: PhantomData })))
 }
-/*
-  def vecCapacity(memory: AdapterForExterns, prototype: PrototypeH, args: Vector[ReferenceV]): ReferenceV = {
-    vassert(args.size == 1)
-    memory.dereference(args(0)) match {
-      case OpaqueV(_) =>
-    }
 
-    // This whole function just exists for testing, there are some tests that feed 42 in to newVecWithCapacity
-    memory.addAllocationForReturn(MutableShareH, InlineH, IntV(42, 64))
-  }
-}
-
-*/

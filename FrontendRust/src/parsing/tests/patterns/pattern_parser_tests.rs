@@ -1,30 +1,4 @@
-/*
-package dev.vale.parsing.patterns
 
-import dev.vale.{Collector, Err, StrI, vimpl}
-import dev.vale.parsing.{PatternParser, TestParseUtils}
-import dev.vale.parsing.ast.{AbstractP, DestructureP, IgnoredLocalNameDeclarationP, LocalNameDeclarationP, NameOrRunePT, NameP, PatternPP, Patterns, TuplePT}
-import dev.vale.parsing.ast.Patterns._
-import dev.vale.parsing._
-import dev.vale.parsing.ast._
-import org.scalatest._
-
-class PatternParserTests extends FunSuite with Matchers with Collector with TestParseUtils {
-  private def compile[T](code: String): PatternPP = {
-    compilePattern(code)
-//    compile(new PatternParser().parsePattern(_), code)
-  }
-
-  private def checkFail[T](code: String) = {
-    vimpl()
-//    compileForError(new PatternParser().parsePattern(_), code)
-  }
-
-  private def checkRest[T](code: String, expectedRest: String) = {
-    vimpl()
-//    compileForRest(new PatternParser().parsePattern(_), code, expectedRest)
-  }
-*/
 use bumpalo::Bump;
 use crate::cast;
 use crate::parse_arena::ParseArena;
@@ -59,15 +33,7 @@ fn simple_int() {
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("Simple Int") {
-    // Make sure every pattern on the way down to kind can match Int
-//    compile(Parser.parseTypeName(_),"int") shouldHave { case "int" => }
-//    compile(runeOrKindPattern,"int") shouldHave { case NameOrRunePT(NameP(_, StrI("int"))) => }
-//    compile(patternType,"int") shouldHave { case PatternTypePPI(None, NameOrRunePT(NameP(_, StrI("int")))) => }
-    compile("_ int") shouldHave { case Patterns.fromEnv("int") => }
-  }
-*/
+
 #[test]
 fn name_only_capture() {
   let parse_bump = Bump::new();
@@ -80,13 +46,7 @@ fn name_only_capture() {
   assert!(pattern.templex.is_none());
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("Name-only Capture") {
-    compile("a") match {
-      case PatternPP(_, Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)), None, None) =>
-    }
-  }
-*/
+
 #[test]
 fn empty_pattern() {
   let parse_bump = Bump::new();
@@ -102,11 +62,7 @@ fn empty_pattern() {
   assert!(pattern.templex.is_none());
   assert!(pattern.destructure.is_none());
 }
-/*
-  test("Empty pattern") {
-    compile("_") match { case PatternPP(_, Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),None,None) => }
-  }
-*/
+
 #[test]
 fn capture_with_type_with_destructure() {
   let parse_bump = Bump::new();
@@ -130,17 +86,7 @@ fn capture_with_type_with_destructure() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Capture with type with destructure") {
-    compile("a Moo[a, b]") shouldHave {
-      case PatternPP(
-          _,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-          Some(NameOrRunePT(NameP(_, StrI("Moo")))),
-          Some(DestructureP(_,Vector(capture("a"),capture("b"))))) =>
-    }
-  }
-*/
+
 #[test]
 fn cstodts() {
   let parse_bump = Bump::new();
@@ -159,19 +105,7 @@ fn cstodts() {
   assert_templex_name(a_pattern.templex.as_ref().unwrap(), "int");
   assert!(a_pattern.destructure.is_none());
 }
-/*
 
-  test("CSTODTS") {
-    // This tests us handling an ambiguity properly, see CSTODTS in docs.
-    compile("moo T[a int]") shouldHave {
-      case PatternPP(
-          _,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("moo"))), None)),
-          Some(NameOrRunePT(NameP(_, StrI("T")))),
-          Some(DestructureP(_,Vector(PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),Some(NameOrRunePT(NameP(_, StrI("int")))),None))))) =>
-    }
-  }
-*/
 #[test]
 fn capture_with_destructure_with_type_outside() {
   let parse_bump = Bump::new();
@@ -198,20 +132,4 @@ fn capture_with_destructure_with_type_outside() {
   assert!(b_pattern.templex.is_none());
   assert!(b_pattern.destructure.is_none());
 }
-/*
-  test("Capture with destructure with type outside") {
-    compile("a (int, bool)[a, b]") shouldHave {
-      case PatternPP(
-          _,
-          Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),
-          Some(
-            TuplePT(_,
-                  Vector(
-                    NameOrRunePT(NameP(_, StrI("int"))),
-                    NameOrRunePT(NameP(_, StrI("bool")))))),
-          Some(DestructureP(_,Vector(capture("a"), capture("b"))))) =>
-    }
-  }
 
-}
-*/

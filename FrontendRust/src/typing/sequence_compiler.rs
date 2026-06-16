@@ -19,33 +19,8 @@ use std::collections::HashSet;
 use std::iter::once;
 use std::marker::PhantomData;
 
-/*
-package dev.vale.typing
 
-import dev.vale.postparsing._
-import dev.vale.typing.ast._
-import dev.vale.{Interner, Keywords, Profiler, RangeS, vassert, vassertSome, vimpl}
-import dev.vale.typing.citizen.StructCompiler
-import dev.vale.typing.env.{IInDenizenEnvironmentT, TemplataLookupContext}
-import dev.vale.typing.names._
-import dev.vale.typing.templata._
-import dev.vale.typing.types._
-import dev.vale.typing.ast._
-import dev.vale.typing.types._
-import dev.vale.typing.templata._
-import dev.vale.typing.citizen.StructCompilerCore
-import dev.vale.typing.env.PackageEnvironmentT
-import dev.vale.typing.function.FunctionCompiler
 
-*/
-/*
-class SequenceCompiler(
-  opts: TypingPassOptions,
-  interner: Interner,
-  keywords: Keywords,
-    structCompiler: StructCompiler,
-    templataCompiler: TemplataCompiler) {
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -65,20 +40,7 @@ where 's: 't,
         }));
         final_expr
     }
-/*
-  def resolveTuple(
-    env: IInDenizenEnvironmentT,
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-      callLocation: LocationInDenizen,
-    exprs2: Vector[ReferenceExpressionTE]):
-  (ReferenceExpressionTE) = {
-    val types2 = exprs2.map(_.result.expectReference().coord)
-    val region = RegionT(DefaultRegionT)
-    val finalExpr = TupleTE(exprs2, makeTupleCoord(env, coutputs, parentRanges, callLocation, region, types2))
-    (finalExpr)
-  }
-*/
+
     pub fn make_tuple_kind(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -103,28 +65,7 @@ where 's: 't,
             IResolveOutcome::ResolveFailure(_) => panic!("make_tuple_kind: resolve_struct failed"),
         }
     }
-/*
-  def makeTupleKind(
-    env: IInDenizenEnvironmentT,
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-      callLocation: LocationInDenizen,
-    types2: Vector[CoordT]):
-  StructTT = {
-    val tupleTemplate @ StructDefinitionTemplataT(_, _) =
-      vassertSome(
-        env.lookupNearestWithName(
-          interner.intern(StructTemplateNameT(keywords.tupleHumanName(types2.length))), Set(TemplataLookupContext)))
-    structCompiler.resolveStruct(
-      coutputs,
-      env,
-      RangeS.internal(interner, -17653) :: parentRanges,
-      callLocation,
-      tupleTemplate,
-//      Vector(CoordListTemplata(types2))).kind
-      types2.map(CoordTemplataT)).expect().kind
-  }
-*/
+
     pub fn make_tuple_coord(
         &self,
         env: IInDenizenEnvironmentT<'s, 't>,
@@ -137,18 +78,5 @@ where 's: 't,
         let tuple_kind = self.make_tuple_kind(env, coutputs, parent_ranges, call_location, types);
         self.coerce_kind_to_coord(coutputs, KindT::Struct(self.typing_interner.alloc(tuple_kind)), region)
     }
-/*
-  def makeTupleCoord(
-    env: IInDenizenEnvironmentT,
-    coutputs: CompilerOutputs,
-    parentRanges: List[RangeS],
-      callLocation: LocationInDenizen,
-    region: RegionT,
-    types2: Vector[CoordT]):
-  CoordT = {
-    templataCompiler.coerceKindToCoord(
-      coutputs, makeTupleKind(env, coutputs, parentRanges, callLocation, types2), region)
-  }
-}
-*/
+
 }

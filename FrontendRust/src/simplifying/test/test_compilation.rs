@@ -10,16 +10,7 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
-/*
-package dev.vale.simplifying
 
-import dev.vale.options.GlobalOptions
-import dev.vale.{Builtins, FileCoordinateMap, Interner, Keywords, PackageCoordinate, Tests}
-
-import scala.collection.immutable.List
-
-object HammerTestCompilation {
-*/
 // mig: fn test
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
   interner: &'ctx HammerInterner<'s, 'h>,
@@ -57,18 +48,4 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     },
     instantiating_bump)
 }
-/*
-  def test(code: String*): HammerCompilation = {
-    val interner = new Interner()
-    val keywords = new Keywords(interner)
-    new HammerCompilation(
-      interner,
-      keywords,
-      Vector(PackageCoordinate.BUILTIN(interner, keywords), PackageCoordinate.TEST_TLD(interner, keywords)),
-      Builtins.getCodeMap(interner, keywords)
-        .or(FileCoordinateMap.test(interner, code.toVector))
-        .or(Tests.getPackageToResourceResolver),
-      HammerCompilationOptions())
-  }
-}
-*/
+

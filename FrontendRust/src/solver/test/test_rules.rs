@@ -1,12 +1,4 @@
-/*
-package dev.vale.solver
 
-import dev.vale.Err
-import org.scalatest._
-
-import scala.collection.immutable.Map
-
-*/
 // mig: trait IRule
 pub trait IRule {
     fn all_runes(&self) -> Vec<i64>;
@@ -54,12 +46,7 @@ impl TestRule {
         }
     }
 }
-/*
-sealed trait IRule {
-  def allRunes: Vector[Long]
-  def allPuzzles: Vector[Vector[Long]]
-}
-*/
+
 // mig: struct Lookup
 #[derive(Clone, Debug)]
 pub struct Lookup {
@@ -75,12 +62,7 @@ impl IRule for Lookup {
         vec![vec![]]
     }
 }
-/*
-case class Lookup(rune: Long, name: String) extends IRule {
-  override def allRunes: Vector[Long] = Vector(rune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector())
-}
-*/
+
 // mig: struct Literal
 #[derive(Clone, Debug)]
 pub struct Literal {
@@ -96,12 +78,7 @@ impl IRule for Literal {
         vec![vec![]]
     }
 }
-/*
-case class Literal(rune: Long, value: String) extends IRule {
-  override def allRunes: Vector[Long] = Vector(rune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector())
-}
-*/
+
 // mig: struct Equals
 #[derive(Clone, Debug)]
 pub struct Equals {
@@ -117,12 +94,7 @@ impl IRule for Equals {
         vec![vec![self.left_rune], vec![self.right_rune]]
     }
 }
-/*
-case class Equals(leftRune: Long, rightRune: Long) extends IRule {
-  override def allRunes: Vector[Long] = Vector(leftRune, rightRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(leftRune), Vector(rightRune))
-}
-*/
+
 // mig: struct CoordComponents
 #[derive(Clone, Debug)]
 pub struct CoordComponents {
@@ -142,12 +114,7 @@ impl IRule for CoordComponents {
         ]
     }
 }
-/*
-case class CoordComponents(coordRune: Long, ownershipRune: Long, kindRune: Long) extends IRule {
-  override def allRunes: Vector[Long] = Vector(coordRune, ownershipRune, kindRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(coordRune), Vector(ownershipRune, kindRune))
-}
-*/
+
 // mig: struct OneOf
 #[derive(Clone, Debug)]
 pub struct OneOf {
@@ -163,12 +130,7 @@ impl IRule for OneOf {
         vec![vec![self.coord_rune]]
     }
 }
-/*
-case class OneOf(coordRune: Long, possibleValues: Vector[String]) extends IRule {
-  override def allRunes: Vector[Long] = Vector(coordRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(coordRune))
-}
-*/
+
 // mig: struct Call
 #[derive(Clone, Debug)]
 pub struct Call {
@@ -188,12 +150,7 @@ impl IRule for Call {
         ]
     }
 }
-/*
-case class Call(resultRune: Long, nameRune: Long, argRune: Long) extends IRule {
-  override def allRunes: Vector[Long] = Vector(resultRune, nameRune, argRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(resultRune, nameRune), Vector(nameRune, argRune))
-}
-*/
+
 // mig: struct Send
 #[derive(Clone, Debug)]
 pub struct Send {
@@ -209,13 +166,7 @@ impl IRule for Send {
         vec![vec![self.receiver_rune]]
     }
 }
-/*
-// See IRFU and SRCAMP for what this rule is doing
-case class Send(senderRune: Long, receiverRune: Long) extends IRule {
-  override def allRunes: Vector[Long] = Vector(receiverRune, senderRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(receiverRune))
-}
-*/
+
 // mig: struct Implements
 #[derive(Clone, Debug)]
 pub struct Implements {
@@ -231,12 +182,7 @@ impl IRule for Implements {
         vec![vec![self.sub_rune, self.super_rune]]
     }
 }
-/*
-case class Implements(subRune: Long, superRune: Long) extends IRule {
-  override def allRunes: Vector[Long] = Vector(subRune, superRune)
-  override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(subRune, superRune))
-}
-*/
+
 // mig: struct Pack
 #[derive(Clone, Debug)]
 pub struct Pack {
@@ -262,15 +208,4 @@ impl IRule for Pack {
         }
     }
 }
-/*
-case class Pack(resultRune: Long, memberRunes: Vector[Long]) extends IRule {
-  override def allRunes: Vector[Long] = Vector(resultRune) ++ memberRunes
-  override def allPuzzles: Vector[Vector[Long]] = {
-    if (memberRunes.isEmpty) {
-      Vector(Vector(resultRune))
-    } else {
-      Vector(Vector(resultRune), memberRunes)
-    }
-  }
-}
-*/
+

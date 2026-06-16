@@ -28,37 +28,13 @@ use std::fmt::Formatter;
 use std::fmt::Result;
 use std::ptr::eq;
 
-/*
-package dev.vale.finalast
 
-import dev.vale.{PackageCoordinate, PackageCoordinateMap, StrI, vassert, vassertSome, vcurious, vfail, vimpl, vpass}
-import dev.vale.von.IVonData
-
-import scala.collection.immutable.ListMap
-
-object ProgramH {
-//  val emptyTupleStructRef =
-//    // If the typingpass ever decides to change this things name, update this to match typingpass's.
-////    StructRefH(FullNameH("Tup0", 0, PackageCoordinate.BUILTIN, Vector(VonObject("Tup",None,Vector(VonMember("members",VonArray(None,Vector())))))))
-//    StructRefH(FullNameH("Tup",0, PackageCoordinate.BUILTIN, Vector(VonObject("CitizenName",None,Vector(VonMember("humanName",VonObject("CitizenTemplateName",None,Vector(VonMember("Tup",VonStr("Tup"))))), VonMember("templateArgs",VonArray(None,Vector(VonObject("CoordListTemplata",None,Vector(VonMember("coords",VonArray(None,Vector()))))))))))))
-//  def emptyTupleStructType = ReferenceH(ShareH, InlineH, ReadonlyH, emptyTupleStructRef)
-
-  val mainRegionName = "main"
-  val externRegionName = "host"
-}
-
-*/
 
 // mig: case class RegionH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionH;
-/*
-case class RegionH() {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-*/
+
 
 // mig: case class Export
 /// Temporary state
@@ -67,15 +43,7 @@ pub struct Export<'s, 'h> where 's: 'h {
     pub name_h: &'h IdH<'s>,
     pub exported_name: StrI<'s>,
 }
-/*
-case class Export(
-  nameH: IdH,
-  exportedName: String
-) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-*/
+
 
 // mig: case class PackageH
 /// Temporary state
@@ -94,71 +62,33 @@ pub struct PackageH<'s, 'h> where 's: 'h {
     pub prototype_to_extern: &'h ArenaIndexMap<'h, &'h PrototypeH<'s, 'h>, HamutsFunctionExtern<'s, 'h>>,
     pub kind_to_extern: &'h ArenaIndexMap<'h, &'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>,
 }
-/*
-case class PackageH(
-    // All the interfaces in the program.
-    interfaces: Vector[InterfaceDefinitionH],
-    // All the structs in the program.
-    structs: Vector[StructDefinitionH],
-    // All of the user defined functions (and some from the compiler itself).
-    functions: Vector[FunctionH],
-    staticSizedArrays: Vector[StaticSizedArrayDefinitionHT],
-    runtimeSizedArrays: Vector[RuntimeSizedArrayDefinitionHT],
-    // Used for native compilation only, not JVM/CLR/JS/iOS.
-    // These are pointing into the specific functions (in the `functions` field)
-    // which should be called when we drop a reference to an immutable object.
-//    immDestructorsByKind: Map[KindH, PrototypeH],
-    // Translations for backends to use if they need to export a name.
-    exportNameToFunction: Map[StrI, PrototypeH],
-    // Translations for backends to use if they need to export a name.
-    exportNameToKind: Map[StrI, KindHT],
-    // Translations for backends to use if they need to export a name.
-    prototypeToExtern: Map[PrototypeH, HamutsFunctionExtern],
-    // Translations for backends to use if they need to export a name.
-    kindToExtern: Map[OpaqueHT, HamutsKindExtern]
-) {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-*/
+
 // mig: fn extern_functions
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: extern_functions");
   }
-/*
-  // These are convenience functions for the tests to look up various functions.
-  def externFunctions = functions.filter(_.isExtern)
-*/
+
 // mig: fn abstract_functions
   pub fn abstract_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: abstract_functions");
   }
-/*
-  def abstractFunctions = functions.filter(_.isAbstract)
-*/
+
 // mig: fn get_all_user_implemented_functions
   pub fn get_all_user_implemented_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: get_all_user_implemented_functions");
   }
-/*
-  // Functions that are neither extern nor abstract
-  def getAllUserImplementedFunctions = functions.filter(f => f.isUserFunction && !f.isExtern && !f.isAbstract)
-*/
+
 // mig: fn non_extern_functions
   pub fn non_extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: non_extern_functions");
   }
-/*
-  // Abstract or implemented
-  def nonExternFunctions = functions.filter(!_.isExtern)
-*/
+
 // mig: fn get_all_user_functions
   pub fn get_all_user_functions(&self) -> Vec<&FunctionH<'s, 'h>> {
     self.functions.iter().filter(|f| f.is_user_function()).collect()
   }
-/*
-  def getAllUserFunctions = functions.filter(_.isUserFunction)
-*/
+
 // mig: fn lookup_function
   pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
     let from_exports: Vec<&'h PrototypeH<'s, 'h>> = self.export_name_to_function.iter().filter(|(k, _)| k.0 == readable_name).map(|(_, v)| *v).collect();
@@ -174,35 +104,14 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     let first = matches[0];
     self.functions.iter().find(|f| eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
-/*
-  // Convenience function for the tests to look up a function.
-  // Function must be at the top level of the program.
-  def lookupFunction(readableName: String) = {
-    val matches =
-      (Vector.empty ++
-        exportNameToFunction.find(_._1.str == readableName).map(_._2).toVector ++
-        functions.filter(_.prototype.id.localName == readableName).map(_.prototype))
-        .distinct
-    vassert(matches.nonEmpty)
-    vassert(matches.size <= 1)
-    functions.find(_.prototype == matches.head).get
-  }
-*/
+
 // mig: fn lookup_struct
   pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
     let matches: Vec<&StructDefinitionH<'s, 'h>> = self.structs.iter().filter(|s| s.id.local_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
-/*
-  // Convenience function for the tests to look up a struct.
-  // Struct must be at the top level of the program.
-  def lookupStruct(humanName: String) = {
-    val matches = structs.filter(_.id.localName == humanName)
-    vassert(matches.size == 1)
-    matches.head
-  }
-*/
+
 // mig: fn lookup_interface
   pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
     let matches: Vec<&InterfaceDefinitionH<'s, 'h>> = self.interfaces.iter().filter(|i| i.id.shortened_name.0 == human_name).collect();
@@ -210,38 +119,20 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     matches[0]
   }
 }
-/*
-  // Convenience function for the tests to look up an interface.
-  // Interface must be at the top level of the program.
-  def lookupInterface(humanName: String) = {
-    val matches = interfaces.filter(_.id.shortenedName == humanName)
-    vassert(matches.size == 1)
-    matches.head
-  }
-}
-*/
+
 
 // mig: case class ProgramH
 /// Temporary state
 pub struct ProgramH<'s, 'h> where 's: 'h {
     pub packages: PackageCoordinateMap<'s, PackageH<'s, 'h>>,
 }
-/*
-case class ProgramH(
-  packages: PackageCoordinateMap[PackageH]) {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-*/
+
 // mig: fn lookup_package
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   pub fn lookup_package(&self, package_coordinate: PackageCoordinate<'s>) -> PackageH<'s, 'h> {
     *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
-/*
-  def lookupPackage(packageCoordinate: PackageCoordinate): PackageH = {
-    vassertSome(packages.get(packageCoordinate))
-  }
-*/
+
 // mig: fn lookup_function
     pub fn lookup_function(&self, prototype: &PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
         let paackage = self.lookup_package(prototype.id.package_coordinate);
@@ -249,60 +140,32 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
         assert!(prototype == result.prototype);
         result
     }
-/*
-  def lookupFunction(prototype: PrototypeH): FunctionH = {
-    val paackage = lookupPackage(prototype.id.packageCoordinate)
-    val result = vassertSome(paackage.functions.find(_.id == prototype.id))
-    vassert(prototype == result.prototype)
-    result
-  }
-*/
+
 // mig: fn lookup_struct
     pub fn lookup_struct(&self, interner: &HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
         paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
     }
-/*
-  def lookupStruct(structRefH: StructHT): StructDefinitionH = {
-    val paackage = lookupPackage(structRefH.id.packageCoordinate)
-    vassertSome(paackage.structs.find(_.getRef == structRefH))
-  }
-*/
+
 // mig: fn lookup_interface
     pub fn lookup_interface(&self, interner: &HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
         paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
     }
-/*
-  def lookupInterface(interfaceRefH: InterfaceHT): InterfaceDefinitionH = {
-    val paackage = lookupPackage(interfaceRefH.id.packageCoordinate)
-    vassertSome(paackage.interfaces.find(_.getRef == interfaceRefH))
-  }
-*/
+
 // mig: fn lookup_static_sized_array
     pub fn lookup_static_sized_array(&self, ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(ssa_th.id.package_coordinate);
         paackage.static_sized_arrays.iter().find(|s| s.name == ssa_th.id).expect("vassertSome: lookup_static_sized_array")
     }
-/*
-  def lookupStaticSizedArray(ssaTH: StaticSizedArrayHT): StaticSizedArrayDefinitionHT = {
-    val paackage = lookupPackage(ssaTH.id.packageCoordinate)
-    vassertSome(paackage.staticSizedArrays.find(_.name == ssaTH.id))
-  }
-*/
+
 // mig: fn lookup_runtime_sized_array
     pub fn lookup_runtime_sized_array(&self, rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(rsa_th.name.package_coordinate);
         paackage.runtime_sized_arrays.iter().find(|s| s.name == rsa_th.name).expect("vassertSome: lookup_runtime_sized_array")
     }
 }
-/*
-  def lookupRuntimeSizedArray(rsaTH: RuntimeSizedArrayHT): RuntimeSizedArrayDefinitionHT = {
-    val paackage = lookupPackage(rsaTH.name.packageCoordinate)
-    vassertSome(paackage.runtimeSizedArrays.find(_.name == rsaTH.name))
-  }
-}
-*/
+
 
 // mig: case class StructDefinitionH
 /// Temporary state
@@ -324,37 +187,7 @@ impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
         interner.intern_struct_ht(StructHTValH { id: self.id })
     }
 }
-/*
-// The struct definition, which defines a struct's name, members, and so on.
-// There is only one of these per type of struct in the program.
-case class StructDefinitionH(
-    // Name of the struct. Guaranteed to be unique in the entire program.
-    id: IdH,
-    // Whether we can take weak references to this object.
-    // On native, this means an extra "weak ref count" will be included for the object.
-    // On JVM/CLR/JS, this means the object will have an extra tiny object pointing
-    // back at itself.
-    // On iOS, this can be ignored, all objects are weakable already.
-    weakable: Boolean,
-    // Whether it's defined by the outside world.
-    extern: Boolean,
-    // Whether this struct is deeply immutable or not.
-    // This affects how the struct is deallocated.
-    // On native, this means that we potentially call the destructor any time we let go
-    // of a reference.
-    // On JVM/CLR/JS/iOS, this can be ignored.
-    mutability: Mutability,
-    // All of the `impl`s, in other words, all of the vtables for this struct for all
-    // the interfaces it implements.
-    edges: Vector[EdgeH],
-    // The members of the struct, in order.
-    members: Vector[StructMemberH]) {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-  def getRef: StructHT = StructHT(id)
-}
-*/
+
 
 // mig: case class StructMemberH
 /// Temporary state
@@ -364,26 +197,7 @@ pub struct StructMemberH<'s, 'h> where 's: 'h {
     pub variability: Variability,
     pub tyype: CoordH<'s, 'h>,
 }
-/*
-// A member of a struct.
-case class StructMemberH(
-  // Name of the struct member. This is *not* guaranteed to be unique in the entire
-  // program.
-  name: IdH,
-  // Whether this field can be changed or not.
-  // This isn't wired up to anything, feel free to ignore it.
-  variability: Variability,
-  // The type of the member.
-  tyype: CoordH[KindHT]) {
 
-  vpass()
-
-  val hash = runtime.ScalaRunTime._hashCode(this)
-
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-}
-*/
 
 // mig: case class InterfaceDefinitionH
 /// Temporary state
@@ -401,32 +215,7 @@ impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
         interner.intern_interface_ht(InterfaceHTValH { id: self.id })
     }
 }
-/*
-// An interface definition containing name, methods, etc.
-case class InterfaceDefinitionH(
-  id: IdH,
-  // Whether we can take weak references to this interface.
-  // On native, this means an extra "weak ref count" will be included for the object.
-  // On JVM/CLR/JS, this means the object should extend the IWeakable interface,
-  // and expose a tiny object pointing back at itself.
-  // On iOS, this can be ignored, all objects are weakable already.
-  weakable: Boolean,
-  // Whether this interface is deeply immutable or not.
-  // On native, this affects how we free the object.
-  // This can be ignored on JVM/CLR/JS/iOS.
-  mutability: Mutability,
-  // The interfaces that this interface extends.
-  // This isnt hooked up to anything, and can be safely ignored.
-  // TODO: Change this to edges, since interfaces impl other interfaces.
-  superInterfaces: Vector[InterfaceHT],
-  // All the methods that we can call on this interface.
-  methods: Vector[InterfaceMethodH]) {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-  def getRef = InterfaceHT(id)
-}
-*/
+
 
 // mig: case class InterfaceMethodH
 /// Temporary state
@@ -435,19 +224,7 @@ pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
     pub prototype_h: &'h PrototypeH<'s, 'h>,
     pub virtual_param_index: i32,
 }
-/*
-// A method in an interface.
-case class InterfaceMethodH(
-  // The name, params, and return type of the method.
-  prototypeH: PrototypeH,
-  // Describes which param is the one that will have the vtable.
-  // Currently this is always assumed to be zero.
-  virtualParamIndex: Int) {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-  vassert(virtualParamIndex >= 0)
-}
-*/
+
 
 // mig: case class EdgeH
 /// Temporary state
@@ -460,21 +237,7 @@ pub struct EdgeH<'s, 'h> where 's: 'h {
     pub interface: &'h InterfaceHT<'s, 'h>,
     pub struct_prototypes_by_interface_method: &'h ArenaIndexMap<'h, InterfaceMethodH<'s, 'h>, &'h PrototypeH<'s, 'h>>,
 }
-/*
-// Represents how a struct implements an interface.
-// Each edge has a vtable.
-case class EdgeH(
-  // The struct whose actual functions will be called.
-  struct: StructHT,
-  // The interface that this struct is conforming to.
-  interface: InterfaceHT,
-  // Map whose key is an interface method, and whose value is the method of the struct
-  // that it's overriding.
-  structPrototypesByInterfaceMethod: ListMap[InterfaceMethodH, PrototypeH]) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
-*/
+
 
 // mig: sealed trait IFunctionAttributeH + case objects UserFunctionH, PureH
 /// Polyvalue
@@ -483,11 +246,7 @@ pub enum IFunctionAttributeH {
     UserFunctionH,
     PureH,
 }
-/*
-sealed trait IFunctionAttributeH
-case object UserFunctionH extends IFunctionAttributeH // Whether it was written by a human. Mostly for tests right now.
-case object PureH extends IFunctionAttributeH
-*/
+
 
 // mig: case class FunctionH
 /// Temporary state
@@ -502,40 +261,14 @@ pub struct FunctionH<'s, 'h> where 's: 'h {
     pub attributes: &'h [IFunctionAttributeH],
     pub body: ExpressionH<'s, 'h>,
 }
-/*
-// A function's definition.
-case class FunctionH(
-  // Describes the function's name, params, and return type.
-  prototype: PrototypeH,
 
-  // Whether this has a body. If true, the body will simply contain an InterfaceCallH instruction.
-  isAbstract: Boolean,
-  // Whether this is an extern. If true, the body will simply contain an ExternCallH instruction to the same
-  // prototype describing this function.
-  isExtern: Boolean,
-
-  attributes: Vector[IFunctionAttributeH],
-
-  // The body of the function that contains the actual instructions.
-  body: ExpressionH[KindHT]) {
-
-  vpass()
-
-  val hash = runtime.ScalaRunTime._hashCode(this)
-
-  override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
-  def id = prototype.id
-  def isUserFunction = attributes.contains(UserFunctionH)
-}
-*/
 // mig: fn is_user_function
 impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
     pub fn is_user_function(&self) -> bool {
         self.attributes.contains(&IFunctionAttributeH::UserFunctionH)
     }
 }
-/* Guardian: disable-all */
+
 
 // mig: case class PrototypeH
 /// Interning permanent (see @TFITCX)
@@ -546,16 +279,7 @@ pub struct PrototypeH<'s, 'h> where 's: 'h {
     pub return_type: CoordH<'s, 'h>,
     pub _must_intern: MustIntern,
 }
-/*
-// A wrapper around a function's name, which also has its params and return type.
-case class PrototypeH(
-  id: IdH,
-  params: Vector[CoordH[KindHT]],
-  returnType: CoordH[KindHT]
-) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
+
 
 // mig: case class PrototypeH (transient companion)
 /// Interning transient (see @TFITCX)
@@ -585,45 +309,8 @@ impl<'s> Display for IdH<'s> {
         write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
     }
 }
-/* Guardian: disable-all */
-/*
-// A unique name for something in the program.
-case class IdH(
-  // This is at the beginning so toString puts it at the start, for easier debugging
-  localName: String, // Careful, has collisions.
-  packageCoordinate: PackageCoordinate,
-  // Should be the shortest possible string without collisions
-  shortenedName: String,
-  // Most precise name, without shortening.
-  fullyQualifiedName: String) {
-  vpass()
 
-  val hash = runtime.ScalaRunTime._hashCode(this)
 
-  override def hashCode(): Int = hash;
-
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case IdH(_, thatPackageCoord, thatShortenedName, thatFullyQualifiedName) => {
-        if (shortenedName == thatShortenedName) {
-          // These makes sure that the shortening never has any false collisions.
-          vassert(fullyQualifiedName == thatFullyQualifiedName)
-          vassert(packageCoordinate == thatPackageCoord)
-          true
-        } else {
-          false
-        }
-      }
-    }
-  }
-}
-
-//object IdH {
-//  def namePartsToString(packageCoordinate: PackageCoordinate, parts: Vector[IVonData]) = {
-//    packageCoordinate.module.str + "::" + packageCoordinate.packages.map(_ + "::").mkString("") + parts.map(MetalPrinter.print).mkString(":")
-//  }
-//}
-*/
 
 // mig: case class IdH (transient companion)
 /// Interning transient (see @TFITCX)

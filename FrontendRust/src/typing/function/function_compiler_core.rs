@@ -16,82 +16,13 @@ use crate::typing::templata::templata::*;
 use crate::utils::range::RangeS;
 use std::marker::PhantomData;
 
-/*
-package dev.vale.typing.function
 
-import dev.vale.highertyping.FunctionA
-import dev.vale._
-import dev.vale.postparsing._
-import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.typing.{CompileErrorExceptionT, CompilerOutputs, ConvertHelper, DeferredEvaluatingFunctionBody, RangedInternalErrorT, TemplataCompiler, TypingPassOptions, ast}
-import dev.vale.typing.ast._
-import dev.vale.typing.env._
-import dev.vale.typing.expression.CallCompiler
-import dev.vale.typing.names._
-import dev.vale.typing.templata._
-import dev.vale.typing.types._
-import dev.vale.highertyping._
-import dev.vale.typing.types._
-import dev.vale.typing.templata._
-import dev.vale.typing.{ast, _}
-import dev.vale.typing.ast._
-import dev.vale.typing.citizen.ImplCompiler
-import dev.vale.typing.env._
-
-import scala.collection.immutable.{List, Set}
-
-*/
 pub struct ResultTypeMismatchError<'s, 't> {
     pub expected_type: CoordT<'s, 't>,
     pub actual_type: CoordT<'s, 't>,
 }
-/*
-case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious(); }
 
-*/
-/*
-class FunctionCompilerCore(
-    opts: TypingPassOptions,
-    interner: Interner,
-    keywords: Keywords,
-    nameTranslator: NameTranslator,
 
-    templataCompiler: TemplataCompiler,
-    convertHelper: ConvertHelper,
-    delegate: IFunctionCompilerDelegate) {
-  val bodyCompiler = new BodyCompiler(opts, nameTranslator, templataCompiler, convertHelper, new IBodyCompilerDelegate {
-    override def evaluateBlockStatements(
-      coutputs: CompilerOutputs,
-      startingNenv: NodeEnvironmentT,
-      nenv: NodeEnvironmentBox,
-      life: LocationInFunctionEnvironmentT,
-      parentRanges: List[RangeS],
-      callLocation: LocationInDenizen,
-      region: RegionT,
-      exprs: BlockSE
-    ): (ReferenceExpressionTE, Set[CoordT]) = {
-      delegate.evaluateBlockStatements(
-        coutputs, startingNenv, nenv, life, parentRanges, callLocation, region, exprs)
-    }
-
-    override def translatePatternList(
-      coutputs: CompilerOutputs,
-      nenv: NodeEnvironmentBox,
-      life: LocationInFunctionEnvironmentT,
-      parentRanges: List[RangeS],
-      callLocation: LocationInDenizen,
-        region: RegionT,
-      patterns1: Vector[AtomSP],
-      patternInputExprs2: Vector[ReferenceExpressionTE]
-    ): ReferenceExpressionTE = {
-      delegate.translatePatternList(coutputs, nenv, life, parentRanges, callLocation, region, patterns1, patternInputExprs2)
-    }
-  })
-
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -274,184 +205,7 @@ where 's: 't,
 
         Ok(header)
     }
-/*
-  // Preconditions:
-  // - already spawned local env
-  // - either no template args, or they were already added to the env.
-  // - either no closured vars, or they were already added to the env.
-  def evaluateFunctionForHeader(
-    fullEnv: FunctionEnvironmentT,
-    coutputs: CompilerOutputs,
-    callRange: List[RangeS],
-    callLocation: LocationInDenizen,
-    params2: Vector[ParameterT],
-    instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT]):
-  (FunctionHeaderT) = {
-    fullEnv.id match {
-      case IdT(_, Vector(), FunctionNameT(FunctionTemplateNameT(StrI("drop"), _), Vector(CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1"))))))))), Vector(CoordT(_, RegionT(DefaultRegionT), StructTT(IdT(_, Vector(), StructNameT(StructTemplateNameT(StrI("Tup2")), Vector(CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T0")))))))), CoordTemplataT(CoordT(_, RegionT(DefaultRegionT), KindPlaceholderT(IdT(_, Vector(FunctionTemplateNameT(StrI("drop"), _)), KindPlaceholderNameT(KindPlaceholderTemplateNameT(1, CodeRuneS(StrI("T1")))))))))))))))) => {
-        vpass()
-      }
-      case _ =>
-    }
 
-//    opts.debugOut("Evaluating function " + fullEnv.fullName)
-
-//    val functionTemplateName = TemplataCompiler.getFunctionTemplate(fullEnv.fullName)
-    val functionTemplateName = fullEnv.id
-
-    val life = LocationInFunctionEnvironmentT(Vector())
-
-    val isDestructor =
-      params2.nonEmpty &&
-        params2.head.tyype.ownership == OwnT &&
-        (fullEnv.id.localName match {
-          case FunctionNameT(humanName, _, _) if humanName == keywords.drop => true
-          case _ => false
-        })
-
-    val maybeExport =
-      fullEnv.function.attributes.collectFirst { case e@ExportS(_) => e }
-
-    val signature2 = SignatureT(fullEnv.id);
-    val maybeRetTemplata =
-      fullEnv.function.maybeRetCoordRune match {
-        case None => (None)
-        case Some(retCoordRune) => {
-          fullEnv.lookupNearestWithImpreciseName(interner.intern(RuneNameS(retCoordRune.rune)), Set(TemplataLookupContext)).headOption
-        }
-      }
-    val maybeRetCoord =
-      maybeRetTemplata match {
-        case None => (None)
-        case Some(CoordTemplataT(retCoord)) => {
-          coutputs.declareFunctionReturnType(signature2, retCoord)
-          (Some(retCoord))
-        }
-        case _ => throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Must be a coord!"))
-      }
-
-    val header =
-      fullEnv.function.body match {
-        case CodeBodyS(body) => {
-          val attributesWithoutExport =
-            fullEnv.function.attributes.filter({
-              case ExportS(_) => false
-              case _ => true
-            })
-          val attributesT = translateAttributes(attributesWithoutExport)
-
-          maybeRetCoord match {
-            case Some(returnCoord) => {
-              val header =
-                finalizeHeader(fullEnv, coutputs, attributesT, params2, returnCoord)
-
-              coutputs.deferEvaluatingFunctionBody(
-                DeferredEvaluatingFunctionBody(
-                  header.toPrototype,
-                  (coutputs) => {
-                    finishFunctionMaybeDeferred(
-                      coutputs, fullEnv, callRange, callLocation, life, attributesT, params2, isDestructor, Some(returnCoord), instantiationBoundParams)
-                  }))
-
-              (header)
-            }
-            case None => {
-              val header =
-                finishFunctionMaybeDeferred(
-                  coutputs, fullEnv, callRange, callLocation, life, attributesT, params2, isDestructor, None, instantiationBoundParams)
-              (header)
-            }
-          }
-        }
-        case ExternBodyS => {
-          val retCoord = vassertSome(maybeRetCoord)
-          val header =
-            makeExternFunction(
-              coutputs,
-              fullEnv,
-              fullEnv.function.range,
-              translateFunctionAttributes(fullEnv.function.attributes),
-              params2,
-              retCoord,
-              Some(FunctionTemplataT(fullEnv.parentEnv, fullEnv.function)))
-          (header)
-        }
-        case AbstractBodyS | GeneratedBodyS(_) => {
-          val generatorId =
-            fullEnv.function.body match {
-              case AbstractBodyS => keywords.abstractBody
-              case GeneratedBodyS(generatorId) => generatorId
-            }
-
-          // Funny story... let's say we're current instantiating a constructor,
-          // for example MySome<T>().
-          // The constructor returns a MySome<T>, which means when we do the above
-          // evaluating of the function body, we stamp the MySome<T> struct.
-          // That ends up stamping the entire struct, including the constructor.
-          // That's what we were originally here for, and evaluating the body above
-          // just did it for us O_o
-          // So, here we check to see if we accidentally already did it.
-          //   opts.debugOut("doesnt this mean we have to do this in every single generated function?")
-          //   coutputs.lookupFunction(signature2) match {
-          //     case Some(function2) => {
-          //       (function2.header)
-          //     }
-          //     case None => {
-          //       val generator = vassertSome(fullEnv.globalEnv.nameToFunctionBodyMacro.get(generatorId))
-          //       val (header, body) =
-          //         generator.generateFunctionBody(
-          //           fullEnv, coutputs, generatorId, life, callRange,
-          //           Some(fullEnv.function), params2, maybeRetCoord)
-          //
-          //       coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
-          //       val runeToFunctionBound = TemplataCompiler.assembleFunctionBoundToRune(fullEnv.templatas)
-          //       coutputs.addFunction(FunctionT(header, runeToFunctionBound, body))
-          //
-          //       if (header.toSignature != signature2) {
-          //         throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Generator made a function whose signature doesn't match the expected one!\n" +
-          //           "Expected:  " + signature2 + "\n" +
-          //           "Generated: " + header.toSignature))
-          //       }
-          //       (header)
-          //     }
-          //   }
-          // Note from later: This might not be true anymore, since we have real generics.
-          vassert(coutputs.lookupFunction(signature2).isEmpty)
-
-          val generator = vassertSome(fullEnv.globalEnv.nameToFunctionBodyMacro.get(generatorId))
-          val (header, body) =
-            generator.generateFunctionBody(
-              fullEnv, coutputs, generatorId, life, callRange, callLocation,
-              Some(fullEnv.function), params2, maybeRetCoord)
-
-          coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
-          coutputs.addFunction(
-            FunctionDefinitionT(
-              header,
-              instantiationBoundParams,
-              body))
-
-          if (header.toSignature != signature2) {
-            throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Generator made a function whose signature doesn't match the expected one!\n" +
-              "Expected:  " + signature2 + "\n" +
-              "Generated: " + header.toSignature))
-          }
-          header
-        }
-      }
-
-    if (header.attributes.contains(PureT)) {
-      //      header.params.foreach(param => {
-      //        if (param.tyype.permission != ReadonlyT) {
-      //          throw CompileErrorExceptionT(NonReadonlyReferenceFoundInPureFunctionParameter(fullEnv.function.range, param.name))
-      //        }
-      //      })
-    }
-
-    header
-  }
-
-*/
     pub fn get_function_prototype_for_call(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -461,22 +215,7 @@ where 's: 't,
     ) -> PrototypeT<'s, 't> {
         self.get_function_prototype_inner_for_call(full_env, full_env.id)
     }
-/*
-  // Preconditions:
-  // - already spawned local env
-  // - either no template args, or they were already added to the env.
-  // - either no closured vars, or they were already added to the env.
-  def getFunctionPrototypeForCall(
-    fullEnv: FunctionEnvironmentT,
-      coutputs: CompilerOutputs,
-    callRange: List[RangeS],
-      params2: Vector[ParameterT]):
-  (PrototypeT[IFunctionNameT]) = {
-    getFunctionPrototypeInnerForCall(
-      fullEnv, fullEnv.id)
-  }
 
-*/
     pub fn get_function_prototype_inner_for_call(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -494,23 +233,7 @@ where 's: 't,
         };
         PrototypeT { id, return_type: return_coord }
     }
-/*
-  def getFunctionPrototypeInnerForCall(
-    fullEnv: FunctionEnvironmentT,
-    id: IdT[IFunctionNameT]):
-  PrototypeT[IFunctionNameT] = {
-    val retCoordRune = vassertSome(fullEnv.function.maybeRetCoordRune)
-    val returnCoord =
-      fullEnv.lookupNearestWithImpreciseName(
-        interner.intern(RuneNameS(retCoordRune.rune)),
-        Set(TemplataLookupContext))  match {
-        case Some(CoordTemplataT(retCoord)) => retCoord
-        case other => vwat(other)
-      }
-    PrototypeT(id, returnCoord)
-  }
 
-*/
     pub fn finalize_header(
         &self,
         full_env: &'t FunctionEnvironmentT<'s, 't>,
@@ -533,27 +256,7 @@ where 's: 't,
         coutputs.declare_function_return_type(sig_ref, return_coord);
         header
     }
-/*
-  def finalizeHeader(
-      fullEnv: FunctionEnvironmentT,
-      coutputs: CompilerOutputs,
-      attributesT: Vector[IFunctionAttributeT],
-      paramsT: Vector[ParameterT],
-    returnCoord: CoordT):
-  FunctionHeaderT = {
-    val header =
-      FunctionHeaderT(
-        fullEnv.id,
-        attributesT,
-//        vimpl(),
-        paramsT,
-        returnCoord,
-        Some(FunctionTemplataT(fullEnv.parentEnv, fullEnv.function)));
-    coutputs.declareFunctionReturnType(header.toSignature, returnCoord)
-    header
-  }
 
-*/
     pub fn finish_function_maybe_deferred(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -597,61 +300,7 @@ where 's: 't,
         coutputs.add_function(header_sig, function2);
         Ok(function2.header)
     }
-/*
-  // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.
-  private def finishFunctionMaybeDeferred(
-      coutputs: CompilerOutputs,
-      fullEnvSnapshot: FunctionEnvironmentT,
-      callRange: List[RangeS],
-      callLocation: LocationInDenizen,
-      life: LocationInFunctionEnvironmentT,
-      attributesT: Vector[IFunctionAttributeT],
-      paramsT: Vector[ParameterT],
-      isDestructor: Boolean,
-      maybeExplicitReturnCoord: Option[CoordT],
-      instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT]):
-  FunctionHeaderT = {
-    val (maybeEvaluatedRetCoord, body2) =
-      bodyCompiler.declareAndEvaluateFunctionBody(
-        fullEnvSnapshot,
-        coutputs, life, callRange, callLocation, fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
 
-    val retCoord = vassertOne(maybeExplicitReturnCoord.toList ++ maybeEvaluatedRetCoord.toList)
-    val header = finalizeHeader(fullEnvSnapshot, coutputs, attributesT, paramsT, retCoord)
-
-    // Funny story... let's say we're current instantiating a constructor,
-    // for example MySome<T>().
-    // The constructor returns a MySome<T>, which means when we do the above
-    // evaluating of the function body, we stamp the MySome<T> struct.
-    // That ends up stamping the entire struct, including the constructor.
-    // That's what we were originally here for, and evaluating the body above
-    // just did it for us O_o
-    // So, here we check to see if we accidentally already did it.
-    // Note from later: this might not be true anymore now that we have real generics.
-    //   coutputs.lookupFunction(header.toSignature) match {
-    //     case None => {
-    //       val functionBoundToRune = TemplataCompiler.assembleFunctionBoundToRune(fullEnv.templatas)
-    //       val function2 = FunctionT(header, functionBoundToRune, body2);
-    //       coutputs.addFunction(function2)
-    //       (function2.header)
-    //     }
-    //     case Some(function2) => {
-    //       (function2.header)
-    //     }
-    //   }
-    vassert(coutputs.lookupFunction(header.toSignature).isEmpty)
-    val neededFunctionBounds = TemplataCompiler.assembleRuneToFunctionBound(fullEnvSnapshot.templatas)
-    val neededImplBounds = TemplataCompiler.assembleRuneToImplBound(fullEnvSnapshot.templatas)
-    val function2 =
-      FunctionDefinitionT(
-        header,
-        instantiationBoundParams,
-        body2);
-    coutputs.addFunction(function2)
-    header
-  }
-
-*/
     pub fn translate_attributes(&self, attributes_a: &[&IFunctionAttributeS<'s>]) -> Vec<IFunctionAttributeT<'s>> {
         attributes_a.iter().map(|a| {
             match a {
@@ -665,17 +314,7 @@ where 's: 't,
             }
         }).collect()
     }
-/*
-  def translateAttributes(attributesA: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {
-    attributesA.map({
-      //      case ExportA(packageCoord) => Export2(packageCoord)
-      case UserFunctionS => UserFunctionT
-      case PureS => PureT
-      case AdditiveS => AdditiveT
-    })
-  }
 
-*/
     pub fn make_extern_function(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -784,84 +423,7 @@ where 's: 't,
             }
         }
     }
-/*
-  def makeExternFunction(
-      coutputs: CompilerOutputs,
-      env: FunctionEnvironmentT,
-      range: RangeS,
-      attributes: Vector[IFunctionAttributeT],
-      params2: Vector[ParameterT],
-      returnType2: CoordT,
-      maybeOrigin: Option[FunctionTemplataT]):
-  (FunctionHeaderT) = {
-    env.id.localName match {
-      case FunctionNameT(FunctionTemplateNameT(humanName, _), templateParams, params) => {
-        val header =
-          ast.FunctionHeaderT(
-            env.id,
-            attributes,
-//            Vector(RegionT(env.defaultRegion.localName, true)),
-            params2,
-            returnType2,
-            maybeOrigin)
 
-        val externFunctionId = IdT(env.id.packageCoord, env.id.initSteps, interner.intern(ExternFunctionNameT(humanName, templateParams, params)))
-        val externPrototype = PrototypeT[ExternFunctionNameT](externFunctionId, header.returnType)
-
-        coutputs.addInstantiationBounds(
-          opts.globalOptions.sanityCheck,
-          interner,
-          env.templateId,
-          externPrototype.id,
-          InstantiationBoundArgumentsT.make(Map(), Map(), Map()))
-
-        val argLookups =
-          header.params.zipWithIndex.map({ case (param2, index) => ArgLookupTE(index, param2.tyype) })
-        val function2 =
-          FunctionDefinitionT(
-            header,
-            InstantiationBoundArgumentsT.make[FunctionBoundNameT, ImplBoundNameT](Map(), Map(), Map()),
-            ReturnTE(ExternFunctionCallTE(externPrototype, argLookups)))
-
-        coutputs.declareFunctionReturnType(header.toSignature, header.returnType)
-        coutputs.addFunction(function2)
-        // Register the extern with coutputs so it survives to HinputsT.functionExterns and reaches
-        // the Backend's pragma generation. The placeholderedExternId mirrors what Compiler.scala
-        // used to construct: a top-level IdT with an ExternNameT carrying a fresh ExternTemplateNameT
-        // keyed on the function's range. Fires for both top-level externs and externs declared
-        // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
-        val placeholderedExternId =
-          IdT(
-            env.id.packageCoord,
-            Vector(),
-            interner.intern(
-              ExternNameT(
-                interner.intern(ExternTemplateNameT(range.begin)),
-                RegionT(DefaultRegionT))))
-        // Per @PRIIROZ, internal-method externs inherit the container's generic params at the end
-        // of their templateArgs. Hammer uses this count to reshape the wire-format SimpleId so the
-        // inherited args land on the citizen step instead of the function step (i.e.
-        // `Vec<i32>::capacity` rather than `Vec::capacity<i32>`), which is what Backend's
-        // rustifySimpleId expects per @SMLRZ.
-        val maybeInheritance =
-          externPrototype.id.initId(interner) match {
-            case IdT(paackage, initSteps, ctn: ICitizenTemplateNameT) => {
-              val citizen = coutputs.lookupCitizen(IdT(paackage, initSteps, ctn))
-              Some(GenericParametersInheritance(citizen.genericParamTypes.size))
-            }
-            case _ => None
-          }
-        coutputs.addFunctionExtern(
-          range, placeholderedExternId, externPrototype, humanName, maybeInheritance)
-        (header)
-      }
-      case _ => {
-        throw CompileErrorExceptionT(RangedInternalErrorT(List(range), "Only human-named function can be extern!"))
-      }
-    }
-  }
-
-*/
     pub fn translate_function_attributes(&self, a: &[IFunctionAttributeS<'s>]) -> Vec<IFunctionAttributeT<'s>> {
         a.iter().map(|attr| {
             match attr {
@@ -874,62 +436,5 @@ where 's: 't,
             }
         }).collect()
     }
-/*
-  def translateFunctionAttributes(a: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {
-    U.map[IFunctionAttributeS, IFunctionAttributeT](a, {
-      case UserFunctionS => UserFunctionT
-      case ExternS(packageCoord) => ExternT(packageCoord)
-      case x => vimpl(x)
-    })
-  }
 
-
-//  def makeImplDestructor(
-//    env: FunctionEnvironment,
-//    coutputs: CompilerOutputs,
-//    maybeOriginFunction1: Option[FunctionA],
-//    structDefT: StructDefinitionT,
-//    interfaceTT: InterfaceTT,
-//    structDestructor: PrototypeT,
-//  ):
-//  (FunctionHeaderT) = {
-//    val ownership = if (structDefT.mutability == MutableT) OwnT else ShareT
-//    val permission = if (structDefT.mutability == MutableT) ReadwriteT else ReadonlyT
-//    val structTT = structDefT.getRef
-//    val structType2 = CoordT(ownership, permission, structTT)
-//
-//    val destructor2 =
-//      ast.FunctionT(
-//        ast.FunctionHeaderT(
-//          env.fullName,
-//          Vector.empty,
-//          Vector(ast.ParameterT(interner.intern(CodeVarNameT("self")), None, structType2)),
-//          CoordT(ShareT, VoidT()),
-//          maybeOriginFunction1),
-//        BlockTE(
-//            ReturnTE(
-//              FunctionCallTE(
-//                structDestructor,
-//                Vector(ArgLookupTE(0, structType2))))))
-//
-//    // If this fails, then the signature the FunctionCompilerMiddleLayer made for us doesn't
-//    // match what we just made
-//    vassert(
-//      coutputs.getDeclaredSignatureOrigin(
-//        destructor2.header.toSignature).nonEmpty)
-//
-//    // we cant make the destructor here because they might have a user defined one somewhere
-//
-//      coutputs
-//        .declareFunctionReturnType(destructor2.header.toSignature, destructor2.header.returnType)
-//      coutputs.addFunction(destructor2);
-//
-//    vassert(
-//      coutputs.getDeclaredSignatureOrigin(
-//        destructor2.header.toSignature).nonEmpty)
-//
-//    (destructor2.header)
-//  }
-}
-*/
 }

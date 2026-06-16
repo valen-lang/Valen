@@ -37,23 +37,7 @@ use crate::von::ast::IVonData;
 use std::collections::HashMap;
 use std::io::stdout;
 
-/*
-package dev.vale
 
-import dev.vale.finalast.ProgramH
-import dev.vale.highertyping.{ICompileErrorA, ProgramA}
-import dev.vale.instantiating.ast.HinputsI
-import dev.vale.lexing.{FailedParse, RangeL}
-import dev.vale.options.GlobalOptions
-import dev.vale.parsing.ast.FileP
-import dev.vale.passmanager.{FullCompilation, FullCompilationOptions}
-import dev.vale.postparsing.{ICompileErrorS, ProgramS}
-import dev.vale.testvm.{Heap, PrimitiveKindV, ReferenceV, Vivem}
-import dev.vale.typing.{HinputsT, ICompileErrorT}
-import dev.vale.von.IVonData
-
-object RunCompilation {
-*/
 // mig: fn test
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
@@ -97,22 +81,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         ),
     }
 }
-/*
-  def test(code: String): RunCompilation = {
-    val interner = new Interner()
-    val keywords = new Keywords(interner)
-    new RunCompilation(
-      interner,
-      keywords,
-      Vector(
-        PackageCoordinate.BUILTIN(interner, keywords),
-        PackageCoordinate.TEST_TLD(interner, keywords)),
-      Builtins.getCodeMap(interner, keywords)
-          .or(FileCoordinateMap.test(interner, Vector(code)))
-          .or(Tests.getPackageToResourceResolver),
-      FullCompilationOptions(GlobalOptions(true, true, true, true, true)))
-  }
-*/
+
 
 // mig: fn test_no_builtins
 pub fn test_no_builtins<'s, 'h, 'ctx, 't, 'i, 'p>(
@@ -158,22 +127,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
         ),
     }
 }
-/*
-  def testNoBuiltins(code: String): RunCompilation = {
-    val interner = new Interner()
-    val keywords = new Keywords(interner)
-    new RunCompilation(
-      interner,
-      keywords,
-      Vector(
-        PackageCoordinate.TEST_TLD(interner, keywords)),
-      Builtins.getModulizedCodeMap(interner, keywords)
-          .or(FileCoordinateMap.test(interner, Vector(code)))
-          .or(Tests.getPackageToResourceResolver),
-      FullCompilationOptions(GlobalOptions(true, true, true, true, true)))
-  }
-}
-*/
+
 
 // mig: struct RunCompilation
 pub struct RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
@@ -182,75 +136,51 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
     pub interner: &'ctx TypingInterner<'s, 't>,
     pub hammer_compilation: HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>,
 }
-/*
-class RunCompilation(
-    val interner: Interner,
-    val keywords: Keywords,
-    packagesToBuild: Vector[PackageCoordinate],
-    packageToContentsResolver: IPackageResolver[Map[String, String]],
-    options: FullCompilationOptions = FullCompilationOptions()) {
-  var fullCompilation = new FullCompilation(interner, keywords, packagesToBuild, packageToContentsResolver, options)
-*/
+
 impl<'s, 'h, 'ctx, 't, 'i, 'p> RunCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
 {
   // mig: fn get_code_map
   pub fn get_code_map(&self) { panic!("Unimplemented: get_code_map"); }
-  /*
-  def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = fullCompilation.getCodeMap()
-  */
+  
 
   // mig: fn get_parseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.hammer_compilation.get_parseds()
   }
-  /*
-  def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = fullCompilation.getParseds()
-  */
+  
 
   // mig: fn get_vpst_map
   pub fn get_vpst_map(&self) { panic!("Unimplemented: get_vpst_map"); }
-  /*
-  def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = fullCompilation.getVpstMap()
-  */
+  
 
   // mig: fn get_scoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
       self.hammer_compilation.get_scoutput()
   }
-  /*
-  def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = fullCompilation.getScoutput()
-  */
+  
 
   // mig: fn get_astrouts
   pub fn get_astrouts(&self) { panic!("Unimplemented: get_astrouts"); }
-  /*
-  def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = fullCompilation.getAstrouts()
-  */
+  
 
   // mig: fn get_compiler_outputs
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
       self.hammer_compilation.get_compiler_outputs()
   }
-  /*
-  def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = fullCompilation.getCompilerOutputs()
-  */
+  
 
   // mig: fn expect_compiler_outputs
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.hammer_compilation.expect_compiler_outputs()
   }
-  /*
-  def expectCompilerOutputs(): HinputsT = fullCompilation.expectCompilerOutputs()
-  */
+  
 
   // mig: fn get_monouts
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.hammer_compilation.get_monouts()
   }
-  /*
-  def getMonouts(): HinputsI = fullCompilation.getMonouts()
-  */
+  
 
   // mig: fn get_hamuts
   pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
@@ -260,13 +190,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
       // check went with it.
       self.hammer_compilation.get_hamuts()
   }
-  /*
-  def getHamuts(): ProgramH = {
-    val hamuts = fullCompilation.getHamuts()
-    fullCompilation.getVonHammer().vonifyProgram(hamuts)
-    hamuts
-  }
-  */
+  
 
   // The following seven methods drive the reference backend (Vivem/HeapV/ReferenceV/
   // PrimitiveKindV). They're sliced as panic stubs because their bodies all delegate
@@ -280,11 +204,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
 
   // mig: fn eval_for_kind_heap_args (Scala overload `evalForKind(heap, args: Vector[ReferenceV])`)
   pub fn eval_for_kind_heap_args<'v>(&self, _heap: HeapV<'v, 'h, 's>, _args: Vec<ReferenceV<'v, 'h, 's>>) -> IVonData { panic!("Unimplemented: eval_for_kind_heap_args"); }
-  /*
-  def evalForKind(heap: Heap, args: Vector[ReferenceV]): IVonData = {
-    Vivem.executeWithHeap(getHamuts(), heap, args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
-  }
-  */
+  
 
   // mig: fn run_heap_args (Scala overload `run(heap, args: Vector[ReferenceV])`)
   pub fn run_heap_args<'v>(&mut self, mut heap: HeapV<'v, 'h, 's>, args: Vec<ReferenceV<'v, 'h, 's>>) -> Result<(), VmRuntimeErrorV<'s>> {
@@ -296,11 +216,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
           hamuts, interner, scout_arena, &mut heap, input_argument_references, &empty_stdin, &regular_stdout,
       ).map(|_| ())
   }
-  /*
-  def run(heap: Heap, args: Vector[ReferenceV]): Unit = {
-    Vivem.executeWithHeap(getHamuts(), heap, args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
-  }
-  */
+  
 
   // mig: fn run_primitive_args (Scala overload `run(args: Vector[PrimitiveKindV])`)
   pub fn run_primitive_args<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<(), VmRuntimeErrorV<'s>> {
@@ -313,11 +229,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &regular_stdout,
       ).map(|_| ())
   }
-  /*
-  def run(args: Vector[PrimitiveKindV]): Unit = {
-    Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
-  }
-  */
+  
 
   // mig: fn eval_for_kind_primitive_args (Scala overload `evalForKind(args: Vector[PrimitiveKindV])`)
   pub fn eval_for_kind_primitive_args<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<IVonData, VmRuntimeErrorV<'s>> {
@@ -330,11 +242,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &empty_stdin, &regular_stdout,
       )
   }
-  /*
-  def evalForKind(args: Vector[PrimitiveKindV]): IVonData = {
-    Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, Vivem.regularStdout)
-  }
-  */
+  
 
   // mig: fn eval_for_kind_primitive_args_with_stdin (Scala overload `evalForKind(args, stdin)`)
   pub fn eval_for_kind_primitive_args_with_stdin<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>, stdin: Vec<String>) -> Result<IVonData, VmRuntimeErrorV<'s>> {
@@ -349,14 +257,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
           hamuts, interner, scout_arena, &args, &mut vivem_dout, &vivem_bump, &*stdin_fn, &regular_stdout,
       )
   }
-  /*
-  def evalForKind(
-      args: Vector[PrimitiveKindV],
-      stdin: Vector[String]):
-  IVonData = {
-    Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.stdinFromList(stdin), Vivem.regularStdout)
-  }
-  */
+  
 
   // mig: fn eval_for_stdout
   pub fn eval_for_stdout<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<String, VmRuntimeErrorV<'s>> {
@@ -372,13 +273,7 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
       let result = stdoutput_string_builder.borrow().clone();
       Ok(result)
   }
-  /*
-  def evalForStdout(args: Vector[PrimitiveKindV]): String = {
-    val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()
-    Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, stdoutFunc)
-    stdoutStringBuilder.mkString
-  }
-  */
+  
 
   // mig: fn eval_for_kind_and_stdout
   pub fn eval_for_kind_and_stdout<'v>(&mut self, args: Vec<PrimitiveKindV<'v, 'h, 's>>) -> Result<(IVonData, String), VmRuntimeErrorV<'s>> {
@@ -394,12 +289,5 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx, 'ctx: 'h, 'p: 'h, 'i: 'h,
       let result = stdoutput_string_builder.borrow().clone();
       Ok((kind, result))
   }
-  /*
-  def evalForKindAndStdout(args: Vector[PrimitiveKindV]): (IVonData, String) = {
-    val (stdoutStringBuilder, stdoutFunc) = Vivem.stdoutCollector()
-    val kind = Vivem.executeWithPrimitiveArgs(getHamuts(), args, System.out, Vivem.emptyStdin, stdoutFunc)
-    (kind, stdoutStringBuilder.mkString)
-  }
-}
-*/
+  
 }

@@ -31,28 +31,10 @@ use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-/*
-package dev.vale
 
-import dev.vale.typing.ast.{BorrowToWeakTE, LetNormalTE, SoftLoadTE}
-import dev.vale.typing.{WeakableImplingMismatch, TookWeakRefOfNonWeakableError}
-import dev.vale.typing.env.ReferenceLocalVariableT
-import dev.vale.typing.names.{CodeVarNameT, IdT}
-import dev.vale.typing.templata.simpleNameT
-import dev.vale.typing.types._
-import dev.vale.testvm.ConstraintViolatedException
-import dev.vale.typing._
-import dev.vale.typing.ast._
-import dev.vale.typing.names.CodeVarNameT
-import dev.vale.typing.types._
-import dev.vale.von.VonInt
-import org.scalatest._
-*/
 // mig: struct WeakTests
 pub struct WeakTests;
-/*
-class WeakTests extends FunSuite with Matchers {
-*/
+
 // mig: fn make_and_lock_weak_ref_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
@@ -111,23 +93,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref then destroy own, with struct") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/lockWhileLiveStruct.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-    Collector.only(main, {
-      case LetNormalTE(ReferenceLocalVariableT(CodeVarNameT(StrI("weakMuta")),FinalT,CoordT(WeakT, _, _)),refExpr) => {
-        refExpr.result.coord match {
-          case CoordT(WeakT, _, StructTT(simpleNameT("Muta"))) =>
-        }
-      }
-    })
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn destroy_own_then_locking_gives_none_with_struct
 #[test]
 fn destroy_own_then_locking_gives_none_with_struct() {
@@ -155,14 +121,7 @@ fn destroy_own_then_locking_gives_none_with_struct() {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-/*
-  test("Destroy own then locking gives none, with struct") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/dropThenLockStruct.vale"))
 
-    compile.evalForKind(Vector()) match { case VonInt(42) => }
-  }
-*/
 // mig: fn drop_while_locked_with_struct
 #[test]
 fn drop_while_locked_with_struct() {
@@ -191,20 +150,7 @@ fn drop_while_locked_with_struct() {
         Err(_) => panic!("vfail"),
     }
 }
-/*
-  test("Drop while locked, with struct") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/dropWhileLockedStruct.vale"))
 
-    try {
-      compile.evalForKind(Vector()) match { case VonInt(42) => }
-      vfail()
-    } catch {
-      case ConstraintViolatedException(_) =>
-      case _ => vfail()
-    }
-  }
-*/
 // mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
@@ -241,18 +187,7 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref from borrow local then destroy own, with struct") {
-    val compile = RunCompilation.test(
-      Tests.loadExpected("programs/weaks/weakFromLocalCRefStruct.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
@@ -289,18 +224,7 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref from borrow then destroy own, with struct") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/weakFromCRefStruct.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn make_weak_ref_from_temporary
 #[test]
 fn make_weak_ref_from_temporary() {
@@ -339,20 +263,7 @@ exported func main() int { return getHp(&&Muta(7)); }
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make weak ref from temporary") {
-    val compile = RunCompilation.test(
-        """
-          |weakable struct Muta { hp int; }
-          |func getHp(weakMuta &&Muta) int { return (lock(weakMuta)).get().hp; }
-          |exported func main() int { return getHp(&&Muta(7)); }
-          |""".stripMargin)
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-    Collector.only(main.body, { case BorrowToWeakTE(_) => })
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn make_and_lock_weak_ref_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
@@ -411,23 +322,7 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref then destroy own, with interface") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/lockWhileLiveInterface.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-    Collector.only(main, {
-      case LetNormalTE(ReferenceLocalVariableT(CodeVarNameT(StrI("weakUnit")),FinalT,CoordT(WeakT, _, _)),refExpr) => {
-        refExpr.result.coord match {
-          case CoordT(WeakT, _, InterfaceTT(simpleNameT("IUnit"))) =>
-        }
-      }
-    })
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn destroy_own_then_locking_gives_none_with_interface
 #[test]
 fn destroy_own_then_locking_gives_none_with_interface() {
@@ -455,14 +350,7 @@ fn destroy_own_then_locking_gives_none_with_interface() {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-/*
-  test("Destroy own then locking gives none, with interface") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/dropThenLockInterface.vale"))
 
-    compile.evalForKind(Vector()) match { case VonInt(42) => }
-  }
-*/
 // mig: fn drop_while_locked_with_interface
 #[test]
 fn drop_while_locked_with_interface() {
@@ -491,20 +379,7 @@ fn drop_while_locked_with_interface() {
         Err(other) => panic!("vfail: {:?}", other),
     }
 }
-/*
-  test("Drop while locked, with interface") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/dropWhileLockedInterface.vale"))
 
-    try {
-      compile.evalForKind(Vector()) match { case VonInt(42) => }
-      vfail()
-    } catch {
-      case ConstraintViolatedException(_) =>
-      case other => vfail(other)
-    }
-  }
-*/
 // mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
@@ -541,18 +416,7 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref from borrow local then destroy own, with interface") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/weakFromLocalCRefInterface.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
@@ -589,18 +453,7 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
         other => panic!("expected VonInt(7), got {:?}", other),
     }
 }
-/*
-  test("Make and lock weak ref from borrow then destroy own, with interface") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/weakFromCRefInterface.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    compile.evalForKind(Vector()) match { case VonInt(7) => }
-  }
-*/
 // mig: fn call_weak_self_method_after_drop
 #[test]
 fn call_weak_self_method_after_drop() {
@@ -639,20 +492,7 @@ fn call_weak_self_method_after_drop() {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-/*
-  test("Call weak-self method, after drop") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/callWeakSelfMethodAfterDrop.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    val hamuts = compile.getHamuts()
-
-    compile.evalForKind(Vector()) match { case VonInt(42) => }
-  }
-*/
 // mig: fn call_weak_self_method_while_alive
 #[test]
 fn call_weak_self_method_while_alive() {
@@ -691,20 +531,7 @@ fn call_weak_self_method_while_alive() {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-/*
-  test("Call weak-self method, while alive") {
-    val compile = RunCompilation.test(
-        Tests.loadExpected("programs/weaks/callWeakSelfMethodWhileLive.vale"))
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    vassert(Collector.all(main.body, { case SoftLoadTE(_, WeakT) => true }).size >= 1)
-
-    val hamuts = compile.getHamuts()
-
-    compile.evalForKind(Vector()) match { case VonInt(42) => }
-  }
-*/
 // mig: fn weak_yonder_member
 #[test]
 fn weak_yonder_member() {
@@ -758,40 +585,4 @@ exported func main() int {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-/*
-  test("Weak yonder member") {
-    val compile = RunCompilation.test(
-        """
-          |weakable struct Base {
-          |  hp int;
-          |}
-          |struct Spaceship {
-          |  origin &&Base;
-          |}
-          |exported func main() int {
-          |  base = Base(73);
-          |  ship = Spaceship(&&base);
-          |
-          |  (base).drop(); // Destroys base.
-          |
-          |  maybeOrigin = lock(ship.origin); «14»«15»
-          |  if (not maybeOrigin.isEmpty()) { «16»
-          |    o = maybeOrigin.get();
-          |    return o.hp;
-          |  } else {
-          |    return 42;
-          |  }
-          |}
-          |""".stripMargin)
 
-    val main = compile.expectCompilerOutputs().lookupFunction("main")
-
-    val hamuts = compile.getHamuts()
-
-    compile.evalForKind(Vector()) match { case VonInt(42) => }
-  }
-
-
-}
-
-*/

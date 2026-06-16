@@ -4,18 +4,7 @@ use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::tests::utils::compile_denizen;
 
-/*
-package dev.vale.parsing.functions
 
-import dev.vale.lexing.{BadFunctionBodyError, FailedParse, FuncBoundWithoutWhere, LightFunctionMustHaveParamTypes}
-import dev.vale.parsing._
-import dev.vale.parsing.ast._
-import dev.vale.{Collector, StrI, vassertOne}
-import org.scalatest._
-
-
-class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUtils {
-*/
 // mig: fn func_with_func_bound_with_missing_where
 #[test]
 #[ignore = "blocked - Rust parser produces TopLevelFunction for `func sum<T>() func moo(&T)void {3}` instead of ParseError::FuncBoundWithoutWhere. Tracked in migration-drive-todo.md Phase 4e."]
@@ -33,13 +22,4 @@ fn func_with_func_bound_with_missing_where() {
     other => panic!("Expected FuncBoundWithoutWhere, got {:?}", other),
   }
 }
-/*
-  // This test does not pass yet, use #[ignore].
-  test("Func with func bound with missing 'where'") {
-    compileDenizen("func sum<T>() func moo(&T)void {3}").expectErr() match {
-      case FailedParse(_, _, FuncBoundWithoutWhere(_)) =>
-    }
-  }
 
-}
-*/

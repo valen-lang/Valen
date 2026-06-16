@@ -31,22 +31,7 @@ use crate::interner::StrI;
 use crate::typing::typing_interner::TypingInterner;
 use std::fs::read_to_string;
 use std::marker::PhantomData;
-/*
-package dev.vale.typing
 
-import dev.vale.postparsing._
-import dev.vale.{CodeLocationS, FileCoordinate, PackageCoordinate, RangeS, StrI, Tests, vassert, vassertSome, vimpl}
-import dev.vale.typing.ast.SignatureT
-import dev.vale.typing.names._
-import dev.vale.typing.templata._
-import dev.vale.typing.types._
-import dev.vale.typing.types._
-import org.scalatest._
-
-import scala.collection.immutable.List
-
-class CompilerProjectTests extends FunSuite with Matchers {
-*/
 // mig: fn function_has_correct_name
 #[test]
 fn function_has_correct_name() {
@@ -94,22 +79,7 @@ fn function_has_correct_name() {
     let coutputs = compile.expect_compiler_outputs();
     assert_eq!(coutputs.functions.first().unwrap().header.id, id);
 }
-/*
-  test("Function has correct name") {
-    val compile =
-      CompilerTestCompilation.test(
-        """exported func main() { }""".stripMargin)
-    val coutputs = compile.expectCompilerOutputs()
-    val interner = compile.interner
 
-    val packageCoord = interner.intern(PackageCoordinate(interner.intern(StrI("test")),Vector()))
-    val mainLoc = CodeLocationS(interner.intern(FileCoordinate(packageCoord, "test.vale")), 0)
-    val mainTemplateName = interner.intern(FunctionTemplateNameT(interner.intern(StrI("main")), mainLoc))
-    val mainName = interner.intern(FunctionNameT(mainTemplateName, Vector(), Vector()))
-    val id = IdT(packageCoord, Vector(), mainName)
-    vassertSome(coutputs.functions.headOption).header.id shouldEqual id
-  }
-*/
 // mig: fn lambda_has_correct_name
 #[test]
 fn lambda_has_correct_name() {
@@ -189,34 +159,7 @@ fn lambda_has_correct_name() {
     let lam_func = coutputs.lookup_lambda_in("main");
     assert_eq!(lam_func.header.id, lambda_func_id);
 }
-/*
-  test("Lambda has correct name") {
-    val compile =
-      CompilerTestCompilation.test(
-        """exported func main() { {}() }""".stripMargin)
-    val coutputs = compile.expectCompilerOutputs()
-    val interner = compile.interner
 
-    val packageCoord = interner.intern(PackageCoordinate(interner.intern(StrI("test")),Vector()))
-    val mainLoc = CodeLocationS(interner.intern(FileCoordinate(packageCoord, "test.vale")), 0)
-    val mainTemplateName = interner.intern(FunctionTemplateNameT(interner.intern(StrI("main")), mainLoc))
-    val mainName = interner.intern(FunctionNameT(mainTemplateName, Vector(), Vector()))
-
-    val lambdaLoc = CodeLocationS(interner.intern(FileCoordinate(packageCoord, "test.vale")), 23)
-    val lambdaCitizenTemplateName = interner.intern(LambdaCitizenTemplateNameT(lambdaLoc))
-    val lambdaCitizenName = interner.intern(LambdaCitizenNameT(lambdaCitizenTemplateName))
-    val lambdaFuncTemplateName = interner.intern(LambdaCallFunctionTemplateNameT(lambdaLoc, Vector(CoordT(ShareT,RegionT(DefaultRegionT), interner.intern(StructTT(IdT(packageCoord, Vector(mainName), lambdaCitizenName)))))))
-    val lambdaCitizenId = IdT(packageCoord, Vector(mainName), lambdaCitizenName)
-    val lambdaStruct = interner.intern(StructTT(lambdaCitizenId))
-    val lambdaShareCoord = CoordT(ShareT, RegionT(DefaultRegionT), lambdaStruct)
-    val lambdaFuncName = interner.intern(LambdaCallFunctionNameT(lambdaFuncTemplateName, Vector(), Vector(lambdaShareCoord)))
-    val lambdaFuncId =
-      IdT(packageCoord, Vector(mainName, lambdaCitizenTemplateName), lambdaFuncName)
-
-    val lamFunc = coutputs.lookupLambdaIn("main")
-    lamFunc.header.id shouldEqual lambdaFuncId
-  }
-*/
 // mig: fn struct_has_correct_name
 #[test]
 fn struct_has_correct_name() {
@@ -254,25 +197,7 @@ exported struct MyStruct { a int; }
         _ => panic!("struct.templateName didn't match expected pattern"),
     }
 }
-/*
-  test("Struct has correct name") {
-    val compile =
-      CompilerTestCompilation.test(
-        """
-          |
-          |exported struct MyStruct { a int; }
-          |""".stripMargin)
-    val coutputs = compile.expectCompilerOutputs()
 
-    val struct = coutputs.lookupStruct("MyStruct")
-    struct.templateName match {
-      case IdT(x,Vector(),StructTemplateNameT(StrI("MyStruct"))) => {
-        vassert(x.isTest)
-      }
-    }
-  }
-}
-*/
 
 // NOVEL CODE — TDD reproducer for the is_type_convertible missing-cases
 // panic surfaced by typing_pass_on_roguelike (RuntimeSizedArray vs anything).
@@ -280,7 +205,7 @@ exported struct MyStruct { a int; }
 // or target-side RSA/SSA both return false.
 #[test]
 fn typing_pass_array_type_convertible() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -340,7 +265,7 @@ exported func main() {
 // ArgLookup(1)))) for the `===` builtin.
 #[test]
 fn typing_pass_uses_same_instance() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -397,7 +322,7 @@ exported func main() bool {
 
 #[test]
 fn typing_pass_ssa_destructure() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -455,7 +380,7 @@ exported func main() int {
 // enclosing function scope.
 #[test]
 fn typing_pass_closure_var_mutate() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -513,7 +438,7 @@ exported func main() {
 // at ExpressionCompiler.scala:869-876 (case TupleSE) + SequenceCompiler.scala.
 #[test]
 fn typing_pass_tuple_literal() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -568,7 +493,7 @@ exported func main() {
 // ExpressionCompiler.scala:1387-1429 (case DestructSE).
 #[test]
 fn typing_pass_destruct_struct() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -627,7 +552,7 @@ exported func main() {
 // compiler_test_compilation.
 #[test]
 fn typing_pass_on_roguelike() {
-    /* Guardian: disable-all */
+    
 
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();

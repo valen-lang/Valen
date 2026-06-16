@@ -1,4 +1,4 @@
-/* Guardian: disable-all */
+
 
 // Test-only traversal helper for the final_ast (H-side) pass. Mirrors
 // `src/typing/test/traverse.rs` and `src/postparsing/test/traverse.rs`.

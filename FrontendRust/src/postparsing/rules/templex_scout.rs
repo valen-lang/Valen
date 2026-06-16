@@ -28,25 +28,7 @@ use crate::postparsing::rules::rules::{
 use std::collections::HashMap;
 use crate::interner::StrI;
 use crate::postparsing::itemplatatype::CoordTemplataType;
-/*
-package dev.vale.postparsing.rules
 
-import dev.vale.lexing.RangeL
-import dev.vale.parsing.ast._
-import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, vassert, vassertSome, vimpl}
-import dev.vale.postparsing._
-import dev.vale.parsing.ast._
-import dev.vale.postparsing._
-
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-// Per @ECSIIOSZ, each call-site's templex tree (`Some<T>`, `&E`, `Array<imm, int>`, etc.) is
-// lowered here into a flat rule vector that later becomes the input to a per-call-site
-// solver instance.
-class TemplexScout(
-    interner: Interner,
-  keywords: Keywords) {
-*/
 
 fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
@@ -66,18 +48,7 @@ fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   }));
   rune_s
 }
-/*
-  def addLiteralRule(
-    lidb: LocationInDenizenBuilder,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    rangeS: RangeS,
-    valueSR: ILiteralSL):
-  RuneUsage = {
-    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-    ruleBuilder += LiteralSR(rangeS, runeS, valueSR)
-    runeS
-  }
-*/
+
 fn add_rune_parent_env_lookup_rule<'s>(_scout_arena: &ScoutArena<'s>,
   _lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
@@ -95,18 +66,7 @@ fn add_rune_parent_env_lookup_rule<'s>(_scout_arena: &ScoutArena<'s>,
   ));
   usage
 }
-/*
-  def addRuneParentEnvLookupRule(
-    lidb: LocationInDenizenBuilder,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    rangeS: RangeS,
-    runeS: IRuneS):
-  RuneUsage = {
-    val usage = rules.RuneUsage(rangeS, runeS)
-    ruleBuilder += RuneParentEnvLookupSR(rangeS, usage)
-    usage
-  }
-*/
+
 fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
@@ -127,19 +87,7 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   }));
   rune_s
 }
-/*
-  def addLookupRule(
-    lidb: LocationInDenizenBuilder,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    rangeS: RangeS,
-    contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-    nameSN: IImpreciseNameS):
-  RuneUsage = {
-    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-    ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, runeS, nameSN)
-    runeS
-  }
-*/
+
 pub fn translate_value_templex<'s, 'p>(
   scout_arena: &ScoutArena<'s>,
   templex: &ITemplexPT<'p>,
@@ -179,20 +127,7 @@ pub fn translate_value_templex<'s, 'p>(
     _ => None,
   }
 }
-/*
-  def translateValueTemplex(templex: ITemplexPT): Option[ILiteralSL] = {
-    templex match {
-      case IntPT(_, value) => Some(IntLiteralSL(value))
-      case BoolPT(_, value) => Some(BoolLiteralSL(value))
-      case MutabilityPT(_, mutability) => Some(MutabilityLiteralSL(mutability))
-      case VariabilityPT(_, variability) => Some(VariabilityLiteralSL(variability))
-      case StringPT(_, value) => Some(StringLiteralSL(value))
-      case LocationPT(_, location) => Some(LocationLiteralSL(location))
-      case OwnershipPT(_, ownership) => Some(OwnershipLiteralSL(ownership))
-      case _ => None
-    }
-  }
-*/
+
 // Returns:
 // - Rune for this type
 pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
@@ -204,24 +139,10 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
   context_region: IRuneS<'s>,
   templex: &ITemplexPT<'p>,
 ) -> RuneUsage<'s> {
-  /*
-    // Returns:
-    // - Rune for this type
-    def translateTemplex(
-      env: IEnvironmentS,
-      lidb: LocationInDenizenBuilder,
-      ruleBuilder: ArrayBuffer[IRulexSR],
-      contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-      templex: ITemplexPT):
-    RuneUsage = {
-      Profiler.frame(() => {
-        val evalRange = (range: RangeL) => PostParser.evalRange(env.file, range)
-  */
+  
   let file = env.file();
   match translate_value_templex(scout_arena, templex) {
-    /*
-          translateValueTemplex(templex) match {
-    */
+    
     Some(x) => {
       let mut child_lidb = lidb.child();
       add_literal_rule(scout_arena,
@@ -231,17 +152,9 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         x,
       )
     }
-    /*
-    case Some(x) => {
-      val rune = addLiteralRule(lidb.child(), ruleBuilder, evalRange(templex.range), x)
-      rune
-    }
-    */
+    
     None => match templex {
-      /*
-      case None => {
-        templex match {
-      */
+      
       ITemplexPT::Inline(inline) => translate_templex(
         scout_arena,
         keywords,
@@ -251,9 +164,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         context_region,
         inline.inner,
       ),
-/*
-      case InlinePT(range, inner) => translateTemplex(env, lidb, ruleBuilder, contextRegion, inner)
-*/
+
       ITemplexPT::AnonymousRune(anonymous_rune) => {
         let mut child_lidb = lidb.child();
         let rune = RuneUsage {
@@ -262,21 +173,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         };
         rune
       }
-/*
-      case AnonymousRunePT(range) => {
-        val rune = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
-        rune
-      }
-*/
+
       ITemplexPT::RegionRune(RegionRunePT {
         range: _,
         name: None,
       }) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
-/*
-      case RegionRunePT(range, None) => {
-        vimpl() // isolates
-      }
-*/
+
       ITemplexPT::RegionRune(RegionRunePT {
         range,
         name: Some(name),
@@ -301,19 +203,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           )
         }
       }
-/*
-      case RegionRunePT(range, Some(NameP(_, name))) => {
-        val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(name))
-        if (isRuneFromLocalEnv) {
-          val rune = rules.RuneUsage(evalRange(range), CodeRuneS(name))
-          rune
-        } else {
-          // It's from a parent env
-          val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(name))
-          rune
-        }
-      }
-*/
+
       ITemplexPT::NameOrRune(NameOrRunePT(name_or_rune)) => {
         let is_rune_from_env = env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(
           CodeRuneS {
@@ -361,28 +251,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           // For lookups like these, we bring them into the current region.
         }
       }
-/*
-      case NameOrRunePT(NameP(range, nameOrRune)) => {
-        val isRuneFromEnv = env.allDeclaredRunes().contains(CodeRuneS(nameOrRune))
-        if (isRuneFromEnv) {
-          val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(nameOrRune))
-          if (isRuneFromLocalEnv) {
-            val rune = rules.RuneUsage(evalRange(range), CodeRuneS(nameOrRune))
-            rune
-          } else {
-            // It's from a parent env
-            val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(nameOrRune))
-            rune
-          }
-        } else {
-          // e.g. "int"
-          val name = interner.intern(CodeNameS(nameOrRune))
-          val rune = addLookupRule(lidb.child(), ruleBuilder, evalRange(range), contextRegion, name)
-          // For lookups like these, we bring them into the current region.
-          rune
-        }
-      }
-*/
+
       ITemplexPT::Interpreted(interpreted) => {
         let range_s = PostParser::eval_range(file, interpreted.range);
         let mut child_lidb = lidb.child();
@@ -431,36 +300,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }));
         result_rune_s
       }
-/*
-      case InterpretedPT(range, ownership, maybeRegion, innerP) => {
-        val rangeS = evalRange(range)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
 
-        val maybeRegionRune =
-          maybeRegion.map(runeName => {
-            val rune = CodeRuneS(vassertSome(runeName.name).str) // impl isolates
-            if (!env.allDeclaredRunes().contains(rune)) {
-              throw CompileErrorExceptionS(UnknownRegionError(rangeS, rune.name.str))
-            }
-            rules.RuneUsage(evalRange(range), rune)
-          })
-
-        // We need to use region as the new context region for everything under us, since
-        // region annotations apply deeply.
-        val newRegion =
-          maybeRegionRune match {
-            case None => contextRegion
-            case Some(rune) => rune.rune
-          }
-
-        val innerRuneS =
-          translateTemplex(env, lidb.child(), ruleBuilder, newRegion, innerP)
-
-        ruleBuilder += rules.AugmentSR(evalRange(range), resultRuneS, ownership.map(_.ownership), innerRuneS)
-
-        resultRuneS
-      }
-*/
       ITemplexPT::Call(call) => {
         let range_s = PostParser::eval_range(file, call.range);
         let mut child_lidb = lidb.child();
@@ -499,46 +339,11 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }));
         result_rune_s
       }
-/*
-      case CallPT(rangeP, template, args) => {
-        val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder +=
-          rules.MaybeCoercingCallSR(
-            rangeS,
-            resultRuneS,
-            translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, template),
-            args.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-        resultRuneS
-      }
-*/
+
       ITemplexPT::Function(_function) => {
         panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNCTION_NOT_YET_IMPLEMENTED")
       }
-/*
-      case FunctionPT(rangeP, mutability, paramsPack, returnType) => {
-        val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateNameRuneS =
-          addLookupRule(
-            lidb.child(), ruleBuilder, rangeS, contextRegion, interner.intern(CodeNameS(keywords.IFUNCTION)))
-        val mutabilityRuneS =
-          mutability match {
-            case None => addLiteralRule(lidb.child(), ruleBuilder, rangeS, rules.MutabilityLiteralSL(MutableP))
-            case Some(m) => translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, m)
-          }
-        ruleBuilder +=
-          rules.MaybeCoercingCallSR(
-            rangeS,
-            resultRuneS,
-            templateNameRuneS,
-            Vector(
-              mutabilityRuneS,
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion,  paramsPack),
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnType)))
-        resultRuneS
-      }
-*/
+
       ITemplexPT::Func(func) => {
         let range_s = PostParser::eval_range(file, func.range);
         let params_range_s = PostParser::eval_range(file, func.params_range);
@@ -565,54 +370,9 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         result_rune_s
 
       }
-/*
-      case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {
-        val rangeS = PostParser.evalRange(env.file, range)
-        val paramsRangeS = PostParser.evalRange(env.file, paramsRangeL)
-        val paramsS =
-          paramsP.map(paramP => {
-            translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, paramP)
-          })
-        val paramListRuneS = rules.RuneUsage(paramsRangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder += PackSR(paramsRangeS, paramListRuneS, paramsS.toVector)
 
-        val returnRuneS = translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnTypeP)
-
-        val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
-
-        // Only appears in call site; filtered out when solving definition
-        ruleBuilder += CallSiteFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-        // Only appears in definition; filtered out when solving call site
-        ruleBuilder += DefinitionFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-        // Only appears in call site; filtered out when solving definition
-        ruleBuilder += ResolveSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-
-        resultRuneS
-      }
-*/
       ITemplexPT::Pack(_pack) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_PACK_NOT_YET_IMPLEMENTED"),
-/*
-      case PackPT(rangeP, members) => {
-        val rangeS = PostParser.evalRange(env.file, rangeP)
 
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder +=
-          MaybeCoercingLookupSR(
-            rangeS,
-            templateRuneS,
-            CodeNameS(keywords.tupleHumanName(members.length)))
-
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder += MaybeCoercingCallSR(
-          rangeS,
-          resultRuneS,
-          templateRuneS,
-          members.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-
-
-        resultRuneS
-      }
-*/
       ITemplexPT::StaticSizedArray(static_sized_array) => {
         let range_s = PostParser::eval_range(file, static_sized_array.range);
         let mut child_lidb = lidb.child();
@@ -680,29 +440,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }));
         result_rune_s
       }
-/*
-      case StaticSizedArrayPT(rangeP, mutability, variability, size, element) => {
-        val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder +=
-          rules.LookupSR(
-            rangeS,
-            templateRuneS,
-            interner.intern(CodeNameS(keywords.StaticArray)))
-        ruleBuilder +=
-          MaybeCoercingCallSR(
-            rangeS,
-            resultRuneS,
-            templateRuneS,
-            Vector(
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, size),
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, variability),
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
-        resultRuneS
-      }
-*/
+
       ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
         let range_s = PostParser::eval_range(file, runtime_sized_array.range);
         let mut child_lidb = lidb.child();
@@ -750,27 +488,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }));
         result_rune_s
       }
-/*
-      case RuntimeSizedArrayPT(rangeP, mutability, element) => {
-        val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        ruleBuilder +=
-          rules.LookupSR(
-            rangeS,
-            templateRuneS,
-            interner.intern(CodeNameS(keywords.Array)))
-        ruleBuilder +=
-          MaybeCoercingCallSR(
-            rangeS,
-            resultRuneS,
-            templateRuneS,
-            Vector(
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
-              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
-        resultRuneS
-      }
-*/
+
       ITemplexPT::Tuple(tuple) => {
         let range_s = PostParser::eval_range(file, tuple.range);
         let tuple_name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
@@ -830,45 +548,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           result_rune_s
         }
       }
-/*
-      case TuplePT(rangeP, elements) => {
-        val rangeS = evalRange(rangeP)
-        val tupleName = interner.intern(CodeNameS(keywords.tupleHumanName(elements.length)))
-        if (elements.isEmpty) {
-          // Zero-arg case: lower directly to a single MaybeCoercingLookupSR, matching
-          // how any other zero-arg kind template (e.g., `Spaceship`) is handled.
-          // Emitting a MaybeCoercingCallSR here would deadlock RuneTypeSolver, since
-          // its pre-processor declines to seed Tup0's ambiguous templata shape.
-          val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-          ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, resultRuneS, tupleName)
-          resultRuneS
-        } else {
-          val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-          val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-          ruleBuilder +=
-            rules.MaybeCoercingLookupSR(rangeS, templateRuneS, tupleName)
-          ruleBuilder +=
-            rules.MaybeCoercingCallSR(
-              rangeS,
-              resultRuneS,
-              templateRuneS,
-              elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-          resultRuneS
-        }
-      }
-*/
+
       _ => panic!("POSTPARSER_TRANSLATE_TEMPLEX_NOT_YET_IMPLEMENTED"),
     },
   }
 }
-/*
-Guardian: inline
-          }
-        }
-      }
-    })
-  }
-*/
+
 // Returns:
 // - Rune for this type
 fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
@@ -912,27 +597,7 @@ fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
     }
   }
 }
-/*
-  // Returns:
-  // - Rune for this type
-  def translateTypeIntoRune(
-    env: IEnvironmentS,
-    lidb: LocationInDenizenBuilder,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-    typeP: ITemplexPT):
-  RuneUsage = {
-    typeP match {
-      case NameOrRunePT(NameP(range, nameOrRune)) if env.allDeclaredRunes().contains(CodeRuneS(nameOrRune)) => {
-        val resultRuneS = rules.RuneUsage(PostParser.evalRange(env.file, range), CodeRuneS(nameOrRune))
-        resultRuneS
-      }
-      case nonRuneTemplexP => {
-        translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, nonRuneTemplexP)
-      }
-    }
-  }
-*/
+
 // Returns:
 // - Rune for this type
 pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
@@ -958,28 +623,7 @@ pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
     }
   }
 }
-/*
-  // Returns:
-  // - Rune for this type
-  def translateMaybeTypeIntoRune(
-    env: IEnvironmentS,
-    lidb: LocationInDenizenBuilder,
-    range: RangeS,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-    maybeTypeP: Option[ITemplexPT]):
-  RuneUsage = {
-    maybeTypeP match {
-      case None => {
-        val resultRuneS = rules.RuneUsage(range, ImplicitRuneS(lidb.child().consume()))
-        resultRuneS
-      }
-      case Some(typeP) => {
-        translateTypeIntoRune(env, lidb, ruleBuilder, contextRegion, typeP)
-      }
-  }
-}
-*/
+
 pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
   keywords: &Keywords<'s>,
   env: IEnvironmentS<'s>,
@@ -1010,23 +654,3 @@ pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutAr
     Some(result_rune)
   }
 }
-/*
-  def translateMaybeTypeIntoMaybeRune(
-    env: IEnvironmentS,
-    lidb: LocationInDenizenBuilder,
-    range: RangeS,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    runeToExplicitType: mutable.ArrayBuffer[(IRuneS, ITemplataType)],
-    contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-    maybeTypeP: Option[ITemplexPT]):
-  Option[RuneUsage] = {
-    if (maybeTypeP.isEmpty) {
-      None
-    } else {
-      Some(
-        translateMaybeTypeIntoRune(
-          env, lidb.child(), range, ruleBuilder, contextRegion, maybeTypeP))
-    }
-  }
-}
-*/

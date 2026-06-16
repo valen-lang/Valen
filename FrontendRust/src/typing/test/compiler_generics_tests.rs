@@ -7,42 +7,17 @@ use super::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::typing_interner::TypingInterner;
 use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::tests::tests::get_package_to_resource_resolver;
-/*
-package dev.vale.typing
 
-import dev.vale._
-import OverloadResolver.FindFunctionFailure
-import dev.vale.postparsing.CodeNameS
-import dev.vale.typing.ast.RestackifyTE
-import dev.vale.typing.env.ReferenceLocalVariableT
-import dev.vale.typing.names.CodeVarNameT
-import dev.vale.vassert
-import dev.vale.typing.templata._
-import dev.vale.typing.types._
-import org.scalatest._
-
-import scala.collection.immutable.List
-import scala.io.Source
-*/
 // mig: struct CompilerGenericsTests
 pub struct CompilerGenericsTests;
 // mig: impl CompilerGenericsTests
 impl CompilerGenericsTests {}
-/*
-class CompilerGenericsTests extends FunSuite with Matchers {
-  // TODO: pull all of the typingpass specific stuff out, the unit test-y stuff
-*/
+
 // mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
-/*
-  def readCodeFromResource(resourceFilename: String): String = {
-    val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
-    vassert(is != null)
-    is.mkString("")
-  }
-*/
+
 // mig: fn upcasting_with_generic_bounds
 #[test]
 fn upcasting_with_generic_bounds() {
@@ -87,35 +62,4 @@ fn upcasting_with_generic_bounds() {
     );
     let _coutputs = compile.expect_compiler_outputs();
 }
-/*
-  test("Upcasting with generic bounds") {
 
-    val compile = CompilerTestCompilation.test(
-      """
-        |import v.builtins.panic.*;
-        |import v.builtins.drop.*;
-        |
-        |#!DeriveInterfaceDrop
-        |sealed interface XOpt<T Ref> where func drop(T)void {
-        |  func harvest(virtual opt XOpt<T>) &T;
-        |}
-        |
-        |#!DeriveStructDrop
-        |struct XNone<T Ref> where func drop(T)void  { }
-        |
-        |impl<T> XOpt<T> for XNone<T>;
-        |
-        |func harvest<T>(opt XNone<T>) &T {
-        |  __vbi_panic();
-        |}
-        |
-        |exported func main() int {
-        |  m XOpt<int> = XNone<int>();
-        |  return (m).harvest();
-        |}
-        |
-        |""".stripMargin)
-    val coutputs = compile.expectCompilerOutputs()
-  }
-}
-*/

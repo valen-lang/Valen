@@ -2,14 +2,7 @@ use super::ast::{LocationP, MutabilityP, NameP, OwnershipP, VariabilityP};
 use super::rules::ITypePR;
 use crate::interner::StrI;
 use crate::lexing::RangeL;
-/*
-package dev.vale.parsing.ast
 
-import dev.vale.lexing.RangeL
-import dev.vale.{StrI, vassert, vcurious, vpass}
-
-// See PVSBUFI
-*/
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ITemplexPT<'p> {
@@ -64,47 +57,27 @@ impl ITemplexPT<'_> {
     }
   }
 }
-/*
-sealed trait ITemplexPT {
-  def range: RangeL
-}
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AnonymousRunePT {
   pub range: RangeL,
 }
-/*
-case class AnonymousRunePT(range: RangeL) extends ITemplexPT {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-  vpass()
-}
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BoolPT {
   pub range: RangeL,
   pub value: bool,
 }
-/*
-case class BoolPT(range: RangeL, value: Boolean) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-//case class BorrowPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-//override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PointPT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }
-/*
-case class PointPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-// This is for example func(Int)Bool, func:imm(Int, Int)Str, func:mut()(Str, Bool)
-// It's shorthand for IFunction:(mut, (Int), Bool), IFunction:(mut, (Int, Int), Str), IFunction:(mut, (), (Str, Bool))
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallPT<'p> {
@@ -112,10 +85,7 @@ pub struct CallPT<'p> {
   pub template: &'p ITemplexPT<'p>,
   pub args: &'p [&'p ITemplexPT<'p>],
 }
-/*
-case class CallPT(range: RangeL, template: ITemplexPT, args: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionPT<'p> {
@@ -124,68 +94,46 @@ pub struct FunctionPT<'p> {
   pub parameters: &'p PackPT<'p>,
   pub return_type: &'p ITemplexPT<'p>,
 }
-/*
-// Mutability is Optional because they can leave it out, and mut will be assumed.
-case class FunctionPT(range: RangeL, mutability: Option[ITemplexPT], parameters: PackPT, returnType: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InlinePT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }
-/*
-case class InlinePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IntPT {
   pub range: RangeL,
   pub value: i64,
 }
-/*
-case class IntPT(range: RangeL, value: Long) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RegionRunePT<'p> {
   pub range: RangeL,
   pub name: Option<NameP<'p>>,
 }
-/*
-case class RegionRunePT(range: RangeL, name: Option[NameP]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LocationPT {
   pub range: RangeL,
   pub location: LocationP,
 }
-/*
-case class LocationPT(range: RangeL, location: LocationP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TuplePT<'p> {
   pub range: RangeL,
   pub elements: &'p [&'p ITemplexPT<'p>],
 }
-/*
-case class TuplePT(range: RangeL, elements: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MutabilityPT(pub RangeL, pub MutabilityP);
-/*
-case class MutabilityPT(range: RangeL, mutability: MutabilityP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NameOrRunePT<'p>(pub NameP<'p>);
@@ -200,14 +148,7 @@ impl<'p> NameOrRunePT<'p> {
 // VA: parsed_loader.rs (lines 1859, 1944). Since the struct is in a different module from callers,
 // VA: removing `pub` from the tuple field would enforce the constructor at compile time.
 }
-/*
-case class NameOrRunePT(name: NameP) extends ITemplexPT {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-  def range = name.range
-  vassert(name.str.str != "_")
-}
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InterpretedPT<'p> {
@@ -222,33 +163,18 @@ impl<'p> InterpretedPT<'p> {
     Self { range, maybe_ownership, maybe_region, inner }
   }
 }
-/*
-//case class NullablePT(range: Range, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-//override def hashCode(): Int = vcurious() }
-case class InterpretedPT(range: RangeL, maybeOwnership: Option[OwnershipPT], maybeRegion: Option[RegionRunePT], inner: ITemplexPT) extends ITemplexPT {
-  override def equals(obj: Any): Boolean = vcurious();
-  override def hashCode(): Int = vcurious()
 
-  vassert(maybeOwnership.nonEmpty || maybeRegion.nonEmpty)
-}
-*/
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnershipPT(pub RangeL, pub OwnershipP);
-/*
-case class OwnershipPT(range: RangeL, ownership: OwnershipP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PackPT<'p> {
   pub range: RangeL,
   pub members: &'p [&'p ITemplexPT<'p>],
 }
-/*
-case class PackPT(range: RangeL, members: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -259,10 +185,7 @@ pub struct FuncPT<'p> {
   pub parameters: &'p [&'p ITemplexPT<'p>],
   pub return_type: &'p ITemplexPT<'p>,
 }
-/*
-case class FuncPT(range: RangeL, name: NameP, paramsRange: RangeL, parameters: Vector[ITemplexPT], returnType: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StaticSizedArrayPT<'p> {
@@ -272,16 +195,7 @@ pub struct StaticSizedArrayPT<'p> {
   pub size: &'p ITemplexPT<'p>,
   pub element: &'p ITemplexPT<'p>,
 }
-/*
-case class StaticSizedArrayPT(
-  range: RangeL,
-  mutability: ITemplexPT,
-  variability: ITemplexPT,
-  size: ITemplexPT,
-  element: ITemplexPT
-) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuntimeSizedArrayPT<'p> {
@@ -289,34 +203,21 @@ pub struct RuntimeSizedArrayPT<'p> {
   pub mutability: &'p ITemplexPT<'p>,
   pub element: &'p ITemplexPT<'p>,
 }
-/*
-case class RuntimeSizedArrayPT(
-  range: RangeL,
-  mutability: ITemplexPT,
-  element: ITemplexPT
-) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SharePT<'p> {
   pub range: RangeL,
   pub inner: &'p ITemplexPT<'p>,
 }
-/*
-case class SharePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringPT<'p> {
   pub range: RangeL,
   pub str: StrI<'p>,
 }
-/*
-case class StringPT(range: RangeL, str: String) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TypedRunePT<'p> {
@@ -324,14 +225,7 @@ pub struct TypedRunePT<'p> {
   pub rune: NameP<'p>,
   pub tyype: ITypePR,
 }
-/*
-case class TypedRunePT(range: RangeL, rune: NameP, tyype: ITypePR) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariabilityPT(pub RangeL, pub VariabilityP);
-/*
-case class VariabilityPT(range: RangeL, variability: VariabilityP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
-*/

@@ -18,18 +18,7 @@ use crate::postparsing::post_parser::VariableNameAlreadyExists;
 use crate::postparsing::expressions::BlockSE;
 use crate::collect_only_snode;
 
-/*
-package dev.vale.postparsing
 
-import dev.vale.{Collector, Err, FileCoordinateMap, Interner, Ok, SourceCodeUtils, StrI, vassert, vfail}
-import dev.vale.options.GlobalOptions
-import dev.vale.parsing.Parser
-import org.scalatest._
-
-import scala.runtime.Nothing$
-
-class PostParserVariableTests extends FunSuite with Matchers {
-*/
 fn compile_for_error<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -62,14 +51,7 @@ where 'p: 's,
     Err(e) => e,
   }
 }
-/*
-  private def compileForError(code: String): ICompileErrorS = {
-    PostParserTestCompilation.test(code).getScoutput() match {
-      case Err(e) => e
-      case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
-    }
-  }
-*/
+
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -101,24 +83,7 @@ where 'p: 's,
     .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
-/*
-  private def compile(code: String): ProgramS = {
-    val interner = new Interner()
-    PostParserTestCompilation.test(code).getScoutput() match {
-      case Err(e) => {
-        val codeMap = FileCoordinateMap.test(interner, code)
-        vfail(
-          PostParserErrorHumanizer.humanize(
-            SourceCodeUtils.humanizePos(codeMap, _),
-            SourceCodeUtils.linesBetween(codeMap, _, _),
-            SourceCodeUtils.lineRangeContaining(codeMap, _),
-            SourceCodeUtils.lineContaining(codeMap, _),
-            e))
-      }
-      case Ok(t) => t.expectOne()
-    }
-  }
-*/
+
 #[test]
 fn regular_variable() {
   let parse_bump = Bump::new();
@@ -150,19 +115,7 @@ fn regular_variable() {
     _ => panic!("expected LocalS(CodeVarNameS(StrI(\"x\")), NotUsed x6)"),
   }
 }
-/*
-  test("Regular variable") {
-    val program1 = compile("exported func main() int { x = 4; }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    vassert(body.block.locals.size == 1)
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-      NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn typeless_local_has_no_coord_rune() {
   let parse_bump = Bump::new();
@@ -185,14 +138,7 @@ fn typeless_local_has_no_coord_rune() {
   );
   assert_eq!(local.pattern.coord_rune, None);
 }
-/*
-  test("Type-less local has no coord rune") {
-    val program1 = compile("exported func main() int { x = 4; }")
-    val main = program1.lookupFunction("main")
-    val local = Collector.only(main, { case let @ LetSE(_, rules, pattern, _) => let })
-    local.pattern.coordRune shouldEqual None
-  }
-*/
+
 #[test]
 fn reports_defining_same_name_variable() {
   let parse_bump = Bump::new();
@@ -216,13 +162,7 @@ fn reports_defining_same_name_variable() {
     _ => panic!("expected VariableNameAlreadyExists(_, CodeVarName(\"x\")), got {:?}", err),
   }
 }
-/*
-  test("Reports defining same-name variable") {
-    compileForError("exported func main() { x = 4; x = 5; }") match {
-      case VariableNameAlreadyExists(_, CodeVarNameS(StrI("x"))) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_pointing_to_function() {
   let parse_bump = Bump::new();
@@ -252,18 +192,7 @@ fn self_is_pointing_to_function() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self is pointing to function") {
-    val program1 = compile("exported func main() int { x = 4; doBlarks(&x); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-      Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_pointing_to_method() {
   let parse_bump = Bump::new();
@@ -293,18 +222,7 @@ fn self_is_pointing_to_method() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self is pointing to method") {
-    val program1 = compile("exported func main() int { x = 4; x.doBlarks(); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-      Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_moving_to_function() {
   let parse_bump = Bump::new();
@@ -334,18 +252,7 @@ fn self_is_moving_to_function() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self is moving to function") {
-    val program1 = compile("exported func main() int { x = 4; doBlarks(x); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-      NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_moving_to_method() {
   let parse_bump = Bump::new();
@@ -375,18 +282,7 @@ fn self_is_moving_to_method() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self is moving to method") {
-    val program1 = compile("exported func main() int { x = 4; (x).doBlarks(); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-      NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_mutating_mutable() {
   let parse_bump = Bump::new();
@@ -416,18 +312,7 @@ fn self_is_mutating_mutable() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self is mutating mutable") {
-    val program1 = compile("exported func main() int { x = 4; set x = 6; }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-       NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_is_moving_and_mutating_same_variable() {
   let parse_bump = Bump::new();
@@ -457,18 +342,7 @@ fn self_is_moving_and_mutating_same_variable() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, Used, ...)"),
   }
 }
-/*
-  test("Self is moving and mutating same variable") {
-    val program1 = compile("exported func main() int { x = 4; set x = +(x, 1); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-      CodeVarNameS(StrI("x")),
-       NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn child_is_pointing() {
   let parse_bump = Bump::new();
@@ -501,24 +375,7 @@ fn child_is_pointing() {
     _ => panic!("expected LocalS(..., child_borrowed: Used)"),
   }
 }
-/*
-  test("Child is pointing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  ({ doBlarks(&x); })();
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn child_is_moving() {
   let parse_bump = Bump::new();
@@ -551,24 +408,7 @@ fn child_is_moving() {
     _ => panic!("expected LocalS(..., child_moved: Used)"),
   }
 }
-/*
-  test("Child is moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  ({ doBlarks(x); })();
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn child_is_mutating() {
   let parse_bump = Bump::new();
@@ -601,24 +441,7 @@ fn child_is_mutating() {
     _ => panic!("expected LocalS(..., child_mutated: Used)"),
   }
 }
-/*
-  test("Child is mutating") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  ({ set x = 9; })();
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn self_maybe_pointing() {
   let parse_bump = Bump::new();
@@ -651,22 +474,7 @@ fn self_maybe_pointing() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self maybe pointing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { doBlarks(&x); } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(CodeVarNameS(StrI("x")), Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_maybe_moving() {
   let parse_bump = Bump::new();
@@ -699,24 +507,7 @@ fn self_maybe_moving() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self maybe moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { doBlarks(x); } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_maybe_mutating() {
   let parse_bump = Bump::new();
@@ -749,24 +540,7 @@ fn self_maybe_mutating() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self maybe mutating") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { set x = 9; } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_maybe_pointing() {
   let parse_bump = Bump::new();
@@ -799,24 +573,7 @@ fn children_maybe_pointing() {
     _ => panic!("expected LocalS(..., child_borrowed: Used)"),
   }
 }
-/*
-  test("Children maybe pointing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { doBlarks(&x); }(); } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_maybe_moving() {
   let parse_bump = Bump::new();
@@ -849,24 +606,7 @@ fn children_maybe_moving() {
     _ => panic!("expected LocalS(..., child_moved: Used)"),
   }
 }
-/*
-  test("Children maybe moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { doBlarks(x); }(); } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_maybe_mutating() {
   let parse_bump = Bump::new();
@@ -899,24 +639,7 @@ fn children_maybe_mutating() {
     _ => panic!("expected LocalS(..., child_mutated: Used)"),
   }
 }
-/*
-  test("Children maybe mutating") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { set x = 9; }(); } else { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn self_both_pointing() {
   let parse_bump = Bump::new();
@@ -949,24 +672,7 @@ fn self_both_pointing() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self both pointing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { doBoinks(&x); } else { doBloops(&x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_both_pointing() {
   let parse_bump = Bump::new();
@@ -999,24 +705,7 @@ fn children_both_pointing() {
     _ => panic!("expected LocalS(..., child_borrowed: Used)"),
   }
 }
-/*
-  test("Children both pointing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { doBoinks(&x); }(); } else { { doBloops(&x); }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_both_moving() {
   let parse_bump = Bump::new();
@@ -1049,24 +738,7 @@ fn self_both_moving() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self both moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { doBoinks(x); } else { doBloops(x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_both_moving() {
   let parse_bump = Bump::new();
@@ -1099,24 +771,7 @@ fn children_both_moving() {
     _ => panic!("expected LocalS(..., child_moved: Used)"),
   }
 }
-/*
-  test("Children both moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { doBoinks(x); }(); } else { { doBloops(x); }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_both_mutating() {
   let parse_bump = Bump::new();
@@ -1149,24 +804,7 @@ fn self_both_mutating() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, NotUsed, Used, ...)"),
   }
 }
-/*
-  test("Self both mutating") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { set x = 9; } else { set x = 8; }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_both_mutating() {
   let parse_bump = Bump::new();
@@ -1199,24 +837,7 @@ fn children_both_mutating() {
     _ => panic!("expected LocalS(..., child_mutated: Used)"),
   }
 }
-/*
-  test("Children both mutating") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { set x = 9; }(); } else { { set x = 8; }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn self_pointing_or_moving() {
   let parse_bump = Bump::new();
@@ -1249,24 +870,7 @@ fn self_pointing_or_moving() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self pointing or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { doThings(&x); } else { moveThis(x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_pointing_or_moving() {
   let parse_bump = Bump::new();
@@ -1299,24 +903,7 @@ fn children_pointing_or_moving() {
     _ => panic!("expected LocalS(..., child_borrowed: Used, child_moved: Used)"),
   }
 }
-/*
-  test("Children pointing or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { doThings(&x); }(); } else { { moveThis(x); }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, Used, Used, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_mutating_or_moving() {
   let parse_bump = Bump::new();
@@ -1349,24 +936,7 @@ fn self_mutating_or_moving() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, Used, ...)"),
   }
 }
-/*
-  test("Self mutating or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { set x = 9; } else { moveThis(x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_mutating_or_moving() {
   let parse_bump = Bump::new();
@@ -1399,24 +969,7 @@ fn children_mutating_or_moving() {
     _ => panic!("expected LocalS(..., child_moved: Used, child_mutated: Used)"),
   }
 }
-/*
-  test("Children mutating or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { set x = 9; }(); } else { { moveThis(x); }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, NotUsed, Used, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn self_moving_and_mutating_same_variable() {
   let parse_bump = Bump::new();
@@ -1446,18 +999,7 @@ fn self_moving_and_mutating_same_variable() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), NotUsed, Used, Used, ...)"),
   }
 }
-/*
-  test("Self moving and mutating same variable") {
-    val program1 = compile("exported func main() int { x = 4; set x = +(x, 1); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_moving_and_mutating_same_variable() {
   let parse_bump = Bump::new();
@@ -1487,18 +1029,7 @@ fn children_moving_and_mutating_same_variable() {
     _ => panic!("expected LocalS(..., child_moved: Used, child_mutated: Used)"),
   }
 }
-/*
-  test("Children moving and mutating same variable") {
-    val program1 = compile("exported func main() int { x = 4; { set x = +(x, 1); }(); }")
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, NotUsed, Used, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn self_borrowing_param() {
   let parse_bump = Bump::new();
@@ -1530,23 +1061,7 @@ fn self_borrowing_param() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("Self borrowing param") {
-    val program1 = compile(
-      """
-        |func main(x int) {
-        |  print(&x);
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_borrowing_param() {
   let parse_bump = Bump::new();
@@ -1578,23 +1093,7 @@ fn children_borrowing_param() {
     _ => panic!("expected LocalS(..., child_borrowed: Used)"),
   }
 }
-/*
-  test("Children borrowing param") {
-    val program1 = compile(
-      """
-        |func main(x int) {
-        |  { print(&x); }();
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-          NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn self_loading_or_mutating_or_moving() {
   let parse_bump = Bump::new();
@@ -1627,24 +1126,7 @@ fn self_loading_or_mutating_or_moving() {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, Used, Used, ...)"),
   }
 }
-/*
-  test("Self loading or mutating or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { set x = 9; } else if (true) { moveThis(x); } else { blark(&x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, Used, Used, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn children_loading_or_mutating_or_moving() {
   let parse_bump = Bump::new();
@@ -1677,24 +1159,7 @@ fn children_loading_or_mutating_or_moving() {
     _ => panic!("expected LocalS(..., child_*: Used)"),
   }
 }
-/*
-  test("Children loading or mutating or moving") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = 4;
-        |  if (true) { { set x = 9; }(); } else if (true) { { moveThis(x); }(); } else { { blark(&x); }(); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           NotUsed, NotUsed, NotUsed, Used, Used, Used) =>
-    }
-  }
-*/
+
 #[test]
 fn while_condition_borrowing() {
   let parse_bump = Bump::new();
@@ -1728,25 +1193,7 @@ exported func main() int {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("While condition borrowing") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = Marine();
-        |  while (&x) { }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    // x is always borrowed because the condition of a while is always run
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 #[test]
 fn while_body_maybe_loading() {
   let parse_bump = Bump::new();
@@ -1780,24 +1227,7 @@ exported func main() int {
     _ => panic!("expected LocalS(CodeVarNameS(\"x\"), Used, NotUsed, ...)"),
   }
 }
-/*
-  test("While body maybe loading") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  x = Marine();
-        |  while (true) { doThing(&x); }
-        |}
-      """.stripMargin)
-    val main = program1.lookupFunction("main")
-    val CodeBodyS(body) = main.body
-    body.block.locals.head match {
-      case LocalS(
-          CodeVarNameS(StrI("x")),
-           Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
+
 fn extract_lambda_block_from_main<'s>(
   body: &'s IBodyS<'s>,
 ) -> &'s BlockSE<'s> {
@@ -1880,33 +1310,7 @@ exported func main() int {
     _ => panic!("expected LocalS(ClosureParamNameS(_), NotUsed x6)"),
   }
 }
-/*
-  test("Include closure var in locals") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  m = Marine();
-        |  { m.shout() }();
-        |}
-      """.stripMargin)
-    val scoutput = program1
-    val main = scoutput.lookupFunction("main")
-    val CodeBodyS(BodySE(_, _, BlockSE(_, _, ConsecutorSE(exprs)))) = main.body
-    // __Closure is shown as not used... we could change scout to automatically
-    // borrow it whenever we try to access a closure variable?
-    val lamBlock =
-      exprs.collect({
-        case FunctionCallSE(_, _, OwnershippedSE(_, FunctionSE(FunctionS(_, _, _, _, _, _, _, _, _, CodeBodyS(innerBody))), _), _) => innerBody.block
-      }).head
-    lamBlock.locals.head match {
-      case LocalS(name, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) => {
-        name match {
-          case ClosureParamNameS(_) =>
-        }
-      }
-    }
-  }
-*/
+
 #[test]
 fn include_underscore_in_locals() {
   let parse_bump = Bump::new();
@@ -1942,29 +1346,4 @@ fn include_underscore_in_locals() {
     _ => panic!("expected LocalS(ClosureParamNameS(_), NotUsed x6)"),
   }
 }
-/*
-  test("Include _ in locals") {
-    val program1 = compile(
-      """
-        |exported func main() int {
-        |  { print(_) }(3);
-        |}
-      """.stripMargin)
-    val scoutput = program1
-    val main = scoutput.lookupFunction("main")
-    val CodeBodyS(BodySE(_, _, BlockSE(_, _, ConsecutorSE(exprs)))) = main.body
-    // __Closure is shown as not used... we could change scout to automatically
-    // borrow it whenever we try to access a closure variable?
-    val lamBlock =
-      exprs.collect({
-        case FunctionCallSE(_, _, OwnershippedSE(_, FunctionSE(FunctionS(_, _, _, _, _, _, _, _, _, CodeBodyS(innerBody))), _), _) => innerBody.block
-      }).head
-    val locals = lamBlock.locals
-    locals.find(_.varName match { case ClosureParamNameS(_) => true case _ => false }).get match {
-      case LocalS(ClosureParamNameS(_), NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
-    }
-  }
-*/
-/*
-}
-*/
+

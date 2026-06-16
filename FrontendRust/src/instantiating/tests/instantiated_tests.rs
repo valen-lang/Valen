@@ -14,15 +14,7 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::IPackageResolver;
-/*
-package dev.vale.instantiating
 
-import dev.vale.options.GlobalOptions
-import dev.vale.{Builtins, FileCoordinateMap, Interner, Keywords, PackageCoordinate, Tests}
-import org.scalatest._
-
-object InstantiatingCompilation {
-*/
 // mig: fn test
 pub fn test<'s, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
@@ -67,23 +59,7 @@ where 's: 't, 's: 'i, 'p: 'ctx,
         instantiating_bump,
     )
 }
-/*
-  def test(code: String*): InstantiatedCompilation = {
-    val interner = new Interner()
-    val keywords = new Keywords(interner)
-    new InstantiatedCompilation(
-      interner,
-      keywords,
-      Vector(
-        PackageCoordinate.TEST_TLD(interner, keywords)),
-      Builtins.getCodeMap(interner, keywords)
-        .or(FileCoordinateMap.test(interner, code.toVector))
-        .or(Tests.getPackageToResourceResolver),
-      InstantiatorCompilationOptions(
-        GlobalOptions(true, true, true, true, true)))
-  }
-}
-*/
+
 // mig: struct InstantiatedTests
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
@@ -92,9 +68,7 @@ pub struct InstantiatedTests<'s, 't> {
 }
 
 // mig: impl InstantiatedTests
-/*
-class InstantiatedTests extends FunSuite with Matchers {
-*/
+
 // mig: fn test_templates
 #[test]
 fn test_templates() {
@@ -146,20 +120,3 @@ exported func main() int {
     let mut compile = test(&compilation_bump, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &instantiating_bump, code);
     compile.get_monouts();
 }
-/*
-  test("Test templates") {
-    val compile = InstantiatingCompilation.test(
-      """
-        |func drop(x int) { }
-        |func bork<T>(a T) void where func drop(T)void {
-        |  // implicitly calls drop
-        |}
-        |exported func main() {
-        |  bork(3);
-        |}
-      """.stripMargin)
-    compile.getMonouts()
-  }
-
-}
-*/
