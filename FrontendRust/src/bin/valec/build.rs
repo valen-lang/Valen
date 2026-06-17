@@ -96,7 +96,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     let no_std = get_bool_flag(build_args, "--no_std", false);
 
     // Mirrors build.vale lines 344-366: More flags
-    let maybe_region_override = get_optional_flag(build_args, "--region_override");
     let maybe_opt_level = get_optional_flag(build_args, "--opt_level");
     let maybe_cpu = get_optional_flag(build_args, "--cpu");
     let executable_name = get_flag_value(build_args, "-o", "main");
@@ -146,7 +145,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             // Skip flag and its value (if it has one)
             if arg == "-o" || arg == "--output_dir" || arg == "--builtins_dir_override"
                 || arg == "--clang_override" || arg == "--libc_override"
-                || arg == "--region_override" || arg == "--opt_level" || arg == "--cpu"
+                || arg == "--opt_level" || arg == "--cpu"
                 || arg == "--replay_whitelist_extern" {
                 i += 2; // Skip flag and value
                 continue;
@@ -237,7 +236,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
 
         let backend_argv = midas::build_backend_argv(
             &output_dir,
-            maybe_region_override.as_deref(),
             maybe_opt_level.as_deref(),
             maybe_cpu.as_deref(),
             &executable_name,

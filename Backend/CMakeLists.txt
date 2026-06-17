@@ -96,7 +96,6 @@ set(BACKEND_LIB_SRCS
 		src/region/rcimm/rcimm.cpp
 		src/region/common/wrcweaks/wrcweaks.cpp
 		src/region/common/fatweaks/fatweaks.cpp
-		src/region/naiverc/naiverc.cpp
 		src/region/unsafe/unsafe.cpp
 		src/region/linear/linear.cpp
 		src/region/linear/linearstructs.cpp

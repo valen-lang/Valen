@@ -130,8 +130,6 @@ IRegion* GlobalState::getRegion(RegionId* regionId) {
 //    return unsafeRegion;
 //  } else if (regionId == metalCache->assistRegionId) {
 //    return assistRegion;
-//  } else if (regionId == metalCache->naiveRcRegionId) {
-//    return naiveRcRegion;
 //  } else if (regionId == metalCache->resilientV3RegionId) {
 //    return resilientV3Region;
 //  } else if (regionId == metalCache->resilientV4RegionId) {

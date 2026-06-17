@@ -28,21 +28,12 @@ LLVMValueRef upcastThinPtr(
     InterfaceKind* targetInterfaceKindM) {
   assert(sourceStructTypeM->location != Location::INLINE);
 
-  switch (globalState->opt->regionOverride) {
-//    case RegionOverride::ASSIST:
-    case RegionOverride::NAIVE_RC:
-    case RegionOverride::FAST: {
-      assert(
-          sourceStructTypeM->ownership == Ownership::MUTABLE_SHARE ||
-          sourceStructTypeM->ownership == Ownership::IMMUTABLE_SHARE ||
-          sourceStructTypeM->ownership == Ownership::OWN ||
-          sourceStructTypeM->ownership == Ownership::MUTABLE_BORROW ||
-          sourceStructTypeM->ownership == Ownership::IMMUTABLE_BORROW);
-      break;
-    }
-    default:
-      { assert(false); throw 1337; }
-  }
+  assert(
+      sourceStructTypeM->ownership == Ownership::MUTABLE_SHARE ||
+      sourceStructTypeM->ownership == Ownership::IMMUTABLE_SHARE ||
+      sourceStructTypeM->ownership == Ownership::OWN ||
+      sourceStructTypeM->ownership == Ownership::MUTABLE_BORROW ||
+      sourceStructTypeM->ownership == Ownership::IMMUTABLE_BORROW);
   ControlBlockPtrLE controlBlockPtrLE =
       kindStructsSource->getConcreteControlBlockPtr(
           FL(), functionState, builder, sourceStructTypeM, sourceRefLE);
@@ -794,40 +785,6 @@ Ref getRuntimeSizedArrayCapacity(
   return toRef(globalState->getRegion(globalState->metalCache->i32Ref), globalState->metalCache->i32Ref, intLE);
 }
 
-ControlBlock makeAssistAndNaiveRCNonWeakableControlBlock(GlobalState* globalState) {
-  ControlBlock controlBlock(globalState, LLVMStructCreateNamed(globalState->context, "mutNonWeakableControlBlock"));
-  controlBlock.addMember(ControlBlockMember::STRONG_RC_32B);
-  // This is where we put the size in the current generational heap, we can use it for something
-  // else until we get rid of that.
-  controlBlock.addMember(ControlBlockMember::UNUSED_32B);
-  if (globalState->opt->census) {
-    controlBlock.addMember(ControlBlockMember::CENSUS_TYPE_STR);
-    controlBlock.addMember(ControlBlockMember::CENSUS_OBJ_ID);
-  }
-  controlBlock.build();
-  return controlBlock;
-}
-
-ControlBlock makeAssistAndNaiveRCWeakableControlBlock(GlobalState* globalState) {
-  ControlBlock controlBlock(globalState, LLVMStructCreateNamed(globalState->context, "mutWeakableControlBlock"));
-  controlBlock.addMember(ControlBlockMember::STRONG_RC_32B);
-  // This is where we put the size in the current generational heap, we can use it for something
-  // else until we get rid of that.
-  controlBlock.addMember(ControlBlockMember::UNUSED_32B);
-  if (globalState->opt->census) {
-    controlBlock.addMember(ControlBlockMember::CENSUS_TYPE_STR);
-    controlBlock.addMember(ControlBlockMember::CENSUS_OBJ_ID);
-  }
-  controlBlock.addMember(ControlBlockMember::WRCI_32B);
-  // We could add this in to avoid an InstructionCombiningPass bug where when it inlines things
-  // it doesnt seem to realize that there's padding at the end of structs.
-  // To see it, make loadFromWeakable test in fast mode, see its .ll and its .opt.ll, it seems
-  // to get the wrong pointer for the first member.
-  // mutWeakableControlBlock.addMember(ControlBlockMember::UNUSED_32B);
-  controlBlock.build();
-  return controlBlock;
-}
-// TODO see if we can combine this with assist+naiverc weakable.
 ControlBlock makeFastWeakableControlBlock(GlobalState* globalState) {
   ControlBlock controlBlock(globalState, LLVMStructCreateNamed(globalState->context, "mutWeakableControlBlock"));
   // Fast mode mutables have no strong RC
@@ -860,19 +817,6 @@ ControlBlock makeFastNonWeakableControlBlock(GlobalState* globalState) {
 }
 
 
-ControlBlock makeResilientV0WeakableControlBlock(GlobalState* globalState) {
-  ControlBlock controlBlock(globalState, LLVMStructCreateNamed(globalState->context, "mutWeakableControlBlock"));
-  controlBlock.addMember(ControlBlockMember::WRCI_32B);
-  // This is where we put the size in the current generational heap, we can use it for something
-  // else until we get rid of that.
-  controlBlock.addMember(ControlBlockMember::UNUSED_32B);
-  if (globalState->opt->census) {
-    controlBlock.addMember(ControlBlockMember::CENSUS_TYPE_STR);
-    controlBlock.addMember(ControlBlockMember::CENSUS_OBJ_ID);
-  }
-  controlBlock.build();
-  return controlBlock;
-}
 Ref resilientLockWeak(
     GlobalState* globalState,
     FunctionState* functionState,
@@ -1079,35 +1023,6 @@ Ref normalLocalStore(GlobalState* globalState, FunctionState* functionState, LLV
   LLVMBuildStore(builder, toStoreLE, localAddr);
   return oldRef;
 }
-
-//StructsRouter makeAssistAndNaiveRCModeLayoutter(GlobalState* globalState) {
-//  return StructsRouter(
-//      globalState,
-//      makeImmControlBlock(globalState),
-//      makeAssistAndNaiveRCWeakableControlBlock(globalState),
-//      makeAssistAndNaiveRCNonWeakableControlBlock(globalState));
-//}
-//StructsRouter makeFastModeLayoutter(GlobalState* globalState) {
-//  return StructsRouter(
-//      globalState,
-//      makeImmControlBlock(globalState),
-//      makeFastNonWeakableControlBlock(globalState),
-//      makeFastWeakableControlBlock(globalState));
-//}
-//StructsRouter makeResilientV0Layoutter(GlobalState* globalState) {
-//  return StructsRouter(
-//      globalState,
-//      makeImmControlBlock(globalState),
-//      makeResilientV0WeakableControlBlock(globalState),
-//      makeResilientV0WeakableControlBlock(globalState));
-//}
-//StructsRouter makeResilientV1Layoutter(GlobalState* globalState) {
-//  return StructsRouter(
-//      globalState,
-//      makeImmControlBlock(globalState),
-//      makeResilientV1WeakableControlBlock(globalState),
-//      makeResilientV1WeakableControlBlock(globalState));
-//}
 
 // Returns a LLVMValueRef for a ref to the string object.
 // The caller should then use getStringBytesPtr to then fill the string's contents.

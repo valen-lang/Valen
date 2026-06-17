@@ -9,11 +9,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-enum class RegionOverride {
-  NAIVE_RC,
-  FAST
-};
-
 enum class ValeOptimizationLevel {
     O0,
     O1,
@@ -54,8 +49,6 @@ struct ValeOptions {
     bool printMemOverhead = false;    // Enables generational heap
     bool enableReplaying = false;    // Enables deterministic replaying
     std::unordered_map<std::string, std::unordered_set<std::string>> projectNameToReplayWhitelistedExterns;
-
-    RegionOverride regionOverride = RegionOverride::FAST;
 };
 
 int valeOptSet(ValeOptions *opt, int *argc, char **argv);

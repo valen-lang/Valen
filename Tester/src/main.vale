@@ -207,7 +207,6 @@ exported func main() int {
 
 
   if (include_regions.len() == 0) {
-    include_regions.add("naive-rc");
     include_regions.add("unsafe-fast");
   }
 
@@ -300,17 +299,15 @@ exported func main() int {
     suite.StartTest(42, "nestedblocks", samples_path./("programs/nestedblocks.vale"), &List<str>(), region, false, None<str>());
     suite.StartTest(42, "restackify", samples_path./("programs/restackify.vale"), &List<str>(), region, false, None<str>());
     
-    if (region != "naive-rc") {
-      suite.StartTest(42, "interfacemutreturnexport", samples_path./("programs/externs/interfacemutreturnexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "interfacemutparamexport", samples_path./("programs/externs/interfacemutparamexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "structmutreturnexport", samples_path./("programs/externs/structmutreturnexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "structmutparamexport", samples_path./("programs/externs/structmutparamexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "structmutparamdeepexport", samples_path./("programs/externs/structmutparamdeepexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(10, "rsamutparamexport", samples_path./("programs/externs/rsamutparamexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "rsamutreturnexport", samples_path./("programs/externs/rsamutreturnexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(10, "ssamutparamexport", samples_path./("programs/externs/ssamutparamexport"), &List<str>(), region, false, None<str>());
-      suite.StartTest(42, "ssamutreturnexport", samples_path./("programs/externs/ssamutreturnexport"), &List<str>(), region, false, None<str>());
-    }
+    suite.StartTest(42, "interfacemutreturnexport", samples_path./("programs/externs/interfacemutreturnexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "interfacemutparamexport", samples_path./("programs/externs/interfacemutparamexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "structmutreturnexport", samples_path./("programs/externs/structmutreturnexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "structmutparamexport", samples_path./("programs/externs/structmutparamexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "structmutparamdeepexport", samples_path./("programs/externs/structmutparamdeepexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(10, "rsamutparamexport", samples_path./("programs/externs/rsamutparamexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "rsamutreturnexport", samples_path./("programs/externs/rsamutreturnexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(10, "ssamutparamexport", samples_path./("programs/externs/ssamutparamexport"), &List<str>(), region, false, None<str>());
+    suite.StartTest(42, "ssamutreturnexport", samples_path./("programs/externs/ssamutreturnexport"), &List<str>(), region, false, None<str>());
   });
 
   suite.FinishTests(0);
@@ -470,8 +467,6 @@ Subprocess {
   build_args.add("vtest=" + suite.backend_tests_dir./("testbuiltins.c").str());
   build_args.add("--output_dir");
   build_args.add(test_build_dir.str());
-  build_args.add("--region_override");
-  build_args.add(region);
   build_args.add("--llvm_ir");
   build_args.add("true");
   build_args.add("--opt_level");

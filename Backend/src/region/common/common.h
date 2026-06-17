@@ -240,11 +240,8 @@ Ref getRuntimeSizedArrayCapacity(
     LLVMBuilderRef builder,
     WrapperPtrLE arrayRefLE);
 
-ControlBlock makeAssistAndNaiveRCNonWeakableControlBlock(GlobalState* globalState);
-ControlBlock makeAssistAndNaiveRCWeakableControlBlock(GlobalState* globalState);
 ControlBlock makeFastWeakableControlBlock(GlobalState* globalState);
 ControlBlock makeFastNonWeakableControlBlock(GlobalState* globalState);
-ControlBlock makeResilientV0WeakableControlBlock(GlobalState* globalState);
 Ref resilientLockWeak(
     GlobalState* globalState,
     FunctionState* functionState,

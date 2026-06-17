@@ -4,7 +4,5 @@ fn p(rel: &str) -> std::path::PathBuf {
     programs_dir().join(rel)
 }
 
-#[test] fn interfaceimm_unsafe_fast() { assert_compile_and_run(&p("programs/virtuals/interfaceimm.vale"), "unsafe-fast", 42); }
-#[test] fn interfaceimm_naive_rc()    { assert_compile_and_run(&p("programs/virtuals/interfaceimm.vale"), "naive-rc", 42); }
-#[test] fn interfacemut_unsafe_fast() { assert_compile_and_run(&p("programs/virtuals/interfacemut.vale"), "unsafe-fast", 42); }
-#[test] fn interfacemut_naive_rc()    { assert_compile_and_run(&p("programs/virtuals/interfacemut.vale"), "naive-rc", 42); }
+#[test] fn interfaceimm() { assert_compile_and_run(&p("programs/virtuals/interfaceimm.vale"), 42); }
+#[test] fn interfacemut() { assert_compile_and_run(&p("programs/virtuals/interfacemut.vale"), 42); }

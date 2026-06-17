@@ -30,26 +30,18 @@ pub struct ExecResult {
 /// - `primary_vale` may be a single `.vale` file or a directory; the directory
 ///   case is registered as a `vtest=<dir>` project (whose `.vale` files at the
 ///   top level get walked).
-/// - `extra_vale` adds further `vtest=...` inputs.
 /// - `extra_c` lists additional C sources to link with clang (e.g. extern
 ///   tests' `native/test.c`).
-/// - `region` is `"unsafe-fast"` or `"naive-rc"`; forwarded to the backend.
 /// - `extra_backend_flags` is appended verbatim to the backend argv (e.g.
 ///   `&["--enable_replaying", "true"]` for replay tests).
 pub fn compile_program(
     primary_vale: &Path,
-    extra_vale: &[&Path],
     extra_c: &[&Path],
-    region: &str,
     extra_backend_flags: &[&str],
 ) -> CompiledProgram {
     compile_inputs(
-        std::iter::once(primary_vale)
-            .chain(extra_vale.iter().copied())
-            .map(|p| p.to_path_buf())
-            .collect(),
+        vec![primary_vale.to_path_buf()],
         extra_c,
-        region,
         extra_backend_flags,
         Vec::new(),
     )
@@ -63,7 +55,6 @@ pub fn compile_program(
 /// life of the returned `CompiledProgram`.
 pub fn compile_inline(
     code: &str,
-    region: &str,
     extra_backend_flags: &[&str],
 ) -> CompiledProgram {
     let src_dir = tempfile::tempdir().unwrap();
@@ -72,7 +63,6 @@ pub fn compile_inline(
     compile_inputs(
         vec![src_dir.path().to_path_buf()],
         &[],
-        region,
         extra_backend_flags,
         vec![src_dir],
     )
@@ -81,7 +71,6 @@ pub fn compile_inline(
 fn compile_inputs(
     vale_inputs: Vec<PathBuf>,
     extra_c: &[&Path],
-    region: &str,
     extra_backend_flags: &[&str],
     keepalive: Vec<tempfile::TempDir>,
 ) -> CompiledProgram {
@@ -129,8 +118,6 @@ fn compile_inputs(
         "backend".to_string(),
         "--output_dir".to_string(),
         out_dir.display().to_string(),
-        "--region_override".to_string(),
-        region.to_string(),
     ];
     for f in extra_backend_flags {
         backend_argv.push((*f).to_string());
@@ -172,7 +159,7 @@ fn compile_inputs(
         &clang_cfg,
     )
     .unwrap_or_else(|e| panic!("pass_manager::build failed:\n{}", e));
-    assert_eq!(bp.rc, 0, "backend returned {} (region={})", bp.rc, region);
+    assert_eq!(bp.rc, 0, "backend returned {}", bp.rc);
 
     CompiledProgram {
         exe: bp.exe_path,
@@ -201,8 +188,8 @@ pub fn programs_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/tests")
 }
 
-pub fn assert_compile_and_run(vale_path: &Path, region: &str, expected: i32) {
-    let cp = compile_program(vale_path, &[], &[], region, &[]);
+pub fn assert_compile_and_run(vale_path: &Path, expected: i32) {
+    let cp = compile_program(vale_path, &[], &[]);
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -214,10 +201,9 @@ pub fn assert_compile_and_run(vale_path: &Path, region: &str, expected: i32) {
 pub fn assert_compile_and_run_with_c(
     vale_dir: &Path,
     extra_c: &[&Path],
-    region: &str,
     expected: i32,
 ) {
-    let cp = compile_program(vale_dir, &[], extra_c, region, &[]);
+    let cp = compile_program(vale_dir, extra_c, &[]);
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -226,8 +212,8 @@ pub fn assert_compile_and_run_with_c(
     );
 }
 
-pub fn assert_inline_compile_and_run(code: &str, region: &str, expected: i32) {
-    let cp = compile_inline(code, region, &[]);
+pub fn assert_inline_compile_and_run(code: &str, expected: i32) {
+    let cp = compile_inline(code, &[]);
     let r = cp.run(&[]);
     assert_eq!(
         r.exit_code, expected,
@@ -239,15 +225,12 @@ pub fn assert_inline_compile_and_run(code: &str, region: &str, expected: i32) {
 pub fn assert_replay_test(
     vale_dir: &Path,
     extra_c: &[&Path],
-    region: &str,
     first_expected: i32,
     repeated_expected: i32,
 ) {
     let cp = compile_program(
         vale_dir,
-        &[],
         extra_c,
-        region,
         &["--enable_replaying", "true"],
     );
     let r0 = cp.run(&[]);
@@ -275,8 +258,8 @@ mod smoke {
     use super::*;
 
     #[test]
-    fn smoke_structimm_unsafe_fast() {
+    fn smoke_structimm() {
         let p = programs_dir().join("programs/structs/structimm.vale");
-        assert_compile_and_run(&p, "unsafe-fast", 5);
+        assert_compile_and_run(&p, 5);
     }
 }

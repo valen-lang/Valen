@@ -9,8 +9,8 @@ use std::os::raw::{c_char, c_int};
 extern "C" {
     // AST-driven entry. Caller has populated MetalCache+Program via the
     // metal_cache_ffi.h builders (driven by MetalLowerer against a ProgramH).
-    // argv carries valeOptSet-style flags (--output_dir, --region_override,
-    // etc.); inputs come from the Program parameter, not from .vast files.
+    // argv carries valeOptSet-style flags (--output_dir, etc.); inputs come
+    // from the Program parameter, not from .vast files.
     fn backend_compile_program(
         cache: *mut metal_cache::MetalCacheHandleRaw,
         program: *mut std::ffi::c_void,

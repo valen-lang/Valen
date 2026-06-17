@@ -14,15 +14,7 @@ LLVMValueRef FatWeaks::getInnerRefFromWeakRef(
     LLVMBuilderRef builder,
     Reference* weakRefM,
     WeakFatPtrLE weakFatPtrLE) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::FAST:
-    case RegionOverride::NAIVE_RC:
-      assert(weakRefM->ownership == Ownership::WEAK);
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  assert(weakRefM->ownership == Ownership::WEAK);
 
 //  globalState->getRegion(refHere)->checkValidReference(FL(), functionState, builder, weakRefM, weakFatPtrLE);
 
@@ -37,15 +29,7 @@ LLVMValueRef FatWeaks::getInnerRefFromWeakRefWithoutCheck(
     LLVMBuilderRef builder,
     Reference* weakRefM,
     WeakFatPtrLE weakRefLE) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::FAST:
-    case RegionOverride::NAIVE_RC:
-      assert(weakRefM->ownership == Ownership::WEAK);
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  assert(weakRefM->ownership == Ownership::WEAK);
 
   auto innerRefLE = LLVMBuildExtractValue(builder, weakRefLE.refLE, WEAK_REF_MEMBER_INDEX_FOR_OBJPTR, "");
   // We dont check that its valid because if it's a weak ref, it might *not* be pointing at

@@ -53,7 +53,6 @@ enum
     OPT_ENABLE_REPLAYING,
     OPT_REPLAY_WHITELIST_EXTERN,
     OPT_CENSUS,
-    OPT_REGION_OVERRIDE,
     OPT_FILENAMES,
     OPT_CHECKTREE,
     OPT_EXTFUN,
@@ -102,7 +101,6 @@ static opt_arg_t args[] =
     { "enable_replaying", '\0', OPT_ARG_OPTIONAL, OPT_ENABLE_REPLAYING },
     { "replay_whitelist_extern", '\0', OPT_ARG_REQUIRED, OPT_REPLAY_WHITELIST_EXTERN },
     { "census", '\0', OPT_ARG_OPTIONAL, OPT_CENSUS },
-    { "region_override", '\0', OPT_ARG_REQUIRED, OPT_REGION_OVERRIDE },
     { "ir", '\0', OPT_ARG_NONE, OPT_IR },
     { "asm", '\0', OPT_ARG_NONE, OPT_ASM },
     { "llvm_ir", '\0', OPT_ARG_NONE, OPT_LLVMIR },
@@ -365,29 +363,6 @@ int valeOptSet(ValeOptions *opt, int *argc, char **argv) {
           } else if (s.arg_val == std::string("off")) {
             opt->census = false;
           } else { assert(false); throw 1337; }
-          break;
-        }
-
-        case OPT_REGION_OVERRIDE: {
-          if (s.arg_val == std::string("unsafe-fast")) {
-            opt->regionOverride = RegionOverride::FAST;
-//          } else if (s.arg_val == std::string("assist")) {
-//            opt->regionOverride = RegionOverride::ASSIST;
-          } else if (s.arg_val == std::string("naive-rc")) {
-            opt->regionOverride = RegionOverride::NAIVE_RC;
-//          } else if (s.arg_val == std::string("resilient-v0")) {
-//            opt->regionOverride = RegionOverride::RESILIENT_V0;
-//          } else if (s.arg_val == std::string("resilient-v1")) {
-//            opt->regionOverride = RegionOverride::RESILIENT_V1;
-//          } else if (s.arg_val == std::string("resilient-v2")) {
-//            opt->regionOverride = RegionOverride::RESILIENT_V2;
-//          } else if (s.arg_val == std::string("resilient-limit")) {
-//            opt->regionOverride = RegionOverride::RESILIENT_LIMIT;
-          } else {
-            std::cerr << "Unknown region: " << s.arg_val << std::endl;
-            exit(1);
-            { assert(false); throw 1337; }
-          }
           break;
         }
 

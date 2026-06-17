@@ -780,15 +780,7 @@ LLVMValueRef KindStructs::getStrongRcPtrFromControlBlockPtr(
     LLVMBuilderRef builder,
     Reference* refM,
     ControlBlockPtrLE controlBlockPtr) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::NAIVE_RC:
-      break;
-    case RegionOverride::FAST:
-      assert(refM->ownership == Ownership::MUTABLE_SHARE || refM->ownership == Ownership::IMMUTABLE_SHARE);
-      break;
-    default:
-      { assert(false); throw 1337; }
-  }
+  assert(refM->ownership == Ownership::MUTABLE_SHARE || refM->ownership == Ownership::IMMUTABLE_SHARE);
 
   return LLVMBuildStructGEP2(
       builder,

@@ -10,7 +10,6 @@ use std::path::Path;
 #[allow(clippy::too_many_arguments)]
 pub fn build_backend_argv(
     output_dir: &Path,
-    maybe_region_override: Option<&str>,
     maybe_opt_level: Option<&str>,
     maybe_cpu: Option<&str>,
     // `-o <name>` is consumed by valec for the final clang invocation;
@@ -41,10 +40,6 @@ pub fn build_backend_argv(
     command_line_args.push(output_dir.display().to_string());
 
     // Mirrors midas.vale lines 41-109
-    if let Some(region_override) = maybe_region_override {
-        command_line_args.push("--region_override".to_string());
-        command_line_args.push(region_override.to_string());
-    }
     if let Some(opt_level_val) = maybe_opt_level {
         command_line_args.push("--opt_level".to_string());
         command_line_args.push(opt_level_val.to_string());

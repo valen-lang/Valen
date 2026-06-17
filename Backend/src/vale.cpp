@@ -41,7 +41,6 @@
 #include "region/linear/linear.h"
 #include "function/expressions/shared/members.h"
 #include "function/expressions/expressions.h"
-#include "region/naiverc/naiverc.h"
 
 #ifdef _WIN32
 #define asmext "asm"
@@ -667,20 +666,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
     LLVMStructSetBody(globalState->universalRefCompressedStructLT, &int256LT, 1, false);
   }
 
-  switch (globalState->opt->regionOverride) {
-//    case RegionOverride::ASSIST:
-//      std::cout << "Region override: assist" << std::endl;
-//      break;
-    case RegionOverride::NAIVE_RC:
-      std::cout << "Region override: naive-rc" << std::endl;
-      break;
-    case RegionOverride::FAST:
-      std::cout << "Region override: fast" << std::endl;
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  std::cout << "Region override: fast" << std::endl;
 
 //  if (globalState->opt->regionOverride == RegionOverride::ASSIST) {
 //    if (!globalState->opt->census) {
@@ -773,17 +759,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->regions.emplace(globalState->linearRegion->getRegionId(), globalState->linearRegion);
 
 
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::NAIVE_RC:
-      globalState->mutRegion = new NaiveRC(globalState, globalState->metalCache->mutRegionId);
-      break;
-    case RegionOverride::FAST:
-      globalState->mutRegion = new Unsafe(globalState);
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  globalState->mutRegion = new Unsafe(globalState);
   globalState->regions.emplace(globalState->mutRegion->getRegionId(), globalState->mutRegion);
 
   Determinism determinism(globalState);

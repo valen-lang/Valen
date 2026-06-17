@@ -18,8 +18,6 @@ There are a handful of different subclasses:
     * The main mutable region, if --region-override=unsafe-fast.
  * RCImmRegion: A region for immutable objects.
     * Might not be in the final design, depending on how/whether we share iso regions around.
- * NaiveRCRegion: A region using naive reference counting. Won't use inline interfaces. Its main purpose is for benchmarking against.
-    * The main mutable region, if --region-override=naive-rc
  * LinearRegion: A bump allocator, only used for:
     * Sending objects to C
     * Writing objects to a temporary buffer for a file.

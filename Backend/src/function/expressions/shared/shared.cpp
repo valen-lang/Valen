@@ -71,16 +71,8 @@ LLVMValueRef adjustStrongRc(
     Ref exprRef,
     Reference* refM,
     int amount) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::NAIVE_RC:
-      break;
-    case RegionOverride::FAST:
-      assert(refM->ownership == Ownership::MUTABLE_SHARE);
-      // Shouldnt increment IMMUTABLE_SHARE's RC
-      break;
-    default:
-      { assert(false); throw 1337; }
-  }
+  assert(refM->ownership == Ownership::MUTABLE_SHARE);
+  // Shouldnt increment IMMUTABLE_SHARE's RC
 
   auto controlBlockPtrLE =
       kindStructsSource->getControlBlockPtr(from, functionState, builder, exprRef, refM);

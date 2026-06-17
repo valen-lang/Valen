@@ -26,15 +26,7 @@ static LLVMValueRef makeWrciHeader(
 void WrcWeaks::buildCheckWrc(
     LLVMBuilderRef builder,
     LLVMValueRef wrciLE) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::FAST:
-    case RegionOverride::NAIVE_RC:
-      // fine, proceed
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  // fine, proceed
   std::vector<LLVMValueRef> checkWrcsArgs = {
       wrcTablePtrLE,
       wrciLE,
@@ -177,16 +169,6 @@ WeakFatPtrLE WrcWeaks::weakStructPtrToWrciWeakInterfacePtr(
     InterfaceKind* targetInterfaceKindM,
     Reference* targetInterfaceTypeM) {
 
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::FAST:
-    case RegionOverride::NAIVE_RC:
-      // continue
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
-
 //  checkValidReference(
 //      FL(), globalState, functionState, builder, sourceStructTypeM, sourceRefLE);
   auto controlBlockPtr =
@@ -252,19 +234,12 @@ WeakFatPtrLE WrcWeaks::assembleStructWeakRef(
     Reference* targetTypeM,
     StructKind* structKindM,
     WrapperPtrLE objPtrLE) {
-//  if (globalState->opt->regionOverride == RegionOverride::RESILIENT_V0) {
-//    assert(structTypeM->ownership == Ownership::OWN || structTypeM->ownership == Ownership::SHARE);
-//  } else
-    if (
-      globalState->opt->regionOverride == RegionOverride::NAIVE_RC ||
-      globalState->opt->regionOverride == RegionOverride::FAST) {
-    assert(
-        structTypeM->ownership == Ownership::OWN ||
-        structTypeM->ownership == Ownership::MUTABLE_SHARE ||
-        structTypeM->ownership == Ownership::IMMUTABLE_SHARE ||
-        structTypeM->ownership == Ownership::MUTABLE_BORROW ||
-        structTypeM->ownership == Ownership::IMMUTABLE_BORROW);
-  } else { assert(false); throw 1337; }
+  assert(
+      structTypeM->ownership == Ownership::OWN ||
+      structTypeM->ownership == Ownership::MUTABLE_SHARE ||
+      structTypeM->ownership == Ownership::IMMUTABLE_SHARE ||
+      structTypeM->ownership == Ownership::MUTABLE_BORROW ||
+      structTypeM->ownership == Ownership::IMMUTABLE_BORROW);
 
   auto controlBlockPtrLE = kindStructsSource->getConcreteControlBlockPtr(FL(), functionState, builder, structTypeM, objPtrLE);
   auto wrciLE = getWrciFromControlBlockPtr(globalState, builder, kindStructsSource, structTypeM, controlBlockPtrLE);
@@ -342,10 +317,6 @@ LLVMValueRef WrcWeaks::getNewWrci(
     FunctionState* functionState,
     LLVMBuilderRef builder) {
   auto int32LT = LLVMInt32TypeInContext(globalState->context);
-  assert(
-
-          globalState->opt->regionOverride == RegionOverride::NAIVE_RC ||
-          globalState->opt->regionOverride == RegionOverride::FAST);
 
   // uint64_t resultWrci = __wrc_firstFree;
   auto resultWrciLE = LLVMBuildLoad2(builder, int32LT, getWrcFirstFreeWrciPtr(builder), "resultWrci");
@@ -496,15 +467,7 @@ Ref WrcWeaks::getIsAliveFromWeakRef(
     LLVMBuilderRef builder,
     Reference* weakRefM,
     Ref weakRef) {
-  switch (globalState->opt->regionOverride) {
-    case RegionOverride::FAST:
-    case RegionOverride::NAIVE_RC:
-      assert(weakRefM->ownership == Ownership::WEAK);
-      break;
-    default:
-      { assert(false); throw 1337; }
-      break;
-  }
+  assert(weakRefM->ownership == Ownership::WEAK);
 
   auto weakFatPtrLE =
       weakRefStructsSource->makeWeakFatPtr(
