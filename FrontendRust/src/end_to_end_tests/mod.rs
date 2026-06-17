@@ -137,70 +137,45 @@ fn compile_inputs(
     }
     let backend_argv_refs: Vec<&str> = backend_argv.iter().map(|s| s.as_str()).collect();
 
-    let (rc, package_stems) = crate::pass_manager::pass_manager::build(
-        &parse_arena,
-        &keywords,
-        &opts,
-        &backend_argv_refs,
-    )
-    .unwrap_or_else(|e| panic!("pass_manager::build failed:\n{}", e));
-    assert_eq!(rc, 0, "backend returned {} (region={})", rc, region);
-
-    let mut abi_cs: Vec<PathBuf> = Vec::new();
-    let abi_dir = out_dir.join("abi");
-    if abi_dir.is_dir() {
-        for stem in &package_stems {
-            // package_stems are dot-joined (project[.pkg.pkg]); abi/ uses
-            // the project name as the first-level dir.
-            let project = stem.split('.').next().unwrap_or(stem);
-            let pkg_dir = abi_dir.join(project);
-            if !pkg_dir.is_dir() {
-                continue;
-            }
-            for c_entry in std::fs::read_dir(&pkg_dir).unwrap().filter_map(|e| e.ok()) {
-                let c_path = c_entry.path();
-                if c_path.is_file() && c_path.extension().map_or(false, |x| x == "c") {
-                    abi_cs.push(c_path);
-                }
-            }
-        }
-    }
-
     let builtins_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
         .join("Backend/builtins");
-    let builtin_cs: Vec<PathBuf> = std::fs::read_dir(&builtins_dir)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| p.extension().map_or(false, |x| x == "c"))
-        .collect();
     let test_builtins = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
         .join("Backend/test_builtins/testbuiltins.c");
-    let include_dir = out_dir.join("include");
-    let obj = out_dir.join("build.o");
 
-    let exe = out_dir.join("a.out");
-    let mut cmd = std::process::Command::new("clang");
-    cmd.arg("-o")
-        .arg(&exe)
-        .arg(&obj)
-        .args(&builtin_cs)
-        .arg(&test_builtins)
-        .args(&abi_cs);
+    let mut extra_inputs: Vec<PathBuf> = vec![test_builtins];
     for c in extra_c {
-        cmd.arg(c);
+        extra_inputs.push(c.to_path_buf());
     }
-    cmd.arg("-I").arg(&include_dir);
-    cmd.arg("-lm").arg("-Wno-everything");
-    let st = cmd.status().unwrap();
-    assert!(st.success(), "clang link failed (region={})", region);
+
+    let clang_cfg = crate::pass_manager::pass_manager::ClangConfig {
+        builtins_dir,
+        extra_inputs,
+        clang_path: None,
+        libc_path: None,
+        executable_name: "a.out".to_string(),
+        asan: false,
+        debug_symbols: false,
+        pic: false,
+        pie: false,
+        windows: false,
+    };
+
+    let bp = crate::pass_manager::pass_manager::build(
+        &parse_arena,
+        &keywords,
+        &opts,
+        &backend_argv_refs,
+        &clang_cfg,
+    )
+    .unwrap_or_else(|e| panic!("pass_manager::build failed:\n{}", e));
+    assert_eq!(bp.rc, 0, "backend returned {} (region={})", bp.rc, region);
 
     CompiledProgram {
-        exe,
+        exe: bp.exe_path,
         cwd: out_dir,
         _work: work,
         _extra_keepalive: keepalive,

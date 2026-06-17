@@ -18,14 +18,12 @@ pub struct ProjectValeInputDeclaration {
 
 #[derive(Debug, Clone)]
 pub struct ProjectNonValeInputDeclaration {
-    pub project_name: String,
     pub path: PathBuf,
 }
 
 /// Run the complete in-process pipeline: parse → typing → hammer →
-/// MetalLowerer → backend_compile_program. No `.vast` JSON written, no JSON
-/// re-parse — MetalLowerer hands the ProgramH straight into the C++
-/// MetalCache via FFI.
+/// MetalLowerer → backend_compile_program → clang link. Returns the linked
+/// executable path via `BuiltProgram`.
 pub fn compile_in_process(
     project_directories: &[ProjectDirectoryDeclaration],
     project_vale_inputs: &[ProjectValeInputDeclaration],
@@ -37,7 +35,8 @@ pub fn compile_in_process(
     include_builtins: bool,
     output_dir: &Path,
     backend_argv: Vec<String>,
-) -> Result<(i32, Vec<String>), String> {
+    clang_cfg: frontend_rust::pass_manager::pass_manager::ClangConfig,
+) -> Result<frontend_rust::pass_manager::pass_manager::BuiltProgram, String> {
     // Build the same arg list pass_manager::main consumes, then route it
     // through parse_opts to populate the Options struct.
     let mut frontend_args: Vec<String> = Vec::new();
@@ -92,7 +91,7 @@ pub fn compile_in_process(
 
     let argv_refs: Vec<&str> = backend_argv.iter().map(|s| s.as_str()).collect();
     frontend_rust::pass_manager::pass_manager::build(
-        &parse_arena, &keywords, &opts, &argv_refs,
+        &parse_arena, &keywords, &opts, &argv_refs, &clang_cfg,
     )
 }
 

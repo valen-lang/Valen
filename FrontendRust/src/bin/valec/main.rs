@@ -2,7 +2,6 @@
 // Mirrors Coordinator/src/main.vale
 
 mod build;
-mod clang;
 mod midas;
 mod valestrom;
 

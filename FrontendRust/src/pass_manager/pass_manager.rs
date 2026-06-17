@@ -390,16 +390,47 @@ fn resolve_package_contents<'a>(
 
 
 
-/// Returns `(exit_code, package_coord_stems)`. The stems are dot-joined
-/// `(project, package_steps...)` strings (e.g. `"__vale"`, `"stdlib.collections.hashmap"`)
-/// — one per compiled package. The valec bin uses them to find the matching
-/// `<project>/<package_steps>/native/*.c` files for the link step.
+/// Configuration for the post-backend clang link step that produces the
+/// final executable. Both `valec` and the test harness build a `ClangConfig`
+/// and hand it to `build`; the function handles abi/builtin walking + clang
+/// invocation internally.
+pub struct ClangConfig {
+  /// Directory holding the Backend builtins (`strings.c`, `assert.c`, etc.).
+  pub builtins_dir: PathBuf,
+  /// Additional `.c` files to link beyond builtins + auto-walked abi files.
+  /// Used for: caller-declared non-Vale inputs (valec's `vtest=foo.c`),
+  /// per-project `native/*.c` files (resolved by the caller from project
+  /// directory declarations), test-only shims (`testbuiltins.c`), and
+  /// extern tests' `native/test.c`.
+  pub extra_inputs: Vec<PathBuf>,
+  pub clang_path: Option<String>,
+  pub libc_path: Option<String>,
+  pub executable_name: String,
+  pub asan: bool,
+  pub debug_symbols: bool,
+  pub pic: bool,
+  pub pie: bool,
+  pub windows: bool,
+}
+
+pub struct BuiltProgram {
+  pub rc: i32,
+  pub package_stems: Vec<String>,
+  pub exe_path: PathBuf,
+}
+
+/// Drive the full pipeline (parse → scout → typing → instantiating → hammer →
+/// MetalLowerer → backend → clang link) and return the linked executable's
+/// path. Returns `BuiltProgram { rc, package_stems, exe_path }`. The stems
+/// are dot-joined `(project, package_steps...)` strings (e.g. `"__vale"`,
+/// `"stdlib.collections.hashmap"`) — one per compiled package.
 pub fn build<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   opts: &Options<'p>,
   backend_argv: &[&str],
-) -> Result<(i32, Vec<String>), String>
+  clang_cfg: &ClangConfig,
+) -> Result<BuiltProgram, String>
 where
   'p: 'ctx,
 {
@@ -517,7 +548,86 @@ where
   let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, program_h);
 
   let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, backend_argv);
-  Ok((rc, package_coord_stems))
+  if rc != 0 {
+    return Ok(BuiltProgram {
+      rc,
+      package_stems: package_coord_stems,
+      exe_path: PathBuf::from(output_dir_path).join(&clang_cfg.executable_name),
+    });
+  }
+
+  // Clang link: collect builtin .c files + abi/<project>/*.c files written
+  // by the backend + caller-supplied extras, then invoke clang. Returns the
+  // path of the linked executable.
+  let mut clang_inputs: Vec<PathBuf> = Vec::new();
+  let obj = PathBuf::from(output_dir_path).join("build.o");
+  clang_inputs.push(obj);
+  if let Ok(entries) = fs::read_dir(&clang_cfg.builtins_dir) {
+    for entry in entries.flatten() {
+      let path = entry.path();
+      if path.is_file()
+        && path.extension().and_then(|s| s.to_str()) == Some("c")
+      {
+        clang_inputs.push(path);
+      }
+    }
+  }
+  let abi_dir = PathBuf::from(output_dir_path).join("abi");
+  let mut project_names: HashSet<String> = HashSet::new();
+  for stem in &package_coord_stems {
+    let parts: Vec<&str> = stem.split('.').collect();
+    if parts.is_empty() { continue; }
+    project_names.insert(parts[0].to_string());
+  }
+  for project_name in &project_names {
+    let pkg_abi = abi_dir.join(project_name);
+    if pkg_abi.is_dir() {
+      if let Ok(entries) = fs::read_dir(&pkg_abi) {
+        for entry in entries.flatten() {
+          let path = entry.path();
+          if path.is_file()
+            && path.extension().and_then(|s| s.to_str()) == Some("c")
+          {
+            clang_inputs.push(path);
+          }
+        }
+      }
+    }
+  }
+  for p in &clang_cfg.extra_inputs {
+    clang_inputs.push(p.clone());
+  }
+
+  let clang_process = crate::clang::invoke_clang(
+    clang_cfg.windows,
+    clang_cfg.clang_path.as_deref(),
+    clang_cfg.libc_path.as_deref(),
+    &clang_inputs,
+    &clang_cfg.executable_name,
+    clang_cfg.asan,
+    clang_cfg.debug_symbols,
+    &PathBuf::from(output_dir_path),
+    clang_cfg.pic,
+    clang_cfg.pie,
+  )?;
+  let clang_output = clang_process
+    .wait_with_output()
+    .map_err(|e| format!("clang wait failed: {}", e))?;
+  if !clang_output.status.success() {
+    let rc = clang_output.status.code().unwrap_or(-1);
+    return Err(format!(
+      "clang failed with rc={}:\nstdout={}\nstderr={}",
+      rc,
+      String::from_utf8_lossy(&clang_output.stdout),
+      String::from_utf8_lossy(&clang_output.stderr),
+    ));
+  }
+  let exe_path = PathBuf::from(output_dir_path).join(&clang_cfg.executable_name);
+  Ok(BuiltProgram {
+    rc,
+    package_stems: package_coord_stems,
+    exe_path,
+  })
 }
 
 

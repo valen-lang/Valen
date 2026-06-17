@@ -1,13 +1,10 @@
 // Build orchestration logic
 // Mirrors Coordinator/src/build.vale
 
-use std::collections::HashSet;
 use std::fs;
-use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use crate::clang;
 use crate::midas;
 use crate::valestrom::{ProjectDirectoryDeclaration, ProjectNonValeInputDeclaration, ProjectValeInputDeclaration};
 
@@ -50,34 +47,6 @@ fn get_optional_flag(args: &[String], flag: &str) -> Option<String> {
     None
 }
 
-/// Wait for a child process and print its output
-fn print_and_join(mut child: process::Child) -> Result<i32, String> {
-    // Print stdout
-    if let Some(stdout) = child.stdout.take() {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                println!("{}", line);
-            }
-        }
-    }
-    
-    // Print stderr
-    if let Some(stderr) = child.stderr.take() {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            if let Ok(line) = line {
-                eprintln!("{}", line);
-            }
-        }
-    }
-    
-    // Wait for process to complete
-    let status = child.wait()
-        .map_err(|e| format!("Failed to wait for process: {}", e))?;
-    
-    Ok(status.code().unwrap_or(-1))
-}
 
 /// Main build function
 /// Mirrors build_stuff in build.vale lines 39-632
@@ -223,7 +192,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
                 });
             } else {
                 project_non_vale_input_declarations.push(ProjectNonValeInputDeclaration {
-                    project_name: project_name.to_string(),
                     path: resolved_path,
                 });
             }
@@ -283,8 +251,40 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             force_all_known_live, include_bounds_checks,
         );
 
-        println!("Running frontend + backend in-process...");
-        let (return_code, stems) = match crate::valestrom::compile_in_process(
+        // Mirrors build.vale lines 552-606: Pre-walk every project_directory
+        // for any `native/*.c` files so they're linked into the final exe.
+        // pass_manager::build's internal clang step uses ClangConfig.extra_inputs
+        // for caller-collected non-builtin / non-abi C sources.
+        let mut extra_inputs: Vec<PathBuf> = Vec::new();
+        for declaration in &project_directory_declarations {
+            collect_native_c_files(&declaration.path, &mut extra_inputs);
+        }
+        for declaration in &project_non_vale_input_declarations {
+            extra_inputs.push(declaration.path.clone());
+        }
+
+        let clang_cfg = frontend_rust::pass_manager::pass_manager::ClangConfig {
+            builtins_dir: builtins_dir.clone(),
+            extra_inputs,
+            clang_path: maybe_clang_path_override.clone(),
+            libc_path: maybe_libc_path_override.clone(),
+            executable_name: executable_name.clone(),
+            asan,
+            debug_symbols,
+            pic,
+            pie,
+            windows,
+        };
+
+        if !run_backend {
+            println!("Not running backend, stopping here. (Note: --run_backend=false now also skips clang.)");
+            let _ = output_vast;
+            let _ = run_clang;
+            return;
+        }
+
+        println!("Running frontend + backend + clang in-process...");
+        let bp = match crate::valestrom::compile_in_process(
             &project_directory_declarations,
             &project_vale_input_declarations,
             &project_non_vale_input_declarations,
@@ -292,177 +292,51 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             include_builtins,
             &output_dir,
             backend_argv,
+            clang_cfg,
         ) {
             Ok(result) => result,
             Err(e) => { eprintln!("Compilation error: {}", e); process::exit(1); }
         };
 
-        if return_code != 0 {
-            eprintln!("Compilation returned error code {}, aborting.", return_code);
-            process::exit(return_code);
+        if bp.rc != 0 {
+            eprintln!("Compilation returned error code {}, aborting.", bp.rc);
+            process::exit(bp.rc);
         }
         let _ = output_vast;
-        compiled_package_stems = stems;
+        compiled_package_stems = bp.package_stems;
     }
 
-    // Mirrors build.vale lines 480-483: Check if should run backend
-    if !run_backend {
-        println!("Not running backend, stopping here.");
-        return;
-    }
-
-    // Mirrors build.vale lines 524-527: Check if should run clang
-    if !run_clang {
-        println!("Not running clang, stopping here.");
-        return;
-    }
-
-    // Mirrors build.vale lines 529-550: Collect clang inputs
     if verbose {
-        println!("Collecting cc inputs...");
+        println!("Done! Stems: {:?}", compiled_package_stems);
     }
+}
 
-    let mut clang_inputs = Vec::new();
-    if windows {
-        clang_inputs.push(output_dir.join("build.obj"));
-    } else {
-        clang_inputs.push(output_dir.join("build.o"));
-    }
-
-    // Add .c files from output directory
-    if let Ok(entries) = fs::read_dir(&output_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(name) = path.file_name() {
-                    if name.to_string_lossy().ends_with(".c") {
-                        clang_inputs.push(path);
-                    }
-                }
-            }
-        }
-    }
-
-    // Add .c files from builtins directory
-    if let Ok(entries) = fs::read_dir(&builtins_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(name) = path.file_name() {
-                    if name.to_string_lossy().ends_with(".c") {
-                        clang_inputs.push(path);
-                    }
-                }
-            }
-        }
-    }
-
-    // Mirrors build.vale lines 552-606: Collect native .c files from projects.
-    // pass_manager::build hands us a (project, package_steps...) stem per
-    // compiled package; we walk the matching `<project_dir>/<steps...>/native/`
-    // for `.c` files to feed into clang.
-    let mut project_names = HashSet::new();
-    for stem in &compiled_package_stems {
-        let parts: Vec<&str> = stem.split('.').collect();
-        if parts.is_empty() { continue; }
-        let project_name = parts[0];
-        project_names.insert(project_name.to_string());
-        for declaration in &project_directory_declarations {
-            if declaration.project_name == project_name {
-                let mut package_native_dir = declaration.path.clone();
-                for package_step in &parts[1..] {
-                    package_native_dir = package_native_dir.join(package_step);
-                }
-                let possible_native_dir = package_native_dir.join("native");
-                if possible_native_dir.is_dir() {
-                    if let Ok(entries) = fs::read_dir(&possible_native_dir) {
-                        for entry in entries.flatten() {
-                            let path = entry.path();
-                            if path.is_file()
-                                && path.file_name().map_or(false, |n| n.to_string_lossy().ends_with(".c"))
-                            {
-                                clang_inputs.push(path);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    let abi_dir = output_dir.join("abi");
-
-    // Collect ABI-generated .c files
-    for project_name in &project_names {
-        let possible_generated_dir = abi_dir.join(project_name);
-        if possible_generated_dir.exists() {
-            if !possible_generated_dir.is_dir() {
-                eprintln!("Generated dir is not a directory: {}", possible_generated_dir.display());
-                process::exit(1);
-            }
-
-            if let Ok(entries) = fs::read_dir(&possible_generated_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_file() {
-                        if let Some(name) = path.file_name() {
-                            if name.to_string_lossy().ends_with(".c") {
-                                clang_inputs.push(path);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Add non-Vale inputs for this project
-        for declaration in &project_non_vale_input_declarations {
-            if declaration.project_name == *project_name {
-                clang_inputs.push(declaration.path.clone());
-            }
-        }
-    }
-
-    // Mirrors build.vale lines 608-631: Invoke clang
-    if verbose {
-        println!("Invoking cc...");
-    }
-
-    let clang_process = match clang::invoke_clang(
-        windows,
-        maybe_clang_path_override.as_deref(),
-        maybe_libc_path_override.as_deref(),
-        &clang_inputs,
-        &executable_name,
-        asan,
-        debug_symbols,
-        &output_dir,
-        pic,
-        pie,
-    ) {
-        Ok(process) => process,
-        Err(e) => {
-            eprintln!("Error invoking clang: {}", e);
-            process::exit(1);
-        }
+/// Recursively walk a project directory for `native/*.c` files at any
+/// package level.
+fn collect_native_c_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
     };
-
-    println!("Running clang...");
-    let clang_return_code = match print_and_join(clang_process) {
-        Ok(code) => code,
-        Err(e) => {
-            eprintln!("Error waiting for clang: {}", e);
-            process::exit(1);
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
         }
-    };
-    
-    if clang_return_code != 0 {
-        eprintln!("clang returned error code {}, aborting.", clang_return_code);
-        process::exit(clang_return_code);
-    }
-    
-    if verbose {
-        println!("Done!");
+        if path.file_name().and_then(|n| n.to_str()) == Some("native") {
+            if let Ok(c_entries) = fs::read_dir(&path) {
+                for c_entry in c_entries.flatten() {
+                    let c_path = c_entry.path();
+                    if c_path.is_file()
+                        && c_path.extension().and_then(|s| s.to_str()) == Some("c")
+                    {
+                        out.push(c_path);
+                    }
+                }
+            }
+        } else {
+            collect_native_c_files(&path, out);
+        }
     }
 }
 

@@ -4,6 +4,7 @@
 
 pub mod backend_ffi;
 pub mod builtins;
+pub mod clang;
 pub mod compile_options;
 pub mod file_coordinate_map;
 pub mod final_ast;
