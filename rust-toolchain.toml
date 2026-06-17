@@ -1,5 +1,5 @@
-# Pins the Rust toolchain for the Cargo projects in this repo (FrontendRust,
-# TesterRust). rustup picks this up automatically when running cargo/rustc from any
+# Pins the Rust toolchain for the Cargo projects in this repo (FrontendRust).
+# rustup picks this up automatically when running cargo/rustc from any
 # subdirectory.
 #
 # Why pin:

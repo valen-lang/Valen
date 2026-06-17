@@ -178,8 +178,7 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             if arg == "-o" || arg == "--output_dir" || arg == "--builtins_dir_override"
                 || arg == "--clang_override" || arg == "--libc_override"
                 || arg == "--region_override" || arg == "--opt_level" || arg == "--cpu"
-                || arg == "--replay_whitelist_extern"
-                || arg == "--frontend_path_override" || arg == "--backend_path_override" {
+                || arg == "--replay_whitelist_extern" {
                 i += 2; // Skip flag and value
                 continue;
             } else if arg == "--benchmark" || arg == "--sanity_check" || arg == "--verbose"

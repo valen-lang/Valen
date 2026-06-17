@@ -10,5 +10,6 @@ mod compiler_solver_tests;
 mod compiler_virtual_tests;
 mod after_regions_tests;
 mod after_regions_error_tests;
+mod compiler_humanizer_tests;
 mod in_progress_tests;
 mod todo_tests;
