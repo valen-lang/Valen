@@ -26,11 +26,6 @@ use crate::higher_typing::ast::FunctionA;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 
 
-// (Scala `class StructConstructorMacro(opts, interner, keywords, nameTranslator,
-//  destructorCompiler)` absorbed onto `Compiler`; the method bodies live at
-//  `Compiler::get_struct_sibling_entries_struct_constructor` and
-//  `Compiler::generate_function_body_struct_constructor` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

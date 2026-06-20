@@ -212,7 +212,6 @@ pub(crate) fn solve_identifiability<'s>(
     all_runes,
   );
 
-  // Inline advance loop (matches Scala's while loop in solve())
   loop {
     solver_state.sanity_check();
     // Stage 1: simple solve

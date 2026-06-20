@@ -1,4 +1,3 @@
-// From Frontend/PostParsingPass/src/dev/vale/postparsing/PostParser.scala
 // Coordinates the Scout (post-parsing) pass
 
 // AFTERM: rename Denizen to Definition, and maybe Citizen to TypeDefinition
@@ -70,21 +69,12 @@ use crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune;
 use std::collections::HashSet;
 
 
-
 #[derive(Debug, PartialEq)]
 pub struct CompileErrorExceptionS<'s> {
   pub err: ICompileErrorS<'s>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-// SPORK
-// V: whats the common theme between all SPORK comments?
-// VA: SPORK marks things that exist in Rust but have no direct Scala counterpart — deviations from
-// VA: Scala parity. Examples: Clone+PartialEq derives on types Scala didn't derive (ICompileErrorS,
-// VA: IEnvironmentS), Rust-only convenience methods (CodeLocationS::internal, RangeS::file), and
-// VA: restructured trait shapes (SolverDelegate::rule_to_puzzles). It flags novel Rust logic for
-// VA: review under shields like ATDCX and NCWSRX. 6 occurrences across post_parser.rs, solver.rs,
-// VA: and utils/range.rs.
 pub enum ICompileErrorS<'s> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'s>),
   CouldntFindRuneS(CouldntFindRuneS<'s>),
@@ -130,10 +120,6 @@ impl ICompileErrorS<'_> {
 }
 
 
-
-
-
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct CouldntFindVarToMutateS<'s> {
   pub range: RangeS<'s>,
@@ -152,9 +138,6 @@ pub struct CouldntFindRuneS<'s> {
 pub struct StatementAfterReturnS<'s> {
   pub range: RangeS<'s>,
 }
-
-
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -206,8 +189,6 @@ pub struct VirtualAndAbstractGoTogether<'s> {
 }
 
 
-
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuneExplicitTypeConflictS<'s> {
   pub range: RangeS<'s>,
@@ -242,8 +223,6 @@ impl<'s> IEnvironmentS<'s> {
       IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
     }
   }
-  
-
   
 
   pub fn all_declared_runes(&self) -> IndexSet<IRuneS<'s>> {
@@ -291,7 +270,6 @@ impl<'s> EnvironmentS<'s> {
   }
   
 }
-
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -378,7 +356,6 @@ pub fn find_variable(&self, name: &IImpreciseNameS<'s>) -> Option<IVarNameS<'s>>
 }
 
 }
-
 
 
 // MIGALLOW: noVariableUses -> no_variable_uses
@@ -995,7 +972,6 @@ fn scout_impl(
     }
     _ => {
       return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
-        // Intentionally mirrors Scala's `struct.range` here.
         range: PostParser::eval_range(file, struct_.range()),
         message: "Can't determine name of struct!".to_string(),
       }));
@@ -1585,14 +1561,6 @@ pub(crate) fn check_identifiability(
       .unwrap_or(&[]);
 
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
-    // V: is this whole function now closer or further from scala?
-    // VA: Mostly closer — the full pipeline (attributes, generic params, rules, mutability, members,
-    // VA: InterfaceS construction) is wired up and matches Scala's sequencing. The primary remaining
-    // VA: gap is maybeDefaultRegionRuneP handling: Scala has a full match that synthesizes an implicit
-    // VA: GenericParameterS with RegionGenericParameterTypeS(ReadWriteRegionS) on the None branch;
-    // VA: Rust replaces this with two assert!(is_none) panics. Also: attribute computation is reordered
-    // VA: (before generic params instead of after internalMethods), and predictRuneTypes receives
-    // VA: &identifying_runes_s instead of Scala's empty ArrayBuffer.
     assert!(
       interface.maybe_default_region_rune.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
@@ -1795,7 +1763,6 @@ pub struct ScoutCompilation<'s, 'ctx, 'p> {
 
 impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
 {
-  // MIGALLOW: new -> new (From PostParser.scala lines 922-928)
   pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
@@ -1849,7 +1816,6 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
   }
   
 
-  // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     if self.scoutput_cache.is_some() {
       return Ok(self.scoutput_cache.as_ref().unwrap());
@@ -1865,19 +1831,6 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
     );
     let mut scoutput: FileCoordinateMap<'s, ProgramS<'s>> = FileCoordinateMap::new();
     for (file_coordinate_p, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
-      // Cross-pass translation: re-intern FileCoordinate from 'p into 's
-      // V: should we have arcana for this? also its weird how verbose this is compared to the scala version below
-      // VA: The verbosity is inherent to the 'p/'s lifetime split — already explained in the VA below.
-      // VA: The verbosity is an inherent consequence of the 'p/'s lifetime split. Scala's single
-      // GC-backed interner didn't need cross-pass re-interning — coordinates were just reused.
-      // In Rust, every StrI<'p> must become StrI<'s> by re-interning through scout_arena.
-      // Good candidate for arcana documentation.
-      // V: can we have an intern_file_coordinate method on scout_arena that takes one from a
-      // different arena like p?
-      // VA: Yes. A method like `intern_file_coordinate_cross_pass(&self, fc: &FileCoordinate<'_>) -> &'s FileCoordinate<'s>`
-      // VA: would re-intern each package string via .as_str(), call intern_package_coordinate, then
-      // VA: intern_file_coordinate. Needs only &self — no ParseArena param, since StrI exposes .as_str().
-      // VA: Would reduce the two repeated 6-line blocks in this loop to one-liner calls.
       let package_coord_s: &'s PackageCoordinate<'s> = self.scout_arena.intern_package_coordinate(
         self.scout_arena.intern_str(file_coordinate_p.package_coord.module.as_str()),
         &file_coordinate_p.package_coord.packages.iter()
@@ -1907,7 +1860,6 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
   }
 
 
-  // From PostParser.scala lines 951-964: expectScoutput
   pub fn expect_scoutput(&mut self) -> &FileCoordinateMap<'s, ProgramS<'s>> {
     match self.get_scoutput() {
       Ok(x) => x,

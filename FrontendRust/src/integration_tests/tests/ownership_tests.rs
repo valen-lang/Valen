@@ -28,11 +28,9 @@ use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct OwnershipTests
 pub struct OwnershipTests;
 
 
-// mig: fn borrowing_a_temporary_mutable_makes_a_local_var
 #[test]
 fn borrowing_a_temporary_mutable_makes_a_local_var() {
     let compilation_bump = bumpalo::Bump::new();
@@ -92,7 +90,6 @@ exported func main() int {
 }
 
 
-// mig: fn owning_ref_method_call
 #[test]
 fn owning_ref_method_call() {
     let compilation_bump = bumpalo::Bump::new();
@@ -132,7 +129,6 @@ exported func main() int {
 }
 
 
-// mig: fn derive_drop
 #[test]
 fn derive_drop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -180,7 +176,6 @@ exported func main() {
 }
 
 
-// mig: fn custom_drop_result_is_an_owning_ref_calls_destructor
 #[test]
 fn custom_drop_result_is_an_owning_ref_calls_destructor() {
     let compilation_bump = bumpalo::Bump::new();
@@ -234,7 +229,6 @@ exported func main() {
 }
 
 
-// mig: fn saves_return_value_then_destroys_temporary
 #[test]
 fn saves_return_value_then_destroys_temporary() {
     let compilation_bump = bumpalo::Bump::new();
@@ -286,7 +280,6 @@ exported func main() int {
 }
 
 
-// mig: fn calls_destructor_on_local_var
 #[test]
 fn calls_destructor_on_local_var() {
     let compilation_bump = bumpalo::Bump::new();
@@ -340,7 +333,6 @@ exported func main() {
 }
 
 
-// mig: fn calls_destructor_on_local_var_unless_moved
 #[test]
 fn calls_destructor_on_local_var_unless_moved() {
     let compilation_bump = bumpalo::Bump::new();
@@ -449,7 +441,6 @@ exported func main() {
 }
 
 
-// mig: fn saves_return_value_then_destroys_local_var
 #[test]
 fn saves_return_value_then_destroys_local_var() {
     let compilation_bump = bumpalo::Bump::new();
@@ -507,7 +498,6 @@ exported func main() int {
 }
 
 
-// mig: fn gets_from_temporary_struct_a_members_member
 #[test]
 fn gets_from_temporary_struct_a_members_member() {
     let compilation_bump = bumpalo::Bump::new();
@@ -545,7 +535,6 @@ exported func main() int {
 }
 
 
-// mig: fn unstackifies_local_vars
 #[test]
 fn unstackifies_local_vars() {
     let compilation_bump = bumpalo::Bump::new();
@@ -585,7 +574,6 @@ exported func main() int {
 }
 
 
-// mig: fn basic_builder_pattern
 #[test]
 fn basic_builder_pattern() {
     let compilation_bump = bumpalo::Bump::new();
@@ -627,7 +615,6 @@ exported func main() int {
 }
 
 
-// mig: fn member_access_on_returned_owning_ref
 #[test]
 fn member_access_on_returned_owning_ref() {
     let compilation_bump = bumpalo::Bump::new();

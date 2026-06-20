@@ -14,15 +14,12 @@ use std::collections::HashSet;
 use std::marker::PhantomData;
 
 
-// mig: struct RuneTypeSolveError
 #[derive(Debug)]
 pub struct RuneTypeSolveError<'s> {
   pub range: Vec<RangeS<'s>>,
   pub failed_solve: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataType<'s>, IRuneTypeRuleError<'s>>,
 }
 
-// mig: impl RuneTypeSolveError
-// mig: enum IRuneTypeRuleError
 #[derive(Debug)]
 pub enum IRuneTypeRuleError<'s> {
   FoundCitizenDidntMatchExpectedType(FoundCitizenDidntMatchExpectedType<'s>),
@@ -53,7 +50,6 @@ impl<'s> From<IRuneTypingLookupFailedError<'s>> for IRuneTypeRuleError<'s> {
   }
 }
 
-// mig: struct FoundCitizenDidntMatchExpectedType
 #[derive(Debug)]
 pub struct FoundCitizenDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
@@ -61,8 +57,6 @@ pub struct FoundCitizenDidntMatchExpectedType<'s> {
   pub actual_type: ITemplataType<'s>,
 }
 
-// mig: impl FoundCitizenDidntMatchExpectedType
-// mig: struct FoundTemplataDidntMatchExpectedType
 #[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
@@ -70,16 +64,12 @@ pub struct FoundTemplataDidntMatchExpectedType<'s> {
   pub actual_type: ITemplataType<'s>,
 }
 
-// mig: impl FoundTemplataDidntMatchExpectedType
-// mig: struct NotEnoughArgumentsForGenericCall
 #[derive(Debug)]
 pub struct NotEnoughArgumentsForGenericCall<'s> {
   pub range: Vec<RangeS<'s>>,
   pub index_of_non_defaulting_param: i32,
 }
 
-// mig: impl NotEnoughArgumentsForGenericCall
-// mig: struct GenericCallArgTypeMismatch
 #[derive(Debug)]
 pub struct GenericCallArgTypeMismatch<'s> {
   pub range: Vec<RangeS<'s>>,
@@ -88,42 +78,31 @@ pub struct GenericCallArgTypeMismatch<'s> {
   pub param_index: i32,
 }
 
-// mig: impl GenericCallArgTypeMismatch
-// mig: enum IRuneTypingLookupFailedError
 pub enum IRuneTypingLookupFailedError<'s> {
   TooManyMatchingTypes(RuneTypingTooManyMatchingTypes<'s>),
   CouldntFindType(RuneTypingCouldntFindType<'s>),
 }
 
-// mig: struct RuneTypingTooManyMatchingTypes
 #[derive(Debug)]
 pub struct RuneTypingTooManyMatchingTypes<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
 }
-// mig: impl RuneTypingTooManyMatchingTypes
 impl<'s> RuneTypingTooManyMatchingTypes<'s> {
 
-// mig: fn equals
 
-// mig: fn hash_code
 } // end impl RuneTypingTooManyMatchingTypes
 
-// mig: struct RuneTypingCouldntFindType
 #[derive(Debug)]
 pub struct RuneTypingCouldntFindType<'s> {
   pub range: RangeS<'s>,
   pub name: IImpreciseNameS<'s>,
 }
-// mig: impl RuneTypingCouldntFindType
 impl<'s> RuneTypingCouldntFindType<'s> {
 
-// mig: fn equals
 
-// mig: fn hash_code
 } // end impl RuneTypingCouldntFindType
 
-// mig: struct FoundTemplataDidntMatchExpectedTypeA
 #[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedTypeA<'s> {
   pub range: Vec<RangeS<'s>>,
@@ -131,16 +110,12 @@ pub struct FoundTemplataDidntMatchExpectedTypeA<'s> {
   pub actual_type: ITemplataType<'s>,
 }
 
-// mig: impl FoundTemplataDidntMatchExpectedTypeA
-// mig: struct FoundPrimitiveDidntMatchExpectedType
 pub struct FoundPrimitiveDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
   pub actual_type: ITemplataType<'s>,
 }
 
-// mig: impl FoundPrimitiveDidntMatchExpectedType
-// mig: enum IRuneTypeSolverLookupResult
 #[derive(PartialEq)]
 pub enum IRuneTypeSolverLookupResult<'s> {
   Primitive(PrimitiveRuneTypeSolverLookupResult<'s>),
@@ -148,29 +123,22 @@ pub enum IRuneTypeSolverLookupResult<'s> {
   Templata(TemplataLookupResult<'s>),
 }
 
-// mig: struct PrimitiveRuneTypeSolverLookupResult
 #[derive(PartialEq)]
 pub struct PrimitiveRuneTypeSolverLookupResult<'s> {
   pub tyype: ITemplataType<'s>,
 }
 
-// mig: impl PrimitiveRuneTypeSolverLookupResult
-// mig: struct CitizenRuneTypeSolverLookupResult
 #[derive(PartialEq)]
 pub struct CitizenRuneTypeSolverLookupResult<'s> {
   pub tyype: ITemplataType<'s>,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
 }
 
-// mig: impl CitizenRuneTypeSolverLookupResult
-// mig: struct TemplataLookupResult
 #[derive(PartialEq)]
 pub struct TemplataLookupResult<'s> {
   pub templata: ITemplataType<'s>,
 }
 
-// mig: impl TemplataLookupResult
-// mig: trait IRuneTypeSolverEnv
 pub trait IRuneTypeSolverEnv<'s> {
   fn lookup(
     &self,
@@ -180,12 +148,10 @@ pub trait IRuneTypeSolverEnv<'s> {
 }
 
 
-// mig: struct RuneTypeSolver
 pub struct RuneTypeSolver<'s, 'ctx> {
   pub scout_arena: &'ctx ScoutArena<'s>,
 }
 
-// mig: impl RuneTypeSolver
 impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
   pub fn solve_rune_type<E: IRuneTypeSolverEnv<'s>>(
     &self,
@@ -205,14 +171,12 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
   }
   
 }
-// mig: fn get_runes_rune_type
 fn get_runes_rune_type<'s>(
   rule: &IRulexSR<'s>,
 ) -> Vec<IRuneS<'s>> {
   rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
 }
 
-// mig: fn get_puzzles_rune_type
 fn get_puzzles_rune_type<'s>(
   predicting: bool,
   rule: &IRulexSR<'s>,
@@ -267,7 +231,6 @@ fn get_puzzles_rune_type<'s>(
   }
 }
 
-// mig: fn solve_rule
 
 fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   scout_arena: &ScoutArena<'s>,
@@ -459,7 +422,6 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   }
 }
 
-// mig: fn lookup
 
 fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   _env: &E,
@@ -528,15 +490,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   Ok(())
 }
 
-// mig: fn solve_rune_type
 pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
-  // V: we took out self here, do we have a coherent story about when something should be self/impl'd
-  // VA: In Scala, solveRuneType was a method on class RuneTypeSolver(interner). In Rust, it was
-  // VA: extracted to a free function while RuneTypeSolver exists as a thin delegating wrapper.
-  // VA: The dominant pattern across postparsing solvers is free functions: identifiability_solver.rs
-  // VA: and rule_scout.rs are entirely free functions with no struct. The RuneTypeSolver struct is
-  // VA: the exception — it could be removed to match the peer files, or the free functions could be
-  // VA: moved into it to match Scala's class structure. Currently inconsistent.
   scout_arena: &ScoutArena<'s>,
   sanity_check: bool,
   env: &E,
@@ -550,8 +504,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   IndexMap<IRuneS<'s>, ITemplataType<'s>>,
   RuneTypeSolveError<'s>,
 > {
-
-
 
 
   // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
@@ -654,7 +606,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
     }
     map
   };
-  // unpreprocessedInitiallyKnownRunes comes after (takes priority, see Scala comment)
   for (k, v) in unpreprocessed_initially_known_runes {
     initially_known_runes.insert(k, v);
   }
@@ -683,7 +634,6 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
     solver_runes,
   );
 
-  // Inline advance loop (matches Scala's while loop in solve())
   loop {
     solver_state.sanity_check();
     solver_state.userify_conclusions().iter().for_each(|(rune, conclusion)| {
@@ -744,14 +694,12 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 }
 
 
-// mig: fn sanity_check_conclusion
 fn sanity_check_conclusion<'s>(
   _rune: IRuneS<'s>,
   _conclusion: &ITemplataType<'s>,
 ) {
 }
 
-// mig: fn complex_solve
 fn complex_solve() -> Result<(), ()> {
   panic!("Unimplemented complex_solve");
   // val stepsAfter = solverState.getSteps().size
@@ -761,7 +709,6 @@ fn complex_solve() -> Result<(), ()> {
   // true // continue
 }
 
-// mig: fn solve
 fn solve<'s>(
   _state: (),
   _env: (),
@@ -779,7 +726,6 @@ fn solve<'s>(
 }
 
 
-// mig: fn check_generic_call_without_defaults
 fn check_generic_call_without_defaults<'s>(
   _param_types: &[ITemplataType<'s>],
   _arg_types: &[ITemplataType<'s>],
@@ -795,7 +741,6 @@ fn check_generic_call_without_defaults<'s>(
   // Ok(())
 }
 
-// mig: fn check_generic_call
 fn check_generic_call<'s>(
   range: Vec<RangeS<'s>>,
   citizen_generic_params: &[&GenericParameterS<'s>],

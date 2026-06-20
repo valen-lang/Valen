@@ -35,10 +35,8 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::code_hierarchy::PackageCoordinateMap;
 
-// mig: struct VivemTests
 pub struct VivemTests {}
 
-// mig: fn return_7
 #[test]
 fn return_7() {
 
@@ -109,7 +107,6 @@ fn return_7() {
     }
 }
 
-// mig: fn adding
 #[test]
 fn adding() {
 

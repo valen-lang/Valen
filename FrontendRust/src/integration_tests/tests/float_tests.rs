@@ -8,10 +8,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct FloatTests
 pub struct FloatTests;
 
-// mig: fn print_float
 #[test]
 fn print_float() {
     let compilation_bump = bumpalo::Bump::new();
@@ -42,7 +40,6 @@ exported func main() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "42.125");
 }
 
-// mig: fn float_arithmetic
 #[test]
 fn float_arithmetic() {
     let compilation_bump = bumpalo::Bump::new();
@@ -70,7 +67,6 @@ fn float_arithmetic() {
     }
 }
 
-// mig: fn float_equals
 #[test]
 fn float_equals() {
     let compilation_bump = bumpalo::Bump::new();
@@ -98,7 +94,6 @@ fn float_equals() {
     }
 }
 
-// mig: fn concat_string_and_float
 #[test]
 fn concat_string_and_float() {
     let compilation_bump = bumpalo::Bump::new();

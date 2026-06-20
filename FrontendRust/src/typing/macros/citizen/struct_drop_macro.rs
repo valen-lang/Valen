@@ -30,12 +30,6 @@ use crate::higher_typing::ast::FunctionA;
 use std::marker::PhantomData;
 
 
-// (Scala `class StructDropMacro(opts, interner, keywords, nameTranslator, destructorCompiler)`
-//  absorbed onto `Compiler`; the three method bodies live at
-//  `Compiler::get_struct_sibling_entries_struct_drop`,
-//  `Compiler::make_implicit_drop_function_struct_drop`, and
-//  `Compiler::generate_function_body_struct_drop` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

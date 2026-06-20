@@ -8,17 +8,13 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::tests::tests::get_package_to_resource_resolver;
 
-// mig: struct CompilerGenericsTests
 pub struct CompilerGenericsTests;
-// mig: impl CompilerGenericsTests
 impl CompilerGenericsTests {}
 
-// mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
 
-// mig: fn upcasting_with_generic_bounds
 #[test]
 fn upcasting_with_generic_bounds() {
     let parse_bump = Bump::new();

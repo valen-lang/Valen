@@ -19,18 +19,12 @@ use std::rc::Rc;
 pub type PrintStream = dyn Write;
 
 
-// mig: struct PanicExceptionV
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct PanicExceptionV;
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for PanicExceptionV` below.)
 
-// mig: fn eq (realized-by-impl PartialEq)
-// (Realized by `impl PartialEq for PanicExceptionV` below.)
 
-// mig: struct ConstraintViolatedExceptionV
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ConstraintViolatedExceptionV<'s>
@@ -38,13 +32,8 @@ pub struct ConstraintViolatedExceptionV<'s>
     pub msg: StrI<'s>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for ConstraintViolatedExceptionV` below.)
 
-// mig: fn eq (realized-by-impl PartialEq)
-// (Realized by `impl PartialEq for ConstraintViolatedExceptionV` below.)
 
-// (no scala counterpart — Rust adaptation: enum wrapping the testvm exception structs so vm errors bubble as Result instead of Scala's throw/catch. Carries only the 's lifetime — the vm/heap lifetimes from the original phantoms were vacuous and prevent the Result from outliving the eval_for_* boundary.)
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum VmRuntimeErrorV<'s>
 {
@@ -53,7 +42,6 @@ pub enum VmRuntimeErrorV<'s>
 }
 
 
-// mig: fn execute_with_primitive_args
 pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mut heap = HeapV::new(interner, vivem_dout, vivem_bump);
     let arg_references: &'v [ReferenceV<'v, 'h, 's>] =
@@ -64,28 +52,23 @@ pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, 
     inner_execute(program_h, interner, scout_arena, arg_references, &mut heap, stdin, stdout)
 }
 
-// mig: fn execute_with_heap
 pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, input_heap: &mut HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     assert_eq!(input_heap.count_unreachable_allocations(interner, input_argument_references), 0);
     inner_execute(program_h, interner, scout_arena, input_argument_references, input_heap, stdin, stdout)
 }
 
-// mig: fn empty_stdin
 pub fn empty_stdin<'v, 'h, 's>() -> StrI<'s> {
     panic!("Unimplemented: empty_stdin")
 }
 
-// mig: fn null_stdout
 pub fn null_stdout<'v, 'h, 's>(str: StrI<'s>) {
     panic!("Unimplemented: null_stdout")
 }
 
-// mig: fn regular_stdout
 pub fn regular_stdout<'v, 'h, 's>(str: StrI<'s>) {
     print!("{}", str.0);
 }
 
-// mig: fn stdin_from_list
 pub fn stdin_from_list<'s>(stdin_list: &[StrI<'s>]) -> Box<dyn Fn() -> StrI<'s> + 's> {
     let remaining_stdin = RefCell::new(stdin_list.to_vec());
     let stdin: Box<dyn Fn() -> StrI<'s> + 's> = Box::new(move || {
@@ -98,7 +81,6 @@ pub fn stdin_from_list<'s>(stdin_list: &[StrI<'s>]) -> Box<dyn Fn() -> StrI<'s> 
     stdin
 }
 
-// mig: fn stdout_collector
 pub fn stdout_collector<'s>() -> (Rc<RefCell<String>>, Box<dyn Fn(StrI<'s>)>) {
     let stdoutput = Rc::new(RefCell::new(String::new()));
     let stdoutput_clone = stdoutput.clone();
@@ -109,7 +91,6 @@ pub fn stdout_collector<'s>() -> (Rc<RefCell<String>>, Box<dyn Fn(StrI<'s>)>) {
     (stdoutput, func)
 }
 
-// mig: fn inner_execute
 pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mains: Vec<&'h FunctionH<'s, 'h>> =
         program_h.packages.package_coord_to_contents.iter().flat_map(|(_package_coord, paackage)| {

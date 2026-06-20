@@ -2,10 +2,6 @@ use super::ast::RangeL;
 use std::cmp::min;
 
 
-  
-
-/// Lexing iterator for traversing source code
-/// Matches Scala's LexingIterator
 #[derive(Clone, Debug)]
 pub struct LexingIterator<'a> {
   pub code: &'a str,
@@ -49,7 +45,6 @@ impl<'a> LexingIterator<'a> {
     self.consume_ellipses_comments();
   }
   
-
 
   /// Skip to past a specific character
   fn skip_to_past(&mut self, needle: char) -> bool {
@@ -184,8 +179,6 @@ impl<'a> LexingIterator<'a> {
   }
   
 
-
-
   pub fn new(code: &'a str) -> Self {
     LexingIterator {
       code,
@@ -222,9 +215,6 @@ impl<'a> LexingIterator<'a> {
     }
   }
   
-
-
-
 
   /// Peek if a string matches (without advancing)
   pub fn peek_string(&self, s: &str) -> bool {
@@ -269,7 +259,6 @@ impl<'a> LexingIterator<'a> {
     }
   }
   
-
 
 }
 

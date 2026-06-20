@@ -13,13 +13,6 @@ pub struct PatternParser<'p, 'ctx> {
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
 }
-// V: why is this cloneable?/
-// VA: It isn't — PatternParser has no derive macros at all and is never cloned. Question is moot.
-// V: should this be folded into the main Parser struct?
-// VA: It could be — its only fields (parse_arena, keywords) duplicate what Parser already holds.
-// VA: It exists as a separate struct for method grouping, matching Scala's separate class. Parser
-// VA: holds it as a field and creates it in Parser::new(). Keeping it separate is faithful to Scala's
-// VA: structure; folding it in would reduce indirection but diverge from the Scala class layout.
 
 
 impl<'p, 'ctx> PatternParser<'p, 'ctx>
@@ -34,7 +27,6 @@ where
   }
 
   /// Parse a parameter
-  /// Mirrors parseParameter in PatternParser.scala lines 13-72
   pub fn parse_parameter(
     &self,
     iter: &mut ScrambleIterator<'p, '_>,
@@ -132,9 +124,7 @@ where
   }
 
   
-
   /// Parse a pattern
-  /// Mirrors parsePattern in PatternParser.scala lines 74-221
   pub fn parse_pattern(
     &self,
     iter: &mut ScrambleIterator<'p, '_>,
@@ -146,9 +136,6 @@ where
     is_in_lambda: bool,
     maybe_name_from_parameter: Option<WordLE<'p>>,
   ) -> ParseResult<PatternPP<'p>> {
-    // Mirrors PatternParser.scala lines 75-88
-    // The Scala code used to have an early return here, but it was dead code and has been commented out.
-    // We just check for empty pattern with no name.
     if !iter.has_next() {
       if maybe_name_from_parameter.is_none() {
         return Err(ParseError::EmptyPattern(pattern_begin));

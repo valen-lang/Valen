@@ -32,10 +32,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct WeakTests
 pub struct WeakTests;
 
-// mig: fn make_and_lock_weak_ref_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -94,7 +92,6 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
     }
 }
 
-// mig: fn destroy_own_then_locking_gives_none_with_struct
 #[test]
 fn destroy_own_then_locking_gives_none_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -122,7 +119,6 @@ fn destroy_own_then_locking_gives_none_with_struct() {
     }
 }
 
-// mig: fn drop_while_locked_with_struct
 #[test]
 fn drop_while_locked_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -151,7 +147,6 @@ fn drop_while_locked_with_struct() {
     }
 }
 
-// mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -188,7 +183,6 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_struct() {
     }
 }
 
-// mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct
 #[test]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -225,7 +219,6 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_struct() {
     }
 }
 
-// mig: fn make_weak_ref_from_temporary
 #[test]
 fn make_weak_ref_from_temporary() {
     let compilation_bump = bumpalo::Bump::new();
@@ -264,7 +257,6 @@ exported func main() int { return getHp(&&Muta(7)); }
     }
 }
 
-// mig: fn make_and_lock_weak_ref_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -323,7 +315,6 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
     }
 }
 
-// mig: fn destroy_own_then_locking_gives_none_with_interface
 #[test]
 fn destroy_own_then_locking_gives_none_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -351,7 +342,6 @@ fn destroy_own_then_locking_gives_none_with_interface() {
     }
 }
 
-// mig: fn drop_while_locked_with_interface
 #[test]
 fn drop_while_locked_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -380,7 +370,6 @@ fn drop_while_locked_with_interface() {
     }
 }
 
-// mig: fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -417,7 +406,6 @@ fn make_and_lock_weak_ref_from_borrow_local_then_destroy_own_with_interface() {
     }
 }
 
-// mig: fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface
 #[test]
 fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -454,7 +442,6 @@ fn make_and_lock_weak_ref_from_borrow_then_destroy_own_with_interface() {
     }
 }
 
-// mig: fn call_weak_self_method_after_drop
 #[test]
 fn call_weak_self_method_after_drop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -493,7 +480,6 @@ fn call_weak_self_method_after_drop() {
     }
 }
 
-// mig: fn call_weak_self_method_while_alive
 #[test]
 fn call_weak_self_method_while_alive() {
     let compilation_bump = bumpalo::Bump::new();
@@ -532,7 +518,6 @@ fn call_weak_self_method_while_alive() {
     }
 }
 
-// mig: fn weak_yonder_member
 #[test]
 fn weak_yonder_member() {
     let compilation_bump = bumpalo::Bump::new();

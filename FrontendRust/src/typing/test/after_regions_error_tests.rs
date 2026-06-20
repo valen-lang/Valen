@@ -21,25 +21,20 @@ use crate::typing::types::types::IntT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 
-// mig: struct AfterRegionsErrorTests
 pub struct AfterRegionsErrorTests {}
 
-// mig: fn prints_bread_crumb_trail
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn prints_bread_crumb_trail() { panic!("Unmigrated test: prints_bread_crumb_trail"); }
 
-// mig: fn reports_error
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn reports_error() { panic!("Unmigrated test: reports_error"); }
 
-// mig: fn reports_error_imm_interface_imm_struct
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_error_imm_interface_imm_struct"); }
 
-// mig: fn report_when_downcasting_between_unrelated_types
 #[test]
 fn report_when_downcasting_between_unrelated_types() {
     // This test does not pass yet, use #[ignore].
@@ -86,7 +81,6 @@ Can't downcast `ISpaceship` to unrelated `Spoon`
     );
 }
 
-// mig: fn lambda_body_type_mismatches_anonymous_interface_return_type
 #[test]
 fn lambda_body_type_mismatches_anonymous_interface_return_type() {
     let parse_bump = Bump::new();
@@ -170,7 +164,6 @@ Found function: main.λC:test:0.vale:6:25.λF:test:0.vale:6:25<i32>(main.λC:tes
     );
 }
 
-// mig: fn detects_sending_non_citizen_to_citizen
 // This test does not pass yet, use #[ignore].
 #[test]
 fn detects_sending_non_citizen_to_citizen() {
@@ -287,7 +280,6 @@ Unsolved runes: _113 _1212 _1214
     );
 }
 
-// mig: fn accidentally_mention_type_rune
 // This test does not pass yet, use #[ignore].
 #[test]
 fn accidentally_mention_type_rune() {
@@ -331,7 +323,6 @@ Can't use rune `Z` as a value expression. Did you mean a local variable with a s
     );
 }
 
-// mig: fn call_bound_with_wrong_arguments
 // This test does not pass yet, use #[ignore].
 #[test]
 fn call_bound_with_wrong_arguments() {
@@ -391,12 +382,10 @@ Candidate 1 (of 1): str(&Kind$add.X):
     );
 }
 
-// mig: fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() { panic!("Unmigrated test: inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt"); }
 
-// mig: fn ambiguous_call
 #[test]
 fn ambiguous_call() {
     // This test does not pass yet, use #[ignore].
@@ -443,7 +432,6 @@ Multiple candidates for call:
     );
 }
 
-// mig: fn cant_make_non_weakable_extend_a_weakable
 // This test does not pass yet, use #[ignore].
 #[test]
 fn cant_make_non_weakable_extend_a_weakable() {
@@ -482,7 +470,6 @@ Weakable mismatch in impl: struct is not weakable, but interface is.
     );
 }
 
-// mig: fn cant_make_weakable_extend_a_non_weakable
 // This test does not pass yet, use #[ignore].
 #[test]
 fn cant_make_weakable_extend_a_non_weakable() {
@@ -521,7 +508,6 @@ Weakable mismatch in impl: struct is weakable, but interface is not.
     );
 }
 
-// mig: fn cant_make_weak_ref_to_non_weakable
 // This test does not pass yet, use #[ignore].
 #[test]
 #[ignore = "blocked - Rust typing pass produces Ok where Scala throws TookWeakRefOfNonWeakableError for `&&m` on non-weakable struct"]
@@ -555,7 +541,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args
 #[test]
 fn hash_map_style_return_type_inference_must_not_skip_caller_bound_args() {
     // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539

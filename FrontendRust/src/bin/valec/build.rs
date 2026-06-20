@@ -1,5 +1,4 @@
 // Build orchestration logic
-// Mirrors Coordinator/src/build.vale
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -47,9 +46,8 @@ fn get_optional_flag(args: &[String], flag: &str) -> Option<String> {
     None
 }
 
-
+// V: rename
 /// Main build function
-/// Mirrors build_stuff in build.vale lines 39-632
 pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
 
     let windows = cfg!(windows);
@@ -61,8 +59,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     // In Vale this uses the flagger library, we'll parse manually
     
 
-
-    // Mirrors build.vale lines 316-323: Builtins directory
     let builtins_dir = if let Some(override_path) = get_optional_flag(build_args, "--builtins_dir_override") {
         let path = PathBuf::from(override_path);
         if !path.is_dir() {
@@ -74,14 +70,11 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         compiler_dir.join("builtins")
     };
 
-    // Mirrors build.vale lines 325-326
     let maybe_clang_path_override = get_optional_flag(build_args, "--clang_override");
     let maybe_libc_path_override = get_optional_flag(build_args, "--libc_override");
 
-    // Mirrors build.vale line 328
     let output_dir = PathBuf::from(get_flag_value(build_args, "--output_dir", "build"));
 
-    // Mirrors build.vale lines 330-342: Parse boolean flags
     let benchmark = get_bool_flag(build_args, "--benchmark", false);
     let verbose = get_bool_flag(build_args, "--verbose", false);
     let debug_output = get_bool_flag(build_args, "--debug_output", false);
@@ -95,7 +88,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     let enable_side_calling = get_bool_flag(build_args, "--enable_side_calling", false);
     let no_std = get_bool_flag(build_args, "--no_std", false);
 
-    // Mirrors build.vale lines 344-366: More flags
     let maybe_opt_level = get_optional_flag(build_args, "--opt_level");
     let maybe_cpu = get_optional_flag(build_args, "--cpu");
     let executable_name = get_flag_value(build_args, "-o", "main");
@@ -118,12 +110,10 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     let include_bounds_checks = get_bool_flag(build_args, "--include_bounds_checks", true);
     let force_all_known_live = get_bool_flag(build_args, "--force_all_known_live", false);
 
-    // Mirrors build.vale lines 368-370
     if verbose {
         println!("Parsing command line inputs...");
     }
 
-    // Mirrors build.vale lines 372-380: Initialize project declarations
     let mut project_directory_declarations = Vec::new();
     let mut project_vale_input_declarations = Vec::new();
     let mut project_non_vale_input_declarations = Vec::new();
@@ -135,7 +125,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         });
     }
 
-    // Mirrors build.vale lines 383-407: Parse unrecognized inputs (project declarations)
     let mut i = 0;
     while i < build_args.len() {
         let arg = &build_args[i];
@@ -207,7 +196,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         process::exit(1);
     }
 
-    // Mirrors build.vale lines 419-453: Run frontend
     if verbose {
         println!("Invoking Frontend...");
     }
@@ -249,7 +237,6 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             force_all_known_live, include_bounds_checks,
         );
 
-        // Mirrors build.vale lines 552-606: Pre-walk every project_directory
         // for any `native/*.c` files so they're linked into the final exe.
         // pass_manager::build's internal clang step uses ClangConfig.extra_inputs
         // for caller-collected non-builtin / non-abi C sources.

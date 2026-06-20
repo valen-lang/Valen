@@ -1,4 +1,3 @@
-// From Frontend/PostParsingPass/src/dev/vale/postparsing/
 pub mod ast;
 pub mod expression_scout;
 pub mod expressions;

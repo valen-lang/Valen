@@ -15,10 +15,8 @@ use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct ArrayListTest
 pub struct ArrayListTest;
 
-// mig: fn simple_array_list_no_optionals
 #[test]
 fn simple_array_list_no_optionals() {
     let compilation_bump = bumpalo::Bump::new();
@@ -74,7 +72,6 @@ exported func main() int {
     }
 }
 
-// mig: fn doubling_array_list
 #[test]
 fn doubling_array_list() {
     let compilation_bump = bumpalo::Bump::new();
@@ -112,7 +109,6 @@ exported func main() int {
     }
 }
 
-// mig: fn array_list_zero_constructor
 #[test]
 fn array_list_zero_constructor() {
     let compilation_bump = bumpalo::Bump::new();
@@ -150,7 +146,6 @@ exported func main() int {
     }
 }
 
-// mig: fn array_list_len
 #[test]
 fn array_list_len() {
     let compilation_bump = bumpalo::Bump::new();
@@ -187,7 +182,6 @@ exported func main() int {
     }
 }
 
-// mig: fn array_list_set
 #[test]
 fn array_list_set() {
     let compilation_bump = bumpalo::Bump::new();
@@ -225,7 +219,6 @@ exported func main() int {
     }
 }
 
-// mig: fn array_list_with_optionals_with_mutable_element
 #[test]
 fn array_list_with_optionals_with_mutable_element() {
     let compilation_bump = bumpalo::Bump::new();
@@ -267,7 +260,6 @@ exported func main() int {
     }
 }
 
-// mig: fn mutate_mutable_from_in_lambda
 #[test]
 fn mutate_mutable_from_in_lambda() {
     let compilation_bump = bumpalo::Bump::new();
@@ -323,7 +315,6 @@ exported func main() int {
     }
 }
 
-// mig: fn move_mutable_from_in_lambda
 #[test]
 fn move_mutable_from_in_lambda() {
     let compilation_bump = bumpalo::Bump::new();
@@ -378,7 +369,6 @@ exported func main() int {
     }
 }
 
-// mig: fn remove_from_middle
 #[test]
 fn remove_from_middle() {
     let compilation_bump = bumpalo::Bump::new();
@@ -420,7 +410,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn remove_from_beginning
 #[test]
 fn remove_from_beginning() {
     let compilation_bump = bumpalo::Bump::new();

@@ -1,4 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/HammerCompilation.scala
 // Coordinates the Hammer (simplifying) pass
 
 use bumpalo::Bump;
@@ -25,27 +24,13 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 
 
-
-// mig: struct HammerCompilationOptions
-//
-// Drops PartialEq/Eq/Hash because `debug_out: Arc<dyn Fn(...)>` and
-// `global_options: GlobalOptions` don't impl them. Scala uses vcurious.
 pub struct HammerCompilationOptions {
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub global_options: GlobalOptions,
 }
-// mig: impl HammerCompilationOptions
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for HammerCompilationOptions` or `#[derive(Hash)]`.)
-
-// mig: fn eq (realized-by-impl PartialEq)
-// (Realized by `impl PartialEq for HammerCompilationOptions` or `#[derive(PartialEq)]`.)
 
 
-// mig: fn new
-// Mirrors Scala's `object HammerCompilationOptions { def apply() }` zero-arg
-// constructor (the case-class default-arg apply pattern). Defaults match
-// Scala: `debugOut = (x => println("##: " + x))`, `globalOptions = GlobalOptions()`.
+
 impl HammerCompilationOptions {
   pub fn new() -> Self {
     HammerCompilationOptions {
@@ -62,7 +47,6 @@ impl HammerCompilationOptions {
 }
 
 
-// mig: struct HammerCompilation
 pub struct HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i,
 {
@@ -74,18 +58,11 @@ where 's: 'h, 's: 'i,
   pub options: HammerCompilationOptions,
   pub instantiated_compilation: InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>,
   pub hamuts_cache: Option<&'h ProgramH<'s, 'h>>,
-  // Scala has `var vonHammerCache: Option[VonHammer]`. Dropped: per
-  // typing-pass precedent the VonHammer compiler class was collapsed
-  // onto `Hammer` (no separate VonHammer state), so there is nothing
-  // to cache.
 }
 
-// mig: impl HammerCompilation
-// mig: fn new
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
 {
-  // Rust adaptation (SPDMX Exception B): `typing_interner` borrowed from test wrapper, threaded down (mirrors Scala `val interner` flowing through the pipeline). `typing_bump` is no longer needed here because TypingInterner is constructed at the test site.
   pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
     interner: &'ctx HammerInterner<'s, 'h>,
@@ -125,7 +102,6 @@ where 's: 'h, 's: 't, 's: 'i, 'p: 'ctx,
   }
 }
 
-// mig: fn get_code_map
 impl<'s, 'h, 'ctx, 't, 'i, 'p> HammerCompilation<'s, 'h, 'ctx, 't, 'i, 'p>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -134,49 +110,41 @@ where 's: 'h, 's: 'i, 'i: 'h,
   }
 
 
-// mig: fn get_parseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.instantiated_compilation.get_parseds()
   }
 
 
-// mig: fn get_vpst_map
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.instantiated_compilation.get_vpst_map()
   }
 
 
-// mig: fn get_scoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.instantiated_compilation.get_scoutput()
   }
 
 
-// mig: fn get_astrouts
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.instantiated_compilation.get_astrouts()
   }
 
 
-// mig: fn get_compiler_outputs
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.instantiated_compilation.get_compiler_outputs()
   }
 
 
-// mig: fn get_monouts
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     self.instantiated_compilation.get_monouts()
   }
 
 
-// mig: fn expect_compiler_outputs
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.instantiated_compilation.expect_compiler_outputs()
   }
 
 
-// mig: fn get_hamuts
   pub fn get_hamuts(&mut self) -> &'h ProgramH<'s, 'h> {
     match self.hamuts_cache {
       Some(hamuts) => hamuts,

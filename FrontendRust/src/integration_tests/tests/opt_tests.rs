@@ -7,10 +7,8 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct OptTests
 pub struct OptTests;
 
-// mig: fn test_empty_and_get_for_some
 #[test]
 fn test_empty_and_get_for_some() {
     let compilation_bump = bumpalo::Bump::new();
@@ -45,7 +43,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_empty_and_get_for_none
 #[test]
 fn test_empty_and_get_for_none() {
     let compilation_bump = bumpalo::Bump::new();
@@ -78,7 +75,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_empty_and_get_for_borrow
 #[test]
 fn test_empty_and_get_for_borrow() {
     let compilation_bump = bumpalo::Bump::new();
@@ -115,6 +111,5 @@ exported func main() int {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-
 
 

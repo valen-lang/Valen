@@ -1,4 +1,3 @@
-// From Frontend/TypingPass/src/dev/vale/typing/Compilation.scala
 // Coordinates the Typing pass
 
 use bumpalo::Bump;
@@ -47,7 +46,6 @@ where 's: 't,
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
-  // Rust adaptation (SPDMX Exception B): `typing_interner` is borrowed from the test wrapper (mirrors Scala's `val interner: Interner` constructor field on RunCompilation). The interner used to be constructed internally from `typing_bump` here; now it lives at the test wrapper and is threaded in. `typing_bump` itself is dropped as a constructor param.
   pub fn new(
     typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
@@ -136,9 +134,9 @@ pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
   }
 }
   
-  // Rust adaptation: `&self` read of the already-computed compiler outputs, so a caller can borrow it
-  // alongside another field of this struct in one expression (`&mut expect_compiler_outputs` would
-  // conflict). Caller must have run `expect_compiler_outputs` first.
+  // `&self` read of the already-computed compiler outputs, so a caller can borrow it alongside
+  // another field of this struct (`&mut expect_compiler_outputs` would conflict). Caller must
+  // have run `expect_compiler_outputs` first.
   pub fn cached_compiler_outputs(&self) -> &HinputsT<'s, 't> {
     self.hinputs_cache.as_ref().expect("compiler outputs not computed")
   }

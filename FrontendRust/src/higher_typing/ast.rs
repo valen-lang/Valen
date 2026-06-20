@@ -19,7 +19,6 @@ use std::ptr::eq;
 use std::ptr::hash;
 
 
-// mig: struct ProgramA
 #[derive(Debug)]
 pub struct ProgramA<'s> {
     pub structs: &'s [&'s StructA<'s>],
@@ -29,19 +28,13 @@ pub struct ProgramA<'s> {
     pub exports: &'s [&'s ExportAsA<'s>],
 }
 
-// mig: impl ProgramA
 impl<'s> ProgramA<'s> {
 
-// mig: fn equals
 
-// mig: fn hash_code
-
-// mig: fn lookup_function_by_name
 pub fn lookup_function_by_name(&self, _name: &INameS<'s>) -> &FunctionA<'s> {
     panic!("Unimplemented: lookup_function_by_name");
 }
 
-// mig: fn lookup_function_by_str
 pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'s> {
     let matches: Vec<_> = self.functions.iter().filter(|function| {
       match &function.name {
@@ -53,17 +46,14 @@ pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'s> {
     matches[0]
 }
 
-// mig: fn lookup_interface
 pub fn lookup_interface(&self, _name: &INameS<'s>) -> &InterfaceA<'s> {
     panic!("Unimplemented: lookup_interface");
 }
 
-// mig: fn lookup_struct_by_name
 pub fn lookup_struct_by_name(&self, _name: &INameS<'s>) -> &StructA<'s> {
     panic!("Unimplemented: lookup_struct_by_name");
 }
 
-// mig: fn lookup_struct_by_str
 pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
     let matches: Vec<_> = self.structs.iter().filter(|s| {
       match &s.name {
@@ -76,7 +66,6 @@ pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
 }
 }
 
-// mig: struct StructA
 #[derive(Debug)]
 pub struct StructA<'s> {
     pub range: RangeS<'s>,
@@ -95,7 +84,6 @@ pub struct StructA<'s> {
     pub internal_methods: &'s [&'s FunctionA<'s>],
 }
 
-// mig: impl StructA
 impl<'s> StructA<'s> {
 pub fn new(
     range: RangeS<'s>,
@@ -143,12 +131,9 @@ pub fn new(
     Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods }
 }
 
-// mig: fn hash_code
 
-// mig: fn equals
 }
 
-// mig: struct ImplA
 #[derive(Debug)]
 pub struct ImplA<'s> {
     pub range: RangeS<'s>,
@@ -162,7 +147,6 @@ pub struct ImplA<'s> {
     pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 
-// mig: impl ImplA
 impl<'s> ImplA<'s> {
 pub fn new(
     range: RangeS<'s>,
@@ -186,12 +170,9 @@ pub fn new(
     Self { range, name, generic_params, rules, rune_to_type, sub_citizen_rune, sub_citizen_imprecise_name, interface_kind_rune, super_interface_imprecise_name }
 }
 
-// mig: fn hash_code
 
-// mig: fn equals
 }
 
-// mig: struct ExportAsA
 #[derive(Debug)]
 pub struct ExportAsA<'s> {
     pub range: RangeS<'s>,
@@ -201,26 +182,19 @@ pub struct ExportAsA<'s> {
     pub type_rune: RuneUsage<'s>,
 }
 
-// mig: impl ExportAsA
 impl<'s> ExportAsA<'s> {
 
-// mig: fn hash_code
 
-// mig: fn equals
 }
 
-// mig: trait CitizenA
 pub trait CitizenA<'s> {
 
-// mig: fn tyype
 fn tyype(&self) -> &TemplateTemplataType<'s>;
 
-// mig: fn generic_parameters
 fn generic_parameters(&self) -> &[GenericParameterS<'s>];
 
 }
 
-// mig: struct InterfaceA
 #[derive(Debug)]
 pub struct InterfaceA<'s> {
     pub range: RangeS<'s>,
@@ -236,7 +210,6 @@ pub struct InterfaceA<'s> {
     pub internal_methods: &'s [&'s FunctionA<'s>],
 }
 
-// mig: impl InterfaceA
 impl<'s> InterfaceA<'s> {
 pub fn new(
     range: RangeS<'s>,
@@ -276,36 +249,28 @@ pub fn new(
     Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, rune_to_type, rules, internal_methods }
 }
 
-// mig: fn hash_code
 
-// mig: fn equals
 }
 
 
-// mig: mod interface_name
 pub mod interface_name {
     use super::*;
 
-// mig: fn unapply
 pub fn unapply<'s>(_interface_a: &'s InterfaceA<'s>) -> Option<&'s TopLevelInterfaceDeclarationNameS<'s>> {
     panic!("Unimplemented: unapply");
 }
 }
 
 
-// mig: mod struct_name
 pub mod struct_name {
     use super::*;
 
-// mig: fn unapply
 pub fn unapply<'s>(_struct_a: &'s StructA<'s>) -> Option<&'s IStructDeclarationNameS<'s>> {
     panic!("Unimplemented: unapply");
 }
 }
 
 
-
-// mig: struct FunctionA
 #[derive(Debug)]
 pub struct FunctionA<'s> {
     pub range: RangeS<'s>,
@@ -320,7 +285,6 @@ pub struct FunctionA<'s> {
     pub body: IBodyS<'s>,
 }
 
-// mig: impl FunctionA
 impl<'s> FunctionA<'s> {
 pub fn new(
     range: RangeS<'s>,
@@ -357,11 +321,7 @@ pub fn new(
     Self { range, name, attributes, tyype, generic_parameters, rune_to_type, params, maybe_ret_coord_rune, rules, body }
 }
 
-// mig: fn hash_code
 
-// mig: fn equals
-
-// mig: fn is_light
 pub fn is_light(&self) -> bool {
     match &self.body {
         IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => true,
@@ -369,7 +329,6 @@ pub fn is_light(&self) -> bool {
     }
 }
 
-// mig: fn is_lambda
 pub fn is_lambda(&self) -> bool {
     match &self.name {
         IFunctionDeclarationNameS::LambdaDeclarationName(_) => true,

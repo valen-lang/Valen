@@ -17,8 +17,6 @@ use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::higher_typing::ast::InterfaceA;
 
 
-// Dispatch-tag enum replacing Scala's IFunctionBodyMacro trait; bodies live as
-// Compiler::generate_function_body_<suffix> methods.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FunctionBodyMacro {
     LockWeak,
@@ -75,7 +73,6 @@ impl FunctionBodyMacro {
     
 }
 
-// Dispatch-tag enum replacing Scala's IOnStructDefinedMacro trait; bodies live on impl Compiler.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnStructDefinedMacro {
     StructConstructor,
@@ -100,7 +97,6 @@ impl OnStructDefinedMacro {
     
 }
 
-// Dispatch-tag enum replacing Scala's IOnInterfaceDefinedMacro trait; bodies live on impl Compiler.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnInterfaceDefinedMacro {
     AnonymousInterface,
@@ -125,8 +121,6 @@ impl OnInterfaceDefinedMacro {
     
 }
 
-// Dispatch-tag enum replacing Scala's IOnImplDefinedMacro trait; bodies live on impl Compiler.
-// (No concrete implementors in the current codebase — Scala initializes this map empty.)
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OnImplDefinedMacro {}
 

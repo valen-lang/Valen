@@ -61,16 +61,6 @@ pub enum IFindFunctionFailureReason<'s, 't> {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 #[derive(Copy, Clone, Debug)]
 pub struct FindFunctionFailure<'s, 't> {
     pub name: IImpreciseNameS<'s>,
@@ -182,6 +172,7 @@ where 's: 't,
         for e in self.get_placeholder_extra_call_envs(env, coutputs, range, param_filters) {
             self.get_candidate_banners_inner(e, coutputs, range, function_name, searched_envs, results);
         }
+        // VCOORD: doublecheck this
         // Empirically dead on the current Vale corpus (verified 2026-06-08 by reverting
         // to a no-op shape and running the full suite — 1064/1064 still passed). Only
         // EdgeCompiler's override resolution passes non-empty here, and both envs it
@@ -271,7 +262,6 @@ where 's: 't,
         candidate: ICalleeCandidate<'s, 't>,
         exact: bool,
     ) -> Result<Result<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>, ICompileErrorT<'s, 't>> {
-        // Scala: anonymous `new IRuneTypeSolverEnv { override def lookup(...) }` inside attemptCandidateBanner
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             calling_env: IInDenizenEnvironmentT<'s, 't>,
             typing_interner: &'a TypingInterner<'s, 't>,
@@ -341,8 +331,6 @@ where 's: 't,
                     let rune_type_solve_env =
                         OverloadRuneTypeSolverEnv { calling_env, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
 
-                    // Scala: runeTypeSolver.solve(sanityCheck, useOptimizedSolver, env, ...)
-                    // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)
                     let rules_s_deref: Vec<IRulexSR<'s>> =
                         explicit_template_arg_rules_with_connections.clone();
                     let combined_explicit_runes: Vec<IRuneS<'s>> = {
@@ -785,7 +773,7 @@ where 's: 't,
         }
     }
 
-    // Rust adaptation: arena-allocated ReferenceExpressionTE — caller needs to keep the value to pass to DestroyStaticSizedArrayIntoFunctionTE, so we take &'t.
+    // Caller needs to keep the value to pass to DestroyStaticSizedArrayIntoFunctionTE, so we take &'t.
     pub fn get_array_consumer_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,

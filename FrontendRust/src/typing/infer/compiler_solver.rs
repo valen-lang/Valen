@@ -80,35 +80,6 @@ pub enum ITypingPassSolverError<'s, 't> {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -324,7 +295,6 @@ where 's: 't,
         //   solverState.sanityCheck()
         solver_state.sanity_check();
         for (_rune, _conclusion) in solver_state.userify_conclusions() {
-            // Scala calls sanityCheckConclusion here; skipped for now
         }
         // Stage 1: Do simple solves
         match solver_state.get_next_solvable() {
@@ -750,19 +720,6 @@ where 's: 't,
                     Some(_) => panic!("Expected CoordTemplataT in ResolveSR returnRune"),
                     //         case None => {
                     None => {
-                        // Per @BRRZ, params are known but return isn't. Do a real overload lookup
-                        // (the same delegate.resolveFunction the post-solve phase uses at
-                        // InferCompiler.scala:350) so we can discover the return type and unblock
-                        // the solver. Safety of this mid-solve lookup:
-                        //   - CompilerOutputs.lookupFunction's signatureToFunction cache is the
-                        //     recursion terminator for nested bound resolution.
-                        //   - RuneTypeSolver.scala:210 already types returnRune as
-                        //     CoordTemplataType, so the commitStep below is guaranteed well-typed.
-                        //   - Per @SROACSD, no solver call site coexists DefinitionFuncSR with
-                        //     ResolveSR, so there is no rule-ordering hazard.
-                        //   - All state read by the call chain is frozen env + settled
-                        //     CompilerOutputs; the outer solver's in-flight state is never
-                        //     consulted.
                         let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         match self.resolve_function_from_infer_env(
@@ -822,11 +779,11 @@ where 's: 't,
             IRulexSR::DefinitionFunc(def_func) => {
                 let param_coords = match solver_state.get_conclusion(&def_func.params_list_rune.rune).expect("DefinitionFunc paramListRune has no conclusion") {
                     ITemplataT::CoordList(cl) => cl.coords,
-                    _ => unreachable!("DefinitionFunc: paramListRune is statically typed CoordList (Scala destructures `val CoordListTemplataT(_) = …`)"),
+                    _ => unreachable!("DefinitionFunc: paramListRune is statically typed CoordList"),
                 };
                 let return_type = match solver_state.get_conclusion(&def_func.return_rune.rune).expect("DefinitionFunc returnRune has no conclusion") {
                     ITemplataT::Coord(ct) => ct.coord,
-                    _ => unreachable!("DefinitionFunc: returnRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)"),
+                    _ => unreachable!("DefinitionFunc: returnRune is statically typed Coord"),
                 };
                 let new_prototype = self.assemble_prototype(env, state, def_func.range, def_func.name, param_coords, return_type);
                 let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: new_prototype }));
@@ -1110,7 +1067,7 @@ where 's: 't,
                 match solver_state.get_conclusion(&r.kind_rune.rune) {
                     None => {
                         let coord_templata = solver_state.get_conclusion(&r.coord_rune.rune).expect("vassertSome: CoerceToCoord coordRune unsolved");
-                        let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)") };
+                        let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord") };
                         match coord.ownership {
                             OwnershipT::Own | OwnershipT::Share => {
                                 let mut conclusions = IndexMap::new();
@@ -1177,15 +1134,13 @@ where 's: 't,
             IRulexSR::RuneParentEnvLookup(r) => {
                 // This rule should never reach the solver — callers are required to preprocess
                 // it out (look up the rune in callingEnv, emit an InitialKnown, strip the rule).
-                // Canonical preprocessing fold: OverloadResolver.scala:311-325. See MKRFA /
-                // docs/refactor-thoughts/mkrfa-protocol-leak.md for the full contract.
                 panic!("vwat: RuneParentEnvLookupSR should have been MKRFA-preprocessed before reaching the solver: {:?}", r.rune)
             }
             //     case AugmentSR(...) =>
             IRulexSR::Augment(augment) => {
                 match solver_state.get_conclusion(&augment.result_rune.rune) {
                     Some(outer_coord_templata) => {
-                        let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("Augment: outerCoordRune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)") };
+                        let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("Augment: outerCoordRune is statically typed Coord") };
                         let inner_ownership = match augment.ownership {
                             None => outer_coord.ownership,
                             Some(augment_ownership) => {
@@ -1200,7 +1155,7 @@ where 's: 't,
                                         OwnershipT::Own
                                     }
                                     ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => outer_coord.ownership,
-                                    _ => unreachable!("Augment Some-branch: get_mutability returns Mutability or Placeholder; Scala matches Placeholder/Mutable vs Immutable exhaustively"),
+                                    _ => unreachable!("Augment Some-branch: get_mutability returns Mutability or Placeholder; exhaustive over Placeholder/Mutable vs Immutable"),
                                 }
                             }
                         };
@@ -1244,7 +1199,7 @@ where 's: 't,
                                         }
                                         evaluate_ownership(augment_ownership)
                                     }
-                                    _ => unreachable!("Augment None-branch: get_mutability returns Mutability or Placeholder; Scala matches Immutable/Placeholder/Mutable exhaustively"),
+                                    _ => unreachable!("Augment None-branch: get_mutability returns Mutability or Placeholder; exhaustive over Immutable/Placeholder/Mutable"),
                                 }
                             }
                         };
@@ -1269,7 +1224,7 @@ where 's: 't,
                         let members: Vec<CoordT<'s, 't>> = pack.members.iter().map(|member_rune| {
                             match solver_state.get_conclusion(&member_rune.rune).expect("Pack member rune has no conclusion") {
                                 ITemplataT::Coord(ct) => ct.coord,
-                                _ => unreachable!("Pack: each member rune is statically typed Coord (Scala destructures `val CoordTemplataT(_) = …`)"),
+                                _ => unreachable!("Pack: each member rune is statically typed Coord"),
                             }
                         }).collect();
                         let members_slice = self.typing_interner.alloc_slice_from_vec(members);
@@ -1298,7 +1253,7 @@ where 's: 't,
                             }
                         }
                     }
-                    Some(_other) => unreachable!("Pack: result rune is statically typed CoordList; Scala only matches Some(CoordListTemplataT(_))"),
+                    Some(_other) => unreachable!("Pack: result rune is statically typed CoordList"),
                 }
             }
             //     case CallSR(range, resultRune, templateRune, argRunes) => {
@@ -1446,10 +1401,10 @@ where 's: 't,
                                     }
                                 }
                             }
-                            _ => unreachable!("Scala's solve_call_rule Some-branch Kind match is exhaustive in practice (RSA/SSA only); other Kind variants vimpl-deferred"),
+                            _ => unreachable!("solve_call_rule Some-branch Kind match is exhaustive in practice (RSA/SSA only); other Kind variants deferred"),
                         }
                     }
-                    _ => unreachable!("Scala's solve_call_rule Some branch handles only Kind result; other ITemplataT variants vimpl-deferred"),
+                    _ => unreachable!("solve_call_rule Some branch handles only Kind result; other ITemplataT variants deferred"),
                 }
             }
             None => {
@@ -1559,8 +1514,8 @@ where 's: 't,
             ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
             ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
             ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
-            ILiteralSL::BoolLiteral(_) => unreachable!("Scala's literalToTemplata has no BoolLiteral arm; constructed by TemplexScout but never reaches solver in practice"),
-            ILiteralSL::LocationLiteral(_) => unreachable!("Scala's literalToTemplata has no LocationLiteral arm; constructed by TemplexScout but never reaches solver in practice"),
+            ILiteralSL::BoolLiteral(_) => unreachable!("literalToTemplata: BoolLiteral constructed by TemplexScout but never reaches solver in practice"),
+            ILiteralSL::LocationLiteral(_) => unreachable!("literalToTemplata: LocationLiteral constructed by TemplexScout but never reaches solver in practice"),
         }
     }
     

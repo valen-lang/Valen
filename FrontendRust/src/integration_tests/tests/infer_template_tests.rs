@@ -28,10 +28,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct InferTemplateTests
 pub struct InferTemplateTests;
 
-// mig: fn test_inferring_a_borrowed_argument
 #[test]
 pub fn test_inferring_a_borrowed_argument() {
     let compilation_bump = bumpalo::Bump::new();
@@ -114,7 +112,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_inferring_a_borrowed_static_sized_array
 #[test]
 pub fn test_inferring_a_borrowed_static_sized_array() {
     let compilation_bump = bumpalo::Bump::new();
@@ -148,7 +145,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_inferring_an_owning_static_sized_array
 #[test]
 pub fn test_inferring_an_owning_static_sized_array() {
     let compilation_bump = bumpalo::Bump::new();

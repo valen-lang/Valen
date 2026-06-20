@@ -439,10 +439,6 @@ pub struct KindPlaceholderT<'s, 't> {
 // the From/TryFrom bridges below.
 
 // -- Union enums for the Kind-payload interning family ----------------------
-// Per handoff-slab-4.md Gotcha 2: typing interner uses one HashMap per
-// sealed-trait family with a tagged-union Val key. These mirror scout's
-// INameValS/INameS pattern.
-//
 // Dispatch enums for kind interning — these types are interned per @WVSBIZ
 // (enum budget: KindT stores them behind &'t to stay small and Copy).
 /// Interning transient (see @TFITCX)

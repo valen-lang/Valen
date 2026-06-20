@@ -1,5 +1,3 @@
-// From Frontend/InstantiatingPass/src/dev/vale/instantiating/InstantiatedCompilation.scala
-// Coordinates the Instantiating pass
 
 use bumpalo::Bump;
 use crate::scout_arena::ScoutArena;
@@ -27,25 +25,15 @@ use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 
 
-
-// mig: struct InstantiatorCompilationOptions
 pub struct InstantiatorCompilationOptions {
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
 }
-// mig: impl InstantiatorCompilationOptions
-
-// mig: fn hash_code
-
-// mig: fn equals
 
 
-// mig: struct InstantiatedCompilation
 pub struct InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where 's: 't, 's: 'i,
 {
   pub typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 't, 'p>,
-  // Retained from `new` to feed `Instantiator::translate` in `get_monouts`
-  // (Scala's `val keywords` + `options` class fields).
   keywords: &'ctx Keywords<'s>,
   global_options: GlobalOptions,
   // The instantiating arena's interner, built from the externally-owned 'i Bump
@@ -56,16 +44,12 @@ where 's: 't, 's: 'i,
 }
 
 
-// mig: impl InstantiatedCompilation
-// mig: fn new
 impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
     's: 'i,
     'p: 'ctx,
 {
-  // From InstantiatedCompilation.scala lines 19-34
-  // Rust adaptation (SPDMX Exception B): `typing_interner` borrowed from test wrapper, threaded down to TypingPassCompilation (mirrors Scala `val interner` flowing from RunCompilation through the pipeline).
   pub fn new(
     typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,
@@ -106,7 +90,6 @@ where
   }
 }
 
-// mig: fn get_code_map
 impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
@@ -117,40 +100,31 @@ where
     self.typing_pass_compilation.get_code_map()
   }
 
-// mig: fn get_parseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.typing_pass_compilation.get_parseds()
   }
 
-// mig: fn get_vpst_map
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.typing_pass_compilation.get_vpst_map()
   }
 
-// mig: fn get_scoutput
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.typing_pass_compilation.get_scoutput()
   }
 
-// mig: fn get_astrouts
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.typing_pass_compilation.get_astrouts()
   }
 
-// mig: fn get_compiler_outputs
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.typing_pass_compilation.get_compiler_outputs()
   }
 
-// mig: fn expect_compiler_outputs
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.typing_pass_compilation.expect_compiler_outputs()
   }
 
-// mig: fn get_monouts
-  // Returns HinputsI<'s, 'i>, where 'i is the InstantiatedCompilation's own
-  // instantiating-arena lifetime (the `instantiating_interner` field), mirroring
-  // how TypingPassCompilation::get_compiler_outputs returns HinputsT<'s, 't>.
+
   pub fn get_monouts(&mut self) -> &HinputsI<'s, 'i> {
     if self.monouts_cache.is_some() {
       return self.monouts_cache.as_ref().unwrap();
@@ -166,10 +140,6 @@ where
   }
 
 
-  
-  // Rust adaptation: `&self` read of the already-computed monouts so a caller can borrow it
-  // alongside another field of this struct in one expression (`&mut get_monouts` would
-  // conflict). Caller must have run `get_monouts` first to populate the cache.
   pub fn cached_monouts(&self) -> &HinputsI<'s, 'i> {
     self.monouts_cache.as_ref().expect("monouts not computed")
   }

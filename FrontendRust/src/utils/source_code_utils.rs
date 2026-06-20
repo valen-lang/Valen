@@ -4,7 +4,6 @@ use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap};
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::code_hierarchy::PackageCoordinate;
 
-// Mirrors SourceCodeUtils.scala:humanizePos(humanizedFilePath, source, pos)
 pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
   let mut line = 0;
   let mut line_begin = 0;
@@ -27,7 +26,6 @@ pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> S
 }
 
 
-// mig: fn humanize_package
 pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
   for p in package_coord.packages.iter() {
@@ -37,7 +35,6 @@ pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String 
   result
 }
 
-// mig: fn humanize_file
 pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
   format!(
     "{}:{}",
@@ -46,7 +43,6 @@ pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
   )
 }
 
-// mig: fn humanize_pos
 pub fn humanize_pos_code_map<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   code_location_s: &CodeLocationS<'b>,
@@ -61,12 +57,10 @@ pub fn humanize_pos_code_map<'a, 'b>(
   humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
 }
 
-// mig: fn humanize_pos
 pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
   humanize_pos_path(&file_path.display().to_string(), source, pos)
 }
 
-// mig: fn next_thing_and_rest_of_line
 fn next_thing_and_rest_of_line_code_map<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
   _file: &FileCoordinate<'a>,
@@ -75,7 +69,6 @@ fn next_thing_and_rest_of_line_code_map<'a>(
   panic!("Unimplemented: next_thing_and_rest_of_line");
 }
 
-// mig: fn next_thing_and_rest_of_line
 pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
   let remaining = &source[pos..];
   remaining
@@ -86,7 +79,6 @@ pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
     .to_string()
 }
 
-// mig: fn line_begin
 fn line_begin<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
   _code_location_s: &CodeLocationS<'a>,
@@ -94,7 +86,6 @@ fn line_begin<'a>(
   panic!("Unimplemented: line_begin");
 }
 
-// mig: fn line_range_containing
 pub fn line_range_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   code_location_s: &CodeLocationS<'b>,
@@ -134,7 +125,6 @@ pub fn line_range_containing<'a, 'b>(
   panic!("line_range_containing: offset beyond text");
 }
 
-// mig: fn lines_between
 pub fn lines_between<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   begin_code_loc: &CodeLocationS<'b>,
@@ -172,7 +162,6 @@ pub fn lines_between<'a, 'b>(
   result
 }
 
-// mig: fn line_containing
 pub fn line_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   code_location_s: &CodeLocationS<'b>,

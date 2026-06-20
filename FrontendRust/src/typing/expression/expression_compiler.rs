@@ -56,8 +56,6 @@ use std::iter::once;
 use std::marker::PhantomData;
 
 
-
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -116,7 +114,7 @@ where 's: 't,
                         })))))
                     }
                     None => Ok(None),
-                    _ => unreachable!("Scala's evaluateLookupForLoad None-branch match is exhaustive over IntegerTemplataT/BooleanTemplataT/None with no catch-all"),
+                    _ => unreachable!("evaluateLookupForLoad None-branch is exhaustive over IntegerTemplataT/BooleanTemplataT/None"),
                 }
             }
         }
@@ -160,7 +158,7 @@ where 's: 't,
                         panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability");
                         // vimpl()
                     }
-                    _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
+                    _ => unreachable!("AddressibleClosure mutability is exhaustive over Mutable/Immutable/Placeholder"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
@@ -255,7 +253,7 @@ where 's: 't,
                         panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability");
                         // vimpl()
                     }
-                    _ => unreachable!("Scala's AddressibleClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
+                    _ => unreachable!("AddressibleClosure mutability is exhaustive over Mutable/Immutable/Placeholder"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location}));
@@ -288,7 +286,7 @@ where 's: 't,
                         panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability");
                         // vimpl()
                     }
-                    _ => unreachable!("Scala's ReferenceClosure mutability match is exhaustive over Mutable/Immutable/Placeholder with no catch-all"),
+                    _ => unreachable!("ReferenceClosure mutability is exhaustive over Mutable/Immutable/Placeholder"),
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
@@ -310,7 +308,7 @@ where 's: 't,
                 }))))
             }
             None => Ok(None),
-            #[allow(unreachable_patterns)] // mirrors Scala's `case _ => vwat()` catch-all
+            #[allow(unreachable_patterns)]
             _ => panic!("evaluate_addressible_lookup: unexpected variable type"),
         }
     }
@@ -371,7 +369,7 @@ where 's: 't,
                     panic!("Unimplemented: make_closure_struct_construct_expression PlaceholderTemplataT");
                     // vimpl()
                 }
-                _ => unreachable!("Scala's closure-struct mutability match has no catch-all"),
+                _ => unreachable!("closure-struct mutability match is exhaustive"),
             };
         let struct_ref = self.typing_interner.alloc(closure_struct_ref);
         let result_pointer_type = CoordT { ownership, region, kind: KindT::Struct(struct_ref) };
@@ -648,7 +646,7 @@ where 's: 't,
                 let lookup_expr_1 =
                     self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership)?;
                 match lookup_expr_1 {
-                    None => unreachable!("Scala throws CouldntFindIdentifierToLoadT here, but the scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs; Scala's own test was deleted for the same reason (see compiler_tests.rs:3763)"),
+                    None => unreachable!("scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs"),
                     Some(x) => Ok((x, HashSet::new())),
                 }
             }
@@ -1099,7 +1097,7 @@ where 's: 't,
                         });
                     }
                     if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
-                        unreachable!("Scala throws RangedInternalErrorT here, but Vale's flow analysis appears to swallow restackify-mismatches at this point — no Vale program can trigger it (Scala's own test corpus has none either)");
+                        unreachable!("Vale's flow analysis swallows restackify-mismatches before reaching this point");
                     }
                     for local in &then_unstackified_ancestor_locals {
                         nenv.mark_local_unstackified(*local);
@@ -1206,7 +1204,6 @@ where 's: 't,
                                 local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
                             });
                         }
-                        // BUG: Scala checks bodyRestackifiedAncestorLocals twice (same condition, same error) — mirroring as-is
                         if !body_restackified_ancestor_locals.is_empty() {
                             let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
                                 &once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
@@ -1805,7 +1802,7 @@ where 's: 't,
                             name,
                         });
                     }
-                    _ => unreachable!("Scala's OverloadSet match has no catch-all; Rust over-matches for slice-pattern exhaustiveness"),
+                    _ => unreachable!("OverloadSet match is exhaustive; over-matched for slice-pattern exhaustiveness"),
                 };
                 #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
                 Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
@@ -2148,7 +2145,7 @@ where 's: 't,
                         //   BorrowT)
                     }
                     OwnershipT::Borrow | OwnershipT::Share => unborrowed_container_expr_2,
-                    OwnershipT::Weak => unreachable!("Scala dotBorrow has no WeakT arm — only OwnT and BorrowT|ShareT"),
+                    OwnershipT::Weak => unreachable!("dotBorrow has no WeakT arm — only OwnT and BorrowT|ShareT"),
                 }
             }
         }
@@ -2396,11 +2393,6 @@ where 's: 't,
 
 }
 
-// Concrete IRuneTypeSolverEnv for the LetSE arm of evaluate. The Scala anonymous
-// `new IRuneTypeSolverEnv` at ExpressionCompiler.scala:959 closes over `nenv` and
-// delegates to lookupNearestWithImpreciseName. This struct captures that field.
-// Same shape as `HigherTypingRuneTypeSolverEnv` in higher_typing_pass.rs (which
-// collapses 6 anonymous Scala impls into one named struct).
 struct LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,

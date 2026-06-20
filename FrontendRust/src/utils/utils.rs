@@ -1,6 +1,5 @@
 use std::hash::Hash;
 
-// mig: fn repeat
 pub fn repeat<T: Clone>(elem: T, n: i32) -> Vec<T> {
     let mut result: Vec<T> = Vec::new();
     for _ in 0..n {
@@ -9,7 +8,6 @@ pub fn repeat<T: Clone>(elem: T, n: i32) -> Vec<T> {
     result
 }
 
-// mig: fn union_maps_expect_no_conflict
 pub fn union_maps_expect_no_conflict<K, V, F>(
     a: &indexmap::IndexMap<K, V>,
     b: &indexmap::IndexMap<K, V>,
@@ -31,7 +29,6 @@ where K: Copy + Eq + Hash, V: Copy, F: Fn(V, V) -> bool,
     result
 }
 
-// mig: fn replace_all
 pub fn replace_all(original: &str, replacements: &indexmap::IndexMap<&str, &str>) -> String {
     let mut str_acc: String = original.to_string();
     for (from, to) in replacements {
@@ -40,7 +37,6 @@ pub fn replace_all(original: &str, replacements: &indexmap::IndexMap<&str, &str>
     str_acc
 }
 
-// mig: fn scrambles
 // Get all possible versions of original_map where the keys are the same
 // but the value for each is randomized.
 pub fn scrambles<T, Y>(original_map: &indexmap::IndexMap<T, Y>) -> Vec<indexmap::IndexMap<T, Y>>
@@ -48,8 +44,6 @@ where T: Clone + Eq + Hash, Y: Clone,
 {
     let original_keys: Vec<T> = original_map.keys().cloned().collect();
     let original_vals: Vec<Y> = original_map.values().cloned().collect();
-    // (Rust adaptation of Scala's List.permutations — Rust stdlib has no permutations method.)
-    // Heap's algorithm, iterative, generates all permutations of original_vals.
     let mut vals_permuted: Vec<Vec<Y>> = Vec::new();
     let mut arr = original_vals.clone();
     let n = arr.len();

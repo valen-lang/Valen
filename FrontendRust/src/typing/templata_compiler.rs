@@ -50,7 +50,6 @@ use std::iter::empty;
 use std::marker::PhantomData;
 
 
-
 #[derive(Copy, Clone)]
 pub enum IBoundArgumentsSource<'s, 't> {
     InheritBoundsFromTypeItself,
@@ -59,12 +58,6 @@ pub enum IBoundArgumentsSource<'s, 't> {
         instantiation_bound_arguments: &'t InstantiationBoundArgumentsT<'s, 't>,
     },
 }
-
-
-
-
-
-
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -178,7 +171,6 @@ where 's: 't,
         })
     }
 
-    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getNameTemplate is a companion-object static.
     pub fn get_name_template(
         name: INameT<'s, 't>,
     ) -> INameT<'s, 't> {
@@ -188,7 +180,6 @@ where 's: 't,
         }
     }
 
-    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getSuperTemplate is a companion-object static.
     pub fn get_super_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -203,7 +194,6 @@ where 's: 't,
         })
     }
 
-    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getRootSuperTemplate is a companion-object static.
     pub fn get_root_super_template(
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
@@ -419,11 +409,11 @@ where 's: 't,
                     (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
                     (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
                     (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
-                    _ => unreachable!("Scala's substituteTemplatasInCoord covers the 5 substantive ownership pairs; remaining Weak-on-substituting-side combinations are degenerate"),
+                    _ => unreachable!("remaining Weak-on-substituting-side ownership pairs are degenerate"),
                 };
                 CoordT { ownership: result_ownership, region: result_region, kind: c.coord.kind }
             }
-            _ => unreachable!("Scala's substituteTemplatasInCoord match is exhaustive over KindTemplataT/CoordTemplataT only"),
+            _ => unreachable!("exhaustive over KindTemplataT/CoordTemplataT only"),
         }
     }
 
@@ -504,7 +494,7 @@ where 's: 't,
                 let new_interface = Compiler::substitute_templatas_in_interface(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, i);
                 ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Interface(new_interface) }))
             }
-            KindT::OverloadSet(_) => unreachable!("Scala's substituteTemplatasInKind has no OverloadSet arm; an OverloadSet cannot appear as a substantive kind here"),
+            KindT::OverloadSet(_) => unreachable!("an OverloadSet cannot appear as a substantive kind here"),
         }
     }
 
@@ -544,7 +534,7 @@ where 's: 't,
             INameT::LambdaCitizen(lambda_citizen_name_t) => {
                 INameT::LambdaCitizen(lambda_citizen_name_t)
             }
-            _ => unreachable!("Scala's substituteTemplatasInStruct is exhaustive over AnonymousSubstructNameT/StructNameT/LambdaCitizenNameT"),
+            _ => unreachable!("exhaustive over AnonymousSubstructNameT/StructNameT/LambdaCitizenNameT"),
         };
         let new_id = interner.intern_id(IdValT {
             package_coord: id.package_coord,
@@ -731,7 +721,7 @@ where 's: 't,
                     template_args: new_template_args_ref,
                 }))
             }
-            _ => unreachable!("Scala's substituteTemplatasInInterface match is exhaustive over InterfaceNameT only"),
+            _ => unreachable!("exhaustive over InterfaceNameT only"),
         };
         let new_id = interner.intern_id(IdValT {
             package_coord: id.package_coord,
@@ -833,9 +823,6 @@ where 's: 't,
                 tentative_id
             }
         };
-        // Rust adaptation: Scala had vassert(substitutedFuncName.getClass.equals(funcName.getClass))
-        // and vassert(originalPrototype.getClass.equals(prototype.getClass)) to guard the cast-back
-        // to T. Rust has no generic T to cast back to, so these class-equality asserts are omitted.
         interner.intern_prototype(PrototypeValT {
             id: IdValT { package_coord: perhaps_imported_id.package_coord, init_steps: perhaps_imported_id.init_steps, local_name: perhaps_imported_id.local_name },
             return_type: substituted_return_type,
@@ -870,11 +857,6 @@ where 's: 't,
 
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 
-// IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
-// so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
-// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). The seven fields below mirror
-// Scala's anonymous-trait-impl closure captures at TemplataCompiler.scala:808-824 (sanityCheck, interner,
-// keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource).
 pub struct IPlaceholderSubstituter<'s, 'ctx, 't> {
     pub sanity_check: bool,
     pub interner: &'ctx TypingInterner<'s, 't>,
@@ -884,11 +866,6 @@ pub struct IPlaceholderSubstituter<'s, 'ctx, 't> {
     pub new_substituting_templatas: &'t [ITemplataT<'s, 't>],
     pub bound_arguments_source: IBoundArgumentsSource<'s, 't>,
 }
-// Per TL.md "Guardian Annotations For New Definitions Without Scala Counterparts" and the
-// LetExprRuneTypeSolverEnv / OverloadRuneTypeSolverEnv precedent (Slab 15f): the methods below realize
-// Scala's anonymous `new IPlaceholderSubstituter { override def ... }` block at TemplataCompiler.scala:808-824.
-// The Scala bodies live inside getPlaceholderSubstituter (later in the file) so direct adjacency isn't possible
-// here — Guardian shields disabled on the impl methods.
 impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
     
     pub fn substitute_for_coord(
@@ -965,9 +942,6 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
 }
 
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
-
-
-
 
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -1083,12 +1057,6 @@ where 's: 't,
 }
 
 
-// Concrete IRuneTypeSolverEnv produced by `create_rune_type_solver_env` above. The
-// Scala anonymous `new IRuneTypeSolverEnv` at TemplataCompiler.scala:1513 closes over
-// `parentEnv` and dispatches to either a LambdaStructImpreciseNameS special case or
-// `parentEnv.lookupNearestWithImpreciseName`. Same shape pattern as
-// `HigherTypingRuneTypeSolverEnv` (higher_typing_pass.rs) and `LetExprRuneTypeSolverEnv`
-// (expression_compiler.rs).
 pub struct TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
@@ -1114,9 +1082,6 @@ where
     > {
         match name_s {
             IImpreciseNameS::LambdaStructImpreciseName(_) => {
-                // Scala: vregionmut() // Take out with regions
-                // Lambdas look up their struct as a KindTemplata in their environment, they don't
-                // look up the origin template by name. (Scala comment from astronomizeLambda.)
                 Ok(IRuneTypeSolverLookupResult::Templata(
                     TemplataLookupResult {
                         templata: ITemplataType::KindTemplataType(
@@ -1253,7 +1218,7 @@ where 's: 't,
                 }
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => ownership_if_mutable,
                 ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                _ => unreachable!("Scala's pointify_kind mutability match is exhaustive over Mutable/Immutable/Placeholder"),
+                _ => unreachable!("exhaustive over Mutable/Immutable/Placeholder"),
             };
         match kind {
             KindT::RuntimeSizedArray(_) => {
@@ -1271,7 +1236,7 @@ where 's: 't,
             KindT::Float(_) => CoordT { ownership: OwnershipT::Share, region, kind },
             KindT::Bool(_) => CoordT { ownership: OwnershipT::Share, region, kind },
             KindT::Str(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            _ => unreachable!("Scala's pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not in Scala"),
+            _ => unreachable!("exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str"),
         }
     }
 
@@ -1520,7 +1485,7 @@ where 's: 't,
                 mutability: match kind_ownership {
                     OwnershipT::Own => MutabilityT::Mutable,
                     OwnershipT::Share => MutabilityT::Immutable,
-                    _ => unreachable!("Scala's create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
+                    _ => unreachable!("exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
                 },
             });
             // coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)

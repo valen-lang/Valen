@@ -7,10 +7,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct ArithmeticTestsA
 pub struct ArithmeticTestsA;
 
-// mig: fn dividing
 #[test]
 fn dividing() {
     let compilation_bump = bumpalo::Bump::new();

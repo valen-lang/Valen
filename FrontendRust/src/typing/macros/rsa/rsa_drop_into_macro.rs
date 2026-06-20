@@ -13,9 +13,6 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 
-// (Scala `class RSADropIntoMacro(keywords, arrayCompiler)` absorbed onto `Compiler`;
-//  the method body lives at `Compiler::generate_function_body_rsa_drop_into` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

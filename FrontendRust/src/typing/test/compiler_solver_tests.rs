@@ -80,12 +80,10 @@ use crate::typing::templata::templata_utils::unapply_simple_name;
 use std::collections::HashSet;
 use std::marker::PhantomData;
 
-// mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
 
-// mig: fn test_simple_generic_function
 #[test]
 fn test_simple_generic_function() {
 
@@ -106,7 +104,6 @@ fn test_simple_generic_function() {
     assert_eq!(coutputs.get_all_user_functions().len(), 1);
 }
 
-// mig: fn test_lacking_drop_function
 #[test]
 fn test_lacking_drop_function() {
 
@@ -140,7 +137,6 @@ Couldn't find a suitable function drop(Kind$bork.T). No function with that name 
     );
 }
 
-// mig: fn test_having_drop_function_concept_function
 #[test]
 fn test_having_drop_function_concept_function() {
 
@@ -206,7 +202,6 @@ fn test_having_drop_function_concept_function() {
     );
 }
 
-// mig: fn test_calling_a_generic_function_with_a_concept_function
 #[test]
 fn test_calling_a_generic_function_with_a_concept_function() {
 
@@ -256,7 +251,6 @@ exported func main() {
     );
 }
 
-// mig: fn test_rune_type_in_generic_param
 #[test]
 fn test_rune_type_in_generic_param() {
 
@@ -284,7 +278,6 @@ fn test_rune_type_in_generic_param() {
     }
 }
 
-// mig: fn test_single_parameter_function
 #[test]
 fn test_single_parameter_function() {
 
@@ -314,7 +307,6 @@ exported func main() int {
     let _compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
 }
 
-// mig: fn test_calling_a_generic_function_with_a_drop_concept_function
 #[test]
 fn test_calling_a_generic_function_with_a_drop_concept_function() {
 
@@ -385,7 +377,6 @@ exported func main() {
     }
 }
 
-// mig: fn humanize_errors
 #[test]
 fn humanize_errors() {
 
@@ -534,17 +525,14 @@ fn humanize_errors() {
     assert!(error_text.contains("\n                                 ^^^^^^^^^^^^^^^^^^^ _7: (unknown)"), "missing _7:(unknown) caret line, got: {}", error_text);
 }
 
-// mig: fn make_loc
 fn make_loc(pos: i32) {
     panic!("Unimplemented: make_loc");
 }
 
-// mig: fn make_range
 fn make_range(begin: i32, end: i32) {
     panic!("Unimplemented: make_range");
 }
 
-// mig: fn simple_int_rule
 #[test]
 fn simple_int_rule() {
 
@@ -573,7 +561,6 @@ exported func main() int where N Int = 3 {
     );
 }
 
-// mig: fn equals_transitive
 #[test]
 fn equals_transitive() {
 
@@ -602,7 +589,6 @@ exported func main() int where N Int = 3, M Int = N {
     );
 }
 
-// mig: fn one_of
 #[test]
 fn one_of() {
 
@@ -631,7 +617,6 @@ exported func main() int where N Int = any(2, 3, 4), N = 3 {
     );
 }
 
-// mig: fn components
 #[test]
 fn components() {
 
@@ -663,7 +648,6 @@ where
     }
 }
 
-// mig: fn prototype_rule_call_via_rune
 #[test]
 fn prototype_rule_call_via_rune() {
 
@@ -696,7 +680,6 @@ where mooFunc Prot = func moo(int, bool)str
     assert_eq!(unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
 
-// mig: fn prototype_rule_call_directly
 #[test]
 fn prototype_rule_call_directly() {
 
@@ -729,7 +712,6 @@ where func moo(int, bool)str
     assert_eq!(unapply_simple_name(&call.callable.id), Some("moo".to_string()));
 }
 
-// mig: fn send_struct_to_struct
 #[test]
 fn send_struct_to_struct() {
 
@@ -755,7 +737,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn send_struct_to_interface
 #[test]
 fn send_struct_to_interface() {
 
@@ -783,7 +764,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn assume_most_specific_generic_param
 #[test]
 fn assume_most_specific_generic_param() {
     let parse_bump = Bump::new();
@@ -820,7 +800,6 @@ exported func main() {
     }
 }
 
-// mig: fn assume_most_specific_common_ancestor
 #[test]
 fn assume_most_specific_common_ancestor() {
 
@@ -873,7 +852,6 @@ exported func main() {
     assert_eq!(upcasts.len(), 2);
 }
 
-// mig: fn descendant_satisfying_call
 #[test]
 fn descendant_satisfying_call() {
 
@@ -943,7 +921,6 @@ exported func main() {
     }).expect("expected FunctionCallTE moo(UpcastTE(_, IShip<int>, _))");
 }
 
-// mig: fn reports_incomplete_solve
 #[test]
 fn reports_incomplete_solve() {
 
@@ -999,7 +976,6 @@ Unsolved runes: N
     );
 }
 
-// mig: fn stamps_an_interface_template_via_a_function_return
 #[test]
 fn stamps_an_interface_template_via_a_function_return() {
 
@@ -1035,7 +1011,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn pointer_becomes_share_if_kind_is_immutable
 #[test]
 fn pointer_becomes_share_if_kind_is_immutable() {
 
@@ -1067,7 +1042,6 @@ exported func main() int {
     assert_eq!(coutputs.lookup_function_by_str("bork").header.params[0].tyype.ownership, OwnershipT::Share);
 }
 
-// mig: fn detects_conflict_between_types
 #[test]
 fn detects_conflict_between_types() {
 
@@ -1098,10 +1072,6 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::CallResultWasntExpectedType { actual: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), .. }, .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::CallResultWasntExpectedType { actual: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), .. }, .. }), .. }, .. } => {}
-        // Rust-only extra arms: Rust's `.min()`-based solver firing order produces a
-        // RuleError(InternalSolverError(SolverConflict(...))) shape that Scala's
-        // HashMap-iteration-order solver doesn't hit for this test. See
-        // docs/historical/nondeterministic-solver.md for the full investigation.
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::InternalSolverError { err: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::InternalSolverError { err: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. }), .. }, .. } => {}
         other => panic!("vfail: {:#?}", other),
@@ -1147,7 +1117,6 @@ Unsolved runes: _3 _3.kind
     );
 }
 
-// mig: fn can_match_kind_templata_type_against_struct_env_entry_struct_templata
 #[test]
 fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
 
@@ -1187,7 +1156,6 @@ exported func main() int {
     assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT::I32) } })));
 }
 
-// mig: fn can_destructure_and_assemble_static_sized_array
 #[test]
 fn can_destructure_and_assemble_static_sized_array() {
 
@@ -1269,7 +1237,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_equivalent_identifying_runes_in_functions
 #[test]
 fn test_equivalent_identifying_runes_in_functions() {
 
@@ -1288,7 +1255,6 @@ fn test_equivalent_identifying_runes_in_functions() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn iragp_test_equivalent_identifying_runes_in_struct
 #[test]
 fn iragp_test_equivalent_identifying_runes_in_struct() {
 

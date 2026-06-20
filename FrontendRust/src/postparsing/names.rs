@@ -243,7 +243,6 @@ pub enum IImpreciseNameValS<'s> {
 }
 
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarNameS<'s> {
   CodeVarName(StrI<'s>),
@@ -284,7 +283,6 @@ pub enum IFunctionDeclarationNameS<'s> {
   ImmConcreteDestructorName(&'s ImmConcreteDestructorNameS<'s>),
   ImmInterfaceDestructorName(&'s ImmInterfaceDestructorNameS<'s>),
 }
-
 
 
 /// Value form for interner lookups. Shallow variant holds canonical IFunctionDeclarationNameS.
@@ -369,10 +367,6 @@ impl<'s> IImplDeclarationNameS<'s> {
     }
   }
 
-  // Rust adaptation: Scala's `IImplDeclarationNameS extends INameS` allows implicit
-  // subtype upcast; Rust restates it as an explicit re-intern through the scout arena
-  // so the caller can hand the value to `INameS`-typed APIs (e.g. `translateNameStep`).
-  // Inverse of `INameS::as_top_level_citizen_name` (which narrows the other direction).
   pub fn to_i_name_s(self, scout_arena: &ScoutArena<'s>) -> INameS<'s> {
     match self {
       IImplDeclarationNameS::ImplDeclarationName(p) => {
@@ -394,17 +388,12 @@ impl<'s> IImplDeclarationNameS<'s> {
 }
 
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ICitizenDeclarationNameS<'s> {
   TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'s>),
   TopLevelInterfaceDeclarationName(TopLevelInterfaceDeclarationNameS<'s>),
   AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'s>),
 }
-// Rust adaptation: Scala's `ICitizenDeclarationNameS` is a parent trait covering both
-// `TopLevelCitizenDeclarationNameS` subtypes and `AnonymousSubstructTemplateNameS`.
-// Rust restates it as an explicit enum so fields like `ConstructorNameS.tlcd` and the
-// citizen rune carriers can hold any citizen-shaped name.
 impl<'s> From<TopLevelCitizenDeclarationNameS<'s>> for ICitizenDeclarationNameS<'s> {
   fn from(value: TopLevelCitizenDeclarationNameS<'s>) -> Self {
     match value {
@@ -438,7 +427,6 @@ impl<'s> IStructDeclarationNameS<'s> {
   }
   
   
-
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     match self {
       IStructDeclarationNameS::TopLevelStructDeclarationName(n) => {
@@ -537,7 +525,6 @@ impl<'s> TopLevelCitizenDeclarationNameS<'s> {
 }
 
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IStructDeclarationNameS<'s> {
   TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'s>),
@@ -556,9 +543,6 @@ pub struct TopLevelInterfaceDeclarationNameS<'s> {
   pub range: RangeS<'s>,
 }
 
-// Rust adaptation: Scala inherits `getImpreciseName` from `TopLevelCitizenDeclarationNameS`
-// (`= interner.intern(CodeNameS(name))`). Rust doesn't auto-inherit across the
-// struct/enum split, so we restate the dispatch on the child struct.
 impl<'s> TopLevelInterfaceDeclarationNameS<'s> {
   pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
     scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.name }))
@@ -1343,7 +1327,6 @@ pub struct AnonymousSubstructFunctionBoundParamsListRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
 }
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

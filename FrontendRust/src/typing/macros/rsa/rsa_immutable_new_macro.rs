@@ -18,10 +18,6 @@ use std::collections::HashSet;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 
-// (Scala `class RSAImmutableNewMacro(interner, keywords, overloadResolver, arrayCompiler,
-//  destructorCompiler)` absorbed onto `Compiler`; the method body lives at
-//  `Compiler::generate_function_body_rsa_immutable_new` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

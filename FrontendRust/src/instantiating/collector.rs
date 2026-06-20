@@ -1,18 +1,3 @@
-// Rust-only port of Scala's reflective `Collector` (utils/collector.rs), specialized for the I-side
-// (instantiating) AST. Scala walks any object graph via `productIterator`; Rust has no reflection, so
-// this is a hand-written exhaustive walker over the value-AST: PrototypeI / IdI / INameI (+ all name
-// structs) / CoordI / KindIT (+ kind structs) / ITemplataI (+ payloads).
-//
-// Template-name `template` fields are not separately descended: every node reachable through a
-// template name is either a leaf (interface/struct/function template names carry no templatas/ids)
-// or is reachable directly from the owning name's own fields (e.g. the override-dispatcher's
-// `template.impl_id` and the forwarder's `inner` function name). The expression and
-// top-level-definition hierarchies are NOT covered here yet — add `visit_*` + `NodeRefI` variants
-// for them when a function/HinputsI-rooted `Collector` use is reached.
-//
-// `all(root, pred)` mirrors Scala's `Collector.all`: walk the whole tree, push every `pred` match.
-// `only(root, pred)` mirrors `Collector.only`: exactly one match or panic. Predicates narrow the wide
-// `NodeRefI` (e.g. `NodeRefI::Templata(ITemplataI::Coord(_))`) the same way Rust matches everywhere.
 
 
 use crate::instantiating::ast::names::*;
@@ -50,7 +35,6 @@ where
     }
 }
 
-// ── Public API (mirrors Scala Collector.all / Collector.only) ────────────────────────────────────
 
 pub fn all_in_prototype<'s, 'i, T, F>(root: &'i PrototypeI<'s, 'i>, pred: &F) -> Vec<T>
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
@@ -87,11 +71,6 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     out
 }
 
-/// Scala `Collector.all(substitutions.toVector, pred)` — walks the I-side `ITemplataI` values of a
-/// typing-to-instantiating substitutions map. Keys are typing-side `IdT` placeholder ids; the I-side
-/// collector cannot walk them, but an I-side templata (e.g. `RegionTemplataI`) cannot structurally
-/// appear inside a typing-side `IdT` anyway — so walking values is complete w.r.t. any I-side-typed
-/// predicate.
 pub fn all_in_substitutions<'s, 't, 'i, T, F>(
     subs: &IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>>,
     pred: &F,
@@ -104,7 +83,6 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     out
 }
 
-/// Scala `Collector.only` over a prototype root — exactly one match or panic.
 pub fn only_in_prototype<'s, 'i, T, F>(root: &'i PrototypeI<'s, 'i>, pred: &F) -> T
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut matches = all_in_prototype(root, pred);
@@ -119,7 +97,6 @@ where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     out
 }
 
-/// Scala `Collector.only` over a function-definition root — exactly one match or panic.
 pub fn only_in_function<'s, 'i, T, F>(root: &'i FunctionDefinitionI<'s, 'i>, pred: &F) -> T
 where F: Fn(NodeRefI<'s, 'i>) -> Option<T>, 's: 'i {
     let mut matches = all_in_function(root, pred);

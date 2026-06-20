@@ -1,12 +1,3 @@
-// From Frontend/FinalAST/src/dev/vale/finalast/ast.scala
-//
-// H-side output AST types for the simplifying (hammer) pass. Mirrors
-// src/instantiating/ast/ast.rs pattern: Temporary-state structs hold real
-// fields where downstream code uses them; otherwise bare-placeholder
-// PhantomData shells with `<'s, 'h>` lifetimes for forward compatibility.
-//
-// IdH is currently a bare-placeholder (same precedent as IdI in instantiating);
-// real fields restored when slice-pipeline reaches it.
 
 #[allow(unused_imports)]
 use std::marker::PhantomData;
@@ -29,14 +20,11 @@ use std::fmt::Result;
 use std::ptr::eq;
 
 
-
-// mig: case class RegionH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionH;
 
 
-// mig: case class Export
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Export<'s, 'h> where 's: 'h {
@@ -45,11 +33,6 @@ pub struct Export<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class PackageH
-/// Temporary state
-//
-// PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
-// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
 #[derive(Copy, Clone, Debug)]
 pub struct PackageH<'s, 'h> where 's: 'h {
     pub interfaces: &'h [InterfaceDefinitionH<'s, 'h>],
@@ -63,33 +46,27 @@ pub struct PackageH<'s, 'h> where 's: 'h {
     pub kind_to_extern: &'h ArenaIndexMap<'h, &'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>,
 }
 
-// mig: fn extern_functions
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: extern_functions");
   }
 
-// mig: fn abstract_functions
   pub fn abstract_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: abstract_functions");
   }
 
-// mig: fn get_all_user_implemented_functions
   pub fn get_all_user_implemented_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: get_all_user_implemented_functions");
   }
 
-// mig: fn non_extern_functions
   pub fn non_extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: non_extern_functions");
   }
 
-// mig: fn get_all_user_functions
   pub fn get_all_user_functions(&self) -> Vec<&FunctionH<'s, 'h>> {
     self.functions.iter().filter(|f| f.is_user_function()).collect()
   }
 
-// mig: fn lookup_function
   pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
     let from_exports: Vec<&'h PrototypeH<'s, 'h>> = self.export_name_to_function.iter().filter(|(k, _)| k.0 == readable_name).map(|(_, v)| *v).collect();
     let from_functions: Vec<&'h PrototypeH<'s, 'h>> = self.functions.iter().filter(|f| f.prototype.id.local_name.0 == readable_name).map(|f| f.prototype).collect();
@@ -105,14 +82,12 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     self.functions.iter().find(|f| eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
 
-// mig: fn lookup_struct
   pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
     let matches: Vec<&StructDefinitionH<'s, 'h>> = self.structs.iter().filter(|s| s.id.local_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
 
-// mig: fn lookup_interface
   pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
     let matches: Vec<&InterfaceDefinitionH<'s, 'h>> = self.interfaces.iter().filter(|i| i.id.shortened_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
@@ -121,19 +96,16 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class ProgramH
 /// Temporary state
 pub struct ProgramH<'s, 'h> where 's: 'h {
     pub packages: PackageCoordinateMap<'s, PackageH<'s, 'h>>,
 }
 
-// mig: fn lookup_package
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   pub fn lookup_package(&self, package_coordinate: PackageCoordinate<'s>) -> PackageH<'s, 'h> {
     *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
 
-// mig: fn lookup_function
     pub fn lookup_function(&self, prototype: &PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
         let paackage = self.lookup_package(prototype.id.package_coordinate);
         let result = paackage.functions.iter().find(|f| f.prototype.id == prototype.id).expect("lookup_function: missing");
@@ -141,25 +113,21 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
         result
     }
 
-// mig: fn lookup_struct
     pub fn lookup_struct(&self, interner: &HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
         paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
     }
 
-// mig: fn lookup_interface
     pub fn lookup_interface(&self, interner: &HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
         paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
     }
 
-// mig: fn lookup_static_sized_array
     pub fn lookup_static_sized_array(&self, ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(ssa_th.id.package_coordinate);
         paackage.static_sized_arrays.iter().find(|s| s.name == ssa_th.id).expect("vassertSome: lookup_static_sized_array")
     }
 
-// mig: fn lookup_runtime_sized_array
     pub fn lookup_runtime_sized_array(&self, rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(rsa_th.name.package_coordinate);
         paackage.runtime_sized_arrays.iter().find(|s| s.name == rsa_th.name).expect("vassertSome: lookup_runtime_sized_array")
@@ -167,11 +135,7 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class StructDefinitionH
 /// Temporary state
-//
-// PartialEq/Eq/Hash dropped because the edges field's EdgeH transitively
-// holds an ArenaIndexMap (which lacks those impls). Matches Scala's `vcurious`.
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s>,
@@ -181,7 +145,6 @@ pub struct StructDefinitionH<'s, 'h> where 's: 'h {
     pub edges: &'h [EdgeH<'s, 'h>],
     pub members: &'h [StructMemberH<'s, 'h>],
 }
-// mig: fn get_ref (on StructDefinitionH — see Scala `def getRef: StructHT = StructHT(id)` in the StructDefinitionH audit block below)
 impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
     pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h StructHT<'s, 'h> {
         interner.intern_struct_ht(StructHTValH { id: self.id })
@@ -189,7 +152,6 @@ impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class StructMemberH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructMemberH<'s, 'h> where 's: 'h {
@@ -199,7 +161,6 @@ pub struct StructMemberH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class InterfaceDefinitionH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
@@ -209,7 +170,6 @@ pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
     pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
     pub methods: &'h [InterfaceMethodH<'s, 'h>],
 }
-// mig: fn get_ref (on InterfaceDefinitionH — see Scala `def getRef = InterfaceHT(id)` in audit-trail below)
 impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
     pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h InterfaceHT<'s, 'h> {
         interner.intern_interface_ht(InterfaceHTValH { id: self.id })
@@ -217,7 +177,6 @@ impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class InterfaceMethodH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
@@ -226,11 +185,9 @@ pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class EdgeH
 /// Temporary state
 //
 // PartialEq/Eq/Hash dropped because ArenaIndexMap doesn't implement them
-// (also matches Scala's `override def equals(obj: Any): Boolean = vcurious()`).
 #[derive(Copy, Clone, Debug)]
 pub struct EdgeH<'s, 'h> where 's: 'h {
     pub struct_: &'h StructHT<'s, 'h>,
@@ -239,7 +196,6 @@ pub struct EdgeH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: sealed trait IFunctionAttributeH + case objects UserFunctionH, PureH
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IFunctionAttributeH {
@@ -248,11 +204,7 @@ pub enum IFunctionAttributeH {
 }
 
 
-// mig: case class FunctionH
 /// Temporary state
-//
-// Drops PartialEq/Eq/Hash because the `body: ExpressionH` field opts out
-// (per typing-pass parity — Scala uses `vcurious` on FunctionH).
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionH<'s, 'h> where 's: 'h {
     pub prototype: &'h PrototypeH<'s, 'h>,
@@ -262,7 +214,6 @@ pub struct FunctionH<'s, 'h> where 's: 'h {
     pub body: ExpressionH<'s, 'h>,
 }
 
-// mig: fn is_user_function
 impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
     pub fn is_user_function(&self) -> bool {
         self.attributes.contains(&IFunctionAttributeH::UserFunctionH)
@@ -270,7 +221,6 @@ impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class PrototypeH
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeH<'s, 'h> where 's: 'h {
@@ -281,7 +231,6 @@ pub struct PrototypeH<'s, 'h> where 's: 'h {
 }
 
 
-// mig: case class PrototypeH (transient companion)
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeHValH<'s, 'h> where 's: 'h {
@@ -290,7 +239,6 @@ pub struct PrototypeHValH<'s, 'h> where 's: 'h {
     pub return_type: CoordH<'s, 'h>,
 }
 
-// mig: case class IdH
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdH<'s> {
@@ -300,10 +248,6 @@ pub struct IdH<'s> {
     pub fully_qualified_name: StrI<'s>,
     pub _must_intern: MustIntern,
 }
-// Realizes Scala's case-class auto-toString for IdH:
-//   IdH(<local_name>,<package_coordinate>,<shortened_name>,<fully_qualified_name>)
-// Per Scala convention: no space between case-class fields. StrI fields print as bare strings
-// per Rust StrI's existing Display canon (interner.rs:40); Scala would wrap each as StrI(<v>).
 impl<'s> Display for IdH<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
@@ -311,8 +255,6 @@ impl<'s> Display for IdH<'s> {
 }
 
 
-
-// mig: case class IdH (transient companion)
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IdHValH<'s> {
@@ -324,13 +266,9 @@ pub struct IdHValH<'s> {
 
 // --- Auxiliary types referenced by hammer files ---
 
-// FunctionRefH lives in Scala's `Hammer.scala`, but it's a pure data type
-// (just a wrapper around a PrototypeH ref) so we colocate it with the H-side
-// AST here. Not interned in Scala (no `MustIntern` needed).
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionRefH<'s, 'h> where 's: 'h {
     pub prototype: &'h PrototypeH<'s, 'h>,
 }
 
-// VariableIdH and Local live in instructions.rs (per Scala instructions.scala layout).

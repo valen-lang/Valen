@@ -11,9 +11,7 @@ use crate::utils::utils::replace_all;
 use crate::utils::utils::scrambles;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct StructTests
 
-// mig: fn make_empty_imm_struct
 #[test]
 fn make_empty_imm_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -42,7 +40,6 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn make_imm_struct_with_one_member
 #[test]
 fn make_imm_struct_with_one_member() {
     let compilation_bump = bumpalo::Bump::new();
@@ -71,7 +68,6 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn make_nested_imm_struct
 #[test]
 fn make_nested_imm_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -101,7 +97,6 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn make_empty_mut_struct
 #[test]
 fn make_empty_mut_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -130,7 +125,6 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn constructor_with_self
 #[test]
 fn constructor_with_self() {
     let compilation_bump = bumpalo::Bump::new();
@@ -158,7 +152,6 @@ fn constructor_with_self() {
     }
 }
 
-// mig: fn make_struct
 #[test]
 fn make_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -187,7 +180,6 @@ exported func main() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn make_struct_and_get_member
 #[test]
 fn make_struct_and_get_member() {
     let compilation_bump = bumpalo::Bump::new();
@@ -215,7 +207,6 @@ fn make_struct_and_get_member() {
     }
 }
 
-// mig: fn mutate_struct
 #[test]
 fn mutate_struct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -243,7 +234,6 @@ fn mutate_struct() {
     }
 }
 
-// mig: fn normal_destructure
 #[test]
 fn normal_destructure() {
     let compilation_bump = bumpalo::Bump::new();
@@ -280,7 +270,6 @@ exported func main() int {
     }
 }
 
-// mig: fn sugar_destructure
 #[test]
 fn sugar_destructure() {
     let compilation_bump = bumpalo::Bump::new();
@@ -317,7 +306,6 @@ exported func main() int {
     }
 }
 
-// mig: fn destroy_members_at_right_times
 #[test]
 fn destroy_members_at_right_times() {
     let compilation_bump = bumpalo::Bump::new();
@@ -362,7 +350,6 @@ exported func main() {
 }
 
 
-// mig: fn panic_function
 #[test]
 fn panic_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -409,7 +396,6 @@ exported func main() int {
     }
 }
 
-// mig: fn odmfrc
 #[test]
 fn odmfrc() {
     let code = r"

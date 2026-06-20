@@ -200,7 +200,6 @@ where 's: 't,
 
         // if (header.attributes.exists({ case PureT => true case _ => false })) { ... }
         if header.attributes.iter().any(|a| matches!(a, IFunctionAttributeT::Pure)) {
-            // (Scala has commented-out purity checks here)
         }
 
         Ok(header)
@@ -385,11 +384,6 @@ where 's: 't,
                 let header_sig = self.typing_interner.alloc(function2.header.to_signature());
                 coutputs.declare_function_return_type(header_sig, function2.header.return_type);
                 coutputs.add_function(header_sig, function2);
-                // Register the extern with coutputs so it survives to HinputsT.functionExterns and reaches
-                // the Backend's pragma generation. The placeholderedExternId mirrors what Compiler.scala
-                // used to construct: a top-level IdT with an ExternNameT carrying a fresh ExternTemplateNameT
-                // keyed on the function's range. Fires for both top-level externs and externs declared
-                // inside an extern struct (the latter wouldn't otherwise reach Compiler.scala's loop).
                 let extern_template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
                     code_loc: range.begin,
                 });

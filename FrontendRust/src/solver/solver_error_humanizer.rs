@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::Hash;
 
-// mig: fn humanize_failed_solve
 pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
   code_map: impl Fn(&CodeLocationS<'a>) -> String,
   lines_between: impl Fn(&CodeLocationS<'a>, &CodeLocationS<'a>) -> Vec<RangeS<'a>>,

@@ -9,10 +9,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct IntegrationTestsB
 pub struct IntegrationTestsB;
 
-// mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
 fn tests_single_expression_and_single_statement_functions_returns() {
     let compilation_bump = bumpalo::Bump::new();
@@ -40,7 +38,6 @@ exported func main() { moo(); }
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_calling_a_templated_struct_constructor
 #[test]
 fn tests_calling_a_templated_struct_constructor() {
     let compilation_bump = bumpalo::Bump::new();
@@ -72,7 +69,6 @@ exported func main() int {
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn test_array_push_pop_len_capacity_drop
 #[test]
 fn test_array_push_pop_len_capacity_drop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -116,7 +112,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_int_generic
 #[test]
 fn test_int_generic() {
     let compilation_bump = bumpalo::Bump::new();
@@ -153,7 +148,6 @@ exported func main() int {
     }
 }
 
-// mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
 fn tests_upcasting_from_a_struct_to_an_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -178,7 +172,6 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_upcasting_from_if
 #[test]
 fn tests_upcasting_from_if() {
     let compilation_bump = bumpalo::Bump::new();
@@ -206,7 +199,6 @@ fn tests_upcasting_from_if() {
     }
 }
 
-// mig: fn tests_lambda
 #[test]
 fn tests_lambda() {
     let compilation_bump = bumpalo::Bump::new();
@@ -235,7 +227,6 @@ exported func main() int {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_generic_with_a_lambda
 #[test]
 fn tests_generic_with_a_lambda() {
     let compilation_bump = bumpalo::Bump::new();
@@ -267,7 +258,6 @@ exported func main() int {
 }
 
 // See LCCPGB for explanation.
-// mig: fn tests_generic_s_lambda_calling_parent_function_s_bound
 #[test]
 fn tests_generic_s_lambda_calling_parent_function_s_bound() {
     let compilation_bump = bumpalo::Bump::new();
@@ -300,7 +290,6 @@ exported func main() {
 }
 
 // This lambda has an implicit <Y> template param
-// mig: fn tests_generic_with_a_polymorphic_lambda
 #[test]
 fn tests_generic_with_a_polymorphic_lambda() {
     let compilation_bump = bumpalo::Bump::new();
@@ -332,7 +321,6 @@ exported func main() int {
 }
 
 // This lambda has an implicit <Y> template param, invoked with a bool then a string
-// mig: fn tests_generic_with_a_polymorphic_lambda_invoked_twice
 #[test]
 fn tests_generic_with_a_polymorphic_lambda_invoked_twice() {
     let compilation_bump = bumpalo::Bump::new();
@@ -365,7 +353,6 @@ exported func main() int {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_double_closure
 #[test]
 fn tests_double_closure() {
     let compilation_bump = bumpalo::Bump::new();
@@ -390,7 +377,6 @@ fn tests_double_closure() {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_from_subdir_file
 #[test]
 fn tests_from_subdir_file() {
     let compilation_bump = bumpalo::Bump::new();
@@ -418,7 +404,6 @@ fn tests_from_subdir_file() {
     }
 }
 
-// mig: fn test_generic_param_default
 #[test]
 fn test_generic_param_default() {
     let compilation_bump = bumpalo::Bump::new();
@@ -448,7 +433,6 @@ exported func main() int { bork() }
     }
 }
 
-// mig: fn tests_calling_a_virtual_function
 #[test]
 fn tests_calling_a_virtual_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -476,7 +460,6 @@ fn tests_calling_a_virtual_function() {
     }
 }
 
-// mig: fn tests_making_a_variable_with_a_pattern
 #[test]
 fn tests_making_a_variable_with_a_pattern() {
     let compilation_bump = bumpalo::Bump::new();
@@ -503,7 +486,6 @@ fn tests_making_a_variable_with_a_pattern() {
     }
 }
 
-// mig: fn tests_a_linked_list
 #[test]
 fn tests_a_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
@@ -528,7 +510,6 @@ fn tests_a_linked_list() {
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_a_templated_linked_list
 #[test]
 fn tests_a_templated_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
@@ -553,7 +534,6 @@ fn tests_a_templated_linked_list() {
     let _ = compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn tests_calling_an_abstract_function
 #[test]
 fn tests_calling_an_abstract_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -581,7 +561,6 @@ fn tests_calling_an_abstract_function() {
     }
 }
 
-// mig: fn template_overrides_are_stamped
 #[test]
 fn template_overrides_are_stamped() {
     // See TIBANFC: Translate Impl Bound Argument Names For Case
@@ -610,7 +589,6 @@ fn template_overrides_are_stamped() {
     }
 }
 
-// mig: fn tests_a_foreach_for_a_linked_list
 #[test]
 fn tests_a_foreach_for_a_linked_list() {
     let compilation_bump = bumpalo::Bump::new();
@@ -635,7 +613,6 @@ fn tests_a_foreach_for_a_linked_list() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "102030");
 }
 
-// mig: fn tests_recursion
 #[test]
 fn tests_recursion() {
     let compilation_bump = bumpalo::Bump::new();
@@ -663,7 +640,6 @@ fn tests_recursion() {
     }
 }
 
-// mig: fn tests_generic_recursion
 #[test]
 fn tests_generic_recursion() {
     let compilation_bump = bumpalo::Bump::new();

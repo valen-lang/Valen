@@ -97,14 +97,11 @@ pub enum IFunctionGenerator {
 }
 
 
-
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn print(
         &self,
-        // TODO: Slab 14 — Scala uses a by-name parameter here; pick impl Display or &str as the Rust equivalent when porting the body.
         x: (),
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
@@ -122,7 +119,6 @@ where 's: 't,
 }
 
 
-// (no direct Scala counterpart — derived from `class Compiler(opts, interner, keywords)` in the Scala block above)
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -250,12 +246,6 @@ where 's: 't,
         }
     }
 
-    // mig: fn is_descendant_kind
-    // Rust adaptation: collides with Compiler::is_descendant lifted from
-    // ImplCompiler.scala (which Rust flattened onto Compiler); appended `_kind`
-    // suffix to disambiguate this delegate-class isDescendant from
-    // ImplCompiler's. Scala uses class-level disambiguation (Compiler's
-    // anonymous CompilerSolverDelegate vs ImplCompiler) that Rust lacks.
     pub fn is_descendant_kind(
         &self,
         _envs: &InferEnv<'s, 't>,
@@ -283,9 +273,6 @@ where 's: 't,
         }
     }
 
-    // mig: fn is_ancestor_kind
-    // Rust adaptation: see is_descendant_kind above for the `_kind` suffix
-    // rationale (ImplCompiler/Compiler flattening collision).
     pub fn is_ancestor_kind(
         &self,
         _envs: &InferEnv<'s, 't>,
@@ -298,7 +285,6 @@ where 's: 't,
         }
     }
 
-    // mig: fn lookup_templata_imprecise
     pub fn lookup_templata_imprecise(
         &self,
         envs: InferEnv<'s, 't>,
@@ -310,9 +296,6 @@ where 's: 't,
     }
     
     
-    // mig: fn predict_static_sized_array_kind
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn predict_static_sized_array_kind(
         &self,
         _envs: InferEnv<'s, 't>,
@@ -326,9 +309,6 @@ where 's: 't,
         self.resolve_static_sized_array(mutability, variability, size, element, region)
     }
     
-    // mig: fn predict_runtime_sized_array_kind
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn predict_runtime_sized_array_kind(
         &self,
         _envs: InferEnv<'s, 't>,
@@ -340,9 +320,6 @@ where 's: 't,
         self.resolve_runtime_sized_array(element, array_mutability, region)
     }
     
-    // mig: fn kind_is_from_template
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn kind_is_from_template(
         &self,
         _coutputs: &mut CompilerOutputs<'s, 't>,
@@ -361,9 +338,6 @@ where 's: 't,
         }
     }
     
-    // mig: fn get_ancestors
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn get_ancestors(
         &self,
         envs: InferEnv<'s, 't>,
@@ -386,9 +360,6 @@ where 's: 't,
         result
     }
     
-    // mig: fn struct_is_closure
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn struct_is_closure(
         &self,
         _state: &mut CompilerOutputs<'s, 't>,
@@ -399,9 +370,6 @@ where 's: 't,
         // structDef.isClosure
     }
     
-    // mig: fn predict_function
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn predict_function(
         &self,
         envs: InferEnv<'s, 't>,
@@ -418,18 +386,6 @@ where 's: 't,
         PrototypeTemplataT { prototype }
     }
     
-    // mig: fn resolve_function_from_infer_env
-    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's inner
-    // IInfererDelegate (solver-side) anonymous-class `resolveFunction`
-    // (Compiler.scala:395-413) is flattened onto Rust's Compiler. The 5-arg
-    // surface is what the solver calls; the missing 3 args
-    // (`call_location`, `context_region`, `verify_conclusions`) are read from
-    // the supplied `InferEnv` and a hardcoded `true`, matching Scala's
-    // `envs.callLocation`, `envs.contextRegion`, and literal `true`. Body
-    // forwards to the sibling 8-arg `resolve_function` (the outer delegate's
-    // flatten); Scala's two delegate impls each call `overloadResolver.findFunction`
-    // directly, but the Rust port DRYs that through the 8-arg wrapper since both
-    // anonymous classes have already been flattened onto the same Compiler.
     pub fn resolve_function_from_infer_env(
         &self,
         env: InferEnv<'s, 't>,
@@ -450,9 +406,6 @@ where 's: 't,
         )
     }
     
-    // mig: fn assemble_prototype
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn assemble_prototype(
         &self,
         envs: InferEnv<'s, 't>,
@@ -476,9 +429,6 @@ where 's: 't,
         result
     }
     
-    // mig: fn assemble_impl
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn assemble_impl(
         &self,
         env: InferEnv<'s, 't>,
@@ -495,8 +445,6 @@ where 's: 't,
         IsaTemplataT { declaration_range: range, impl_name: id, sub_kind, super_kind }
     }
     
-    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's IInferCompilerDelegate
-    // anonymous-class `resolveFunction` (Compiler.scala:455-477) is flattened onto Rust's Compiler.
     pub fn resolve_function(
         &self,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
@@ -527,10 +475,6 @@ where 's: 't,
     }
     
 
-    // mig: fn evaluate_generic_function_from_non_call_for_header
-    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's IStructCompilerDelegate
-    // anonymous-class `evaluateGenericFunctionFromNonCallForHeader` (Compiler.scala:536-544) is
-    // flattened onto Rust's Compiler struct. Its body delegates to functionCompiler.evaluateGenericFunctionFromNonCall.
     pub fn evaluate_generic_function_from_non_call_for_header(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -541,9 +485,6 @@ where 's: 't,
         self.evaluate_generic_function_from_non_call(coutputs, parent_ranges, call_location, function_templata)
     }
     
-    // mig: fn scout_expected_function_for_prototype
-    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
-    // (which Rust flattened onto Compiler).
     pub fn scout_expected_function_for_prototype(
         &self,
         _env: IInDenizenEnvironmentT<'s, 't>,
@@ -569,11 +510,6 @@ where 's: 't,
         // }
     }
     
-    // mig: fn generate_function
-    // Rust adaptation: lifted from Compiler.scala's anonymous IFunctionCompilerDelegate
-    // (which Rust flattened onto Compiler). Scala's `functionCompilerCore: FunctionCompilerCore`,
-    // `structCompiler`, `destructorCompiler`, `arrayCompiler` parameters are absorbed
-    // into `&self` since all four compilers are flattened onto `Compiler` in Rust.
     pub fn generate_function(
         &self,
         _generator: IFunctionGenerator,
@@ -772,7 +708,6 @@ where 's: 't,
         let name_to_top_level_environment =
             self.typing_interner.alloc_slice_from_vec(namespace_name_to_templatas_vec);
 
-        // Mirrors Scala compiler.scala:1170-1187 nameToFunctionBodyMacro Map population.
         let mut name_to_function_body_macro =
             self.typing_interner.alloc_index_map::<StrI<'s>, FunctionBodyMacro>();
         name_to_function_body_macro.insert(self.keywords.abstract_body, FunctionBodyMacro::AbstractBody);
@@ -1355,7 +1290,6 @@ where 's: 't,
             function_exports: coutputs.get_function_exports(),
             kind_externs: coutputs.get_kind_externs(),
             function_externs: coutputs.get_function_externs(),
-            // sub_citizen_to_interface_to_edge will be populated by instantiator (Scala comment WPBI)
             sub_citizen_to_interface_to_edge: HashMap::new(),
         };
 

@@ -17,7 +17,6 @@ use std::marker::PhantomData;
 use std::mem::discriminant;
 use crate::typing::types::types::{IRegionT, RegionT};
 
-// mig: fn humanize_templata
 pub fn humanize_templata<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     templata: &ITemplataI<'s, 'i>,
@@ -44,7 +43,6 @@ pub fn humanize_templata<'s, 'i>(
     }
 }
 
-// mig: fn humanize_coord
 pub fn humanize_coord<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     coord: &CoordI<'s, 'i>,
@@ -61,7 +59,6 @@ pub fn humanize_coord<'s, 'i>(
     ownership_str.to_string() + &kind_str
 }
 
-// mig: fn humanize_kind
 pub fn humanize_kind<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     kind: &KindIT<'s, 'i>,
@@ -80,7 +77,6 @@ pub fn humanize_kind<'s, 'i>(
     }
 }
 
-// mig: fn humanize_id
 pub fn humanize_id<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     name: &IdI<'s, 'i>,
@@ -94,7 +90,6 @@ pub fn humanize_id<'s, 'i>(
     prefix + &humanize_name(code_map, name.local_name, containing_region)
 }
 
-// mig: fn humanize_name
 pub fn humanize_name<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     name: INameI<'s, 'i>,
@@ -173,7 +168,6 @@ pub fn humanize_name<'s, 'i>(
     }
 }
 
-// mig: fn humanize_generic_args
 pub fn humanize_generic_args<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     template_args: &[ITemplataI<'s, 'i>],
@@ -194,7 +188,6 @@ pub fn humanize_generic_args<'s, 'i>(
     }
 }
 
-// mig: fn humanize_signature
 pub fn humanize_signature<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     signature: &'i SignatureI<'s, 'i>,

@@ -31,11 +31,6 @@ use crate::utils::source_code_utils::humanize_package;
 use std::iter::once;
 
 
-// Mirror of canonical Scala CompilerErrorHumanizer.humanize. Per MACTX, several canonical
-// arms (CantUseRuneValueAsExpression, KindIsNotStruct, CouldntFindImpl, CantSharePlaceholder,
-// NoCommonAncestors, CantDetermineNarrowestKind, FunctionDoesntHaveName, InternalSolverError)
-// are present in the audit-trail above but their Rust ICompileErrorT variants haven't been
-// added yet — they fall through to the catch-all `_ => panic!` below until ported.
 pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingInterner<'s, 't>, verbose: bool, code_map: &dyn Fn(CodeLocationS<'s>) -> String, lines_between: &dyn Fn(CodeLocationS<'s>, CodeLocationS<'s>) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS<'s>) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS<'s>) -> String, err: ICompileErrorT<'s, 't>) -> String {
   let error_str_body = match &err {
     ICompileErrorT::TypingPassDefiningError { range: _, inner } => {

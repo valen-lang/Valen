@@ -7,7 +7,6 @@ use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 
 
-// mig: fn test
 pub fn test<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -18,10 +17,6 @@ pub fn test<'s, 'ctx, 'p>(
 ) -> ScoutCompilation<'s, 'ctx, 'p>
 where 'p: 's,
 {
-  // `code` is unused in the body — in the Rust port, the code string is already baked into
-  // `package_to_contents_resolver` (the caller builds the resolver via `code_hierarchy::test_from_vec`
-  // before passing it in). Scala's `FileCoordinateMap.test(interner, Vector(code))` performs that
-  // role inside `test`, but Rust hoists it to the caller per SPDMX exception B (lifetime adaptation).
   let _ = code;
   let global_options = GlobalOptions {
     sanity_check: true,

@@ -7,9 +7,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 
 
-// (Scala `class FunctorHelper(interner, keywords)` absorbed onto `Compiler`;
-//  the method body lives at `Compiler::get_functor_for_prototype` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

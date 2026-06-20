@@ -14,9 +14,6 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::types::types::RegionT;
 
 
-// (Scala `class LockWeakMacro(keywords, expressionCompiler)` absorbed onto `Compiler`;
-//  the method body lives at `Compiler::generate_function_body_lock_weak` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -22,7 +22,7 @@ where 's: 't,
 
 // FunctionA/StructA/InterfaceA/ImplA are arena-allocated (ATDCX) and don't
 // derive PartialEq/Eq/Hash. Compare/hash those variants by pointer identity;
-// ITemplataT is itself Eq+Hash (Slab 3).
+// ITemplataT is itself Eq+Hash.
 impl<'s, 't> PartialEq for IEnvEntryT<'s, 't>
 where 's: 't,
 {

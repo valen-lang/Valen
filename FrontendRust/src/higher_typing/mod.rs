@@ -1,4 +1,3 @@
-// From Frontend/HigherTypingPass/src/dev/vale/highertyping/
 pub mod ast;
 pub mod astronomer_error_reporter;
 pub mod higher_typing_error_humanizer;

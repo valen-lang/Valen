@@ -39,7 +39,6 @@ pub fn build_backend_argv(
     command_line_args.push("--output_dir".to_string());
     command_line_args.push(output_dir.display().to_string());
 
-    // Mirrors midas.vale lines 41-109
     if let Some(opt_level_val) = maybe_opt_level {
         command_line_args.push("--opt_level".to_string());
         command_line_args.push(opt_level_val.to_string());

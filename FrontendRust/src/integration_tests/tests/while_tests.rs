@@ -7,10 +7,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct WhileTests
 pub struct WhileTests;
 
-// mig: fn simple_while_loop_that_doesnt_execute
 #[test]
 fn simple_while_loop_that_doesnt_execute() {
     let compilation_bump = bumpalo::Bump::new();
@@ -42,7 +40,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_a_for_ish_while_loop
 #[test]
 fn test_a_for_ish_while_loop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -77,7 +74,6 @@ exported func main() int {
     }
 }
 
-// mig: fn tests_a_while_loop_with_a_complex_condition
 #[test]
 fn tests_a_while_loop_with_a_complex_condition() {
     let compilation_bump = bumpalo::Bump::new();
@@ -114,7 +110,6 @@ exported func main() int {
     }
 }
 
-// mig: fn tests_a_while_loop_with_a_set_in_it
 #[test]
 fn tests_a_while_loop_with_a_set_in_it() {
     let compilation_bump = bumpalo::Bump::new();
@@ -153,7 +148,6 @@ exported func main() int {
     }
 }
 
-// mig: fn tests_a_while_loop_with_a_declaration_in_it
 #[test]
 fn tests_a_while_loop_with_a_declaration_in_it() {
     let compilation_bump = bumpalo::Bump::new();
@@ -187,7 +181,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args_with_stdin(Vec::new(), vec!["A".to_string(), "B".to_string(), "c".to_string()]).unwrap();
 }
 
-// mig: fn return_from_infinite_while_loop
 #[test]
 fn return_from_infinite_while_loop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -221,7 +214,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_conditional_break
 #[test]
 fn infinite_while_loop_conditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -258,7 +250,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_unconditional_break
 #[test]
 fn infinite_while_loop_unconditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -292,7 +283,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_conditional_break_from_both_sides
 #[test]
 fn infinite_while_loop_conditional_break_from_both_sides() {
     let compilation_bump = bumpalo::Bump::new();
@@ -330,7 +320,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_conditional_return
 #[test]
 fn infinite_while_loop_conditional_return() {
     let compilation_bump = bumpalo::Bump::new();
@@ -367,7 +356,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_unconditional_return
 #[test]
 fn infinite_while_loop_unconditional_return() {
     let compilation_bump = bumpalo::Bump::new();
@@ -401,7 +389,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_while_loop_conditional_return_from_both_sides
 #[test]
 fn infinite_while_loop_conditional_return_from_both_sides() {
     let compilation_bump = bumpalo::Bump::new();
@@ -439,7 +426,6 @@ exported func main() int {
     }
 }
 
-// mig: fn while_with_condition_declaration
 #[test]
 fn while_with_condition_declaration() {
     let compilation_bump = bumpalo::Bump::new();
@@ -471,7 +457,6 @@ exported func main() int {
     }
 }
 
-// mig: fn each_on_int_range
 #[test]
 fn each_on_int_range() {
     let compilation_bump = bumpalo::Bump::new();
@@ -508,7 +493,6 @@ exported func main() int {
     }
 }
 
-// mig: fn parallel_foreach
 #[test]
 fn parallel_foreach() {
     let compilation_bump = bumpalo::Bump::new();
@@ -547,7 +531,6 @@ exported func main() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap().trim(), "[1, 2, 3, 4, 5]");
 }
 
-// mig: fn mutable_foreach
 #[test]
 fn mutable_foreach() {
     let compilation_bump = bumpalo::Bump::new();
@@ -603,7 +586,6 @@ exported func main() int {
     }
 }
 
-// mig: fn each_on_int_range_with_conditional_break
 #[test]
 fn each_on_int_range_with_conditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -645,7 +627,6 @@ exported func main() int {
     }
 }
 
-// mig: fn each_on_int_range_with_unconditional_break
 #[test]
 fn each_on_int_range_with_unconditional_break() {
     let compilation_bump = bumpalo::Bump::new();
@@ -682,7 +663,6 @@ exported func main() int {
     }
 }
 
-// mig: fn each_on_int_range_with_conditional_break_from_both_branches
 #[test]
 fn each_on_int_range_with_conditional_break_from_both_branches() {
     let compilation_bump = bumpalo::Bump::new();

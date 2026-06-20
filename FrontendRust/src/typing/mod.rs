@@ -1,4 +1,3 @@
-// From Frontend/TypingPass/src/dev/vale/typing/
 
 // Core entry point
 pub mod compilation;

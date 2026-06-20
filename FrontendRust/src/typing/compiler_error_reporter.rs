@@ -14,8 +14,6 @@ use crate::utils::range::RangeS;
 use std::slice::from_ref;
 
 
-
-
 #[derive(Debug)]
 pub enum ICompileErrorT<'s, 't> {
     CouldntNarrowDownCandidates { range: &'t [RangeS<'s>], candidates: &'t [PrototypeT<'s, 't>] },
@@ -114,7 +112,6 @@ pub enum ICompileErrorT<'s, 't> {
     TookWeakRefOfNonWeakableError { range: &'t [RangeS<'s>] },
 }
 
-// mig: fn range
 impl<'s, 't> ICompileErrorT<'s, 't> {
     pub fn range(&self) -> &[RangeS<'s>] {
         match self {
@@ -178,64 +175,5 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

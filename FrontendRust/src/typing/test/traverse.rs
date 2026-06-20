@@ -1,15 +1,5 @@
 
 
-// Test-only traversal helper for the typing pass. Mirrors `src/postparsing/test/traverse.rs`.
-//
-// Scala uses `Collector.only` (in `Frontend/Utils/.../Collector.scala`) which walks
-// arbitrary case-class trees via `Product.productIterator` runtime reflection. Rust
-// can't replicate that ergonomically, so this file enumerates the typing AST with a
-// `NodeRefT` enum, hand-written `visit_*` walkers, and `collect_only_*` /
-// `collect_where_*` macros that compile a pattern down to predicate-based collection.
-//
-// No Scala counterpart — pure scaffolding (same as the postparsing precedent).
-
 use crate::typing::ast::ast::{
     EdgeT, FunctionDefinitionT, FunctionExportT, FunctionExternT, FunctionHeaderT,
     ICitizenAttributeT, IFunctionAttributeT, InterfaceEdgeBlueprintT, KindExportT, KindExternT,

@@ -1,9 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/BlockHammer.scala
-//
-// Scala's `BlockHammer` is collapsed: per typing-pass `Compiler` precedent
-// (no sub-`StructCompiler`/`ExpressionCompiler`/etc.), all sub-hammer methods
-// live as `impl Hammer { ... }` blocks colocated in per-area files.
-// `BlockHammer` itself is NOT a Rust struct.
 
 use crate::final_ast::instructions::{BlockH, ImmutabilifyH, MutabilifyH};
 use crate::instantiating::ast::ast::FunctionHeaderI;
@@ -16,8 +10,6 @@ use crate::instantiating::ast::expressions::ExpressionIE;
 use std::collections::HashSet;
 
 
-
-// mig: fn translate_block
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -56,7 +48,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_mutabilify
     pub fn translate_mutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -70,7 +61,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_immutabilify
     pub fn translate_immutabilify(
         &self,
         hinputs: &HinputsI<'s, 'i>,

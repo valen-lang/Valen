@@ -11,10 +11,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct PackTests
 pub struct PackTests;
 
-// mig: fn extract_seq
 #[test]
 fn extract_seq() {
     let compilation_bump = bumpalo::Bump::new();
@@ -55,7 +53,6 @@ exported func main() int {
     }
 }
 
-// mig: fn nested_seqs
 #[test]
 fn nested_seqs() {
     let compilation_bump = bumpalo::Bump::new();
@@ -102,7 +99,6 @@ exported func main() int {
     }
 }
 
-// mig: fn nested_tuples
 #[test]
 fn nested_tuples() {
     let compilation_bump = bumpalo::Bump::new();

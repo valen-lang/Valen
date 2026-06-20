@@ -1,13 +1,3 @@
-// From Frontend/FinalAST/src/dev/vale/finalast/instructions.scala
-//
-// H-side instruction set: 50+ ExpressionH variants describing the lowered
-// program. Mirrors src/instantiating/ast/expressions.rs pattern — enum
-// dispatch with arena refs (no `dyn`). Per typing-pass parity, expression
-// types opt out of `PartialEq`/`Hash` (Scala uses `vcurious`); just
-// `Copy/Clone/Debug`.
-//
-// All variant payload structs are bare-placeholder (PhantomData) for now.
-// Body migration restores fields per Scala.
 
 #[allow(unused_imports)]
 use std::marker::PhantomData;
@@ -22,7 +12,6 @@ use crate::final_ast::types::OwnershipH;
 use crate::final_ast::types::VoidHT;
 
 
-// mig: enum ExpressionH
 /// Polyvalue
 #[derive(Copy, Clone, Debug)]
 pub enum ExpressionH<'s, 'h> where 's: 'h {
@@ -78,7 +67,6 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
     PreCheckBorrowH(&'h PreCheckBorrowH<'s, 'h>),
 }
 
-// mig: fn result_type
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn result_type(&self) -> CoordH<'s, 'h> {
     match self {
@@ -193,7 +181,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     }
     }
 
-// mig: fn expect_struct_access
     pub fn expect_struct_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::StructHT(_) => *self,
@@ -201,13 +188,11 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
-// mig: fn expect_interface_access
     pub fn expect_interface_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_interface_access");
         // resultType match { case CoordH(_, _, x @ InterfaceHT(_)) => this.asInstanceOf[ExpressionH[InterfaceHT]] }
     }
 
-// mig: fn expect_runtime_sized_array_access
     pub fn expect_runtime_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::RuntimeSizedArrayHT(_) => *self,
@@ -215,7 +200,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
-// mig: fn expect_static_sized_array_access
     pub fn expect_static_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::StaticSizedArrayHT(_) => *self,
@@ -223,7 +207,6 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
-// mig: fn expect_int_access
     pub fn expect_int_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::IntHT(_) => *self,
@@ -231,13 +214,11 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
-// mig: fn expect_i64_access
     pub fn expect_i64_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_i64_access");
         // resultType match { case CoordH(_, _, x @ IntHT(64)) => this.asInstanceOf[ExpressionH[IntHT]] }
     }
 
-// mig: fn expect_bool_access
     pub fn expect_bool_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::BoolHT(_) => *self,
@@ -246,18 +227,11 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     }
 }
 
-// mig: struct ConstantVoidH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantVoidH;
 
-// mig: fn eq (realized-by-impl PartialEq)
 
-// mig: fn hash_code (realized-by-impl Hash)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ConstantIntH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantIntH {
@@ -265,52 +239,28 @@ pub struct ConstantIntH {
     pub bits: i32,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ConstantBoolH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantBoolH {
     pub value: bool,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ConstantStrH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantStrH<'h> {
     pub value: &'h str,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ConstantF64H
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantF64H {
     pub value: f64,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ArgumentH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ArgumentH<'s, 'h> where 's: 'h {
@@ -318,7 +268,6 @@ pub struct ArgumentH<'s, 'h> where 's: 'h {
     pub argument_index: i32,
 }
 
-// mig: struct StackifyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StackifyH<'s, 'h> where 's: 'h {
@@ -327,13 +276,7 @@ pub struct StackifyH<'s, 'h> where 's: 'h {
     pub name: Option<&'h IdH<'s>>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct RestackifyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct RestackifyH<'s, 'h> where 's: 'h {
@@ -342,26 +285,14 @@ pub struct RestackifyH<'s, 'h> where 's: 'h {
     pub name: Option<&'h IdH<'s>>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct UnstackifyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct UnstackifyH<'s, 'h> where 's: 'h {
     pub local: Local<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct DestroyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyH<'s, 'h> where 's: 'h {
@@ -370,13 +301,7 @@ pub struct DestroyH<'s, 'h> where 's: 'h {
     pub local_indices: &'h [Local<'s, 'h>],
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct DestroyStaticSizedArrayIntoLocalsH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsH<'s, 'h> where 's: 'h {
@@ -385,13 +310,7 @@ pub struct DestroyStaticSizedArrayIntoLocalsH<'s, 'h> where 's: 'h {
     pub local_indices: &'h [Local<'s, 'h>],
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct StructToInterfaceUpcastH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StructToInterfaceUpcastH<'s, 'h> where 's: 'h {
@@ -399,13 +318,7 @@ pub struct StructToInterfaceUpcastH<'s, 'h> where 's: 'h {
     pub target_interface: &'h InterfaceHT<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct InterfaceToInterfaceUpcastH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceToInterfaceUpcastH<'s, 'h> where 's: 'h {
@@ -413,13 +326,7 @@ pub struct InterfaceToInterfaceUpcastH<'s, 'h> where 's: 'h {
     pub target_interface: &'h InterfaceHT<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct LocalStoreH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct LocalStoreH<'s, 'h> where 's: 'h {
@@ -428,13 +335,7 @@ pub struct LocalStoreH<'s, 'h> where 's: 'h {
     pub local_name: &'h IdH<'s>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct LocalLoadH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct LocalLoadH<'s, 'h> where 's: 'h {
@@ -443,13 +344,7 @@ pub struct LocalLoadH<'s, 'h> where 's: 'h {
     pub local_name: &'h IdH<'s>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct MemberStoreH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct MemberStoreH<'s, 'h> where 's: 'h {
@@ -460,7 +355,6 @@ pub struct MemberStoreH<'s, 'h> where 's: 'h {
     pub member_name: &'h IdH<'s>,
 }
 
-// mig: struct MemberLoadH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct MemberLoadH<'s, 'h> where 's: 'h {
@@ -471,11 +365,7 @@ pub struct MemberLoadH<'s, 'h> where 's: 'h {
     pub member_name: &'h IdH<'s>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct NewArrayFromValuesH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct NewArrayFromValuesH<'s, 'h> where 's: 'h {
@@ -483,7 +373,6 @@ pub struct NewArrayFromValuesH<'s, 'h> where 's: 'h {
     pub source_expressions: &'h [ExpressionH<'s, 'h>],
 }
 
-// mig: struct StaticSizedArrayStoreH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StaticSizedArrayStoreH<'s, 'h> where 's: 'h {
@@ -493,11 +382,7 @@ pub struct StaticSizedArrayStoreH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct RuntimeSizedArrayStoreH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayStoreH<'s, 'h> where 's: 'h {
@@ -507,11 +392,7 @@ pub struct RuntimeSizedArrayStoreH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct RuntimeSizedArrayLoadH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayLoadH<'s, 'h> where 's: 'h {
@@ -522,11 +403,7 @@ pub struct RuntimeSizedArrayLoadH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct StaticSizedArrayLoadH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StaticSizedArrayLoadH<'s, 'h> where 's: 'h {
@@ -538,11 +415,7 @@ pub struct StaticSizedArrayLoadH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct CallH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct CallH<'s, 'h> where 's: 'h {
@@ -550,13 +423,7 @@ pub struct CallH<'s, 'h> where 's: 'h {
     pub args_expressions: &'h [ExpressionH<'s, 'h>],
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ExternCallH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ExternCallH<'s, 'h> where 's: 'h {
@@ -564,13 +431,7 @@ pub struct ExternCallH<'s, 'h> where 's: 'h {
     pub args_expressions: &'h [ExpressionH<'s, 'h>],
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct InterfaceCallH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceCallH<'s, 'h> where 's: 'h {
@@ -581,13 +442,7 @@ pub struct InterfaceCallH<'s, 'h> where 's: 'h {
     pub function_type: &'h PrototypeH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct IfH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct IfH<'s, 'h> where 's: 'h {
@@ -597,91 +452,49 @@ pub struct IfH<'s, 'h> where 's: 'h {
     pub common_supertype: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct WhileH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct WhileH<'s, 'h> where 's: 'h {
     pub body_block: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ConsecutorH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConsecutorH<'s, 'h> where 's: 'h {
     pub exprs: &'h [ExpressionH<'s, 'h>],
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct BlockH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BlockH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct MutabilifyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct MutabilifyH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ImmutabilifyH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ImmutabilifyH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ReturnH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ReturnH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct NewImmRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct NewImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
@@ -692,11 +505,7 @@ pub struct NewImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct NewMutRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct NewMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
@@ -705,11 +514,7 @@ pub struct NewMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct PushRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct PushRuntimeSizedArrayH<'s, 'h> where 's: 'h {
@@ -717,13 +522,7 @@ pub struct PushRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub newcomer_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct PopRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayH<'s, 'h> where 's: 'h {
@@ -731,13 +530,7 @@ pub struct PopRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub element_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct StaticArrayFromCallableH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StaticArrayFromCallableH<'s, 'h> where 's: 'h {
@@ -747,11 +540,7 @@ pub struct StaticArrayFromCallableH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct DestroyStaticSizedArrayIntoFunctionH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoFunctionH<'s, 'h> where 's: 'h {
@@ -762,13 +551,7 @@ pub struct DestroyStaticSizedArrayIntoFunctionH<'s, 'h> where 's: 'h {
     pub array_size: i64,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct DestroyImmRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
@@ -778,37 +561,19 @@ pub struct DestroyImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub array_element_type: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct DestroyMutRuntimeSizedArrayH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub array_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct BreakH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BreakH;
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct NewStructH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct NewStructH<'s, 'h> where 's: 'h {
@@ -817,46 +582,27 @@ pub struct NewStructH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
-// mig: struct ArrayLengthH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct ArrayCapacityH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayCapacityH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct BorrowToWeakH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BorrowToWeakH<'s, 'h> where 's: 'h {
     pub ref_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct IsSameInstanceH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct IsSameInstanceH<'s, 'h> where 's: 'h {
@@ -870,13 +616,7 @@ impl<'s, 'h> IsSameInstanceH<'s, 'h> where 's: 'h {
     
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct AsSubtypeH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct AsSubtypeH<'s, 'h> where 's: 'h {
@@ -887,7 +627,6 @@ pub struct AsSubtypeH<'s, 'h> where 's: 'h {
     pub none_constructor: &'h PrototypeH<'s, 'h>,
 }
 
-// mig: struct LockWeakH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct LockWeakH<'s, 'h> where 's: 'h {
@@ -897,33 +636,20 @@ pub struct LockWeakH<'s, 'h> where 's: 'h {
     pub none_constructor: &'h PrototypeH<'s, 'h>,
 }
 
-// mig: struct DiscardH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DiscardH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: struct PreCheckBorrowH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct PreCheckBorrowH<'s, 'h> where 's: 'h {
     pub inner_expression: ExpressionH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: fn result_type (realized-by-dispatcher)
-
-// mig: trait IExpressionH
 /// Polyvalue
 #[derive(Copy, Clone, Debug)]
 pub enum IExpressionH<'s, 'h> where 's: 'h {
@@ -931,41 +657,30 @@ pub enum IExpressionH<'s, 'h> where 's: 'h {
     AddressExpressionH(&'h AddressExpressionH<'s, 'h>),
 }
 
-// mig: fn expect_reference_expression
 pub fn expect_reference_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h ReferenceExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_reference_expression");
     // this match { case r @ ReferenceExpressionH(_) => r; case AddressExpressionH(_) => vfail(...) }
 }
 
-// mig: fn expect_address_expression
 pub fn expect_address_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h AddressExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_address_expression");
     // this match { case a @ AddressExpressionH(_) => a; case ReferenceExpressionH(_) => vfail(...) }
 }
 
-// mig: struct ReferenceExpressionH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ReferenceExpressionH<'s, 'h> where 's: 'h {
     pub reference: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct AddressExpressionH
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct AddressExpressionH<'s, 'h> where 's: 'h {
     pub reference: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct Local
 /// Temporary state
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Local<'s, 'h> where 's: 'h {
@@ -974,11 +689,7 @@ pub struct Local<'s, 'h> where 's: 'h {
     pub type_h: CoordH<'s, 'h>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
 
-// mig: fn eq (realized-by-impl PartialEq)
-
-// mig: struct VariableIdH
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VariableIdH<'s, 'h> where 's: 'h {
@@ -986,54 +697,5 @@ pub struct VariableIdH<'s, 'h> where 's: 'h {
     pub height: i32,
     pub name: Option<&'h IdH<'s>>,
 }
-
-// mig: fn hash_code (realized-by-impl Hash)
-
-
-
-// ---- 50 expression-variant payload structs, Scala-parity fields ----
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

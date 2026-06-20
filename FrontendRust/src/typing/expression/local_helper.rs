@@ -21,7 +21,6 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::function_environment_t::AddressibleLocalVariableT;
 
 
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -37,7 +36,7 @@ where 's: 't,
         match target_ownership {
             OwnershipT::Borrow => {}
             _ => {
-                unreachable!("Scala's makeTemporaryLocal asserts targetOwnership matches BorrowT via an exhaustive-only match (no other arm)");
+                unreachable!("makeTemporaryLocal: targetOwnership must be BorrowT");
             }
         }
         let rlv = self.make_temporary_local(nenv, life, r.result().coord);
@@ -158,7 +157,7 @@ where 's: 't,
                                 panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
                             }
                             _ => {
-                                unreachable!("Scala's OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE — no catch-all");
+                                unreachable!("OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE");
                             }
                         }
                     }

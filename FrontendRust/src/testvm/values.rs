@@ -21,7 +21,6 @@ use std::fmt::Result as FmtResult;
 use std::io::Write;
 
 
-// mig: struct RRReferenceV
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct RRReferenceV<'v, 'h, 's>
@@ -31,10 +30,7 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<&'v ()>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for RRReferenceV<'v, 'h, 's>` below.)
 
-// mig: struct RRKindV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct RRKindV<'v, 'h, 's>
@@ -44,10 +40,7 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<&'v ()>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for RRKindV<'v, 'h, 's>` below.)
 
-// mig: struct AllocationV<'v, 'h, 's>
 /// Temporary state
 pub struct AllocationV<'v, 'h, 's> {
   pub reference: ReferenceV<'v, 'h, 's>,
@@ -55,13 +48,11 @@ pub struct AllocationV<'v, 'h, 's> {
   pub referrers: HashMap<IObjectReferrerV<'v, 'h, 's>, i32>,
 }
 
-// mig: fn id
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn id(&self) -> AllocationIdV<'v, 'h, 's> {
     panic!("Unimplemented: id");
   }
 
-// mig: fn increment_ref_count
   pub fn increment_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
@@ -81,7 +72,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     referrers.insert(referrer, current + 1);
   }
 
-// mig: fn decrement_ref_count
   pub fn decrement_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
@@ -98,12 +88,10 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     }
   }
 
-// mig: fn get_ref_count
   pub fn get_ref_count(&self) -> i32 {
     panic!("Unimplemented: get_ref_count");
   }
 
-// mig: fn ensure_ref_count
   pub fn ensure_ref_count(&self, scout_arena: &ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
     if matches!(self.kind, KindV::Void(_)) {
       // Void has no RC
@@ -125,7 +113,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     Ok(())
   }
 
-// mig: fn print_refs
   pub fn print_refs(&self, vivem_dout: &mut PrintStream) {
     if self.get_total_ref_count(None) > 0 {
       let referrers_str = self.referrers.iter().map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
@@ -133,7 +120,6 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     }
   }
 
-// mig: fn get_total_ref_count
   pub fn get_total_ref_count(&self, maybe_ownership_filter: Option<OwnershipH>) -> i32 {
     if matches!(self.kind, KindV::Void(_)) {
       return 1;
@@ -146,19 +132,13 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     result
   }
 
-// mig: fn finalize
   pub fn finalize(&self) {
     panic!("Unimplemented: finalize");
   }
 }
 
-// mig: fn unapply (realized-by-TryFrom)
-// (Realized via `impl TryFrom<Wide> for Narrow` or inline match.)
 
-// mig: fn unapply (realized-by-TryFrom)
-// (Realized via `impl TryFrom<Wide> for Narrow` or inline match.)
 
-// mig: enum KindV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub enum KindV<'v, 'h, 's> {
@@ -172,7 +152,6 @@ pub enum KindV<'v, 'h, 's> {
   ArrayInstance(&'v ArrayInstanceV<'v, 'h, 's>),
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     match self {
@@ -188,7 +167,6 @@ impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   }
 }
 
-// mig: enum PrimitiveKindV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone)]
 pub enum PrimitiveKindV<'v, 'h, 's> {
@@ -200,9 +178,6 @@ pub enum PrimitiveKindV<'v, 'h, 's> {
   Opaque(OpaqueV<'v, 'h, 's>),
 }
 
-// Scala uses subtype polymorphism (`PrimitiveKindV extends KindV`); per SSTREX
-// the Rust port uses flat sister enums, so the subset→superset conversion is
-// expressed as an explicit `From` impl.
 impl<'v, 'h, 's> From<PrimitiveKindV<'v, 'h, 's>> for KindV<'v, 'h, 's> {
   fn from(p: PrimitiveKindV<'v, 'h, 's>) -> Self {
     match p {
@@ -216,18 +191,15 @@ impl<'v, 'h, 's> From<PrimitiveKindV<'v, 'h, 's>> for KindV<'v, 'h, 's> {
   }
 }
 
-// mig: VoidV
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidV;
 
-// mig: fn tyype
 impl VoidV {
   pub fn tyype<'v, 'h, 's>(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> where 's: 'h, 'h: 'v, {
     RRKindV { hamut: KindHT::VoidHT(VoidHT), _phantom: PhantomData }
   }
 }
 
-// mig: struct IntV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntV<'v, 'h, 's>
@@ -238,14 +210,12 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> IntV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::IntHT(IntHT { bits: self.bits }), _phantom: PhantomData }
   }
 }
 
-// mig: struct BoolV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolV<'v, 'h, 's>
@@ -255,14 +225,12 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::BoolHT(BoolHT), _phantom: PhantomData }
   }
 }
 
-// mig: struct FloatV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct FloatV<'v, 'h, 's>
@@ -272,14 +240,12 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::FloatHT(FloatHT), _phantom: PhantomData }
   }
 }
 
-// mig: struct StrV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrV<'v, 'h, 's>
@@ -289,14 +255,12 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h ())>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> StrV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StrHT(StrHT), _phantom: PhantomData }
   }
 }
 
-// mig: struct OpaqueV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OpaqueV<'v, 'h, 's>
@@ -306,14 +270,12 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<&'v ()>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::OpaqueHT(_interner.bump().alloc(self.opaque_ht)), _phantom: PhantomData }
   }
 }
 
-// mig: struct StructInstanceV<'v, 'h, 's>
 /// Temporary state
 #[derive(Debug)]
 pub struct StructInstanceV<'v, 'h, 's>
@@ -323,33 +285,28 @@ where 's: 'h, 'h: 'v,
   pub members: Cell<Option<&'v [ReferenceV<'v, 'h, 's>]>>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StructHT(self.struct_h.get_ref(interner)), _phantom: PhantomData }
   }
 
-// mig: fn get_reference_member
   pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
     let members = self.members.get().expect("StructInstance has no members");
     let (_tyype, r#ref) = (self.struct_h.members[index as usize].tyype, members[index as usize]);
     r#ref
   }
 
-// mig: fn set_reference_member
   pub fn set_reference_member(&self, vivem_bump: &'v bumpalo::Bump, index: i32, reference: ReferenceV<'v, 'h, 's>) {
     let mut new_members: Vec<ReferenceV<'v, 'h, 's>> = self.members.get().expect("StructInstance has no members").to_vec();
     new_members[index as usize] = reference;
     self.members.set(Some(vivem_bump.alloc_slice_copy(&new_members)));
   }
 
-// mig: fn zero
   pub fn zero(&self) {
     self.members.set(None);
   }
 }
 
-// mig: struct ArrayInstanceV<'v, 'h, 's>
 /// Temporary state
 #[derive(Debug)]
 pub struct ArrayInstanceV<'v, 'h, 's> {
@@ -359,13 +316,11 @@ pub struct ArrayInstanceV<'v, 'h, 's> {
   pub elements: Cell<&'v [ReferenceV<'v, 'h, 's>]>,
 }
 
-// mig: fn tyype
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: self.type_h.kind, _phantom: PhantomData }
   }
 
-// mig: fn get_element
   pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
     if index < 0 || index as usize >= elements.len() {
@@ -374,7 +329,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     elements[index as usize]
   }
 
-// mig: fn set_element
   pub fn set_element(&self, vivem_bump: &'v bumpalo::Bump, index: i64, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
     if index < 0 || index as usize >= elements.len() {
@@ -386,7 +340,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     self.elements.set(new_vec.into_bump_slice());
   }
 
-// mig: fn initialize_element
   pub fn initialize_element(&self, vivem_bump: &'v bumpalo::Bump, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
     assert!(elements.len() < self.capacity as usize);
@@ -396,7 +349,6 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     self.elements.set(new_vec.into_bump_slice());
   }
 
-// mig: fn deinitialize_element
   pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
     assert!(!elements.is_empty());
@@ -405,13 +357,11 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     r#ref
   }
 
-// mig: fn get_size
   pub fn get_size(&self) -> i64 {
     self.elements.get().len() as i64
   }
 }
 
-// mig: struct AllocationIdV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AllocationIdV<'v, 'h, 's> {
@@ -419,10 +369,7 @@ pub struct AllocationIdV<'v, 'h, 's> {
   pub num: i32,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for AllocationIdV<'v, 'h, 's>` below.)
 
-// mig: struct ReferenceV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ReferenceV<'v, 'h, 's> {
@@ -433,12 +380,10 @@ pub struct ReferenceV<'v, 'h, 's> {
   pub num: i32,
 }
 
-// mig: fn alloc_id
 impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   pub fn alloc_id(&self) -> AllocationIdV<'v, 'h, 's> {
     AllocationIdV { tyype: RRKindV { hamut: self.actual_kind.hamut, _phantom: PhantomData }, num: self.num }
   }
-// mig: fn actual_coord (val actualCoord — Scala synthesized field)
   pub fn actual_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
       hamut: CoordH {
@@ -449,7 +394,6 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
       _phantom: PhantomData,
     }
   }
-// mig: fn seen_as_coord (val seenAsCoord — Scala synthesized field)
   pub fn seen_as_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
       hamut: CoordH {
@@ -462,7 +406,6 @@ impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
   }
 }
 
-// mig: enum IObjectReferrerV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum IObjectReferrerV<'v, 'h, 's> {
@@ -474,7 +417,6 @@ pub enum IObjectReferrerV<'v, 'h, 's> {
   ArgumentToObjectReferrer(ArgumentToObjectReferrerV<'v, 'h, 's>),
 }
 
-// mig: fn ownership
 impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
   pub fn ownership(&self) -> OwnershipH {
     match self {
@@ -488,7 +430,6 @@ impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
   }
 }
 
-// mig: struct VariableToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct VariableToObjectReferrerV<'v, 'h, 's> {
@@ -496,10 +437,7 @@ pub struct VariableToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for VariableToObjectReferrerV` below.)
 
-// mig: struct MemberToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MemberToObjectReferrerV<'v, 'h, 's> {
@@ -507,10 +445,7 @@ pub struct MemberToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for MemberToObjectReferrerV` below.)
 
-// mig: struct ElementToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ElementToObjectReferrerV<'v, 'h, 's> {
@@ -518,10 +453,7 @@ pub struct ElementToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for ElementToObjectReferrerV` below.)
 
-// mig: struct RegisterToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
@@ -529,10 +461,7 @@ pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for RegisterToObjectReferrerV` below.)
 
-// mig: struct RegisterHoldToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
@@ -540,10 +469,7 @@ pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for RegisterHoldToObjectReferrerV` below.)
 
-// mig: struct ArgumentToObjectReferrerV
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArgumentToObjectReferrerV<'v, 'h, 's> {
@@ -551,10 +477,7 @@ pub struct ArgumentToObjectReferrerV<'v, 'h, 's> {
   pub ownership: OwnershipH,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for ArgumentToObjectReferrerV` below.)
 
-// mig: struct VariableAddressV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct VariableAddressV<'v, 'h, 's>
@@ -564,8 +487,6 @@ where 's: 'h, 'h: 'v,
   pub local: Local<'s, 'h>,
 }
 
-// mig: fn to_string (realized-by-impl Display)
-// (Realized by `impl Display for VariableAddressV<'v, 'h, 's>` below.)
 
 impl<'v, 'h, 's> Display for VariableAddressV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
@@ -573,10 +494,7 @@ impl<'v, 'h, 's> Display for VariableAddressV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   }
 }
 
-// mig: fn eq (realized-by-impl PartialEq)
-// (Realized by `impl PartialEq for VariableAddressV<'v, 'h, 's>` below.)
 
-// mig: struct MemberAddressV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MemberAddressV<'v, 'h, 's> {
@@ -584,14 +502,12 @@ pub struct MemberAddressV<'v, 'h, 's> {
   pub field_index: i32,
 }
 
-// mig: fn to_string
 impl<'v, 'h, 's> MemberAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> String {
     format!("*o:{}.{}", self.struct_id.num, self.field_index)
   }
 }
 
-// mig: struct ElementAddressV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ElementAddressV<'v, 'h, 's> {
@@ -599,14 +515,12 @@ pub struct ElementAddressV<'v, 'h, 's> {
   pub element_index: i64,
 }
 
-// mig: fn to_string
 impl<'v, 'h, 's> ElementAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> String {
     format!("*o:{}.{}", self.array_id.num, self.element_index)
   }
 }
 
-// mig: struct CallIdV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CallIdV<'v, 'h, 's>
@@ -617,27 +531,19 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<&'v ()>,
 }
 
-// mig: fn to_string
 impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
     panic!("Unimplemented: to_string_call_id");
   }
 }
 
-// Rust adaptation: Scala's `case class CallId` gets `toString` autoboxed into
-// string-concat via `+`. The Rust port realizes that as `impl Display`, mirroring
-// the Scala `toString` body line-for-line. The `to_string(&self) -> StrI<'s>`
-// method above stays panic-stubbed until a caller needs the interned form.
 impl<'v, 'h, 's> Display for CallIdV<'v, 'h, 's> {
   fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
     write!(f, "ƒ{}/{}", self.call_depth, self.function.id.shortened_name.0)
   }
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for CallIdV<'v, 'h, 's>` below.)
 
-// mig: struct ArgumentIdV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArgumentIdV<'v, 'h, 's> {
@@ -645,10 +551,7 @@ pub struct ArgumentIdV<'v, 'h, 's> {
   pub index: i32,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for ArgumentIdV<'v, 'h, 's>` below.)
 
-// mig: struct VariableV<'v, 'h, 's>
 /// Temporary state
 #[derive(Clone)]
 pub struct VariableV<'v, 'h, 's> {
@@ -657,7 +560,6 @@ pub struct VariableV<'v, 'h, 's> {
   pub expected_type: CoordH<'s, 'h>,
 }
 
-// mig: struct ExpressionIdV<'v, 'h, 's>
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ExpressionIdV<'v, 'h, 's> {
@@ -665,7 +567,6 @@ pub struct ExpressionIdV<'v, 'h, 's> {
   pub path: &'v [i32],
 }
 
-// mig: fn add_step
 impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
   pub fn add_step(&self, bump: &'v bumpalo::Bump, i: i32) -> ExpressionIdV<'v, 'h, 's> {
     let old_len = self.path.len();
@@ -676,29 +577,23 @@ impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
   }
 }
 
-// mig: enum RegisterV<'v, 'h, 's>
 /// Temporary state
 pub enum RegisterV<'v, 'h, 's> {
   ReferenceRegister(&'v ReferenceRegisterV<'v, 'h, 's>),
 }
 
-// mig: fn expect_reference_register
 impl<'v, 'h, 's> RegisterV<'v, 'h, 's> {
   pub fn expect_reference_register(&self) -> ReferenceRegisterV<'v, 'h, 's> {
     panic!("Unimplemented: expect_reference_register");
   }
 }
 
-// mig: struct ReferenceRegisterV
 /// Temporary state
 pub struct ReferenceRegisterV<'v, 'h, 's> {
   pub reference: ReferenceV<'v, 'h, 's>,
 }
 
-// mig: fn hash_code (realized-by-impl Hash)
-// (Realized by `impl Hash for ReferenceRegisterV` below.)
 
-// mig: struct VivemPanicV
 /// Temporary state
 pub struct VivemPanicV<'v, 'h, 's>
 where 's: 'h, 'h: 'v,

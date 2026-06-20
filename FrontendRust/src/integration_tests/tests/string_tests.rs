@@ -13,10 +13,8 @@ use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 use crate::von::ast::VonStr;
 
-// mig: struct StringTests
 pub struct StringTests;
 
-// mig: fn simple_string
 #[test]
 fn simple_string() {
     let compilation_bump = bumpalo::Bump::new();
@@ -55,7 +53,6 @@ exported func main() str {
     }
 }
 
-// mig: fn empty_string
 #[test]
 fn empty_string() {
     let compilation_bump = bumpalo::Bump::new();
@@ -94,7 +91,6 @@ exported func main() str {
     }
 }
 
-// mig: fn string_with_escapes
 #[test]
 fn string_with_escapes() {
     let compilation_bump = bumpalo::Bump::new();
@@ -133,7 +129,6 @@ exported func main() str {
     }
 }
 
-// mig: fn string_with_hex_escape
 #[test]
 fn string_with_hex_escape() {
     let code = "exported func main() str { return \"sprog\\u001bwoggle\"; }";
@@ -178,7 +173,6 @@ fn string_with_hex_escape() {
     assert_eq!(result, "sprog\u{001b}woggle");
 }
 
-// mig: fn int_to_string
 #[test]
 fn int_to_string() {
     let compilation_bump = bumpalo::Bump::new();
@@ -206,7 +200,6 @@ fn int_to_string() {
     }
 }
 
-// mig: fn i64_to_string
 #[test]
 fn i64_to_string() {
     let compilation_bump = bumpalo::Bump::new();
@@ -234,7 +227,6 @@ fn i64_to_string() {
     }
 }
 
-// mig: fn string_length
 #[test]
 fn string_length() {
     let compilation_bump = bumpalo::Bump::new();
@@ -262,7 +254,6 @@ fn string_length() {
     }
 }
 
-// mig: fn strings_equal
 #[test]
 fn strings_equal() {
     let compilation_bump = bumpalo::Bump::new();
@@ -290,7 +281,6 @@ fn strings_equal() {
     }
 }
 
-// mig: fn string_interpolate
 #[test]
 fn string_interpolate() {
     let compilation_bump = bumpalo::Bump::new();
@@ -317,7 +307,6 @@ fn string_interpolate() {
     }
 }
 
-// mig: fn slice_a_slice
 #[test]
 fn slice_a_slice() {
     let compilation_bump = bumpalo::Bump::new();

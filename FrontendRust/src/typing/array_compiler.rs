@@ -43,9 +43,6 @@ use crate::typing::types::types::MutabilityT;
 use std::marker::PhantomData;
 
 
-
-
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -107,10 +104,7 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
-        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
-        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
-        // site, copy this again (or, preferably, land the shared helper refactor queued in
-        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
                 (Vec::new(), Vec::new()),
@@ -235,10 +229,7 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
-        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
-        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
-        // site, copy this again (or, preferably, land the shared helper refactor queued in
-        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
                 (Vec::new(), Vec::new()),
@@ -473,10 +464,7 @@ where 's: 't,
             Ok(()) => {}
         }
         let rules_a = rule_builder;
-        // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
-        // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
-        // site, copy this again (or, preferably, land the shared helper refactor queued in
-        // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
+        // We preprocess out the rune parent env lookups, see MKRFA.
         let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
             rules_a.iter().fold(
                 (Vec::new(), Vec::new()),

@@ -1,8 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/NameHammer.scala
-//
-// Per typing-pass `Compiler` precedent, `NameHammer` is not a Rust struct.
-// Its methods live as `impl Hammer { ... }` blocks colocated here; its free
-// functions (in Scala's `object NameHammer`) become module-level Rust fns.
 
 use crate::interner::StrI;
 use crate::utils::range::CodeLocationS;
@@ -33,8 +28,6 @@ use std::marker::PhantomData;
 use std::mem::discriminant;
 
 
-
-// mig: fn translate_full_name
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -58,7 +51,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn add_step
     pub fn add_step(
         &self,
         _hamuts: &Hamuts<'s, 'i, 'h>,
@@ -79,9 +71,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 }
 
 
-
-
-// mig: fn translate_code_location (object NameHammer free function)
 pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
     panic!("Unimplemented: translate_code_location");
     // val CodeLocationS(fileCoord, offset) = location
@@ -91,7 +80,6 @@ pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
 }
 
 
-// mig: fn translate_file_coordinate (object NameHammer free function)
 pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
     panic!("Unimplemented: translate_file_coordinate");
     // val FileCoordinate(PackageCoordinate(module, paackage), filename) = coord
@@ -105,7 +93,6 @@ pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
 }
 
 
-// mig: fn translate_package_coordinate (object NameHammer free function)
 pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObject {
     let PackageCoordinate { module, packages: paackage } = coord;
     let non_empty_module_name = if module.0 == "" { "__vale".to_string() } else { module.0.to_string() };
@@ -129,7 +116,6 @@ pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObj
 }
 
 
-// mig: fn simplify_id (object NameHammer free function)
 pub fn simplify_id<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, id: &IdI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -148,7 +134,6 @@ where 's: 'i, 'i: 'h,
 }
 
 
-// mig: fn simplify_name (object NameHammer free function)
 pub fn simplify_name<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, name: &INameI<'s, 'i>) -> SimpleIdStep<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -176,7 +161,6 @@ where 's: 'i, 'i: 'h,
 }
 
 
-// mig: fn simplify_templata (object NameHammer free function)
 pub fn simplify_templata<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, templata: &ITemplataI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -190,7 +174,6 @@ where 's: 'i, 'i: 'h,
 }
 
 
-// mig: fn simplify_kind (object NameHammer free function)
 pub fn simplify_kind<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &KindIT<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -211,7 +194,6 @@ where 's: 'i, 'i: 'h,
 }
 
 
-// mig: fn simplify_coord (object NameHammer free function)
 pub fn simplify_coord<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &CoordI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {

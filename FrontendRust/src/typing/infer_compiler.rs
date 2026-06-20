@@ -65,9 +65,6 @@ pub enum IConclusionResolveError<'s, 't> {
 }
 
 
-
-
-
 #[derive(Debug)]
 pub enum IResolvingError<'s, 't> {
     ResolvingSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
@@ -75,13 +72,11 @@ pub enum IResolvingError<'s, 't> {
 }
 
 
-
 #[derive(Debug)]
 pub enum IDefiningError<'s, 't> {
     DefiningSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
     DefiningResolveConclusionError(IConclusionResolveError<'s, 't>),
 }
-
 
 
 #[derive(Copy, Clone)]
@@ -143,10 +138,6 @@ where 's: 't,
     }
 
     // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
-    //
-    // ⚠ Same MKRFA caller contract as make_solver_state above. Expression-level `rules` must have
-    // RuneParentEnvLookupSR preprocessed into `initial_knowns` before this call (see
-    // OverloadResolver.scala:311-325). Unenforced; violations are silent.
     pub fn solve_for_resolving(
         &self,
         envs: InferEnv<'s, 't>,
@@ -207,6 +198,7 @@ where 's: 't,
         Ok(solver_state.userify_conclusions().into_iter().collect())
     }
 
+    // VCOORD: doublecheck this
     // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
     // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
     // filtering, CSSNCE env threading, DRSINI incremental defaults).

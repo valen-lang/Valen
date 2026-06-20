@@ -15,7 +15,6 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::IPackageResolver;
 
-// mig: fn test
 pub fn test<'s, 'ctx, 't, 'i, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
     typing_interner: &'ctx TypingInterner<'s, 't>,
@@ -60,16 +59,13 @@ where 's: 't, 's: 'i, 'p: 'ctx,
     )
 }
 
-// mig: struct InstantiatedTests
 /// Temporary state
 #[derive(PartialEq, Eq, Hash)]
 pub struct InstantiatedTests<'s, 't> {
   pub _marker: PhantomData<(&'s (), &'t ())>,
 }
 
-// mig: impl InstantiatedTests
 
-// mig: fn test_templates
 #[test]
 fn test_templates() {
 

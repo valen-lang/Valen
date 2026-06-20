@@ -64,17 +64,13 @@ use crate::tests::tests::get_package_to_resource_resolver;
 use crate::tests::tests::load_expected;
 use std::iter::empty;
 use std::marker::PhantomData;
-// mig: struct CompilerTests
 pub struct CompilerTests {}
-// mig: impl CompilerTests
 impl CompilerTests {}
 
-// mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
 
-// mig: fn simple_program_returning_an_int_explicit
 #[test]
 fn simple_program_returning_an_int_explicit() {
     // We had a bug once looking up "int" in the environment, hence this test.
@@ -97,7 +93,6 @@ fn simple_program_returning_an_int_explicit() {
     assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
 }
 
-// mig: fn hardcoding_negative_numbers
 #[test]
 fn hardcoding_negative_numbers() {
     let parse_bump = Bump::new();
@@ -127,7 +122,6 @@ fn hardcoding_negative_numbers() {
     );
 }
 
-// mig: fn simple_local
 #[test]
 fn simple_local() {
     let parse_bump = Bump::new();
@@ -153,7 +147,6 @@ exported func main() int {
     assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
 }
 
-// mig: fn tests_panic_return_type
 #[test]
 fn tests_panic_return_type() {
     let parse_bump = Bump::new();
@@ -189,7 +182,6 @@ exported func main() int {
     );
 }
 
-// mig: fn taking_an_argument_and_returning_it
 #[test]
 fn taking_an_argument_and_returning_it() {
     let parse_bump = Bump::new();
@@ -229,7 +221,6 @@ fn taking_an_argument_and_returning_it() {
     }
 }
 
-// mig: fn tests_adding_two_numbers
 #[test]
 fn tests_adding_two_numbers() {
     let parse_bump = Bump::new();
@@ -300,7 +291,6 @@ fn tests_adding_two_numbers() {
     }
 }
 
-// mig: fn simple_struct_read
 #[test]
 fn simple_struct_read() {
     let parse_bump = Bump::new();
@@ -325,7 +315,6 @@ exported func main(moo &Moo) int {
     let main = coutputs.lookup_function_by_str("main");
 }
 
-// mig: fn make_array_and_dot_it
 #[test]
 fn make_array_and_dot_it() {
     let parse_bump = Bump::new();
@@ -352,7 +341,6 @@ exported func main() int {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn simple_struct_instantiate
 #[test]
 fn simple_struct_instantiate() {
     let parse_bump = Bump::new();
@@ -378,7 +366,6 @@ exported func main() Moo {
     let _main = coutputs.lookup_function_by_str("main");
 }
 
-// mig: fn call_destructor
 #[test]
 fn call_destructor() {
     let parse_bump = Bump::new();
@@ -420,7 +407,6 @@ exported func main() int {
     );
 }
 
-// mig: fn custom_destructor
 #[test]
 fn custom_destructor() {
     let parse_bump = Bump::new();
@@ -468,7 +454,6 @@ fn custom_destructor() {
     );
 }
 
-// mig: fn make_constraint_reference
 #[test]
 fn make_constraint_reference() {
     let parse_bump = Bump::new();
@@ -506,7 +491,6 @@ exported func main() void {
     assert_eq!(let_normal.variable.coord().ownership, OwnershipT::Borrow);
 }
 
-// mig: fn recursion
 #[test]
 fn recursion() {
     let parse_bump = Bump::new();
@@ -529,7 +513,6 @@ fn recursion() {
     assert!(coutputs.lookup_function_by_str("main").header.return_type == CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT { bits: 32 }) });
 }
 
-// mig: fn test_overloads
 #[test]
 fn test_overloads() {
     let parse_bump = Bump::new();
@@ -553,7 +536,6 @@ fn test_overloads() {
     ));
 }
 
-// mig: fn test_readonly_ufcs
 #[test]
 fn test_readonly_ufcs() {
     let parse_bump = Bump::new();
@@ -574,7 +556,6 @@ fn test_readonly_ufcs() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn test_readwrite_ufcs
 #[test]
 fn test_readwrite_ufcs() {
     let parse_bump = Bump::new();
@@ -595,7 +576,6 @@ fn test_readwrite_ufcs() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn test_templates
 #[test]
 fn test_templates() {
     let parse_bump = Bump::new();
@@ -621,7 +601,6 @@ fn test_templates() {
     assert!(coutputs.get_all_user_functions().len() == 2);
 }
 
-// mig: fn test_taking_a_callable_param
 #[test]
 fn test_taking_a_callable_param() {
     let parse_bump = Bump::new();
@@ -653,7 +632,6 @@ fn test_taking_a_callable_param() {
     ));
 }
 
-// mig: fn simple_struct
 #[test]
 fn simple_struct() {
     let parse_bump = Bump::new();
@@ -775,7 +753,6 @@ fn simple_struct() {
     );
 }
 
-// mig: fn calls_destructor_on_local_var
 #[test]
 fn calls_destructor_on_local_var() {
     let parse_bump = Bump::new();
@@ -827,7 +804,6 @@ fn calls_destructor_on_local_var() {
     assert_eq!(all_calls.len(), 2);
 }
 
-// mig: fn tests_defining_an_empty_interface_and_an_implementing_struct
 #[test]
 fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     let parse_bump = Bump::new();
@@ -876,7 +852,6 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
         }));
 }
 
-// mig: fn tests_defining_a_non_empty_interface_and_an_implementing_struct
 #[test]
 fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     let parse_bump = Bump::new();
@@ -931,7 +906,6 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
         }));
 }
 
-// mig: fn stamps_an_interface_template_via_a_function_return
 #[test]
 fn stamps_an_interface_template_via_a_function_return() {
     let parse_bump = Bump::new();
@@ -968,7 +942,6 @@ fn stamps_an_interface_template_via_a_function_return() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn reads_a_struct_member
 #[test]
 fn reads_a_struct_member() {
     let parse_bump = Bump::new();
@@ -1012,7 +985,6 @@ fn reads_a_struct_member() {
     );
 }
 
-// mig: fn automatically_drops_struct
 #[test]
 fn automatically_drops_struct() {
     let parse_bump = Bump::new();
@@ -1076,7 +1048,6 @@ fn automatically_drops_struct() {
     );
 }
 
-// mig: fn tests_stamping_an_interface_template_from_a_function_param
 #[test]
 fn tests_stamping_an_interface_template_from_a_function_param() {
     let parse_bump = Bump::new();
@@ -1137,7 +1108,6 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
     assert_eq!(main.header.params[0].tyype, expected_coord);
 }
 
-// mig: fn reports_mismatched_return_type_when_expecting_void
 #[test]
 fn reports_mismatched_return_type_when_expecting_void() {
     let parse_bump = Bump::new();
@@ -1185,7 +1155,6 @@ Function test:0.vale:1:1: main return type void doesn't match body's result: i32
     );
 }
 
-// mig: fn tests_exporting_function
 #[test]
 fn tests_exporting_function() {
     let parse_bump = Bump::new();
@@ -1209,7 +1178,6 @@ fn tests_exporting_function() {
     assert_eq!(export.prototype, moo.header.to_prototype());
 }
 
-// mig: fn tests_exporting_struct
 #[test]
 fn tests_exporting_struct() {
     let parse_bump = Bump::new();
@@ -1233,7 +1201,6 @@ fn tests_exporting_struct() {
     assert_eq!(export.tyype, KindT::from(&moo.instantiated_citizen));
 }
 
-// mig: fn tests_exporting_interface
 #[test]
 fn tests_exporting_interface() {
     let parse_bump = Bump::new();
@@ -1257,7 +1224,6 @@ fn tests_exporting_interface() {
     assert_eq!(export.tyype, KindT::from(&moo.instantiated_interface));
 }
 
-// mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
 fn tests_single_expression_and_single_statement_functions_returns() {
     let parse_bump = Bump::new();
@@ -1305,7 +1271,6 @@ fn tests_single_expression_and_single_statement_functions_returns() {
     }
 }
 
-// mig: fn tests_calling_a_templated_struct_s_constructor
 #[test]
 fn tests_calling_a_templated_struct_s_constructor() {
     let parse_bump = Bump::new();
@@ -1449,7 +1414,6 @@ fn tests_calling_a_templated_struct_s_constructor() {
     );
 }
 
-// mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
 fn tests_upcasting_from_a_struct_to_an_interface() {
     let parse_bump = Bump::new();
@@ -1542,7 +1506,6 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
     }
 }
 
-// mig: fn tests_calling_a_virtual_function
 #[test]
 fn tests_calling_a_virtual_function() {
     let parse_bump = Bump::new();
@@ -1614,7 +1577,6 @@ fn tests_calling_a_virtual_function() {
     );
 }
 
-// mig: fn tests_upcasting_has_the_right_stuff
 #[test]
 fn tests_upcasting_has_the_right_stuff() {
     let parse_bump = Bump::new();
@@ -1689,7 +1651,6 @@ fn tests_upcasting_has_the_right_stuff() {
 //    freePrototype.fullName.last.parameters.head shouldEqual up.result.reference
 }
 
-// mig: fn tests_calling_a_virtual_function_through_a_borrow_ref
 #[test]
 fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     let parse_bump = Bump::new();
@@ -1734,7 +1695,6 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     );
 }
 
-// mig: fn tests_calling_a_templated_function_with_explicit_template_args
 #[test]
 fn tests_calling_a_templated_function_with_explicit_template_args() {
     // Tests putting MyOption<int> as the type of x.
@@ -1760,7 +1720,6 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn tests_destructuring_borrow_doesnt_compile_to_destroy
 #[test]
 fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
     let parse_bump = Bump::new();
@@ -1830,7 +1789,6 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
     );
 }
 
-// mig: fn tests_making_a_variable_with_a_pattern
 #[test]
 fn tests_making_a_variable_with_a_pattern() {
     // Tests putting MyOption<int> as the type of x.
@@ -1867,7 +1825,6 @@ fn tests_making_a_variable_with_a_pattern() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn tests_a_linked_list
 #[test]
 fn tests_a_linked_list() {
     let parse_bump = Bump::new();
@@ -1888,7 +1845,6 @@ fn tests_a_linked_list() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn test_borrow_ref
 #[test]
 fn test_borrow_ref() {
     let parse_bump = Bump::new();
@@ -1909,7 +1865,6 @@ fn test_borrow_ref() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn tests_calling_a_function_with_an_upcast
 #[test]
 fn tests_calling_a_function_with_an_upcast() {
     let parse_bump = Bump::new();
@@ -1956,7 +1911,6 @@ fn tests_calling_a_function_with_an_upcast() {
     );
 }
 
-// mig: fn tests_calling_a_templated_function_with_an_upcast
 #[test]
 fn tests_calling_a_templated_function_with_an_upcast() {
     let parse_bump = Bump::new();
@@ -2003,7 +1957,6 @@ fn tests_calling_a_templated_function_with_an_upcast() {
     );
 }
 
-// mig: fn tests_upcast_with_generics_has_the_right_stuff
 #[test]
 fn tests_upcast_with_generics_has_the_right_stuff() {
     let parse_bump = Bump::new();
@@ -2050,7 +2003,6 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
     );
 }
 
-// mig: fn tests_a_templated_linked_list
 #[test]
 fn tests_a_templated_linked_list() {
     let parse_bump = Bump::new();
@@ -2071,7 +2023,6 @@ fn tests_a_templated_linked_list() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn tests_a_foreach_for_a_linked_list
 #[test]
 fn tests_a_foreach_for_a_linked_list() {
     let parse_bump = Bump::new();
@@ -2092,7 +2043,6 @@ fn tests_a_foreach_for_a_linked_list() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn test_return_from_inside_if_destroys_locals
 #[test]
 fn test_return_from_inside_if_destroys_locals() {
     let parse_bump = Bump::new();
@@ -2157,7 +2107,6 @@ fn test_return_from_inside_if_destroys_locals() {
     assert_eq!(destructor_calls.len(), 2);
 }
 
-// mig: fn recursive_struct
 #[test]
 fn recursive_struct() {
     let parse_bump = Bump::new();
@@ -2182,7 +2131,6 @@ fn recursive_struct() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn recursive_struct_with_opt
 #[test]
 fn recursive_struct_with_opt() {
     let parse_bump = Bump::new();
@@ -2209,7 +2157,6 @@ fn recursive_struct_with_opt() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn templated_imm_struct
 #[test]
 fn templated_imm_struct() {
     let parse_bump = Bump::new();
@@ -2234,7 +2181,6 @@ fn templated_imm_struct() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn borrow_load_member
 #[test]
 fn borrow_load_member() {
     let parse_bump = Bump::new();
@@ -2266,7 +2212,6 @@ fn borrow_load_member() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn test_vector_of_struct_templata
 #[test]
 fn test_vector_of_struct_templata() {
     let parse_bump = Bump::new();
@@ -2298,7 +2243,6 @@ fn test_vector_of_struct_templata() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn if_branches_returns_never_and_struct
 #[test]
 fn if_branches_returns_never_and_struct() {
     let parse_bump = Bump::new();
@@ -2329,7 +2273,6 @@ fn if_branches_returns_never_and_struct() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn test_return
 #[test]
 fn test_return() {
     let parse_bump = Bump::new();
@@ -2354,7 +2297,6 @@ fn test_return() {
     );
 }
 
-// mig: fn test_return_from_inside_if
 #[test]
 fn test_return_from_inside_if() {
     let parse_bump = Bump::new();
@@ -2408,7 +2350,6 @@ exported func main() int {
     );
 }
 
-// mig: fn zero_method_anonymous_interface
 #[test]
 fn zero_method_anonymous_interface() {
     let parse_bump = Bump::new();
@@ -2433,7 +2374,6 @@ fn zero_method_anonymous_interface() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn reports_when_exported_function_depends_on_non_exported_param
 #[test]
 fn reports_when_exported_function_depends_on_non_exported_param() {
     let parse_bump = Bump::new();
@@ -2467,7 +2407,6 @@ that wasn't exported from package test
     );
 }
 
-// mig: fn reports_when_exported_function_depends_on_non_exported_return
 #[test]
 fn reports_when_exported_function_depends_on_non_exported_return() {
     let parse_bump = Bump::new();
@@ -2501,7 +2440,6 @@ that wasn't exported from package test
     );
 }
 
-// mig: fn reports_when_extern_function_depends_on_non_exported_param
 #[test]
 fn reports_when_extern_function_depends_on_non_exported_param() {
     let parse_bump = Bump::new();
@@ -2531,7 +2469,6 @@ Extern function moo depends on kind Firefly that wasn't exported from package te
     );
 }
 
-// mig: fn reports_when_extern_function_depends_on_non_exported_return
 #[test]
 fn reports_when_extern_function_depends_on_non_exported_return() {
     let parse_bump = Bump::new();
@@ -2561,7 +2498,6 @@ Extern function moo depends on kind Firefly that wasn't exported from package te
     );
 }
 
-// mig: fn reports_when_exported_struct_depends_on_non_exported_member
 #[test]
 fn reports_when_exported_struct_depends_on_non_exported_member() {
     let parse_bump = Bump::new();
@@ -2595,7 +2531,6 @@ Exported kind Firefly depends on kind Raza that wasn't exported from package tes
     );
 }
 
-// mig: fn checks_that_we_stored_a_borrowed_temporary_in_a_local
 #[test]
 fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     let parse_bump = Bump::new();
@@ -2632,10 +2567,6 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     );
 }
 
-// mig: fn reports_when_reading_nonexistant_local
-// Removed this test because this is now caught in the postparser (the scout pass now throws
-// CouldntFindVarToMutateS on an unrecognized name, before the typing pass runs). Per canonical
-// Scala which removed it for the same reason.
 
 #[test]
 fn reports_when_ssa_from_callable_has_unknown_element_type() {
@@ -3081,7 +3012,6 @@ If condition should be a bool, but was: CoordT { ownership: Share, region: Regio
     );
 }
 
-// mig: fn reports_when_mutating_after_moving
 #[test]
 fn reports_when_mutating_after_moving() {
     let parse_bump = Bump::new();
@@ -3121,7 +3051,6 @@ Can't use local that was already moved: newWeapon
     );
 }
 
-// mig: fn tests_export_struct_twice
 #[test]
 fn tests_export_struct_twice() {
     let parse_bump = Bump::new();
@@ -3160,7 +3089,6 @@ Type exported multiple times:
     );
 }
 
-// mig: fn reports_when_reading_after_moving
 #[test]
 fn reports_when_reading_after_moving() {
     let parse_bump = Bump::new();
@@ -3200,7 +3128,6 @@ Can't use local that was already moved: newWeapon
     );
 }
 
-// mig: fn reports_when_moving_from_inside_a_while
 #[test]
 fn reports_when_moving_from_inside_a_while() {
     let parse_bump = Bump::new();
@@ -3242,7 +3169,6 @@ Can't move a local (CodeVar(CodeVarNameT { name: "m" })) from inside a while loo
     );
 }
 
-// mig: fn cant_subscript_non_subscriptable_type
 #[test]
 fn cant_subscript_non_subscriptable_type() {
     let parse_bump = Bump::new();
@@ -3295,7 +3221,6 @@ Cannot subscript type: Weapon!
     );
 }
 
-// mig: fn humanize_errors
 #[test]
 fn humanize_errors() {
 
@@ -3467,7 +3392,6 @@ fn humanize_errors() {
         } }).is_empty());
 }
 
-// mig: fn report_when_multiple_types_in_array
 #[test]
 fn report_when_multiple_types_in_array() {
     let parse_bump = Bump::new();
@@ -3510,7 +3434,6 @@ Array's elements have different types: CoordT { ownership: Share, region: Region
     );
 }
 
-// mig: fn report_when_abstract_method_defined_outside_open_interface
 #[test]
 fn report_when_abstract_method_defined_outside_open_interface() {
     let parse_bump = Bump::new();
@@ -3548,7 +3471,6 @@ Open (non-sealed) interfaces can't have abstract methods defined outside the int
     );
 }
 
-// mig: fn report_when_imm_struct_has_varying_member
 #[test]
 fn report_when_imm_struct_has_varying_member() {
     let parse_bump = Bump::new();
@@ -3586,7 +3508,6 @@ Immutable struct ("Spaceship") cannot have varying member ("name").
     );
 }
 
-// mig: fn report_imm_mut_mismatch_for_generic_type
 #[test]
 fn report_imm_mut_mismatch_for_generic_type() {
     let parse_bump = Bump::new();
@@ -3620,7 +3541,6 @@ Immutable struct ("MyImmContainer") cannot have mutable member ("value").
     );
 }
 
-// mig: fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
 #[test]
 fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param() {
     let parse_bump = Bump::new();
@@ -3663,7 +3583,6 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
     coutputs.lookup_impl(my_struct.instantiated_citizen.id, interface.instantiated_interface.id);
 }
 
-// mig: fn report_when_imm_contains_varying_member
 #[test]
 fn report_when_imm_contains_varying_member() {
     let parse_bump = Bump::new();
@@ -3697,7 +3616,6 @@ Immutable struct ("Spaceship") cannot have varying member ("name").
     );
 }
 
-// mig: fn test_imm_array
 #[test]
 fn test_imm_array() {
     let parse_bump = Bump::new();
@@ -3737,7 +3655,6 @@ fn test_imm_array() {
     }
 }
 
-// mig: fn tests_calling_an_abstract_function
 #[test]
 fn tests_calling_an_abstract_function() {
     let parse_bump = Bump::new();
@@ -3769,7 +3686,6 @@ fn tests_calling_an_abstract_function() {
     }).unwrap();
 }
 
-// mig: fn test_struct_default_generic_argument_in_type
 #[test]
 fn test_struct_default_generic_argument_in_type() {
     let parse_bump = Bump::new();
@@ -3830,7 +3746,6 @@ fn test_struct_default_generic_argument_in_type() {
     }
 }
 
-// mig: fn lock_weak_member
 #[test]
 fn lock_weak_member() {
     let parse_bump = Bump::new();
@@ -3882,7 +3797,6 @@ fn lock_weak_member() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn tests_destructuring_shared_doesnt_compile_to_destroy
 #[test]
 fn tests_destructuring_shared_doesnt_compile_to_destroy() {
     let parse_bump = Bump::new();
@@ -3921,7 +3835,6 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
     assert_eq!(destroys.len(), 0);
 }
 
-// mig: fn generates_free_function_for_imm_struct
 #[test]
 fn generates_free_function_for_imm_struct() {
     let code = r#"
@@ -3946,7 +3859,6 @@ fn generates_free_function_for_imm_struct() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn reports_when_exported_ssa_depends_on_non_exported_element
 #[test]
 fn reports_when_exported_ssa_depends_on_non_exported_element() {
     let parse_bump = Bump::new();
@@ -3976,7 +3888,6 @@ Exported kind StaticArray<5, imm, final, Raza> depends on kind Raza that wasn't 
     );
 }
 
-// mig: fn reports_when_exported_rsa_depends_on_non_exported_element
 #[test]
 fn reports_when_exported_rsa_depends_on_non_exported_element() {
     let parse_bump = Bump::new();
@@ -4006,9 +3917,7 @@ Exported kind Array<imm, Raza> depends on kind Raza that wasn't exported from pa
     );
 }
 
-// mig: fn imm_generic_can_contain_imm_thing
 
-// mig: fn test_make_array
 #[test]
 fn test_make_array() {
     let parse_bump = Bump::new();
@@ -4039,7 +3948,6 @@ exported func main() int {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn test_array_push_pop_len_capacity_drop
 #[test]
 fn test_array_push_pop_len_capacity_drop() {
     let parse_bump = Bump::new();
@@ -4073,7 +3981,6 @@ fn test_array_push_pop_len_capacity_drop() {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
-// mig: fn upcast_generic
 #[test]
 fn upcast_generic() {
     let parse_bump = Bump::new();
@@ -4139,7 +4046,6 @@ fn upcast_generic() {
     );
 }
 
-// mig: fn downcast_function_rrbfs
 #[test]
 fn downcast_function_rrbfs() {
     // Here we had something interesting happen: the complex solve had a race with the thing that
@@ -4310,7 +4216,6 @@ fn downcast_function_rrbfs() {
 }
 
 // AFTERM: doublecheck this
-// mig: fn downcast_with_as
 #[test]
 fn downcast_with_as() {
     let parse_bump = Bump::new();
@@ -4613,7 +4518,6 @@ fn downcast_with_as() {
     }
 }
 
-// mig: fn closure_using_parent_function_s_bound
 #[test]
 fn closure_using_parent_function_s_bound() {
     let parse_bump = Bump::new();
@@ -4644,7 +4548,6 @@ fn closure_using_parent_function_s_bound() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn test_struct_default_generic_argument_in_call
 #[test]
 fn test_struct_default_generic_argument_in_call() {
     let parse_bump = Bump::new();
@@ -4705,7 +4608,6 @@ fn test_struct_default_generic_argument_in_call() {
     }
 }
 
-// mig: fn structs_can_resolve_other_structs_instantiation_bound_arguments
 #[test]
 fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
     // The definition of Marine<T> was trying to resolve the existence of func drop(int)void.

@@ -1,8 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/FunctionHammer.scala
-//
-// Per typing-pass `Compiler` precedent, `FunctionHammer` is not a Rust
-// struct. Methods become `impl Hammer { ... }` blocks colocated here.
-
 use std::collections::{HashMap, HashSet};
 use crate::final_ast::ast::FunctionRefH;
 use crate::final_ast::ast::IFunctionAttributeH;
@@ -18,8 +13,6 @@ use crate::instantiating::ast::expressions::ExpressionIE;
 use crate::simplifying::hammer::Locals;
 
 
-
-// mig: fn translate_functions
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -41,7 +34,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_function
     pub fn translate_function(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -85,7 +77,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_function_attributes
     pub fn translate_function_attributes(
         &self,
         attributes: &[IFunctionAttributeI<'s>],
@@ -100,7 +91,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_function_ref
     pub fn translate_function_ref(
         &self,
         hinputs: &HinputsI<'s, 'i>,

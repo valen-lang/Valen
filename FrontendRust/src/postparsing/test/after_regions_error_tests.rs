@@ -15,8 +15,6 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::test::traverse::NodeRefS;
 
 
-
-// mig: fn compile
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -38,7 +36,6 @@ where 'p: 's,
 }
 
 
-// mig: fn compile_for_error
 fn compile_for_error<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -59,7 +56,6 @@ where 'p: 's,
 }
 
 
-// mig: fn reports_when_non_kind_interface_in_impl
 #[test]
 fn reports_when_non_kind_interface_in_impl() {
   let parse_bump = Bump::new();
@@ -90,7 +86,6 @@ impl &IMoo for Moo;
 }
 
 
-// mig: fn reports_when_non_kind_struct_in_impl
 #[test]
 fn reports_when_non_kind_struct_in_impl() {
   let parse_bump = Bump::new();
@@ -121,7 +116,6 @@ impl IMoo for &Moo;
 }
 
 
-// mig: fn abstract_func_without_virtual
 #[test]
 fn abstract_func_without_virtual() {
   let parse_bump = Bump::new();
@@ -151,7 +145,6 @@ abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop
 }
 
 
-// mig: fn test_one_anonymous_param_lambda_identifying_runes
 #[test]
 fn test_one_anonymous_param_lambda_identifying_runes() {
   let parse_bump = Bump::new();

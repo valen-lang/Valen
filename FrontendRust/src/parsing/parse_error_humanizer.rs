@@ -19,7 +19,6 @@ impl ParseErrorHumanizer {
     )
   }
 
-  // Mirrors ParseErrorHumanizer.scala:humanize error messages
   fn get_error_message(err: &ParseError) -> &str {
     match err {
       ParseError::RangedInternalError { .. } => "Internal error",
@@ -100,7 +99,6 @@ impl ParseErrorHumanizer {
       ParseError::BadLambdaBegin(_) => "Bad lambda begin.",
       ParseError::BadLambdaBodyBegin(_) => "Bad lambda body begin.",
 
-      // Additional variants not in original Scala match - use default messages
       ParseError::BadNameBeforeDestructure(_) => "Bad name before destructure.",
       ParseError::BadLocalNameInUnlet(_) => "Bad local name in unlet.",
       ParseError::FoundBothAbstractAndOverride(_) => "Found both abstract and override.",

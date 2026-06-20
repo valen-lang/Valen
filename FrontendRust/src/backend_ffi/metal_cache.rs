@@ -65,22 +65,18 @@ pub struct VariableId<'cache>(NonNull<c_void>, PhantomData<&'cache ()>);
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Local<'cache>(NonNull<c_void>, PhantomData<&'cache ()>);
 
-/// Mirror of metal/types.h `enum class Mutability`.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Mutability { Immutable = 0, Mutable = 1 }
 
-/// Mirror of metal/types.h `enum class Variability`.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Variability { Final = 0, Varying = 1 }
 
-/// Mirror of metal/types.h `enum class Weakability`.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Weakability { Weakable = 0, NonWeakable = 1 }
 
-/// Mirror of metal/types.h `enum class Ownership` numeric encoding.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Ownership {
@@ -92,7 +88,6 @@ pub enum Ownership {
     ImmutableShare = 5,
 }
 
-/// Mirror of metal/types.h `enum class Location`.
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Location {

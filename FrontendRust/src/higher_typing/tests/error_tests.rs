@@ -22,7 +22,6 @@ use crate::scout_arena::ScoutArena;
 use crate::utils::range::CodeLocationS;
 
 
-// mig: fn compile_program_for_error
 fn compile_program_for_error<'s, 'ctx, 'p>(
     compilation: &mut HigherTypingCompilation<'s, 'ctx, 'p>,
 ) -> ICompileErrorA<'s> {
@@ -33,7 +32,6 @@ fn compile_program_for_error<'s, 'ctx, 'p>(
 }
 
 
-// mig: fn report_type_not_found
 #[test]
 fn report_type_not_found() {
     let parse_bump = bumpalo::Bump::new();
@@ -309,6 +307,5 @@ exported func main(a &Bork) {
         _ => panic!("expected CouldntSolveRules(...RuneTypingCouldntFindType(CodeNameS(\"Bork\")))"),
     }
 }
-
 
 

@@ -7,10 +7,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonBool;
 
-// mig: struct ConjunctionTests
 pub struct ConjunctionTests;
 
-// mig: fn and
 #[test]
 fn and() {
     let compilation_bump = bumpalo::Bump::new();
@@ -37,7 +35,6 @@ fn and() {
     }
 }
 
-// mig: fn or
 #[test]
 fn or() {
     let compilation_bump = bumpalo::Bump::new();
@@ -64,7 +61,6 @@ fn or() {
     }
 }
 
-// mig: fn and_short_circuiting
 #[test]
 fn and_short_circuiting() {
     let compilation_bump = bumpalo::Bump::new();
@@ -88,7 +84,6 @@ fn and_short_circuiting() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "bork!");
 }
 
-// mig: fn or_short_circuiting
 #[test]
 fn or_short_circuiting() {
     let compilation_bump = bumpalo::Bump::new();

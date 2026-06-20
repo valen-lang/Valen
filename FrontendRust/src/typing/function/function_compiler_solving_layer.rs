@@ -34,7 +34,6 @@ use std::iter::empty;
 use std::marker::PhantomData;
 
 
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -417,10 +416,6 @@ where 's: 't,
                 .chain(function.maybe_ret_coord_rune.map(|ru| ru.rune))
                 .collect();
 
-        // No MKRFA preprocessing needed: `function.rules` is declaration-scoped (same solver as
-        // the function's own generic params), so the postparser never emits RuneParentEnvLookupSR
-        // into it. If this site ever starts consuming expression-level rules, MKRFA preprocessing
-        // MUST be added — see OverloadResolver.scala:311 and docs/refactor-thoughts/mkrfa-protocol-leak.md.
         let mut solver = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
 

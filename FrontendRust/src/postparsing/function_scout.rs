@@ -59,9 +59,6 @@ pub enum IFunctionParent<'s>
 }
 
 
-
-
-// mig: struct ParentCitizen
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParentCitizen<'s> {
   pub citizen_is_interface: bool,
@@ -70,7 +67,6 @@ pub struct ParentCitizen<'s> {
   pub citizen_rules: Vec<IRulexSR<'s>>,
   pub citizen_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
 }
-
 
 
 impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
@@ -1067,11 +1063,6 @@ fn create_magic_parameters(
       locals: self.scout_arena.alloc_slice_from_vec(combined_locals),
       expr: block1.expr,
     });
-    // V: tell me about the above change?
-    // VA: This is a faithful translation of Scala's `BlockSE(bodyRangeS, block1.locals ++ magicParamLocals, block1.expr)`.
-    // VA: It re-allocates BlockSE with combined locals (original + magic params) into the arena. Not novel logic.
-    // VA: One minor divergence: Rust uses block1.range (already computed) while Scala uses bodyRangeS
-    // VA: (a fresh evalRange(body0.range)). They likely resolve to the same value but the source differs.
     let all_uses = self_uses.then_merge(&child_uses);
     let uses_of_parent_variables = all_uses
       .uses

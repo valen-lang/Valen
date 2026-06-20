@@ -32,9 +32,6 @@ pub struct ProgramS<'s> {
   pub imports: &'s [&'s ImportS<'s>],
 }
 
-// V: lets make sure equals and hashCode are mentioned in the shields as exceptions.
-// V: lets combine the various "must match scala" shields
-// VA: (these are process/shield-editing tasks, not code questions — not investigated here)
 
 impl<'s> ProgramS<'s> {
   pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'s> {
@@ -84,7 +81,6 @@ pub enum ICitizenAttributeS<'s> {
   MacroCall(MacroCallS<'s>),
   Export(ExportS<'s>),
 }
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -267,7 +263,6 @@ impl<'s> IStructMemberS<'s> {
 }
 
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NormalStructMemberS<'s> {
   pub range: RangeS<'s>,
@@ -382,7 +377,6 @@ pub fn struct_s_name<'s>(struct_s: &StructS<'s>) -> TopLevelCitizenDeclarationNa
 }
 
 
-
 #[derive(Debug, PartialEq)]
 pub struct ParameterS<'s> {
   pub range: RangeS<'s>,
@@ -420,7 +414,6 @@ pub enum IBodyS<'s> {
   GeneratedBody(GeneratedBodyS<'s>),
   CodeBody(CodeBodyS<'s>),
 }
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -466,8 +459,6 @@ impl<'s> IGenericParameterTypeS<'s> {
       _ => panic!("Expected region generic parameter type"),
     }
   }
-  
-
   
 
   pub fn tyype(&self) -> ITemplataType<'s> {
@@ -534,8 +525,6 @@ pub struct GenericParameterS<'s> {
   pub tyype: IGenericParameterTypeS<'s>,
   pub default: Option<GenericParameterDefaultS<'s>>,
 }
-
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -699,7 +688,6 @@ pub struct LocationInDenizen<'x> {
 }
 
 
-
 /// Borrowed view of a LocationInDenizen path, for use as an intern lookup key.
 /// Per @DSAUIMZ, fields are private to prevent pre-allocation.
 /// Only constructible via LocationInDenizenBuilder::borrow_val().
@@ -766,7 +754,6 @@ pub struct TopLevelFunctionS<'s> {
 }
 
 
-
 #[derive(Debug, PartialEq)]
 pub struct TopLevelImplS<'s> {
   pub impl_: ImplS<'s>,
@@ -783,8 +770,6 @@ pub struct TopLevelExportAsS<'s> {
 pub struct TopLevelImportS<'s> {
   pub imporrt: ImportS<'s>,
 }
-
-
 
 
 #[derive(Debug, PartialEq)]
@@ -806,7 +791,6 @@ impl<'s> ICitizenDenizenS<'s> {
 pub fn as_citizen_denizen<'s>(_x: &IDenizenS<'s>) -> Option<ICitizenDenizenS<'s>> {
   panic!("as_citizen_denizen is dead code")
 }
-
 
 
 #[derive(Debug, PartialEq)]

@@ -7,15 +7,12 @@ use crate::tests::tests::load_expected;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct AfterRegionsIntegrationTests
 pub struct AfterRegionsIntegrationTests;
 
-// mig: fn todo
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn todo() { panic!("Unmigrated test: todo"); }
 
-// mig: fn test_returning_empty_seq
 #[test]
 fn test_returning_empty_seq() {
     let compilation_bump = bumpalo::Bump::new();
@@ -46,12 +43,10 @@ exported func main() () {
     compile.run_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn map_function
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn map_function() { panic!("Unmigrated test: map_function"); }
 
-// mig: fn imm_tuple_access
 #[test]
 fn imm_tuple_access() {
     let compilation_bump = bumpalo::Bump::new();
@@ -79,7 +74,6 @@ fn imm_tuple_access() {
     }
 }
 
-// mig: fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface
 #[test]
 fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() {
     // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
@@ -154,17 +148,14 @@ exported func main() int {
     }
 }
 
-// mig: fn test_overload_set
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
 
-// mig: fn pass_overload_set_into_placeholder_parameter_posipp
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated test: pass_overload_set_into_placeholder_parameter_posipp"); }
 
-// mig: fn upcasting_in_a_generic_function
 #[test]
 #[ignore = "ignored upstream in Scala (see audit comment): pending CoordT redesign — make CoordT contain a placeholder and move Ownership to a generic param so the return type's ownership is calculated from the parameter"]
 fn upcasting_in_a_generic_function() {
@@ -218,12 +209,10 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn diff_iter
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn diff_iter() { panic!("Unmigrated test: diff_iter"); }
 
-// mig: fn call_array_without_element_type
 #[test]
 fn call_array_without_element_type() {
     let compilation_bump = bumpalo::Bump::new();
@@ -257,7 +246,6 @@ exported func main() int {
     }
 }
 
-// mig: fn make_array_without_type
 #[test]
 fn make_array_without_type() {
     let compilation_bump = bumpalo::Bump::new();
@@ -291,7 +279,6 @@ exported func main() int {
     }
 }
 
-// mig: fn borrowing_to_array
 #[test]
 fn borrowing_to_array() {
     let compilation_bump = bumpalo::Bump::new();
@@ -332,7 +319,6 @@ exported func main() int {
     }
 }
 
-// mig: fn infinite_lambda_call
 #[test]
 #[ignore = "ignored upstream in Scala"]
 fn infinite_lambda_call() { panic!("Unmigrated test: infinite_lambda_call"); }

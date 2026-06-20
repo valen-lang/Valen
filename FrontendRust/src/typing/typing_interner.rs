@@ -19,8 +19,6 @@ use crate::typing::ast::ast::{
     PrototypeT, PrototypeValQuery, PrototypeValT, SignatureT, SignatureValQuery, SignatureValT,
 };
 use crate::typing::names::names::*;
-// Templata payload interner removed; types are TFITCX Value-type per Scala parity
-// and constructed directly via `bump.alloc(FooTemplataT { ... })` at call sites.
 use crate::typing::types::types::{
     InterfaceTT, InterfaceTTValT, InternedKindPayloadT, InternedKindPayloadValT, KindPlaceholderT,
     OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT,
@@ -28,10 +26,6 @@ use crate::typing::types::types::{
 };
 use std::hash::Hash;
 
-// 6-family HashMap design mirroring scout_arena.rs. Values with subcollections
-// or that need to fit behind &'t in a Copy enum are interned here (see @WVSBIZ).
-// Per-concrete intern methods are thin wrappers that dispatch through the
-// family method and unwrap the result.
 /// Temporary state (see @TFITCX)
 pub struct TypingInterner<'s, 't>
 where 's: 't,
@@ -43,9 +37,6 @@ where 's: 't,
 struct Inner<'s, 't>
 where 's: 't,
 {
-    // 5 family-level HashMaps. Family 6 (templata payload) was removed once the
-    // Templata family was reclassified Value-type per Scala parity — those types
-    // are now constructed directly via `bump.alloc(...)` at call sites.
     name_val_to_ref: hashbrown::HashMap<INameValT<'s, 't, 't>, INameT<'s, 't>>,
     id_val_to_ref: hashbrown::HashMap<IdValT<'s, 't, 't>, &'t IdT<'s, 't>>,
     prototype_val_to_ref: hashbrown::HashMap<PrototypeValT<'s, 't, 't>, &'t PrototypeT<'s, 't>>,
@@ -560,10 +551,5 @@ where 's: 't,
     impl_intern_kind_wrapper!(intern_kind_placeholder, KindPlaceholder, KindPlaceholderT, KindPlaceholderT);
     impl_intern_kind_wrapper!(intern_overload_set, OverloadSet, OverloadSetTValT, OverloadSetT);
 
-    // (Templata payload wrappers removed — types are TFITCX Value-type per
-    // Scala parity and constructed directly via `bump.alloc(FooTemplataT { ... })`.)
 }
 
-// KindT and ITemplataT are inline-owned (not arena-interned), so they have no
-// Val companions and no intern methods. See the "reuse struct as Val" comment
-// in types/types.rs for the per-concrete-payload story.

@@ -1,16 +1,5 @@
 
 
-// Test-only traversal helper for the final_ast (H-side) pass. Mirrors
-// `src/typing/test/traverse.rs` and `src/postparsing/test/traverse.rs`.
-//
-// Scala uses `Collector.only` (in `Frontend/Utils/.../Collector.scala`) which walks
-// arbitrary case-class trees via `Product.productIterator` runtime reflection. Rust
-// can't replicate that ergonomically, so this file enumerates the final_ast with a
-// `NodeRefH` enum, hand-written `visit_*` walkers, and `collect_only_*` /
-// `collect_where_*` macros that compile a pattern down to predicate-based collection.
-//
-// No Scala counterpart — pure scaffolding (same as the typing/postparsing precedents).
-
 use crate::final_ast::ast::{
     EdgeH, FunctionH, IdH, InterfaceDefinitionH, InterfaceMethodH, PackageH, ProgramH, PrototypeH,
     StructDefinitionH, StructMemberH,

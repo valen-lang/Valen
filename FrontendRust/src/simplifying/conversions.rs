@@ -1,4 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/Conversions.scala
 #[allow(unused_imports)]
 use crate::utils::range::CodeLocationS;
 #[allow(unused_imports)]
@@ -8,14 +7,12 @@ use crate::final_ast::types::{CodeLocation, Mutability, Variability, OwnershipH,
 #[allow(unused_imports)]
 use crate::postparsing::itemplatatype::ITemplataType;
 
-// mig: fn evaluate_code_location
 pub fn evaluate_code_location(loc: CodeLocationS) -> CodeLocation {
     panic!("Unimplemented: evaluate_code_location");
     // val CodeLocationS(line, col) = loc
     // finalast.CodeLocation(line, col)
 }
 
-// mig: fn evaluate_mutability
 pub fn evaluate_mutability(mutability: MutabilityI) -> Mutability {
     match mutability {
         MutabilityI::Mutable => Mutability::Mutable,
@@ -23,7 +20,6 @@ pub fn evaluate_mutability(mutability: MutabilityI) -> Mutability {
     }
 }
 
-// mig: fn evaluate_mutability_templata
 pub fn evaluate_mutability_templata(mutability: MutabilityI) -> Mutability {
     match mutability {
         MutabilityI::Mutable => Mutability::Mutable,
@@ -31,7 +27,6 @@ pub fn evaluate_mutability_templata(mutability: MutabilityI) -> Mutability {
     }
 }
 
-// mig: fn evaluate_variability_templata
 pub fn evaluate_variability_templata(mutability: VariabilityI) -> Variability {
     match mutability {
         VariabilityI::Varying => Variability::Varying,
@@ -39,13 +34,11 @@ pub fn evaluate_variability_templata(mutability: VariabilityI) -> Variability {
     }
 }
 
-// mig: fn evaluate_location
 pub fn evaluate_location(location: LocationI) -> LocationH {
     panic!("Unimplemented: evaluate_location");
     // location match { case InlineI => InlineH; case YonderI => YonderH }
 }
 
-// mig: fn evaluate_variability
 pub fn evaluate_variability(variability: VariabilityI) -> Variability {
     match variability {
         VariabilityI::Final => Variability::Final,
@@ -53,7 +46,6 @@ pub fn evaluate_variability(variability: VariabilityI) -> Variability {
     }
 }
 
-// mig: fn evaluate_ownership
 pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
     match ownership {
         OwnershipI::Own => OwnershipH::OwnH,
@@ -65,7 +57,6 @@ pub fn evaluate_ownership(ownership: OwnershipI) -> OwnershipH {
     }
 }
 
-// mig: fn unevaluate_templata_type
 pub fn unevaluate_templata_type(tyype: ITemplataType) -> ITemplataType {
     panic!("Unimplemented: unevaluate_templata_type");
     // tyype match {

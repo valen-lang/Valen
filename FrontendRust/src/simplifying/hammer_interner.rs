@@ -1,16 +1,4 @@
 
-// Mirrors src/instantiating/instantiating_interner.rs (per Slab 17 plan).
-//
-// Scaled down from instantiating's 3-region-mode (sI/nI/cI) design to a
-// single-region-mode design: by the time data reaches H-side it's already
-// region-collapsed, so there is no `R` parameter and one HashMap per
-// logical interned type suffices. Lifetime convention: `<'s, 'h>` with
-// `where 's: 'h`.
-//
-// Slab 17 Phase 2: 5 intern families wired = kind-payload (1 family with
-// 4 logical types) + prototype. IdH interning deferred until IdH gets real
-// fields (bare-placeholder for now, same precedent as IdI in instantiating).
-
 use std::cell::RefCell;
 use std::collections::HashMap as StdHashMap;
 

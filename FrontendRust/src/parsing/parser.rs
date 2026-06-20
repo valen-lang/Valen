@@ -17,11 +17,8 @@ use crate::parse_arena::ParseArena;
 use std::collections::HashSet;
 
 
-
 type ParseResult<T> = Result<T, ParseError>;
 
-/// Main parser coordinating all parsing operations
-/// Matches Scala's Parser class
 pub struct Parser<'p, 'ctx> {
   // VV: crate::
   parse_arena: &'ctx ParseArena<'p>,
@@ -357,7 +354,6 @@ where
   }
 
   
-
   /// Parse an interface definition
   pub fn parse_interface(&self, interface_l: InterfaceL<'p>) -> ParseResult<InterfaceP<'p>> {
     let InterfaceL {
@@ -429,9 +425,7 @@ where
   }
 
   
-
   /// Parse an impl block
-  /// Mirrors Parser.parseImpl in Parser.scala lines 397-461
   pub fn parse_impl(&self, impl_l: ImplL<'p>) -> ParseResult<ImplP<'p>> {
     let ImplL {
       range: impl_range,
@@ -505,14 +499,11 @@ where
   }
 
 
-
   /// Parse an export-as declaration
-  /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
   pub fn parse_export_as(&self, export_l: ExportAsL<'p>) -> ParseResult<ExportAsP<'p>> {
     let mut iter = ScrambleIterator::new(&export_l.contents);
 
     // Try to find "as" keyword and get everything before it
-    // Mirrors ParseUtils.trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
     let exportee = {
       let mut scouting_iter = iter.clone();
       let mut found_as = false;
@@ -569,7 +560,6 @@ where
   
 
   /// Parse an import declaration
-  /// Mirrors Parser.parseImport in Parser.scala lines 499-516
   pub fn parse_import(&self, import_l: ImportL<'p>) -> ParseResult<ImportP<'p>> {
     let ImportL {
       range,
@@ -624,7 +614,6 @@ where
         range,
         maybe_custom_name,
       } => {
-        // Mirrors Parser.scala parseAttribute handling of ExternAttribute
         match maybe_custom_name {
           None => Ok(IAttributeP::ExternAttribute(ExternAttributeP { range })),
           Some(parend) => {
@@ -664,7 +653,6 @@ where
   
 
   /// Parse a function
-  /// Mirrors Parser.parseFunction in Parser.scala lines 552-654
   pub fn parse_function(
     &self,
     func_l: FunctionL<'p>,
@@ -726,12 +714,10 @@ where
     let (trailing_details_with_return_and_where, maybe_default_region) =
       self.parse_body_default_region(original_trailing_details_l.clone());
 
-    // Mirrors Parser.scala lines 582-618
     // TODO: simplify this. It's really just trying to split on "where".
     let mut return_and_where_iter =
       ScrambleIterator::new(&trailing_details_with_return_and_where);
 
-    // Mirrors Parser.scala lines 584-589
     let (maybe_return_iter, return_end_pos, maybe_rules_iter) =
       match try_skip_past_keyword_while(&mut return_and_where_iter, self.keywords.r#where, |it| {
         it.has_next()
@@ -751,7 +737,6 @@ where
         ),
       };
 
-    // Mirrors Parser.scala lines 591-602
     let return_begin_pos = trailing_details_with_return_and_where.range.begin();
     let maybe_return_type_p = if let Some(mut return_iter) = maybe_return_iter {
       if return_iter.has_next() {
@@ -763,13 +748,11 @@ where
       None
     };
 
-    // Mirrors Parser.scala line 603
     let return_p = FunctionReturnP {
       range: RangeL(return_begin_pos, return_end_pos),
       ret_type: maybe_return_type_p,
     };
 
-    // Mirrors Parser.scala lines 605-618
     let maybe_rules_p = maybe_rules_iter
       .map(|rules_iter| {
         let _begin = rules_iter.get_pos();
@@ -837,7 +820,6 @@ where
   
 
   /// Parse body default region from trailing details
-  /// Mirrors Parser.parseBodyDefaultRegion in Parser.scala lines 660-691
   fn parse_body_default_region(
     &self,
     input_scramble: ScrambleLE<'p>,
@@ -848,11 +830,6 @@ where
 
     let _last_two = &input_scramble.elements[input_scramble.elements.len() - 2..];
 
-    // Mirrors Parser.scala parseBodyDefaultRegion lines 669-679
-    // The Scala code checks:
-    // - Vector(SymbolLE(_, '\'')) => anonymous region (ONE element: just ')
-    // - Vector(WordLE(...), SymbolLE(_, '\'')) => named region (TWO elements: word then ')
-    // So we need to check the length of elements, not just the last two
     let default_region = match input_scramble.elements.len() {
       1 => {
         // Check if it's just a single apostrophe
@@ -920,7 +897,6 @@ where
 }
 
 
-// From Parser.scala lines 699-854: ParserCompilation class
 // 'p: interner
 // 'p: parsed arena (parsed data outlives 'p; interner outlives parsed)
 // Arena is passed in by reference, caller owns it
@@ -940,7 +916,6 @@ where
 {
   
 
-  // From Parser.scala lines 699-706
   pub fn new(
     opts: GlobalOptions,
     parse_arena: &'ctx ParseArena<'p>,
@@ -960,8 +935,6 @@ where
     }
   }
 
-  // From Parser.scala lines 708-773: loadAndParse
-  // From Parser.scala lines 708-773: loadAndParse
   fn load_and_parse(
     &self,
     needed_packages: &[&'p PackageCoordinate<'p>],
@@ -973,7 +946,6 @@ where
     ),
     FailedParse<'p>,
   > {
-    // From Parser.scala line 712: Check for duplicates
     let unique_packages: HashSet<_> = needed_packages.iter().collect();
     assert!(
       unique_packages.len() == needed_packages.len(),
@@ -981,12 +953,10 @@ where
       needed_packages
     );
 
-    // From Parser.scala lines 714-715
     let mut found_code_map: FileCoordinateMap<'p, String> = FileCoordinateMap::<String>::new();
     let mut parsed_map: FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> =
       FileCoordinateMap::new();
 
-    // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
     let parser = Parser::new(self.parse_arena, self.keywords);
     let resolver_fn = |package_coord: &'p PackageCoordinate<'p>| resolver.resolve(package_coord);
     parse_and_explore::parse_and_explore(
@@ -998,7 +968,6 @@ where
             &resolver_fn,
             |_file_coord, _code, _imports, denizen| denizen,
             |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
-                // From Parser.scala lines 756-766
                 found_code_map.put(file_coord, code.to_string());
                 let comments_slice = self.parse_arena.alloc_slice_copy(comment_ranges);
                 let denizens_slice = self.parse_arena.alloc_slice_from_vec(denizens);
@@ -1008,25 +977,20 @@ where
                     denizens: denizens_slice,
                 };
 
-                // From Parser.scala line 766
                 parsed_map.put(file_coord, (file, comment_ranges.to_vec()));
             },
         ).map_err(|e| e)?;
 
-    // From Parser.scala line 772
     Ok((found_code_map, parsed_map))
   }
   
 
-  
-  // From Parser.scala lines 779-784: getCodeMap
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.get_parseds()?;
     Ok(self.code_map_cache.clone().unwrap())
   }
   
 
-  // From Parser.scala lines 785-787: expectCodeMap
   pub fn expect_code_map(&self) -> FileCoordinateMap<'p, String> {
     self
       .code_map_cache
@@ -1034,7 +998,6 @@ where
       .expect("code_map_cache should be populated")
   }
 
-  // From Parser.scala lines 789-816: getParseds
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     if let Some(ref parseds) = self.parseds_cache {
       return Ok(parseds.clone());
@@ -1050,7 +1013,6 @@ where
   }
   
 
-  // From Parser.scala lines 818-826: expectParseds
   pub fn expect_parseds(&mut self) -> FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)> {
     match self.get_parseds() {
       Err(FailedParse {
@@ -1068,18 +1030,16 @@ where
   }
   
 
-  // From Parser.scala lines 829-846: getVpstMap
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     if let Some(ref vpst) = self.vpst_map_cache {
       return Ok(vpst.clone());
     }
 
     let _parseds = self.get_parseds()?;
-    panic!("ParserCompilation.get_vpst_map not yet fully implemented - need to vonify and print. See Parser.scala lines 829-846")
+    panic!("ParserCompilation.get_vpst_map not yet fully implemented - need to vonify and print")
   }
   
 
-  // From Parser.scala lines 849-851: expectVpstMap
   pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<'p, String> {
     self.get_vpst_map().expect("getVpstMap should succeed")
   }
@@ -1114,7 +1074,6 @@ where
   }
   
 
-  /// Parse optional region marker - delegates to shared parse_region (Parser.parseRegion in Scala)
   fn parse_region(
     &self,
     original_iter: &mut ScrambleIterator<'p, '_>,

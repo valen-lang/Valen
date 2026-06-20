@@ -12,9 +12,6 @@ use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
 
-// (Scala `class SameInstanceMacro(keywords)` absorbed onto `Compiler`; the
-//  method body lives at `Compiler::generate_function_body_same_instance` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

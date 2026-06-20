@@ -16,10 +16,6 @@ use std::ptr::eq;
 use std::ptr::hash;
 
 
-
-// Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md`. Scala's
-// `IdT[+T <: INameT]` phantom outer parameter is erased in Rust — callers
-// pattern-match on `local_name` at the point they need narrowing.
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct IdT<'s, 't>
@@ -121,9 +117,6 @@ impl<'s, 't> IdT<'s, 't> {
     
 }
 
-// (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
-// and init_steps slice (canonicalized by the typing interner per IDEPFL),
-// structural compare on local_name (inline-owned INameT).)
 impl<'s, 't> Hash for IdT<'s, 't>
 where 's: 't,
 {
@@ -148,9 +141,6 @@ where 's: 't,
     }
 }
 impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
-// Widen/narrow conversion methods removed with the move to monomorphic IdT.
-// Callers that need a specific leaf-name pattern-match on `local_name` directly,
-// like Scala does. See `docs/reasoning/idt-typed-view-alternatives.md`.
 
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -229,11 +219,6 @@ pub enum INameT<'s, 't> {
     CallEnv(&'t CallEnvNameT),
 }
 
-// (Rust adaptation: Scala expression `idT.localName.parameters` works
-// because Scala types `localName` as `IFunctionNameT` via `IdT[IFunctionNameT]`'s
-// type parameter. Rust's `IdT.local_name: INameT` loses that narrowing, so we
-// expose `parameters()` on the broad enum and panic for non-function variants.
-// Same shape as `PrototypeT::param_types` at ast.rs:1020.)
 impl<'s, 't> INameT<'s, 't> where 's: 't {
     pub fn parameters(&self) -> &'t [CoordT<'s, 't>] {
         match self {
@@ -291,8 +276,6 @@ pub enum IFunctionTemplateNameT<'s, 't> {
     AnonymousSubstructConstructorTemplate(&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>),
 }
 
-// Scala trait method: def makeFunctionName(...): IFunctionNameT
-// Each variant overrides — see names.scala lines 265, 345, 376, 400, 415, 424, 441, 487, 666
 impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
   pub fn make_function_name(
     &self,
@@ -363,12 +346,6 @@ impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
     }
   }
   
-// Proactive dispatch method (TL.md "Proactively Add Inherited Dispatch
-// Methods"): Scala accesses `template.humanName` on IFunctionTemplateNameT
-// at InferCompiler.scala:314 and elsewhere. Most concrete subtypes carry a
-// `humanName: StrI` field; the few that don't (OverrideDispatcher,
-// LambdaCallFunction, Constructor, AnonymousSubstructConstructor) panic
-// until a test path requires them.
   pub fn human_name(&self) -> StrI<'s> {
     match self {
       IFunctionTemplateNameT::FunctionTemplate(x) => x.human_name,
@@ -376,10 +353,10 @@ impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
       IFunctionTemplateNameT::PredictedFunctionTemplate(x) => x.human_name,
       IFunctionTemplateNameT::ExternFunction(x) => x.human_name,
       IFunctionTemplateNameT::ForwarderFunctionTemplate(x) => x.inner.human_name(),
-      IFunctionTemplateNameT::OverrideDispatcherTemplate(_) => panic!("Unimplemented: human_name on OverrideDispatcherTemplate (no humanName field in Scala)"),
-      IFunctionTemplateNameT::LambdaCallFunctionTemplate(_) => panic!("Unimplemented: human_name on LambdaCallFunctionTemplate (no humanName field in Scala)"),
-      IFunctionTemplateNameT::ConstructorTemplate(_) => panic!("Unimplemented: human_name on ConstructorTemplate (no humanName field in Scala)"),
-      IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(_) => panic!("Unimplemented: human_name on AnonymousSubstructConstructor (no humanName field in Scala)"),
+      IFunctionTemplateNameT::OverrideDispatcherTemplate(_) => panic!("Unimplemented: human_name on OverrideDispatcherTemplate"),
+      IFunctionTemplateNameT::LambdaCallFunctionTemplate(_) => panic!("Unimplemented: human_name on LambdaCallFunctionTemplate"),
+      IFunctionTemplateNameT::ConstructorTemplate(_) => panic!("Unimplemented: human_name on ConstructorTemplate"),
+      IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(_) => panic!("Unimplemented: human_name on AnonymousSubstructConstructor"),
     }
   }
   
@@ -420,26 +397,14 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
             IInstantiationNameT::RuntimeSizedArray(x) => ITemplateNameT::RuntimeSizedArrayTemplate(x.template),
             IInstantiationNameT::KindPlaceholder(x) => ITemplateNameT::KindPlaceholderTemplate(x.template),
             IInstantiationNameT::OverrideDispatcher(x) => ITemplateNameT::OverrideDispatcherTemplate(x.template),
-            // Scala: `override def template: ITemplateNameT = this`. The
-            // OverrideDispatcherCaseNameT extends both IInstantiationNameT
-            // and ITemplateNameT, so it is its own template — Rust's wide
-            // ITemplateNameT enum carries an `OverrideDispatcherCase` variant
-            // that wraps the same `&'t OverrideDispatcherCaseNameT` payload.
             IInstantiationNameT::OverrideDispatcherCase(x) => ITemplateNameT::OverrideDispatcherCase(x),
             IInstantiationNameT::Extern(x) => ITemplateNameT::ExternTemplate(x.template),
-            // Scala: `override def template: IFunctionTemplateNameT = this`.
-            // ExternFunctionNameT extends both IFunctionNameT and
-            // IFunctionTemplateNameT, so it is its own template — Rust's wide
-            // ITemplateNameT enum carries an `ExternFunction` variant.
             IInstantiationNameT::ExternFunction(x) => ITemplateNameT::ExternFunction(x),
             IInstantiationNameT::Function(x) => ITemplateNameT::FunctionTemplate(x.template),
             IInstantiationNameT::ForwarderFunction(x) => ITemplateNameT::ForwarderFunctionTemplate(x.template),
             IInstantiationNameT::FunctionBound(x) => ITemplateNameT::FunctionBoundTemplate(x.template),
             IInstantiationNameT::PredictedFunction(x) => ITemplateNameT::PredictedFunctionTemplate(x.template),
             IInstantiationNameT::LambdaCallFunction(x) => ITemplateNameT::LambdaCallFunctionTemplate(x.template),
-            // Scala: `template: IStructTemplateNameT` (covariant override
-            // narrowing the trait's `ITemplateNameT` return). Rust flattens
-            // IStructTemplateNameT's three variants into ITemplateNameT.
             IInstantiationNameT::Struct(x) => match x.template {
                 IStructTemplateNameT::StructTemplate(t) => ITemplateNameT::StructTemplate(t),
                 IStructTemplateNameT::LambdaCitizenTemplate(t) => ITemplateNameT::LambdaCitizenTemplate(t),
@@ -626,8 +591,6 @@ pub enum IStructTemplateNameT<'s, 't> {
     AnonymousSubstructTemplate(&'t AnonymousSubstructTemplateNameT<'s, 't>),
 }
 
-// Scala trait method: def makeStructName(...): IStructNameT
-// Overrides: LambdaCitizenTemplate (line 569), StructTemplate (line 618), AnonymousSubstructTemplate (line 659)
 impl<'s, 't> IStructTemplateNameT<'s, 't> where 's: 't {
   pub fn make_struct_name(
     &self,
@@ -663,8 +626,6 @@ pub enum IInterfaceTemplateNameT<'s, 't> {
     InterfaceTemplate(&'t InterfaceTemplateNameT<'s>),
 }
 
-// Scala trait method: def makeInterfaceName(...): IInterfaceNameT
-// Override: InterfaceTemplate (line 632)
 impl<'s, 't> IInterfaceTemplateNameT<'s, 't> where 's: 't {
   pub fn make_interface_name(
     &self,
@@ -849,8 +810,6 @@ pub enum IImplTemplateNameT<'s, 't> {
     AnonymousSubstructImplTemplate(&'t AnonymousSubstructImplTemplateNameT<'s, 't>),
 }
 
-// Scala trait method: def makeImplName(...): IImplNameT
-// Overrides: ImplTemplate (line 160), ImplBoundTemplate (line 175), AnonymousSubstructImplTemplate (line 643)
 impl<'s, 't> IImplTemplateNameT<'s, 't> where 's: 't {
   pub fn make_impl_name(
     &self,
@@ -910,7 +869,7 @@ impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
     
 }
 
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// TODO: placeholder PhantomData — replace with real fields
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IRegionNameT<'s, 't> { _Phantom(PhantomData<(&'s (), &'t ())>) }
@@ -956,7 +915,6 @@ pub struct ImplBoundNameT<'s, 't> {
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub _must_intern: MustIntern,
 }
-
 
 
 /// Interned (see @TFITCX)
@@ -1397,20 +1355,11 @@ pub struct ForwarderFunctionTemplateNameT<'s, 't> {
 }
 
 
-
-
-
-
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructorTemplateNameT<'s> {
     pub code_location: CodeLocationS<'s>,
 }
-
-
-
-
-
 
 
 /// Interned (see @TFITCX)
@@ -1545,19 +1494,6 @@ pub struct ResolvingEnvNameT {
 pub struct CallEnvNameT {
 }
 
-
-// ============================================================================
-// From / TryFrom bridges between sub-enums and concrete names.
-//
-// No Scala counterpart — Scala's sealed-trait hierarchy handled all of these
-// implicitly. Rust needs them spelled out.
-//
-// - From<&'t XxxNameT> for IYyyNameT  — wrap a concrete ref as a sub-enum.
-// - From<&'t INarrowT> for IWideT     — upcast a narrow sub-enum to a wider one.
-// - TryFrom<&'t INameT> for &'t IYyyNameT — narrow (arena ref) form; panic
-//   stub per handoff §6.3 Gotcha — this path requires TypingInterner to intern
-//   the narrower sub-enum, which is Slab 3+ work (intern_* are still `panic!()`).
-// ============================================================================
 
 // -- Concrete → INameT -------------------------------------------------------
 impl<'s, 't> From<&'t ExportTemplateNameT<'s>> for INameT<'s, 't> {
@@ -2824,7 +2760,7 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
 }
 
 // ============================================================================
-// IDEPFL *ValT companion types (Slab 2 Step 6).
+// IDEPFL *ValT companion types.
 //
 // The typing interner canonicalizes each concrete name struct — two
 // structurally-equivalent values share the same `&'t XxxNameT` arena
@@ -3185,10 +3121,9 @@ transient_name_val_impls!(AnonymousSubstructNameValT, AnonymousSubstructNameValQ
 // ============================================================================
 // INameValT — the union Val enum for the name-interning family.
 //
-// Per handoff-slab-4.md Gotcha 2 (6-family-map design mirroring scout's
-// INameValS/INameS). One variant per concrete name in INameT. For simple names
-// the variant payload is the concrete struct by value; for transient names
-// (15, carrying slices) the payload is the concrete `*ValT` struct.
+// One variant per concrete name in INameT. For simple names the variant payload
+// is the concrete struct by value; for transient names (15, carrying slices)
+// the payload is the concrete `*ValT` struct.
 //
 // Hash is derived (content-based; iterates slice contents). Query wrapper
 // provides heterogeneous lookup (`'tmp` → `'t`) via Equivalent.

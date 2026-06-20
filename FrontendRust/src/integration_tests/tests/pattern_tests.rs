@@ -24,11 +24,9 @@ use crate::typing::types::types::RegionT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-// mig: struct PatternTests
 pub struct PatternTests;
 
 
-// mig: fn test_matching_a_multiple_member_seq_of_immutables
 #[test]
 fn test_matching_a_multiple_member_seq_of_immutables() {
     let compilation_bump = bumpalo::Bump::new();
@@ -66,7 +64,6 @@ fn test_matching_a_multiple_member_seq_of_immutables() {
 }
 
 
-// mig: fn test_matching_a_multiple_member_seq_of_mutables
 #[test]
 fn test_matching_a_multiple_member_seq_of_mutables() {
     let compilation_bump = bumpalo::Bump::new();
@@ -107,7 +104,6 @@ exported func main() int { [x, y] = (Marine(6), Marine(8)); return y.hp; }
 }
 
 
-// mig: fn test_matching_a_multiple_member_pack_of_immutable_and_own
 #[test]
 fn test_matching_a_multiple_member_pack_of_immutable_and_own() {
     let compilation_bump = bumpalo::Bump::new();
@@ -134,7 +130,6 @@ exported func main() int { [x, y] = (7, Marine(8)); return y.hp; }
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        // BUG: Scala uses `==` (a pure expression with discarded result) instead of `shouldEqual`; the assertion is dead.
         let _ = coutputs.functions[0].header.return_type == CoordT {
             ownership: OwnershipT::Share,
             region: RegionT { region: IRegionT::Default },
@@ -148,7 +143,6 @@ exported func main() int { [x, y] = (7, Marine(8)); return y.hp; }
 }
 
 
-// mig: fn test_matching_a_multiple_member_pack_of_immutable_and_borrow
 #[test]
 fn test_matching_a_multiple_member_pack_of_immutable_and_borrow() {
     let compilation_bump = bumpalo::Bump::new();
@@ -179,7 +173,6 @@ exported func main() int {
     );
     {
         let coutputs = compile.expect_compiler_outputs();
-        // BUG: Scala uses `==` (a pure expression with discarded result) instead of `shouldEqual`; the assertion is dead.
         let _ = coutputs.functions[0].header.return_type == CoordT {
             ownership: OwnershipT::Share,
             region: RegionT { region: IRegionT::Default },
@@ -227,7 +220,6 @@ exported func main() int {
 }
 
 
-// mig: fn test_destructuring_a_shared
 #[test]
 fn test_destructuring_a_shared() {
     let compilation_bump = bumpalo::Bump::new();
@@ -266,8 +258,6 @@ exported func main() int {
 }
 
 
-
-// mig: fn ignore_destructure
 #[test]
 fn ignore_destructure() {
     let compilation_bump = bumpalo::Bump::new();
@@ -302,7 +292,5 @@ exported func main() int {
         other => panic!("expected VonInt(42), got {:?}", other),
     }
 }
-
-
 
 

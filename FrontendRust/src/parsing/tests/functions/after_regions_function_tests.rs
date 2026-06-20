@@ -5,8 +5,8 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::tests::utils::compile_denizen;
 
 
-// mig: fn func_with_func_bound_with_missing_where
 #[test]
+// V: unignore this
 #[ignore = "blocked - Rust parser produces TopLevelFunction for `func sum<T>() func moo(&T)void {3}` instead of ParseError::FuncBoundWithoutWhere. Tracked in migration-drive-todo.md Phase 4e."]
 fn func_with_func_bound_with_missing_where() {
   // This test does not pass yet, use #[ignore].

@@ -291,7 +291,7 @@ where 's: 't,
                     OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
-                        unreachable!("Scala determineClosureVariableMember ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
+                        unreachable!("ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
                 };
                 (variability, tyype)
@@ -305,7 +305,7 @@ where 's: 't,
                     OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
-                        unreachable!("Scala determineClosureVariableMember ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
+                        unreachable!("ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
                 };
                 (variability, tyype)

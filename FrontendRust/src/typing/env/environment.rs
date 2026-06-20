@@ -29,7 +29,6 @@ use std::hash::Hasher;
 use std::mem::discriminant;
 
 
-
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>
@@ -46,16 +45,12 @@ where 's: 't,
     Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 
-// mig: fn to_string
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   pub fn to_string(&self) -> String {
     panic!("Unimplemented: to_string");
     // "#Environment:" + id
   }
   
-// mig: fn eq
-
-// mig: fn hash_code
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
@@ -71,12 +66,10 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn templatas
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -97,7 +90,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
@@ -114,7 +106,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn lookup_all_with_imprecise_name
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -124,7 +115,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     self.lookup_with_imprecise_name_inner(name_s, lookup_filter, false, interner)
   }
   
-// mig: fn lookup_all_with_name
   pub fn lookup_all_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -136,7 +126,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     // })
   }
   
-// mig: fn lookup_nearest_with_name
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -151,7 +140,6 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn lookup_nearest_with_imprecise_name
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -237,7 +225,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -248,7 +235,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_nearest_with_imprecise_name(name_s, lookup_filter, interner)
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -259,7 +245,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_nearest_with_name(name_s, lookup_filter, interner)
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_all_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -269,7 +254,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_all_with_name(name_s, lookup_filter)
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -280,7 +264,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_all_with_imprecise_name(name_s, lookup_filter, interner)
   }
 
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
@@ -292,7 +275,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_with_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -304,7 +286,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     as_env.lookup_with_imprecise_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
   
-// Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
   pub fn templatas(&self) -> &'t TemplatasStoreT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.templatas,
@@ -318,10 +299,6 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-
-// mig: fn snapshot
-
-// mig: fn to_string
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
@@ -358,14 +335,6 @@ pub enum ILookupContext {
 }
 
 
-
-// Macro-dispatch fields (functorHelper, *Macro, nameToStructDefinedMacro, etc.)
-// from the Scala case class below are omitted here; they moved to `Compiler` as
-// part of the god-struct refactor. See docs/migration/handoff-god-struct-progress.md.
-// Exception: `name_to_function_body_macro` is preserved as a field per Scala
-// parity — the Scala lookup is via Map[StrI, IFunctionBodyMacro], realized in
-// Rust as ArenaIndexMap<StrI, FunctionBodyMacro> (dispatch-tag enum at
-// macros::macros::FunctionBodyMacro).
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GlobalEnvironmentT<'s, 't>
@@ -379,7 +348,6 @@ where 's: 't,
 }
 
 
-// mig: fn entry_matches_filter
 pub fn entry_matches_filter<'s, 't>(
   entry: &IEnvEntryT<'s, 't>,
   contexts: &HashSet<ILookupContext>,
@@ -416,7 +384,6 @@ pub fn entry_matches_filter<'s, 't>(
   }
 }
 
-// mig: fn entry_to_templata
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
   entry: IEnvEntryT<'s, 't>,
@@ -451,7 +418,6 @@ where 's: 't,
   }
 }
 
-// mig: fn get_imprecise_name
 pub fn get_imprecise_name<'s, 't>(
   scout_arena: &ScoutArena<'s>,
   name_t: INameT<'s, 't>,
@@ -482,11 +448,8 @@ pub fn get_imprecise_name<'s, 't>(
     INameT::Function(f) => get_imprecise_name(scout_arena, INameT::FunctionTemplate(f.template)),
     INameT::ForwarderFunction(f) => get_imprecise_name(scout_arena, INameT::ForwarderFunctionTemplate(f.template)),
     INameT::ForwarderFunctionTemplate(f) => get_imprecise_name(scout_arena, f.inner.into()),
-    // Scala: ImplTemplateNameT(_) => vwat() — should never be called for impl entries (they are
-    // indexed under ImplImpreciseNameS in TemplatasStore.buildFor, never via getImpreciseName(key)).
     INameT::ImplTemplate(_) => {
-        panic!("Unimplemented or unreachable: ImplTemplateNameT — Scala vwat()");
-        // vwat()
+        panic!("Unimplemented or unreachable: ImplTemplateNameT");
     }
     INameT::AnonymousSubstructTemplate(astn) => {
         let inner_name = get_imprecise_name(scout_arena, astn.interface.into());
@@ -515,7 +478,6 @@ pub fn get_imprecise_name<'s, 't>(
   }
 }
 
-// mig: fn code_locations_match
 pub fn code_locations_match<'s>(
   code_location_a: &CodeLocationS<'s>,
   code_location_b: &CodeLocationS<'s>,
@@ -538,7 +500,6 @@ where 's: 't,
   pub imprecise_to_entries: ArenaIndexMap<'t, IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>]>,
 }
 
-// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
   fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") }
   
@@ -551,8 +512,6 @@ impl<'s, 't> Hash for TemplatasStoreT<'s, 't> where 's: 't {
   
 }
 
-// (no scala counterpart — builder for TemplatasStoreT. Heap Vec/HashMap during
-// construction, frozen to arena slices at build_in.)
 /// Temporary state (see @TFITCX)
 pub struct TemplatasStoreBuilder<'s, 't>
 where 's: 't,
@@ -653,9 +612,6 @@ where 's: 't,
   }
   
 
-  // (no scala counterpart — inverse of `snapshot`. Copies an arena `TemplatasStoreT`
-  //  back into a heap builder so a `NodeEnvironmentBox` can be reconstructed from a
-  //  `&'t NodeEnvironmentT`. Symmetric with `snapshot`.)
   pub fn from_store(store: &TemplatasStoreT<'s, 't>) -> Self {
     let name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
       (&store.name_to_entry).into_iter().map(|(k, v)| (*k, *v)).collect();
@@ -691,11 +647,8 @@ where 's: 't,
   }
   
 }
-// mig: fn eq
 
-// mig: fn hash_code
 
-// mig: fn add_entries
 impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   pub fn add_entries(
     &self,
@@ -822,7 +775,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     }
   }
 
-// mig: fn add_entry
   pub fn add_entry(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -833,7 +785,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     self.add_entries(interner, scout_arena, vec![(name, entry)])
   }
 
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -846,7 +797,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
       .map(|entry| entry_to_templata(defining_env, *entry, interner))
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -862,7 +812,6 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   
 }
 
-// mig: fn make_top_level_environment
 pub fn make_top_level_environment<'s, 't>(
   global_env: &'t GlobalEnvironmentT<'s, 't>,
   namespace_name: IdT<'s, 't>,
@@ -888,19 +837,14 @@ where 's: 't,
   pub global_namespaces: &'t [&'t TemplatasStoreT<'s, 't>],
 }
 
-// mig: fn hash_code
-// (Realized by `impl Hash for PackageEnvironmentT` below.)
 
-// mig: fn templatas
 impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
     // vimpl()
   }
   
-// mig: fn eq
 
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -923,7 +867,6 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
     result
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -974,24 +917,18 @@ where 's: 't,
 }
 
 
-// mig: fn denizen_id
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // templateId
   }
   
-// mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
-// mig: fn hash_code
 
-// mig: fn eq
-
-// mig: fn root_compiling_denizen_env
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     match (self.id.local_name, self.parent_env.id().local_name) {
       (id_local, parent_local)
@@ -1015,7 +952,6 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1035,7 +971,6 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1101,26 +1036,22 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-// mig: fn root_compiling_denizen_env
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
   
-// mig: fn denizen_id
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
-// mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1132,7 +1063,6 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1176,26 +1106,22 @@ where 's: 't,
 }
 
 
-// mig: fn root_compiling_denizen_env
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
   
-// mig: fn denizen_id
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
-// mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1207,7 +1133,6 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1243,29 +1168,22 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
-// mig: fn denizen_id
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
-// mig: fn denizen_template_id
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
-// mig: fn eq
 
-// mig: fn hash_code
-
-// mig: fn root_compiling_denizen_env
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     self.parent_env.root_compiling_denizen_env()
   }
   
-// mig: fn lookup_with_name_inner
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1277,7 +1195,6 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
-// mig: fn lookup_with_imprecise_name_inner
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1291,7 +1208,6 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   
 }
 
-// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
   

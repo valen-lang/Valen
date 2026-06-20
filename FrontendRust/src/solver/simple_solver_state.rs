@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-// mig: struct SimpleSolverState
 pub struct SimpleSolverState<Rule, Rune, Conclusion>
 where
     Rune: Eq + Hash,
@@ -17,7 +16,6 @@ where
     rune_to_conclusion: IndexMap<Rune, Conclusion>,
 }
 
-// mig: impl SimpleSolverState
 impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion>
 where
     Rule: Clone,
@@ -25,42 +23,34 @@ where
     Conclusion: Clone + PartialEq,
 {
 
-// mig: fn sanity_check
     pub fn sanity_check(&self) {
         // vassert(rules == rules.distinct)
     }
 
-// mig: fn get_rule
     pub fn get_rule(&self, rule_index: i32) -> &Rule {
         &self.rules[rule_index as usize]
     }
 
-// mig: fn get_conclusion
     pub fn get_conclusion(&self, rune: &Rune) -> Option<Conclusion> {
         self.rune_to_conclusion.get(rune).cloned()
     }
 
-// mig: fn get_conclusions
     pub fn get_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.rune_to_conclusion.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 
-// mig: fn userify_conclusions
     pub fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.rune_to_conclusion.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 
-    // mig: fn get_all_runes (matches Scala's getAllRunes() -> Set[Rune])
     pub fn get_all_runes(&self) -> HashSet<Rune> {
         self.all_runes.iter().cloned().collect()
     }
 
-    // mig: fn is_complete
     pub fn is_complete(&self) -> bool {
         self.rune_to_conclusion.len() == self.all_runes.len()
     }
 
-    // mig: fn commit_step (matches Scala's commitStep)
     pub fn commit_step<ErrType>(
         &mut self,
         complex: bool,
@@ -124,9 +114,7 @@ where
         Ok(())
     }
 
-// mig: fn get_next_solvable
     pub fn get_next_solvable(&self) -> Option<i32> {
-        // Get rule with lowest ID, keep it deterministic (matches Scala)
         self.open_rule_to_puzzle_to_runes
             .iter()
             .filter(|(_, puzzle_to_runes)| {
@@ -140,7 +128,6 @@ where
             .min()
     }
 
-// mig: fn get_unsolved_rules
     pub fn get_unsolved_rules(&self) -> Vec<Rule> {
         self.open_rule_to_puzzle_to_runes
             .keys()
@@ -148,7 +135,6 @@ where
             .collect()
     }
 
-    // mig: fn get_unsolved_runes (matches Scala's getUnsolvedRunes)
     pub fn get_unsolved_runes(&self) -> Vec<Rune> {
         self.all_runes.iter()
             .filter(|r| !self.rune_to_conclusion.contains_key(*r))
@@ -156,12 +142,10 @@ where
             .collect()
     }
 
-    // mig: fn get_steps
     pub fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
         self.steps.clone()
     }
 
-    // mig: fn rule_is_solved (matches Scala's ruleIsSolved)
     pub fn rule_is_solved(&self, rule_index: i32) -> bool {
         !self.open_rule_to_puzzle_to_runes.contains_key(&rule_index)
     }

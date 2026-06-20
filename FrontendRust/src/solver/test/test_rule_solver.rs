@@ -7,17 +7,14 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::marker::PhantomData;
 
-// mig: struct TestRuleSolver
 pub struct TestRuleSolver<'ctx, 's> {
     pub scout_arena: &'ctx ScoutArena<'s>,
 }
 
 
-// mig: impl TestRuleSolver
 impl<'ctx, 's> TestRuleSolver<'ctx, 's> {
 
 
-// mig: fn complex_solve_impl
 pub fn complex_solve_impl(
     &self,
     _state: &(),
@@ -98,7 +95,6 @@ pub fn complex_solve_impl(
     Ok(())
 }
 
-// mig: fn solve_impl
 pub fn solve_impl(
   &self,
   _state: &(),
@@ -246,7 +242,6 @@ pub fn solve_impl(
     }
 }
 
-// mig: fn instantiate_ancestor_template
 fn instantiate_ancestor_template(&self, descendants: Vec<String>, ancestor_template: &str) -> String {
     let descendant = descendants.first().expect("descendants non-empty");
     match (descendant.as_str(), ancestor_template) {
@@ -258,7 +253,6 @@ fn instantiate_ancestor_template(&self, descendants: Vec<String>, ancestor_templ
     }
 }
 
-// mig: fn get_ancestors
 fn get_ancestors(&self, descendant: &str, include_self: bool) -> Vec<String> {
     let self_and_ancestors: Vec<String> = match self.get_template(descendant).as_str() {
         "Firefly" => vec!["ISpaceship".to_string()],
@@ -277,7 +271,6 @@ fn get_ancestors(&self, descendant: &str, include_self: bool) -> Vec<String> {
     result
 }
 
-// mig: fn get_template
 fn get_template(&self, tyype: &str) -> String {
     if tyype.contains(':') {
         tyype.split(':').next().unwrap_or(tyype).to_string()
@@ -286,7 +279,6 @@ fn get_template(&self, tyype: &str) -> String {
     }
 }
 
-// mig: fn solve_receives
 fn solve_receives(
     &self,
     senders: Vec<String>,
@@ -332,7 +324,6 @@ fn solve_receives(
     }
 }
 
-// mig: fn narrow
 fn narrow(
     &self,
     ancestor_template_unnarrowed: HashSet<String>,
@@ -356,7 +347,6 @@ fn narrow(
 
 }
 
-// mig: fn rule_to_puzzles (free function for use with make_solver_state)
 pub fn rule_to_puzzles(rule: &TestRule) -> Vec<Vec<i64>> {
     rule.all_puzzles()
 }

@@ -45,13 +45,6 @@ use crate::postparsing::ast::IStructMemberS;
 use crate::postparsing::names::IStructDeclarationNameS;
 
 
-// (Scala `class AnonymousInterfaceMacro(opts, interner, keywords, nameTranslator,
-//  overloadCompiler, structCompiler, structConstructorMacro, structDropMacro)` absorbed
-//  onto `Compiler`; the method bodies live at
-//  `Compiler::{get_interface_sibling_entries_anonymous_interface, map_runes_anonymous_interface,
-//  inherited_method_rune_anonymous_interface, make_struct_anonymous_interface,
-//  make_forwarder_function_anonymous_interface}` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -52,10 +52,8 @@ use crate::von::ast::VonInt;
 use crate::von::ast::VonStr;
 use std::marker::PhantomData;
 
-// mig: struct VirtualTests
 pub struct VirtualTests;
 
-// mig: fn simple_program_containing_a_virtual_function
 #[test]
 fn simple_program_containing_a_virtual_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -133,7 +131,6 @@ func main(i I) int {
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 
-// mig: fn can_call_virtual_function
 #[test]
 fn can_call_virtual_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -211,7 +208,6 @@ func main(i I) int {
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 
-// mig: fn owning_interface
 #[test]
 fn owning_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -244,7 +240,6 @@ exported func main() int {
     }
 }
 
-// mig: fn simple_override_with_param_and_bound
 #[test]
 fn simple_override_with_param_and_bound() {
     // This is the Serenity case in ROWC.
@@ -285,7 +280,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn struct_with_different_ordered_runes
 #[test]
 fn struct_with_different_ordered_runes() {
     // This is the Firefly case in ROWC.
@@ -326,7 +320,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn struct_with_less_generic_params_than_interface
 #[test]
 fn struct_with_less_generic_params_than_interface() {
     // This is the Raza case in ROWC.
@@ -366,7 +359,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn struct_with_more_generic_params_than_interface
 #[test]
 fn struct_with_more_generic_params_than_interface() {
     // This is the Milano case in ROWC.
@@ -406,7 +398,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn struct_repeating_generic_params_for_interface
 #[test]
 fn struct_repeating_generic_params_for_interface() {
     // This is the Enterprise case in ROWC.
@@ -446,7 +437,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn imm_interface
 #[test]
 fn imm_interface() {
     let compilation_bump = bumpalo::Bump::new();
@@ -474,7 +464,6 @@ fn imm_interface() {
     }
 }
 
-// mig: fn can_call_interface_envs_function_from_outside
 #[test]
 fn can_call_interface_envs_function_from_outside() {
     let compilation_bump = bumpalo::Bump::new();
@@ -517,7 +506,6 @@ func main(i I) int {
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
 }
 
-// mig: fn interface_with_method_with_param_of_substruct
 #[test]
 fn interface_with_method_with_param_of_substruct() {
     let compilation_bump = bumpalo::Bump::new();
@@ -549,7 +537,6 @@ func collectHeaders2(header &List<&Header>, this &Header) { }
     let _coutputs = compile.get_hamuts();
 }
 
-// mig: fn feeding_instantiation_bounds_for_something_created_in_same_function
 #[test]
 fn feeding_instantiation_bounds_for_something_created_in_same_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -592,7 +579,6 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn generic_interface_forwarder_with_bound
 #[test]
 fn generic_interface_forwarder_with_bound() {
     let compilation_bump = bumpalo::Bump::new();
@@ -643,7 +629,6 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn generic_interface_forwarder_with_drop_bound
 #[test]
 fn generic_interface_forwarder_with_drop_bound() {
     let compilation_bump = bumpalo::Bump::new();
@@ -690,7 +675,6 @@ exported func main() int {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn open_interface_constructor
 #[test]
 fn open_interface_constructor() {
     let compilation_bump = bumpalo::Bump::new();
@@ -734,7 +718,6 @@ exported func main() int {
     }
 }
 
-// mig: fn open_interface_constructor_multiple_methods
 #[test]
 fn open_interface_constructor_multiple_methods() {
     let compilation_bump = bumpalo::Bump::new();
@@ -786,7 +769,6 @@ exported func main() int {
 }
 
 
-// mig: fn successful_pointer_downcast_with_as
 #[test]
 fn successful_pointer_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
@@ -814,7 +796,6 @@ fn successful_pointer_downcast_with_as() {
     }
 }
 
-// mig: fn failed_pointer_downcast_with_as
 #[test]
 fn failed_pointer_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
@@ -901,7 +882,6 @@ fn failed_pointer_downcast_with_as() {
     }
 }
 
-// mig: fn successful_owning_downcast_with_as
 #[test]
 fn successful_owning_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
@@ -929,7 +909,6 @@ fn successful_owning_downcast_with_as() {
     }
 }
 
-// mig: fn failed_owning_downcast_with_as
 #[test]
 fn failed_owning_downcast_with_as() {
     let compilation_bump = bumpalo::Bump::new();
@@ -957,7 +936,6 @@ fn failed_owning_downcast_with_as() {
     }
 }
 
-// mig: fn lambda_is_compatible_anonymous_interface
 #[test]
 fn lambda_is_compatible_anonymous_interface() {
     let compilation_bump = bumpalo::Bump::new();

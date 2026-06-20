@@ -17,10 +17,6 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 
 
-// (Scala `class AbstractBodyMacro(interner, keywords, overloadResolver)` absorbed onto
-//  `Compiler`; the method body lives at
-//  `Compiler::generate_function_body_abstract_body` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

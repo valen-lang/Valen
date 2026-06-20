@@ -225,10 +225,6 @@ pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
 impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {
 
 
-
-
-
-
 }
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -245,9 +241,6 @@ impl<'s, 't> SignatureT<'s, 't> {
 
 }
 
-// (no scala counterpart — Rust-only interning scaffolding)
-// Transient Val for interning: holds a stack-borrowed IdValT<'s, 't, 'tmp> so
-// callers can construct a lookup key without first arena-allocating init_steps.
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct SignatureValT<'s, 't, 'tmp>
@@ -321,10 +314,6 @@ pub struct ExternT<'s> {
 impl<'s> ExternT<'s> {
 
 
-
-
-
-
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -358,7 +347,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     ) -> FunctionHeaderT<'s, 't> { panic!("Unimplemented: FunctionHeaderT::new"); }
 
 
-
     fn is_extern(&self) -> bool {
         panic!("Unimplemented: is_extern");
         // attributes.exists({ case ExternT(_) => true case _ => false })
@@ -366,10 +354,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 
 
     pub fn is_user_function(&self) -> bool { self.attributes.contains(&IFunctionAttributeT::UserFunction) }
-
-
-
-
 
 
     pub fn get_abstract_interface(&self) -> Option<InterfaceTT<'s, 't>> {
@@ -422,9 +406,6 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
     }
 
 }
-// Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md` (same
-// treatment as IdT). Scala's `PrototypeT[+T <: IFunctionNameT]` phantom
-// parameter is erased in Rust.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeT<'s, 't>
@@ -448,9 +429,6 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 
 }
 
-// (no scala counterpart — Rust-only interning scaffolding)
-// Transient Val for interning: inner IdValT borrows its init_steps slice from
-// a stack-local builder via 'tmp, so construction doesn't arena-allocate.
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct PrototypeValT<'s, 't, 'tmp>

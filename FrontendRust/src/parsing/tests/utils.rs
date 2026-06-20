@@ -14,9 +14,6 @@ use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::tests::traverse::NodeRefP;
 use crate::collect_only;
 
-/// AFTERM: Remove this function and use the one in ParserTestCompilation.scala instead
-/// so that it does a round-trip through vonprinter and parsedloader.
-/// Compile a Vale file and return the FileP AST
 pub fn compile_file<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,

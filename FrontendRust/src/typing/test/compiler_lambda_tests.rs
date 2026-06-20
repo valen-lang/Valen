@@ -17,19 +17,15 @@ use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::collect_only_tnode;
 use crate::tests::tests::get_package_to_resource_resolver;
 
-// mig: struct CompilerLambdaTests
 pub struct CompilerLambdaTests;
 
-// mig: impl CompilerLambdaTests
 impl CompilerLambdaTests {}
 
 
-// mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
 
-// mig: fn simple_lambda
 #[test]
 fn simple_lambda() {
 
@@ -53,7 +49,6 @@ fn simple_lambda() {
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type, expected);
 }
 
-// mig: fn lambda_with_one_magic_arg
 #[test]
 fn lambda_with_one_magic_arg() {
 
@@ -93,7 +88,6 @@ fn lambda_with_one_magic_arg() {
     );
 }
 
-// mig: fn lambda_is_reused
 #[test]
 fn lambda_is_reused() {
 
@@ -122,7 +116,6 @@ exported func main() {
     assert_eq!(lambdas.len(), 1);
 }
 
-// mig: fn lambda_called_with_different_types
 #[test]
 fn lambda_called_with_different_types() {
 
@@ -151,7 +144,6 @@ exported func main() {
     assert_eq!(lambdas.len(), 2);
 }
 
-// mig: fn curried_lambda
 #[test]
 fn curried_lambda() {
 
@@ -180,7 +172,6 @@ exported func main() {
     assert_eq!(lambdas.len(), 3);
 }
 
-// mig: fn lambda_with_a_type_specified_param
 #[test]
 fn lambda_with_a_type_specified_param() {
 
@@ -232,7 +223,6 @@ exported func main() int {
     );
 }
 
-// mig: fn tests_lambda_and_concept_function
 #[test]
 fn tests_lambda_and_concept_function() {
 
@@ -266,7 +256,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn lambda_inside_different_function_with_same_name
 #[test]
 fn lambda_inside_different_function_with_same_name() {
 
@@ -301,7 +290,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn lambda_inside_template
 #[test]
 fn lambda_inside_template() {
 
@@ -336,7 +324,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// mig: fn curried_lambda_inside_template
 #[test]
 fn curried_lambda_inside_template() {
 

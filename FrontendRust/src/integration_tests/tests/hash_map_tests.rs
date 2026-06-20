@@ -8,10 +8,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct HashMapTest
 pub struct HashMapTest;
 
-// mig: fn monomorphize_problem
 #[test]
 fn monomorphize_problem() {
     // See NBIFP, the instantiator has to grab bounds from its params too
@@ -59,7 +57,6 @@ exported func main() int {
     }
 }
 
-// mig: fn supply_bounds_to_child_functions
 #[test]
 fn supply_bounds_to_child_functions() {
     // We need to supply our bounds to our lambdas and drop functions, see LCCPGB and LCNBAFA.
@@ -115,7 +112,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_update
 #[test]
 fn hash_map_update() {
     let compilation_bump = bumpalo::Bump::new();
@@ -153,7 +149,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_collisions
 #[test]
 fn hash_map_collisions() {
     let compilation_bump = bumpalo::Bump::new();
@@ -212,7 +207,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_with_functors
 #[test]
 fn hash_map_with_functors() {
     let compilation_bump = bumpalo::Bump::new();
@@ -250,7 +244,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_with_struct_as_key
 #[test]
 fn hash_map_with_struct_as_key() {
     let compilation_bump = bumpalo::Bump::new();
@@ -305,7 +298,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_has
 #[test]
 fn hash_map_has() {
     let compilation_bump = bumpalo::Bump::new();
@@ -350,7 +342,6 @@ exported func main() int {
     }
 }
 
-// mig: fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots
 #[test]
 fn gathers_substitutes_bounds_for_structs_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
@@ -415,7 +406,6 @@ exported func main() int {
     }
 }
 
-// mig: fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots
 #[test]
 fn gathers_substitutes_bounds_for_interfaces_inside_things_accessed_from_dots() {
     // See SBITAFD, we had a problem where we didn't register coutputs for new instantiations that
@@ -478,7 +468,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_values
 #[test]
 fn hash_map_values() {
     let compilation_bump = bumpalo::Bump::new();
@@ -522,7 +511,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_with_mutable_values
 #[test]
 fn hash_map_with_mutable_values() {
     let compilation_bump = bumpalo::Bump::new();
@@ -568,7 +556,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_remove
 #[test]
 fn hash_map_remove() {
     let compilation_bump = bumpalo::Bump::new();
@@ -614,7 +601,6 @@ exported func main() int {
     }
 }
 
-// mig: fn hash_map_remove_2
 #[test]
 fn hash_map_remove_2() {
     let compilation_bump = bumpalo::Bump::new();

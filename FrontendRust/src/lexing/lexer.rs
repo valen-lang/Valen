@@ -15,8 +15,6 @@ enum StringPartResult<'p> {
 }
 
 
-/// Vale lexer
-/// Matches Scala's Lexer class
 pub struct Lexer<'p, 'ctx> {
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
@@ -199,7 +197,6 @@ where
   }
 
   
-
   /// Lex a top-level denizen (function, struct, interface, impl, import, export)
   pub fn lex_denizen(&self, iter: &mut LexingIterator) -> Result<IDenizenL<'p>>
   {
@@ -242,7 +239,6 @@ where
   }
 
   
-
   /// Lex an impl block
   pub fn lex_impl(
     &self,
@@ -343,9 +339,6 @@ where
   }
 
   
-
-  /// Lex a function definition
-  /// MIGBAD: Scala uses iter.peek(2) and iter.peek(3) for multi-character lookahead (lines 703-740), while Rust uses iter.peek_string() method. Change Rust to match Scala.
   pub fn lex_function(
     &self,
     iter: &mut LexingIterator,
@@ -468,7 +461,6 @@ where
   }
 
   
-
   /// Lex a struct definition
   pub fn lex_struct(
     &self,
@@ -576,7 +568,6 @@ where
   }
 
   
-
   /// Lex an interface definition
   pub fn lex_interface(
     &self,
@@ -663,7 +654,6 @@ where
   }
 
   
-
   /// Lex an import declaration
   pub fn lex_import(
     &self,
@@ -913,8 +903,6 @@ where
   }
   
 
-  
-
   /// Check if we're at the end of a scramble
   fn at_end(
     &self,
@@ -1019,7 +1007,6 @@ where
 
     let begin = iter.get_pos();
 
-    // Try identifier - use is_unicode_identifier_part to match Scala's isUnicodeIdentifierPart
     if Self::is_unicode_identifier_part(iter.peek()) {
       let id = self
           .lex_identifier(iter)
@@ -1050,7 +1037,6 @@ where
   fn lex_identifier(&self, iter: &mut LexingIterator) -> Option<WordLE<'p>> {
     let begin = iter.get_pos();
 
-    // Keep eating identifier characters using isUnicodeIdentifierPart to match Scala
     while !iter.at_end() && Self::is_unicode_identifier_part(iter.peek()) {
       iter.advance();
     }
@@ -1086,7 +1072,6 @@ where
   }
   
   
-
   /// Check if we're at the end of a string
   fn lex_string_end(&self, iter: &mut LexingIterator, is_long_string: bool) -> bool {
     if iter.at_end() {
@@ -1214,7 +1199,6 @@ where
   }
 
   
-
   /// Parse a four-digit hexadecimal number
   pub fn parse_four_digit_hex_num(&self, iter: &mut LexingIterator, _offset: usize) -> Option<i32> {
     let str = iter.peek_exact(4)?;

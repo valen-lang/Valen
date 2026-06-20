@@ -536,12 +536,6 @@ where 's: 't,
                         citizen_id,
                         IBoundArgumentsSource::InheritBoundsFromTypeItself,
                     );
-                    // Rust adaptation: Scala iterates `citizenInnerEnv.templatas.nameToEntry` while
-                    // calling `substituter.substituteForPrototype(coutputs, …)` in the same pass.
-                    // In Rust the &coutputs (via citizenInnerEnv) and &mut coutputs (via substituter)
-                    // conflict, so we split into two phases: collect raw entries here, then mutate
-                    // in the second pass below.
-                    // Phase 1: collect raw entry data under immutable borrow of coutputs
                     let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s>, &'t [ITemplataT<'s, 't>], &'t [CoordT<'s, 't>], CoordT<'s, 't>)> = {
                         let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
                         citizen_inner_env.templatas().name_to_entry.iter()

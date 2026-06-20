@@ -13,10 +13,8 @@ use crate::von::ast::IVonData;
 use crate::von::ast::VonBool;
 use crate::von::ast::VonInt;
 
-// mig: struct TupleTests
 pub struct TupleTests;
 
-// mig: fn returning_tuple_from_function_and_dotting_it
 #[test]
 fn returning_tuple_from_function_and_dotting_it() {
     let compilation_bump = bumpalo::Bump::new();
@@ -51,7 +49,6 @@ exported func main() int {
     }
 }
 
-// mig: fn tuple_with_two_things
 #[test]
 fn tuple_with_two_things() {
     let compilation_bump = bumpalo::Bump::new();
@@ -85,7 +82,6 @@ exported func main() bool {
     }
 }
 
-// mig: fn tuple_type
 #[test]
 fn tuple_type() {
     let compilation_bump = bumpalo::Bump::new();
@@ -121,7 +117,6 @@ exported func main() int {
     }
 }
 
-// mig: fn simple_tuple_with_one_int
 #[test]
 fn simple_tuple_with_one_int() {
     let compilation_bump = bumpalo::Bump::new();

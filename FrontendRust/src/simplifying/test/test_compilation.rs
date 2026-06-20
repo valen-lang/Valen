@@ -1,4 +1,3 @@
-// From Frontend/SimplifyingPass/test/dev/vale/simplifying/TestCompilation.scala
 use bumpalo::Bump;
 use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
@@ -11,7 +10,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
 
-// mig: fn test
 pub fn test<'s, 'h, 'ctx, 't, 'i, 'p>(
   interner: &'ctx HammerInterner<'s, 'h>,
   typing_interner: &'ctx TypingInterner<'s, 't>,

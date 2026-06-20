@@ -215,7 +215,6 @@ where 's: 'h,
 {
     let name = lower_id_to_name(cache, s.id);
     let kind = cache.get_struct_kind(name);
-    // Mirrors readjson.cpp:654 — rcimm for immutable, mut for mutable.
     let region_id = match s.mutability {
         MutabilityH::Immutable => cache.rcimm_region_id(),
         MutabilityH::Mutable => cache.mut_region_id(),

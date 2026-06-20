@@ -1,5 +1,4 @@
 
-// mig: trait IRule
 pub trait IRule {
     fn all_runes(&self) -> Vec<i64>;
     fn all_puzzles(&self) -> Vec<Vec<i64>>;
@@ -47,13 +46,11 @@ impl TestRule {
     }
 }
 
-// mig: struct Lookup
 #[derive(Clone, Debug)]
 pub struct Lookup {
     pub rune: i64,
     pub name: String,
 }
-// mig: impl Lookup
 impl IRule for Lookup {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.rune]
@@ -63,13 +60,11 @@ impl IRule for Lookup {
     }
 }
 
-// mig: struct Literal
 #[derive(Clone, Debug)]
 pub struct Literal {
     pub rune: i64,
     pub value: String,
 }
-// mig: impl Literal
 impl IRule for Literal {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.rune]
@@ -79,13 +74,11 @@ impl IRule for Literal {
     }
 }
 
-// mig: struct Equals
 #[derive(Clone, Debug)]
 pub struct Equals {
     pub left_rune: i64,
     pub right_rune: i64,
 }
-// mig: impl Equals
 impl IRule for Equals {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.left_rune, self.right_rune]
@@ -95,14 +88,12 @@ impl IRule for Equals {
     }
 }
 
-// mig: struct CoordComponents
 #[derive(Clone, Debug)]
 pub struct CoordComponents {
     pub coord_rune: i64,
     pub ownership_rune: i64,
     pub kind_rune: i64,
 }
-// mig: impl CoordComponents
 impl IRule for CoordComponents {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.coord_rune, self.ownership_rune, self.kind_rune]
@@ -115,13 +106,11 @@ impl IRule for CoordComponents {
     }
 }
 
-// mig: struct OneOf
 #[derive(Clone, Debug)]
 pub struct OneOf {
     pub coord_rune: i64,
     pub possible_values: Vec<String>,
 }
-// mig: impl OneOf
 impl IRule for OneOf {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.coord_rune]
@@ -131,14 +120,12 @@ impl IRule for OneOf {
     }
 }
 
-// mig: struct Call
 #[derive(Clone, Debug)]
 pub struct Call {
     pub result_rune: i64,
     pub name_rune: i64,
     pub arg_rune: i64,
 }
-// mig: impl Call
 impl IRule for Call {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.result_rune, self.name_rune, self.arg_rune]
@@ -151,13 +138,11 @@ impl IRule for Call {
     }
 }
 
-// mig: struct Send
 #[derive(Clone, Debug)]
 pub struct Send {
     pub sender_rune: i64,
     pub receiver_rune: i64,
 }
-// mig: impl Send
 impl IRule for Send {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.receiver_rune, self.sender_rune]
@@ -167,13 +152,11 @@ impl IRule for Send {
     }
 }
 
-// mig: struct Implements
 #[derive(Clone, Debug)]
 pub struct Implements {
     pub sub_rune: i64,
     pub super_rune: i64,
 }
-// mig: impl Implements
 impl IRule for Implements {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.sub_rune, self.super_rune]
@@ -183,13 +166,11 @@ impl IRule for Implements {
     }
 }
 
-// mig: struct Pack
 #[derive(Clone, Debug)]
 pub struct Pack {
     pub result_rune: i64,
     pub member_runes: Vec<i64>,
 }
-// mig: impl Pack
 impl IRule for Pack {
     fn all_runes(&self) -> Vec<i64> {
         vec![self.result_rune]

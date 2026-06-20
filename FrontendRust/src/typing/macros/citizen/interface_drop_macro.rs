@@ -18,10 +18,6 @@ use crate::higher_typing::ast::FunctionA;
 use crate::postparsing::ast::AbstractSP;
 
 
-// (Scala `class InterfaceDropMacro(interner, keywords, nameTranslator)` absorbed onto
-//  `Compiler`; the method body lives at
-//  `Compiler::get_interface_sibling_entries_interface_drop` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -2,7 +2,6 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use crate::scout_arena::ScoutArena;
 
 
-
 impl<'a> RangeS<'a> {
   pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> RangeS<'a> {
     assert!(internal_num < 0, "RangeS::internal - internal_num must be negative");
@@ -12,7 +11,6 @@ impl<'a> RangeS<'a> {
   }
   
 }
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -47,7 +45,6 @@ pub struct RangeS<'a> {
   pub end: CodeLocationS<'a>,
 }
 
-// Scala's toString was just for debug purposes (covered by #[derive(Debug)])
 impl<'a> RangeS<'a> {
   pub fn new(begin: CodeLocationS<'a>, end: CodeLocationS<'a>) -> RangeS<'a> {
     assert!(begin.file == end.file, "RangeS: begin.file != end.file");

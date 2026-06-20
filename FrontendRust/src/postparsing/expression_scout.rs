@@ -39,7 +39,6 @@ use crate::postparsing::expressions::UnletSE;
 use std::collections::HashMap;
 
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum IScoutResult<'s, 'p> {
   LocalLookupResult(LocalLookupResultS<'s>),
@@ -360,7 +359,6 @@ fn find_local(
 }
 
 
-
 // Returns:
 // - new seq num
 // - declared variables
@@ -461,8 +459,6 @@ fn scout_expression(
       ))
     }
       
-        
-        
         
     IExpressionPE::SubExpression(sub_expression) => {
       let mut sub_expression_lidb = lidb.child();
@@ -603,8 +599,6 @@ fn scout_expression(
       }
     }
     
-        
-        
         
     IExpressionPE::FunctionCall(function_call) => {
       let parent_env = IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone());
@@ -998,9 +992,6 @@ fn scout_expression(
       let (stack_frame1, unfiltered_exprs, self_uses, child_uses) =
           self.scout_elements_as_expressions(stack_frame, &mut consecutor_lidb, &consecutor.inners)?;
 
-      // Match Scala's two-step behavior:
-      // 1) recursively scout all inners
-      // 2) strip voids that appear after a return; error on non-void after return
       let mut filtered_exprs = Vec::new();
       let mut saw_return = false;
       for expr_s in unfiltered_exprs {
@@ -1030,7 +1021,6 @@ fn scout_expression(
       ))
     }
     
-        
         
     IExpressionPE::If(if_expr) => {
       let range_s = PostParser::eval_range(file_coordinate, if_expr.range);
@@ -1310,7 +1300,6 @@ fn scout_expression(
       ))
     }
     
-        
         
     IExpressionPE::Not(not) => {
       let not_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {

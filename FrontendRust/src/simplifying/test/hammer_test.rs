@@ -1,4 +1,3 @@
-// From Frontend/SimplifyingPass/test/dev/vale/simplifying/HammerTest.scala
 
 use bumpalo::Bump;
 use crate::keywords::Keywords;
@@ -14,15 +13,12 @@ use crate::tests::tests::get_package_to_resource_resolver;
 use std::collections::HashMap;
 use crate::collect_where_hnode;
 use crate::typing::typing_interner::TypingInterner;
-// mig: struct HammerTest
 pub struct HammerTest {
 }
 
-// mig: impl HammerTest
 // (impl block suppressed per simplifying-pass policy — test fns emitted at module scope)
 
 
-// mig: fn local_ids_unique
 #[test]
 fn local_ids_unique() {
     let parse_bump = Bump::new();
@@ -35,7 +31,6 @@ fn local_ids_unique() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
-    // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "
 exported func main() {
@@ -73,13 +68,6 @@ exported func main() {
     assert!(local_ids.len() >= 6);
 }
 
-// NOVEL CODE: no Scala counterpart. Minimal end-to-end driving test for hammer
-// body migration — the simplest possible program (return an int; no control flow,
-// no generics), modeled structurally on `local_ids_unique` above. Running it drives
-// the hammer pipeline from the first `panic!()` outward (currently
-// `HammerTestCompilation::test`). As the harness + entry points get real bodies,
-// grow this to mirror local_ids_unique's shape: get_hamuts() →
-// lookup_package(TEST_TLD) → lookup_function("main") → assert the export exists.
 #[test]
 fn returns_int() {
     
@@ -93,7 +81,6 @@ fn returns_int() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
-    // Rust adaptation (SPDMX Exception B): TypingInterner construction hoisted to the test site (Scala's `val interner = new Interner()` inside `HammerTestCompilation.test` becomes a caller-owned interner so Rust can borrow it `&'ctx` through the pipeline).
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "exported func main() int { return 7; }\n";
     let resolver = get_code_map(&parse_arena, &parser_keywords)

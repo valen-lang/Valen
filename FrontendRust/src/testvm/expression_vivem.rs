@@ -68,32 +68,27 @@ use crate::testvm::vivem::VmRuntimeErrorV;
 use std::mem::discriminant;
 
 
-// mig: enum INodeExecuteResultV
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum INodeExecuteResultV<'v, 'h, 's> {
   Continue(NodeContinueV<'v, 'h, 's>),
   Return(NodeReturnV<'v, 'h, 's>),
   Break(NodeBreakV<'v, 'h, 's>),
-  // (no scala counterpart — Rust adaptation: error path bubbled in-band instead of Scala's throw.)
   Error(VmRuntimeErrorV<'s>),
 }
 
-// mig: struct NodeContinueV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeContinueV<'v, 'h, 's> {
   pub result_ref: ReferenceV<'v, 'h, 's>,
 }
 
-// mig: struct NodeReturnV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeReturnV<'v, 'h, 's> {
   pub return_ref: ReferenceV<'v, 'h, 's>,
 }
 
-// mig: struct NodeBreakV<'v, 'h, 's>
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeBreakV<'v, 'h, 's>
@@ -102,7 +97,6 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
-// mig: fn make_primitive
 pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     assert!(!matches!(kind, KindV::Void(_)));
     let r#ref = heap.allocate_transient(interner, OwnershipH::MutableShareH, location, kind);
@@ -115,7 +109,6 @@ pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &Hamme
     r#ref
 }
 
-// mig: fn take_argument
 pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
     let r#ref = heap.take_argument(interner, call_id, argument_index, result_type);
     heap.increment_reference_ref_count(
@@ -124,7 +117,6 @@ pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &Hammer
     r#ref
 }
 
-// mig: fn possess_callee_return
 pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     heap.decrement_reference_ref_count(
         IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id: callee_call_id, ownership: result.return_ref.ownership }),
@@ -137,7 +129,6 @@ pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: 
     result.return_ref
 }
 
-// mig: fn upcast
 pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_interface_ref: &'h InterfaceHT<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
     ReferenceV {
         actual_kind: source_reference.actual_kind,
@@ -148,7 +139,6 @@ pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_inter
     }
 }
 
-// mig: fn execute_node
 pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let node_name = match node {
         ExpressionH::ConstantVoidH(_) => "ConstantVoidH",
@@ -214,7 +204,6 @@ pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &Hamm
     result
 }
 
-// mig: fn execute_node_inner
 pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let call_id = expression_id.call_id;
     match node {
@@ -1159,7 +1148,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
     }
 }
 
-// mig: fn consume_elements
 pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) -> Result<(), VmRuntimeErrorV<'s>> {
     let consumer_function = program_h.lookup_function(&consumer_prototype);
     for i in (0..size).rev() {
@@ -1183,11 +1171,7 @@ pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &
     Ok(())
 }
 
-// mig: fn generate_elements
 pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>, &mut HeapV<'v, 'h, 's>)) -> Result<(), VmRuntimeErrorV<'s>> {
-    // Rust borrow-checker adaptation: Scala's GC lets the callback freely capture `heap`
-    // while `generateElements` also holds it. Rust requires that `heap` flow through the
-    // callback as a parameter on each call. Architect-approved (δ) at change_mutability.
     let generator_function = program_h.lookup_function(&generator_prototype);
     for i in 0..size {
         {
@@ -1218,7 +1202,6 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: 
     Ok(())
 }
 
-// mig: fn execute_interface_function
 pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, undeviewed_arg_references: &'v [ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> Result<(FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)), VmRuntimeErrorV<'s>> {
     let interface_reference = undeviewed_arg_references[virtual_param_index as usize];
     let edge = match heap.dereference(interface_reference, true) {
@@ -1254,7 +1237,6 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, i
     Ok((*function_h, (callee_call_id, INodeExecuteResultV::Return(retuurn))))
 }
 
-// mig: fn discard
 pub fn discard<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, heap: &mut HeapV<'v, 'h, 's>, stdout: &'v dyn Fn(StrI<'s>), stdin: &'v dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
     heap.decrement_reference_ref_count(
         IObjectReferrerV::RegisterToObjectReferrer(
@@ -1265,7 +1247,6 @@ pub fn discard<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInt
     cleanup(program_h, interner, heap, stdout, stdin, call_id, expected_reference, actual_reference)
 }
 
-// mig: fn cleanup
 pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
     if heap.get_total_ref_count(actual_reference) == 0 {
         match expected_reference.ownership {

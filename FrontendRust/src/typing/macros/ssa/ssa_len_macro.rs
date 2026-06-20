@@ -14,9 +14,6 @@ use crate::typing::types::types::{KindT, RegionT};
 use crate::typing::templata::templata::ITemplataT;
 
 
-// (Scala `class SSALenMacro(keywords)` absorbed onto `Compiler`; the method
-//  body lives at `Compiler::generate_function_body_ssa_len` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

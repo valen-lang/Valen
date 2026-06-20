@@ -28,10 +28,8 @@ use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 use crate::von::ast::VonStr;
 
-// mig: struct IfTests
 pub struct IfTests;
 
-// mig: fn simple_true_branch_returning_an_int
 #[test]
 fn simple_true_branch_returning_an_int() {
     let compilation_bump = bumpalo::Bump::new();
@@ -98,7 +96,6 @@ exported func main() int {
     }
 }
 
-// mig: fn simple_false_branch_returning_an_int
 #[test]
 fn simple_false_branch_returning_an_int() {
     let compilation_bump = bumpalo::Bump::new();
@@ -129,7 +126,6 @@ exported func main() int {
     }
 }
 
-// mig: fn ladder
 #[test]
 fn ladder() {
     let compilation_bump = bumpalo::Bump::new();
@@ -184,7 +180,6 @@ exported func main() int {
     }
 }
 
-// mig: fn moving_from_inside_if
 #[test]
 fn moving_from_inside_if() {
     let compilation_bump = bumpalo::Bump::new();
@@ -246,7 +241,6 @@ exported func main() int {
     }
 }
 
-// mig: fn if_with_complex_condition
 #[test]
 fn if_with_complex_condition() {
     let compilation_bump = bumpalo::Bump::new();
@@ -296,7 +290,6 @@ exported func main() str {
     }
 }
 
-// mig: fn if_with_condition_declaration
 #[test]
 fn if_with_condition_declaration() {
     let compilation_bump = bumpalo::Bump::new();
@@ -328,7 +321,6 @@ exported func main() int {
     }
 }
 
-// mig: fn ret_from_inside_if_will_destroy_locals
 #[test]
 fn ret_from_inside_if_will_destroy_locals() {
     let compilation_bump = bumpalo::Bump::new();
@@ -373,7 +365,6 @@ exported func main() int {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "In then!\nDestroying marine!\n");
 }
 
-// mig: fn can_continue_if_other_branch_would_have_returned
 #[test]
 fn can_continue_if_other_branch_would_have_returned() {
     let compilation_bump = bumpalo::Bump::new();
@@ -426,7 +417,6 @@ Destroying marine!
 ");
 }
 
-// mig: fn destructure_inside_if
 #[test]
 fn destructure_inside_if() {
     let compilation_bump = bumpalo::Bump::new();
@@ -480,7 +470,6 @@ exported func main() {
 ");
 }
 
-// mig: fn if_nevers
 #[test]
 fn if_nevers() {
     let compilation_bump = bumpalo::Bump::new();
@@ -508,7 +497,6 @@ fn if_nevers() {
     }
 }
 
-// mig: fn if_with_panics_and_rets
 #[test]
 fn if_with_panics_and_rets() {
     let compilation_bump = bumpalo::Bump::new();
@@ -547,7 +535,6 @@ exported func main() int {
     }
 }
 
-// mig: fn toast
 #[test]
 fn toast() {
     let compilation_bump = bumpalo::Bump::new();

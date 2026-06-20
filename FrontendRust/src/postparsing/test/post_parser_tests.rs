@@ -101,7 +101,6 @@ where 'p: 's,
 }
 
 
-
 #[test]
 fn lookup_plus() {
   let parse_bump = Bump::new();
@@ -1360,10 +1359,6 @@ fn foreach_expr() {
 }
 
 
-
-// NOVEL CODE — TDD reproducer for the `destruct` expression scout panic
-// surfaced by typing_pass_on_roguelike. The Scala equivalent is `case
-// DestructPE(range, innerPE) => ...` at ExpressionScout.scala:393.
 #[test]
 fn destruct_expression() {
   let parse_bump = Bump::new();
@@ -1382,10 +1377,6 @@ fn destruct_expression() {
   // Just ensure scout completed without panicking.
 }
 
-// NOVEL CODE — TDD reproducer for the AndPE/OrPE expression scout panic
-// surfaced by typing_pass_on_roguelike. Scala equivalent at
-// ExpressionScout.scala:605/628 uses `newIf` to expand `&&` / `||` into
-// short-circuiting conditionals.
 #[test]
 fn and_or_expression() {
   let parse_bump = Bump::new();
@@ -1403,9 +1394,6 @@ fn and_or_expression() {
   let _code_body = cast!(&main.body, IBodyS::CodeBody);
 }
 
-// NOVEL CODE — TDD reproducer for the TuplePE expression scout panic
-// surfaced by typing_pass_on_roguelike. The Scala equivalent is
-// `case TuplePE(range, elementsPE) => ...` at ExpressionScout.scala:486.
 #[test]
 fn tuple_expression() {
   let parse_bump = Bump::new();
@@ -1423,9 +1411,6 @@ fn tuple_expression() {
   let _code_body = cast!(&main.body, IBodyS::CodeBody);
 }
 
-// NOVEL CODE — TDD reproducer for the StrInterpolatePE expression scout
-// panic surfaced by typing_pass_on_roguelike. The Scala equivalent is
-// `case StrInterpolatePE(range, partsPE) => ...` at ExpressionScout.scala:254.
 #[test]
 fn str_interpolate_expression() {
   let parse_bump = Bump::new();

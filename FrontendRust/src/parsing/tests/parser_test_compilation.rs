@@ -6,9 +6,6 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 
 
-
-/// AFTERM: Check this is faithful to old Scala
-/// Mirrors ParserTestCompilation.test in Scala.
 pub fn test<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,

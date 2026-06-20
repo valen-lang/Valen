@@ -29,7 +29,6 @@ use std::iter::once;
 use std::marker::PhantomData;
 
 
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't, 't: 'ctx, 's: 'ctx,
 {
@@ -401,7 +400,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                             after_sub_pattern_success_continuation)]
                     }
                     OwnershipT::Weak => {
-                        unreachable!("Scala's ownership match has only OwnT and BorrowT|ShareT — Weak is a Rust-side exhaustiveness arm with no Scala counterpart");
+                        unreachable!("ownership match handles only OwnT and BorrowT|ShareT here; Weak is a Rust-side exhaustiveness arm");
                     }
                 }
             }

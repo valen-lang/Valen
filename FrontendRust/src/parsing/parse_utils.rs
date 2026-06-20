@@ -11,8 +11,6 @@ use crate::parsing::ScrambleIterator;
 type ParseResult<T> = Result<T, ParseError>;
 
 
-/// Parse optional region marker (e.g., 'a or ' for isolate).
-/// Shared between Parser and TemplexParser - mirrors Parser.parseRegion in Parser.scala lines 861-888.
 pub fn parse_region<'p>(
   original_iter: &mut ScrambleIterator<'p, '_>,
 ) -> ParseResult<Option<RegionRunePT<'p>>> {
@@ -46,7 +44,6 @@ pub fn parse_region<'p>(
 }
 
 /// Helper method to skip past an equals sign while a condition is true
-/// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
 pub fn try_skip_past_equals_while<'p, 's, F>(
   iter: &mut ScrambleIterator<'p, 's>,
   continue_while: F,
@@ -81,10 +78,7 @@ where
 }
 
 
-
-
 /// Try to skip past a keyword, returning the portion before it
-/// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
 pub fn try_skip_past_keyword_while<'p, 's, F>(
   iter: &mut ScrambleIterator<'p, 's>,
   keyword: StrI<'p>,
@@ -93,36 +87,27 @@ pub fn try_skip_past_keyword_while<'p, 's, F>(
 where
   F: Fn(&ScrambleIterator<'p, 's>) -> bool,
 {
-  // Mirrors ParseUtils.scala line 82
   let mut scouting_iter = iter.clone();
 
-  // Mirrors ParseUtils.scala line 83
   while continue_while(&scouting_iter) {
-    // Mirrors ParseUtils.scala lines 84-98
     match scouting_iter.peek_cloned() {
       Some(INodeLEEnum::Word(w)) if w.str == keyword => {
-        // Mirrors ParseUtils.scala lines 86-88
         // We'll return this iterator for the things that come before the keyword
         let mut before_iter = iter.clone();
         before_iter.end = scouting_iter.index;
 
-        // Mirrors ParseUtils.scala lines 90-92
         // Now modify self to skip past it.
         iter.skip_to(&scouting_iter);
         iter.advance();
 
-        // Mirrors ParseUtils.scala line 94
         return Some((w.clone(), before_iter));
       }
       _ => {}
     }
-    // Mirrors ParseUtils.scala line 98
     scouting_iter.advance();
   }
 
-  // Mirrors ParseUtils.scala line 101
   None
 }
-
 
 

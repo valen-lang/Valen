@@ -1,19 +1,4 @@
 
-// Mirrors src/typing/typing_interner.rs (per architect decision Slab 16a/16b).
-//
-// Scala had a single `Interner` shared across passes that used `HashMap[T, T]`
-// for identity-by-eq canonicalization. The Rust port gives each pass its own
-// arena-backed interner — this is the instantiating pass's.
-//
-// Slab 16b: 12 intern families wired = 4 logical types (StructIT / InterfaceIT /
-// StaticSizedArrayIT / RuntimeSizedArrayIT) × 3 region modes (sI / nI / cI).
-// Per architect: separate families per (type × region-mode) — defensive against
-// any future runtime semantics on R. Each region-mode-specific family is its
-// own HashMap, even though R stays phantom at the type level.
-//
-// Lifetime convention: `'s: 'i` — interned data borrows scout strings via 's
-// and lives in the 'i arena. `'t` is intentionally NOT carried on the interner;
-// HinputsI needs to outlive the typing arena (see arenas.md).
 
 use std::cell::RefCell;
 use std::collections::HashMap as StdHashMap;
@@ -639,7 +624,7 @@ where 's: 'i,
     }
 
     // =========================================================================
-    // Name interning — 3 region-mode families × 72 variants (per Slab 16c extension)
+    // Name interning — 3 region-mode families × 72 variants.
     // =========================================================================
     //
     // Mirrors typing-pass `intern_name` + 75 macro-generated wrappers, scaled to
@@ -767,14 +752,9 @@ where 's: 'i,
     impl_intern_name_wrappers_r_only!(intern_resolving_env_name, ResolvingEnv, ResolvingEnvNameI);
     impl_intern_name_wrappers_r_only!(intern_call_env_name, CallEnv, CallEnvNameI);
 
-    // --- Future intern families (added when their AST shapes mature) ---
-    // intern_id_* — once IdI is shaped (currently bare-placeholder)
-    // intern_templata_* — value-type per Scala parity; no interning (see templata.rs)
 }
 
-// Tests cfg-gated: they construct IdI(PhantomData) which no longer compiles now
-// that IdI has real fields (packageCoord/initSteps/localName per Scala). Re-enable
-// once a test fixture for IdI is available (needs ScoutArena + PackageCoordinate setup).
+// V: figure out where these go
 #[cfg(all(test, any()))]
 mod tests {
     use super::*;

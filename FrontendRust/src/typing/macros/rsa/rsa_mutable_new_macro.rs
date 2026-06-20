@@ -17,10 +17,6 @@ use crate::typing::types::types::{IRegionT, RegionT};
 use std::collections::HashSet;
 
 
-// (Scala `class RSAMutableNewMacro(interner, keywords, arrayCompiler, destructorCompiler)`
-//  absorbed onto `Compiler`; the method body lives at
-//  `Compiler::generate_function_body_rsa_mutable_new` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

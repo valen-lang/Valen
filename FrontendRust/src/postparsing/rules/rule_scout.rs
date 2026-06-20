@@ -28,7 +28,6 @@ use crate::postparsing::rules::rules::KindComponentsSR;
 use crate::postparsing::rules::rules::PrototypeComponentsSR;
 
 
-
 // Returns:
 // - new rules produced on the side while translating the given rules
 // - the translated versions of the given rules
@@ -357,7 +356,6 @@ fn translate_rulex<'s, 'p>(
 }
 
 
-
 pub fn translate_type<'s>(scout_arena: &ScoutArena<'s>, tyype: ITypePR) -> ITemplataType<'s> {
   match tyype {
     ITypePR::PrototypeType => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
@@ -459,12 +457,6 @@ impl<'s> Equivalencies<'s> {
 }
 
 
-
-// Rust adaptation: callers in the typing pass have `&[IRulexSR<'s>]` but no
-// `Equivalencies` instance (Scala constructed one ad-hoc at each call site:
-// `new Equivalencies(rulesS).getKindEquivalentRunes(runes)`). This free fn
-// preserves the call-site shape; it constructs the Equivalencies internally
-// and delegates.
 pub fn get_kind_equivalent_runes_iter<'s, I>(
   rules_s: &[IRulexSR<'s>],
   runes: I,

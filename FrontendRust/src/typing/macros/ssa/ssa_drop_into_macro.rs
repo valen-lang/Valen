@@ -14,9 +14,6 @@ use crate::typing::types::types::RegionT;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 
-// (Scala `class SSADropIntoMacro(keywords, arrayCompiler)` absorbed onto `Compiler`;
-//  the method body lives at `Compiler::generate_function_body_ssa_drop_into` below.)
-
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

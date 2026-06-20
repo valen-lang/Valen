@@ -17,10 +17,8 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct BlockTests
 pub struct BlockTests;
 
-// mig: fn empty_block
 #[test]
 fn empty_block() {
     let compilation_bump = bumpalo::Bump::new();
@@ -74,7 +72,6 @@ exported func main() int {
 }
 
 
-// mig: fn simple_block_with_a_variable
 #[test]
 fn simple_block_with_a_variable() {
     let compilation_bump = bumpalo::Bump::new();
@@ -145,7 +142,6 @@ exported func main() int {
 }
 
 
-// mig: fn simple_block_with_a_variable_another_variable_outside_with_same_name
 #[test]
 fn simple_block_with_a_variable_another_variable_outside_with_same_name() {
     let compilation_bump = bumpalo::Bump::new();

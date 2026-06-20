@@ -21,7 +21,6 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 
 
-
 pub fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   match templata {
     // case t @ MutabilityTemplataT(_) => t
@@ -107,8 +106,6 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
   // templata match { case t @ KindTemplataT(_) => t; case _ => vfail() }
 }
 
-// Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
-// Interned payloads behind &'t; scalar variants inline. See @WVSBIZ for why.
 /// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
@@ -239,8 +236,6 @@ impl<'s, 't> Hash for FunctionTemplataT<'s, 't> {
 }
 
 
-
-
 impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
   pub fn get_template_name(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: get_template_name");
@@ -261,10 +256,6 @@ pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
 }
-
-
-
-
 
 
 /// Value-type (see @TFITCX)
@@ -323,9 +314,6 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
   panic!("Unimplemented: unapply");
 }
 
-// AFTERM: figure out why some templatas compare environment and some don't —
-// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
-// but this type's derived equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
@@ -334,13 +322,6 @@ pub struct InterfaceDefinitionTemplataT<'s, 't> {
 }
 
 
-
-
-
-
-// AFTERM: figure out why some templatas compare environment and some don't —
-// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
-// but this type's derived equality includes `env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {

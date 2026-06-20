@@ -32,7 +32,6 @@ use crate::typing::typing_interner::TypingInterner;
 use std::fs::read_to_string;
 use std::marker::PhantomData;
 
-// mig: fn function_has_correct_name
 #[test]
 fn function_has_correct_name() {
     let parse_bump = Bump::new();
@@ -80,7 +79,6 @@ fn function_has_correct_name() {
     assert_eq!(coutputs.functions.first().unwrap().header.id, id);
 }
 
-// mig: fn lambda_has_correct_name
 #[test]
 fn lambda_has_correct_name() {
     let parse_bump = Bump::new();
@@ -160,7 +158,6 @@ fn lambda_has_correct_name() {
     assert_eq!(lam_func.header.id, lambda_func_id);
 }
 
-// mig: fn struct_has_correct_name
 #[test]
 fn struct_has_correct_name() {
     let parse_bump = Bump::new();
@@ -199,10 +196,6 @@ exported struct MyStruct { a int; }
 }
 
 
-// NOVEL CODE — TDD reproducer for the is_type_convertible missing-cases
-// panic surfaced by typing_pass_on_roguelike (RuntimeSizedArray vs anything).
-// Scala equivalent at TemplataCompiler.scala:951-953 / 960-962: source-side
-// or target-side RSA/SSA both return false.
 #[test]
 fn typing_pass_array_type_convertible() {
     
@@ -259,10 +252,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// NOVEL CODE — TDD reproducer for the same_instance_macro panic surfaced by
-// typing_pass_on_roguelike. Scala equivalent at SameInstanceMacro.scala:
-// emits a FunctionHeaderT + Block(Return(IsSameInstance(ArgLookup(0),
-// ArgLookup(1)))) for the `===` builtin.
 #[test]
 fn typing_pass_uses_same_instance() {
     
@@ -432,10 +421,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// NOVEL CODE — TDD reproducer for the `evaluate_expression — Tuple` chain
-// surfaced by typing_pass_on_roguelike. Exercises evaluate_expression Tuple
-// arm → resolve_tuple → make_tuple_coord → make_tuple_kind. Scala equivalent
-// at ExpressionCompiler.scala:869-876 (case TupleSE) + SequenceCompiler.scala.
 #[test]
 fn typing_pass_tuple_literal() {
     
@@ -488,9 +473,6 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// NOVEL CODE — TDD reproducer for the `evaluate_expression — Destruct` panic
-// surfaced by typing_pass_on_roguelike. Scala equivalent at
-// ExpressionCompiler.scala:1387-1429 (case DestructSE).
 #[test]
 fn typing_pass_destruct_struct() {
     
@@ -545,11 +527,9 @@ exported func main() {
     compile.expect_compiler_outputs();
 }
 
-// NOVEL CODE — exploratory: run the typing pass on roguelike.vale to gauge
-// how close the migration is to handling a real-world program. Loads the
-// roguelike.vale source from disk, rewrites `stdlib.*` imports to use the
-// Rust-side on-disk file layout, and feeds the program through
-// compiler_test_compilation.
+// Exploratory: run the typing pass on roguelike.vale to gauge real-world coverage.
+// Loads the roguelike.vale source from disk, rewrites `stdlib.*` imports to use
+// the on-disk file layout, and feeds the program through compiler_test_compilation.
 #[test]
 fn typing_pass_on_roguelike() {
     
@@ -565,11 +545,6 @@ fn typing_pass_on_roguelike() {
     let source = read_to_string("src/tests/programs/roguelike.vale")
             .expect("could not read src/tests/programs/roguelike.vale");
 
-    // Scala-parity: mirror Benchmark.scala — instantiate TypingPassCompilation
-    // directly with packages_to_build=[BUILTIN, TEST_TLD] (the BUILTIN root
-    // namespace must be in the list so its files get compiled into the global
-    // env), and use Builtins.getCodeMap (puts each builtin in both
-    // v.builtins.<module> empty placeholder and root namespace with content).
     let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(

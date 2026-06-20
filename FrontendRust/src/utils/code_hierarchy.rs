@@ -1,4 +1,3 @@
-// From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
 use indexmap::IndexMap;
 use std::collections::HashMap;
@@ -41,15 +40,11 @@ where
 }
 
 
-
-// mig: struct FileCoordinate
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
   pub package_coord: &'a PackageCoordinate<'a>,
   pub filepath: StrI<'a>,
 }
-// mig: impl FileCoordinate
-// compareTo and compare methods were commented out in Scala (ordering not implemented)
 impl<'a> FileCoordinate<'a> {
 
   pub fn is_internal(&self) -> bool {
@@ -65,7 +60,6 @@ impl<'a> FileCoordinate<'a> {
       && self.package_coord.eq_by_value(other.package_coord)
   }
 
-// mig: fn test
   pub fn test(scout_arena: &ScoutArena<'a>) -> FileCoordinate<'a> {
     let test_module = scout_arena.intern_str(TEST_MODULE);
     let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
@@ -73,14 +67,11 @@ impl<'a> FileCoordinate<'a> {
   }
 
 }
-// mig: struct PackageCoordinate
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PackageCoordinate<'a> {
   pub module: StrI<'a>,
   pub packages: InternedSlice<'a, StrI<'a>>,
 }
-// mig: impl PackageCoordinate
-// compareTo and compare methods were commented out in Scala (ordering not implemented)
 impl<'a> PackageCoordinate<'a> {
 
   pub fn is_internal(&self) -> bool {
@@ -98,7 +89,6 @@ impl<'a> PackageCoordinate<'a> {
           .all(|(a, b)| a.as_str() == b.as_str())
   }
 
-// mig: fn parent
   pub fn parent(&self, bump: &'a Bump) -> Option<PackageCoordinate<'a>> {
     if self.packages.is_empty() {
       return None;
@@ -118,7 +108,6 @@ impl<'a> PackageCoordinate<'a> {
     // VA: raw bump is only for internal data structures (ArenaIndexMap). This method has zero callers.
   }
 
-// mig: fn test_tld
   pub fn test_tld<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     _keywords: &'ctx Keywords<'a>,
@@ -129,7 +118,6 @@ impl<'a> PackageCoordinate<'a> {
     parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[])
   }
 
-// mig: fn builtin
   pub fn builtin<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
@@ -140,7 +128,6 @@ impl<'a> PackageCoordinate<'a> {
     parse_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
 
-// mig: fn internal
   pub fn internal(
     scout_arena: &ScoutArena<'a>,
     keywords: &Keywords<'a>,
@@ -149,12 +136,6 @@ impl<'a> PackageCoordinate<'a> {
   }
 
 }
-// Realizes Scala's case-class auto-toString for PackageCoordinate:
-//   PackageCoordinate(<module>,Vector(<pkg1>, <pkg2>, ...))
-// Per Scala convention: no space between case-class fields, comma+space between Vector elements.
-// NOTE: Rust StrI's Display canon (interner.rs:40) prints the bare string, while Scala StrI's
-// own case-class toString wraps as `StrI(<value>)`. This divergence is inherited from the
-// existing canon and not propagated here.
 impl<'a> Display for PackageCoordinate<'a> {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     write!(f, "PackageCoordinate({},Vector(", self.module)?;
@@ -168,10 +149,8 @@ impl<'a> Display for PackageCoordinate<'a> {
   }
 }
 
-// mig: const TEST_MODULE
 const TEST_MODULE: &str = "test";
 
-// mig: fn simple
 pub fn simple<'a, T: Clone>(
     file_coord: &'a FileCoordinate<'a>,
     contents: T,
@@ -181,7 +160,6 @@ pub fn simple<'a, T: Clone>(
     result
   }
 
-// mig: fn test
 pub fn test<'a, C: Clone>(
     scout_arena: &ScoutArena<'a>,
     contents: C,
@@ -195,7 +173,6 @@ pub fn test<'a, C: Clone>(
     result
   }
 
-// mig: fn test
 pub fn test_from_vec<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
     contents: Vec<T>,
@@ -207,7 +184,6 @@ pub fn test_from_vec<'a, T: Clone>(
     test_from_map(parse_arena, map)
   }
 
-// mig: fn test
 pub fn test_from_map<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
     contents: HashMap<String, T>,
@@ -221,14 +197,11 @@ pub fn test_from_map<'a, T: Clone>(
     result
   }
 
-// mig: struct FileCoordinateMap
 #[derive(Clone, Debug)]
 pub struct FileCoordinateMap<'a, Contents> {
   pub package_coord_to_file_coords: HashMap<&'a PackageCoordinate<'a>, Vec<&'a FileCoordinate<'a>>>,
   pub file_coord_to_contents: HashMap<&'a FileCoordinate<'a>, Contents>,
 }
-// mig: impl FileCoordinateMap
-// mergeNonOverlapping was commented out in Scala (not yet needed)
 impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
@@ -243,7 +216,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     super::code_hierarchy::test(scout_arena, contents)
   }
 
-// mig: fn apply
   pub fn apply(&self, coord: &'a FileCoordinate<'a>) -> &Contents {
     self
       .file_coord_to_contents
@@ -257,7 +229,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
       .map(|(_, v)| v)
   }
 
-// mig: fn put_package
   // This is different from put in that we can hand in an empty map here.
   // It's the only way to have an empty package in the FileCoordinateMap.
   pub fn put_package(
@@ -276,7 +247,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     }
   }
 
-// mig: fn put
   pub fn put(&mut self, file_coord: &'a FileCoordinate<'a>, contents: Contents) {
     assert!(
       !self.file_coord_to_contents.contains_key(&file_coord),
@@ -295,7 +265,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     file_coords.push(file_coord);
   }
 
-// mig: fn map
   pub fn map<T, F>(&self, func: F) -> FileCoordinateMap<'a, T>
   where
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
@@ -311,7 +280,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     }
   }
 
-// mig: fn flat_map
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
@@ -323,7 +291,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
       .collect()
   }
 
-// mig: fn expect_one
   pub fn expect_one(&self) -> &Contents {
     assert!(
       self.file_coord_to_contents.len() == 1,
@@ -332,7 +299,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     self.file_coord_to_contents.values().next().unwrap()
   }
 
-// mig: fn resolve
   pub fn resolve(
     &self,
     package_coord: &'a PackageCoordinate<'a>,
@@ -355,7 +321,6 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
   }
 
 }
-// mig: fn compose_resolvers
 pub fn compose_resolvers<'a, Contents>(
   resolver_a: impl Fn(&'a PackageCoordinate<'a>) -> Option<HashMap<String, Contents>>,
   resolver_b: impl Fn(&'a PackageCoordinate<'a>) -> HashMap<String, Contents>,
@@ -367,7 +332,6 @@ pub fn compose_resolvers<'a, Contents>(
   }
 }
 
-// mig: fn compose_map_and_resolver
 pub fn compose_map_and_resolver<'a, Contents>(
   files: &FileCoordinateMap<'a, Contents>,
   then_resolver: impl Fn(&'a PackageCoordinate<'a>) -> HashMap<String, Contents>,
@@ -382,13 +346,10 @@ where
   }
 }
 
-// mig: trait IPackageResolver
 pub trait IPackageResolver<'a, T> {
 
-// mig: fn resolve
   fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<T>;
 
-// mig: fn or
   fn or<F>(self, fallback: F) -> OrResolver<Self, F>
   where
     Self: Sized,
@@ -400,7 +361,6 @@ pub trait IPackageResolver<'a, T> {
     }
   }
 
-// mig: fn inner_or
   fn inner_or(
     &self,
     fallback: &impl IPackageResolver<'a, T>,
@@ -424,12 +384,10 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>>
     FileCoordinateMap::resolve(self, package_coord)
   }
 }
-// mig: struct PackageCoordinateMap
 #[derive(Clone, Debug)]
 pub struct PackageCoordinateMap<'a, Contents> {
   pub package_coord_to_contents: IndexMap<&'a PackageCoordinate<'a>, Contents>,
 }
-// mig: impl PackageCoordinateMap
 impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
@@ -438,17 +396,14 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     }
   }
 
-// mig: fn put
   pub fn put(&mut self, package_coord: &'a PackageCoordinate<'a>, contents: Contents) {
     self.package_coord_to_contents.insert(package_coord, contents);
   }
 
-// mig: fn get
   pub fn get(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<&Contents> {
     self.package_coord_to_contents.get(package_coord)
   }
 
-// mig: fn expect_one
   pub fn expect_one(&self) -> &Contents {
     assert!(
       self.package_coord_to_contents.len() == 1,
@@ -457,7 +412,6 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     self.package_coord_to_contents.values().next().unwrap()
   }
 
-// mig: fn map
   pub fn map<T, F>(&self, func: F) -> PackageCoordinateMap<'a, T>
   where
     F: Fn(&'a PackageCoordinate<'a>, &Contents) -> T,
@@ -470,7 +424,6 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     result
   }
 
-// mig: fn flat_map
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where
     F: Fn(&'a PackageCoordinate<'a>, &Contents) -> T,

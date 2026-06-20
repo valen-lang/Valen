@@ -15,14 +15,11 @@ use super::test_rules::Send;
 use super::test_rules::Call;
 use super::test_rules::Lookup;
 use crate::scout_arena::ScoutArena;
-// mig: const complex_rule_set
 const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
 
-// mig: const complex_rule_set_equals_rules
 const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
 
 
-// mig: fn test_simple_and_optimized
     fn test_simple_and_optimized() {
         panic!("Unimplemented: test_simple_and_optimized");
     }
@@ -79,7 +76,6 @@ fn advance(
     Ok(false)
 }
 
-// mig: fn simple_int_rule
     #[test]
     fn simple_int_rule() {
 
@@ -91,7 +87,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn equals_transitive
     #[test]
     fn equals_transitive() {
 
@@ -111,7 +106,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn incomplete_solve
     #[test]
     fn incomplete_solve() {
 
@@ -124,7 +118,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn half_complete_solve
     #[test]
     fn half_complete_solve() {
 
@@ -144,7 +137,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn one_of
     #[test]
     fn one_of() {
 
@@ -164,7 +156,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn solves_a_components_rule
     #[test]
     fn solves_a_components_rule() {
 
@@ -194,7 +185,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn reverse_solve_a_components_rule
     #[test]
     fn reverse_solve_a_components_rule() {
 
@@ -220,7 +210,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_infer_pack
     #[test]
     fn test_infer_pack() {
 
@@ -243,7 +232,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_infer_pack_from_result
     #[test]
     fn test_infer_pack_from_result() {
 
@@ -268,7 +256,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_infer_pack_from_empty_result
     #[test]
     fn test_infer_pack_from_empty_result() {
 
@@ -287,7 +274,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_cant_solve_empty_pack
     #[test]
     fn test_cant_solve_empty_pack() {
 
@@ -300,7 +286,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn complex_rule_set
     #[test]
     fn complex_rule_set() {
 
@@ -347,7 +332,6 @@ fn advance(
         );
     }
 
-// mig: fn test_receiving_struct_to_struct
     #[test]
     fn test_receiving_struct_to_struct() {
 
@@ -371,7 +355,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_receive_struct_from_sent_interface
     #[test]
     fn test_receive_struct_from_sent_interface() {
 
@@ -392,8 +375,6 @@ fn advance(
         ];
         let failed = expect_solve_failure(rules);
 
-        // commitStep appends the step before checking conflicts, so the conflicting step
-        // is captured in the audit trail (matching Scala behavior).
         let conclusions_set: HashSet<(i64, String)> = failed
             .steps
             .iter()
@@ -431,7 +412,6 @@ fn advance(
         }
     }
 
-// mig: fn test_receive_interface_from_sent_struct
     #[test]
     fn test_receive_interface_from_sent_struct() {
 
@@ -459,7 +439,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_complex_solve_most_specific_ancestor
     // Tests @CSCDSRZ: complex solve infers the receiver kind from senders.
     #[test]
     fn test_complex_solve_most_specific_ancestor() {
@@ -484,7 +463,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_complex_solve_calculate_common_ancestor
     // Tests @CSCDSRZ: complex solve finds the common ancestor of multiple senders.
     #[test]
     fn test_complex_solve_calculate_common_ancestor() {
@@ -518,7 +496,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn test_complex_solve_descendant_satisfying_call
     // Tests @CSCDSRZ: complex solve picks a descendant that satisfies a call constraint.
     #[test]
     fn test_complex_solve_descendant_satisfying_call() {
@@ -554,7 +531,6 @@ fn advance(
         assert_eq!(result, expected);
     }
 
-// mig: fn partial_solve
     #[test]
     fn partial_solve() {
 
@@ -609,7 +585,6 @@ fn advance(
         );
     }
 
-// mig: fn predicting
     #[test]
     fn predicting() {
 
@@ -631,7 +606,6 @@ fn advance(
         assert_eq!(conclusions, expected);
     }
 
-// mig: fn solve_with_puzzler
     fn solve_with_puzzler(
         puzzler: Box<dyn Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>>,
     ) -> HashMap<i64, String> {
@@ -674,7 +648,6 @@ fn advance(
         solver_state.userify_conclusions().into_iter().collect()
     }
 
-// mig: fn test_conflict
     #[test]
     fn test_conflict() {
 
@@ -701,7 +674,6 @@ fn advance(
         }
     }
 
-// mig: fn expect_solve_failure
     fn expect_solve_failure(
         rules: Vec<super::test_rules::TestRule>,
     ) -> FailedSolve<TestRule, i64, String, String> {
@@ -742,7 +714,6 @@ fn advance(
         panic!("Incorrectly completed the solve")
     }
 
-// mig: fn get_conclusions
     fn get_conclusions(
         rules: Vec<super::test_rules::TestRule>,
         expect_complete_solve: bool,

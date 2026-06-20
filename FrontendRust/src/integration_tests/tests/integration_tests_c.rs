@@ -25,10 +25,8 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 
-// mig: struct IntegrationTestsC
 pub struct IntegrationTestsC;
 
-// mig: fn tests_floats
 #[test]
 fn tests_floats() {
     let compilation_bump = bumpalo::Bump::new();
@@ -62,7 +60,6 @@ exported func main() int {
     }
 }
 
-// mig: fn get_or_function
 #[test]
 fn get_or_function() {
     let compilation_bump = bumpalo::Bump::new();
@@ -90,7 +87,6 @@ fn get_or_function() {
     }
 }
 
-// mig: fn panic_on_drop_because_of_outstanding_borrow
 #[test]
 fn panic_on_drop_because_of_outstanding_borrow() {
     let compilation_bump = bumpalo::Bump::new();
@@ -126,7 +122,6 @@ exported func main() {
     }
 }
 
-// mig: fn unlet_to_avoid_an_outstanding_borrow_panic
 // Not sure if this is desirable behavior, because borrow_ship isnt really used after
 // we drop ship. Still, let's have this test so we don't *accidentally* change it.
 #[test]
@@ -162,7 +157,6 @@ exported func main() {
     compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
 }
 
-// mig: fn function_return_with_return_upcasts
 #[test]
 fn function_return_with_return_upcasts() {
     let compilation_bump = bumpalo::Bump::new();
@@ -198,7 +192,6 @@ fn function_return_with_return_upcasts() {
     }
 }
 
-// mig: fn test_shaking
 #[test]
 fn test_shaking() {
     // Make sure that functions that cant be called by main will not be included.
@@ -248,7 +241,6 @@ exported func main() {
         )).is_some());
 }
 
-// mig: fn test_overloading_between_borrow_and_weak
 #[test]
 fn test_overloading_between_borrow_and_weak() {
     let compilation_bump = bumpalo::Bump::new();
@@ -290,7 +282,6 @@ exported func main() int {
     }
 }
 
-// mig: fn truncate_i64_to_i32
 #[test]
 fn truncate_i64_to_i32() {
     let compilation_bump = bumpalo::Bump::new();
@@ -322,7 +313,6 @@ exported func main() int {
     }
 }
 
-// mig: fn return_without_return
 #[test]
 fn return_without_return() {
     let compilation_bump = bumpalo::Bump::new();
@@ -349,7 +339,6 @@ fn return_without_return() {
     }
 }
 
-// mig: fn test_export_functions
 #[test]
 fn test_export_functions() {
     let compilation_bump = bumpalo::Bump::new();
@@ -377,7 +366,6 @@ exported func moo() int {
     let _hamuts = compile.get_hamuts();
 }
 
-// mig: fn test_extern_functions
 #[test]
 fn test_extern_functions() {
     let compilation_bump = bumpalo::Bump::new();
@@ -422,7 +410,6 @@ fn test_extern_functions() {
     }
 }
 
-// mig: fn test_narrowing_between_borrow_and_owning_overloads
 #[test]
 fn test_narrowing_between_borrow_and_owning_overloads() {
     // See NMORFI for why this test is here. Before the SCCTT fix, it couldn't resolve between the two
@@ -469,7 +456,6 @@ exported func main() int {
     }
 }
 
-// mig: fn test_catch_deref_after_drop
 #[test]
 fn test_catch_deref_after_drop() {
     let compilation_bump = bumpalo::Bump::new();
@@ -499,7 +485,6 @@ fn test_catch_deref_after_drop() {
 
 // This test is here because we had a bug where the compiler was enforcing that we unstackify
 // the same locals from all branches of if, even if they were constraint refs.
-// mig: fn using_same_constraint_ref_from_both_branches_of_if
 #[test]
 fn using_same_constraint_ref_from_both_branches_of_if() {
     let compilation_bump = bumpalo::Bump::new();
@@ -543,7 +528,6 @@ exported func main() int {
 }
 
 // Compiler should be fine with moving things from if statements if we return out.
-// mig: fn moving_same_thing_from_both_branches_of_if
 #[test]
 fn moving_same_thing_from_both_branches_of_if() {
     let compilation_bump = bumpalo::Bump::new();
@@ -586,7 +570,6 @@ exported func main() int {
     }
 }
 
-// mig: fn exporting_array
 #[test]
 fn exporting_array() {
     let compilation_bump = bumpalo::Bump::new();
@@ -615,7 +598,6 @@ fn exporting_array() {
     assert_eq!(rsa.element_type.kind, KindHT::IntHT(IntHT { bits: 32 }));
 }
 
-// mig: fn call_borrow_parameter_with_shared_reference
 #[test]
 fn call_borrow_parameter_with_shared_reference() {
     let compilation_bump = bumpalo::Bump::new();
@@ -648,7 +630,6 @@ exported func main() int {
     }
 }
 
-// mig: fn supplying_bounded_struct_to_struct_accepting
 #[test]
 fn supplying_bounded_struct_to_struct_accepting() {
     let compilation_bump = bumpalo::Bump::new();
@@ -683,7 +664,6 @@ exported func main() int {
     }
 }
 
-// mig: fn same_type_multiple_times_in_an_invocation
 #[test]
 fn same_type_multiple_times_in_an_invocation() {
     let compilation_bump = bumpalo::Bump::new();
@@ -718,7 +698,6 @@ exported func main() int {
     }
 }
 
-// mig: fn restackify
 #[test]
 fn restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
@@ -747,7 +726,6 @@ fn restackify() {
     }
 }
 
-// mig: fn destructure_restackify
 #[test]
 fn destructure_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
@@ -776,7 +754,6 @@ fn destructure_restackify() {
     }
 }
 
-// mig: fn loop_restackify
 #[test]
 fn loop_restackify() {
     // Allow set on variables that have been moved already, which is useful for linear style.
@@ -805,7 +782,6 @@ fn loop_restackify() {
     }
 }
 
-// mig: fn ignoring_receiver
 #[test]
 fn ignoring_receiver() {
     let compilation_bump = bumpalo::Bump::new();

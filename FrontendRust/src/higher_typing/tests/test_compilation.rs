@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use crate::utils::code_hierarchy::IPackageResolver;
 
 
-// mig: fn test
 pub fn test<'s, 'ctx, 'p>(
     compilation_bump: &'ctx bumpalo::Bump,
     scout_arena: &'ctx ScoutArena<'s>,

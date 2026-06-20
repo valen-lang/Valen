@@ -1,8 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/LoadHammer.scala
-//
-// Per typing-pass `Compiler` precedent, `LoadHammer` is not a Rust struct.
-// Methods become `impl Hammer { ... }` blocks colocated here.
-
 use crate::final_ast::instructions::ExpressionH;
 use crate::final_ast::types::CoordH;
 use crate::instantiating::ast::ast::FunctionHeaderI;
@@ -30,8 +25,6 @@ use crate::instantiating::ast::ast::ILocalVariableI;
 use crate::instantiating::ast::expressions::AddressExpressionIE;
 
 
-
-// mig: fn translate_load
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -72,7 +65,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_mundane_runtime_sized_array_load
     pub fn translate_mundane_runtime_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -116,7 +108,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_mundane_static_sized_array_load
     pub fn translate_mundane_static_sized_array_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -157,7 +148,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_addressible_member_load
     pub fn translate_addressible_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -213,7 +203,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_mundane_member_load
     pub fn translate_mundane_member_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -248,7 +237,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_addressible_local_load
     pub fn translate_addressible_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -289,7 +277,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_mundane_local_load
     pub fn translate_mundane_local_load(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -313,7 +300,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_local_address
     pub fn translate_local_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -336,7 +322,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_member_address
     pub fn translate_member_address(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -384,7 +369,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
 }
 
 
-// mig: fn get_borrowed_location (free helper — no &self needed)
 pub fn get_borrowed_location<'s, 'h>(member_type: CoordH<'s, 'h>) -> LocationH
 where 's: 'h,
 {

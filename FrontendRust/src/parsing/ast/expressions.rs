@@ -5,7 +5,6 @@ use super::templex::{ITemplexPT, RegionRunePT};
 use crate::lexing::RangeL;
 
 
-/// Expression enum - idiomatic Rust replacement for Scala's trait hierarchy
 #[derive(Debug, PartialEq)]
 pub enum IExpressionPE<'p> {
   Void(VoidPE),

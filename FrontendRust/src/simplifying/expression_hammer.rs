@@ -1,7 +1,3 @@
-// From Frontend/SimplifyingPass/src/dev/vale/simplifying/ExpressionHammer.scala
-//
-// Per typing-pass `Compiler` precedent, `ExpressionHammer` is not a Rust struct.
-// Methods become `impl Hammer { ... }` blocks colocated here.
 
 use crate::final_ast::instructions::{ExpressionH, WhileH};
 use crate::instantiating::ast::ast::{FunctionHeaderI, PrototypeI};
@@ -75,10 +71,6 @@ use std::collections::HashSet;
 use std::marker::PhantomData;
 
 
-
-// mig: fn translate_expression (Scala `ExpressionHammer.translate` — disambiguated
-// from `Hammer.translate` per overload-suffix pattern, since both methods now
-// live on the same `impl Hammer` per typing-pass collapse.)
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -471,7 +463,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_deferreds
     pub fn translate_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -527,7 +518,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_expressions_until_never
     pub fn translate_expressions_until_never(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -561,7 +551,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_expressions_and_deferreds
     pub fn translate_expressions_and_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -579,7 +568,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_extern_function_call
     pub fn translate_extern_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -604,7 +592,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_function_pointer_call
     pub fn translate_function_pointer_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -637,7 +624,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_new_mut_runtime_sized_array
     pub fn translate_new_mut_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -663,7 +649,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_new_imm_runtime_sized_array
     pub fn translate_new_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -699,7 +684,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_static_array_from_callable
     pub fn translate_static_array_from_callable(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -727,7 +711,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_destroy_static_sized_array
     pub fn translate_destroy_static_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -758,7 +741,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_destroy_imm_runtime_sized_array
     pub fn translate_destroy_imm_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -772,7 +754,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_if
     pub fn translate_if(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -833,7 +814,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_while
     pub fn translate_while(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -851,7 +831,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-// mig: fn translate_interface_function_call
     pub fn translate_interface_function_call(
         &self,
         hinputs: &HinputsI<'s, 'i>,
