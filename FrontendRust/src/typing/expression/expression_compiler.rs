@@ -16,6 +16,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
+use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -560,7 +561,7 @@ where 's: 't,
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr)?;
 
                 let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
-                let rune_to_initially_known_type: HashMap<_, _> =
+                let rune_to_initially_known_type: IndexMap<_, _> =
                     get_rune_types_from_pattern(&let_se.pattern)
                         .into_iter().collect();
                 let range_list: Vec<RangeS<'s>> =
@@ -2257,7 +2258,7 @@ where 's: 't,
         let rules_with_implicitly_coercing_lookups_s = function_s.rules;
         let body_s = function_s.body;
 
-        let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let mut rune_s_to_pre_known_type_a: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             rune_to_explicit_type.iter().map(|(k, v)| (*k, v.clone())).collect();
         for param in params_s {
             if let Some(ref coord_rune) = param.pattern.coord_rune {
@@ -2290,7 +2291,7 @@ where 's: 't,
                 Err(_e) => panic!("CouldntSolveRuneTypesT"),
             };
 
-        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             rune_a_to_type_with_implicitly_coercing_lookups_s;
         // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
         // loose. We intentionally ignored the types of the things they're looking up, so we could know

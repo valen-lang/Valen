@@ -35,6 +35,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
 use crate::utils::range::CodeLocationS;
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use crate::postparsing::rune_type_solver::PrimitiveRuneTypeSolverLookupResult;
 use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
@@ -64,7 +65,7 @@ pub struct EnvironmentA<'s> {
   maybe_name: Option<&'s INameS<'s>>,
   maybe_parent_env: Option<&'s EnvironmentA<'s>>,
   code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>,
-  rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
 }
 
 // mig: impl EnvironmentA
@@ -100,7 +101,7 @@ impl<'s> EnvironmentA<'s> {
 
 
 // mig: fn add_runes
-fn add_runes(&self, new_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>) -> EnvironmentA<'s> {
+fn add_runes(&self, new_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>) -> EnvironmentA<'s> {
   let mut merged = self.rune_to_type.clone();
   merged.extend(new_rune_to_type);
   EnvironmentA {
@@ -115,7 +116,7 @@ fn add_runes(&self, new_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>) ->
 
 
 // mig: fn explicify_lookups
-pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>>) -> Result<(), IRuneTypingLookupFailedError<'s>> {
+pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut IndexMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>>) -> Result<(), IRuneTypingLookupFailedError<'s>> {
   // Only two rules' results can be coerced: LookupSR and CallSR.
   // Let's look for those and rewrite them to put an explicit coercion in there.
   for rule in all_rules_with_implicitly_coercing_lookups_s {
@@ -214,7 +215,7 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
 }
 
 // mig: fn coerce_kind_lookup_to_coord
-fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
+fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut IndexMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
   let kind_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
     range: range.clone(),
     original_coord_rune: result_rune.rune.clone(),
@@ -226,7 +227,7 @@ fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type:
 }
 
 // mig: fn coerce_kind_template_lookup_to_kind
-fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
+fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut IndexMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
     original_kind_rune: result_rune.rune.clone(),
@@ -238,7 +239,7 @@ fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_
 }
 
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
+fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut IndexMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
 
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
     range: range.clone(),
@@ -418,7 +419,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
   let all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>> =
     header_rules_with_implicitly_coercing_lookups_s.iter().chain(member_rules_with_implicitly_coercing_lookups_s.iter()).cloned().collect();
-  let mut all_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+  let mut all_rune_to_explicit_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   all_rune_to_explicit_type.extend(members_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())));
 
   let rune_a_to_type_with_implicitly_coercing_lookups_s =
@@ -432,7 +433,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       env,
     )?;
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+  let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
 
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
@@ -592,7 +593,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
       env,
     )?;
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+  let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit loose...
 
@@ -650,7 +651,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
   // Scala creates runeTypingEnv here, but Rust can't because it borrows astrouts immutably
   // while calculate_rune_types needs &mut astrouts. Created below after mutable borrows end.
 
-  let mut rune_to_explicit_type_with_kinds: HashMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+  let mut rune_to_explicit_type_with_kinds: IndexMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   rune_to_explicit_type_with_kinds.insert(struct_kind_rune_s.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}));
   rune_to_explicit_type_with_kinds.insert(interface_kind_rune_s.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}));
 
@@ -668,7 +669,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
   // getOrDie because we should have gotten a complete solve
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(tyype.clone()));
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+  let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
   // loose. We intentionally ignored the types of the things they're looking up, so we could know
@@ -722,7 +723,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       rules_with_implicitly_coercing_lookups_s,
       env,
     )?;
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+  let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
@@ -776,7 +777,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
       env,
     )?;
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+  let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
   // loose. We intentionally ignored the types of the things they're looking up, so we could know
@@ -823,18 +824,18 @@ fn calculate_rune_types(
   astrouts: &mut Astrouts<'s>,
   range_s: RangeS<'s>,
   identifying_runes_s: Vec<IRuneS<'s>>,
-  rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+  rune_to_explicit_type: IndexMap<IRuneS<'s>, ITemplataType<'s>>,
   params_s: &[ParameterS<'s>],
   rules_s: &[IRulexSR<'s>],
   env: &EnvironmentA<'s>,
-) -> Result<HashMap<IRuneS<'s>, ITemplataType<'s>>, ICompileErrorA<'s>> {
+) -> Result<IndexMap<IRuneS<'s>, ITemplataType<'s>>, ICompileErrorA<'s>> {
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
     astrouts,
     env,
     range_s: range_s.clone(),
   };
-  let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type;
+  let mut rune_s_to_pre_known_type_a: IndexMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type;
   for param in params_s {
     if let Some(ref coord_rune) = param.pattern.coord_rune {
       rune_s_to_pre_known_type_a.insert(coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {}));
@@ -866,7 +867,7 @@ fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>
     maybe_name: None,
     maybe_parent_env: None,
     code_map,
-    rune_to_type: HashMap::new(),
+    rune_to_type: IndexMap::new(),
   };
 
   // If something is absent from the map, we haven't started evaluating it yet

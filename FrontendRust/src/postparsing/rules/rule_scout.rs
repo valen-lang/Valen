@@ -388,7 +388,7 @@ fn get_rune_kind_template<'s>(
 
 
 struct Equivalencies<'s> {
-  rune_to_kind_equivalent_runes: HashMap<IRuneS<'s>, HashSet<IRuneS<'s>>>,
+  rune_to_kind_equivalent_runes: indexmap::IndexMap<IRuneS<'s>, indexmap::IndexSet<IRuneS<'s>>>,
 }
 
 impl<'s> Equivalencies<'s> {
@@ -398,7 +398,7 @@ impl<'s> Equivalencies<'s> {
   }
 
   fn new(rules_s: &[IRulexSR<'s>]) -> Self {
-    let mut this = Self { rune_to_kind_equivalent_runes: HashMap::new() };
+    let mut this = Self { rune_to_kind_equivalent_runes: indexmap::IndexMap::new() };
     for rule in rules_s {
       match rule {
         IRulexSR::CoordComponents(r) => this.mark_kind_equivalent(r.result_rune.rune, r.kind_rune.rune),
@@ -428,7 +428,7 @@ impl<'s> Equivalencies<'s> {
 
   fn find_transitively_equivalent_into(
     &self,
-    found_so_far: &mut HashSet<IRuneS<'s>>,
+    found_so_far: &mut indexmap::IndexSet<IRuneS<'s>>,
     rune: IRuneS<'s>,
   ) {
     let equivalents: Vec<IRuneS<'s>> = self.rune_to_kind_equivalent_runes
@@ -443,14 +443,14 @@ impl<'s> Equivalencies<'s> {
     }
   }
 
-  fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> HashSet<IRuneS<'s>> {
-    let mut set = HashSet::new();
+  fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> indexmap::IndexSet<IRuneS<'s>> {
+    let mut set: indexmap::IndexSet<IRuneS<'s>> = indexmap::IndexSet::new();
     set.insert(rune);
     self.find_transitively_equivalent_into(&mut set, rune);
     set
   }
 
-  fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> HashSet<IRuneS<'s>>
+  fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> indexmap::IndexSet<IRuneS<'s>>
   where
     I: Iterator<Item = IRuneS<'s>>,
   {
@@ -468,7 +468,7 @@ impl<'s> Equivalencies<'s> {
 pub fn get_kind_equivalent_runes_iter<'s, I>(
   rules_s: &[IRulexSR<'s>],
   runes: I,
-) -> HashSet<IRuneS<'s>>
+) -> indexmap::IndexSet<IRuneS<'s>>
 where
   I: Iterator<Item = IRuneS<'s>>,
 {

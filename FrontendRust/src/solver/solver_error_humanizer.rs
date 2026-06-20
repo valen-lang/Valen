@@ -99,12 +99,17 @@ where
       |(string_so_far, previously_printed), step| {
         let new_string = format!("{}{}{}{}{}",
           if !step.complex && step.solved_rules.is_empty() { "Supplied:" } else { "" },
-          if step.complex { "(complex)  " } else { "" },
+          if step.complex { if step.solved_rules.is_empty() { "(complex)" } else { "(complex)  " } } else { "" },
           step.solved_rules.iter().map(|(_, r)| rule_to_string(r)).collect::<Vec<_>>().join("  ") + "\n",
-          step.conclusions.iter()
-            .filter(|(rune, _)| !previously_printed.contains(rune))
-            .map(|(rune, conclusion)| format!("  {}: {}\n", humanize_rune(*rune), humanize_conclusion(*conclusion)))
-            .collect::<String>(),
+          {
+            let mut entries: Vec<(&RuneId, &Conclusion)> = step.conclusions.iter()
+              .filter(|(rune, _)| !previously_printed.contains(rune))
+              .collect();
+            entries.sort_by_key(|(rune, _)| humanize_rune(**rune));
+            entries.iter()
+              .map(|(rune, conclusion)| format!("  {}: {}\n", humanize_rune(**rune), humanize_conclusion(**conclusion)))
+              .collect::<String>()
+          },
           step.added_rules.iter()
             .map(|r| format!("  added rule: {}\n", rule_to_string(r)))
             .collect::<String>(),

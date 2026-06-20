@@ -16,6 +16,7 @@ use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use crate::typing::types::types::{KindPlaceholderT, KindT};
 use crate::typing::names::names::IInstantiationNameT;
@@ -1410,7 +1411,7 @@ where 's: 't,
         name_prefix: IdT<'s, 't>,
         generic_param: &'s GenericParameterS<'s>,
         index: i32,
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         current_height: Option<i32>,
         register_with_compiler_outputs: bool,
     ) -> ITemplataT<'s, 't> {

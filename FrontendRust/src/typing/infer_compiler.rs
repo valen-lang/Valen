@@ -36,13 +36,13 @@ use std::marker::PhantomData;
 
 /// Temporary state (see @TFITCX)
 pub struct CompleteResolveSolve<'s, 't> {
-    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 
 /// Temporary state (see @TFITCX)
 pub struct CompleteDefineSolve<'s, 't> {
-    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 
@@ -116,7 +116,7 @@ where 's: 't,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[IRulexSR<'s>],
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         initial_knowns: &[InitialKnown<'s, 't>],
@@ -152,7 +152,7 @@ where 's: 't,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[IRulexSR<'s>],
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
@@ -168,10 +168,10 @@ where 's: 't,
                     match &generic_param.default {
                         Some(default_rules) => {
                             let default_rule_vec: Vec<IRulexSR<'s>> = default_rules.rules.iter().map(|r| **r).collect();
-                            let new_runes: HashSet<IRuneS<'s>> =
+                            let new_runes: indexmap::IndexSet<IRuneS<'s>> =
                                 default_rules.rune_to_type.iter().map(|(k, _)| *k).collect();
                             solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
-                                false, vec![], HashMap::new(), default_rule_vec, new_runes
+                                false, vec![], IndexMap::new(), default_rule_vec, new_runes
                             ).unwrap();
                             true
                         }
@@ -193,11 +193,11 @@ where 's: 't,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[IRulexSR<'s>],
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
         initial_sends: &[InitialSend<'s, 't>],
-    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+    ) -> Result<IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
         let mut solver_state =
             self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
         match self.r#continue(envs, coutputs, &mut solver_state) {
@@ -222,7 +222,7 @@ where 's: 't,
         envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         initial_rules: &[IRulexSR<'s>],
-        initial_rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        initial_rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
         initial_sends: &[InitialSend<'s, 't>],
@@ -239,7 +239,7 @@ where 's: 't,
                 receiver_rune: send.receiver_rune,
             }));
         }
-        let mut already_known: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = HashMap::new();
+        let mut already_known: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::new();
         for known in initial_knowns {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&envs, state, known.rune.rune, known.templata);
@@ -272,13 +272,13 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         rules: &[IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let _steps_stream = solver_state.get_steps();
-        let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+        let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> =
             solver_state.userify_conclusions().into_iter().collect();
 
         let all_runes: HashSet<IRuneS<'s>> =
@@ -483,13 +483,10 @@ where 's: 't,
 
     pub fn interpret_results(
         &self,
-        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_to_type: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        // VIOLATES @IIIOZ: still HashMap because the conclusions cascade through 6 files of
-        // `&HashMap<IRuneS<'s>, ITemplataT<'s, 't>>` signatures (FailedSolve fields, add_runed_data_to_near_env,
-        // check_defining_conclusions_and_resolve, etc.). Determinism here deferred to a follow-up sweep.
-        let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = solver_state.userify_conclusions().into_iter().collect();
+    ) -> Result<IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = solver_state.userify_conclusions().into_iter().collect();
         let mut all_runes: HashSet<IRuneS<'s>> = rune_to_type.keys().cloned().collect();
         all_runes.extend(solver_state.get_all_runes());
         // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
@@ -519,7 +516,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         initial_rules: &[IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
         let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
             include_reachable_bounds_for_runes
@@ -619,7 +616,7 @@ where 's: 't,
     pub fn import_conclusions_and_reachable_bounds(
         &self,
         original_calling_env: IInDenizenEnvironmentT<'s, 't>,
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> &'t GeneralEnvironmentT<'s, 't> {
         // If this is the original calling env, in other words, if we're the original caller for
@@ -662,7 +659,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
         rules: &[IRulexSR<'s>],
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
         // Check all template calls
@@ -764,7 +761,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         c: ResolveSR<'s>,
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         context_region: RegionT,
     ) -> Result<Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let return_coord = match conclusions.get(&c.return_rune.rune) {
@@ -801,7 +798,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         c: CallSiteCoordIsaSR<'s>,
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
         let CallSiteCoordIsaSR { range, result_rune, sub_rune, super_rune } = c;
         let sub_coord = match conclusions.get(&sub_rune.rune) {
@@ -842,7 +839,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         c: CallSR<'s>,
-        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        conclusions: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), ResolveFailure<'s, 't, KindT<'s, 't>>> {
         let CallSR { range, result_rune, template_rune, args: arg_runes } = c;
 

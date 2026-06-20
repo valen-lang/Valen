@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use crate::typing::compiler::Compiler;
 use crate::typing::infer_compiler::*;
@@ -49,7 +50,7 @@ pub enum IsParentResult<'s, 't> {
 
 pub struct IsParent<'s, 't> {
     pub templata: ITemplataT<'s, 't>,
-    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub impl_id: IdT<'s, 't>,
 }
 
@@ -101,7 +102,7 @@ where 's: 't,
         let call_site_rules: Vec<IRulexSR<'s>> =
             impl_a.rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
-        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
         let mut all_ranges: Vec<RangeS<'s>> = vec![impl_a.range];
@@ -145,7 +146,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         initial_knowns: &[InitialKnown<'s, 't>],
         impl_templata: ImplDefinitionTemplataT<'s, 't>,
-    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+    ) -> Result<IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
 
         let parent_env = impl_templata.env;
         let impl_a = impl_templata.impl_;
@@ -176,7 +177,7 @@ where 's: 't,
         let call_site_rules: Vec<IRulexSR<'s>> =
             impl_a.rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
 
-        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
         let mut all_ranges: Vec<RangeS<'s>> = vec![impl_a.range];
@@ -235,7 +236,7 @@ where 's: 't,
         let impl_outer_env_iden: IInDenizenEnvironmentT<'s, 't> =
             IInDenizenEnvironmentT::Citizen(impl_outer_env);
 
-        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             impl_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
         let impl_placeholders: Vec<InitialKnown<'s, 't>> =
@@ -596,7 +597,7 @@ where 's: 't,
                 make(self.typing_interner, vec![], vec![], vec![]));
             return IsParentResult::IsParent(IsParent {
                 templata: ITemplataT::Isa(self.typing_interner.alloc(*impl_isa)),
-                conclusions: HashMap::new(),
+                conclusions: IndexMap::new(),
                 impl_id: impl_isa.impl_name,
             });
         }

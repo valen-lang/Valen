@@ -1,5 +1,6 @@
 // From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use crate::interner::{InternedSlice, StrI};
 use crate::parse_arena::ParseArena;
@@ -426,14 +427,14 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>>
 // mig: struct PackageCoordinateMap
 #[derive(Clone, Debug)]
 pub struct PackageCoordinateMap<'a, Contents> {
-  pub package_coord_to_contents: HashMap<&'a PackageCoordinate<'a>, Contents>,
+  pub package_coord_to_contents: IndexMap<&'a PackageCoordinate<'a>, Contents>,
 }
 // mig: impl PackageCoordinateMap
 impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
     PackageCoordinateMap {
-      package_coord_to_contents: HashMap::new(),
+      package_coord_to_contents: IndexMap::new(),
     }
   }
 

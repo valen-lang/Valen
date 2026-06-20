@@ -1,4 +1,5 @@
 mod compiler_test_compilation;
+mod humanize_helper;
 mod compiler_tests;
 pub mod traverse;
 mod compiler_generics_tests;

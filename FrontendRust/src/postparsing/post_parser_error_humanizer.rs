@@ -203,9 +203,8 @@ pub fn humanize_rune<'s>(
       // "_" + lid.path.mkString("")
     }
     IRuneS::CodeRune(r) => r.name.0.to_string(),
-    IRuneS::ArgumentRune(_) => {
-      panic!("implement: humanize_rune ArgumentRune");
-      // "(arg " + paramIndex + ")"
+    IRuneS::ArgumentRune(r) => {
+      format!("(arg {})", r.arg_index)
     }
     IRuneS::SelfKindRune(_) => {
       panic!("implement: humanize_rune SelfKindRune");
@@ -367,13 +366,11 @@ pub fn humanize_rune<'s>(
       panic!("implement: humanize_rune ImplicitCoercionOwnershipRune");
       // humanizeRune(inner) + ".own"
     }
-    IRuneS::ImplicitCoercionKindRune(_) => {
-      panic!("implement: humanize_rune ImplicitCoercionKindRune");
-      // humanizeRune(inner) + ".kind"
+    IRuneS::ImplicitCoercionKindRune(r) => {
+      format!("{}.kind", humanize_rune(r.original_coord_rune))
     }
-    IRuneS::ImplicitCoercionTemplateRune(_) => {
-      panic!("implement: humanize_rune ImplicitCoercionTemplateRune");
-      // humanizeRune(inner) + ".gen"
+    IRuneS::ImplicitCoercionTemplateRune(r) => {
+      format!("{}.gen", humanize_rune(r.original_kind_rune))
     }
     IRuneS::ImplicitRegionRune(_) => {
       panic!("implement: humanize_rune ImplicitRegionRune");
@@ -463,49 +460,51 @@ pub fn humanize_rule<'s>(
       panic!("implement: humanize_rule DefinitionCoordIsa");
       // humanizeRune(resultRune.rune) + " = " + humanizeRune(subRune.rune) + " def-isa " + humanizeRune(superRune.rune)
     }
-    IRulexSR::CallSiteCoordIsa(_) => {
-      panic!("implement: humanize_rule CallSiteCoordIsa");
-      // resultRune.map(r => humanizeRune(r.rune)).getOrElse("_") + " = " + humanizeRune(subRune.rune) + " call-isa " + humanizeRune(superRune.rune)
+    IRulexSR::CallSiteCoordIsa(r) => {
+      let result = r.result_rune.map(|x| humanize_rune(x.rune)).unwrap_or_else(|| "_".to_string());
+      format!("{} = {} call-isa {}", result, humanize_rune(r.sub_rune.rune), humanize_rune(r.super_rune.rune))
     }
-    IRulexSR::CoordSend(_) => {
-      panic!("implement: humanize_rule CoordSend");
-      // humanizeRune(senderRune.rune) + " -> " + humanizeRune(receiverRune.rune)
+    IRulexSR::CoordSend(r) => {
+      format!("{} -> {}", humanize_rune(r.sender_rune.rune), humanize_rune(r.receiver_rune.rune))
     }
-    IRulexSR::CoerceToCoord(_) => {
-      panic!("implement: humanize_rule CoerceToCoord");
-      // "coerceToCoord(" + humanizeRune(coordRune.rune) + ", " + humanizeRune(kindRune.rune) + ")"
+    IRulexSR::CoerceToCoord(r) => {
+      format!("coerceToCoord({}, {})", humanize_rune(r.coord_rune.rune), humanize_rune(r.kind_rune.rune))
     }
     IRulexSR::MaybeCoercingCall(r) => humanize_rune(r.result_rune.rune) + " = " + &humanize_rune(r.template_rune.rune) + "<" + &r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ") + ">",
     IRulexSR::MaybeCoercingLookup(r) => humanize_rune(r.rune.rune) + " = \"" + &humanize_imprecise_name(r.name) + "\"",
-    IRulexSR::Call(_) => {
-      panic!("implement: humanize_rule Call");
-      // humanizeRune(resultRune.rune) + " = " + humanizeRune(templateRune.rune) + "<" + argRunes.map(_.rune).map(humanizeRune).mkString(", ") + ">"
+    IRulexSR::Call(r) => {
+      let args_str = r.args.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ");
+      format!("{} = {}<{}>", humanize_rune(r.result_rune.rune), humanize_rune(r.template_rune.rune), args_str)
     }
-    IRulexSR::Lookup(_) => {
-      panic!("implement: humanize_rule Lookup");
-      // humanizeRune(rune.rune) + " = \"" + humanizeImpreciseName(name) + "\""
+    IRulexSR::Lookup(r) => {
+      format!("{} = \"{}\"", humanize_rune(r.rune.rune), humanize_imprecise_name(r.name))
     }
     IRulexSR::Literal(r) => humanize_rune(r.rune.rune) + " = " + &humanize_literal(&r.literal),
     IRulexSR::Augment(r) => humanize_rune(r.result_rune.rune) + " = " + &r.ownership.map(humanize_ownership).unwrap_or_else(String::new) + &humanize_rune(r.inner_rune.rune),
-    IRulexSR::Equals(_) => {
-      panic!("implement: humanize_rule Equals");
-      // humanizeRune(left.rune) + " = " + humanizeRune(right.rune)
+    IRulexSR::Equals(r) => {
+      format!("{} = {}", humanize_rune(r.left.rune), humanize_rune(r.right.rune))
     }
     IRulexSR::RuneParentEnvLookup(_) => {
       panic!("implement: humanize_rule RuneParentEnvLookup");
       // "inherit " + humanizeRune(rune.rune)
     }
-    IRulexSR::Pack(_) => {
-      panic!("implement: humanize_rule Pack");
-      // humanizeRune(resultRune.rune) + " = (" + members.map(x => humanizeRune(x.rune)).mkString(", ") + ")"
+    IRulexSR::Pack(r) => {
+      let members_str = r.members.iter().map(|x| humanize_rune(x.rune)).collect::<Vec<_>>().join(", ");
+      format!("{} = ({})", humanize_rune(r.result_rune.rune), members_str)
     }
-    IRulexSR::Resolve(_) => {
-      panic!("implement: humanize_rule Resolve");
-      // humanizeRune(resultRune.rune) + " = resolve-func " + name + "(" + humanizeRune(paramsListRune.rune) + ")" + humanizeRune(returnRune.rune)
+    IRulexSR::Resolve(r) => {
+      format!("{} = resolve-func {}({}){}",
+        humanize_rune(r.result_rune.rune),
+        r.name.0,
+        humanize_rune(r.params_list_rune.rune),
+        humanize_rune(r.return_rune.rune))
     }
-    IRulexSR::CallSiteFunc(_) => {
-      panic!("implement: humanize_rule CallSiteFunc");
-      // humanizeRune(resultRune.rune) + " = callsite-func " + name + "(" + humanizeRune(paramsListRune.rune) + ")" + humanizeRune(returnRune.rune)
+    IRulexSR::CallSiteFunc(r) => {
+      format!("{} = callsite-func {}({}){}",
+        humanize_rune(r.prototype_rune.rune),
+        r.name.0,
+        humanize_rune(r.params_list_rune.rune),
+        humanize_rune(r.return_rune.rune))
     }
     IRulexSR::DefinitionFunc(_) => {
       panic!("implement: humanize_rule DefinitionFunc");

@@ -1,6 +1,7 @@
 
 use crate::solver::{SimpleSolverState, FailedSolve, ISolverError, make_solver_state};
 use super::test_rules::TestRule;
+use indexmap::{IndexMap, IndexSet};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use crate::utils::range::RangeS;
@@ -85,7 +86,7 @@ fn advance(
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal { rune: -1, value: "1337".to_string() }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [(-1, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
     }
@@ -104,7 +105,7 @@ fn advance(
                 value: "1337".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> =
             [(-1, "1337".to_string()), (-2, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
@@ -118,7 +119,7 @@ fn advance(
             coord_rune: -1,
             possible_values: vec!["1448".to_string(), "1337".to_string()],
         })];
-        let result = get_conclusions(rules, false, HashMap::new());
+        let result = get_conclusions(rules, false, IndexMap::new());
         let expected: HashMap<i64, String> = HashMap::new();
         assert_eq!(result, expected);
     }
@@ -137,7 +138,7 @@ fn advance(
                 value: "1337".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, false, HashMap::new());
+        let result = get_conclusions(rules, false, IndexMap::new());
         let expected: HashMap<i64, String> =
             [(-2, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
@@ -157,7 +158,7 @@ fn advance(
                 value: "1337".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> =
             [(-1, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
@@ -182,7 +183,7 @@ fn advance(
                 value: "1448".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "1337/1448".to_string()),
             (-2, "1337".to_string()),
@@ -208,7 +209,7 @@ fn advance(
                 value: "1337/1448".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "1337/1448".to_string()),
             (-2, "1337".to_string()),
@@ -231,7 +232,7 @@ fn advance(
                 member_runes: vec![-1, -2],
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "1337".to_string()),
             (-2, "1448".to_string()),
@@ -256,7 +257,7 @@ fn advance(
                 member_runes: vec![-1, -2],
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "1337".to_string()),
             (-2, "1448".to_string()),
@@ -281,7 +282,7 @@ fn advance(
                 member_runes: vec![],
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [(-3, "".to_string())].into_iter().collect();
         assert_eq!(result, expected);
     }
@@ -294,7 +295,7 @@ fn advance(
             result_rune: -3,
             member_runes: vec![],
         })];
-        let result = get_conclusions(rules, false, HashMap::new());
+        let result = get_conclusions(rules, false, IndexMap::new());
         let expected: HashMap<i64, String> = HashMap::new();
         assert_eq!(result, expected);
     }
@@ -339,7 +340,7 @@ fn advance(
                 right_rune: -7,
             }),
         ];
-        let conclusions = get_conclusions(rules, true, HashMap::new());
+        let conclusions = get_conclusions(rules, true, IndexMap::new());
         assert_eq!(
             conclusions.get(&-7),
             Some(&"1337/1448/1337/1448".to_string())
@@ -360,7 +361,7 @@ fn advance(
                 receiver_rune: -1,
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "Firefly".to_string()),
             (-2, "Firefly".to_string()),
@@ -448,7 +449,7 @@ fn advance(
                 receiver_rune: -1,
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "ISpaceship".to_string()),
             (-2, "Firefly".to_string()),
@@ -473,7 +474,7 @@ fn advance(
                 receiver_rune: -1,
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "Firefly".to_string()),
             (-2, "Firefly".to_string()),
@@ -506,7 +507,7 @@ fn advance(
                 receiver_rune: -1,
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "ISpaceship".to_string()),
             (-2, "Firefly".to_string()),
@@ -541,7 +542,7 @@ fn advance(
                 value: "IWeapon".to_string(),
             }),
         ];
-        let result = get_conclusions(rules, true, HashMap::new());
+        let result = get_conclusions(rules, true, IndexMap::new());
         let expected: HashMap<i64, String> = [
             (-1, "IWeapon:int".to_string()),
             (-4, "int".to_string()),
@@ -582,7 +583,7 @@ fn advance(
             Box::new(super::test_rule_solver::rule_to_puzzles),
             &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
-            HashMap::new(),
+            IndexMap::new(),
             all_runes,
         );
 
@@ -591,10 +592,10 @@ fn advance(
             solver_state.userify_conclusions().into_iter().collect();
         assert_eq!(first_conclusions.get(&-2), Some(&"A".to_string()));
 
-        let mut new_conclusions = HashMap::new();
+        let mut new_conclusions = IndexMap::new();
         new_conclusions.insert(-1i64, "Firefly".to_string());
         solver_state
-            .commit_step::<String>(false, vec![], new_conclusions, vec![], HashSet::new())
+            .commit_step::<String>(false, vec![], new_conclusions, vec![], IndexSet::new())
             .expect("commit_step");
 
         while advance(&mut solver_state, &test_solver).expect("advance") {}
@@ -666,7 +667,7 @@ fn advance(
             puzzler,
             &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
-            HashMap::new(),
+            IndexMap::new(),
             all_runes,
         );
         while advance(&mut solver_state, &test_solver).expect("advance") {}
@@ -723,7 +724,7 @@ fn advance(
             Box::new(super::test_rule_solver::rule_to_puzzles),
             &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
-            HashMap::new(),
+            IndexMap::new(),
             all_runes,
         );
 
@@ -745,7 +746,7 @@ fn advance(
     fn get_conclusions(
         rules: Vec<super::test_rules::TestRule>,
         expect_complete_solve: bool,
-        initially_known_runes: HashMap<i64, String>,
+        initially_known_runes: IndexMap<i64, String>,
     ) -> HashMap<i64, String> {
 
 

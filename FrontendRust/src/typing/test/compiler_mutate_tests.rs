@@ -11,6 +11,7 @@ use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocal
 use crate::typing::names::names::{CodeVarNameT, FunctionNameValT, FunctionTemplateNameT, IdT, IdValT, INameT, IStructTemplateNameT, IVarNameT, RawArrayNameT, StaticSizedArrayNameT, StructNameValT, StructTemplateNameT};
 use crate::typing::templata::templata::{ITemplataT, KindTemplataT, MutabilityTemplataT, VariabilityTemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, MutabilityT, OwnershipT, RegionT, StaticSizedArrayTT, StructTTValT, VariabilityT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
@@ -232,7 +233,9 @@ exported func main() int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CantMutateFinalMember), got Ok"));
+    match &err {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
                 INameT::Struct(StructNameT {
@@ -249,6 +252,15 @@ exported func main() int {
         }
         _ => panic!("expected CantMutateFinalMember"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:4:1:
+exported func main() int {
+At test:0.vale:6:7:
+  set v.x = 10.0;
+Cannot mutate final member 'x' of container Vec3
+"#,
+    );
 }
 
 // mig: fn reports_when_we_try_to_mutate_a_final_member_in_a_struct
@@ -274,7 +286,9 @@ exported func main() int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CantMutateFinalMember), got Ok"));
+    match &err {
         ICompileErrorT::CantMutateFinalMember { struct_, member_name, .. } => {
             match struct_.id.local_name {
                 INameT::Struct(StructNameT {
@@ -291,6 +305,15 @@ exported func main() int {
         }
         _ => panic!("expected CantMutateFinalMember"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:4:1:
+exported func main() int {
+At test:0.vale:6:7:
+  set v.x = 10.0;
+Cannot mutate final member 'x' of container Vec3
+"#,
+    );
 }
 
 // mig: fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array
@@ -319,7 +342,9 @@ exported func main() int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CantMutateFinalElement), got Ok"));
+    match &err {
         ICompileErrorT::CantMutateFinalElement {
             coord: CoordT {
                 kind: KindT::StaticSizedArray(StaticSizedArrayTT {
@@ -344,6 +369,15 @@ exported func main() int {
         } => {}
         _ => panic!("expected CantMutateFinalElement"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:5:1:
+exported func main() int {
+At test:0.vale:7:7:
+  set arr[4] = 10;
+Cannot change a slot in array StaticArray<10, imm, final, i32> to point to a different element; it's an array of final references.
+"#,
+    );
 }
 
 // mig: fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type
@@ -368,10 +402,22 @@ exported func main() {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CouldntConvertForMutateT), got Ok"));
+    match &err {
         ICompileErrorT::CouldntConvertForMutateT { expected_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }, actual_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Str(_), .. }, .. } => {}
         _ => panic!("expected CouldntConvertForMutateT"),
     }
+    // TODO: humanize CouldntConvertForMutateT uses Debug-format on CoordT; replace with humanize_templata and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:1:
+exported func main() {
+At test:0.vale:5:7:
+  set a = "blah";
+Mutate couldn't convert CoordT { ownership: Share, region: RegionT { region: Default }, kind: Str(StrT) } to expected destination type CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+"##,
+    );
 }
 
 // mig: fn reports_when_we_try_to_override_a_non_interface
@@ -397,10 +443,20 @@ exported func main() {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CantImplNonInterface), got Ok"));
+    match &err {
         ICompileErrorT::CantImplNonInterface { templata: ITemplataT::Kind(KindTemplataT { kind: KindT::Int(IntT { bits: 32 }) }), .. } => {}
         _ => panic!("expected CantImplNonInterface"),
     }
+    // TODO: humanize CantImplNonInterface uses Debug-format on the templata; replace with humanize_templata and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:3:1:
+impl int for Bork;
+Can't extend a non-interface: Kind(KindTemplataT { kind: Int(IntT { bits: 32 }) })
+"#,
+    );
 }
 
 // mig: fn can_mutate_an_element_in_a_runtime_sized_array
@@ -498,10 +554,23 @@ exported func main() int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs() {
-        Err(crate::typing::compiler_error_reporter::ICompileErrorT::RangedInternalErrorT { .. }) => {},
-        other => panic!("expected RangedInternalErrorT for if-branch-move-mismatch, got: {:?}", other.map(|_| "Ok(_)")),
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(RangedInternalErrorT) for if-branch-move-mismatch, got Ok"));
+    match &err {
+        crate::typing::compiler_error_reporter::ICompileErrorT::RangedInternalErrorT { .. } => {},
+        other => panic!("expected RangedInternalErrorT for if-branch-move-mismatch, got: {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:4:1:
+exported func main() int {
+At test:0.vale:7:3:
+  if true {
+Internal error: Must move same variables from inside branches!
+From then branch: {CodeVar(CodeVarNameT { name: "s" })}
+From else branch: {}
+"##,
+    );
 }
 #[test]
 fn if_branches_moving_same_vars_different_order_compiles() {

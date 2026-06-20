@@ -24,6 +24,7 @@ use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::IStructTemplateNameT;
 use crate::typing::types::types::{IRegionT, StructTTValT, RegionT};
 use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
+use indexmap::{IndexMap, IndexSet};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use crate::typing::infer_compiler::InitialSend;
@@ -71,7 +72,7 @@ where 's: 't,
             self_env: declaring_env,
             context_region,
         };
-        let header_rune_to_type_map: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let header_rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.header_rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
         // This checks to make sure it's a valid use of this template.
@@ -139,12 +140,12 @@ where 's: 't,
             interface_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
-        let defaults_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.generic_parameters.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
-        let rune_to_type_for_prediction: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
                  interface_a.rune_to_type.get(r).copied()
@@ -215,12 +216,12 @@ where 's: 't,
             struct_a.generic_parameters.iter().map(|gp| gp.rune.rune)
             .chain(call_site_rule_runes.into_iter())
             .collect();
-        let defaults_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let defaults_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.generic_parameters.iter()
                 .filter_map(|gp| gp.default.as_ref())
                 .flat_map(|d| d.rune_to_type.iter().map(|(k, v)| (*k, *v)))
                 .collect();
-        let rune_to_type_for_prediction: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type_for_prediction: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             runes_for_prediction.iter().map(|r|
                 (*r,
                  struct_a.header_rune_to_type.get(r).copied()
@@ -298,7 +299,7 @@ where 's: 't,
             self_env: declaring_env,
             context_region,
         };
-        let rune_to_type_map: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type_map: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
         // This checks to make sure it's a valid use of this template.
@@ -359,7 +360,7 @@ where 's: 't,
         let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *struct_template_id);
         let all_rules_s: Vec<IRulexSR<'s>> =
             struct_a.header_rules.iter().copied().chain(struct_a.member_rules.iter().copied()).collect();
-        let all_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let all_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.header_rune_to_type.iter().chain(struct_a.members_rune_to_type.iter())
                 .map(|(k, v)| (*k, *v)).collect();
         let definition_rules: Vec<IRulexSR<'s>> =
@@ -391,10 +392,10 @@ where 's: 't,
                         generic_param, index, &all_rune_to_type, placeholder_pure_height, true);
                     solver_state.commit_step::<()>(
                         false, vec![], {
-                            let mut m = HashMap::new();
+                            let mut m = IndexMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], HashSet::new()).unwrap();
+                        }, vec![], IndexSet::new()).unwrap();
                     true
                 }
             }
@@ -472,7 +473,7 @@ where 's: 't,
         let interface_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
         // We declare the interface's outer environment in the precompile stage instead of here because of MDATOEF.
         let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *interface_template_id);
-        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+        let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
             interface_a.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
         let definition_rules: Vec<IRulexSR<'s>> =
             interface_a.rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
@@ -503,10 +504,10 @@ where 's: 't,
                         generic_param, index, &rune_to_type, placeholder_pure_height, true);
                     solver_state.commit_step::<()>(
                         false, vec![], {
-                            let mut m = HashMap::new();
+                            let mut m = IndexMap::new();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], HashSet::new()).unwrap();
+                        }, vec![], IndexSet::new()).unwrap();
                     true
                 }
             }

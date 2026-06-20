@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use std::iter::once;
 
@@ -65,7 +66,7 @@ where 's: 't,
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
-        let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         initially_known_runes.insert(variability_rune, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
@@ -88,8 +89,8 @@ where 's: 't,
                 err: e,
             })?;
 
-        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
-            HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
         match explicify_lookups(
             &rune_typing_env,
@@ -196,7 +197,7 @@ where 's: 't,
         maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
-        let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
         initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         if let Some(rune) = maybe_element_type_rune {
             initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
@@ -216,8 +217,8 @@ where 's: 't,
                 range: self.typing_interner.alloc_slice_copy(parent_ranges),
                 err: e,
             })?;
-        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
-            HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
         match explicify_lookups(
             &rune_typing_env,
@@ -424,7 +425,7 @@ where 's: 't,
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
-        let mut initially_known_runes: HashMap<IRuneS<'s>, ITemplataType<'s>> = HashMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         initially_known_runes.insert(mutability_rune_a, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         initially_known_runes.insert(variability_rune_a, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
@@ -448,7 +449,7 @@ where 's: 't,
                 err: e,
             })?;
 
-        let member_types: HashSet<CoordT<'s, 't>> =
+        let member_types: indexmap::IndexSet<CoordT<'s, 't>> =
             exprs_2.iter().map(|e| e.result().coord).collect();
         if member_types.len() > 1 {
             let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
@@ -458,8 +459,8 @@ where 's: 't,
         let member_type = *member_types.iter().next().expect("vassert: memberTypes is empty");
 
         // VIOLATES @IIIOZ: still HashMap because explicify_lookups takes &mut HashMap.
-        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
-            HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+        let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+            IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
         let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
         match explicify_lookups(
             &rune_typing_env,
@@ -885,13 +886,13 @@ where 's: 't,
         *self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: id })
     }
 
-    fn get_array_size(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
+    fn get_array_size(&self, templatas: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
         panic!("Unimplemented: get_array_size");
         // val IntegerTemplataT(m) = vassertSome(templatas.get(sizeRuneA))
         // m.toInt
     }
 
-    fn get_array_element_type(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
+    fn get_array_element_type(&self, templatas: &IndexMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
         let coord_templata = expect_coord_templata(*templatas.get(&type_rune_a).expect("vassertSome: typeRuneA not in templatas"));
         coord_templata.coord
     }

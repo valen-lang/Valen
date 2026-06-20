@@ -5,6 +5,7 @@ use crate::solver::{
     FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, make_solver_state,
 };
 use crate::utils::range::RangeS;
+use indexmap::{IndexMap, IndexSet};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 
@@ -89,52 +90,52 @@ fn solve_rule_impl<'s>(
 ) -> Result<(), ISolverError<IRuneS<'s>, bool, IIdentifiabilityRuleError>> {
   match rule {
     IRulexSR::KindComponents(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.kind_rune.rune.clone(), true), (x.mutability_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.kind_rune.rune.clone(), true), (x.mutability_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::CoordComponents(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.ownership_rune.rune.clone(), true), (x.kind_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.ownership_rune.rune.clone(), true), (x.kind_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::PrototypeComponents(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::MaybeCoercingCall(x) => {
-      let mut conclusions: HashMap<IRuneS<'s>, bool> = [(x.result_rune.rune.clone(), true), (x.template_rune.rune.clone(), true)].into_iter().collect();
+      let mut conclusions: IndexMap<IRuneS<'s>, bool> = [(x.result_rune.rune.clone(), true), (x.template_rune.rune.clone(), true)].into_iter().collect();
       for arg in x.args {
         conclusions.insert(arg.rune.clone(), true);
       }
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], IndexSet::new())
     }
     IRulexSR::Resolve(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::CallSiteFunc(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.prototype_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.prototype_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::DefinitionFunc(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.params_list_rune.rune.clone(), true), (x.return_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::DefinitionCoordIsa(x) => {
-        solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.sub_rune.rune.clone(), true), (x.super_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+        solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.sub_rune.rune.clone(), true), (x.super_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::CallSiteCoordIsa(x) => {
-        let mut conclusions: HashMap<IRuneS<'s>, bool> = [(x.sub_rune.rune.clone(), true), (x.super_rune.rune.clone(), true)].into_iter().collect();
+        let mut conclusions: IndexMap<IRuneS<'s>, bool> = [(x.sub_rune.rune.clone(), true), (x.super_rune.rune.clone(), true)].into_iter().collect();
         if let Some(result_rune) = &x.result_rune {
             conclusions.insert(result_rune.rune.clone(), true);
         }
-        solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], HashSet::new())
+        solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], IndexSet::new())
     }
     IRulexSR::OneOf(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::Equals(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.left.rune.clone(), true), (x.right.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.left.rune.clone(), true), (x.right.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::IsConcrete(_) => {
       panic!("IRulexSR::IsConcrete not yet migrated in identifiability solve_rule");
       // solverState.commitStep(false, Vector(ruleIndex), Map(rune.rune -> true), Vector(), Set.empty)
     }
     IRulexSR::IsInterface(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::IsStruct(_) => {
       panic!("IRulexSR::IsStruct not yet migrated in identifiability solve_rule");
@@ -145,16 +146,16 @@ fn solve_rule_impl<'s>(
       // solverState.commitStep(false, Vector(ruleIndex), Map(resultRune.rune -> true, coordListRune.rune -> true), Vector(), Set.empty)
     }
     IRulexSR::CoerceToCoord(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.kind_rune.rune.clone(), true), (x.coord_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.kind_rune.rune.clone(), true), (x.coord_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::Literal(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::Lookup(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::MaybeCoercingLookup(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::RuneParentEnvLookup(_) => {
       panic!("unimplemented");
@@ -162,14 +163,14 @@ fn solve_rule_impl<'s>(
       // solverState.commitStep[IIdentifiabilityRuleError](false, Vector(ruleIndex), vimpl(), Vector(), Set.empty)
     }
     IRulexSR::Augment(x) => {
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.inner_rune.rune.clone(), true)].into_iter().collect(), vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.inner_rune.rune.clone(), true)].into_iter().collect(), vec![], IndexSet::new())
     }
     IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in identifiability solve_rule"),
     IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in identifiability solve_rule"),
     IRulexSR::Pack(x) => {
-      let mut conclusions: HashMap<IRuneS<'s>, bool> = x.members.iter().map(|m| (m.rune.clone(), true)).collect();
+      let mut conclusions: IndexMap<IRuneS<'s>, bool> = x.members.iter().map(|m| (m.rune.clone(), true)).collect();
       conclusions.insert(x.result_rune.rune.clone(), true);
-      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], HashSet::new())
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], conclusions, vec![], IndexSet::new())
     }
     IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in identifiability solve_rule"),
   }
@@ -183,7 +184,7 @@ pub(crate) fn solve_identifiability<'s>(
   rules: &'s [IRulexSR<'s>],
   identifying_runes: &[IRuneS<'s>],
 ) -> Result<HashMap<IRuneS<'s>, bool>, IdentifiabilitySolveError<'s>> {
-  let initially_known_runes: HashMap<_, _> =
+  let initially_known_runes: IndexMap<_, _> =
     identifying_runes.iter().map(|r| (r.clone(), true)).collect();
 
   let all_runes: Vec<IRuneS<'s>> = {

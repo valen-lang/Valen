@@ -3,6 +3,7 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use crate::interner::StrI;
@@ -121,10 +122,22 @@ fn test_lacking_drop_function() {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+    match &err {
         ICompileErrorT::CouldntFindFunctionToCallT { fff: FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop") }), .. }, .. } => {}
         _ => panic!("expected CouldntFindFunctionToCallT with FindFunctionFailure(CodeNameS(\"drop\"))"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+func bork<T>(a T) { }
+At test:0.vale:2:22:
+func bork<T>(a T) { }
+Couldn't find a suitable function drop(Kind$bork.T). No function with that name exists.
+
+"#,
+    );
 }
 
 // mig: fn test_having_drop_function_concept_function
@@ -950,7 +963,9 @@ exported func main() int where N Int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(TypingPassSolverError), got Ok"));
+    match &err {
         ICompileErrorT::TypingPassSolverError { failed_solve, .. } => {
             assert!(failed_solve.unsolved_rules.is_empty(), "expected empty unsolved_rules");
             assert!(matches!(failed_solve.error, ISolverError::SolveIncomplete(_)));
@@ -964,6 +979,24 @@ exported func main() int where N Int {
         }
         _ => panic!("expected TypingPassSolverError"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:1:
+exported func main() int where N Int {
+At test:0.vale:3:1:
+exported func main() int where N Int {
+Couldn't solve some runes: N
+Steps:
+Supplied:
+  added rule: _21111.kind = "int"
+  added rule: coerceToCoord(_21111, _21111.kind)
+_21111.kind = "int"
+  _21111.kind: i32
+coerceToCoord(_21111, _21111.kind)
+  _21111: i32
+Unsolved runes: N
+"##,
+    );
 }
 
 // mig: fn stamps_an_interface_template_via_a_function_return
@@ -1056,7 +1089,9 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(TypingPassSolverError), got Ok"));
+    match &err {
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipB"), .. }), .. }, .. }), new_conclusion: ITemplataT::StructDefinition(StructDefinitionTemplataT { origin_struct: &StructA { name: IStructDeclarationNameS::TopLevelStructDeclarationName(TopLevelStructDeclarationNameS { name: StrI("ShipA"), .. }), .. }, .. }), .. }), .. }, .. } => {}
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. } => {}
@@ -1071,6 +1106,45 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
         ICompileErrorT::TypingPassSolverError { failed_solve: FailedSolve { error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::InternalSolverError { err: ISolverError::SolverConflict(SolverConflict { previous_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipB"), .. }), .. }), .. }, .. }) }), new_conclusion: ITemplataT::Kind(&KindTemplataT { kind: KindT::Struct(StructTT { id: IdT { local_name: INameT::Struct(StructNameT { template: IStructTemplateNameT::StructTemplate(StructTemplateNameT { human_name: StrI("ShipA"), .. }), .. }), .. }, .. }) }), .. }), .. }, .. }), .. }, .. } => {}
         other => panic!("vfail: {:#?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:5:1:
+exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+At test:0.vale:5:1:
+exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+Solver conflict on rune _123111: was ShipB but now concluding ShipA
+exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
+                                                            ^^^^^ _123111: ShipA
+                                                   ^^^^^^ N: ShipA
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ _3: (unknown)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ _3.kind: (unknown)
+Steps:
+Supplied:
+  added rule: _113111.gen = "ShipA"
+  added rule: _113111 = _113111.gen<>
+  added rule: N = _113111
+  added rule: _123111.gen = "ShipB"
+  added rule: _123111 = _123111.gen<>
+  added rule: N = _123111
+  added rule: _3.kind = "void"
+  added rule: coerceToCoord(_3, _3.kind)
+_113111.gen = "ShipA"
+  _113111.gen: ShipA
+_113111 = _113111.gen<>
+  _113111: ShipA
+N = _113111
+  N: ShipA
+_123111.gen = "ShipB"
+  _123111.gen: ShipB
+_123111 = _123111.gen<>
+  _123111: ShipB
+N = _123111
+Unsolved rule: coerceToCoord(_3, _3.kind)
+Unsolved rule: _3.kind = "void"
+Unsolved rule: N = _123111
+Unsolved runes: _3 _3.kind
+"##,
+    );
 }
 
 // mig: fn can_match_kind_templata_type_against_struct_env_entry_struct_templata

@@ -1,3 +1,4 @@
+use indexmap::{IndexMap, IndexSet};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -11,9 +12,9 @@ where
     rule_to_puzzles: Box<dyn Fn(&Rule) -> Vec<Vec<Rune>>>,
     steps: Vec<super::Step<Rule, Rune, Conclusion>>,
     rules: Vec<Rule>,
-    all_runes: HashSet<Rune>,
-    open_rule_to_puzzle_to_runes: HashMap<i32, Vec<Vec<Rune>>>,
-    rune_to_conclusion: HashMap<Rune, Conclusion>,
+    all_runes: IndexSet<Rune>,
+    open_rule_to_puzzle_to_runes: IndexMap<i32, Vec<Vec<Rune>>>,
+    rune_to_conclusion: IndexMap<Rune, Conclusion>,
 }
 
 // mig: impl SimpleSolverState
@@ -51,7 +52,7 @@ where
 
     // mig: fn get_all_runes (matches Scala's getAllRunes() -> Set[Rune])
     pub fn get_all_runes(&self) -> HashSet<Rune> {
-        self.all_runes.clone()
+        self.all_runes.iter().cloned().collect()
     }
 
     // mig: fn is_complete
@@ -64,9 +65,9 @@ where
         &mut self,
         complex: bool,
         solved_rule_indices: Vec<i32>,
-        conclusions: HashMap<Rune, Conclusion>,
+        conclusions: IndexMap<Rune, Conclusion>,
         new_rules: Vec<Rule>,
-        new_runes: HashSet<Rune>,
+        new_runes: IndexSet<Rune>,
     ) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>> {
         self.all_runes.extend(new_runes);
         let solved_rules: Vec<(i32, Rule)> = solved_rule_indices
@@ -77,7 +78,7 @@ where
             complex,
             solved_rules,
             added_rules: new_rules.clone(),
-            conclusions: conclusions.clone(),
+            conclusions: conclusions.clone().into_iter().collect(),
         };
         // Append step before checking for conflicts (audit trail captures conflicting step)
         self.steps.push(step);
@@ -149,9 +150,10 @@ where
 
     // mig: fn get_unsolved_runes (matches Scala's getUnsolvedRunes)
     pub fn get_unsolved_runes(&self) -> Vec<Rune> {
-        self.all_runes.difference(
-            &self.rune_to_conclusion.keys().cloned().collect()
-        ).cloned().collect()
+        self.all_runes.iter()
+            .filter(|r| !self.rune_to_conclusion.contains_key(*r))
+            .cloned()
+            .collect()
     }
 
     // mig: fn get_steps
@@ -173,8 +175,8 @@ pub fn new(
         steps: vec![],
         rules: vec![],
         all_runes: all_runes.into_iter().collect(),
-        open_rule_to_puzzle_to_runes: HashMap::new(),
-        rune_to_conclusion: HashMap::new(),
+        open_rule_to_puzzle_to_runes: IndexMap::new(),
+        rune_to_conclusion: IndexMap::new(),
     }
 }
 

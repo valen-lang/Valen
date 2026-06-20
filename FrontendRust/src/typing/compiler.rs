@@ -1206,7 +1206,7 @@ where 's: 't,
                 let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
                 let export_env_as_ienv = IEnvironmentT::Export(export_env);
 
-                let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                let rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                     export.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
 
                 let parent_ranges_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(&[export.range]);

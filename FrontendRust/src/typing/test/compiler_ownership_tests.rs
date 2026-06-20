@@ -10,6 +10,7 @@ use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocal
 use crate::typing::names::names::IVarNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use crate::typing::test::traverse::NodeRefT;
@@ -198,10 +199,22 @@ exported func main() {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+    match &err {
         ICompileErrorT::CouldntFindFunctionToCallT { fff: FindFunctionFailure { name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("drop") }), .. }, .. } => {}
         _ => panic!("expected CouldntFindFunctionToCallT with FindFunctionFailure(CodeNameS(\"drop\"))"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:7:1:
+exported func main() {
+At test:0.vale:8:3:
+  Muta();
+Couldn't find a suitable function drop(Muta). No function with that name exists.
+
+"#,
+    );
 }
 
 // mig: fn opt_with_undroppable_contents

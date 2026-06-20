@@ -30,6 +30,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
 use std::collections::HashSet;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::ast::expressions::ConstantIntTE;
 use crate::typing::ast::expressions::FunctionCallTE;
@@ -1152,7 +1153,9 @@ fn reports_mismatched_return_type_when_expecting_void() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(BodyResultDoesntMatch), got Ok"));
+    match &err {
         ICompileErrorT::BodyResultDoesntMatch { function_name, expected_return_type, result_type, .. } => {
             match function_name {
                 IFunctionDeclarationNameS::FunctionName(fn_name) => assert_eq!(fn_name.name.as_str(), "main"),
@@ -1171,6 +1174,15 @@ fn reports_mismatched_return_type_when_expecting_void() {
         }
         _other => panic!("expected BodyResultDoesntMatch"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() { 73 }
+At test:0.vale:1:1:
+exported func main() { 73 }
+Function test:0.vale:1:1: main return type void doesn't match body's result: i32
+"#,
+    );
 }
 
 // mig: fn tests_exporting_function
@@ -2437,10 +2449,22 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+exported func moo(firefly &Firefly) { }
+Exported function:
+moo(&Firefly)
+depends on kind:
+Firefly
+that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn reports_when_exported_function_depends_on_non_exported_return
@@ -2459,10 +2483,22 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:3:1:
+exported func moo() &Firefly { __pretend<&Firefly>() }
+Exported function:
+moo
+depends on kind:
+Firefly
+that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn reports_when_extern_function_depends_on_non_exported_param
@@ -2481,10 +2517,18 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+extern func moo(firefly &Firefly);
+Extern function moo depends on kind Firefly that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn reports_when_extern_function_depends_on_non_exported_return
@@ -2503,10 +2547,18 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+extern func moo() &Firefly;
+Extern function moo depends on kind Firefly that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn reports_when_exported_struct_depends_on_non_exported_member
@@ -2529,10 +2581,18 @@ struct Raza imm { }";
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+exported struct Firefly imm {
+Exported kind Firefly depends on kind Raza that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn checks_that_we_stored_a_borrowed_temporary_in_a_local
@@ -2597,10 +2657,21 @@ fn reports_when_ssa_from_callable_has_unknown_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::HigherTypingInferError { .. } => {}
         other => panic!("expected HigherTypingInferError, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:2:7:
+  a = #[#5]NoSuchType(&{_ * 42});
+: Couldn't solve generics types:
+Couldn't find anything with the name 'NoSuchType'
+"#,
+    );
 }
 
 #[test]
@@ -2624,10 +2695,20 @@ fn reports_when_ssa_callable_returns_wrong_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::UnexpectedArrayElementType { .. } => {}
         other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+exported func main() int {
+At test:0.vale:3:7:
+  a = #[#5]int(&{ _ == 0 });
+Unexpected type for array element, tried to put a bool into an array of i32
+"#,
+    );
 }
 
 #[test]
@@ -2652,10 +2733,21 @@ fn reports_when_rsa_from_callable_has_unknown_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::HigherTypingInferError { .. } => {}
         other => panic!("expected HigherTypingInferError, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:3:1:
+exported func main() int {
+At test:0.vale:4:7:
+  a = []NoSuchType(3, &(i int) => { i });
+: Couldn't solve generics types:
+Couldn't find anything with the name 'NoSuchType'
+"#,
+    );
 }
 
 #[test]
@@ -2681,10 +2773,20 @@ fn reports_when_rsa_callable_returns_wrong_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::UnexpectedArrayElementType { .. } => {}
         other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:4:1:
+exported func main() int {
+At test:0.vale:5:7:
+  a = #[]int(5, &{ _ == 0 });
+Unexpected type for array element, tried to put a bool into an array of i32
+"#,
+    );
 }
 
 #[test]
@@ -2707,10 +2809,21 @@ fn reports_when_ssa_from_values_has_unknown_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::HigherTypingInferError { .. } => {}
         other => panic!("expected HigherTypingInferError, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:2:7:
+  a = #[#]NoSuchType(1, 2, 3);
+: Couldn't solve generics types:
+Couldn't find anything with the name 'NoSuchType'
+"#,
+    );
 }
 
 #[test]
@@ -2733,10 +2846,20 @@ fn reports_when_ssa_values_have_wrong_element_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::UnexpectedArrayElementType { .. } => {}
         other => panic!("expected UnexpectedArrayElementType, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:2:7:
+  a = #[#]int(true, false, true);
+Unexpected type for array element, tried to put a bool into an array of i32
+"#,
+    );
 }
 
 #[test]
@@ -2761,10 +2884,22 @@ fn reports_when_rsa_indexed_with_non_integer() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::IndexedArrayWithNonInteger { .. } => {}
         other => panic!("expected IndexedArrayWithNonInteger, got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:3:1:
+exported func main() int {
+At test:0.vale:5:10:
+  return a[true];
+At test:0.vale:5:10:
+  return a[true];
+Indexed array with non-integer: bool
+"#,
+    );
 }
 
 #[test]
@@ -2787,10 +2922,21 @@ fn reports_when_dot_applied_to_non_container() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Can't apply") => {}
         other => panic!("expected RangedInternalErrorT 'Can't apply', got {:?}", other),
     }
+    // TODO: the RangedInternalErrorT message itself includes a Debug-format of the kind; replace at the error-construction site with a humanize_kind call and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:3:10:
+  return x.foo;
+Internal error: Can't apply .foo to Int(IntT { bits: 32 })
+"#,
+    );
 }
 
 #[test]
@@ -2815,10 +2961,20 @@ fn reports_when_rsa_dot_member_is_not_digit() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Array has no member") => {}
         other => panic!("expected RangedInternalErrorT 'Array has no member', got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:3:1:
+exported func main() int {
+At test:0.vale:5:10:
+  return a.foo;
+Internal error: Array has no member named foo
+"#,
+    );
 }
 
 #[test]
@@ -2841,10 +2997,20 @@ fn reports_when_ssa_dot_member_is_not_digit() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::RangedInternalErrorT { message, .. } if message.contains("Sequence has no member") => {}
         other => panic!("expected RangedInternalErrorT 'Sequence has no member', got {:?}", other),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:3:10:
+  return a.foo;
+Internal error: Sequence has no member named foo
+"#,
+    );
 }
 
 #[test]
@@ -2867,10 +3033,20 @@ fn reports_when_if_branches_have_different_kinds() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::CantReconcileBranchesResults { .. } => {}
         _other => panic!("expected CantReconcileBranchesResults"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int {
+At test:0.vale:2:7:
+  x = if true { 5 } else { 6.0 };
+If branches return different types: i32 and float
+"#,
+    );
 }
 
 #[test]
@@ -2888,10 +3064,21 @@ fn reports_when_if_condition_isnt_boolean() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::IfConditionIsntBoolean { .. } => {}
         _other => panic!("expected IfConditionIsntBoolean"),
     }
+    // TODO: humanize IfConditionIsntBoolean uses Debug-format on CoordT; replace with humanize_templata and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported func main() int { if 3 { return 5; } else { return 7; } }
+At test:0.vale:1:31:
+exported func main() int { if 3 { return 5; } else { return 7; } }
+If condition should be a bool, but was: CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+"#,
+    );
 }
 
 // mig: fn reports_when_mutating_after_moving
@@ -2920,10 +3107,18 @@ fn reports_when_mutating_after_moving() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
         _other => panic!("expected CantUseUnstackifiedLocal"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:7:7:
+  set newWeapon.ammo = 11;
+Can't use local that was already moved: newWeapon
+"#,
+    );
 }
 
 // mig: fn tests_export_struct_twice
@@ -2947,12 +3142,22 @@ fn tests_export_struct_twice() {
     let mut compile = compiler_test_compilation(
         &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
     );
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::TypeExportedMultipleTimes { exports, .. } => {
             assert_eq!(exports.len(), 2);
         }
         _ => panic!("Expected TypeExportedMultipleTimes"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+exported struct Moo { }
+Type exported multiple times:
+  test:0.vale:1:1: exported struct Moo { }
+  test:0.vale:2:1: export Moo as Bork;
+"#,
+    );
 }
 
 // mig: fn reports_when_reading_after_moving
@@ -2981,10 +3186,18 @@ fn reports_when_reading_after_moving() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
         _other => panic!("expected CantUseUnstackifiedLocal"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:7:11:
+  println(newWeapon.ammo);
+Can't use local that was already moved: newWeapon
+"#,
+    );
 }
 
 // mig: fn reports_when_moving_from_inside_a_while
@@ -3012,10 +3225,21 @@ fn reports_when_moving_from_inside_a_while() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }), .. } => {}
         _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
     }
+    // TODO: humanize CantUnstackifyOutsideLocalFromInsideWhile uses Debug-format on local_id; replace with humanize_name and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:2:1:
+exported func main() int {
+At test:0.vale:4:3:
+  while (false) {
+Can't move a local (CodeVar(CodeVarNameT { name: "m" })) from inside a while loop.
+"##,
+    );
 }
 
 // mig: fn cant_subscript_non_subscriptable_type
@@ -3040,7 +3264,8 @@ fn cant_subscript_non_subscriptable_type() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::CannotSubscriptT {
             tyype: KindT::Struct(StructTT {
                 id: IdT {
@@ -3059,6 +3284,15 @@ fn cant_subscript_non_subscriptable_type() {
         } => {}
         _other => panic!("expected CannotSubscriptT for Weapon struct"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+exported func main() int {
+At test:0.vale:4:10:
+  return weapon[42];
+Cannot subscript type: Weapon!
+"#,
+    );
 }
 
 // mig: fn humanize_errors
@@ -3253,7 +3487,8 @@ exported func main() int {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
             let types_set: HashSet<CoordT> = types.iter().copied().collect();
             assert_eq!(types_set, HashSet::from([
@@ -3263,6 +3498,16 @@ exported func main() int {
         }
         _other => panic!("expected ArrayElementsHaveDifferentTypes"),
     }
+    // TODO: humanize ArrayElementsHaveDifferentTypes uses Debug-format on each CoordT; replace with humanize_templata and re-capture.
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:2:1:
+exported func main() int {
+At test:0.vale:3:9:
+  arr = [#](true, 42);
+Array's elements have different types: CoordT { ownership: Share, region: RegionT { region: Default }, kind: Bool(BoolT) }, CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+"#,
+    );
 }
 
 // mig: fn report_when_abstract_method_defined_outside_open_interface
@@ -3287,10 +3532,20 @@ exported func main() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::AbstractMethodOutsideOpenInterface { .. } => {}
         _other => panic!("expected AbstractMethodOutsideOpenInterface"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:4:1:
+abstract func bork(virtual moo &IBlah);
+At test:0.vale:4:20:
+abstract func bork(virtual moo &IBlah);
+Open (non-sealed) interfaces can't have abstract methods defined outside the interface.
+"#,
+    );
 }
 
 // mig: fn report_when_imm_struct_has_varying_member
@@ -3317,10 +3572,18 @@ exported func main() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ImmStructCantHaveVaryingMember { .. } => {}
         _other => panic!("expected ImmStructCantHaveVaryingMember"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:3:
+  name! str;
+Immutable struct ("Spaceship") cannot have varying member ("name").
+"##,
+    );
 }
 
 // mig: fn report_imm_mut_mismatch_for_generic_type
@@ -3343,10 +3606,18 @@ exported func main() { x = MyImmContainer<MyMutStruct>(MyMutStruct()); }";
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ImmStructCantHaveMutableMember { .. } => {}
         _other => panic!("expected ImmStructCantHaveMutableMember"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:26:
+where func drop(T)void { value T; }
+Immutable struct ("MyImmContainer") cannot have mutable member ("value").
+"##,
+    );
 }
 
 // mig: fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
@@ -3412,10 +3683,18 @@ struct Spaceship imm {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ImmStructCantHaveVaryingMember { struct_name: INameS::TopLevelStructDeclaration(TopLevelStructDeclarationNameS { name: StrI("Spaceship"), .. }), member_name: "name", .. } => {}
         _other => panic!("expected ImmStructCantHaveVaryingMember for Spaceship.name"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:3:
+  name! str;
+Immutable struct ("Spaceship") cannot have varying member ("name").
+"##,
+    );
 }
 
 // mig: fn test_imm_array
@@ -3683,10 +3962,18 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+export [#5]<imm>Raza as RazaArray;
+Exported kind StaticArray<5, imm, final, Raza> depends on kind Raza that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn reports_when_exported_rsa_depends_on_non_exported_element
@@ -3705,10 +3992,18 @@ fn reports_when_exported_rsa_depends_on_non_exported_element() {
         .or(get_package_to_resource_resolver());
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err().expect("expected Err, got Ok");
+    match &err {
         ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
         _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r#"At test:0.vale:1:1:
+export []<imm>Raza as RazaArray;
+Exported kind Array<imm, Raza> depends on kind Raza that wasn't exported from package test
+"#,
+    );
 }
 
 // mig: fn imm_generic_can_contain_imm_thing

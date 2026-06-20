@@ -1,1 +1,1 @@
-/Volumes/V/Guardian/docs/skills/guardian-add.md
+../../Guardian/docs/skills/guardian-add.md

@@ -117,7 +117,7 @@ where 's: 't,
             Ok(potential_banner) => {
                 Ok(Ok(StampFunctionSuccess {
                     prototype: potential_banner.prototype,
-                    inferences: HashMap::new(),
+                    inferences: IndexMap::new(),
                 }))
             }
         }
@@ -318,9 +318,9 @@ where 's: 't,
                     // Args supplied through receivingRuneToExplicitTemplateArgRune (the named channel for
                     // container template args) also need their callsite rune seeded with the expected type,
                     // otherwise MaybeCoercingLookupSR for those args can't fire in the rune-type solver.
-                    let receiving_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                    let receiving_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                         ft.function.generic_parameters.iter().map(|gp| (gp.rune.rune, gp.tyype.tyype())).collect();
-                    let callsite_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                    let callsite_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                         receiving_rune_to_explicit_template_arg_rune.iter()
                             .filter_map(|(receiving_rune, callsite_rune)| {
                                 receiving_rune_to_type.get(&receiving_rune.rune).map(|t| (callsite_rune.rune, *t))
@@ -328,7 +328,7 @@ where 's: 't,
                             .collect();
                     // There might be less explicitly specified template args than there are types, and that's
                     // fine. Hopefully the rest will be figured out by the rule evaluator.
-                    let explicit_template_arg_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = {
+                    let explicit_template_arg_rune_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> = {
                         let mut m = callsite_rune_to_type;
                         for (r, t) in positional_explicit_template_arg_runes_s.iter().copied()
                             .zip(identifying_rune_templata_types.iter().copied())
@@ -366,11 +366,8 @@ where 's: 't,
                         }
                         Ok(rune_a_to_type_with_implicitly_coercing_lookups_s) => {
                             let rune_type_solve_env = self.create_rune_type_solver_env(calling_env);
-                            // VIOLATES @IIIOZ: still HashMap because explicify_lookups takes &mut HashMap.
-                            // Determinism here is blocked on cascading explicify_lookups + calculate_rune_types
-                            // (in higher_typing_pass.rs) to IndexMap. Deferred to a separate sweep.
-                            let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
-                                HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
+                            let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
+                                IndexMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
                             let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
                             match explicify_lookups(
                                 &rune_type_solve_env,

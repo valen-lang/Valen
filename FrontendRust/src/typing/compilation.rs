@@ -90,6 +90,10 @@ pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedPa
   self.higher_typing_compilation.get_code_map()
 }
 
+pub fn scout_arena_for_tests(&self) -> &'ctx ScoutArena<'s> {
+  self.scout_arena
+}
+
 pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
   self.higher_typing_compilation.get_parseds()
 }

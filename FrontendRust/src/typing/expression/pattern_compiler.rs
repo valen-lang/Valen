@@ -20,6 +20,7 @@ use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
 use crate::parsing::ast::LoadAsP;
 use crate::postparsing::expressions::IExpressionSE;
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use crate::postparsing::names::IRuneValS;
@@ -111,7 +112,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
-        rune_a_to_type_with_implicitly_coercing_lookups_s: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rune_a_to_type_with_implicitly_coercing_lookups_s: &IndexMap<IRuneS<'s>, ITemplataType<'s>>,
         pattern: &'s AtomSP<'s>,
         unconverted_input_expr: ReferenceExpressionTE<'s, 't>,
         region: RegionT,
@@ -130,7 +131,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 unconverted_input_expr
             }
             Some(receiver_rune) => {
-                let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                let mut rune_a_to_type: IndexMap<IRuneS<'s>, ITemplataType<'s>> =
                     rune_a_to_type_with_implicitly_coercing_lookups_s.clone();
                 // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
                 // loose. We intentionally ignored the types of the things they're looking up, so we could know

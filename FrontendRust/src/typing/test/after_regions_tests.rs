@@ -8,6 +8,7 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT, IStructTemplateNameT, StructNameT, StructTemplateNameT};
 use crate::typing::templata::templata::{CoordTemplataT, ITemplataT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
+use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::{CoordT, KindT, StructTT};
 use crate::typing::typing_interner::TypingInterner;
@@ -446,7 +447,9 @@ exported func main() int {
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
-    match compile.get_compiler_outputs().err().unwrap() {
+    let err = compile.get_compiler_outputs().err()
+        .unwrap_or_else(|| panic!("expected Err(CouldntFindFunctionToCallT), got Ok"));
+    match &err {
         ICompileErrorT::CouldntFindFunctionToCallT { fff, .. } => {
             assert!(fff.rejected_callee_to_reason.len() == 1);
             match fff.rejected_callee_to_reason[0].1 {
@@ -456,6 +459,21 @@ exported func main() int {
         }
         _ => panic!("expected CouldntFindFunctionToCallT"),
     }
+    assert_humanized_eq(
+        &humanize_compile_error(&mut compile, err),
+        r##"At test:0.vale:3:1:
+exported func main() int {
+At test:0.vale:4:3:
+  moo(42, true, "hello", false)
+Couldn't find a suitable function moo(i32, bool, str, bool). Rejected candidates:
+
+Candidate 1 (of 1): test:0.vale:2:1:
+CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 1 }
+Number of params doesn't match! Supplied 4 but function takes 3
+
+
+"##,
+    );
 }
 
 // mig: fn reports_when_ownership_doesnt_match
