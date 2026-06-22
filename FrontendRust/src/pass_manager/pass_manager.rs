@@ -359,11 +359,12 @@ fn resolve_package_contents<'a>(
 pub struct ClangConfig {
   /// Directory holding the Backend builtins (`strings.c`, `assert.c`, etc.).
   pub builtins_dir: PathBuf,
-  /// Additional `.c` files to link beyond builtins + auto-walked abi files.
-  /// Used for: caller-declared non-Vale inputs (valec's `vtest=foo.c`),
-  /// per-project `native/*.c` files (resolved by the caller from project
-  /// directory declarations), test-only shims (`testbuiltins.c`), and
-  /// extern tests' `native/test.c`.
+  /// Additional `.c` files to link beyond builtins, the abi auto-walker,
+  /// and the Frontend-driven `native/*.c` auto-walker.
+  /// Used ONLY for caller-explicit non-Vale inputs: valec's `name=file.c`
+  /// CLI form, test-only shims (`testbuiltins.c`), and extern tests'
+  /// `native/test.c`. Per-package `native/*.c` isnt needed here, those are
+  /// auto-discovered.
   pub extra_inputs: Vec<PathBuf>,
   pub clang_path: Option<String>,
   pub libc_path: Option<String>,
@@ -556,6 +557,46 @@ where
       }
     }
   }
+
+  // For each PackageCoordinate the Frontend actually reached, look up its
+  // project root (from opts.inputs' ModulePathInput entries) and scan that
+  // package's `native/` dir for *.c files. Unreached packages' natives are
+  // skipped, for example, stdlib subpackages a program doesn't import (e.g.
+  // stdlib.date when nothing calls UnixTimestamp) don't get their native impls
+  // compiled.
+  let module_paths: HashMap<&str, &str> = opts.inputs.iter().filter_map(|input| {
+    if let IFrontendInput::ModulePathInput { module, module_path } = input {
+      Some((module.0, module_path.as_str()))
+    } else {
+      None
+    }
+  }).collect();
+  for (coord, _pkg) in program_h.packages.package_coord_to_contents.iter() {
+    // Synthetic __vale module (empty module name) has its impls in
+    // clang_cfg.builtins_dir; skip the native walk for it.
+    if coord.module.0.is_empty() { continue; }
+    let project_root = match module_paths.get(coord.module.0) {
+      Some(p) => *p,
+      None => continue,
+    };
+    let mut native_dir = PathBuf::from(project_root);
+    for step in coord.packages.iter() {
+      native_dir.push(step.0);
+    }
+    native_dir.push("native");
+    if !native_dir.is_dir() { continue; }
+    if let Ok(entries) = fs::read_dir(&native_dir) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+          && path.extension().and_then(|s| s.to_str()) == Some("c")
+        {
+          clang_inputs.push(path);
+        }
+      }
+    }
+  }
+
   for p in &clang_cfg.extra_inputs {
     clang_inputs.push(p.clone());
   }

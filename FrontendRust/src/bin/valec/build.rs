@@ -237,13 +237,11 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
             force_all_known_live, include_bounds_checks,
         );
 
-        // for any `native/*.c` files so they're linked into the final exe.
-        // pass_manager::build's internal clang step uses ClangConfig.extra_inputs
-        // for caller-collected non-builtin / non-abi C sources.
+        // Caller-supplied non-Vale inputs (e.g. CLI `name=file.c`). Auto-discovery
+        // of `native/*.c` files is now Frontend-driven inside `pass_manager::build`
+        // (only reached packages' native dirs are walked), so this list holds
+        // only what the caller explicitly named.
         let mut extra_inputs: Vec<PathBuf> = Vec::new();
-        for declaration in &project_directory_declarations {
-            collect_native_c_files(&declaration.path, &mut extra_inputs);
-        }
         for declaration in &project_non_vale_input_declarations {
             extra_inputs.push(declaration.path.clone());
         }
@@ -296,32 +294,4 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
     }
 }
 
-/// Recursively walk a project directory for `native/*.c` files at any
-/// package level.
-fn collect_native_c_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return,
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        if path.file_name().and_then(|n| n.to_str()) == Some("native") {
-            if let Ok(c_entries) = fs::read_dir(&path) {
-                for c_entry in c_entries.flatten() {
-                    let c_path = c_entry.path();
-                    if c_path.is_file()
-                        && c_path.extension().and_then(|s| s.to_str()) == Some("c")
-                    {
-                        out.push(c_path);
-                    }
-                }
-            }
-        } else {
-            collect_native_c_files(&path, out);
-        }
-    }
-}
 

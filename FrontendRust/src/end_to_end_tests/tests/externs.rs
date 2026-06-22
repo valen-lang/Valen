@@ -2,8 +2,9 @@ use crate::end_to_end_tests::{assert_compile_and_run_with_c, programs_dir};
 
 fn run(dir_rel: &str, expected: i32) {
     let dir = programs_dir().join(dir_rel);
-    let test_c = dir.join("native/test.c");
-    assert_compile_and_run_with_c(&dir, &[&test_c], expected);
+    // `native/test.c` is auto-discovered by the Frontend-driven walker in
+    // pass_manager::build; no need to pass it via extra_c.
+    assert_compile_and_run_with_c(&dir, &[], expected);
 }
 
 #[test] fn interfacemutreturnexport() { run("programs/externs/interfacemutreturnexport", 42); }

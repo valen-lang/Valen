@@ -2,8 +2,7 @@ use crate::end_to_end_tests::{assert_replay_test, programs_dir};
 
 fn run(dir_rel: &str, first: i32, repeated: i32) {
     let dir = programs_dir().join(dir_rel);
-    let test_c = dir.join("native/test.c");
-    assert_replay_test(&dir, &[&test_c], first, repeated);
+    assert_replay_test(&dir, &[], first, repeated);
 }
 
 #[test] fn simpleexternreturn_replay()        { run("programs/externs/simpleexternreturn", 42, 84); }

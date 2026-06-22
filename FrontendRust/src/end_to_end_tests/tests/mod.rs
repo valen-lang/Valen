@@ -8,6 +8,7 @@ pub mod ifelse;
 pub mod inline;
 pub mod lambdas;
 pub mod misc;
+pub mod native_walker;
 pub mod replay;
 pub mod strings;
 pub mod structs;
