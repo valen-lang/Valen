@@ -41,7 +41,6 @@ include_shields = [
 [migrate_mode]
 include_shields = [
     { name = "ScalaCommentParity-SCPX.md" },
-    { name = "ScalaParityDuringMigration-SPDMX.md" },
     { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
     { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
 
@@ -67,7 +66,6 @@ include_shields = [
 [guard_mode]
 include_shields = [
     { name = "ScalaCommentParity-SCPX.md" },
-    { name = "ScalaParityDuringMigration-SPDMX.md" },
     { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
     { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
 
@@ -94,7 +92,6 @@ include_shields = [
 
 [review_mode]
 include_shields = [
-    { name = "ScalaParityDuringMigration-SPDMX.md" },
     { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
     { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
     { name = "NoExpensiveClones-NECX.md" },
