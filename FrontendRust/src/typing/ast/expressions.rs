@@ -425,6 +425,7 @@ where 's: 't,
 {
     pub inner_expr: ReferenceExpressionTE<'s, 't>,
     pub deferred_expr: ReferenceExpressionTE<'s, 't>,
+    _sealed: (),
 }
 
 impl<'s, 't> DeferTE<'s, 't> {
@@ -446,7 +447,7 @@ impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
             region: inner_coord.region,
             kind: KindT::Void(VoidT),
         });
-        DeferTE { inner_expr, deferred_expr }
+        DeferTE { inner_expr, deferred_expr, _sealed: () }
     }
 
 }
@@ -459,6 +460,7 @@ where 's: 't,
     pub then_call: ReferenceExpressionTE<'s, 't>,
     pub else_call: ReferenceExpressionTE<'s, 't>,
     pub common_supertype: CoordT<'s, 't>,
+    _sealed: (),
 }
 
 impl<'s, 't> IfTE<'s, 't> {
@@ -486,7 +488,7 @@ impl<'s, 't> IfTE<'s, 't> {
             KindT::Never(_) => else_result_coord,
             _ => then_result_coord,
         };
-        IfTE { condition, then_call, else_call, common_supertype }
+        IfTE { condition, then_call, else_call, common_supertype, _sealed: () }
     }
     
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
@@ -501,6 +503,7 @@ where 's: 't,
 {
     pub block: BlockTE<'s, 't>,
     pub result_coord: CoordT<'s, 't>,
+    _sealed: (),
 }
 
 impl<'s, 't> WhileTE<'s, 't> {
@@ -515,7 +518,7 @@ impl<'s, 't> WhileTE<'s, 't> {
             KindT::Never(NeverT { from_break: false }) => block.result().coord,
             _ => panic!("vwat"),
         };
-        WhileTE { block, result_coord }
+        WhileTE { block, result_coord, _sealed: () }
     }
     
 
@@ -887,6 +890,7 @@ where 's: 't,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub index_expr: ReferenceExpressionTE<'s, 't>,
     pub variability: VariabilityT,
+    _sealed: (),
 }
 
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
@@ -902,7 +906,7 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> where 's: 't, {
         variability: VariabilityT,
     ) -> RuntimeSizedArrayLookupTE<'s, 't> {
         assert_eq!(array_expr.result().coord.kind, KindT::RuntimeSizedArray(array_type));
-        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, variability }
+        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, variability, _sealed: () }
     }
 
 }

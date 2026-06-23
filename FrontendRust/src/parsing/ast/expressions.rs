@@ -87,7 +87,7 @@ impl IExpressionPE<'_> {
         assert!(!x.inners.is_empty());
         let begin = x.inners.first().unwrap().range().begin();
         let end = x.inners.last().unwrap().range().end();
-        RangeL(begin, end)
+        RangeL::new(begin, end)
       }
       IExpressionPE::Shortcall(x) => x.range,
     }

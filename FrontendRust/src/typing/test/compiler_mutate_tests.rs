@@ -399,14 +399,13 @@ exported func main() {
         ICompileErrorT::CouldntConvertForMutateT { expected_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }, actual_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Str(_), .. }, .. } => {}
         _ => panic!("expected CouldntConvertForMutateT"),
     }
-    // TODO: humanize CouldntConvertForMutateT uses Debug-format on CoordT; replace with humanize_templata and re-capture.
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r##"At test:0.vale:3:1:
 exported func main() {
 At test:0.vale:5:7:
   set a = "blah";
-Mutate couldn't convert CoordT { ownership: Share, region: RegionT { region: Default }, kind: Str(StrT) } to expected destination type CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+Mutate couldn't convert str to expected destination type i32
 "##,
     );
 }
@@ -439,12 +438,11 @@ exported func main() {
         ICompileErrorT::CantImplNonInterface { templata: ITemplataT::Kind(KindTemplataT { kind: KindT::Int(IntT { bits: 32 }) }), .. } => {}
         _ => panic!("expected CantImplNonInterface"),
     }
-    // TODO: humanize CantImplNonInterface uses Debug-format on the templata; replace with humanize_templata and re-capture.
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r#"At test:0.vale:3:1:
 impl int for Bork;
-Can't extend a non-interface: Kind(KindTemplataT { kind: Int(IntT { bits: 32 }) })
+Can't extend a non-interface: i32
 "#,
     );
 }

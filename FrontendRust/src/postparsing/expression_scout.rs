@@ -250,7 +250,7 @@ fn scout_impure_block(
         }
         _ => panic!("POSTPARSER_NEW_BLOCK_EXPECTED_FUNCTION_NAME"),
       };
-      let range_at_end = RangeL(range_s.end.offset, range_s.end.offset);
+      let range_at_end = RangeL::new(range_s.end.offset, range_s.end.offset);
       // Per @PPSPASTNZ, allocate synthetic parser node in parse_arena
       let callable_expr_p = &*self.parse_arena.alloc(IExpressionPE::Lookup(self.parse_arena.alloc(LookupPE {
         name: IImpreciseNameP::LookupName(NameP(range_at_end, function_name)),
@@ -1359,7 +1359,7 @@ fn scout_expression(
     }
     IExpressionPE::And(and_pe) => {
       let right_range = PostParser::eval_range(&file_coordinate, and_pe.right.range);
-      let end_range = RangeS { begin: right_range.end, end: right_range.end };
+      let end_range = RangeS::new(right_range.end, right_range.end);
       let (stack_frame_z, if_se, self_uses, child_uses) = Self::new_if(
         stack_frame, lidb, and_pe.range,
         |sf1, lidb| {
@@ -1388,7 +1388,7 @@ fn scout_expression(
     }
     IExpressionPE::Or(or_pe) => {
       let right_range = PostParser::eval_range(&file_coordinate, or_pe.right.range);
-      let end_range = RangeS { begin: right_range.end, end: right_range.end };
+      let end_range = RangeS::new(right_range.end, right_range.end);
       let (stack_frame_z, if_se, self_uses, child_uses) = Self::new_if(
         stack_frame, lidb, or_pe.range,
         |sf1, lidb| {
@@ -1431,14 +1431,14 @@ fn scout_expression(
       let range_s = PostParser::eval_range(&file_coordinate, str_interp_pe.range);
       let starting_expr: &'s IExpressionSE<'s> =
         self.scout_arena.alloc(IExpressionSE::ConstantStr(ConstantStrSE {
-          range: RangeS { begin: range_s.begin, end: range_s.begin },
+          range: RangeS::new(range_s.begin, range_s.begin),
           value: self.scout_arena.intern_str(""),
         }));
       let added_expr = parts_se.iter().fold(starting_expr, |prev_expr, part_se| {
-        let add_call_range = RangeS {
-          begin: prev_expr.range().end,
-          end: part_se.range().begin,
-        };
+        let add_call_range = RangeS::new(
+          prev_expr.range().end,
+          part_se.range().begin,
+        );
         let plus_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
           name: self.keywords.plus,
         }));

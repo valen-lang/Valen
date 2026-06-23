@@ -68,7 +68,7 @@ impl<'a> LexingIterator<'a> {
 
       self.skip_to_past('»');
 
-      self.comments.push(RangeL(begin as i32, self.position as i32));
+      self.comments.push(RangeL::new(begin as i32, self.position as i32));
 
       self.consume_comments();
     }
@@ -87,7 +87,7 @@ impl<'a> LexingIterator<'a> {
       let begin = self.position;
       self.position = pos_after_whitespace + 3;
       assert!(self.position <= self.code.len());
-      self.comments.push(RangeL(begin as i32, self.position as i32));
+      self.comments.push(RangeL::new(begin as i32, self.position as i32));
       self.consume_comments();
     }
 
@@ -107,7 +107,7 @@ impl<'a> LexingIterator<'a> {
       self.position = pos_after_whitespace + 2;
       assert!(self.position <= self.code.len());
       self.skip_to_past('\n');
-      self.comments.push(RangeL(begin as i32, (self.position - 1) as i32));
+      self.comments.push(RangeL::new(begin as i32, (self.position - 1) as i32));
       self.consume_comments();
     }
   }

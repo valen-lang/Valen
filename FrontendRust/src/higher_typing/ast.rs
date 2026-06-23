@@ -82,6 +82,7 @@ pub struct StructA<'s> {
     pub member_rules: &'s [IRulexSR<'s>],
     pub members: &'s [IStructMemberS<'s>],
     pub internal_methods: &'s [&'s FunctionA<'s>],
+    _sealed: (),
 }
 
 impl<'s> StructA<'s> {
@@ -128,7 +129,7 @@ pub fn new(
         !members_rune_to_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
         "vassert: members_rune_to_type should not contain DenizenDefaultRegionRuneS"
     );
-    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods }
+    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods, _sealed: () }
 }
 
 
@@ -145,6 +146,7 @@ pub struct ImplA<'s> {
     pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
     pub interface_kind_rune: RuneUsage<'s>,
     pub super_interface_imprecise_name: IImpreciseNameS<'s>,
+    _sealed: (),
 }
 
 impl<'s> ImplA<'s> {
@@ -167,7 +169,7 @@ pub fn new(
             _ => {}
         }
     }
-    Self { range, name, generic_params, rules, rune_to_type, sub_citizen_rune, sub_citizen_imprecise_name, interface_kind_rune, super_interface_imprecise_name }
+    Self { range, name, generic_params, rules, rune_to_type, sub_citizen_rune, sub_citizen_imprecise_name, interface_kind_rune, super_interface_imprecise_name, _sealed: () }
 }
 
 
@@ -208,6 +210,7 @@ pub struct InterfaceA<'s> {
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub rules: &'s [IRulexSR<'s>],
     pub internal_methods: &'s [&'s FunctionA<'s>],
+    _sealed: (),
 }
 
 impl<'s> InterfaceA<'s> {
@@ -246,7 +249,7 @@ pub fn new(
             "vassert: internal method generic_parameters must match interface generic_parameters"
         );
     }
-    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, rune_to_type, rules, internal_methods }
+    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, rune_to_type, rules, internal_methods, _sealed: () }
 }
 
 
@@ -283,6 +286,7 @@ pub struct FunctionA<'s> {
     pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
     pub rules: &'s [IRulexSR<'s>],
     pub body: IBodyS<'s>,
+    _sealed: (),
 }
 
 impl<'s> FunctionA<'s> {
@@ -318,7 +322,7 @@ pub fn new(
         range.begin.file.package_coord == name.package_coordinate(),
         "vassert: range.begin.file.package_coord must equal name.package_coordinate()"
     );
-    Self { range, name, attributes, tyype, generic_parameters, rune_to_type, params, maybe_ret_coord_rune, rules, body }
+    Self { range, name, attributes, tyype, generic_parameters, rune_to_type, params, maybe_ret_coord_rune, rules, body, _sealed: () }
 }
 
 

@@ -556,7 +556,7 @@ fn template_calling() {
         callable_expr: IExpressionPE::Lookup(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(_, StrI("MyNone"))),
           template_args: Some(TemplateArgsP {
-            args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))), ..],
+            args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
             ..
           }),
         }),
@@ -576,8 +576,8 @@ fn template_calling() {
           name: IImpreciseNameP::LookupName(NameP(_, StrI("MySome"))),
           template_args: Some(TemplateArgsP {
             args: [ITemplexPT::Call(CallPT {
-              template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("MyNone")))),
-              args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))), ..],
+              template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("MyNone")), .. }),
+              args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
               ..
             }), ..],
             ..
@@ -728,7 +728,7 @@ fn single_arg_typed_brace_lambda() {
                   decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
                   ..
                 }),
-                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int"))))),
+                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. })),
                 ..
               }),
               ..
@@ -1159,7 +1159,7 @@ fn static_array_from_callable_with_rune() {
       mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
       variability_pt: None,
       size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
-        size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("N"))))),
+        size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. })),
       }),
       initializing_individual_elements: false,
       args: [IExpressionPE::Lambda(_), ..],
@@ -1306,7 +1306,7 @@ fn double_rsa_with_type() {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
-        element: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("bool")))),
+        element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("bool")), .. }),
         ..
       })),
       mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),

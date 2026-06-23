@@ -901,7 +901,7 @@ fn scout_impl(
           ITemplexPT::NameOrRune(name)
             if !user_declared_runes_set.contains(&self.scout_arena.intern_rune(IRuneValS::CodeRune(
               CodeRuneS {
-                name: self.scout_arena.intern_str(name.0.str().as_str()),
+                name: self.scout_arena.intern_str(name.name.str().as_str()),
               },
             ))) =>
           {
@@ -914,18 +914,18 @@ fn scout_impl(
         panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
       };
       self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-        name: self.scout_arena.intern_str(name.0.str().as_str()),
+        name: self.scout_arena.intern_str(name.name.str().as_str()),
       }))
     }
     ITemplexPT::NameOrRune(name)
       if !user_declared_runes_set.contains(&self.scout_arena.intern_rune(IRuneValS::CodeRune(
         CodeRuneS {
-          name: self.scout_arena.intern_str(name.0.str().as_str()),
+          name: self.scout_arena.intern_str(name.name.str().as_str()),
         },
       ))) =>
     {
       self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-        name: self.scout_arena.intern_str(name.0.str().as_str()),
+        name: self.scout_arena.intern_str(name.name.str().as_str()),
       }))
     }
     _ => {
@@ -943,7 +943,7 @@ fn scout_impl(
           ITemplexPT::NameOrRune(name)
             if !user_declared_runes_set.contains(&self.scout_arena.intern_rune(IRuneValS::CodeRune(
               CodeRuneS {
-                name: self.scout_arena.intern_str(name.0.str().as_str()),
+                name: self.scout_arena.intern_str(name.name.str().as_str()),
               },
             ))) =>
           {
@@ -956,18 +956,18 @@ fn scout_impl(
         panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
       };
       self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-        name: self.scout_arena.intern_str(name.0.str().as_str()),
+        name: self.scout_arena.intern_str(name.name.str().as_str()),
       }))
     }
     ITemplexPT::NameOrRune(name)
       if !user_declared_runes_set.contains(&self.scout_arena.intern_rune(IRuneValS::CodeRune(
         CodeRuneS {
-          name: self.scout_arena.intern_str(name.0.str().as_str()),
+          name: self.scout_arena.intern_str(name.name.str().as_str()),
         },
       ))) =>
     {
       self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-        name: self.scout_arena.intern_str(name.0.str().as_str()),
+        name: self.scout_arena.intern_str(name.name.str().as_str()),
       }))
     }
     _ => {
@@ -1022,7 +1022,7 @@ fn scout_export_as(
   let mut lidb = LocationInDenizenBuilder::new(Vec::new());
   let mut rule_builder = Vec::<IRulexSR<'s>>::new();
   let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
-  let region_range = RangeS { begin: range_s.end.clone(), end: range_s.end.clone() };
+  let region_range = RangeS::new(range_s.end.clone(), range_s.end.clone());
   let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
     DenizenDefaultRegionRuneS { denizen_name: export_name },
   ));
@@ -1241,7 +1241,7 @@ fn predict_mutability(
 
     let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
-        RangeL(head.body_range.begin(), head.body_range.begin()),
+        RangeL::new(head.body_range.begin(), head.body_range.begin()),
         MutabilityP::Mutable,
       ),
     );
@@ -1678,7 +1678,7 @@ pub(crate) fn check_identifiability(
 
     let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
-        RangeL(interface.body_range.begin(), interface.body_range.begin()),
+        RangeL::new(interface.body_range.begin(), interface.body_range.begin()),
         MutabilityP::Mutable,
       ),
     );
@@ -1750,125 +1750,119 @@ pub(crate) fn check_identifiability(
 }
 
 
-pub struct ScoutCompilation<'s, 'ctx, 'p> {
-  global_options: GlobalOptions,
-  scout_arena: &'ctx ScoutArena<'s>,
-  keywords: &'ctx Keywords<'s>,
-  keywords_p: &'ctx Keywords<'p>,
-  parse_arena: &'ctx ParseArena<'p>,
-  parser_compilation: ParserCompilation<'p, 'ctx>,
-  scoutput_cache: Option<FileCoordinateMap<'s, ProgramS<'s>>>,
-}
+pub use scout_compilation::ScoutCompilation;
+// Wrapped in a private submodule for _sealed to work.
+mod scout_compilation {
+  use super::*;
 
-
-impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
-{
-  pub fn new(
+  pub struct ScoutCompilation<'s, 'ctx, 'p> {
+    global_options: GlobalOptions,
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
-    parser_keywords: &'ctx Keywords<'p>,
+    keywords_p: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
-    packages_to_build: Vec<&'p PackageCoordinate<'p>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    global_options: GlobalOptions,
-  ) -> Self {
-    let parser_compilation = ParserCompilation::new(
-      global_options.clone(),
-      parse_arena,
-      parser_keywords,
-      packages_to_build,
-      package_to_contents_resolver,
-    );
-
-    ScoutCompilation {
-      global_options,
-      scout_arena,
-      keywords,
-      keywords_p: parser_keywords,
-      parse_arena,
-      parser_compilation,
-      scoutput_cache: None,
-    }
-    // V: anything enforce that we actually have to call this constructor?
-    // VA: All ScoutCompilation fields are private, so external callers are forced through new().
-    // But code within the same module can bypass it via struct literal — no language-level
-    // enforcement within the module.
-    // V: is there a way we can make it so people cant bypass it?
-    // VA: Yes — move ScoutCompilation to its own submodule (e.g. postparsing/scout_compilation.rs).
-    // VA: Rust's privacy is module-scoped, so code in the same module can always bypass private
-    // VA: fields via struct literal syntax. A separate module would make the private fields
-    // VA: truly inaccessible from the rest of postparsing.
+    parser_compilation: ParserCompilation<'p, 'ctx>,
+    scoutput_cache: Option<FileCoordinateMap<'s, ProgramS<'s>>>,
   }
-  
 
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.parser_compilation.get_code_map()
-  }
-  
-
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
-    self.parser_compilation.get_parseds()
-  }
-  
-
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
-    self.parser_compilation.get_vpst_map()
-  }
-  
-
-  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
-    if self.scoutput_cache.is_some() {
-      return Ok(self.scoutput_cache.as_ref().unwrap());
-    }
-
-    let parseds = self.parser_compilation.expect_parseds();
-    let post_parser = PostParser::new(
-      self.global_options.clone(),
-      self.scout_arena,
-      self.keywords,
-      self.keywords_p,
-      self.parse_arena,
-    );
-    let mut scoutput: FileCoordinateMap<'s, ProgramS<'s>> = FileCoordinateMap::new();
-    for (file_coordinate_p, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
-      let package_coord_s: &'s PackageCoordinate<'s> = self.scout_arena.intern_package_coordinate(
-        self.scout_arena.intern_str(file_coordinate_p.package_coord.module.as_str()),
-        &file_coordinate_p.package_coord.packages.iter()
-          .map(|s| self.scout_arena.intern_str(s.as_str()))
-          .collect::<Vec<_>>(),
+  impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
+  {
+    pub fn new(
+      scout_arena: &'ctx ScoutArena<'s>,
+      keywords: &'ctx Keywords<'s>,
+      parser_keywords: &'ctx Keywords<'p>,
+      parse_arena: &'ctx ParseArena<'p>,
+      packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+      package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+      global_options: GlobalOptions,
+    ) -> Self {
+      let parser_compilation = ParserCompilation::new(
+        global_options.clone(),
+        parse_arena,
+        parser_keywords,
+        packages_to_build,
+        package_to_contents_resolver,
       );
-      let file_coordinate_s: &'s FileCoordinate<'s> = self.scout_arena.intern_file_coordinate(
-        package_coord_s,
-        file_coordinate_p.filepath.as_str(),
-      );
-      let program_s = post_parser.scout_program(file_coordinate_s, file_p)?;
-      scoutput.put(file_coordinate_s, program_s);
+
+      ScoutCompilation {
+        global_options,
+        scout_arena,
+        keywords,
+        keywords_p: parser_keywords,
+        parse_arena,
+        parser_compilation,
+        scoutput_cache: None,
+      }
     }
-    // Re-intern package_coord_to_file_coords from 'p to 's
-    for (pkg_p, files_p) in &parseds.package_coord_to_file_coords {
-      let pkg_s = self.scout_arena.intern_package_coordinate(
-        self.scout_arena.intern_str(pkg_p.module.as_str()),
-        &pkg_p.packages.iter().map(|s| self.scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
-      );
-      let files_s: Vec<&'s FileCoordinate<'s>> = files_p.iter().map(|fc| {
-        self.scout_arena.intern_file_coordinate(pkg_s, fc.filepath.as_str())
-      }).collect();
-      scoutput.package_coord_to_file_coords.insert(pkg_s, files_s);
-    }
-    self.scoutput_cache = Some(scoutput);
-    Ok(self.scoutput_cache.as_ref().unwrap())
-  }
 
 
-  pub fn expect_scoutput(&mut self) -> &FileCoordinateMap<'s, ProgramS<'s>> {
-    match self.get_scoutput() {
-      Ok(x) => x,
-      Err(e) => {
-        panic!("ScoutCompilation.expect_scoutput failed: {:?}", e)
+    pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+      self.parser_compilation.get_code_map()
+    }
+
+
+    pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
+      self.parser_compilation.get_parseds()
+    }
+
+
+    pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+      self.parser_compilation.get_vpst_map()
+    }
+
+
+    pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
+      if self.scoutput_cache.is_some() {
+        return Ok(self.scoutput_cache.as_ref().unwrap());
+      }
+
+      let parseds = self.parser_compilation.expect_parseds();
+      let post_parser = PostParser::new(
+        self.global_options.clone(),
+        self.scout_arena,
+        self.keywords,
+        self.keywords_p,
+        self.parse_arena,
+      );
+      let mut scoutput: FileCoordinateMap<'s, ProgramS<'s>> = FileCoordinateMap::new();
+      for (file_coordinate_p, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
+        let package_coord_s: &'s PackageCoordinate<'s> = self.scout_arena.intern_package_coordinate(
+          self.scout_arena.intern_str(file_coordinate_p.package_coord.module.as_str()),
+          &file_coordinate_p.package_coord.packages.iter()
+            .map(|s| self.scout_arena.intern_str(s.as_str()))
+            .collect::<Vec<_>>(),
+        );
+        let file_coordinate_s: &'s FileCoordinate<'s> = self.scout_arena.intern_file_coordinate(
+          package_coord_s,
+          file_coordinate_p.filepath.as_str(),
+        );
+        let program_s = post_parser.scout_program(file_coordinate_s, file_p)?;
+        scoutput.put(file_coordinate_s, program_s);
+      }
+      // Re-intern package_coord_to_file_coords from 'p to 's
+      for (pkg_p, files_p) in &parseds.package_coord_to_file_coords {
+        let pkg_s = self.scout_arena.intern_package_coordinate(
+          self.scout_arena.intern_str(pkg_p.module.as_str()),
+          &pkg_p.packages.iter().map(|s| self.scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+        );
+        let files_s: Vec<&'s FileCoordinate<'s>> = files_p.iter().map(|fc| {
+          self.scout_arena.intern_file_coordinate(pkg_s, fc.filepath.as_str())
+        }).collect();
+        scoutput.package_coord_to_file_coords.insert(pkg_s, files_s);
+      }
+      self.scoutput_cache = Some(scoutput);
+      Ok(self.scoutput_cache.as_ref().unwrap())
+    }
+
+
+    pub fn expect_scoutput(&mut self) -> &FileCoordinateMap<'s, ProgramS<'s>> {
+      match self.get_scoutput() {
+        Ok(x) => x,
+        Err(e) => {
+          panic!("ScoutCompilation.expect_scoutput failed: {:?}", e)
+        }
       }
     }
   }
-
-
 }
 

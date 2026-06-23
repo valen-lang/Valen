@@ -59,12 +59,12 @@ where
         let maybe_rune_type = self.templex_parser.parse_rune_type(&mut iter)?;
 
         let maybe_type = maybe_rune_type.map(|tyype| GenericParameterTypeP {
-          range: RangeL(type_begin, iter.get_prev_end_pos()),
+          range: RangeL::new(type_begin, iter.get_prev_end_pos()),
           tyype,
         });
 
         let maybe_attrs = if iter.try_skip_word(self.keywords.imm).is_some() {
-          vec![IRuneAttributeP::ImmutableRuneAttribute(RangeL(
+          vec![IRuneAttributeP::ImmutableRuneAttribute(RangeL::new(
             iter.get_prev_end_pos(),
             iter.get_prev_end_pos(),
           ))]
@@ -89,7 +89,7 @@ where
         };
 
         let tyype = GenericParameterTypeP {
-          range: RangeL(range.begin(), iter.get_prev_end_pos()),
+          range: RangeL::new(range.begin(), iter.get_prev_end_pos()),
           tyype: ITypePR::RegionType,
         };
 
@@ -258,14 +258,14 @@ where
 
       Ok(IStructContent::VariadicStructMember(
         VariadicStructMemberP {
-          range: RangeL(begin, iter.get_prev_end_pos()),
+          range: RangeL::new(begin, iter.get_prev_end_pos()),
           variability,
           tyype,
         },
       ))
     } else {
       Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'p> {
-        range: RangeL(begin, iter.get_prev_end_pos()),
+        range: RangeL::new(begin, iter.get_prev_end_pos()),
         name,
         variability,
         tyype,
@@ -749,7 +749,7 @@ where
     };
 
     let return_p = FunctionReturnP {
-      range: RangeL(return_begin_pos, return_end_pos),
+      range: RangeL::new(return_begin_pos, return_end_pos),
       ret_type: maybe_return_type_p,
     };
 
@@ -852,7 +852,7 @@ where
             }),
             INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')),
           ) => {
-            let range = RangeL(word_range.begin(), symbol_range.end());
+            let range = RangeL::new(word_range.begin(), symbol_range.end());
             Some(RegionRunePT {
               range,
             name: Some(NameP(*word_range, *region_name)),
@@ -878,9 +878,9 @@ where
       [..input_scramble.elements.len() - elements_to_remove];
 
     let preceding_elements_range = if preceding_elements.is_empty() {
-      RangeL(input_scramble.range.begin(), input_scramble.range.begin())
+      RangeL::new(input_scramble.range.begin(), input_scramble.range.begin())
     } else {
-      RangeL(
+      RangeL::new(
         preceding_elements.first().unwrap().range().begin(),
         preceding_elements.last().unwrap().range().end(),
       )

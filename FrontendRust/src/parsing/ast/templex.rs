@@ -43,7 +43,7 @@ impl ITemplexPT<'_> {
       ITemplexPT::Location(r) => r.range,
       ITemplexPT::Tuple(r) => r.range,
       ITemplexPT::Mutability(r) => r.0,
-      ITemplexPT::NameOrRune(n) => n.0.range(),
+      ITemplexPT::NameOrRune(n) => n.name.range(),
       ITemplexPT::Interpreted(r) => r.range,
       ITemplexPT::Ownership(r) => r.0,
       ITemplexPT::Pack(p) => p.range,
@@ -136,17 +136,15 @@ pub struct MutabilityPT(pub RangeL, pub MutabilityP);
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct NameOrRunePT<'p>(pub NameP<'p>);
+pub struct NameOrRunePT<'p> {
+  pub name: NameP<'p>,
+  _sealed: (),
+}
 impl<'p> NameOrRunePT<'p> {
   pub fn new(name: NameP<'p>) -> Self {
     assert!(name.as_str() != "_", "vassert: NameOrRunePT name must not be \"_\"");
-    Self(name)
+    Self { name, _sealed: () }
   }
-// V: do we have anything enforcing that we must go through this constructor? and other constructors in general?
-// VA: No. The inner field is `pub`, so callers can write `NameOrRunePT(name)` directly, bypassing
-// VA: the vassert in new(). This happens in 4 places: templex_parser.rs (lines 774, 881) and
-// VA: parsed_loader.rs (lines 1859, 1944). Since the struct is in a different module from callers,
-// VA: removing `pub` from the tuple field would enforce the constructor at compile time.
 }
 
 
@@ -156,11 +154,12 @@ pub struct InterpretedPT<'p> {
   pub maybe_ownership: Option<&'p OwnershipPT>,
   pub maybe_region: Option<&'p RegionRunePT<'p>>,
   pub inner: &'p ITemplexPT<'p>,
+  _sealed: (),
 }
 impl<'p> InterpretedPT<'p> {
   pub fn new(range: RangeL, maybe_ownership: Option<&'p OwnershipPT>, maybe_region: Option<&'p RegionRunePT<'p>>, inner: &'p ITemplexPT<'p>) -> Self {
     assert!(maybe_ownership.is_some() || maybe_region.is_some(), "vassert: InterpretedPT must have ownership or region");
-    Self { range, maybe_ownership, maybe_region, inner }
+    Self { range, maybe_ownership, maybe_region, inner, _sealed: () }
   }
 }
 

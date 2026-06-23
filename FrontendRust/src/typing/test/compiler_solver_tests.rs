@@ -459,7 +459,7 @@ fn humanize_errors() {
 
     let test_file = FileCoordinate::test(&scout_arena);
     let make_loc = |pos: i32| CodeLocationS { file: scout_arena.alloc(test_file), offset: pos };
-    let make_range = |begin: i32, end: i32| RangeS { begin: make_loc(begin), end: make_loc(end) };
+    let make_range = |begin: i32, end: i32| RangeS::new(make_loc(begin), make_loc(end));
 
     let humanize_pos = |x| humanize_pos_code_map(&filenames_and_sources, &x);
     let lines_between_f = |x, y| lines_between(&filenames_and_sources, &x, &y);

@@ -181,17 +181,17 @@ where 's: 't,
         );
 
         let rules_slice = self.scout_arena.alloc_slice_from_vec(rules);
-        let impl_a = self.scout_arena.alloc(ImplA {
-            range: interface_a.range,
-            name: impl_name_s,
-            generic_params: struct_a.generic_parameters,
-            rules: rules_slice,
+        let impl_a = self.scout_arena.alloc(ImplA::new(
+            interface_a.range,
+            impl_name_s,
+            struct_a.generic_parameters,
+            rules_slice,
             rune_to_type,
-            sub_citizen_rune: struct_kind_rune_s,
-            sub_citizen_imprecise_name: struct_imprecise_name,
-            interface_kind_rune: interface_kind_rune_s,
-            super_interface_imprecise_name: interface_imprecise_name,
-        });
+            struct_kind_rune_s,
+            struct_imprecise_name,
+            interface_kind_rune_s,
+            interface_imprecise_name,
+        ));
 
         let impl_local_name = self.translate_name_step(impl_a.name.to_i_name_s(self.scout_arena));
         let impl_name_t_steps = struct_name_t.init_steps.to_vec();
@@ -825,17 +825,17 @@ where 's: 't,
         for param in original_params.iter() {
             match param.virtuality {
                 Some(_) => {
-                    new_params_vec.push(ParameterS {
-                        range: abstract_param_range,
-                        virtuality: None,
-                        pre_checked: false,
-                        pattern: AtomSP {
+                    new_params_vec.push(ParameterS::new(
+                        abstract_param_range,
+                        None,
+                        false,
+                        AtomSP {
                             range: abstract_param_range,
                             name: Some(CaptureS { name: IVarNameS::SelfName, mutate: false }),
                             coord_rune: Some(RuneUsage { range: abstract_param_coord_rune.range, rune: self_coord_rune }),
                             destructure: None,
                         },
-                    });
+                    ));
                 }
                 None => {
                     let old_rune_usage = param.pattern.coord_rune.unwrap();
@@ -843,17 +843,17 @@ where 's: 't,
                         range: old_rune_usage.range,
                         rune: self.inherited_method_rune_anonymous_interface(interface, method, old_rune_usage.rune),
                     };
-                    new_params_vec.push(ParameterS {
-                        range: param.range,
-                        virtuality: param.virtuality,
-                        pre_checked: param.pre_checked,
-                        pattern: AtomSP {
+                    new_params_vec.push(ParameterS::new(
+                        param.range,
+                        param.virtuality,
+                        param.pre_checked,
+                        AtomSP {
                             range: param.pattern.range,
                             name: param.pattern.name,
                             coord_rune: Some(new_rune),
                             destructure: param.pattern.destructure,
                         },
-                    });
+                    ));
                 }
             }
         }

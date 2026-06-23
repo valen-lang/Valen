@@ -3,7 +3,7 @@ use crate::interner::StrI;
 
 /// Position range in source code (test edit)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RangeL(pub i32, pub i32);
+pub struct RangeL(i32, i32);
 
 impl RangeL {
   pub fn new(begin: i32, end: i32) -> Self {

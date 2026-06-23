@@ -15,11 +15,6 @@ use super::test_rules::Send;
 use super::test_rules::Call;
 use super::test_rules::Lookup;
 use crate::scout_arena::ScoutArena;
-const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
-
-const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
-
-
     fn test_simple_and_optimized() {
         panic!("Unimplemented: test_simple_and_optimized");
     }

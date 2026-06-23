@@ -912,12 +912,12 @@ fn create_closure_param(
     coord_rune: Some(closure_param_type_rune),
     destructure: None,
   };
-  return ParameterS::<'s> {
-    range: closure_param_range.clone(),
-    virtuality: None,
-    pre_checked: false,
-    pattern: closure_pattern,
-  };
+  return ParameterS::new(
+    closure_param_range.clone(),
+    None,
+    false,
+    closure_pattern,
+  );
 }
 
 fn create_magic_parameters(

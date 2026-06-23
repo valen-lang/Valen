@@ -93,7 +93,8 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
         humanize_name(scout_arena, typing_interner, code_map, INameT::from(*local_id), None))
     }
     ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { range: _, local_id } => {
-      format!("Can't move a local ({:?}) from inside a while loop.", local_id)
+      format!("Can't move a local ({}) from inside a while loop.",
+        humanize_name(scout_arena, typing_interner, code_map, INameT::from(*local_id), None))
     }
     ICompileErrorT::CannotSubscriptT { range: _, tyype } => {
       format!("Cannot subscript type: {}!",
@@ -105,7 +106,9 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
         humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *expected_type }))))
     }
     ICompileErrorT::CouldntConvertForMutateT { range: _, expected_type, actual_type } => {
-      format!("Mutate couldn't convert {:?} to expected destination type {:?}", actual_type, expected_type)
+      format!("Mutate couldn't convert {} to expected destination type {}",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *actual_type }))),
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *expected_type }))))
     }
     ICompileErrorT::CouldntFindMemberT { range: _, member_name } => {
       format!("Couldn't find member {}!", member_name)
@@ -166,7 +169,9 @@ pub fn humanize<'s, 't>(scout_arena: &ScoutArena<'s>, typing_interner: &TypingIn
       format!("Can't downcast to an interface ({:?}) yet.", target_kind)
     }
     ICompileErrorT::ArrayElementsHaveDifferentTypes { range: _, types } => {
-      let types_str = types.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join(", ");
+      let types_str = types.iter().map(|c|
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *c })))
+      ).collect::<Vec<_>>().join(", ");
       format!("Array's elements have different types: {}", types_str)
       // "Array's elements have different types: " + types.mkString(", ")
     }
@@ -219,13 +224,15 @@ that wasn't exported from package {}",
       "Open (non-sealed) interfaces can't have abstract methods defined outside the interface.".to_string()
     }
     ICompileErrorT::IfConditionIsntBoolean { range: _, actual_type } => {
-      format!("If condition should be a bool, but was: {:?}", actual_type)
+      format!("If condition should be a bool, but was: {}",
+        humanize_templata(scout_arena, typing_interner, code_map, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT { coord: *actual_type }))))
     }
     ICompileErrorT::WhileConditionIsntBoolean { range: _, actual_type } => {
       format!("If condition should be a bool, but was: {:?}", actual_type)
     }
     ICompileErrorT::CantImplNonInterface { range: _, templata } => {
-      format!("Can't extend a non-interface: {:?}", templata)
+      format!("Can't extend a non-interface: {}",
+        humanize_templata(scout_arena, typing_interner, code_map, *templata))
     }
     ICompileErrorT::NonCitizenCantImpl { range: _, templata: _ } => {
       panic!("implement: humanize NonCitizenCantImpl")

@@ -204,7 +204,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         }
       }
 
-      ITemplexPT::NameOrRune(NameOrRunePT(name_or_rune)) => {
+      ITemplexPT::NameOrRune(NameOrRunePT { name: name_or_rune, .. }) => {
         let is_rune_from_env = env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(
           CodeRuneS {
             name: scout_arena.intern_str(name_or_rune.str().as_str()),
@@ -567,10 +567,10 @@ fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
 ) -> RuneUsage<'s> {
   let file = env.file();
   match type_p {
-    NameOrRune(NameOrRunePT(NameP(
+    NameOrRune(NameOrRunePT { name: NameP(
       range,
       name_or_rune,
-    )))
+    ), .. })
       if env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS {
         name: scout_arena.intern_str(name_or_rune.as_str()),
       }))) =>

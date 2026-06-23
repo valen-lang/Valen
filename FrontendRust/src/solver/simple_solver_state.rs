@@ -90,7 +90,7 @@ where
         }
         // Remove solved rules
         for &rule_index in &solved_rule_indices {
-            self.open_rule_to_puzzle_to_runes.remove(&rule_index);
+            self.open_rule_to_puzzle_to_runes.swap_remove(&rule_index);
         }
         // Add new rules with puzzles
         for rule in new_rules {

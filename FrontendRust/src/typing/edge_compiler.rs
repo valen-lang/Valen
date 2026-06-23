@@ -294,7 +294,7 @@ where 's: 't,
             .map(|o| o.function.range)
             .unwrap_or_else(|| {
                 let loc = CodeLocationS::internal(self.scout_arena, -2976395);
-                RangeS { begin: loc, end: loc }
+                RangeS::new(loc, loc)
             });
 
         let origin_function_templata = maybe_origin_function_templata

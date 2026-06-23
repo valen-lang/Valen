@@ -438,7 +438,7 @@ fn let_with_simple_pattern() {
           decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
           ..
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Moo"))))),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Moo")), .. })),
         destructure: None,
         ..
       },
@@ -470,7 +470,7 @@ fn let_with_simple_pattern_in_destructure() {
               decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
               ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Moo"))))),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Moo")), .. })),
             destructure: None,
             ..
           }, ..],
@@ -499,7 +499,7 @@ fn let_with_destructuring_pattern() {
     IExpressionPE::Let(LetPE {
       pattern: PatternPP {
         destination: None,
-        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Muta"))))),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Muta")), .. })),
         destructure: Some(DestructureP { patterns: [], .. }),
         ..
       },

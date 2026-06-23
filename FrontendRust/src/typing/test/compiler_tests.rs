@@ -3000,14 +3000,13 @@ fn reports_when_if_condition_isnt_boolean() {
         ICompileErrorT::IfConditionIsntBoolean { .. } => {}
         _other => panic!("expected IfConditionIsntBoolean"),
     }
-    // TODO: humanize IfConditionIsntBoolean uses Debug-format on CoordT; replace with humanize_templata and re-capture.
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r#"At test:0.vale:1:1:
 exported func main() int { if 3 { return 5; } else { return 7; } }
 At test:0.vale:1:31:
 exported func main() int { if 3 { return 5; } else { return 7; } }
-If condition should be a bool, but was: CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+If condition should be a bool, but was: i32
 "#,
     );
 }
@@ -3157,14 +3156,13 @@ fn reports_when_moving_from_inside_a_while() {
         ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }), .. } => {}
         _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
     }
-    // TODO: humanize CantUnstackifyOutsideLocalFromInsideWhile uses Debug-format on local_id; replace with humanize_name and re-capture.
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r##"At test:0.vale:2:1:
 exported func main() int {
 At test:0.vale:4:3:
   while (false) {
-Can't move a local (CodeVar(CodeVarNameT { name: "m" })) from inside a while loop.
+Can't move a local (m) from inside a while loop.
 "##,
     );
 }
@@ -3422,14 +3420,13 @@ exported func main() int {
         }
         _other => panic!("expected ArrayElementsHaveDifferentTypes"),
     }
-    // TODO: humanize ArrayElementsHaveDifferentTypes uses Debug-format on each CoordT; replace with humanize_templata and re-capture.
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
         r#"At test:0.vale:2:1:
 exported func main() int {
 At test:0.vale:3:9:
   arr = [#](true, 42);
-Array's elements have different types: CoordT { ownership: Share, region: RegionT { region: Default }, kind: Bool(BoolT) }, CoordT { ownership: Share, region: RegionT { region: Default }, kind: Int(IntT { bits: 32 }) }
+Array's elements have different types: bool, i32
 "#,
     );
 }

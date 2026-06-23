@@ -67,14 +67,6 @@ where
       panic!("implement: humanize CantOwnershipStructInImpl");
       // s"Only a plain struct/interface can be in an impl, remove symbol."
     }
-    ICompileErrorS::VariableNameAlreadyExists(_) => {
-      panic!("implement: humanize VariableNameAlreadyExists");
-      // s"Local named " + humanizeName(name) + " already exists!\n(If you meant to modify the variable, use the `set` keyword beforehand.)"
-    }
-    ICompileErrorS::InterfaceMethodNeedsSelf(_) => {
-      panic!("implement: humanize InterfaceMethodNeedsSelf");
-      // s"Interface's method needs a virtual param of interface's type!"
-    }
     ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(_) => {
       panic!("implement: humanize InitializingRuntimeSizedArrayRequiresSizeAndCallable");
       // s"Initializing a runtime-sized array requires 1-2 arguments: a capacity, and optionally a function that will populate that many elements."
@@ -107,10 +99,6 @@ pub fn humanize_rune_type_error<'s>(
     IRuneTypeRuleError::NotEnoughArgumentsForGenericCall(_) => {
       panic!("implement: humanize_rune_type_error NotEnoughArgumentsForGenericCall");
       // "Not enough arguments for generic call, expected at least " + (indexOfNonDefaultingParam + 1)
-    }
-    IRuneTypeRuleError::CouldntFindType(_) => {
-      panic!("implement: humanize_rune_type_error CouldntFindType");
-      // "Couldn't find anything with the name '" + humanizeImpreciseName(name) + "'"
     }
     _ => panic!("implement: humanize_rune_type_error other"),
   }

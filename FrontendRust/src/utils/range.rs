@@ -43,13 +43,14 @@ impl<'a> CodeLocationS<'a> {
 pub struct RangeS<'a> {
   pub begin: CodeLocationS<'a>,
   pub end: CodeLocationS<'a>,
+  _sealed: (),
 }
 
 impl<'a> RangeS<'a> {
   pub fn new(begin: CodeLocationS<'a>, end: CodeLocationS<'a>) -> RangeS<'a> {
     assert!(begin.file == end.file, "RangeS: begin.file != end.file");
     assert!(begin.offset <= end.offset, "RangeS: begin.offset > end.offset");
-    RangeS { begin, end }
+    RangeS { begin, end, _sealed: () }
   }
 
   // Should only be used in tests.

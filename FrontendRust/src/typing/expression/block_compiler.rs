@@ -53,7 +53,7 @@ where 's: 't,
         let unresultified_undestructed_expressions =
             unnevered_unresultified_undestructed_root_expression;
 
-        let drop_range = RangeS { begin: block_se.range.end, end: block_se.range.end };
+        let drop_range = RangeS::new(block_se.range.end, block_se.range.end);
         let drop_ranges: Vec<RangeS<'s>> =
             once(drop_range).chain(parent_ranges.iter().copied()).collect();
         let new_expr =

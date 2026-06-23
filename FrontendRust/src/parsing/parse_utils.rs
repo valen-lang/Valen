@@ -35,11 +35,11 @@ pub fn parse_region<'p>(
   let rune_end = tentative_iter.get_prev_end_pos();
   original_iter.skip_to(&tentative_iter);
 
-  let range = RangeL(rune_begin, rune_end);
+  let range = RangeL::new(rune_begin, rune_end);
 
   Ok(Some(RegionRunePT {
     range,
-    name: maybe_rune.map(|z| NameP(RangeL(rune_begin, rune_end), z.str)),
+    name: maybe_rune.map(|z| NameP(RangeL::new(rune_begin, rune_end), z.str)),
   }))
 }
 

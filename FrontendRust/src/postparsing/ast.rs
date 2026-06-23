@@ -190,6 +190,7 @@ pub struct StructS<'s> {
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
+  _sealed: (),
 }
 
 impl<'s> StructS<'s> {
@@ -226,6 +227,7 @@ impl<'s> StructS<'s> {
       maybe_predicted_mutability, tyype, header_rune_to_explicit_type,
       header_predicted_rune_to_type, header_rules, members_rune_to_explicit_type,
       members_predicted_rune_to_type, member_rules, members, internal_methods,
+      _sealed: (),
     }
   }
 }
@@ -294,6 +296,7 @@ pub struct InterfaceS<'s> {
   pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
+  _sealed: (),
 }
 impl<'s> InterfaceS<'s> {
   pub fn new(
@@ -329,6 +332,7 @@ impl<'s> InterfaceS<'s> {
       range, name, attributes, weakable, generic_params, rune_to_explicit_type,
       mutability_rune, maybe_predicted_mutability, predicted_rune_to_type,
       tyype, rules, internal_methods,
+      _sealed: (),
     }
   }
 }
@@ -383,11 +387,12 @@ pub struct ParameterS<'s> {
   pub virtuality: Option<AbstractSP<'s>>,
   pub pre_checked: bool,
   pub pattern: AtomSP<'s>,
+  _sealed: (),
 }
 impl<'s> ParameterS<'s> {
   pub fn new(range: RangeS<'s>, virtuality: Option<AbstractSP<'s>>, pre_checked: bool, pattern: AtomSP<'s>) -> Self {
     assert!(pattern.coord_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
-    Self { range, virtuality, pre_checked, pattern }
+    Self { range, virtuality, pre_checked, pattern, _sealed: () }
   }
 }
 
@@ -506,6 +511,7 @@ impl CoordGenericParameterTypeS<'_> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS<'s> {
   pub tyype: ITemplataType<'s>,
+  _sealed: (),
 }
 impl<'s> OtherGenericParameterTypeS<'s> {
   pub fn new(tyype: ITemplataType<'s>) -> Self {
@@ -513,7 +519,7 @@ impl<'s> OtherGenericParameterTypeS<'s> {
       !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::CoordTemplataType(_)),
       "vwat: Use RegionGenericParameterTypeS or CoordGenericParameterTypeS for these types"
     );
-    Self { tyype }
+    Self { tyype, _sealed: () }
   }
 }
 
@@ -546,6 +552,7 @@ pub struct FunctionS<'s> {
   pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
   pub rules: &'s [IRulexSR<'s>],
   pub body: &'s IBodyS<'s>,
+  _sealed: (),
 }
 impl<'s> FunctionS<'s> {
   pub fn new(
@@ -587,6 +594,7 @@ impl<'s> FunctionS<'s> {
     Self {
       range, name, attributes, generic_params, rune_to_predicted_type,
       tyype, params, maybe_ret_coord_rune, rules, body,
+      _sealed: (),
     }
   }
 

@@ -22,7 +22,6 @@ use crate::simplifying::hammer::Hammer;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
 use std::collections::HashSet;
-use std::fs::write;
 use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
@@ -593,14 +592,4 @@ where
   })
 }
 
-
-fn write_file(filepath: &str, s: &str) {
-  if filepath == "stdout:" {
-    println!("{}", s);
-  } else {
-    let bytes = s.as_bytes();
-    write(filepath, bytes)
-      .unwrap_or_else(|e| panic!("Failed to write file {}: {}", filepath, e));
-  }
-}
 

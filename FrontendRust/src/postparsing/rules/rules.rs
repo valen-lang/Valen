@@ -46,10 +46,6 @@ pub enum IRulexSR<'s> {
   IndexList(IndexListSR<'s>),
 }
 
-// V: why cloneable?
-// VA: It shouldn't be. Clone is derived but never called anywhere. IRulexSR is Clone-without-Copy
-// VA: (ATDCX violation). It's always stored as &'s [IRulexSR<'s>] in output structs. Safe to remove Clone.
-
 impl<'s> IRulexSR<'s> {
   pub fn range<'r>(&'r self) -> &'r RangeS<'s> {
     match self {

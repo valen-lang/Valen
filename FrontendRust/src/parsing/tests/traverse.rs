@@ -642,12 +642,13 @@ where
       }
     }
     ITemplexPT::Mutability(MutabilityPT(_range, _mutability)) => {}
-    ITemplexPT::NameOrRune(NameOrRunePT(name)) => visit_name(pred, out, name),
+    ITemplexPT::NameOrRune(NameOrRunePT { name, .. }) => visit_name(pred, out, name),
     ITemplexPT::Interpreted(InterpretedPT {
       range: _range,
       maybe_ownership,
       maybe_region,
       inner,
+      ..
     }) => {
       if let Some(maybe_ownership) = maybe_ownership {
         visit_ownership(pred, out, maybe_ownership);

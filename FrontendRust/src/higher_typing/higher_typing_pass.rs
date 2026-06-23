@@ -382,6 +382,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     member_rules: member_rules_with_implicitly_coercing_lookups_s,
     members,
     internal_methods: internal_methods_s,
+    ..
   } = struct_s;
 
   // Check cache
@@ -525,6 +526,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
     tyype,
     rules: rules_with_implicitly_coercing_lookups_s,
     internal_methods: internal_methods_s,
+    ..
   } = interface_s;
 
   // Check cache

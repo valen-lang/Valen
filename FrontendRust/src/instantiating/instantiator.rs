@@ -1326,7 +1326,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (result_it.coord, result_ce)
             }
             AddressExpressionTE::RuntimeSizedArrayLookup(rslt) => {
-                let RuntimeSizedArrayLookupTE { range: _, array_expr, array_type: rsa_tt, index_expr, variability } = *rslt;
+                let RuntimeSizedArrayLookupTE { range: _, array_expr, array_type: rsa_tt, index_expr, variability, .. } = *rslt;
                 let (_array_it, array_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &array_expr);
                 let _rsa_it = self.translate_runtime_sized_array(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, rsa_tt);
                 let (_index_it, index_ce) = self.translate_ref_expr(_monouts, _denizen_name, _denizen_bound_to_denizen_caller_supplied_thing, _substitutions, _perspective_region_t, &index_expr);
@@ -1441,7 +1441,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 (CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) }, result_ce)
             }
             ReferenceExpressionTE::Defer(d) => {
-                let DeferTE { inner_expr, deferred_expr } = **d;
+                let DeferTE { inner_expr, deferred_expr, .. } = **d;
                 let (inner_it, inner_ce) =
                     self.translate_ref_expr(monouts, denizen_name, denizen_bound_to_denizen_caller_supplied_thing, substitutions, perspective_region_t, &inner_expr);
                 let (_deferred_it, deferred_ce) =

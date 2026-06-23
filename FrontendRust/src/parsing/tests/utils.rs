@@ -416,7 +416,7 @@ pub fn assert_lookup_name(expr: &IExpressionPE, expected: &str) {
 
 pub fn assert_templex_name(expr: &ITemplexPT, expected: &str) {
   let templex_lookup = cast!(expr, ITemplexPT::NameOrRune);
-  assert_eq!(templex_lookup.0.str().as_str(), expected);
+  assert_eq!(templex_lookup.name.str().as_str(), expected);
 }
 
 pub fn assert_name(name: &IImpreciseNameP, expected: &str) {

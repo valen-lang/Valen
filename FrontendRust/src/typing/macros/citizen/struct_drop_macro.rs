@@ -41,7 +41,7 @@ where 's: 't,
 
         let range = |n: i32| -> RangeS<'s> {
             let loc = CodeLocationS::internal(self.scout_arena, n);
-            RangeS { begin: loc, end: loc }
+            RangeS::new(loc, loc)
         };
         let use_ = |n: i32, rune| RuneUsage { range: range(n), rune };
 

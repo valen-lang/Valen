@@ -49,8 +49,8 @@ fn struct_with_list_node() {
         maybe_ownership: Some(OwnershipPT(_, OwnershipP::Share)),
         maybe_region: None,
         inner: ITemplexPT::Call(CallPT {
-          template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("ListNode")))),
-          args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("T"))))],
+          template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
+          args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. })],
           ..
         }),
         ..
@@ -85,7 +85,7 @@ fn imm_generic_param() {
     IStructContent::NormalStructMember(NormalStructMemberP {
       name: NameP(_, StrI("value")),
       variability: VariabilityP::Final,
-      tyype: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("T")))),
+      tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
       ..
     }) => {}
     _ => panic!("expected struct MyImmContainer member structure"),
@@ -112,7 +112,7 @@ fn struct_with_imm_generic_param() {
       variability: VariabilityP::Final,
       tyype: ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)),
-        element: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("T")))),
+        element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
         ..
       }),
       ..
@@ -130,7 +130,7 @@ fn variadic_struct() {
   match expect_1(&struct_.members.contents) {
     IStructContent::VariadicStructMember(VariadicStructMemberP {
       variability: VariabilityP::Final,
-      tyype: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("T")))),
+      tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
       ..
     }) => {}
     _ => panic!("expected variadic struct Moo<T> {{ _ ..T; }} structure"),
@@ -146,7 +146,7 @@ fn variadic_struct_with_varying() {
   match expect_1(&struct_.members.contents) {
     IStructContent::VariadicStructMember(VariadicStructMemberP {
       variability: VariabilityP::Varying,
-      tyype: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("T")))),
+      tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
       ..
     }) => {}
     _ => panic!("expected variadic struct Moo<T> {{ _! ..T; }} structure"),
@@ -173,7 +173,7 @@ fn struct_with_weak() {
           tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Weak)),
             maybe_region: None,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))),
+            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
             ..
           }),
           ..
@@ -206,7 +206,7 @@ fn struct_with_heap() {
           tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Own)),
             maybe_region: None,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Marine")))),
+            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Marine")), .. }),
             ..
           }),
           ..
@@ -239,7 +239,7 @@ fn export_struct() {
           tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Borrow)),
             maybe_region: None,
-            inner: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))),
+            inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
             ..
           }),
           ..
@@ -289,15 +289,15 @@ fn struct_with_rune() {
           IStructContent::NormalStructMember(NormalStructMemberP {
             name: NameP(_, StrI("value")),
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("E")))),
+            tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. }),
             ..
           }),
           IStructContent::NormalStructMember(NormalStructMemberP {
             name: NameP(_, StrI("next")),
             variability: VariabilityP::Final,
             tyype: ITemplexPT::Call(CallPT {
-              template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("ListNode")))),
-              args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("E"))))],
+              template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
+              args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. })],
               ..
             }),
             ..
@@ -357,8 +357,8 @@ fn struct_with_int_rune() {
           tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
             mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
             variability: ITemplexPT::Variability(VariabilityPT(_, VariabilityP::Final)),
-            size: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("N")))),
-            element: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("float")))),
+            size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
+            element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
             ..
           }),
           ..
@@ -417,8 +417,8 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
           tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
             mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
             variability: ITemplexPT::Variability(VariabilityPT(_, VariabilityP::Final)),
-            size: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("N")))),
-            element: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("float")))),
+            size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
+            element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
             ..
           }),
           ..

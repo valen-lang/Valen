@@ -5,7 +5,6 @@ use crate::interner::{InternedSlice, StrI};
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::Keywords;
-use bumpalo::Bump;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result;
@@ -89,24 +88,6 @@ impl<'a> PackageCoordinate<'a> {
           .all(|(a, b)| a.as_str() == b.as_str())
   }
 
-  pub fn parent(&self, bump: &'a Bump) -> Option<PackageCoordinate<'a>> {
-    if self.packages.is_empty() {
-      return None;
-    }
-    let parent_packages = &self.packages.as_slice()[0..self.packages.len() - 1];
-    let arena_packages = bump.alloc_slice_copy(parent_packages);
-    Some(PackageCoordinate {
-      module: self.module,
-      packages: InternedSlice::new(arena_packages),
-    })
-    // V: do we have a coherent story for when something is inline or in the arena?
-    // VA: Not yet. This parent() method takes a raw &Bump and calls alloc_slice_copy directly,
-    // VA: bypassing interning. Every other PackageCoordinate constructor goes through
-    // VA: parse_arena/scout_arena intern_package_coordinate() which deduplicates. If called, this
-    // VA: would produce non-interned coordinates that break pointer-identity equality. Rule: semantic
-    // VA: types (PackageCoordinate, FileCoordinate) should always go through an arena intern method;
-    // VA: raw bump is only for internal data structures (ArenaIndexMap). This method has zero callers.
-  }
 
   pub fn test_tld<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,

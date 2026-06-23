@@ -206,7 +206,7 @@ fn exporting_int() {
   let program = compile(&parse_arena, &keywords, "export int as NumberThing;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    struct_: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))),
+    struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
     exported_name: NameP(_, StrI("NumberThing")),
     ..
   }))
@@ -303,7 +303,7 @@ fn return_with_region_generics() {
   let func = find_func_named(&program, "strongestDesire");
   match func.header.ret.ret_type {
     Some(ITemplexPT::Call(CallPT {
-      template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("IDesire")))),
+      template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("IDesire")), .. }),
       args: [ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP(_, StrI("r"))), .. }),
              ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP(_, StrI("i"))), .. })],
       ..

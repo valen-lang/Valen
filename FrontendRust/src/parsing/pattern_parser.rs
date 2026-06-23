@@ -65,7 +65,7 @@ where
         let end = range2.end();
         iter.advance();
         iter.advance();
-        Some(RangeL(begin, end))
+        Some(RangeL::new(begin, end))
       }
       _ => None,
     };
@@ -308,7 +308,7 @@ where
 
     // Return the complete pattern (lines 217-220)
     Ok(PatternPP::<'p> {
-      range: RangeL(pattern_begin, iter.get_prev_end_pos()),
+      range: RangeL::new(pattern_begin, iter.get_prev_end_pos()),
       destination: maybe_destination_local,
       templex: maybe_type,
       destructure: maybe_destructure,
