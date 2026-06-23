@@ -22,7 +22,7 @@ jobs:
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y llvm-16 llvm-16-dev clang-16 libpolly-16-dev cmake build-essential
+          sudo apt-get install -y llvm-16 llvm-16-dev clang-16 libpolly-16-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
           echo "LLVM_CONFIG=/usr/bin/llvm-config-16" >> $GITHUB_ENV
 
       - name: Install Rust toolchain
@@ -33,6 +33,20 @@ jobs:
 
       - name: Cargo test
         run: cargo test --manifest-path FrontendRust/Cargo.toml
+
+      - name: Package release artifact
+        run: |
+          mkdir -p release/Vale-Ubuntu
+          cp FrontendRust/target/debug/valec release/Vale-Ubuntu/
+          cp scripts/all/README release/Vale-Ubuntu/
+          cp -r Backend/builtins release/Vale-Ubuntu/builtins
+          cp -r stdlib release/Vale-Ubuntu/stdlib
+          (cd release && zip -r Vale-Ubuntu-0.zip Vale-Ubuntu)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vale-Ubuntu-0
+          path: release/Vale-Ubuntu-0.zip
 
   build_and_test_mac:
     runs-on: macos-latest
@@ -53,6 +67,20 @@ jobs:
 
       - name: Cargo test
         run: cargo test --manifest-path FrontendRust/Cargo.toml
+
+      - name: Package release artifact
+        run: |
+          mkdir -p release/Vale-Mac
+          cp FrontendRust/target/debug/valec release/Vale-Mac/
+          cp scripts/all/README release/Vale-Mac/
+          cp -r Backend/builtins release/Vale-Mac/builtins
+          cp -r stdlib release/Vale-Mac/stdlib
+          (cd release && zip -r Vale-Mac-0.zip Vale-Mac)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vale-Mac-0
+          path: release/Vale-Mac-0.zip
 
   build_and_test_docker:
     runs-on: ubuntu-latest

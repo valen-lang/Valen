@@ -1,92 +1,53 @@
-// Main entry point for Vale compiler coordinator
-
 mod build;
 mod midas;
 mod valestrom;
 
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 use std::process;
 
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+#[command(
+    name = "valec",
+    version,
+    about = "The Vale compiler.",
+    long_about = None,
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Compile Vale source files into an executable.
+    Build(build::BuildArgs),
+    /// Print version information.
+    Version,
+}
+
 fn main() {
-    let all_args: Vec<String> = env::args().collect();
+    let cli = Cli::parse();
 
-    if all_args.is_empty() {
-        eprintln!("Error: No arguments provided");
-        process::exit(1);
-    }
-
-    let program_path = PathBuf::from(&all_args[0]);
-    let program_path = if program_path.exists() {
-        program_path
-    } else {
-        // Try to resolve it
-        match fs::canonicalize(&program_path) {
-            Ok(p) => p,
-            Err(_) => {
-                eprintln!("Path {} does not exist!", program_path.display());
-                process::exit(1);
-            }
-        }
-    };
-
-    let compiler_dir = program_path
-        .parent()
-        .expect("Could not determine compiler directory")
-        .to_path_buf();
-
-    if all_args.len() < 2 {
-        eprintln!("Must specify a command (build or help).");
-        process::exit(1);
-    }
-
-    let command = &all_args[1];
-
-    match command.as_str() {
-        "version" | "--version" => {
-            let version_file = compiler_dir.join("valec-version.txt");
-            match fs::read_to_string(&version_file) {
-                Ok(content) => println!("{}", content),
-                Err(e) => {
-                    eprintln!("Error reading version file: {}", e);
-                    process::exit(1);
-                }
-            }
-        }
-        "help" | "--help" => {
-            if all_args.len() >= 3 && all_args[2] == "build" {
-                let help_file = compiler_dir.join("valec-help-build.txt");
-                match fs::read_to_string(&help_file) {
-                    Ok(content) => println!("{}", content),
-                    Err(e) => {
-                        eprintln!("Error reading help file: {}", e);
-                        process::exit(1);
-                    }
-                }
-            } else {
-                let help_file = compiler_dir.join("valec-help.txt");
-                match fs::read_to_string(&help_file) {
-                    Ok(content) => println!("{}", content),
-                    Err(e) => {
-                        eprintln!("Error reading help file: {}", e);
-                        process::exit(1);
-                    }
-                }
-            }
-        }
-        "build" => {
-            build::build_stuff(&compiler_dir, &all_args);
-        }
-        _ => {
-            eprintln!("Unknown command: {}.", command);
-            eprintln!("");
-            let help_file = compiler_dir.join("valec-help.txt");
-            match fs::read_to_string(&help_file) {
-                Ok(content) => println!("{}", content),
-                Err(_) => {}
-            }
+    // Resolve the compiler's install dir from the actual binary location.
+    // Falls back to argv[0] if current_exe() somehow fails (it shouldn't).
+    let compiler_dir: PathBuf = env::current_exe()
+        .and_then(|p| p.canonicalize())
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| {
+            eprintln!("Could not determine compiler install directory.");
             process::exit(1);
+        });
+
+    match cli.command {
+        Command::Build(args) => {
+            build::build_stuff(&compiler_dir, args);
+        }
+        Command::Version => {
+            println!("valec {}", env!("CARGO_PKG_VERSION"));
         }
     }
 }

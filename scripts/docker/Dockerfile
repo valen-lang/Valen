@@ -19,6 +19,7 @@ RUN apt-get update \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
         llvm-16 llvm-16-dev clang-16 libpolly-16-dev \
+        zlib1g-dev libzstd-dev libcurl4-openssl-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # Rust toolchain (rustup, default stable)
@@ -32,10 +33,10 @@ ARG RECOPY_DUMMY=0
 COPY . /Vale
 WORKDIR /Vale
 
-RUN cargo build --release --manifest-path FrontendRust/Cargo.toml
+RUN cargo build --manifest-path FrontendRust/Cargo.toml
 
 # Drop the built valec onto $PATH for the entrypoint
-RUN cp FrontendRust/target/release/valec /usr/local/bin/valec
+RUN cp FrontendRust/target/debug/valec /usr/local/bin/valec
 
 WORKDIR /work
 ENTRYPOINT ["valec"]

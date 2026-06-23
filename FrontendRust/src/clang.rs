@@ -69,6 +69,12 @@ pub fn invoke_clang(
 
     if pie {
         args.push("-fPIE".to_string());
+    } else if !windows {
+        // Some Linux distros (Ubuntu 22.04+) default the system linker to PIE,
+        // which rejects non-PIC objects from the Vale backend with
+        // "relocation R_X86_64_32 ... can not be used when making a PIE object".
+        // Explicitly disable PIE link when the caller didn't request it.
+        args.push("-no-pie".to_string());
     }
 
     if asan {

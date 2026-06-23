@@ -1,194 +1,205 @@
-// Build orchestration logic
+// Build orchestration logic.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
+use clap::Args;
+
 use crate::midas;
 use crate::valestrom::{ProjectDirectoryDeclaration, ProjectNonValeInputDeclaration, ProjectValeInputDeclaration};
 
-/// Parse a flag value from command-line arguments
-/// Helper function for flag parsing
-fn get_flag_value(args: &[String], flag: &str, default: &str) -> String {
-    for i in 0..args.len() {
-        if args[i] == flag && i + 1 < args.len() {
-            return args[i + 1].clone();
-        }
-    }
-    default.to_string()
+/// Flags accepted by `valec build`.
+#[derive(Args, Debug)]
+pub struct BuildArgs {
+    /// Where to write the compiled .ll, .o, and executable.
+    #[arg(long, default_value = "build")]
+    output_dir: PathBuf,
+
+    /// Name of the produced executable.
+    #[arg(short = 'o', default_value = "main")]
+    executable_name: String,
+
+    /// Override the location of the builtins/ directory shipped alongside valec.
+    #[arg(long)]
+    builtins_dir_override: Option<PathBuf>,
+
+    /// Override the clang binary used for the final link.
+    #[arg(long)]
+    clang_override: Option<String>,
+
+    /// Override the libc include + lib directory.
+    #[arg(long)]
+    libc_override: Option<String>,
+
+    /// LLVM optimisation level (e.g. O0, O1, O2, O3).
+    #[arg(long, default_value = "O0")]
+    opt_level: String,
+
+    /// LLVM CPU target.
+    #[arg(long)]
+    cpu: Option<String>,
+
+    /// Generational-reference field size in bits.
+    #[arg(long)]
+    gen_size: Option<String>,
+
+    /// Whitelist of extern names that may be replayed.
+    #[arg(long, default_value = "")]
+    replay_whitelist_extern: String,
+
+    // --- boolean knobs ---
+    #[arg(long, default_value_t = false)]
+    benchmark: bool,
+
+    #[arg(long, default_value_t = false)]
+    verbose: bool,
+
+    #[arg(long, default_value_t = false)]
+    debug_output: bool,
+
+    #[arg(long, default_value_t = true)]
+    include_builtins: bool,
+
+    #[arg(long, default_value_t = true)]
+    output_vast: bool,
+
+    #[arg(long, default_value_t = false)]
+    reuse_vast: bool,
+
+    #[arg(long, default_value_t = true)]
+    run_backend: bool,
+
+    #[arg(long, default_value_t = true)]
+    run_clang: bool,
+
+    #[arg(long, default_value_t = true)]
+    sanity_check: bool,
+
+    #[arg(long, default_value_t = false)]
+    enable_replaying: bool,
+
+    #[arg(long, default_value_t = false)]
+    enable_side_calling: bool,
+
+    /// Skip linking the standard library.
+    #[arg(long, default_value_t = false)]
+    no_std: bool,
+
+    #[arg(long, default_value_t = false)]
+    flares: bool,
+
+    #[arg(long, default_value_t = false)]
+    gen_heap: bool,
+
+    #[arg(long, default_value_t = false)]
+    census: bool,
+
+    /// Build with AddressSanitizer.
+    #[arg(long, default_value_t = false)]
+    asan: bool,
+
+    #[arg(long, default_value_t = false)]
+    verify: bool,
+
+    /// Include debug symbols in the executable.
+    #[arg(short = 'g', default_value_t = false)]
+    debug_symbols: bool,
+
+    /// Emit LLVM IR alongside the executable.
+    #[arg(long, default_value_t = false)]
+    llvm_ir: bool,
+
+    /// Build with position-independent code.
+    #[arg(long, default_value_t = true)]
+    pic: bool,
+
+    /// Build a position-independent executable.
+    #[arg(long, default_value_t = true)]
+    pie: bool,
+
+    /// Emit assembly alongside the executable.
+    #[arg(long, default_value_t = true)]
+    asm: bool,
+
+    #[arg(long, default_value_t = false)]
+    print_mem_overhead: bool,
+
+    #[arg(long, default_value_t = true)]
+    elide_checks_for_known_live: bool,
+
+    #[arg(long, default_value_t = true)]
+    elide_checks_for_regions: bool,
+
+    #[arg(long, default_value_t = false)]
+    use_atomic_rc: bool,
+
+    #[arg(long, default_value_t = true)]
+    include_bounds_checks: bool,
+
+    #[arg(long, default_value_t = false)]
+    force_all_known_live: bool,
+
+    /// Module=directory and module=file.vale mappings. Any positional arg
+    /// containing `=` is parsed as `<name>=<path>`; everything else is rejected.
+    #[arg(trailing_var_arg = true)]
+    inputs: Vec<String>,
 }
 
-/// Check if a boolean flag is present
-fn has_flag(args: &[String], flag: &str) -> bool {
-    args.iter().any(|arg| arg == flag)
-}
-
-/// Get boolean flag value
-fn get_bool_flag(args: &[String], flag: &str, default: bool) -> bool {
-    for i in 0..args.len() {
-        if args[i] == flag {
-            if i + 1 < args.len() {
-                return args[i + 1] == "true";
-            }
-            return true; // Flag present without value means true
-        }
-    }
-    default
-}
-
-/// Get optional string flag value
-fn get_optional_flag(args: &[String], flag: &str) -> Option<String> {
-    for i in 0..args.len() {
-        if args[i] == flag && i + 1 < args.len() {
-            return Some(args[i + 1].clone());
-        }
-    }
-    None
-}
-
-// V: rename
-/// Main build function
-pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
-
+/// Main build entry point.
+pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
     let windows = cfg!(windows);
 
-    // Skip first two args (program name and "build" command)
-    let build_args = &all_args[2..];
-
-    // Parse all the flags (mirrors build.vale lines 57-292)
-    // In Vale this uses the flagger library, we'll parse manually
-    
-
-    let builtins_dir = if let Some(override_path) = get_optional_flag(build_args, "--builtins_dir_override") {
-        let path = PathBuf::from(override_path);
-        if !path.is_dir() {
-            eprintln!("Error: --builtins_dir_override's value ({}) is not a directory.", path.display());
+    let builtins_dir = if let Some(override_path) = args.builtins_dir_override.as_ref() {
+        if !override_path.is_dir() {
+            eprintln!("Error: --builtins-dir-override's value ({}) is not a directory.", override_path.display());
             process::exit(1);
         }
-        path
+        override_path.clone()
     } else {
         compiler_dir.join("builtins")
     };
-
-    let maybe_clang_path_override = get_optional_flag(build_args, "--clang_override");
-    let maybe_libc_path_override = get_optional_flag(build_args, "--libc_override");
-
-    let output_dir = PathBuf::from(get_flag_value(build_args, "--output_dir", "build"));
-
-    let benchmark = get_bool_flag(build_args, "--benchmark", false);
-    let verbose = get_bool_flag(build_args, "--verbose", false);
-    let debug_output = get_bool_flag(build_args, "--debug_output", false);
-    let include_builtins = get_bool_flag(build_args, "--include_builtins", true);
-    let output_vast = get_bool_flag(build_args, "--output_vast", true);
-    let reuse_vast = get_bool_flag(build_args, "--reuse_vast", false);
-    let run_backend = get_bool_flag(build_args, "--run_backend", true);
-    let run_clang = get_bool_flag(build_args, "--run_clang", true);
-    let sanity_check = get_bool_flag(build_args, "--sanity_check", true);
-    let enable_replaying = get_bool_flag(build_args, "--enable_replaying", false);
-    let enable_side_calling = get_bool_flag(build_args, "--enable_side_calling", false);
-    let no_std = get_bool_flag(build_args, "--no_std", false);
-
-    let maybe_opt_level = get_optional_flag(build_args, "--opt_level");
-    let maybe_cpu = get_optional_flag(build_args, "--cpu");
-    let executable_name = get_flag_value(build_args, "-o", "main");
-    let flares = get_bool_flag(build_args, "--flares", false);
-    let gen_heap = get_bool_flag(build_args, "--gen_heap", false);
-    let census = get_bool_flag(build_args, "--census", false);
-    let asan = get_bool_flag(build_args, "--asan", false);
-    let verify = get_bool_flag(build_args, "--verify", false);
-    let debug_symbols = has_flag(build_args, "-g");
-    let llvm_ir = get_bool_flag(build_args, "--llvm_ir", false);
-    let pic = get_bool_flag(build_args, "--pic", true);
-    let opt_level = get_flag_value(build_args, "--opt_level", "O0");
-    let pie = get_bool_flag(build_args, "--pie", true);
-    let asm = get_bool_flag(build_args, "--asm", true);
-    let replay_whitelist_extern = get_flag_value(build_args, "--replay_whitelist_extern", "");
-    let print_mem_overhead = get_bool_flag(build_args, "--print_mem_overhead", false);
-    let elide_checks_for_known_live = get_bool_flag(build_args, "--elide_checks_for_known_live", true);
-    let elide_checks_for_regions = get_bool_flag(build_args, "--elide_checks_for_regions", true);
-    let use_atomic_rc = get_bool_flag(build_args, "--use_atomic_rc", false);
-    let include_bounds_checks = get_bool_flag(build_args, "--include_bounds_checks", true);
-    let force_all_known_live = get_bool_flag(build_args, "--force_all_known_live", false);
-
-    if verbose {
-        println!("Parsing command line inputs...");
-    }
 
     let mut project_directory_declarations = Vec::new();
     let mut project_vale_input_declarations = Vec::new();
     let mut project_non_vale_input_declarations = Vec::new();
 
-    if !no_std {
+    if !args.no_std {
         project_directory_declarations.push(ProjectDirectoryDeclaration {
             project_name: "stdlib".to_string(),
             path: compiler_dir.join("stdlib").join("src"),
         });
     }
 
-    let mut i = 0;
-    while i < build_args.len() {
-        let arg = &build_args[i];
-        
-        // Skip recognized flags
-        if arg.starts_with("--") || arg == "-g" || arg == "-o" {
-            // Skip flag and its value (if it has one)
-            if arg == "-o" || arg == "--output_dir" || arg == "--builtins_dir_override"
-                || arg == "--clang_override" || arg == "--libc_override"
-                || arg == "--opt_level" || arg == "--cpu"
-                || arg == "--replay_whitelist_extern" {
-                i += 2; // Skip flag and value
-                continue;
-            } else if arg == "--benchmark" || arg == "--sanity_check" || arg == "--verbose"
-                || arg == "--debug_output" || arg == "--include_builtins" || arg == "--output_vast"
-                || arg == "--reuse_vast" || arg == "--run_backend" || arg == "--run_clang"
-                || arg == "--enable_replaying" || arg == "--enable_side_calling"
-                || arg == "--no_std" || arg == "--flares" || arg == "--gen_heap" || arg == "--census"
-                || arg == "--asan" || arg == "--verify" || arg == "--llvm_ir" || arg == "--pic"
-                || arg == "--pie" || arg == "--asm" || arg == "--print_mem_overhead"
-                || arg == "--elide_checks_for_known_live" || arg == "--elide_checks_for_regions"
-                || arg == "--use_atomic_rc" || arg == "--include_bounds_checks" || arg == "--force_all_known_live" {
-                // Boolean flags - check if next arg is a value (true/false) or another flag
-                if i + 1 < build_args.len() && (build_args[i + 1] == "true" || build_args[i + 1] == "false") {
-                    i += 2; // Skip flag and value
-                } else {
-                    i += 1; // Skip flag only
-                }
-                continue;
-            } else {
-                i += 1; // Skip flag only
-                continue;
-            }
-        }
-
-        // Check for project=path format
-        if let Some((project_name, path_str)) = arg.split_once('=') {
-            let path = PathBuf::from(path_str);
-            let resolved_path = path.canonicalize().unwrap_or(path.clone());
-            
-            if resolved_path.is_dir() {
-                project_directory_declarations.push(ProjectDirectoryDeclaration {
-                    project_name: project_name.to_string(),
-                    path: resolved_path,
-                });
-            } else if resolved_path.file_name()
-                .and_then(|n| n.to_str())
-                .map(|n| n.ends_with(".vale"))
-                .unwrap_or(false) {
-                project_vale_input_declarations.push(ProjectValeInputDeclaration {
-                    project_name: project_name.to_string(),
-                    path: resolved_path,
-                });
-            } else {
-                project_non_vale_input_declarations.push(ProjectNonValeInputDeclaration {
-                    path: resolved_path,
-                });
-            }
-        } else if !arg.starts_with("-") {
-            eprintln!("Unrecognized input: {}", arg);
+    // Parse positional inputs: name=path entries become project declarations.
+    for input in &args.inputs {
+        let Some((project_name, path_str)) = input.split_once('=') else {
+            eprintln!("Unrecognized input: {}", input);
             process::exit(1);
+        };
+        let path = PathBuf::from(path_str);
+        let resolved_path = path.canonicalize().unwrap_or_else(|_| path.clone());
+
+        if resolved_path.is_dir() {
+            project_directory_declarations.push(ProjectDirectoryDeclaration {
+                project_name: project_name.to_string(),
+                path: resolved_path,
+            });
+        } else if resolved_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.ends_with(".vale"))
+            .unwrap_or(false)
+        {
+            project_vale_input_declarations.push(ProjectValeInputDeclaration {
+                project_name: project_name.to_string(),
+                path: resolved_path,
+            });
+        } else {
+            project_non_vale_input_declarations.push(ProjectNonValeInputDeclaration {
+                path: resolved_path,
+            });
         }
-        
-        i += 1;
     }
 
     if !builtins_dir.exists() {
@@ -196,102 +207,92 @@ pub fn build_stuff(compiler_dir: &Path, all_args: &[String]) {
         process::exit(1);
     }
 
-    if verbose {
+    if args.verbose {
         println!("Invoking Frontend...");
     }
 
-    if reuse_vast {
+    if args.reuse_vast {
         // The in-process MetalLowerer path has no JSON intermediate to reuse.
-        // The flag is parsed for backward-compat error reporting.
-        eprintln!("Error: --reuse_vast is no longer supported; compilation runs directly in-process.");
+        eprintln!("Error: --reuse-vast is no longer supported; compilation runs directly in-process.");
         process::exit(1);
     }
-    let compiled_package_stems: Vec<String>;
-    {
-        if output_dir.exists() {
-            println!("Deleting existing {}.", output_dir.display());
-            if let Err(e) = fs::remove_dir_all(&output_dir) {
-                eprintln!("Error removing old dir: {}", e);
-                process::exit(1);
-            }
-            assert!(!output_dir.exists(), "Removing old dir {} failed!", output_dir.display());
-        }
-        
-        if let Err(e) = fs::create_dir_all(&output_dir) {
-            eprintln!("Error creating output directory: {}", e);
+
+    if args.output_dir.exists() {
+        println!("Deleting existing {}.", args.output_dir.display());
+        if let Err(e) = fs::remove_dir_all(&args.output_dir) {
+            eprintln!("Error removing old dir: {}", e);
             process::exit(1);
         }
-
-        let backend_argv = midas::build_backend_argv(
-            &output_dir,
-            maybe_opt_level.as_deref(),
-            maybe_cpu.as_deref(),
-            &executable_name,
-            flares, gen_heap, census, verify,
-            &opt_level,
-            llvm_ir, asm,
-            enable_replaying, &replay_whitelist_extern,
-            enable_side_calling, pic, print_mem_overhead,
-            elide_checks_for_known_live, elide_checks_for_regions,
-            use_atomic_rc,
-            force_all_known_live, include_bounds_checks,
-        );
-
-        // Caller-supplied non-Vale inputs (e.g. CLI `name=file.c`). Auto-discovery
-        // of `native/*.c` files is now Frontend-driven inside `pass_manager::build`
-        // (only reached packages' native dirs are walked), so this list holds
-        // only what the caller explicitly named.
-        let mut extra_inputs: Vec<PathBuf> = Vec::new();
-        for declaration in &project_non_vale_input_declarations {
-            extra_inputs.push(declaration.path.clone());
-        }
-
-        let clang_cfg = frontend_rust::pass_manager::pass_manager::ClangConfig {
-            builtins_dir: builtins_dir.clone(),
-            extra_inputs,
-            clang_path: maybe_clang_path_override.clone(),
-            libc_path: maybe_libc_path_override.clone(),
-            executable_name: executable_name.clone(),
-            asan,
-            debug_symbols,
-            pic,
-            pie,
-            windows,
-        };
-
-        if !run_backend {
-            println!("Not running backend, stopping here. (Note: --run_backend=false now also skips clang.)");
-            let _ = output_vast;
-            let _ = run_clang;
-            return;
-        }
-
-        println!("Running frontend + backend + clang in-process...");
-        let bp = match crate::valestrom::compile_in_process(
-            &project_directory_declarations,
-            &project_vale_input_declarations,
-            &project_non_vale_input_declarations,
-            benchmark, sanity_check, verbose, debug_output,
-            include_builtins,
-            &output_dir,
-            backend_argv,
-            clang_cfg,
-        ) {
-            Ok(result) => result,
-            Err(e) => { eprintln!("Compilation error: {}", e); process::exit(1); }
-        };
-
-        if bp.rc != 0 {
-            eprintln!("Compilation returned error code {}, aborting.", bp.rc);
-            process::exit(bp.rc);
-        }
-        let _ = output_vast;
-        compiled_package_stems = bp.package_stems;
+        assert!(!args.output_dir.exists(), "Removing old dir {} failed!", args.output_dir.display());
     }
 
-    if verbose {
-        println!("Done! Stems: {:?}", compiled_package_stems);
+    if let Err(e) = fs::create_dir_all(&args.output_dir) {
+        eprintln!("Error creating output directory: {}", e);
+        process::exit(1);
+    }
+
+    let backend_argv = midas::build_backend_argv(
+        &args.output_dir,
+        Some(args.opt_level.as_str()),
+        args.cpu.as_deref(),
+        &args.executable_name,
+        args.flares, args.gen_heap, args.census, args.verify,
+        &args.opt_level,
+        args.llvm_ir, args.asm,
+        args.enable_replaying, &args.replay_whitelist_extern,
+        args.enable_side_calling, args.pic, args.print_mem_overhead,
+        args.elide_checks_for_known_live, args.elide_checks_for_regions,
+        args.use_atomic_rc,
+        args.force_all_known_live, args.include_bounds_checks,
+    );
+
+    let extra_inputs: Vec<PathBuf> = project_non_vale_input_declarations
+        .iter()
+        .map(|d| d.path.clone())
+        .collect();
+
+    let clang_cfg = frontend_rust::pass_manager::pass_manager::ClangConfig {
+        builtins_dir: builtins_dir.clone(),
+        extra_inputs,
+        clang_path: args.clang_override.clone(),
+        libc_path: args.libc_override.clone(),
+        executable_name: args.executable_name.clone(),
+        asan: args.asan,
+        debug_symbols: args.debug_symbols,
+        pic: args.pic,
+        pie: args.pie,
+        windows,
+    };
+
+    if !args.run_backend {
+        println!("Not running backend, stopping here. (Note: --run-backend=false now also skips clang.)");
+        return;
+    }
+
+    println!("Running frontend + backend + clang in-process...");
+    let bp = match crate::valestrom::compile_in_process(
+        &project_directory_declarations,
+        &project_vale_input_declarations,
+        &project_non_vale_input_declarations,
+        args.benchmark, args.sanity_check, args.verbose, args.debug_output,
+        args.include_builtins,
+        &args.output_dir,
+        backend_argv,
+        clang_cfg,
+    ) {
+        Ok(result) => result,
+        Err(e) => {
+            eprintln!("Compilation error: {}", e);
+            process::exit(1);
+        }
+    };
+
+    if bp.rc != 0 {
+        eprintln!("Compilation returned error code {}, aborting.", bp.rc);
+        process::exit(bp.rc);
+    }
+
+    if args.verbose {
+        println!("Done! Stems: {:?}", bp.package_stems);
     }
 }
-
-
