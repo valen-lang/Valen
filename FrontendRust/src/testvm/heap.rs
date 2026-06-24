@@ -868,7 +868,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             locals: HashMap::new(),
         };
         calls_by_id.insert(call_id, call);
-        let mut call_id_stack = call_id_stack;
         call_id_stack.push(call_id);
         assert_eq!(calls_by_id.len(), call_id_stack.len());
         call_id
@@ -904,12 +903,10 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                 let members = si.members.get().expect("vassertSome StructInstance members");
                 assert_eq!(members.len(), si.struct_h.members.len());
                 let von_members: Vec<VonMember> =
-                    si.struct_h.members.iter().zip(members.iter()).enumerate().map(|(_index, (member_h, member_v))| {
+                    si.struct_h.members.iter().zip(members.iter()).enumerate().map(|(_index, (member_h, member_v))| -> VonMember {
                         let _ = member_h;
-                        VonMember {
-                            field_name: panic!("vimpl: memberH.name.toString"),
-                            value: self.to_von(*member_v),
-                        }
+                        let _ = member_v;
+                        panic!("vimpl: memberH.name.toString")
                     }).collect();
                 IVonData::Object(VonObject {
                     tyype: si.struct_h.id.to_string(),

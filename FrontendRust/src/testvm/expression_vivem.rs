@@ -342,30 +342,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
         }
-        ExpressionH::NewStructH(n) => {
-            let NewStructH { source_expressions: args_exprs, target_member_names: _, result_type: struct_ref_h } = **n;
-            let struct_def_h = program_h.lookup_struct(interner, match struct_ref_h.kind { KindHT::StructHT(s) => s, _ => panic!("NewStructH: result_type.kind not StructHT") });
-            let mut member_references: Vec<ReferenceV<'v, 'h, 's>> = Vec::new();
-            for (i, arg_expr) in args_exprs.iter().enumerate() {
-                let r = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
-                    ret @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return ret,
-                    INodeExecuteResultV::Continue(c) => c.result_ref,
-                };
-                member_references.push(r);
-            }
-            for r in member_references.iter() {
-                heap.decrement_reference_ref_count(
-                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
-                    *r);
-            }
-            assert!(member_references.len() == struct_def_h.members.len());
-            let member_references_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&member_references);
-            let reference = heap.new_struct(interner, *struct_def_h, struct_ref_h, member_references_slice);
-            heap.increment_reference_ref_count(
-                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
-                reference);
-            INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
-        }
         ExpressionH::ArgumentH(a) => {
             let ArgumentH { result_type, argument_index } = **a;
             let r#ref = take_argument(heap, interner, call_id, argument_index, result_type);
@@ -421,45 +397,6 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 write!(handle, " *{}", var_address).unwrap();
             }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
-        }
-        ExpressionH::CallH(c) => {
-            let CallH { function: prototype_h, args_expressions: args_exprs } = **c;
-            let arg_refs: Vec<ReferenceV<'v, 'h, 's>> =
-                args_exprs.iter().enumerate().map(|(i, arg_expr)| {
-                    match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, i as i32), arg_expr) {
-                        INodeExecuteResultV::Break(_) | INodeExecuteResultV::Return(_) => panic!("execute_node_inner: CallH arg produced Break/Return — vwat (BRCOBS)"),
-                        INodeExecuteResultV::Error(_) => panic!("execute_node_inner: CallH arg produced Error — vimpl (closure can't propagate)"),
-                        INodeExecuteResultV::Continue(c) => c.result_ref,
-                    }
-                }).collect();
-
-            let function_h = program_h.lookup_function(prototype_h);
-            {
-                let handle = &mut *heap.vivem_dout;
-                writeln!(handle).unwrap();
-                let prefix = "  ".repeat(expression_id.call_id.call_depth as usize);
-                writeln!(handle, "{}Making new stack frame (call)", prefix).unwrap();
-            }
-
-            for r in arg_refs.iter() {
-                heap.decrement_reference_ref_count(
-                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
-                    *r,
-                );
-            }
-
-            let arg_refs_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
-            let (callee_call_id, retuurn) = match execute_function(program_h, interner, scout_arena, stdin, stdout, heap, arg_refs_slice, function_h) {
-                Ok(t) => t,
-                Err(e) => return INodeExecuteResultV::Error(e),
-            };
-            {
-                let handle = &mut *heap.vivem_dout;
-                let prefix = "  ".repeat(expression_id.call_id.call_depth as usize);
-                write!(handle, "{}Getting return reference", prefix).unwrap();
-            }
-            let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
-            INodeExecuteResultV::Continue(NodeContinueV { result_ref: return_ref })
         }
         ExpressionH::LocalStoreH(s) => {
             let LocalStoreH { local: local_index, source_expression: source_expr, local_name: name } = **s;
@@ -1088,7 +1025,9 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
 
             let weak_ref = heap.transmute(constraint_ref, source_expr.result_type(), ExpressionH::BorrowToWeakH(wa_h).result_type());
             heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
-            discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), constraint_ref);
+            if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), constraint_ref) {
+                return INodeExecuteResultV::Error(e);
+            }
 
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: weak_ref })
         }
@@ -1123,7 +1062,9 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 };
                 INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
             } else {
-                discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), weak_ref);
+                if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), weak_ref) {
+                    return INodeExecuteResultV::Error(e);
+                }
                 {
                     let handle = &mut *heap.vivem_dout;
                     writeln!(handle).unwrap();
@@ -1252,7 +1193,7 @@ pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &HammerIntern
         match expected_reference.ownership {
             OwnershipH::OwnH => {}
             OwnershipH::WeakH => {
-                heap.deallocate_if_no_weak_refs(actual_reference);
+                heap.deallocate_if_no_weak_refs(actual_reference)?;
             }
             OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => {}
             OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
