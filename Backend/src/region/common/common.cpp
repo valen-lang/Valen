@@ -246,7 +246,7 @@ void callFree(
           LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0),
           "concreteCharPtrForFree");
   buildFlare(FL(), globalState, functionState, builder, "Freeing ", ptrToIntLE(globalState, builder, concreteAsCharPtrLE));
-  globalState->externs->free.call(builder, {concreteAsCharPtrLE}, "");
+  buildCallWith64BitSExt(globalState, builder, globalState->externs->free, {concreteAsCharPtrLE});
 }
 
 void innerDeallocateYonder(
@@ -422,7 +422,7 @@ LLVMValueRef callMalloc(
     LLVMBuilderRef builder,
     LLVMValueRef sizeLE) {
   assert(LLVMTypeOf(sizeLE) == LLVMInt64TypeInContext(globalState->context));
-  return globalState->externs->malloc.call(builder, {sizeLE}, "");
+  return buildCallWith64BitSExt(globalState, builder, globalState->externs->malloc, {sizeLE});
 }
 
 WrapperPtrLE mallocStr(
@@ -487,7 +487,7 @@ WrapperPtrLE mallocStr(
 
 
   std::vector<LLVMValueRef> strncpyArgsLE = { charsBeginPtr, sourceCharsPtrLE, lenI64LE };
-  globalState->externs->strncpy.call(builder, strncpyArgsLE, "");
+  buildCallWith64BitSExt(globalState, builder, globalState->externs->strncpy, strncpyArgsLE);
 
   auto charsEndPtr = LLVMBuildInBoundsGEP2(builder, int8LT, charsBeginPtr, &lenI32LE, 1, "charsEndPtrZ");
   LLVMBuildStore(builder, constI8LE(globalState, 0), charsEndPtr);
@@ -1771,7 +1771,7 @@ void fastPanic(GlobalState* globalState, AreaAndFileAndLine from, LLVMBuilderRef
     buildPrintToStderr(globalState, builder, "Exiting!\n");
     // See MPESC for status codes
     auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
-    globalState->externs->exit.call(builder, {exitCodeIntLE}, "");
+    buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeIntLE});
   }
 }
 

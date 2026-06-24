@@ -702,7 +702,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
   globalState->freeName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_free");
   globalState->freeThunkName = globalState->metalCache->getName(globalState->metalCache->builtinPackageCoord, "__vale_free_thunk");
 
-  Externs externs(globalState->mod, globalState->context);
+  Externs externs(globalState->mod, globalState->context, globalState->ptrSize);
   globalState->externs = &externs;
 
 //  globalState->stringConstantBuilder = entryBuilder;

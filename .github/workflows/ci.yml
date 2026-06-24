@@ -93,3 +93,43 @@ jobs:
 
       - name: Smoke test (valec --version)
         run: docker run --rm valec --version
+
+  build_and_test_wasi:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LLVM 16
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y llvm-16 llvm-16-dev clang-16 libpolly-16-dev cmake build-essential zlib1g-dev libzstd-dev libcurl4-openssl-dev
+          echo "LLVM_CONFIG=/usr/bin/llvm-config-16" >> $GITHUB_ENV
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasi-sdk
+        run: |
+          # wasi-sdk ships its own clang preconfigured with the wasi sysroot.
+          # We use it (not the system clang-16 above) for the wasm link step;
+          # clang-16 is still needed for FrontendRust's host-side build.
+          mkdir -p $HOME/wasi-sdk
+          curl -L https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-33/wasi-sdk-33.0-x86_64-linux.tar.gz \
+            | tar -xz -C $HOME/wasi-sdk --strip-components=1
+          echo "WASI_SDK_PATH=$HOME/wasi-sdk" >> $GITHUB_ENV
+
+      - name: Install wasmtime
+        run: |
+          curl -L https://wasmtime.dev/install.sh | bash
+          echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
+
+      - name: Cargo build
+        run: cargo build --manifest-path FrontendRust/Cargo.toml
+
+      - name: Cargo test (end_to_end under wasi)
+        env:
+          VALE_TEST_BACKEND: wasi
+        run: cargo test --manifest-path FrontendRust/Cargo.toml --lib end_to_end_tests -- --test-threads=4

@@ -4,7 +4,7 @@
 #include "globalstate.h"
 #include "utils/definefunction.h"
 
-Externs::Externs(LLVMModuleRef mod, LLVMContextRef context) {
+Externs::Externs(LLVMModuleRef mod, LLVMContextRef context, int ptrSizeBits) {
   auto emptyLT = LLVMStructTypeInContext(context, nullptr, 0, false);
   auto emptyPtrLT = LLVMPointerType(emptyLT, 0);
   auto voidLT = LLVMVoidTypeInContext(context);
@@ -16,31 +16,38 @@ Externs::Externs(LLVMModuleRef mod, LLVMContextRef context) {
   auto voidPtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
   auto int256LT = LLVMIntTypeInContext(context, 256);
+  // C `size_t` width — matches pointer width on every target we care
+  // about. i64 on x86_64/arm64, i32 on wasm32. Used for libc functions
+  // whose signatures take/return size_t (malloc, memcpy, strlen, etc.).
+  auto sizeTLT = LLVMIntTypeInContext(context, ptrSizeBits);
+  // C `int` width — always i32 on the targets we support. Used for libc
+  // functions that take/return `int` (exit, getchar, fclose, strncmp ret).
+  auto cIntLT = int32LT;
 
   censusContains = addExtern(mod, "__vcensusContains", int64LT, {voidPtrLT});
   censusAdd = addExtern(mod, "__vcensusAdd", voidLT, {voidPtrLT});
   censusRemove = addExtern(mod, "__vcensusRemove", voidLT, {voidPtrLT});
-  malloc = addExtern(mod, "malloc", int8PtrLT, {int64LT});
+  malloc = addExtern(mod, "malloc", int8PtrLT, {sizeTLT});
   free = addExtern(mod, "free", voidLT, {int8PtrLT});
-  exit = addExtern(mod, "exit", voidLT, {int64LT});
+  exit = addExtern(mod, "exit", voidLT, {cIntLT});
   perror = addExtern(mod, "perror", voidLT, {int8PtrLT});
   assert = addExtern(mod, "__vassert", voidLT, {int1LT, int8PtrLT});
   assertI64Eq = addExtern(mod, "__vassertI64Eq", voidLT, {int64LT, int64LT, int8PtrLT});
   printCStr = addExtern(mod, "__vprintCStr", voidLT, {int8PtrLT});
   printCStrToStderr = addExtern(mod, "__vprintCStrToStderr", voidLT, {int8PtrLT});
-  getch = addExtern(mod, "getchar", int64LT, {});
+  getch = addExtern(mod, "getchar", cIntLT, {});
   printInt = addExtern(mod, "__vprintI64", voidLT, {int64LT});
   printIntToStderr = addExtern(mod, "__vprintI64ToStderr", voidLT, {int64LT});
-  strlen = addExtern(mod, "strlen", int32LT, {int8PtrLT});
-  strncpy = addExtern(mod, "strncpy", voidLT, {int8PtrLT, int8PtrLT, int64LT});
-  strncmp = addExtern(mod, "strncmp", int64LT, {int8PtrLT, int8PtrLT, int64LT});
-  memcpy = addExtern(mod, "memcpy", int8PtrLT, {int8PtrLT, int8PtrLT, int64LT});
-  memset = addExtern(mod, "memset", voidLT, {int8PtrLT, int8LT, int64LT});
+  strlen = addExtern(mod, "strlen", sizeTLT, {int8PtrLT});
+  strncpy = addExtern(mod, "strncpy", int8PtrLT, {int8PtrLT, int8PtrLT, sizeTLT});
+  strncmp = addExtern(mod, "strncmp", cIntLT, {int8PtrLT, int8PtrLT, sizeTLT});
+  memcpy = addExtern(mod, "memcpy", int8PtrLT, {int8PtrLT, int8PtrLT, sizeTLT});
+  memset = addExtern(mod, "memset", int8PtrLT, {int8PtrLT, cIntLT, sizeTLT});
 
   fopen = addExtern(mod, "fopen", int8PtrLT, {int8PtrLT, int8PtrLT});
-  fclose = addExtern(mod, "fclose", int64LT, {int8PtrLT});
-  fread = addExtern(mod, "fread", int64LT, {int8PtrLT, int64LT, int64LT, int8PtrLT});
-  fwrite = addExtern(mod, "fwrite", int64LT, {int8PtrLT, int64LT, int64LT, int8PtrLT});
+  fclose = addExtern(mod, "fclose", cIntLT, {int8PtrLT});
+  fread = addExtern(mod, "fread", sizeTLT, {int8PtrLT, sizeTLT, sizeTLT, int8PtrLT});
+  fwrite = addExtern(mod, "fwrite", sizeTLT, {int8PtrLT, sizeTLT, sizeTLT, int8PtrLT});
 
   strHasherCallLF = addExtern(mod, "strHasherCall", int64LT, {emptyPtrLT, int8PtrLT});
   strEquatorCallLF = addExtern(mod, "strEquatorCall", int1LT, {emptyPtrLT, int8PtrLT, int8PtrLT});

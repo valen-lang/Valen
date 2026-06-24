@@ -374,6 +374,14 @@ pub struct ClangConfig {
   pub pic: bool,
   pub pie: bool,
   pub windows: bool,
+  /// LLVM/clang target triple. `None` means host. Set to e.g.
+  /// `"wasm32-wasi"` to cross-compile to a non-host target — `invoke_clang`
+  /// switches link recipes accordingly, and the value is also forwarded to
+  /// the backend as `--triple` so LLVM emits the matching data layout.
+  pub target_triple: Option<String>,
+  /// Sysroot for cross-compilation (e.g. wasi-sdk's `share/wasi-sysroot`).
+  /// Required when `target_triple` is a non-host wasi target.
+  pub sysroot: Option<PathBuf>,
 }
 
 pub struct BuiltProgram {
@@ -510,7 +518,21 @@ where
   let cache = crate::backend_ffi::metal_cache::MetalCache::new();
   let program = crate::backend_ffi::metal_lowerer::populate_metal_cache(&cache, program_h);
 
-  let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, backend_argv);
+  // Inject --triple into the backend argv when ClangConfig requests a
+  // cross-target, so LLVM emits the correct data layout (e.g. 32-bit
+  // pointers for wasm32). Callers shouldn't have to remember to forward
+  // it, they already set target_triple on ClangConfig for the link.
+  let mut owned_argv: Vec<String>;
+  let backend_argv_with_triple: Vec<&str> = if let Some(triple) = &clang_cfg.target_triple {
+    owned_argv = backend_argv.iter().map(|s| s.to_string()).collect();
+    owned_argv.push("--triple".to_string());
+    owned_argv.push(triple.clone());
+    owned_argv.iter().map(|s| s.as_str()).collect()
+  } else {
+    backend_argv.to_vec()
+  };
+
+  let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, &backend_argv_with_triple);
   if rc != 0 {
     return Ok(BuiltProgram {
       rc,
@@ -612,6 +634,8 @@ where
     &PathBuf::from(output_dir_path),
     clang_cfg.pic,
     clang_cfg.pie,
+    clang_cfg.target_triple.as_deref(),
+    clang_cfg.sysroot.as_deref(),
   )?;
   let clang_output = clang_process
     .wait_with_output()

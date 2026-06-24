@@ -36,7 +36,10 @@ public:
   RawFuncPtrLE int256HasherCallLF;
   RawFuncPtrLE int256EquatorCallLF;
 
-  Externs(LLVMModuleRef mod, LLVMContextRef context);
+  // `ptrSizeBits` matches GlobalState::ptrSize and determines the LLVM
+  // integer width used for `size_t`-typed libc args (i64 on native 64-bit,
+  // i32 on wasm32).
+  Externs(LLVMModuleRef mod, LLVMContextRef context, int ptrSizeBits);
 };
 
 bool includeSizeParam(GlobalState* globalState, Prototype* prototype, int paramIndex);

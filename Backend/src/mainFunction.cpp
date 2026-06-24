@@ -159,23 +159,32 @@ LLVMValueRef makeEntryFunction(
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
   auto int8PtrPtrLT = LLVMPointerType(int8PtrLT, 0);
 
-  // This is the actual entry point for the binary. However, it wont contain much.
-  // It'll just have a
-  // This will be populated at the end, we're just making it here so we can call it
-  auto entryParamsLT = std::vector<LLVMTypeRef>{ int64LT, LLVMPointerType(LLVMPointerType(int8LT, 0), 0) };
-  LLVMTypeRef functionTypeL = LLVMFunctionType(int64LT, entryParamsLT.data(), entryParamsLT.size(), 0);
+  // This is the actual entry point for the binary. Uses the standard C
+  // signature `int main(int argc, char** argv)` so wasi-libc's _start
+  // shim (which expects exactly that) can find and call it. argc gets
+  // sign-extended to i64 before being stored into Vale's i64-typed
+  // numMainArgsLE global, and the Vale main's i64 return is truncated
+  // to i32 on the way out (POSIX exit codes only use the low byte).
+  auto entryParamsLT = std::vector<LLVMTypeRef>{ int32LT, LLVMPointerType(LLVMPointerType(int8LT, 0), 0) };
+  LLVMTypeRef functionTypeL = LLVMFunctionType(int32LT, entryParamsLT.data(), entryParamsLT.size(), 0);
   LLVMValueRef entryFunctionL = LLVMAddFunction(globalState->mod, "main", functionTypeL);
 
-  LLVMSetLinkage(entryFunctionL, LLVMDLLExportLinkage);
   LLVMSetDLLStorageClass(entryFunctionL, LLVMDLLExportStorageClass);
   LLVMSetFunctionCallConv(entryFunctionL, LLVMCCallConv );
+  // wasi-libc's `_start` -> `__main_void` -> `__main_argc_argv` (weak
+  // undef). It does NOT call `main` directly. Expose our `main` under
+  // both names so the wasi crt resolves to it. On native targets the
+  // alias is harmless (the C runtime calls `main`).
+  LLVMAddAlias2(
+      globalState->mod, functionTypeL, 0, entryFunctionL, "__main_argc_argv");
   LLVMBuilderRef entryBuilder = LLVMCreateBuilderInContext(globalState->context);
   LLVMBasicBlockRef blockL =
       LLVMAppendBasicBlockInContext(globalState->context, entryFunctionL, "thebestblock");
   LLVMPositionBuilderAtEnd(entryBuilder, blockL);
 
 
-  auto numMainArgsLE = LLVMGetParam(entryFunctionL, 0);
+  auto numMainArgsI32LE = LLVMGetParam(entryFunctionL, 0);
+  auto numMainArgsLE = LLVMBuildSExt(entryBuilder, numMainArgsI32LE, int64LT, "argcI64");
   auto mainArgsLE = LLVMGetParam(entryFunctionL, 1);
   LLVMBuildStore(entryBuilder, numMainArgsLE, globalState->numMainArgsLE);
   LLVMBuildStore(entryBuilder, mainArgsLE, globalState->mainArgsLE);
@@ -209,7 +218,10 @@ LLVMValueRef makeEntryFunction(
         entryFunctionL, entryBuilder);
   }
 
-  LLVMBuildRet(entryBuilder, resultLE);
+  // Vale main returns i64 (Vale Int); C main returns i32. Truncate.
+  // POSIX/wasi exit codes only use the low byte anyway.
+  auto resultI32LE = LLVMBuildTrunc(entryBuilder, resultLE, int32LT, "exitCodeI32");
+  LLVMBuildRet(entryBuilder, resultI32LE);
   LLVMDisposeBuilder(entryBuilder);
 
   return entryFunctionL;

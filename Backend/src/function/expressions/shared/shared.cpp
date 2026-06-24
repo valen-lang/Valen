@@ -203,7 +203,7 @@ void buildAssertWithExitCode(
       [globalState, exitCode, failMessage](LLVMBuilderRef thenBuilder) {
         buildPrintToStderr(globalState, thenBuilder, failMessage + " Exiting!\n");
         auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), exitCode, false);
-        globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
       });
 }
 
@@ -240,7 +240,7 @@ void buildAssertWithExitCodeV(
       [globalState, exitCode, failMessage](LLVMBuilderRef thenBuilder) {
         buildPrintToStderr(globalState, thenBuilder, failMessage + " Exiting!\n");
         auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), exitCode, false);
-        globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
       });
 }
 
@@ -265,7 +265,7 @@ void buildAssertIntEq(
         buildPrintToStderr(globalState, thenBuilder, failMessage + " Exiting!\n");
         // See MPESC for status codes
         auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 1, false);
-        globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
       });
 }
 
@@ -355,7 +355,7 @@ void buildAssertCensusContains(
           buildPrintToStderr(globalState, thenBuilder, "Object null, so not in census, exiting!\n");
           // See MPESC for status codes
           auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
-          globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+          buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
         });
 
     auto isRegisteredIntLE =
@@ -372,7 +372,7 @@ void buildAssertCensusContains(
           buildPrintToStderr(globalState, thenBuilder, " not registered with census, exiting!\n");
           // See MPESC for status codes
           auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
-          globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+          buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
         });
   }
 }
@@ -441,6 +441,48 @@ LLVMValueRef buildMaybeNeverCallV(
     ValeFuncPtrLE functionLE,
     std::vector<LLVMValueRef> argsLE) {
   return buildMaybeNeverCall(globalState, builder, functionLE.inner, argsLE);
+}
+
+LLVMValueRef buildCallWith64BitSExt(
+    GlobalState* globalState,
+    LLVMBuilderRef builder,
+    RawFuncPtrLE functionLE,
+    std::vector<LLVMValueRef> argsLE) {
+  // Trunc/SExt each i64 arg down (or up) to the callee's declared param
+  // width. LLVMBuildIntCast2 picks the right cast based on widths; we
+  // pass signed=false because the libc args we coerce here are size_t
+  // (unsigned, always positive at our call sites).
+  std::vector<LLVMValueRef> coercedArgs;
+  coercedArgs.reserve(argsLE.size());
+  unsigned numParams = LLVMCountParamTypes(functionLE.funcLT);
+  std::vector<LLVMTypeRef> paramTypes(numParams);
+  if (numParams > 0) {
+    LLVMGetParamTypes(functionLE.funcLT, paramTypes.data());
+  }
+  for (size_t i = 0; i < argsLE.size(); ++i) {
+    LLVMValueRef a = argsLE[i];
+    if (i < numParams) {
+      LLVMTypeRef expected = paramTypes[i];
+      LLVMTypeRef actual = LLVMTypeOf(a);
+      if (actual != expected &&
+          LLVMGetTypeKind(actual) == LLVMIntegerTypeKind &&
+          LLVMGetTypeKind(expected) == LLVMIntegerTypeKind) {
+        a = LLVMBuildIntCast2(builder, a, expected, false, "argcoerce");
+      }
+    }
+    coercedArgs.push_back(a);
+  }
+
+  auto resultLE = functionLE.call(builder, coercedArgs, "");
+  auto retLT = LLVMGetReturnType(functionLE.funcLT);
+  if (LLVMGetTypeKind(retLT) == LLVMIntegerTypeKind &&
+      LLVMGetIntTypeWidth(retLT) < 64) {
+    // SExt (not ZExt) so that callers can still see `result < 0` for
+    // libc errno-style returns from strncmp / fclose / etc.
+    return LLVMBuildSExt(
+        builder, resultLE, LLVMInt64TypeInContext(globalState->context), "ret64");
+  }
+  return resultLE;
 }
 
 RawFuncPtrLE addExtern(LLVMModuleRef mod, const std::string& name, LLVMTypeRef retType, std::vector<LLVMTypeRef> paramTypes) {

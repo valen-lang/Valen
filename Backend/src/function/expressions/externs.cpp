@@ -522,11 +522,11 @@ Ref buildExternCall(
     buildPrintToStderr(globalState, builder, "(panic)\n");
     // See MPESC for status codes
     auto exitCodeLE = makeConstIntExpr(functionState, builder, LLVMInt64TypeInContext(globalState->context), 1);
-    globalState->externs->exit.call(builder, {exitCodeLE}, "");
+    buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {exitCodeLE});
     LLVMBuildRet(builder, LLVMGetUndef(functionState->returnTypeL));
     return toRef(globalState->getRegion(globalState->metalCache->neverRef), globalState->metalCache->neverRef, globalState->neverPtrLE);
   } else if (prototype->name->name == "__vbi_getch") {
-    auto resultIntLE = globalState->externs->getch.call(builder, {}, "");
+    auto resultIntLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->getch, {});
     return toRef(globalState->getRegion(prototype->returnType), prototype->returnType, resultIntLE);
   } else if (prototype->name->name == "__vbi_eqFloatFloat") {
     assert(args.size() == 2);

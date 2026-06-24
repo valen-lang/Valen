@@ -15,7 +15,11 @@ pub fn invoke_clang(
     output_dir: &Path,
     pic: bool,
     pie: bool,
+    target_triple: Option<&str>,
+    sysroot: Option<&Path>,
 ) -> Result<std::process::Child, String> {
+    let is_wasi = target_triple.is_some_and(|t| t.starts_with("wasm"));
+
     let program = if let Some(override_path) = maybe_clang_path_override {
         override_path.to_string()
     } else if windows {
@@ -39,11 +43,25 @@ pub fn invoke_clang(
         args.push(format!("-L{}", libc_path.join("lib").display()));
     }
 
+    if let Some(triple) = target_triple {
+        args.push(format!("--target={}", triple));
+    }
+    if let Some(sys) = sysroot {
+        args.push(format!("--sysroot={}", sys.display()));
+    }
+    if is_wasi {
+        // wasm-ld --gc-sections (default) drops `main` because it isn't
+        // statically reachable from `_start` — wasi-libc's __main_void
+        // references main as a *weak* undef, which doesn't pin it. Force
+        // the export so the link keeps our entry point.
+        args.push("-Wl,--export=main".to_string());
+    }
+
     if windows {
         args.push("/ENTRY:\"main\"".to_string());
         args.push("/SUBSYSTEM:CONSOLE".to_string());
         args.push(format!("/Fe:{}", exe_file.display()));
-        
+
         // Use absolute path for /Fo
         let output_dir_resolved = output_dir.canonicalize()
             .unwrap_or_else(|_| output_dir.to_path_buf());
@@ -51,7 +69,11 @@ pub fn invoke_clang(
     } else {
         args.push("-o".to_string());
         args.push(exe_file.display().to_string());
-        args.push("-lm".to_string());
+        // wasi-libc folds libm into libc, and -lm with no separate libm
+        // would error out.
+        if !is_wasi {
+            args.push("-lm".to_string());
+        }
     }
 
     if debug_symbols {
@@ -69,11 +91,12 @@ pub fn invoke_clang(
 
     if pie {
         args.push("-fPIE".to_string());
-    } else if !windows {
+    } else if !windows && !is_wasi {
         // Some Linux distros (Ubuntu 22.04+) default the system linker to PIE,
         // which rejects non-PIC objects from the Vale backend with
         // "relocation R_X86_64_32 ... can not be used when making a PIE object".
         // Explicitly disable PIE link when the caller didn't request it.
+        // wasm-ld has no concept of PIE; the flag is rejected.
         args.push("-no-pie".to_string());
     }
 

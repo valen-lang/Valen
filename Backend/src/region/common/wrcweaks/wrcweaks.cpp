@@ -308,7 +308,7 @@ LLVMValueRef WrcWeaks::lockWrciFatPtr(
         buildPrintToStderr(globalState, thenBuilder, "Exiting!\n");
         // See MPESC for status codes
         auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 14, false);
-        globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
       });
   return fatWeaks_.getInnerRefFromWeakRef(functionState, builder, refM, weakFatPtrLE);
 }

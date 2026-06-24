@@ -132,7 +132,7 @@ void Linear::dealias(
           "extStrPtrLE");
 
   buildFlare(FL(), globalState, functionState, builder, "Freeing ", ptrToIntLE(globalState, builder, sourceI8PtrLE));
-  globalState->externs->free.call(builder, {sourceI8PtrLE}, "");
+  buildCallWith64BitSExt(globalState, builder, globalState->externs->free, {sourceI8PtrLE});
 }
 
 Ref Linear::lockWeak(
@@ -863,7 +863,7 @@ void Linear::deallocate(
           LLVMPointerType(LLVMInt8TypeInContext(globalState->context), 0),
           "concreteCharPtrForFree");
   buildFlare(FL(), globalState, functionState, builder, "Freeing ", ptrToIntLE(globalState, builder, concreteAsCharPtrLE));
-  globalState->externs->free.call(builder, {concreteAsCharPtrLE}, "");
+  buildCallWith64BitSExt(globalState, builder, globalState->externs->free, {concreteAsCharPtrLE});
 }
 
 LiveRef Linear::constructRuntimeSizedArray(
@@ -1059,7 +1059,7 @@ Ref Linear::innerMallocStr(
 //                functionState, thenBuilder, mutLinearStrRefMT, regionInstanceRef, strLiveRef);
 
         std::vector<LLVMValueRef> argsLE = {charsBeginPtr, sourceCharsPtrLE, lenI64LE};
-        globalState->externs->strncpy.call(thenBuilder, argsLE, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->strncpy, argsLE);
 
         auto charsEndPtr = LLVMBuildInBoundsGEP2(thenBuilder, int8LT, charsBeginPtr, &lenI64LE, 1, "charsEndPtr_");
 
@@ -2219,7 +2219,7 @@ ValeFuncPtrLE Linear::getInterfaceMethodFunctionPtr(
         buildPrintToStderr(globalState, thenBuilder, edgeNumLE);
         buildPrintToStderr(globalState, thenBuilder, "), exiting!\n");
         auto exitCodeIntLE = LLVMConstInt(LLVMInt64TypeInContext(globalState->context), 1, false);
-        globalState->externs->exit.call(thenBuilder, {exitCodeIntLE}, "");
+        buildCallWith64BitSExt(globalState, thenBuilder, globalState->externs->exit, {exitCodeIntLE});
       });
 
   auto funcLT = globalState->getInterfaceFunctionTypesNonPointer(hostInterfaceMT)[indexInEdge];

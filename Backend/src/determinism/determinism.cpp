@@ -303,13 +303,14 @@ void Determinism::makeFuncToMatchCallFromRecordingFile() {
               buildPrintToStderr(globalState, builder, " but this execution is calling ");
               buildPrintToStderr(globalState, builder, replayingCalledFuncNamePtrLE);
               buildPrintToStderr(globalState, builder, ", aborting!\n");
-              globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+              buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
             });
         auto stringsDifferentIntLE =
-            globalState->externs->strncmp.call(
+            buildCallWith64BitSExt(
+                globalState,
                 builder,
-                {recordedCalledFuncNamePtrLE, replayingCalledFuncNamePtrLE, recordedCalledFuncNameLenLE},
-                "");
+                globalState->externs->strncmp,
+                {recordedCalledFuncNamePtrLE, replayingCalledFuncNamePtrLE, recordedCalledFuncNameLenLE});
         auto stringsDifferentLE = LLVMBuildTrunc(builder, stringsDifferentIntLE, int1LT, "stringsDifferent");
         buildIfNever(
             globalState, functionState->containingFuncL, builder, stringsDifferentLE,
@@ -319,7 +320,7 @@ void Determinism::makeFuncToMatchCallFromRecordingFile() {
               buildPrintToStderr(globalState, builder, " but this execution is calling ");
               buildPrintToStderr(globalState, builder, replayingCalledFuncNamePtrLE);
               buildPrintToStderr(globalState, builder, ", aborting!\n");
-              globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+              buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
             });
         buildFlare(FL(), globalState, functionState, builder, "Returning from function matchCallFromRecordingFile");
         LLVMBuildRetVoid(builder);
@@ -421,21 +422,22 @@ void Determinism::writeBytesToFile(
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
   assert(LLVMTypeOf(i8PtrLE) == int8PtrLT);
   auto resultLE =
-      globalState->externs->fwrite.call(
+      buildCallWith64BitSExt(
+          globalState,
           builder,
+          globalState->externs->fwrite,
           {
               i8PtrLE,
               sizeLE,
               constI64LE(globalState, 1),
               LLVMBuildLoad2(builder, int8PtrLT, fileHandleGlobalLE, ""),
-          },
-          "");
+          });
   buildIfNever(
       globalState, functionState->containingFuncL, builder,
       LLVMBuildICmp(builder, LLVMIntSLT, resultLE, constI64LE(globalState, 1), ""),
       [this, voidLT](LLVMBuilderRef builder){
           buildPrintToStderr(globalState, builder, "Couldn't write to recording file.");
-        globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
       });
 }
 
@@ -456,14 +458,14 @@ LLVMValueRef Determinism::openFile(FunctionState* functionState, LLVMBuilderRef 
       { assert(false); throw 1337; }
   }
   buildFlare(FL(), globalState, functionState, builder, "Opening: ", pathI8PtrLE, " with ", modeStrLE);
-  auto fileLE = globalState->externs->fopen.call(builder, {pathI8PtrLE, modeStrLE}, "");
+  auto fileLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->fopen, {pathI8PtrLE, modeStrLE});
   auto fileAsI64LE = ptrToIntLE(globalState, builder, fileLE);
   buildIfNever(
       globalState, functionState->containingFuncL, builder,
       LLVMBuildICmp(builder, LLVMIntEQ, fileAsI64LE, constI64LE(globalState, 0), ""),
       [this, voidLT](LLVMBuilderRef builder){
         buildPrintToStderr(globalState, builder, "Couldn't open recording file.");
-        globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
       });
   return fileLE;
 }
@@ -503,24 +505,25 @@ LLVMValueRef Determinism::readI64FromFile(
   auto i64PtrLE = makeBackendLocal(functionState, builder, int64LT, "", constI64LE(globalState, 0));
 
   auto resultLE =
-      globalState->externs->fread.call(
+      buildCallWith64BitSExt(
+          globalState,
           builder,
+          globalState->externs->fread,
           {
               ptrToVoidPtrLE(globalState, builder, i64PtrLE),
               constI64LE(globalState, int64Size),
               constI64LE(globalState, 1),
               LLVMBuildLoad2(builder, int8PtrLT, fileHandleGlobalLE, "")
-          },
-          "");
+          });
   buildIf(
       globalState, functionState->containingFuncL, builder,
       LLVMBuildICmp(builder, LLVMIntSLT, resultLE, constI64LE(globalState, 1), ""),
       [this, functionState, int64LT](LLVMBuilderRef builder){
         buildFlare(FL(), globalState, functionState, builder);
-        globalState->externs->perror.call(builder, {
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->perror, {
             globalState->getOrMakeStringConstant("Couldn't read from recording file (1)")
-        }, "");
-        globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+        });
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
       });
 
   auto int64LE = LLVMBuildLoad2(builder, int64LT, i64PtrLE, "int64FromFile");
@@ -539,25 +542,27 @@ LLVMValueRef Determinism::readI256FromFile(
   auto i256PtrLE = makeBackendLocal(functionState, builder, int256LT, "", constI256LEFromI64(globalState, 0));
 
   auto resultLE =
-      globalState->externs->fread.call(
+      buildCallWith64BitSExt(
+          globalState,
           builder,
+          globalState->externs->fread,
           {
               ptrToVoidPtrLE(globalState, builder, i256PtrLE),
               constI64LE(globalState, int256Size),
               constI64LE(globalState, 1),
               LLVMBuildLoad2(builder, int8PtrLT, fileHandleGlobalLE, "")
-          },
-          "");
+          });
   buildIf(
       globalState, functionState->containingFuncL, builder,
       LLVMBuildICmp(builder, LLVMIntSLT, resultLE, constI64LE(globalState, 1), ""),
       [this, functionState](LLVMBuilderRef builder){
         buildFlare(FL(), globalState, functionState, builder);
-        globalState->externs->perror.call(
+        buildCallWith64BitSExt(
+            globalState,
             builder,
-            {globalState->getOrMakeStringConstant("Couldn't read from recording file (2)")},
-            "");
-        globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+            globalState->externs->perror,
+            {globalState->getOrMakeStringConstant("Couldn't read from recording file (2)")});
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
       });
 
   auto int256LE = LLVMBuildLoad2(builder, int256LT, i256PtrLE, "int256FromFile");
@@ -591,22 +596,23 @@ void Determinism::readLimitedStringFromFile(
   auto int8PtrLT = LLVMPointerType(int8LT, 0);
 
   auto resultLE =
-      globalState->externs->fread.call(builder,
+      buildCallWith64BitSExt(globalState, builder,
+          globalState->externs->fread,
           {
               bufferPtrLE,
               maxSizeLE,
               constI64LE(globalState, 1),
               LLVMBuildLoad2(builder, int8PtrLT, fileHandleGlobalLE, "")
-          }, "");
+          });
   buildIf(
       globalState, functionState->containingFuncL, builder,
       LLVMBuildICmp(builder, LLVMIntSLT, resultLE, constI64LE(globalState, 1), ""),
       [this, functionState](LLVMBuilderRef builder){
         buildFlare(FL(), globalState, functionState, builder);
-        globalState->externs->perror.call(builder, {
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->perror, {
             globalState->getOrMakeStringConstant("Couldn't read from recording file (3)")
-        }, "");
-        globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+        });
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
       });
 
   buildFlare(FL(), globalState, functionState, builder, "Read str: ", bufferPtrLE);
@@ -875,7 +881,7 @@ void Determinism::buildWriteValueToFile(
     writeBytesToFile(functionState, builder, sizeI64LE, linearStartPtrLE);
 
     buildFlare(FL(), globalState, functionState, builder, "Freeing ", ptrToIntLE(globalState, builder, linearStartPtrLE));
-    globalState->externs->free.call(builder, {linearStartPtrLE}, "");
+    buildCallWith64BitSExt(globalState, builder, globalState->externs->free, {linearStartPtrLE});
 
     buildFlare(FL(), globalState, functionState, builder, "Leaving buildWriteValueToFile for struct");
   } else {
@@ -902,7 +908,7 @@ void Determinism::buildMaybeStopDeterministicMode(
   buildIf(
       globalState, containingFunction, builder, fileNotNullLE,
       [this, fileHandleLE](LLVMBuilderRef builder) {
-        globalState->externs->fclose.call(builder, {fileHandleLE}, "");
+        buildCallWith64BitSExt(globalState, builder, globalState->externs->fclose, {fileHandleLE});
       });
 }
 
@@ -968,29 +974,31 @@ Ref Determinism::buildReadValueFromFile(
     buildFlare(FL(), globalState, functionState, builder, "Entering buildReadValueFromFile for struct/str/rsa/ssa");
     auto valueSizeLE = readI64FromFile(functionState, builder);
     buildFlare(FL(), globalState, functionState, builder, "Malloc'ing size ", valueSizeLE);
-    auto tempBufferPtrLE = globalState->externs->malloc.call(builder, {valueSizeLE}, "");
+    auto tempBufferPtrLE = buildCallWith64BitSExt(globalState, builder, globalState->externs->malloc, {valueSizeLE});
     buildFlare(FL(), globalState, functionState, builder, "Got pointer ", ptrToIntLE(globalState, builder, tempBufferPtrLE));
 
     auto freadResultLE =
-        globalState->externs->fread.call(
+        buildCallWith64BitSExt(
+            globalState,
             builder,
+            globalState->externs->fread,
             {
                 tempBufferPtrLE,
                 valueSizeLE,
                 constI64LE(globalState, 1),
                 LLVMBuildLoad2(builder, int8PtrLT, fileHandleGlobalLE, "")
-            },
-            "");
+            });
     buildIf(
         globalState, functionState->containingFuncL, builder,
         LLVMBuildICmp(builder, LLVMIntSLT, freadResultLE, constI64LE(globalState, 1), ""),
         [this, functionState](LLVMBuilderRef builder){
           buildFlare(FL(), globalState, functionState, builder);
-          globalState->externs->perror.call(
+          buildCallWith64BitSExt(
+              globalState,
               builder,
-              {globalState->getOrMakeStringConstant("Couldn't read from recording file (4)")},
-              "");
-          globalState->externs->exit.call(builder, {constI64LE(globalState, 1)}, "");
+              globalState->externs->perror,
+              {globalState->getOrMakeStringConstant("Couldn't read from recording file (4)")});
+          buildCallWith64BitSExt(globalState, builder, globalState->externs->exit, {constI64LE(globalState, 1)});
         });
 
     auto valeRegionInstanceRef =
@@ -1011,7 +1019,7 @@ Ref Determinism::buildReadValueFromFile(
 
 
     buildFlare(FL(), globalState, functionState, builder, "Freeing ", ptrToIntLE(globalState, builder, tempBufferPtrLE));
-    globalState->externs->free.call(builder, {tempBufferPtrLE}, "");
+    buildCallWith64BitSExt(globalState, builder, globalState->externs->free, {tempBufferPtrLE});
 
     buildFlare(FL(), globalState, functionState, builder, "Read value from file, size ", valueSizeLE);
 

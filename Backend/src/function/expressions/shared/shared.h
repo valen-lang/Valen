@@ -265,6 +265,27 @@ LLVMValueRef buildMaybeNeverCallV(
     ValeFuncPtrLE functionLE,
     std::vector<LLVMValueRef> argsLE);
 
+// Call a function that uses a target-dependent C ABI (e.g. libc) from
+// Vale-side code that uses i64 everywhere. Integer args narrower than
+// the callee's declared param widths are trunc'd / SExt'd to match;
+// a sub-i64 integer return is sign-extended back up to i64.
+//
+// Use for libc externs whose C-ABI signatures involve `int` (i32 on
+// every target) or `size_t` (i32 on wasm32, i64 on native) but whose
+// Vale-side callers want a uniform i64-in / i64-out shape so they can
+// ICmp against `constI64LE`, pass `constI64LE` as size_t, etc. On
+// native 64-bit where every libc int/size_t already maps to i64 the
+// coercions are no-ops.
+//
+// Do NOT use this for plain Vale-to-Vale calls — those types are
+// matched by construction and a mismatch should trip the LLVM verifier
+// rather than be silently coerced.
+LLVMValueRef buildCallWith64BitSExt(
+    GlobalState* globalState,
+    LLVMBuilderRef builder,
+    RawFuncPtrLE functionLE,
+    std::vector<LLVMValueRef> argsLE);
+
 RawFuncPtrLE addExtern(
     LLVMModuleRef mod,
     const std::string& name,

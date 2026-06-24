@@ -118,6 +118,17 @@ pub struct BuildArgs {
     #[arg(long, default_value_t = true)]
     pie: bool,
 
+    /// LLVM target triple (e.g. `wasm32-wasi`). Defaults to the host triple
+    /// when unset. Forwarded to both clang (`--target=`) and the backend
+    /// (`--triple`).
+    #[arg(long)]
+    target_triple: Option<String>,
+
+    /// Sysroot for cross-compilation. Required when `--target_triple` names
+    /// a non-host wasi target. Point at e.g. `~/wasi-sdk/share/wasi-sysroot`.
+    #[arg(long)]
+    sysroot: Option<PathBuf>,
+
     /// Emit assembly alongside the executable.
     #[arg(long, default_value_t = true)]
     asm: bool,
@@ -262,6 +273,8 @@ pub fn build_stuff(compiler_dir: &Path, args: BuildArgs) {
         pic: args.pic,
         pie: args.pie,
         windows,
+        target_triple: args.target_triple.clone(),
+        sysroot: args.sysroot.clone(),
     };
 
     if !args.run_backend {

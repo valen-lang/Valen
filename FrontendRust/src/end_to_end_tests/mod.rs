@@ -12,11 +12,93 @@ use std::path::{Path, PathBuf};
 
 pub mod tests;
 
+/// Which backend the harness should compile + run programs through.
+///
+/// Selected per-process via the `VALE_TEST_BACKEND` env var (`native`
+/// default, `wasi` to cross-compile to `wasm32-wasi` and execute under
+/// wasmtime). Every test runs against the selected backend unless it
+/// opts out via `wasi_skip!("reason")`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Backend {
+    Native,
+    Wasi,
+}
+
+pub fn target_backend() -> Backend {
+    match std::env::var("VALE_TEST_BACKEND").as_deref() {
+        Ok("wasi") => Backend::Wasi,
+        _ => Backend::Native,
+    }
+}
+
+impl Backend {
+    pub fn exe_name(self) -> &'static str {
+        match self {
+            Backend::Native => "a.out",
+            Backend::Wasi => "a.out.wasm",
+        }
+    }
+
+    pub fn target_triple(self) -> Option<&'static str> {
+        match self {
+            Backend::Native => None,
+            Backend::Wasi => Some("wasm32-wasi"),
+        }
+    }
+
+    /// wasi-sdk sysroot path. Resolved from the `WASI_SDK_PATH` env var if
+    /// set, else `~/wasi-sdk`. Returns the `share/wasi-sysroot` subdir.
+    pub fn sysroot(self) -> Option<PathBuf> {
+        match self {
+            Backend::Native => None,
+            Backend::Wasi => Some(wasi_sdk_path().join("share/wasi-sysroot")),
+        }
+    }
+
+    /// Clang binary to invoke. wasi-sdk ships its own clang preconfigured
+    /// for wasi; the host clang generally won't find the wasi sysroot
+    /// libraries even with `--target=wasm32-wasi --sysroot=...`.
+    pub fn clang_path(self) -> Option<String> {
+        match self {
+            Backend::Native => None,
+            Backend::Wasi => Some(
+                wasi_sdk_path()
+                    .join("bin/clang")
+                    .display()
+                    .to_string(),
+            ),
+        }
+    }
+}
+
+fn wasi_sdk_path() -> PathBuf {
+    if let Ok(p) = std::env::var("WASI_SDK_PATH") {
+        return PathBuf::from(p);
+    }
+    let home = std::env::var("HOME").expect("HOME unset");
+    PathBuf::from(home).join("wasi-sdk")
+}
+
+/// Inside a `#[test]` fn, returns early when running under the wasi
+/// backend with a reason logged. Place at the very top of the fn body.
+#[macro_export]
+macro_rules! wasi_skip {
+    ($reason:expr) => {
+        if $crate::end_to_end_tests::target_backend()
+            == $crate::end_to_end_tests::Backend::Wasi
+        {
+            eprintln!("wasi_skip: {}", $reason);
+            return;
+        }
+    };
+}
+
 pub struct CompiledProgram {
     exe: PathBuf,
     pub cwd: PathBuf,
     _work: tempfile::TempDir,
     _extra_keepalive: Vec<tempfile::TempDir>,
+    backend: Backend,
 }
 
 pub struct ExecResult {
@@ -138,17 +220,20 @@ fn compile_inputs(
         extra_inputs.push(c.to_path_buf());
     }
 
+    let backend = target_backend();
     let clang_cfg = crate::pass_manager::pass_manager::ClangConfig {
         builtins_dir,
         extra_inputs,
-        clang_path: None,
+        clang_path: backend.clang_path(),
         libc_path: None,
-        executable_name: "a.out".to_string(),
+        executable_name: backend.exe_name().to_string(),
         asan: false,
         debug_symbols: false,
         pic: false,
         pie: false,
         windows: false,
+        target_triple: backend.target_triple().map(str::to_string),
+        sysroot: backend.sysroot(),
     };
 
     let bp = crate::pass_manager::pass_manager::build(
@@ -166,16 +251,35 @@ fn compile_inputs(
         cwd: out_dir,
         _work: work,
         _extra_keepalive: keepalive,
+        backend,
     }
 }
 
 impl CompiledProgram {
     pub fn run(&self, args: &[&str]) -> ExecResult {
-        let out = std::process::Command::new(&self.exe)
-            .current_dir(&self.cwd)
-            .args(args)
-            .output()
-            .expect("exec failed");
+        let out = match self.backend {
+            Backend::Native => std::process::Command::new(&self.exe)
+                .current_dir(&self.cwd)
+                .args(args)
+                .output()
+                .expect("exec failed"),
+            Backend::Wasi => {
+                // wasmtime: `wasmtime run --dir=. a.out.wasm -- <args>`.
+                // `--dir=.` grants the program filesystem access to the
+                // cwd it was invoked in (needed for replay-bin reads,
+                // file-extern tests, etc.).
+                let mut cmd = std::process::Command::new("wasmtime");
+                cmd.current_dir(&self.cwd)
+                    .arg("run")
+                    .arg("--dir=.")
+                    .arg(&self.exe);
+                if !args.is_empty() {
+                    cmd.arg("--");
+                    cmd.args(args);
+                }
+                cmd.output().expect("wasmtime exec failed")
+            }
+        };
         ExecResult {
             exit_code: out.status.code().unwrap_or(-1),
             stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
