@@ -1,7 +1,7 @@
 use crate::higher_typing::ast::FunctionA;
 use crate::interner::{Interner, StrI};
-use std::collections::{HashMap, HashSet};
-use indexmap::IndexMap;
+use crate::utils::fx::{HashMap, HashSet};
+use crate::utils::fx::IndexMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::*;
@@ -113,30 +113,30 @@ where 's: 't,
 {
     pub fn new() -> Self {
         Self {
-            return_types_by_signature: HashMap::new(),
-            signature_to_function: IndexMap::new(),
-            function_declared_names: HashMap::new(),
-            type_declared_names: HashSet::new(),
-            function_name_to_outer_env: HashMap::new(),
-            function_name_to_inner_env: HashMap::new(),
-            type_name_to_outer_env: HashMap::new(),
-            type_name_to_inner_env: HashMap::new(),
-            type_name_to_mutability: HashMap::new(),
-            interface_name_to_sealed: HashMap::new(),
-            struct_template_name_to_definition: IndexMap::new(),
-            interface_template_name_to_definition: IndexMap::new(),
-            all_impls: HashMap::new(),
-            sub_citizen_template_to_impls: HashMap::new(),
-            super_interface_template_to_impls: HashMap::new(),
+            return_types_by_signature: HashMap::default(),
+            signature_to_function: IndexMap::default(),
+            function_declared_names: HashMap::default(),
+            type_declared_names: HashSet::default(),
+            function_name_to_outer_env: HashMap::default(),
+            function_name_to_inner_env: HashMap::default(),
+            type_name_to_outer_env: HashMap::default(),
+            type_name_to_inner_env: HashMap::default(),
+            type_name_to_mutability: HashMap::default(),
+            interface_name_to_sealed: HashMap::default(),
+            struct_template_name_to_definition: IndexMap::default(),
+            interface_template_name_to_definition: IndexMap::default(),
+            all_impls: HashMap::default(),
+            sub_citizen_template_to_impls: HashMap::default(),
+            super_interface_template_to_impls: HashMap::default(),
             kind_exports: Vec::new(),
             function_exports: Vec::new(),
             kind_externs: Vec::new(),
             function_externs: Vec::new(),
-            instantiation_name_to_bounds: HashMap::new(),
-            deferred_function_body_compiles: IndexMap::new(),
-            deferred_function_compiles: IndexMap::new(),
-            finished_deferred_function_body_compiles: HashSet::new(),
-            finished_deferred_function_compiles: HashSet::new(),
+            instantiation_name_to_bounds: HashMap::default(),
+            deferred_function_body_compiles: IndexMap::default(),
+            deferred_function_compiles: IndexMap::default(),
+            finished_deferred_function_body_compiles: HashSet::default(),
+            finished_deferred_function_compiles: HashSet::default(),
         }
     }
     

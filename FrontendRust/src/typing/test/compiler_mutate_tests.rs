@@ -17,7 +17,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::StructNameT;
 use crate::typing::overload_resolver::FindFunctionFailure;

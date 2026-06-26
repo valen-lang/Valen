@@ -5,7 +5,7 @@ use crate::instantiating::instantiated_compilation::InstantiatorCompilationOptio
 use crate::tests::tests::get_package_to_resource_resolver;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::code_hierarchy::test_from_vec;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use bumpalo::Bump;

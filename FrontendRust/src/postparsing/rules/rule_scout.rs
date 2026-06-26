@@ -19,7 +19,7 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::templex_scout::translate_templex;
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::{HashMap, HashSet};
 use crate::postparsing::itemplatatype::ImplTemplataType;
 use crate::postparsing::rules::rules::DefinitionCoordIsaSR;
 use crate::postparsing::rules::rules::CallSiteCoordIsaSR;
@@ -386,7 +386,7 @@ fn get_rune_kind_template<'s>(
 
 
 struct Equivalencies<'s> {
-  rune_to_kind_equivalent_runes: indexmap::IndexMap<IRuneS<'s>, indexmap::IndexSet<IRuneS<'s>>>,
+  rune_to_kind_equivalent_runes: crate::utils::fx::IndexMap<IRuneS<'s>, crate::utils::fx::IndexSet<IRuneS<'s>>>,
 }
 
 impl<'s> Equivalencies<'s> {
@@ -396,7 +396,7 @@ impl<'s> Equivalencies<'s> {
   }
 
   fn new(rules_s: &[IRulexSR<'s>]) -> Self {
-    let mut this = Self { rune_to_kind_equivalent_runes: indexmap::IndexMap::new() };
+    let mut this = Self { rune_to_kind_equivalent_runes: crate::utils::fx::IndexMap::default() };
     for rule in rules_s {
       match rule {
         IRulexSR::CoordComponents(r) => this.mark_kind_equivalent(r.result_rune.rune, r.kind_rune.rune),
@@ -426,7 +426,7 @@ impl<'s> Equivalencies<'s> {
 
   fn find_transitively_equivalent_into(
     &self,
-    found_so_far: &mut indexmap::IndexSet<IRuneS<'s>>,
+    found_so_far: &mut crate::utils::fx::IndexSet<IRuneS<'s>>,
     rune: IRuneS<'s>,
   ) {
     let equivalents: Vec<IRuneS<'s>> = self.rune_to_kind_equivalent_runes
@@ -441,14 +441,14 @@ impl<'s> Equivalencies<'s> {
     }
   }
 
-  fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> indexmap::IndexSet<IRuneS<'s>> {
-    let mut set: indexmap::IndexSet<IRuneS<'s>> = indexmap::IndexSet::new();
+  fn get_kind_equivalent_runes(&self, rune: IRuneS<'s>) -> crate::utils::fx::IndexSet<IRuneS<'s>> {
+    let mut set: crate::utils::fx::IndexSet<IRuneS<'s>> = crate::utils::fx::IndexSet::default();
     set.insert(rune);
     self.find_transitively_equivalent_into(&mut set, rune);
     set
   }
 
-  fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> indexmap::IndexSet<IRuneS<'s>>
+  fn get_kind_equivalent_runes_iter<I>(&self, runes: I) -> crate::utils::fx::IndexSet<IRuneS<'s>>
   where
     I: Iterator<Item = IRuneS<'s>>,
   {
@@ -460,7 +460,7 @@ impl<'s> Equivalencies<'s> {
 pub fn get_kind_equivalent_runes_iter<'s, I>(
   rules_s: &[IRulexSR<'s>],
   runes: I,
-) -> indexmap::IndexSet<IRuneS<'s>>
+) -> crate::utils::fx::IndexSet<IRuneS<'s>>
 where
   I: Iterator<Item = IRuneS<'s>>,
 {

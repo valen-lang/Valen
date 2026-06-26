@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::io::Write;
 use std::marker::PhantomData;
 use crate::interner::StrI;

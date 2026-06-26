@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::Keywords;
 use crate::compile_options::GlobalOptions;
 use crate::parse_arena::ParseArena;

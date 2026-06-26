@@ -15,7 +15,7 @@ use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
 use crate::postparsing::ast::ProgramS;

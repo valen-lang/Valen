@@ -46,8 +46,8 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
-use std::collections::HashMap;
-use indexmap::IndexSet;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::IndexSet;
 use crate::parsing::ast::IImpreciseNameP;
 use crate::postparsing::names::{IterableNameS, IteratorNameS, IterationOptionNameS};
 use crate::postparsing::identifiability_solver::IdentifiabilitySolveError;
@@ -66,9 +66,7 @@ use crate::postparsing::ast::ExternS;
 use crate::postparsing::function_scout::ParentCitizen;
 use crate::postparsing::identifiability_solver::solve_identifiability;
 use crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 #[derive(Debug, PartialEq)]
 pub struct CompileErrorExceptionS<'s> {
   pub err: ICompileErrorS<'s>,
@@ -301,7 +299,7 @@ impl<'s> FunctionEnvironmentS<'s> {
       file: self.file,
       name: self.name.clone(),
       parent_env: Some(Box::new(IEnvironmentS::FunctionEnvironment(self.clone()))),
-      declared_runes: IndexSet::new(),
+      declared_runes: IndexSet::default(),
       num_explicit_params: self.num_explicit_params,
       is_interface_internal_method: false,
     }
@@ -1485,10 +1483,10 @@ pub(crate) fn predict_rune_types(
   ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   ICompileErrorS<'s>,
 > {
-  let mut grouped_explicit_types = indexmap::IndexMap::<
+  let mut grouped_explicit_types = crate::utils::fx::IndexMap::<
     IRuneS<'s>,
     Vec<ITemplataType<'s>>,
-  >::new();
+  >::default();
   for (rune, explicit_type) in rune_to_explicit_type.iter() {
     grouped_explicit_types
       .entry(rune.clone())

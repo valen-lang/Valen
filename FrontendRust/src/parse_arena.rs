@@ -7,7 +7,7 @@ use crate::interner::{InternedSlice, StrI};
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use bumpalo::Bump;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ptr::eq;
@@ -53,9 +53,9 @@ impl<'p> ParseArena<'p> {
       bump,
       inner: RefCell::new(ParseArenaInner {
         // Pre-size for keywords (~130 entries) + headroom
-        string_to_interned: HashMap::with_capacity(256),
-        package_coord_to_ref: HashMap::new(),
-        file_coord_to_ref: HashMap::new(),
+        string_to_interned: HashMap::with_capacity_and_hasher(256, Default::default()),
+        package_coord_to_ref: HashMap::default(),
+        file_coord_to_ref: HashMap::default(),
       }),
     }
   }

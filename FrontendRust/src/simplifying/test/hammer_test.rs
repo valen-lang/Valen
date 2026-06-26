@@ -10,7 +10,7 @@ use crate::final_ast::instructions::StackifyH;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use crate::builtins::builtins::get_code_map;
 use crate::tests::tests::get_package_to_resource_resolver;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::collect_where_hnode;
 use crate::typing::typing_interner::TypingInterner;
 pub struct HammerTest {

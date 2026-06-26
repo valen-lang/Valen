@@ -8,7 +8,7 @@ use crate::typing::names::names::IVarNameT;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, OwnershipT, RegionT};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::interner::StrI;

@@ -25,7 +25,7 @@ use crate::utils::range::RangeS;
 use crate::postparsing::rules::rules::{
   CallSiteFuncSR, DefinitionFuncSR, PackSR, ResolveSR,
 };
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::interner::StrI;
 use crate::postparsing::itemplatatype::CoordTemplataType;
 

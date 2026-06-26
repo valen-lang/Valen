@@ -11,7 +11,7 @@ use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use bumpalo::Bump;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,7 +21,7 @@ use crate::final_ast::ast::PackageH;
 use crate::simplifying::hammer::Hammer;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::typing::typing_interner::TypingInterner;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
@@ -240,7 +240,7 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
     if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
       if let Ok(code) = fs::read_to_string(file_path) {
         let filepath = file_path.to_string_lossy().to_string();
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         result.insert(filepath, code);
         return Some(result);
       }
@@ -256,7 +256,7 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
     }
 
     // Find all .vale files in this directory
-    let mut results = HashMap::new();
+    let mut results = HashMap::default();
 
     if let Ok(entries) = fs::read_dir(&dir_path) {
       for entry in entries.flatten() {
@@ -340,7 +340,7 @@ fn resolve_package_contents<'a>(
     }
   }
 
-  let mut filepath_to_source: HashMap<String, String> = HashMap::new();
+  let mut filepath_to_source: HashMap<String, String> = HashMap::default();
   for (filepath, code) in source_inputs {
     if filepath_to_source.contains_key(&filepath) {
       panic!("Input filepaths overlap!");
@@ -558,7 +558,7 @@ where
     }
   }
   let abi_dir = PathBuf::from(output_dir_path).join("abi");
-  let mut project_names: HashSet<String> = HashSet::new();
+  let mut project_names: HashSet<String> = HashSet::default();
   for stem in &package_coord_stems {
     let parts: Vec<&str> = stem.split('.').collect();
     if parts.is_empty() { continue; }

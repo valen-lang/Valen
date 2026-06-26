@@ -1,5 +1,5 @@
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use std::iter::once;
 
 use crate::utils::range::RangeS;
@@ -23,7 +23,7 @@ use crate::postparsing::itemplatatype::CoordTemplataType;
 use crate::postparsing::rune_type_solver::solve_rune_type;
 use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
 use crate::typing::templata::templata::{expect_integer, expect_mutability, expect_variability};
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
 use crate::typing::templata::templata::expect_coord_templata;
@@ -63,7 +63,7 @@ where 's: 't,
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
-        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         initially_known_runes.insert(variability_rune, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
@@ -113,7 +113,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = HashSet::new();
+                            let mut filter = HashSet::default();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = calling_env.lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();
@@ -191,7 +191,7 @@ where 's: 't,
         maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
-        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         if let Some(rune) = maybe_element_type_rune {
             initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
@@ -238,7 +238,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = HashSet::new();
+                            let mut filter = HashSet::default();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = IInDenizenEnvironmentT::Node(calling_env).lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();
@@ -416,7 +416,7 @@ where 's: 't,
 
         let rune_typing_env = self.create_rune_type_solver_env(calling_env);
 
-        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::new();
+        let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
         initially_known_runes.insert(mutability_rune_a, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         initially_known_runes.insert(variability_rune_a, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
@@ -440,7 +440,7 @@ where 's: 't,
                 err: e,
             })?;
 
-        let member_types: indexmap::IndexSet<CoordT<'s, 't>> =
+        let member_types: crate::utils::fx::IndexSet<CoordT<'s, 't>> =
             exprs_2.iter().map(|e| e.result().coord).collect();
         if member_types.len() > 1 {
             let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
@@ -473,7 +473,7 @@ where 's: 't,
                         IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                             let name = self.scout_arena.intern_imprecise_name(
                                 IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                            let mut filter = HashSet::new();
+                            let mut filter = HashSet::default();
                             filter.insert(ILookupContext::TemplataLookupContext);
                             let templata = calling_env.lookup_nearest_with_imprecise_name(
                                 name, filter, self.typing_interner).unwrap();

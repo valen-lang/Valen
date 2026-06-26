@@ -1,6 +1,6 @@
 
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use crate::interner::{InternedSlice, StrI};
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
@@ -158,7 +158,7 @@ pub fn test_from_vec<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
     contents: Vec<T>,
   ) -> FileCoordinateMap<'a, T> {
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     for (index, code) in contents.into_iter().enumerate() {
       map.insert(format!("{}.vale", index), code);
     }
@@ -187,8 +187,8 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
     FileCoordinateMap {
-      package_coord_to_file_coords: HashMap::new(),
-      file_coord_to_contents: HashMap::new(),
+      package_coord_to_file_coords: HashMap::default(),
+      file_coord_to_contents: HashMap::default(),
     }
   }
 
@@ -251,7 +251,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
     T: Clone,
   {
-    let mut result_file_coord_to_contents: HashMap<&'a FileCoordinate<'a>, T> = HashMap::new();
+    let mut result_file_coord_to_contents: HashMap<&'a FileCoordinate<'a>, T> = HashMap::default();
     for (file_coord, contents) in &self.file_coord_to_contents {
       result_file_coord_to_contents.insert(file_coord, func(file_coord, contents));
     }
@@ -373,7 +373,7 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
     PackageCoordinateMap {
-      package_coord_to_contents: IndexMap::new(),
+      package_coord_to_contents: IndexMap::default(),
     }
   }
 

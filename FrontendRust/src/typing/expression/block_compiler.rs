@@ -10,7 +10,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::once;
 
 

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;

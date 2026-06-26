@@ -3,9 +3,7 @@ use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::parser::ParserCompilation;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
-
-
+use crate::utils::fx::HashMap;
 pub fn test<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,

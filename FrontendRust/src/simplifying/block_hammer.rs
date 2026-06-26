@@ -7,9 +7,7 @@ use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::types::KindHT;
 use crate::instantiating::ast::expressions::ExpressionIE;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {

@@ -34,7 +34,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::code_hierarchy::test_from_vec;
 use crate::von::ast::IVonData;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::io::stdout;
 
 

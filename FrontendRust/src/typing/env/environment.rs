@@ -1,6 +1,6 @@
-use std::collections::{HashMap as StdHashMap, HashSet};
-use indexmap::IndexMap;
-
+use std::collections::HashMap as StdHashMap;
+use crate::utils::fx::HashSet;
+use crate::utils::fx::IndexMap;
 use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDefinitionTemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
@@ -531,7 +531,7 @@ where 's: 't,
     TemplatasStoreBuilder {
       templatas_store_name,
       name_to_entry: Vec::new(),
-      imprecise_to_entries: IndexMap::new(),
+      imprecise_to_entries: IndexMap::default(),
     }
   }
   
@@ -616,7 +616,7 @@ where 's: 't,
     let name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
       (&store.name_to_entry).into_iter().map(|(k, v)| (*k, *v)).collect();
     let mut imprecise_to_entries: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> =
-      IndexMap::new();
+      IndexMap::default();
     for (k, v) in &store.imprecise_to_entries {
       imprecise_to_entries.insert(*k, v.to_vec());
     }
@@ -729,7 +729,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
 
     // Group by imprecise name
     // Per @IIIOZ: IndexMap so downstream iteration preserves new_entries_by_name_s source order.
-    let mut grouped: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::new();
+    let mut grouped: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::default();
     for (name, entry) in &new_entries_by_name_s {
       grouped.entry(*name).or_insert_with(Vec::new).push(*entry);
     }
@@ -741,7 +741,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     //     .map(key => (key -> (entriesByImpreciseNameS(key) ++ newEntriesByNameS(key)))).toMap
     // Per @IIIOZ: IndexMap so the alloc_index_map_from_iter freeze at line ~1072 inherits deterministic order
     // from upstream self.imprecise_to_entries (IndexMap) and grouped (IndexMap).
-    let mut combined_by_name_s: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::new();
+    let mut combined_by_name_s: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::default();
     // Step 1: entriesByImpreciseNameS
     for (name, entries) in self.imprecise_to_entries.iter() {
       combined_by_name_s.insert(*name, entries.to_vec());

@@ -12,7 +12,7 @@ use crate::Keywords;
 // VA: parse_arena.bump.alloc(Keywords::new_for_parse(...)). The result is &'p Keywords<'p> which
 // VA: coerces to &'ctx Keywords<'p> at all existing call sites — no signature changes needed.
 // VA: All other ~110 fields are StrI<'a> (Copy), so no other blockers.
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::parse_arena::ParseArena;
 
 

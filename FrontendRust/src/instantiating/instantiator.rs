@@ -24,7 +24,7 @@ use crate::compile_options::GlobalOptions;
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::expressions::{ReferenceExpressionTE, ExpressionTE, AddressExpressionTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT};
-use indexmap::IndexMap;
+use crate::utils::fx::IndexMap;
 use crate::instantiating::ast::ast::ExternI;
 use crate::instantiating::ast::ast::ICitizenAttributeI;
 use crate::instantiating::ast::ast::KindExternI;
@@ -183,8 +183,8 @@ use crate::typing::templata::templata::PlaceholderTemplataT;
 use crate::typing::types::types::IRegionT;
 use crate::typing::types::types::RegionT;
 use crate::utils::utils::union_maps_expect_no_conflict;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 use std::mem::discriminant;
 use std::mem::transmute;
@@ -233,20 +233,20 @@ pub struct InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
 impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
   pub fn new() -> Self {
     InstantiatedOutputsI {
-      functions: IndexMap::new(),
-      structs: IndexMap::new(),
-      interfaces_without_methods: IndexMap::new(),
-      struct_to_mutability: IndexMap::new(),
-      struct_to_bounds: IndexMap::new(),
-      interface_to_mutability: IndexMap::new(),
-      interface_to_bounds: IndexMap::new(),
-      impl_to_mutability: IndexMap::new(),
-      impl_to_bounds: IndexMap::new(),
-      interface_to_impls: IndexMap::new(),
-      interface_to_abstract_func_to_virtual_index: IndexMap::new(),
-      impls: IndexMap::new(),
-      abstract_func_to_bounds: IndexMap::new(),
-      interface_to_impl_to_abstract_prototype_to_override: IndexMap::new(),
+      functions: IndexMap::default(),
+      structs: IndexMap::default(),
+      interfaces_without_methods: IndexMap::default(),
+      struct_to_mutability: IndexMap::default(),
+      struct_to_bounds: IndexMap::default(),
+      interface_to_mutability: IndexMap::default(),
+      interface_to_bounds: IndexMap::default(),
+      impl_to_mutability: IndexMap::default(),
+      impl_to_bounds: IndexMap::default(),
+      interface_to_impls: IndexMap::default(),
+      interface_to_abstract_func_to_virtual_index: IndexMap::default(),
+      impls: IndexMap::default(),
+      abstract_func_to_bounds: IndexMap::default(),
+      interface_to_impl_to_abstract_prototype_to_override: IndexMap::default(),
       new_impls: Vec::new(),
       new_abstract_funcs: Vec::new(),
       new_functions: Vec::new(),
@@ -256,8 +256,8 @@ impl<'s, 't, 'i> InstantiatedOutputsI<'s, 't, 'i> where 's: 't, 's: 'i {
   }
     pub fn add_method_to_v_table(&mut self, impl_id: IdI<'s, 'i>, super_interface_id: IdI<'s, 'i>, abstract_func_prototype: PrototypeI<'s, 'i>, override_: PrototypeI<'s, 'i>) {
         let map = self.interface_to_impl_to_abstract_prototype_to_override
-            .entry(super_interface_id).or_insert_with(IndexMap::new)
-            .entry(impl_id).or_insert_with(IndexMap::new);
+            .entry(super_interface_id).or_insert_with(IndexMap::default)
+            .entry(impl_id).or_insert_with(IndexMap::default);
         assert!(!map.contains_key(&abstract_func_prototype));
         map.insert(abstract_func_prototype, override_);
     }
@@ -315,8 +315,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     });
                 let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
                 let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
-                    func_id_to_bound_arg_prototype: IndexMap::new(),
-                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+                    func_id_to_bound_arg_prototype: IndexMap::default(),
+                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
                 };
                 let kind_it = self.translate_kind(
                     monouts,
@@ -355,8 +355,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                 let substitutions = self.assemble_placeholder_map(export_placeholdered_id_t, &export_id);
 
                 let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
-                    func_id_to_bound_arg_prototype: IndexMap::new(),
-                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+                    func_id_to_bound_arg_prototype: IndexMap::default(),
+                    bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
                 };
                 let prototype =
                     self.translate_prototype(
@@ -404,8 +404,8 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
                     let substitutions = self.assemble_placeholder_map(extern_placeholdered_id_t, &extern_id);
 
                     let denizen_bound_to_denizen_caller_supplied_thing = DenizenBoundToDenizenCallerBoundArgI {
-                        func_id_to_bound_arg_prototype: IndexMap::new(),
-                        bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+                        func_id_to_bound_arg_prototype: IndexMap::default(),
+                        bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
                     };
                     let prototype =
                         self.translate_prototype(
@@ -741,13 +741,13 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
             }).collect();
         let dispatcher_instantiation_bound_params_to_args = Self::assemble_instantiation_bound_param_to_arg(_dispatcher_instantiation_bound_params, _abstract_func_instantiation_bound_args);
 
-        let mut bound_param_func_id_to_bound_arg_index_map: IndexMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i>> = IndexMap::new();
+        let mut bound_param_func_id_to_bound_arg_index_map: IndexMap<IdT<'s, 't>, &'i PrototypeI<'s, 'i>> = IndexMap::default();
         for (k, v) in _bound_param_prototype_t_to_bound_arg_prototype_i_from_impl.iter() {
             bound_param_func_id_to_bound_arg_index_map.insert(*k, *v);
         }
         let extra_bounds = DenizenBoundToDenizenCallerBoundArgI {
             func_id_to_bound_arg_prototype: bound_param_func_id_to_bound_arg_index_map,
-            bound_param_impl_id_to_bound_arg_impl_id: IndexMap::new(),
+            bound_param_impl_id_to_bound_arg_impl_id: IndexMap::default(),
         };
         let case_instantiation_bound_params_to_args = dispatcher_instantiation_bound_params_to_args.plus(&extra_bounds);
 
@@ -827,7 +827,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
 
     pub fn assemble_placeholder_map(&self, id_t: &IdT<'s, 't>, id: &IdI<'s, 'i>) -> IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>> {
         let mut result: IndexMap<IdT<'s, 't>, ITemplataI<'s, 'i>> = match id_t.init_non_package_id(self.typing_interner) {
-            None => IndexMap::new(),
+            None => IndexMap::default(),
             Some(init_non_package_id_t) => {
                 self.assemble_placeholder_map(&init_non_package_id_t, &id.init_non_package_id().unwrap())
             }
@@ -1124,9 +1124,9 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         }
         let InterfaceDefinitionT { template_name: _, instantiated_interface: _, ref_: _, attributes, weakable, mutability: mutability_t, instantiation_bound_params: _, internal_methods: _ } = _interface_def_t;
         assert!(!_monouts.interface_to_impl_to_abstract_prototype_to_override.contains_key(_new_id));
-        _monouts.interface_to_impl_to_abstract_prototype_to_override.insert(*_new_id, IndexMap::new());
+        _monouts.interface_to_impl_to_abstract_prototype_to_override.insert(*_new_id, IndexMap::default());
         assert!(!_monouts.interface_to_abstract_func_to_virtual_index.contains_key(_new_id));
-        _monouts.interface_to_abstract_func_to_virtual_index.insert(*_new_id, IndexMap::new());
+        _monouts.interface_to_abstract_func_to_virtual_index.insert(*_new_id, IndexMap::default());
         assert!(!_monouts.interface_to_impls.contains_key(_new_id));
         _monouts.interface_to_impls.insert(*_new_id, Vec::new());
         let perspective_region_t = RegionT { region: IRegionT::Default };
@@ -2711,7 +2711,7 @@ impl<'s, 'ctx, 't, 'i> InstantiatorI<'s, 'ctx, 't, 'i> where 's: 't, 's: 'i {
         _monouts.impls.insert(*_impl_id, (sub_citizen, super_interface, _denizen_bound_to_denizen_caller_supplied_thing.clone(), _instantiation_bounds_for_unsubstituted_impl));
 
         _monouts.interface_to_impl_to_abstract_prototype_to_override.get_mut(&super_interface).expect("vassertSome: interface_to_impl_to_abstract_prototype_to_override")
-            .insert(*_impl_id, IndexMap::new());
+            .insert(*_impl_id, IndexMap::default());
         _monouts.interface_to_impls.get_mut(&super_interface).expect("vassertSome: interface_to_impls").push((*_impl_id_t, *_impl_id));
     }
 }

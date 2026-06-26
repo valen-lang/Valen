@@ -1,12 +1,10 @@
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::typing::compiler::Compiler;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 pub struct Reachables<'s, 't> {
     pub functions: HashSet<SignatureT<'s, 't>>,
     pub structs: HashSet<StructTT<'s, 't>>,

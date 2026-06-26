@@ -26,7 +26,7 @@ use crate::postparsing::ast::LocationInDenizenVal;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use bumpalo::Bump;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::postparsing::names::IImpreciseNameValS::*;
 use crate::postparsing::names::{ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS};
 use IRuneValS::*;
@@ -78,12 +78,12 @@ impl<'s> ScoutArena<'s> {
     ScoutArena {
       bump,
       inner: RefCell::new(ScoutArenaInner {
-        string_to_interned: HashMap::with_capacity(256),
-        package_coord_to_ref: HashMap::new(),
-        file_coord_to_ref: HashMap::new(),
-        imprecise_name_val_to_ref: HashMap::new(),
-        name_val_to_ref: HashMap::new(),
-        rune_val_to_ref: hashbrown::HashMap::new(),
+        string_to_interned: HashMap::with_capacity_and_hasher(256, Default::default()),
+        package_coord_to_ref: HashMap::default(),
+        file_coord_to_ref: HashMap::default(),
+        imprecise_name_val_to_ref: HashMap::default(),
+        name_val_to_ref: HashMap::default(),
+        rune_val_to_ref: hashbrown::HashMap::default(),
       }),
     }
   }

@@ -6,7 +6,7 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::names::names::{FunctionNameT, FunctionTemplateNameT, IdT, INameT};
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::typing::typing_interner::TypingInterner;
 use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::tests::tests::get_package_to_resource_resolver;

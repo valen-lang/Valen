@@ -16,8 +16,8 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
-use indexmap::IndexMap;
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::{HashMap, HashSet};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
@@ -70,7 +70,7 @@ where 's: 't,
         exprs_1: &[&'s IExpressionSE<'s>],
     ) -> Result<(Vec<ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let mut result_exprs = Vec::new();
-        let mut all_returns = HashSet::new();
+        let mut all_returns = HashSet::default();
         for (index, expr) in exprs_1.iter().enumerate() {
             let (ref_expr, returns) = self.evaluate_and_coerce_to_reference_expression(
                 coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, call_location, region, expr)?;
@@ -461,7 +461,7 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(
                     ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE {
                         region,
-                    }))), HashSet::new()))
+                    }))), HashSet::default()))
             }
             IExpressionSE::ConstantInt(c) => {
                 Ok((ExpressionTE::Reference(
@@ -469,7 +469,7 @@ where 's: 't,
                         value: ITemplataT::Integer(c.value),
                         bits: c.bits,
                         region,
-                    }))), HashSet::new()))
+                    }))), HashSet::default()))
             }
             IExpressionSE::Return(ret) => {
                 let (uncasted_inner_expr_2, returns_from_inner_expr) =
@@ -607,7 +607,7 @@ where 's: 't,
                 let region_for_inners = region;
 
                 let mut init_exprs_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
-                let mut init_returns: HashSet<CoordT<'s, 't>> = HashSet::new();
+                let mut init_returns: HashSet<CoordT<'s, 't>> = HashSet::default();
                 for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
                     let (undropped_expr_te, returns) =
                         self.evaluate_and_coerce_to_reference_expression(
@@ -647,7 +647,7 @@ where 's: 't,
                     self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership)?;
                 match lookup_expr_1 {
                     None => unreachable!("scout pass intercepts unknown names with CouldntFindVarToMutateS before typing runs"),
-                    Some(x) => Ok((x, HashSet::new())),
+                    Some(x) => Ok((x, HashSet::default())),
                 }
             }
             IExpressionSE::FunctionCall(fc) => {
@@ -756,7 +756,7 @@ where 's: 't,
                     &once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
                     coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s)?;
-                Ok((ExpressionTE::Reference(call_expr_2), HashSet::new()))
+                Ok((ExpressionTE::Reference(call_expr_2), HashSet::default()))
             }
             IExpressionSE::Ownershipped(ownershipped) => {
                 let (source_te, returns_from_inner) =
@@ -1155,7 +1155,7 @@ where 's: 't,
                         let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal)?;
                         let break_te = ReferenceExpressionTE::Break(self.typing_interner.alloc(BreakTE { region}));
                         let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
-                        Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::new()))
+                        Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::default()))
                     }
                 }
             }
@@ -1530,7 +1530,7 @@ where 's: 't,
                 let (size_te, returns_from_size) = self.evaluate_and_coerce_to_reference_expression(
                     coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, nrsa.size)?;
                 let (maybe_callable_te, returns_from_callable) = match nrsa.callable {
-                    None => (None, HashSet::new()),
+                    None => (None, HashSet::default()),
                     Some(callable_ae) => {
                         let (callable_te, rets) = self.evaluate_and_coerce_to_reference_expression(
                             coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), callable_ae)?;
@@ -1589,14 +1589,14 @@ where 's: 't,
                     value: c.value,
                     region,
                 }));
-                Ok((ExpressionTE::Reference(result), HashSet::new()))
+                Ok((ExpressionTE::Reference(result), HashSet::default()))
             }
             IExpressionSE::ConstantFloat(c) => {
                 let result = ReferenceExpressionTE::ConstantFloat(self.typing_interner.alloc(ConstantFloatTE {
                     value: c.value,
                     region,
                 }));
-                Ok((ExpressionTE::Reference(result), HashSet::new()))
+                Ok((ExpressionTE::Reference(result), HashSet::default()))
             }
             IExpressionSE::Destruct(destruct_se) => {
                 let (inner_expr_2, returns_from_array_expr) =
@@ -1674,7 +1674,7 @@ where 's: 't,
                 // This will likely be dropped, as theyre probably not doing anything with it.
                 // But who knows, maybe they'll do something with it, like pass it as a parameter
                 // to something.
-                Ok((ExpressionTE::Reference(ReferenceExpressionTE::Unlet(self.typing_interner.alloc(result_expr))), HashSet::new()))
+                Ok((ExpressionTE::Reference(ReferenceExpressionTE::Unlet(self.typing_interner.alloc(result_expr))), HashSet::default()))
             }
             IExpressionSE::Index(index_se) => {
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
@@ -1710,7 +1710,7 @@ where 's: 't,
                 let rune_name_s = self.scout_arena.intern_imprecise_name(
                     IImpreciseNameValS::RuneName(RuneNameValS { rune: r.rune }));
                 let templata = nenv.lookup_nearest_with_imprecise_name(rune_name_s, &{
-                    let mut s = HashSet::new();
+                    let mut s = HashSet::default();
                     s.insert(ILookupContext::TemplataLookupContext);
                     s
                 }, self.typing_interner).unwrap();
@@ -1721,7 +1721,7 @@ where 's: 't,
                             bits: 32,
                             region,
                         }));
-                        Ok((ExpressionTE::Reference(result), HashSet::new()))
+                        Ok((ExpressionTE::Reference(result), HashSet::default()))
                     }
                     ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => {
                         let result = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
@@ -1729,7 +1729,7 @@ where 's: 't,
                             bits: 32,
                             region,
                         }));
-                        Ok((ExpressionTE::Reference(result), HashSet::new()))
+                        Ok((ExpressionTE::Reference(result), HashSet::default()))
                     }
                     ITemplataT::Prototype(_pt) => {
                         let mut tiny_env = nenv.function_environment().make_child_node_environment(
@@ -1744,7 +1744,7 @@ where 's: 't,
                         let expr = self.new_global_function_group_expression(
                             IInDenizenEnvironmentT::Node(tiny_env_snapshot),
                             coutputs, RegionT { region: IRegionT::Default }, arbitrary_imprecise);
-                        Ok((ExpressionTE::Reference(expr), HashSet::new()))
+                        Ok((ExpressionTE::Reference(expr), HashSet::default()))
                     }
                     _ => {
                         let mut ranges: Vec<RangeS<'s>> = vec![r.range.clone()];
@@ -1761,13 +1761,13 @@ where 's: 't,
                     value: c.value,
                     region,
                 }));
-                Ok((ExpressionTE::Reference(result), HashSet::new()))
+                Ok((ExpressionTE::Reference(result), HashSet::default()))
             }
             IExpressionSE::OverloadSet(overload_set) => {
                 // Per canonical: vassert(rules.isEmpty); val name = parts.head.name
                 assert!(overload_set.lookup.rules.is_empty()); // implement
                 let name = overload_set.lookup.parts.first().expect("OverloadSet parts must be non-empty").name;
-                let mut lookup_filter = HashSet::new();
+                let mut lookup_filter = HashSet::default();
                 lookup_filter.insert(ILookupContext::ExpressionLookupContext);
                 let templatas_from_env = nenv.lookup_all_with_imprecise_name(name, &lookup_filter, self.typing_interner);
                 let range_list: Vec<RangeS<'s>> = once(overload_set.lookup.range).chain(parent_ranges.iter().copied()).collect();
@@ -1805,7 +1805,7 @@ where 's: 't,
                     _ => unreachable!("OverloadSet match is exhaustive; over-matched for slice-pattern exhaustiveness"),
                 };
                 #[allow(unreachable_code)] // unreachable until the panic!-placeholder match arms above get real bodies
-                Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
+                Ok((ExpressionTE::Reference(templata_from_env), HashSet::default()))
             }
         }
     }
@@ -2416,7 +2416,7 @@ where
         IRuneTypeSolverLookupResult<'s>,
         IRuneTypingLookupFailedError<'s>,
     > {
-        let mut filter = HashSet::new();
+        let mut filter = HashSet::default();
         filter.insert(ILookupContext::TemplataLookupContext);
         match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter, self.typing_interner) {
             Some(ITemplataT::StructDefinition(t)) => {

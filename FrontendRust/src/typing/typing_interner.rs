@@ -125,10 +125,10 @@ where 's: 't,
         TypingInterner {
             bump,
             inner: RefCell::new(Inner {
-                name_val_to_ref: hashbrown::HashMap::new(),
-                id_val_to_ref: hashbrown::HashMap::new(),
-                prototype_val_to_ref: hashbrown::HashMap::new(),
-                signature_val_to_ref: hashbrown::HashMap::new(),
+                name_val_to_ref: hashbrown::HashMap::default(),
+                id_val_to_ref: hashbrown::HashMap::default(),
+                prototype_val_to_ref: hashbrown::HashMap::default(),
+                signature_val_to_ref: hashbrown::HashMap::default(),
                 kind_payload_val_to_ref: StdHashMap::new(),
             }),
         }

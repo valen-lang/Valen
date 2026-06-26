@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
@@ -77,7 +77,7 @@ where 's: 't,
         for template_param in function1.rune_to_type.keys() {
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             lookup_filter.insert(ILookupContext::ExpressionLookupContext);
             assert!(
@@ -143,7 +143,7 @@ where 's: 't,
             //   interner.intern(RuneNameS(rune)), Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty)
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *rune }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             lookup_filter.insert(ILookupContext::ExpressionLookupContext);
             assert!(
@@ -238,7 +238,7 @@ where 's: 't,
             let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
@@ -267,7 +267,7 @@ where 's: 't,
             let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
@@ -322,7 +322,7 @@ where 's: 't,
         maybe_ret_coord_rune.map(|ret_coord_rune| {
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *ret_coord_rune }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
                 Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
@@ -366,7 +366,7 @@ where 's: 't,
         for (template_param, _) in function1.rune_to_type.iter() {
             let imprecise_name = self.scout_arena.intern_imprecise_name(
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
-            let mut lookup_filter = HashSet::new();
+            let mut lookup_filter = HashSet::default();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             lookup_filter.insert(ILookupContext::ExpressionLookupContext);
             let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);

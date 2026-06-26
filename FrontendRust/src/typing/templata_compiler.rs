@@ -16,8 +16,8 @@ use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use crate::typing::types::types::{KindPlaceholderT, KindT};
 use crate::typing::names::names::IInstantiationNameT;
 use crate::typing::names::names::{ISuperKindNameT, ITemplateNameT};
@@ -45,7 +45,7 @@ use crate::typing::env::environment::ILookupContext;
 use crate::typing::templata::templata::ITemplataT;
 use crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult;
 use crate::postparsing::rune_type_solver::RuneTypingCouldntFindType;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::empty;
 use std::marker::PhantomData;
 
@@ -348,7 +348,7 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata))) => {
@@ -369,7 +369,7 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, IdT<'s, 't>> {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Isa(isa))) => {
@@ -1091,7 +1091,7 @@ where
                 ))
             }
             _ => {
-                let mut filter = HashSet::new();
+                let mut filter = HashSet::default();
                 filter.insert(ILookupContext::TemplataLookupContext);
                 match self.parent_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
                     Some(ITemplataT::StructDefinition(t)) => {
@@ -1260,7 +1260,7 @@ where 's: 't,
         // Changed this from AnythingLookupContext to TemplataLookupContext
         // because this is called from StructCompiler to figure out its members.
         // We could instead pipe a lookup context through, if this proves problematic.
-        let mut lookup_filter = HashSet::new();
+        let mut lookup_filter = HashSet::default();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
         let results = env.lookup_nearest_with_imprecise_name(name, lookup_filter, self.typing_interner);
         if results.iter().count() > 1 {

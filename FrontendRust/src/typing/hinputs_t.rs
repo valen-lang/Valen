@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::postparsing::names::IRuneS;
 use crate::typing::ast::ast::{
     EdgeT, FunctionDefinitionT, FunctionExportT, FunctionExternT,

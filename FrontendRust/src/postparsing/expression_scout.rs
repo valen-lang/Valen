@@ -36,9 +36,7 @@ use crate::utils::range::RangeS;
 use crate::postparsing::expressions::ConstantFloatSE;
 use crate::postparsing::expressions::BreakSE;
 use crate::postparsing::expressions::UnletSE;
-use std::collections::HashMap;
-
-
+use crate::utils::fx::HashMap;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum IScoutResult<'s, 'p> {
   LocalLookupResult(LocalLookupResultS<'s>),

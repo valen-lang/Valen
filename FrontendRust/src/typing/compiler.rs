@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use indexmap::IndexMap;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::IndexMap;
 use std::marker::PhantomData;
 use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
@@ -71,7 +71,7 @@ use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::ast::ICitizenAttributeT;
 use crate::typing::names::names::CitizenTemplateNameT;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::empty;
 use std::iter::once;
 
@@ -345,7 +345,7 @@ where 's: 't,
         descendant: KindT<'s, 't>,
         include_self: bool,
     ) -> HashSet<KindT<'s, 't>> {
-        let mut result: HashSet<KindT<'s, 't>> = HashSet::new();
+        let mut result: HashSet<KindT<'s, 't>> = HashSet::default();
         if include_self {
             result.insert(descendant);
         }
@@ -533,13 +533,13 @@ where 's: 't,
         package_to_program_a: &PackageCoordinateMap<'s, ProgramA<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
         let name_to_struct_defined_macro: HashMap<StrI<'s>, OnStructDefinedMacro> = {
-            let mut m = HashMap::new();
+            let mut m = HashMap::default();
             m.insert(self.keywords.derive_struct_constructor, OnStructDefinedMacro::StructConstructor);
             m.insert(self.keywords.derive_struct_drop, OnStructDefinedMacro::StructDrop);
             m
         };
         let name_to_interface_defined_macro: HashMap<StrI<'s>, OnInterfaceDefinedMacro> = {
-            let mut m = HashMap::new();
+            let mut m = HashMap::default();
             m.insert(self.keywords.derive_interface_drop, OnInterfaceDefinedMacro::InterfaceDrop);
             m.insert(self.keywords.derive_anonymous_substruct, OnInterfaceDefinedMacro::AnonymousInterface);
             m
@@ -631,7 +631,7 @@ where 's: 't,
         // preserves id_and_env_entry source order — otherwise the package env's `global_namespaces`
         // slice ends up in random per-process HashMap order, and lookups that walk it nondeterministically
         // pick a different "drop" overload per run.
-        let mut namespace_name_to_entries: IndexMap<&'t IdT<'s, 't>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> = IndexMap::new();
+        let mut namespace_name_to_entries: IndexMap<&'t IdT<'s, 't>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> = IndexMap::default();
         for (name, env_entry) in &id_and_env_entry {
             let package_id = self.typing_interner.intern_id(IdValT {
                 package_coord: name.package_coord,
@@ -1266,7 +1266,7 @@ where 's: 't,
         let reachable_functions = coutputs.get_all_functions();
 
         // interfaceEdgeBlueprints.groupBy(_.interface).mapValues(vassertOne(_))
-        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
+        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::default();
         for blueprint in interface_edge_blueprints.iter() {
             let prev = interface_to_edge_blueprints.insert(blueprint.interface, blueprint);
             assert!(prev.is_none(), "vassertOne: multiple blueprints for same interface");
@@ -1274,7 +1274,7 @@ where 's: 't,
 
         // coutputs.getInstantiationNameToFunctionBoundToRune()
         let raw_instantiation_bounds = coutputs.get_instantiation_name_to_function_bound_to_rune();
-        let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>> = HashMap::new();
+        let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>> = HashMap::default();
         for (id, bounds) in raw_instantiation_bounds.iter() {
             instantiation_name_to_instantiation_bounds.insert(*id, *bounds);
         }
@@ -1290,7 +1290,7 @@ where 's: 't,
             function_exports: coutputs.get_function_exports(),
             kind_externs: coutputs.get_kind_externs(),
             function_externs: coutputs.get_function_externs(),
-            sub_citizen_to_interface_to_edge: HashMap::new(),
+            sub_citizen_to_interface_to_edge: HashMap::default(),
         };
 
         // vassert(reachableFunctions.toVector.map(_.header.id).distinct.size == reachableFunctions.toVector.map(_.header.id).size)
@@ -1427,18 +1427,18 @@ where 's: 't,
                 .collect();
         // Per @IIIOZ: IndexMap so iteration at the package/kind loops below is deterministic.
         // Upstream kind_export_triples is from coutputs.get_kind_exports() (Vec, deterministic).
-        let mut grouped_by_package: IndexMap<&'s PackageCoordinate<'s>, Vec<(KindT<'s, 't>, &'t KindExportT<'s, 't>)>> = IndexMap::new();
+        let mut grouped_by_package: IndexMap<&'s PackageCoordinate<'s>, Vec<(KindT<'s, 't>, &'t KindExportT<'s, 't>)>> = IndexMap::default();
         for (pc, k, ke) in kind_export_triples.into_iter() {
             grouped_by_package.entry(pc).or_insert_with(Vec::new).push((k, ke));
         }
         let package_to_kind_to_export: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> = {
-            let mut result: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> = IndexMap::new();
+            let mut result: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> = IndexMap::default();
             for (pc, kind_pairs) in grouped_by_package.into_iter() {
-                let mut grouped_by_kind: IndexMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = IndexMap::new();
+                let mut grouped_by_kind: IndexMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = IndexMap::default();
                 for (k, ke) in kind_pairs.into_iter() {
                     grouped_by_kind.entry(k).or_insert_with(Vec::new).push(ke);
                 }
-                let mut inner: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
+                let mut inner: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::default();
                 for (k, exports) in grouped_by_kind.into_iter() {
                     let only = match exports.as_slice() {
                         [] => panic!("vwat"),
@@ -1475,7 +1475,7 @@ where 's: 't,
         //       }
         //     })
         // })
-        let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
+        let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::default();
         for func_export in coutputs.get_function_exports().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
             let all_types: Vec<CoordT<'s, 't>> = once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();

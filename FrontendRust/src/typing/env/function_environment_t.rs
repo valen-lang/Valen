@@ -1,5 +1,5 @@
-use std::collections::HashSet;
-use indexmap::IndexSet;
+use crate::utils::fx::HashSet;
+use crate::utils::fx::IndexSet;
 use crate::higher_typing::ast::FunctionA;
 use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::IExpressionSE;

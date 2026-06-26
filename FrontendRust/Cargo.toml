@@ -27,3 +27,7 @@ path = "src/lib.rs"
 name = "valec"
 path = "src/bin/valec/main.rs"
 
+
+[profile.profiling]
+inherits = "release"
+debug = true

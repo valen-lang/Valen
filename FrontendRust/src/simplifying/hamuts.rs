@@ -1,6 +1,5 @@
 
-use std::collections::HashMap;
-
+use crate::utils::fx::HashMap;
 use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::instantiating::ast::types::{
@@ -149,7 +148,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 
 
     pub fn add_kind_export(&mut self, kind: KindHT<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
-        let export_name_to_kind = self.package_coord_to_export_name_to_kind.entry(package_coordinate).or_insert_with(HashMap::new);
+        let export_name_to_kind = self.package_coord_to_export_name_to_kind.entry(package_coordinate).or_insert_with(HashMap::default);
         if let Some(existing) = export_name_to_kind.get(&exported_name) {
             panic!("Already exported a kind `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing);
         }
@@ -158,7 +157,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 
 
     pub fn add_function_export(&mut self, prototype: &'h PrototypeH<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
-        let export_name_to_function = self.package_coord_to_export_name_to_function.entry(package_coordinate).or_insert_with(HashMap::new);
+        let export_name_to_function = self.package_coord_to_export_name_to_function.entry(package_coordinate).or_insert_with(HashMap::default);
         if let Some(existing_full_name) = export_name_to_function.get(&exported_name) {
             panic!("Already exported a `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing_full_name);
         }
@@ -168,7 +167,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 
     pub fn add_kind_extern(&mut self, scout_arena: &ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
         let package_coordinate = opaque_h.package_coord;
-        let kind_to_extern = self.package_coord_to_kind_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
+        let kind_to_extern = self.package_coord_to_kind_to_extern.entry(package_coordinate).or_insert_with(HashMap::default);
         match kind_to_extern.get(&opaque_h) {
             None => {
                 kind_to_extern.insert(opaque_h, HamutsKindExtern {
@@ -186,7 +185,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
 
     pub fn add_function_extern(&mut self, prototype: &'h PrototypeH<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: StrI<'s>) {
         let package_coordinate = prototype.id.package_coordinate;
-        let prototype_to_extern = self.package_coord_to_prototype_to_extern.entry(package_coordinate).or_insert_with(HashMap::new);
+        let prototype_to_extern = self.package_coord_to_prototype_to_extern.entry(package_coordinate).or_insert_with(HashMap::default);
         if let Some(existing) = prototype_to_extern.get(prototype) {
             panic!("Already exported a `{:?}` from package `{:?} : {:?}", exported_name, package_coordinate, existing);
         }

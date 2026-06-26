@@ -14,7 +14,7 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::utils::code_hierarchy::IPackageResolver;
 
 pub struct ImportTests;
@@ -274,7 +274,7 @@ exported func main() int {
         .or(map)
         .or(|pc: &PackageCoordinate| -> Option<HashMap<String, String>> {
             match (pc.module.0, pc.packages.as_slice()) {
-                ("moduleB", [StrI("bork")]) => Some(HashMap::new()),
+                ("moduleB", [StrI("bork")]) => Some(HashMap::default()),
                 _ => None,
             }
         });

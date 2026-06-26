@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use crate::utils::fx::HashMap;
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};

@@ -14,7 +14,7 @@ use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS, CodeRuneS, IRu
 use crate::typing::env::environment::{ILookupContext, IInDenizenEnvironmentT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability};
 use crate::typing::types::types::RegionT;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 
@@ -49,7 +49,7 @@ where 's: 't,
         let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.e }));
         let rune_name_e = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: rune_e }));
         let element_type = match IInDenizenEnvironmentT::from(env).lookup_nearest_with_imprecise_name(rune_name_e, {
-            let mut s = HashSet::new();
+            let mut s = HashSet::default();
             s.insert(ILookupContext::TemplataLookupContext);
             s
         }, self.typing_interner).expect("vassertSome: E rune") {
@@ -61,7 +61,7 @@ where 's: 't,
         let rune_name_m = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: rune_m }));
         let mutability = expect_mutability(
             IInDenizenEnvironmentT::from(env).lookup_nearest_with_imprecise_name(rune_name_m, {
-                let mut s = HashSet::new();
+                let mut s = HashSet::default();
                 s.insert(ILookupContext::TemplataLookupContext);
                 s
             }, self.typing_interner).expect("vassertSome: M rune"),

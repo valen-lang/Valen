@@ -22,7 +22,7 @@ use crate::typing::templata::templata::{ITemplataT, expect_mutability};
 use crate::typing::hinputs_t::make;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
 use crate::parsing::ast::IMacroInclusionP;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::typing::names::names::IInterfaceTemplateNameT;
 use crate::typing::types::types::InterfaceTTValT;
 use std::marker::PhantomData;
@@ -89,7 +89,7 @@ where 's: 't,
         let struct_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(struct_runes_env);
         let mutability_results = struct_runes_env_as_iindenizen
             .lookup_nearest_with_imprecise_name(rune_name_s, {
-                let mut s = HashSet::new();
+                let mut s = HashSet::default();
                 s.insert(ILookupContext::TemplataLookupContext);
                 s
             }, self.typing_interner);
@@ -279,7 +279,7 @@ where 's: 't,
         let interface_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(interface_runes_env);
         let mutability_results = interface_runes_env_as_iindenizen
             .lookup_nearest_with_imprecise_name(rune_name_s, {
-                let mut s = HashSet::new();
+                let mut s = HashSet::default();
                 s.insert(ILookupContext::TemplataLookupContext);
                 s
             }, self.typing_interner);
@@ -351,7 +351,7 @@ where 's: 't,
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: type_rune_s })
             ),
             {
-                let mut s = HashSet::new();
+                let mut s = HashSet::default();
                 s.insert(ILookupContext::TemplataLookupContext);
                 s
             },
@@ -558,7 +558,7 @@ where 's: 't,
             let inner_env: IEnvironmentT = IEnvironmentT::Citizen(struct_inner_env);
             match inner_env.lookup_nearest_with_name(
                 drop_func_name_t,
-                HashSet::from([ILookupContext::ExpressionLookupContext]),
+                [ILookupContext::ExpressionLookupContext].into_iter().collect(),
                 self.typing_interner,
             ) {
                 Some(ITemplataT::Function(ft)) => *ft,

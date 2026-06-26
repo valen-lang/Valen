@@ -1,6 +1,6 @@
-use indexmap::{IndexMap, IndexSet};
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::fx::HashMap;
+use crate::utils::fx::HashSet;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -159,8 +159,8 @@ pub fn new(
         steps: vec![],
         rules: vec![],
         all_runes: all_runes.into_iter().collect(),
-        open_rule_to_puzzle_to_runes: IndexMap::new(),
-        rune_to_conclusion: IndexMap::new(),
+        open_rule_to_puzzle_to_runes: IndexMap::default(),
+        rune_to_conclusion: IndexMap::default(),
     }
 }
 

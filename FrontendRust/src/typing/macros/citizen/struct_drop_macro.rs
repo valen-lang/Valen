@@ -22,7 +22,7 @@ use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS};
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
 use crate::utils::range::CodeLocationS;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::postparsing::itemplatatype::*;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
@@ -48,7 +48,7 @@ where 's: 't,
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
         // Use the same rules as the original struct, see MDSFONARFO.
         for r in struct_a.header_rules.iter() { rules.push(*r); }
-        let mut rune_to_type: HashMap<_, _> = HashMap::new();
+        let mut rune_to_type: HashMap<_, _> = HashMap::default();
         // Use the same runes as the original struct, see MDSFONARFO.
         for (k, v) in struct_a.header_rune_to_type.iter() { rune_to_type.insert(*k, *v); }
 

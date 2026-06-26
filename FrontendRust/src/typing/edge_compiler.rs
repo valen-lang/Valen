@@ -1,7 +1,7 @@
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::compiler::Compiler;
-use std::collections::HashMap;
-use indexmap::IndexMap;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::IndexMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::*;
@@ -37,7 +37,7 @@ use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::types::types::CoordT;
 use crate::postparsing::names::CaseRuneFromImplValS;
 use crate::typing::infer_compiler::CompleteResolveSolve;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 
@@ -145,7 +145,7 @@ where 's: 't,
         // val x3 = x2.mapValues(_.map(_._2))
         // Per @IIIOZ: IndexMap so iteration at line 281 is deterministic across runs.
         // x1 is a Vec built in deterministic source order (from get_all_functions, now IndexMap-backed).
-        let mut x3: IndexMap<IdT<'s, 't>, Vec<&'t FunctionDefinitionT<'s, 't>>> = IndexMap::new();
+        let mut x3: IndexMap<IdT<'s, 't>, Vec<&'t FunctionDefinitionT<'s, 't>>> = IndexMap::default();
         for (k, v) in x1.into_iter() {
             x3.entry(k).or_insert_with(Vec::new).push(v);
         }
@@ -690,7 +690,7 @@ where 's: 't,
             self.typing_interner.alloc_slice_from_vec(impl_independent_placeholder_to_case_placeholder);
 
         let reachable_map = {
-            let mut grouped: HashMap<IRuneS<'s>, Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>> = HashMap::new();
+            let mut grouped: HashMap<IRuneS<'s>, Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>> = HashMap::default();
             for (rune_in_impl, rune_in_citizen, prototype_templata) in &dispatcher_and_case_placeholdered_impl_reachable_prototypes {
                 grouped.entry(*rune_in_impl).or_default().push((*rune_in_citizen, *prototype_templata.prototype));
             }

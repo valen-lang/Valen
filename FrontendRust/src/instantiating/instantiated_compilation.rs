@@ -10,7 +10,7 @@ use crate::parsing::ast::FileP;
 use crate::typing::TypingPassCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::parse_arena::ParseArena;
 use crate::instantiating::instantiating_interner::InstantiatingInterner;

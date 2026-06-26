@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::path::PathBuf;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use std::fs::File;
@@ -38,7 +38,7 @@ pub fn resolve_package_to_resource(package_coord: &PackageCoordinate) -> Option<
   match load(&filepath) {
     None => None,
     Some(source) => {
-      let mut m = HashMap::new();
+      let mut m = HashMap::default();
       m.insert(filename, source);
       Some(m)
     }

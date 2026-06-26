@@ -5,7 +5,7 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::test::compiler_test_compilation::compiler_test_compilation;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::interner::StrI;
 use crate::postparsing::names::{IImpreciseNameS, CodeNameS};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -77,7 +77,7 @@ use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
 use crate::typing::templata::templata_utils::unapply_simple_name;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 fn read_code_from_resource(resource_filename: &str) -> String {
@@ -488,14 +488,14 @@ fn humanize_errors() {
     ];
 
     let step1 = {
-        let mut conclusions = HashMap::new();
+        let mut conclusions = HashMap::default();
         conclusions.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
         Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions }
     };
 
     let failed_solve_1 = FailedSolve {
         steps: vec![step1.clone()],
-        conclusions: HashMap::new(),
+        conclusions: HashMap::default(),
         unsolved_rules: unsolved_rules.clone(),
         unsolved_runes: vec![],
         error: ISolverError::RuleError(RuleError {
@@ -507,7 +507,7 @@ fn humanize_errors() {
         ICompileErrorT::TypingPassSolverError { range: typing_bump.alloc_slice_copy(&tz), failed_solve: failed_solve_1 });
     assert!(!text1.is_empty());
 
-    let mut conclusions2 = HashMap::new();
+    let mut conclusions2 = HashMap::default();
     conclusions2.insert(rune_a, ITemplataT::Ownership(OwnershipTemplataT { ownership: OwnershipT::Own }));
     let failed_solve_2 = FailedSolve {
         steps: vec![step1],
@@ -950,7 +950,7 @@ exported func main() int where N Int {
                 name: scout_arena.intern_str("N"),
             }));
             let unsolved_set: HashSet<_> = failed_solve.unsolved_runes.iter().copied().collect();
-            let mut expected: HashSet<IRuneS> = HashSet::new();
+            let mut expected: HashSet<IRuneS> = HashSet::default();
             expected.insert(expected_n_rune);
             assert_eq!(unsolved_set, expected);
         }

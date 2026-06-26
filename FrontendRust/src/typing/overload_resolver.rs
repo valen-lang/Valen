@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use indexmap::IndexMap;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::IndexMap;
 use crate::typing::compiler::Compiler;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
@@ -38,9 +38,7 @@ use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::IntT;
 use crate::higher_typing::higher_typing_pass::explicify_lookups;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 #[derive(Debug)]
 pub enum IFindFunctionFailureReason<'s, 't> {
     WrongNumberOfArguments { supplied: i32, expected: i32 },
@@ -107,7 +105,7 @@ where 's: 't,
             Ok(potential_banner) => {
                 Ok(Ok(StampFunctionSuccess {
                     prototype: potential_banner.prototype,
-                    inferences: IndexMap::new(),
+                    inferences: IndexMap::default(),
                 }))
             }
         }
@@ -192,11 +190,11 @@ where 's: 't,
         searched_envs: &mut Vec<SearchedEnvironment<'s, 't>>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
     ) {
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         let candidates: Vec<ITemplataT<'s, 't>> =
             env.lookup_all_with_imprecise_name(
                 function_name,
-                HashSet::from([ILookupContext::ExpressionLookupContext]),
+                [ILookupContext::ExpressionLookupContext].into_iter().collect(),
                 self.typing_interner)
                 .into_iter().filter(|c| seen.insert(*c)).collect();
         searched_envs.push(SearchedEnvironment {
@@ -273,7 +271,7 @@ where 's: 't,
                 range: RangeS<'s>,
                 name_s: IImpreciseNameS<'s>,
             ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
-                let mut filter = HashSet::new();
+                let mut filter = HashSet::default();
                 filter.insert(ILookupContext::TemplataLookupContext);
                 match self.calling_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
                     Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult { templata: x.tyype(self.scout_arena) })),
@@ -380,7 +378,7 @@ where 's: 't,
                                             IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                                                 let name = self.scout_arena.intern_imprecise_name(
                                                     IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                                                let mut filter = HashSet::new();
+                                                let mut filter = HashSet::default();
                                                 filter.insert(ILookupContext::TemplataLookupContext);
                                                 let templata = calling_env.lookup_nearest_with_imprecise_name(
                                                     name, filter, self.typing_interner).unwrap();
@@ -537,7 +535,7 @@ where 's: 't,
         param_filters: &[CoordT<'s, 't>],
     ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
         let mut collected: Vec<IInDenizenEnvironmentT<'s, 't>> = Vec::new();
-        let mut seen: HashSet<IdT<'s, 't>> = HashSet::new();
+        let mut seen: HashSet<IdT<'s, 't>> = HashSet::default();
         // Look through each parameter, and if it's a placeholder that impls an interface, grab
         // the interface env so that callers can look inside them for methods too (see @BDPFWDZ).
         for tyype in param_filters.iter() {
@@ -591,7 +589,7 @@ where 's: 't,
         self.get_candidate_banners(
             env, coutputs, call_range, function_name, args, extra_envs_to_look_in,
             &mut searched_envs, &mut undeduped_candidates);
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         let candidates: Vec<ICalleeCandidate<'s, 't>> =
             undeduped_candidates.into_iter().filter(|c| seen.insert(*c)).collect();
         let mut successes: Vec<AttemptedCandidate<'s, 't>> = Vec::new();
@@ -667,11 +665,11 @@ where 's: 't,
         arg_types: &[CoordT<'s, 't>],
     ) -> Result<(AttemptedCandidate<'s, 't>, HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>), ICompileErrorT<'s, 't>> {
         let deduped_banners: Vec<AttemptedCandidate<'s, 't>> = {
-            let mut seen = HashSet::new();
+            let mut seen = HashSet::default();
             unfiltered_banners.iter().filter(|b| seen.insert(**b)).copied().collect()
         };
         // Group by paramTypes, prefer ordinary over bound
-        let mut param_types_to_banners: HashMap<Vec<CoordT<'s, 't>>, Vec<AttemptedCandidate<'s, 't>>> = HashMap::new();
+        let mut param_types_to_banners: HashMap<Vec<CoordT<'s, 't>>, Vec<AttemptedCandidate<'s, 't>>> = HashMap::default();
         for banner in &deduped_banners {
             param_types_to_banners.entry(banner.prototype.param_types().to_vec()).or_default().push(*banner);
         }

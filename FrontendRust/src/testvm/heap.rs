@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::marker::PhantomData;
 use crate::interner::StrI;
 use crate::final_ast::types::{KindHT, CoordH, LocationH, OwnershipH, StructHT, StaticSizedArrayHT, RuntimeSizedArrayHT, StaticSizedArrayDefinitionHT, RuntimeSizedArrayDefinitionHT};
@@ -93,7 +93,7 @@ fn allocation_map_add_impl<'v, 'h, 's>(
         location,
         num: id,
     };
-    let allocation = AllocationV { reference, kind, referrers: HashMap::new() };
+    let allocation = AllocationV { reference, kind, referrers: HashMap::default() };
     objects_by_id.insert(reference.alloc_id(), allocation);
     reference
 }
@@ -107,7 +107,7 @@ pub struct AllocationMapV<'v, 'h, 's> {
 
 impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     pub fn new(interner: &HammerInterner<'s, 'h>) -> AllocationMapV<'v, 'h, 's> {
-        let mut objects_by_id = HashMap::new();
+        let mut objects_by_id = HashMap::default();
         let mut next_id = STARTING_ID;
         let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Void(VoidV));
         AllocationMapV { objects_by_id, next_id, void_ref }
@@ -192,7 +192,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         HeapV {
             objects_by_id: AllocationMapV::new(interner),
             call_id_stack: Vec::new(),
-            calls_by_id: HashMap::new(),
+            calls_by_id: HashMap::default(),
             vivem_dout,
             vivem_bump,
         }
@@ -573,7 +573,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     }
 
     pub fn find_reachable_allocations<'a>(&'a self, interner: &HammerInterner<'s, 'h>, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> {
-        let mut destination_map: HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> = HashMap::new();
+        let mut destination_map: HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> = HashMap::default();
         for input_reachable in input_reachables {
             self.inner_find_reachable_allocations(interner, &mut destination_map, *input_reachable);
         }
@@ -865,7 +865,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             call_id,
             in_args: args,
             args: args.iter().enumerate().map(|(i, r)| (i as i32, Some(*r))).collect(),
-            locals: HashMap::new(),
+            locals: HashMap::default(),
         };
         calls_by_id.insert(call_id, call);
         call_id_stack.push(call_id);

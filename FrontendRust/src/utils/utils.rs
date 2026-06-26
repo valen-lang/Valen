@@ -9,13 +9,13 @@ pub fn repeat<T: Clone>(elem: T, n: i32) -> Vec<T> {
 }
 
 pub fn union_maps_expect_no_conflict<K, V, F>(
-    a: &indexmap::IndexMap<K, V>,
-    b: &indexmap::IndexMap<K, V>,
+    a: &crate::utils::fx::IndexMap<K, V>,
+    b: &crate::utils::fx::IndexMap<K, V>,
     equator: F,
-) -> indexmap::IndexMap<K, V>
+) -> crate::utils::fx::IndexMap<K, V>
 where K: Copy + Eq + Hash, V: Copy, F: Fn(V, V) -> bool,
 {
-    let mut result: indexmap::IndexMap<K, V> = indexmap::IndexMap::new();
+    let mut result: crate::utils::fx::IndexMap<K, V> = crate::utils::fx::IndexMap::default();
     for (k, v) in a {
         result.insert(*k, *v);
     }

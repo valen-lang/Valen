@@ -9,7 +9,7 @@ use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hammer::Hammer;
 use crate::instantiating::instantiated_compilation::{InstantiatedCompilation, InstantiatorCompilationOptions};
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::final_ast::ast::ProgramH;
 use crate::instantiating::ast::hinputs::HinputsI;

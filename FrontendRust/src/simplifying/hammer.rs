@@ -11,7 +11,7 @@ use crate::instantiating::ast::types::{CoordI, KindIT};
 use crate::keywords::Keywords;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::simplifying::hamuts::Hamuts;
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::{HashMap, HashSet};
 use crate::final_ast::ast::FunctionH;
 use crate::final_ast::ast::InterfaceDefinitionH;
 use crate::final_ast::ast::PackageH;
@@ -261,21 +261,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
         } = hinputs;
 
         let mut hamuts = Hamuts {
-            human_name_to_full_name_to_id: HashMap::new(),
-            struct_t_to_opaque_h: HashMap::new(),
-            struct_t_to_struct_h: HashMap::new(),
-            struct_t_to_struct_def_h: HashMap::new(),
+            human_name_to_full_name_to_id: HashMap::default(),
+            struct_t_to_opaque_h: HashMap::default(),
+            struct_t_to_struct_h: HashMap::default(),
+            struct_t_to_struct_def_h: HashMap::default(),
             struct_defs: Vec::new(),
-            static_sized_arrays: HashMap::new(),
-            runtime_sized_arrays: HashMap::new(),
-            interface_t_to_interface_h: HashMap::new(),
-            interface_t_to_interface_def_h: HashMap::new(),
-            function_refs: HashMap::new(),
-            function_defs: HashMap::new(),
-            package_coord_to_export_name_to_function: HashMap::new(),
-            package_coord_to_export_name_to_kind: HashMap::new(),
-            package_coord_to_prototype_to_extern: HashMap::new(),
-            package_coord_to_kind_to_extern: HashMap::new(),
+            static_sized_arrays: HashMap::default(),
+            runtime_sized_arrays: HashMap::default(),
+            interface_t_to_interface_h: HashMap::default(),
+            interface_t_to_interface_def_h: HashMap::default(),
+            function_refs: HashMap::default(),
+            function_defs: HashMap::default(),
+            package_coord_to_export_name_to_function: HashMap::default(),
+            package_coord_to_export_name_to_kind: HashMap::default(),
+            package_coord_to_prototype_to_extern: HashMap::default(),
+            package_coord_to_kind_to_extern: HashMap::default(),
         };
 
         for KindExportI { range: _, tyype, id: export_id, exported_name } in kind_exports.iter() {
@@ -347,27 +347,27 @@ where 's: 'h, 's: 'i, 'i: 'h,
         self.translate_functions(hinputs, &mut hamuts, &user_functions);
         self.translate_functions(hinputs, &mut hamuts, &non_user_functions);
 
-        let mut package_to_interface_defs: HashMap<PackageCoordinate<'s>, Vec<InterfaceDefinitionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_interface_defs: HashMap<PackageCoordinate<'s>, Vec<InterfaceDefinitionH<'s, 'h>>> = HashMap::default();
         for (it, idh) in hamuts.interface_t_to_interface_def_h.iter() {
             package_to_interface_defs.entry(*it.id.package_coord).or_insert_with(Vec::new).push(*idh);
         }
-        let mut package_to_struct_defs: HashMap<PackageCoordinate<'s>, Vec<StructDefinitionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_struct_defs: HashMap<PackageCoordinate<'s>, Vec<StructDefinitionH<'s, 'h>>> = HashMap::default();
         for sd in hamuts.struct_defs.iter() {
             package_to_struct_defs.entry(sd.id.package_coordinate).or_insert_with(Vec::new).push(*sd);
         }
-        let mut package_to_function_defs: HashMap<PackageCoordinate<'s>, Vec<FunctionH<'s, 'h>>> = HashMap::new();
+        let mut package_to_function_defs: HashMap<PackageCoordinate<'s>, Vec<FunctionH<'s, 'h>>> = HashMap::default();
         for (proto, fdh) in hamuts.function_defs.iter() {
             package_to_function_defs.entry(*proto.id.package_coord).or_insert_with(Vec::new).push(*fdh);
         }
-        let mut package_to_static_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<StaticSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        let mut package_to_static_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<StaticSizedArrayDefinitionHT<'s, 'h>>> = HashMap::default();
         for (_, ssad) in hamuts.static_sized_arrays.iter() {
             package_to_static_sized_arrays.entry(ssad.name.package_coordinate).or_insert_with(Vec::new).push(*ssad);
         }
-        let mut package_to_runtime_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<RuntimeSizedArrayDefinitionHT<'s, 'h>>> = HashMap::new();
+        let mut package_to_runtime_sized_arrays: HashMap<PackageCoordinate<'s>, Vec<RuntimeSizedArrayDefinitionHT<'s, 'h>>> = HashMap::default();
         for (_, rsad) in hamuts.runtime_sized_arrays.iter() {
             package_to_runtime_sized_arrays.entry(rsad.name.package_coordinate).or_insert_with(Vec::new).push(*rsad);
         }
-        let mut all_package_coords: HashSet<PackageCoordinate<'s>> = HashSet::new();
+        let mut all_package_coords: HashSet<PackageCoordinate<'s>> = HashSet::default();
         all_package_coords.extend(package_to_interface_defs.keys());
         all_package_coords.extend(package_to_struct_defs.keys());
         all_package_coords.extend(package_to_function_defs.keys());

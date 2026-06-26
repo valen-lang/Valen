@@ -7,7 +7,7 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::typing::compilation::TypingPassCompilation;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
 

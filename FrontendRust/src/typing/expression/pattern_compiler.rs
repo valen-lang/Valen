@@ -20,9 +20,9 @@ use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
 use crate::parsing::ast::LoadAsP;
 use crate::postparsing::expressions::IExpressionSE;
-use indexmap::IndexMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::HashSet;
 use crate::postparsing::names::IRuneValS;
 use crate::higher_typing::higher_typing_pass::explicify_lookups;
 use std::iter::once;
@@ -165,7 +165,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                                 IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
                                     let name = self.scout_arena.intern_imprecise_name(
                                         IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
-                                    let mut filter = HashSet::new();
+                                    let mut filter = HashSet::default();
                                     filter.insert(ILookupContext::TemplataLookupContext);
                                     let templata = snapshot_env.lookup_nearest_with_imprecise_name(
                                         name, filter, self.typing_interner).unwrap();

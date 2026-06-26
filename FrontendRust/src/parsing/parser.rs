@@ -11,12 +11,10 @@ use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::parsing::parse_and_explore;
 use crate::parse_arena::ParseArena;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 type ParseResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'p, 'ctx> {

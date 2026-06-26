@@ -3,8 +3,8 @@ use crate::utils::range::{CodeLocationS, RangeS};
 use crate::solver::solver::ISolverError;
 use crate::solver::solver::FailedSolve;
 use std::cmp::max;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::HashSet;
 use std::hash::Hash;
 
 pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType>(
@@ -57,7 +57,7 @@ where
     distinct
   };
   let line_begin_loc_to_rune_usage: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = {
-    let mut map: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = HashMap::new();
+    let mut map: HashMap<i32, Vec<(RuneId, RangeS<'a>)>> = HashMap::default();
     for rune_usage in &all_rune_usages {
       let usage_begin_line = line_range_containing(&rune_usage.1.begin).begin.offset;
       map.entry(usage_begin_line).or_default().push(*rune_usage);
@@ -94,7 +94,7 @@ where
   };
   let text_from_steps: String = {
     let fold_result = result.steps.iter().fold(
-      ("".to_string(), HashSet::<RuneId>::new()),
+      ("".to_string(), HashSet::<RuneId>::default()),
       |(string_so_far, previously_printed), step| {
         let new_string = format!("{}{}{}{}{}",
           if !step.complex && step.solved_rules.is_empty() { "Supplied:" } else { "" },

@@ -8,7 +8,7 @@ use crate::keywords::Keywords;
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTemplataType};
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 // TODO: rename
 
 

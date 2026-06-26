@@ -24,8 +24,8 @@ use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::IStructTemplateNameT;
 use crate::typing::types::types::{IRegionT, StructTTValT, RegionT};
 use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
-use indexmap::{IndexMap, IndexSet};
-use std::collections::HashMap;
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::fx::HashMap;
 use std::marker::PhantomData;
 use crate::typing::infer_compiler::InitialSend;
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
@@ -34,9 +34,7 @@ use crate::typing::infer_compiler::include_rule_in_definition_solve;
 use crate::postparsing::ast::GenericParameterS;
 use crate::typing::names::names::IdValT;
 use crate::typing::templata::templata::expect_mutability;
-use std::collections::HashSet;
-
-
+use crate::utils::fx::HashSet;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -392,10 +390,10 @@ where 's: 't,
                         generic_param, index, &all_rune_to_type, placeholder_pure_height, true);
                     solver_state.commit_step::<()>(
                         false, vec![], {
-                            let mut m = IndexMap::new();
+                            let mut m = IndexMap::default();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], IndexSet::new()).unwrap();
+                        }, vec![], IndexSet::default()).unwrap();
                     true
                 }
             }
@@ -504,10 +502,10 @@ where 's: 't,
                         generic_param, index, &rune_to_type, placeholder_pure_height, true);
                     solver_state.commit_step::<()>(
                         false, vec![], {
-                            let mut m = IndexMap::new();
+                            let mut m = IndexMap::default();
                             m.insert(generic_param.rune.rune, templata);
                             m
-                        }, vec![], IndexSet::new()).unwrap();
+                        }, vec![], IndexSet::default()).unwrap();
                     true
                 }
             }

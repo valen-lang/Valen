@@ -12,7 +12,7 @@ use crate::typing::types::types::*;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::ILookupContext;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::utils::range::RangeS;
 use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
 use crate::typing::env::function_environment_t::{IVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
@@ -24,8 +24,8 @@ use crate::typing::infer_compiler::InitialKnown;
 use crate::typing::infer_compiler::IResolvingError;
 use crate::typing::ast::ast::PrototypeT;
 use crate::typing::overload_resolver::IFindFunctionFailureReason;
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use std::marker::PhantomData;
 
 
@@ -164,7 +164,7 @@ where 's: 't,
 
             let lookup_result = declaring_env.lookup_nearest_with_name(
                 lambda_citizen_name_2,
-                HashSet::from([ILookupContext::TemplataLookupContext]),
+                [ILookupContext::TemplataLookupContext].into_iter().collect(),
                 self.typing_interner);
             let closure_struct_ref: StructTT<'s, 't> = match lookup_result {
                 Some(ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(s) })) => **s,

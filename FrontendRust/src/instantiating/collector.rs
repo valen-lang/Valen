@@ -8,8 +8,7 @@ use crate::instantiating::ast::expressions::{
     FunctionCallIE, LetNormalIE, ReferenceExpressionIE,
 };
 use crate::typing::names::names::IdT;
-use indexmap::IndexMap;
-
+use crate::utils::fx::IndexMap;
 /// A reference to a node yielded to the collector predicate. Wide (predicate narrows within).
 #[derive(Copy, Clone)]
 pub enum NodeRefI<'s, 'i> {

@@ -10,7 +10,7 @@ use crate::postparsing::ast::{ParameterS, IBodyS, AbstractBodyS};
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
 use crate::utils::range::{RangeS, CodeLocationS};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::postparsing::names::IImpreciseNameValS;
 use crate::postparsing::names::CodeNameS;
 use crate::postparsing::names::TopLevelCitizenDeclarationNameS;
@@ -36,7 +36,7 @@ where 's: 't,
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
         // Use the same rules as the original interface, see MDSFONARFO.
         for r in interface_a.rules.iter() { rules.push(*r); }
-        let mut rune_to_type: HashMap<_, _> = HashMap::new();
+        let mut rune_to_type: HashMap<_, _> = HashMap::default();
         // Use the same runes as the original interface, see MDSFONARFO.
         for (k, v) in interface_a.rune_to_type.iter() { rune_to_type.insert(*k, *v); }
 

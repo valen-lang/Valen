@@ -40,9 +40,9 @@ use crate::postparsing::rules::rules::{
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
 use crate::utils::code_hierarchy::FileCoordinate;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use indexmap::IndexSet;
+use crate::utils::fx::IndexSet;
 use crate::parsing::ast::BlockPE;
 use crate::postparsing::expressions::LocalS;
 

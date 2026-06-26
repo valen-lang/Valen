@@ -21,7 +21,7 @@ use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::names::names::IdValT;
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::higher_typing::ast::FunctionA;
 use crate::postparsing::names::IFunctionDeclarationNameS;
 
@@ -40,7 +40,7 @@ where 's: 't,
             // Only one we have right now is tuple, which has its own special syntax for constructing.
             return vec![];
         }
-        let mut rune_to_type: HashMap<_, _> = HashMap::new();
+        let mut rune_to_type: HashMap<_, _> = HashMap::default();
         let mut rules: Vec<IRulexSR<'s>> = Vec::new();
 
         // We dont need these, they really just contain bounds and stuff, which we'd inherit from our parameters anyway.

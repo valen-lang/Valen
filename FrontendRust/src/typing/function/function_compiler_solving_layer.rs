@@ -1,5 +1,5 @@
-use indexmap::{IndexMap, IndexSet};
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::fx::{HashMap, HashSet};
 use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
 use crate::typing::compilation::TypingPassOptions;
@@ -442,7 +442,7 @@ where 's: 't,
                         match &generic_param.default {
                             Some(default_rules) => {
                                 match solver_state.commit_step::<ITypingPassSolverError>(
-                                    false, vec![], IndexMap::new(),
+                                    false, vec![], IndexMap::default(),
                                     default_rules.rules.iter().map(|r| **r).collect(),
                                     default_rules.rune_to_type.iter().map(|(k, _)| *k).collect()) {
                                     Ok(()) => {}
@@ -653,7 +653,7 @@ where 's: 't,
             .filter(|r| include_rule_in_definition_solve(r))
             .collect();
 
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         let mut param_and_return_runes: Vec<IRuneS<'s>> = Vec::new();
         for param in function.params.iter() {
             if let Some(coord_rune) = param.pattern.coord_rune {
@@ -703,10 +703,10 @@ where 's: 't,
                             generic_param, index, &rune_to_type, placeholder_pure_height, true);
                         solver_state.commit_step::<()>(
                             false, vec![], {
-                                let mut m = IndexMap::new();
+                                let mut m = IndexMap::default();
                                 m.insert(generic_param.rune.rune, templata);
                                 m
-                            }, vec![], IndexSet::new()).unwrap();
+                            }, vec![], IndexSet::default()).unwrap();
                         true
                     }
                 }

@@ -13,7 +13,7 @@ use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::{CoordT, KindT, StructTT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::builtins::builtins::get_embedded_modulized_code_map;
 use crate::collect_only_tnode;
 use crate::collect_where_tnode;
@@ -33,8 +33,7 @@ use crate::typing::overload_resolver::IFindFunctionFailureReason;
 use crate::typing::types::types::InterfaceTT;
 use crate::typing::types::types::KindPlaceholderT;
 use crate::typing::types::types::OwnershipT;
-use std::collections::HashSet;
-
+use crate::utils::fx::HashSet;
 pub struct AfterRegionsTests {}
 
 #[test]

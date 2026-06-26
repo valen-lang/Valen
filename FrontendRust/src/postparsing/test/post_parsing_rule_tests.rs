@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::itemplatatype::{

@@ -11,7 +11,7 @@ use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, RegionT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::once;
 
 

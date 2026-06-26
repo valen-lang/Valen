@@ -5,7 +5,7 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::typing::types::types::{CoordT, IntT, IRegionT, KindT, OwnershipT, RegionT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
@@ -29,7 +29,7 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::utils::source_code_utils::{humanize_pos_code_map, line_containing, line_range_containing, lines_between};
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::ast::expressions::ConstantIntTE;
@@ -3378,12 +3378,12 @@ fn humanize_errors() {
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::TypeExportedMultipleTimes { range: tz_slice, paackage: *test_tld, exports: exports_slice }).is_empty());
     let x_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("X") }));
-    let mut step_conclusions = HashMap::new();
+    let mut step_conclusions = HashMap::default();
     step_conclusions.insert(x_rune, ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })));
     assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
         ICompileErrorT::TypingPassSolverError { range: tz_slice, failed_solve: FailedSolve {
             steps: vec![Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions: step_conclusions }],
-            conclusions: HashMap::new(),
+            conclusions: HashMap::default(),
             unsolved_rules: vec![],
             unsolved_runes: vec![],
             error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::KindIsNotConcrete { kind: ispaceship_kind }, _phantom: PhantomData }),
@@ -3413,7 +3413,7 @@ exported func main() int {
     match &err {
         ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
             let types_set: HashSet<CoordT> = types.iter().copied().collect();
-            assert_eq!(types_set, HashSet::from([
+            assert_eq!(types_set, HashSet::from_iter([
                 CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT::I32) },
                 CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Bool(BoolT) },
             ]));

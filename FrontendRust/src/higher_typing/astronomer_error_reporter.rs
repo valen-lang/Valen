@@ -2,7 +2,7 @@ use crate::utils::range::RangeS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 use std::any::Any;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 // VISTODO: rename
 
 

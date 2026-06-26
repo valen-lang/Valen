@@ -22,12 +22,8 @@ use crate::postparsing::rules::rules::*;
 use std::marker::PhantomData;
 use crate::postparsing::ast::ICitizenAttributeS;
 use crate::typing::templata::conversions::evaluate_mutability;
-use indexmap::IndexMap;
-use std::collections::HashMap;
-
-
-
-
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s, 't>,
     pub ranges: Vec<RangeS<'s>>,

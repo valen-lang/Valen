@@ -1,5 +1,5 @@
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use crate::typing::compiler::Compiler;
 use crate::typing::infer_compiler::*;
 use crate::solver::solver::*;
@@ -39,10 +39,7 @@ use crate::postparsing::names::ImplImpreciseNameValS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::ast::citizens::CitizenDefinitionT;
 use crate::typing::hinputs_t::make;
-use std::collections::HashSet;
-
-
-
+use crate::utils::fx::HashSet;
 pub enum IsParentResult<'s, 't> {
     IsParent(IsParent<'s, 't>),
     IsntParent(IsntParent<'s, 't>),
@@ -516,7 +513,7 @@ where 's: 't,
                 _ => panic!("vwat: unexpected templata in getParents matching"),
             }
         }
-        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::new();
+        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::default();
         let impl_defs: Vec<ImplDefinitionTemplataT<'s, 't>> = impl_defs_with_duplicates.into_iter()
             .filter(|d| seen_ranges.insert(d.impl_.range))
             .collect();
@@ -535,7 +532,7 @@ where 's: 't,
             }
         }).collect();
         let kind_as_kind_t = KindT::from(sub_kind);
-        let mut seen_super: HashSet<ISuperKindTT<'s, 't>> = HashSet::new();
+        let mut seen_super: HashSet<ISuperKindTT<'s, 't>> = HashSet::default();
         let parents_from_impl_templatas: Vec<ISuperKindTT<'s, 't>> =
             impl_templatas_with_duplicates.iter()
                 .filter(|it| it.sub_kind == kind_as_kind_t)
@@ -597,12 +594,12 @@ where 's: 't,
                 make(self.typing_interner, vec![], vec![], vec![]));
             return IsParentResult::IsParent(IsParent {
                 templata: ITemplataT::Isa(self.typing_interner.alloc(*impl_isa)),
-                conclusions: IndexMap::new(),
+                conclusions: IndexMap::default(),
                 impl_id: impl_isa.impl_name,
             });
         }
 
-        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::new();
+        let mut seen_ranges: HashSet<RangeS<'s>> = HashSet::default();
         let impl_defs: Vec<ImplDefinitionTemplataT<'s, 't>> = impl_defs_with_duplicates.into_iter()
             .filter(|d| seen_ranges.insert(d.impl_.range))
             .collect();

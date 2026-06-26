@@ -8,7 +8,7 @@ use crate::lexing::lexing_iterator::LexingIterator;
 use crate::utils::code_hierarchy::{
   FileCoordinate, FileCoordinateMap, IPackageResolver, PackageCoordinate,
 };
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::{HashMap, HashSet};
 use std::sync::Arc;
 
 
@@ -48,7 +48,7 @@ where
 {
   let mut unexplored_packages: HashSet<&'p PackageCoordinate<'p>> =
     packages.into_iter().collect();
-  let mut started_packages: HashSet<PackageCoordinate<'p>> = HashSet::new();
+  let mut started_packages: HashSet<PackageCoordinate<'p>> = HashSet::default();
   let mut already_found_file_to_code = FileCoordinateMap::<String>::new();
 
   let mut files_acc = Vec::new();

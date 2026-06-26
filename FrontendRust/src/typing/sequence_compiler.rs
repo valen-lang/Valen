@@ -15,7 +15,7 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 use crate::typing::citizen::struct_compiler::IResolveOutcome;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::once;
 use std::marker::PhantomData;
 
@@ -51,7 +51,7 @@ where 's: 't,
     ) -> StructTT<'s, 't> {
         let tuple_template_name = self.typing_interner.intern_struct_template_name(StructTemplateNameT { human_name: self.keywords.tuple_human_name[types.len()]});
         let tuple_template = match env.lookup_nearest_with_name(INameT::StructTemplate(tuple_template_name), {
-            let mut s = HashSet::new();
+            let mut s = HashSet::default();
             s.insert(ILookupContext::TemplataLookupContext);
             s
         }, self.typing_interner).unwrap() {

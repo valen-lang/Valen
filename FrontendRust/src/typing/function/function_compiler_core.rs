@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-
+use crate::utils::fx::HashSet;
 use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::typing::types::types::*;
@@ -73,7 +72,7 @@ where 's: 't,
                 Some(ret_coord_rune) => {
                     let imprecise_name = self.scout_arena.intern_imprecise_name(
                         IImpreciseNameValS::RuneName(RuneNameValS { rune: ret_coord_rune.rune }));
-                    let mut lookup_filter = HashSet::new();
+                    let mut lookup_filter = HashSet::default();
                     lookup_filter.insert(ILookupContext::TemplataLookupContext);
                     let full_env_as_i = IEnvironmentT::Function(full_env);
                     full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner)
@@ -223,7 +222,7 @@ where 's: 't,
         let ret_coord_rune = full_env.function.maybe_ret_coord_rune.unwrap();
         let imprecise_name = self.scout_arena.intern_imprecise_name(
             IImpreciseNameValS::RuneName(RuneNameValS { rune: ret_coord_rune.rune }));
-        let mut lookup_filter = HashSet::new();
+        let mut lookup_filter = HashSet::default();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
         let full_env_as_i = IInDenizenEnvironmentT::Function(full_env);
         let return_coord = match full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {

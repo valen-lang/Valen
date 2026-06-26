@@ -35,8 +35,8 @@ use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
 use crate::utils::range::CodeLocationS;
-use indexmap::IndexMap;
-use std::collections::HashMap;
+use crate::utils::fx::IndexMap;
+use crate::utils::fx::HashMap;
 use crate::postparsing::rune_type_solver::PrimitiveRuneTypeSolverLookupResult;
 use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
 use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
@@ -48,7 +48,7 @@ use crate::postparsing::rune_type_solver::RuneTypeSolver;
 use crate::parse_arena::ParseArena;
 use crate::higher_typing::astronomer_error_reporter::CouldntSolveRulesA;
 use std::any::Any;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::iter::once;
 
 pub struct Astrouts<'s> {
@@ -261,7 +261,7 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
   ) -> Self {
-    let mut primitives = HashMap::new();
+    let mut primitives = HashMap::default();
     primitives.insert(keywords.int, ITemplataType::KindTemplataType(KindTemplataType {}));
     primitives.insert(keywords.i64, ITemplataType::KindTemplataType(KindTemplataType {}));
     primitives.insert(keywords.str, ITemplataType::KindTemplataType(KindTemplataType {}));
@@ -451,7 +451,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   }
 
   // Split rune_a_to_type into header vs member portions
-  let mut runes_in_header: HashSet<IRuneS<'s>> = HashSet::new();
+  let mut runes_in_header: HashSet<IRuneS<'s>> = HashSet::default();
   for gp in generic_parameters_s.iter() {
     runes_in_header.insert(gp.rune.rune.clone());
     if let Some(ref default) = gp.default {
@@ -839,7 +839,7 @@ fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>
     maybe_name: None,
     maybe_parent_env: None,
     code_map,
-    rune_to_type: IndexMap::new(),
+    rune_to_type: IndexMap::default(),
   };
 
   // If something is absent from the map, we haven't started evaluating it yet
@@ -848,9 +848,9 @@ fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>
   // If we are asked to evaluate something but there is already a None in the map, then we are
   // caught in a cycle.
   let mut astrouts = Astrouts {
-    code_location_to_maybe_type: HashMap::new(),
-    code_location_to_struct: HashMap::new(),
-    code_location_to_interface: HashMap::new(),
+    code_location_to_maybe_type: HashMap::default(),
+    code_location_to_struct: HashMap::default(),
+    code_location_to_interface: HashMap::default(),
   };
 
   let structs_a: Vec<&'s StructA<'s>> = env.structs_s().into_iter().map(|s| self.translate_struct(&mut astrouts, &env, s)).collect::<Result<Vec<_>, _>>()?;
@@ -911,32 +911,32 @@ pub fn run_pass(
   // Group results by package coordinate
   let ProgramA { structs: structs_a, interfaces: interfaces_a, impls: impls_a, functions: functions_a, exports: exports_a } = program_a;
 
-  let mut package_to_structs_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s StructA<'s>>> = HashMap::new();
+  let mut package_to_structs_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s StructA<'s>>> = HashMap::default();
   for &s in structs_a {
     package_to_structs_a.entry(s.range.begin.file.package_coord).or_default().push(s);
   }
 
-  let mut package_to_interfaces_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s InterfaceA<'s>>> = HashMap::new();
+  let mut package_to_interfaces_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s InterfaceA<'s>>> = HashMap::default();
   for &i in interfaces_a {
     package_to_interfaces_a.entry(i.name.range.begin.file.package_coord).or_default().push(i);
   }
 
-  let mut package_to_functions_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s FunctionA<'s>>> = HashMap::new();
+  let mut package_to_functions_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s FunctionA<'s>>> = HashMap::default();
   for &f in functions_a {
     package_to_functions_a.entry(f.name.package_coordinate()).or_default().push(f);
   }
 
-  let mut package_to_impls_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s ImplA<'s>>> = HashMap::new();
+  let mut package_to_impls_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s ImplA<'s>>> = HashMap::default();
   for &im in impls_a {
     package_to_impls_a.entry(im.name.package_coordinate()).or_default().push(im);
   }
 
-  let mut package_to_exports_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s ExportAsA<'s>>> = HashMap::new();
+  let mut package_to_exports_a: HashMap<&'s PackageCoordinate<'s>, Vec<&'s ExportAsA<'s>>> = HashMap::default();
   for &e in exports_a {
     package_to_exports_a.entry(e.range.begin.file.package_coord).or_default().push(e);
   }
 
-  let mut all_packages: HashSet<&'s PackageCoordinate<'s>> = HashSet::new();
+  let mut all_packages: HashSet<&'s PackageCoordinate<'s>> = HashSet::default();
   all_packages.extend(package_to_structs_a.keys());
   all_packages.extend(package_to_interfaces_a.keys());
   all_packages.extend(package_to_functions_a.keys());

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use crate::utils::fx::{HashMap, HashSet};
 use crate::final_ast::ast::FunctionRefH;
 use crate::final_ast::ast::IFunctionAttributeH;
 use crate::instantiating::ast::ast::{ExternI, FunctionDefinitionI, FunctionHeaderI, IFunctionAttributeI};
@@ -52,9 +52,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let temporary_function_ref_h = FunctionRefH { prototype: prototype_h };
         hamuts.forward_declare_function(header_prototype, temporary_function_ref_h);
         let mut locals = Locals {
-            typing_pass_locals: HashMap::new(),
-            unstackified_vars: HashSet::new(),
-            locals: HashMap::new(),
+            typing_pass_locals: HashMap::default(),
+            unstackified_vars: HashSet::default(),
+            locals: HashMap::default(),
             next_local_id_number: 1,
         };
         let (body_h, deferreds) = self.translate_expression(hinputs, hamuts, header, &mut locals, ExpressionIE::Reference(*body));

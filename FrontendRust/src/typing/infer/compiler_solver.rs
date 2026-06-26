@@ -1,6 +1,5 @@
-use indexmap::{IndexMap, IndexSet};
-use std::collections::{HashMap, HashSet};
-
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::fx::{HashMap, HashSet};
 use crate::utils::range::RangeS;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::*;
@@ -485,7 +484,7 @@ where 's: 't,
     }).collect::<Result<IndexMap<_, _>, _>>().map_err(|e| e)?;
 
     // Per @CSCDSRZ, complex solve only produces conclusions — empty solvedRules and newRules is correct.
-    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![], IndexSet::new()) {
+    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![], IndexSet::default()) {
         Ok(_) => {}
         Err(e) => return Err(e),
     }
@@ -613,9 +612,9 @@ where 's: 't,
                     _ => panic!("Expected KindTemplataT in KindComponentsSR"),
                 };
                 let mutability = self.get_mutability(state, kind);
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 conclusions.insert(kc.mutability_rune.rune, mutability);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
                         let ranges = once(kc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -647,9 +646,9 @@ where 's: 't,
                             other => unreachable!("CoordComponents: get_mutability always returns Mutability or Placeholder; got {:?}", other),
                         };
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(cc.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -664,10 +663,10 @@ where 's: 't,
                             ITemplataT::Coord(ct) => ct.coord,
                             _ => panic!("Expected CoordTemplataT in CoordComponentsSR result"),
                         };
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(cc.ownership_rune.rune, ITemplataT::Ownership(OwnershipTemplataT { ownership: coord.ownership }));
                         conclusions.insert(cc.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -705,9 +704,9 @@ where 's: 't,
                         let return_coord = ct.coord;
                         let prototype_templata = self.predict_function(env, state, resolve.range, resolve.name, param_coords, return_coord);
                         let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(prototype_templata));
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(resolve.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -731,10 +730,10 @@ where 's: 't,
                         ).expect("CompileErrorExceptionT propagation") {
                             Ok(stamp_result) => {
                                 let return_type = stamp_result.prototype.return_type;
-                                let mut conclusions = IndexMap::new();
+                                let mut conclusions = IndexMap::default();
                                 conclusions.insert(resolve.result_rune.rune, ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: stamp_result.prototype })));
                                 conclusions.insert(resolve.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: return_type })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -755,10 +754,10 @@ where 's: 't,
                 match solver_state.get_conclusion(&csf.prototype_rune.rune).expect("prototypeRune not solved in CallSiteFuncSR") {
                     ITemplataT::Prototype(proto_templata) => {
                         let prototype = proto_templata.prototype;
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(CoordListTemplataT { coords: prototype.param_types() })));
                         conclusions.insert(csf.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: prototype.return_type })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -787,9 +786,9 @@ where 's: 't,
                 };
                 let new_prototype = self.assemble_prototype(env, state, def_func.range, def_func.name, param_coords, return_type);
                 let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: new_prototype }));
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 conclusions.insert(def_func.result_rune.rune, new_templata);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(_e) => {
                         panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping");
@@ -831,11 +830,11 @@ where 's: 't,
                     }
                 };
 
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 if let Some(result_rune) = csia.result_rune {
                     conclusions.insert(result_rune.rune, resulting_isa_templata);
                 }
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
                         let ranges = once(csia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -871,9 +870,9 @@ where 's: 't,
                 };
                 // Now introduce an impl so that we can later know sub implements super.
                 let new_impl = self.assemble_impl(env, dcia.range, sub_kind.into(), super_kind.into());
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 conclusions.insert(dcia.result_rune.rune, ITemplataT::Isa(self.typing_interner.alloc(new_impl)));
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
                         let ranges = once(dcia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -888,9 +887,9 @@ where 's: 't,
                 match solver_state.get_conclusion(&equals.left.rune) {
                     None => {
                         let right = solver_state.get_conclusion(&equals.right.rune).expect("Neither left nor right rune solved in EqualsSR");
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(equals.left.rune, right.clone());
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -902,9 +901,9 @@ where 's: 't,
                     }
                     Some(left) => {
                         let left = left.clone();
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(equals.right.rune, left);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -933,7 +932,7 @@ where 's: 't,
                                 sub_rune: coord_send.sender_rune,
                                 super_rune: coord_send.receiver_rune,
                             });
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::new(), vec![new_rule], IndexSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::default(), vec![new_rule], IndexSet::default()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
                                     let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -943,9 +942,9 @@ where 's: 't,
                                 }
                             }
                         } else {
-                            let mut conclusions = IndexMap::new();
+                            let mut conclusions = IndexMap::default();
                             conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
                                     let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -965,7 +964,7 @@ where 's: 't,
                                 sub_rune: coord_send.sender_rune,
                                 super_rune: coord_send.receiver_rune,
                             });
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::new(), vec![new_rule], IndexSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::default(), vec![new_rule], IndexSet::default()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
                                     let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -975,9 +974,9 @@ where 's: 't,
                                 }
                             }
                         } else {
-                            let mut conclusions = IndexMap::new();
+                            let mut conclusions = IndexMap::default();
                             conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
-                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                 Ok(_) => Ok(()),
                                 Err(e) => {
                                     let ranges = once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -1001,7 +1000,7 @@ where 's: 't,
                 if templatas.contains(&result) {
                     let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                     let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::new(), vec![], IndexSet::new()) {
+                    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], IndexMap::default(), vec![], IndexSet::default()) {
                         Ok(_) => Ok(()),
                         Err(e) => {
                             let error = self.typing_interner.alloc(e);
@@ -1070,11 +1069,11 @@ where 's: 't,
                         let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => unreachable!("CoerceToCoord: coordRune is statically typed Coord") };
                         match coord.ownership {
                             OwnershipT::Own | OwnershipT::Share => {
-                                let mut conclusions = IndexMap::new();
+                                let mut conclusions = IndexMap::default();
                                 conclusions.insert(r.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
                                 let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1088,9 +1087,9 @@ where 's: 't,
                     Some(kind) => {
                         let ranges: Vec<RangeS<'s>> = once(r.range).chain(env.parent_ranges.iter().copied()).collect();
                         let coerced = self.coerce_to_coord(state, env.original_calling_env, &ranges, kind, RegionT { region: IRegionT::Default });
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(r.coord_rune.rune, coerced);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(_e) => {
                                 panic!("Unimplemented: solve_rule CoerceToCoord InternalSolverError wrapping");
@@ -1103,9 +1102,9 @@ where 's: 't,
             //     case LiteralSR(range, rune, literal) =>
             IRulexSR::Literal(r) => {
                 let templata = self.literal_to_templata(r.literal);
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 conclusions.insert(r.rune.rune, templata);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(_e) => {
                         panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping");
@@ -1120,9 +1119,9 @@ where 's: 't,
                     None => return Err(ITypingPassSolverError::LookupFailed { name: r.name }),
                     Some(x) => x,
                 };
-                let mut conclusions = IndexMap::new();
+                let mut conclusions = IndexMap::default();
                 conclusions.insert(r.rune.rune, result);
-                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(_e) => {
                         panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping");
@@ -1162,9 +1161,9 @@ where 's: 't,
                         let inner_coord = CoordT { ownership: inner_ownership, region: outer_coord.region, kind: outer_coord.kind };
                         let ranges: Vec<RangeS<'s>> = once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(augment.inner_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: inner_coord })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let error = self.typing_interner.alloc(e);
@@ -1205,9 +1204,9 @@ where 's: 't,
                         };
                         let new_coord = CoordT { ownership: new_ownership, region: new_region, kind: inner_coord.kind };
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(augment.result_rune.rune, new_templata);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 panic!("implement: solve_rule Augment InternalSolverError wrapping");
@@ -1229,9 +1228,9 @@ where 's: 't,
                         }).collect();
                         let members_slice = self.typing_interner.alloc_slice_from_vec(members);
                         let coord_list = self.typing_interner.alloc(CoordListTemplataT { coords: members_slice });
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(pack.result_rune.rune, ITemplataT::CoordList(coord_list));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(_e) => {
                                 panic!("implement: solve_rule Pack None InternalSolverError wrapping");
@@ -1245,7 +1244,7 @@ where 's: 't,
                         let conclusions: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = pack.members.iter().zip(members.iter()).map(|(rune, coord)| {
                             (rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *coord })))
                         }).collect();
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(_e) => {
                                 panic!("implement: solve_rule Pack Some InternalSolverError wrapping");
@@ -1303,7 +1302,7 @@ where 's: 't,
                                             struct_name.template_args().iter().zip(arg_runes.iter())
                                                 .map(|(template_arg, arg_rune)| (arg_rune.rune, *template_arg))
                                                 .collect();
-                                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                             Ok(_) => return Ok(()),
                                             Err(e) => {
                                                 let error = self.typing_interner.alloc(e);
@@ -1336,7 +1335,7 @@ where 's: 't,
                                     arg_runes.iter().zip(interface_inner_name.template_args.iter())
                                         .map(|(arg_rune, template_arg)| (arg_rune.rune, *template_arg))
                                         .collect();
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1359,10 +1358,10 @@ where 's: 't,
                                 }
                                 let mutability_rune = arg_runes[0];
                                 let element_rune = arg_runes[1];
-                                let mut conclusions = IndexMap::new();
+                                let mut conclusions = IndexMap::default();
                                 conclusions.insert(mutability_rune.rune, rsa_tt.mutability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: rsa_tt.element_type() })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1388,12 +1387,12 @@ where 's: 't,
                                 let mutability_rune = arg_runes[1];
                                 let variability_rune = arg_runes[2];
                                 let element_rune = arg_runes[3];
-                                let mut conclusions = IndexMap::new();
+                                let mut conclusions = IndexMap::default();
                                 conclusions.insert(size_rune.rune, ssa_tt.size());
                                 conclusions.insert(mutability_rune.rune, ssa_tt.mutability());
                                 conclusions.insert(variability_rune.rune, ssa_tt.variability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: ssa_tt.element_type() })));
-                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
                                     Err(e) => {
                                         let error = self.typing_interner.alloc(e);
@@ -1422,9 +1421,9 @@ where 's: 't,
                         let context_region = RegionT { region: IRegionT::Default };
                         let mutability = expect_mutability(m);
                         let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, mutability, context_region);
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -1450,11 +1449,11 @@ where 's: 't,
                         let mutability = expect_mutability(m);
                         let variability = expect_variability(v);
                         let ssa_kind = self.predict_static_sized_array_kind(*env, state, mutability, variability, size, coord, context_region);
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: ssa_kind.name })) })));
                         let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let error = self.typing_interner.alloc(e);
@@ -1467,9 +1466,9 @@ where 's: 't,
                             solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")
                         }).collect();
                         let kind = self.predict_struct(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
@@ -1485,9 +1484,9 @@ where 's: 't,
                         }).collect();
                         // See SFWPRL for why we're calling predict_interface instead of resolve_interface
                         let kind = self.predict_interface(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
-                        let mut conclusions = IndexMap::new();
+                        let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id })) })));
-                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::new()) {
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                             Ok(_) => Ok(()),
                             Err(e) => {
                                 let ranges = once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();

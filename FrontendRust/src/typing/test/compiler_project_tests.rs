@@ -4,7 +4,7 @@ use crate::keywords::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
+use crate::utils::fx::HashMap;
 use crate::builtins::builtins::get_code_map;
 use crate::compile_options::GlobalOptions;
 use crate::instantiating::InstantiatorCompilationOptions;
@@ -44,7 +44,7 @@ fn function_has_correct_name() {
     let code = "exported func main() { }";
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("test.vale".to_string(), code.to_string())]),
+            HashMap::from_iter([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -91,7 +91,7 @@ fn lambda_has_correct_name() {
     let code = "exported func main() { {}() }";
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("test.vale".to_string(), code.to_string())]),
+            HashMap::from_iter([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -173,7 +173,7 @@ exported struct MyStruct { a int; }
 ";
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("test.vale".to_string(), code.to_string())]),
+            HashMap::from_iter([("test.vale".to_string(), code.to_string())]),
         )
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -222,7 +222,7 @@ exported func main() {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -278,7 +278,7 @@ exported func main() bool {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -333,7 +333,7 @@ exported func main() int {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -391,7 +391,7 @@ exported func main() {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -443,7 +443,7 @@ exported func main() {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -497,7 +497,7 @@ exported func main() {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source.to_string())]),
+            HashMap::from_iter([("0.vale".to_string(), source.to_string())]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )
@@ -549,7 +549,7 @@ fn typing_pass_on_roguelike() {
     let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
     let resolver = code_hierarchy::test_from_map(
             &parse_arena,
-            HashMap::from([("0.vale".to_string(), source)]),
+            HashMap::from_iter([("0.vale".to_string(), source)]),
         )
         .or(get_code_map(&parse_arena, &parser_keywords)
 )

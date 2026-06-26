@@ -67,7 +67,7 @@ use crate::instantiating::ast::types::NeverIT;
 use crate::instantiating::ast::types::RuntimeSizedArrayITValI;
 use crate::simplifying::hammer::consecrash;
 use crate::simplifying::hammer::consecutive;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 
@@ -801,7 +801,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             } else if else_continues {
                 else_locals.unstackified_vars.iter().copied().collect()
             } else {
-                HashSet::new()
+                HashSet::default()
             };
         let parent_locals_to_unstackify: Vec<_> = parent_locals.locals.keys().copied()
             .filter(|k| !parent_locals.unstackified_vars.contains(k))

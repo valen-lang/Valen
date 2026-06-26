@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use indexmap::IndexMap;
+use crate::utils::fx::HashMap;
+use crate::utils::fx::IndexMap;
 use crate::utils::range::RangeS;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::{GenericParameterS, LocationInDenizen};
@@ -30,7 +30,7 @@ use crate::typing::names::names::IdValT;
 use crate::typing::templata::templata::expect_integer;
 use crate::typing::templata::templata::expect_mutability;
 use crate::typing::templata::templata::expect_variability;
-use std::collections::HashSet;
+use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 
@@ -159,10 +159,10 @@ where 's: 't,
                     match &generic_param.default {
                         Some(default_rules) => {
                             let default_rule_vec: Vec<IRulexSR<'s>> = default_rules.rules.iter().map(|r| **r).collect();
-                            let new_runes: indexmap::IndexSet<IRuneS<'s>> =
+                            let new_runes: crate::utils::fx::IndexSet<IRuneS<'s>> =
                                 default_rules.rune_to_type.iter().map(|(k, _)| *k).collect();
                             solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(
-                                false, vec![], IndexMap::new(), default_rule_vec, new_runes
+                                false, vec![], IndexMap::default(), default_rule_vec, new_runes
                             ).unwrap();
                             true
                         }
@@ -231,7 +231,7 @@ where 's: 't,
                 receiver_rune: send.receiver_rune,
             }));
         }
-        let mut already_known: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::new();
+        let mut already_known: IndexMap<IRuneS<'s>, ITemplataT<'s, 't>> = IndexMap::default();
         for known in initial_knowns {
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&envs, state, known.rune.rune, known.templata);
@@ -429,7 +429,7 @@ where 's: 't,
             }
         }
         {
-            let mut seen: HashSet<IRuneS<'s>> = HashSet::new();
+            let mut seen: HashSet<IRuneS<'s>> = HashSet::default();
             for (rune, _) in runes_and_prototypes.iter() {
                 if !seen.insert(*rune) {
                     panic!("vwat: duplicate rune in runesAndPrototypes");
@@ -448,7 +448,7 @@ where 's: 't,
                 _ => None,
             }).collect();
         {
-            let mut seen: HashSet<IRuneS<'s>> = HashSet::new();
+            let mut seen: HashSet<IRuneS<'s>> = HashSet::default();
             for (rune, _) in runes_and_impls.iter() {
                 if !seen.insert(*rune) {
                     panic!("vwat: duplicate rune in runesAndImpls");

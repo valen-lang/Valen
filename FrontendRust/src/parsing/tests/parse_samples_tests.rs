@@ -5,9 +5,7 @@ use crate::parsing::tests::parser_test_compilation;
 use std::fs;
 use std::path::PathBuf;
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
-
-
+use crate::utils::fx::HashMap;
 fn load_expected(path: &str) -> String {
   let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     .join("src/tests")
@@ -42,7 +40,7 @@ impl<'p> IPackageResolver<'p, HashMap<String, String>> for ParserTestResolver<'p
       self
         .code_map
         .resolve(package_coord)
-        .unwrap_or_else(|| HashMap::from([("".to_string(), "".to_string())])),
+        .unwrap_or_else(|| HashMap::from_iter([("".to_string(), "".to_string())])),
     )
   }
 }

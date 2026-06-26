@@ -2,9 +2,9 @@
 use std::marker::PhantomData;
 
 use super::simple_solver_state::SimpleSolverState;
-use indexmap::{IndexMap, IndexSet};
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::utils::fx::{IndexMap, IndexSet};
+use crate::utils::fx::HashMap;
+use crate::utils::fx::HashSet;
 use std::convert::Infallible;
 use std::hash::Hash;
 
@@ -106,7 +106,7 @@ where
         vec![],
         initially_known_runes,
         initial_rules,
-        IndexSet::new(),
+        IndexSet::default(),
     ) {
         Ok(()) => {},
         Err(_) => panic!("Initial commitStep should not fail"),
