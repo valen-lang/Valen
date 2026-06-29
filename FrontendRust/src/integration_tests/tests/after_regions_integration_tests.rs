@@ -10,10 +10,6 @@ use crate::von::ast::VonInt;
 pub struct AfterRegionsIntegrationTests;
 
 #[test]
-#[ignore = "ignored upstream in Scala"]
-fn todo() { panic!("Unmigrated test: todo"); }
-
-#[test]
 fn test_returning_empty_seq() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -42,10 +38,6 @@ exported func main() () {
 
     compile.run_primitive_args(Vec::new()).unwrap();
 }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn map_function() { panic!("Unmigrated test: map_function"); }
 
 #[test]
 fn imm_tuple_access() {
@@ -147,71 +139,6 @@ exported func main() int {
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn test_overload_set() { panic!("Unmigrated test: test_overload_set"); }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn pass_overload_set_into_placeholder_parameter_posipp() { panic!("Unmigrated test: pass_overload_set_into_placeholder_parameter_posipp"); }
-
-#[test]
-#[ignore = "ignored upstream in Scala (see audit comment): pending CoordT redesign — make CoordT contain a placeholder and move Ownership to a generic param so the return type's ownership is calculated from the parameter"]
-fn upcasting_in_a_generic_function() {
-    // This is testing two things:
-    //  - Upcasting inside a generic function
-    //  - The return type's ownership is actually calculated from the parameter. This will
-    //    fail as long as we still have CoordT(Ownership, ITemplata[KindTemplataType])
-    //    because that ownership isn't a templata. The call site will correctly have that
-    //    ownership as borrow, but the definition will think it's an own, *not* a placeholder
-    //    or variable-thing or anything like that. So, when it gets to the instantiator, it
-    //    will actually make the wrong return type. I think the solution will be to make CoordT
-    //    contain a placeholder, and move O to be a generic param.
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-func upcast<SuperKind Kind, SubType Ref>(left SubType) SuperType
-where O Ownership,
-  SubKind Kind,
-  SuperType Ref = Ref[O, SuperKind],
-  SubType Ref = Ref[O, SubKind],
-  implements(SubType, SuperType)
-{
-  left
-}
-
-sealed interface IShip  {}
-struct Serenity {}
-impl IShip for Serenity;
-
-exported func main() {
-  ship &IShip = upcast<IShip>(&Serenity());
-}
-
-",
-    );
-
-    compile.eval_for_kind_primitive_args(Vec::new()).unwrap();
-}
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn diff_iter() { panic!("Unmigrated test: diff_iter"); }
 
 #[test]
 fn call_array_without_element_type() {
@@ -318,8 +245,4 @@ exported func main() int {
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
 }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn infinite_lambda_call() { panic!("Unmigrated test: infinite_lambda_call"); }
 

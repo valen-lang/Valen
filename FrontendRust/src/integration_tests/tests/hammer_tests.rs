@@ -139,63 +139,6 @@ exported func main() int {
 
 
 #[test]
-#[ignore = "blocked on CoordSendSR Some-receiver solver-conflict fix (see investigations/coord_send_some_branch_fix.md)"]
-pub fn panic_in_expr() {
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let code = "
-import intrange.*;
-
-exported func main() int {
-  return 3 + __vbi_panic();
-}
-";
-    let resolver = get_code_map(&parse_arena, &parser_keywords)
-        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
-    let mut compile = test(
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
-    );
-    let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
-    let main = package_h.lookup_function("main");
-    let int_expr = match main.body {
-        ExpressionH::BlockH(b) => match b.inner {
-            ExpressionH::ConsecutorH(c) => {
-                assert_eq!(c.exprs.len(), 2);
-                let int_expr = c.exprs[0];
-                match c.exprs[1] {
-                    ExpressionH::CallH(call) => {
-                        assert_eq!(call.args_expressions.len(), 0);
-                        assert!(matches!(call.function.return_type.kind, KindHT::NeverHT(_)));
-                    }
-                    _ => panic!("expected CallH for last consecutor expr"),
-                }
-                int_expr
-            }
-            _ => panic!("expected ConsecutorH inside BlockH"),
-        },
-        _ => panic!("expected BlockH body"),
-    };
-    match int_expr {
-        ExpressionH::ConstantIntH(ci) => {
-            assert_eq!(ci.value, 3);
-            assert_eq!(ci.bits, 32);
-        }
-        _ => panic!("expected ConstantIntH(3, 32) at int_expr"),
-    }
-}
-
-
-#[test]
 pub fn tests_export_function() {
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();

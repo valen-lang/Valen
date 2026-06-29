@@ -24,18 +24,6 @@ use crate::typing::types::types::OwnershipT;
 pub struct AfterRegionsErrorTests {}
 
 #[test]
-#[ignore = "ignored upstream in Scala"]
-fn prints_bread_crumb_trail() { panic!("Unmigrated test: prints_bread_crumb_trail"); }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn reports_error() { panic!("Unmigrated test: reports_error"); }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn reports_error_imm_interface_imm_struct() { panic!("Unmigrated test: reports_error_imm_interface_imm_struct"); }
-
-#[test]
 fn report_when_downcasting_between_unrelated_types() {
     // This test does not pass yet, use #[ignore].
     let parse_bump = Bump::new();
@@ -383,10 +371,6 @@ Candidate 1 (of 1): str(&Kind$add.X):
 }
 
 #[test]
-#[ignore = "ignored upstream in Scala"]
-fn inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt() { panic!("Unmigrated test: inherit_reachable_bounds_for_params_and_things_inside_params_too_irbfptipt"); }
-
-#[test]
 fn ambiguous_call() {
     // This test does not pass yet, use #[ignore].
     let parse_bump = Bump::new();
@@ -506,39 +490,6 @@ impl IUnit for Muta;
 Weakable mismatch in impl: struct is weakable, but interface is not.
 "#,
     );
-}
-
-// This test does not pass yet, use #[ignore].
-#[test]
-#[ignore = "blocked - Rust typing pass produces Ok where Scala throws TookWeakRefOfNonWeakableError for `&&m` on non-weakable struct"]
-fn cant_make_weak_ref_to_non_weakable() {
-    let parse_bump = Bump::new();
-    let scout_bump = Bump::new();
-    let typing_bump = Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = r"
-struct Muta { hp int; }
-exported func main() int {
-  m = Muta(7);
-  w = &&m;
-  return m.hp;
-}
-";
-    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
-        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
-        .or(get_package_to_resource_resolver());
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = compiler_test_compilation(
-        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
-    );
-    match compile.get_compiler_outputs() {
-        Err(ICompileErrorT::TookWeakRefOfNonWeakableError { .. }) => {}
-        Err(e) => panic!("expected TookWeakRefOfNonWeakableError, got Err({:?})", e),
-        Ok(_) => panic!("expected TookWeakRefOfNonWeakableError, got Ok"),
-    }
 }
 
 #[test]

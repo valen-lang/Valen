@@ -111,14 +111,6 @@ exported func main() {
 }
 
 #[test]
-#[ignore = "ignored upstream in Scala"]
-fn tests_overload_set_and_concept_function() { panic!("Unmigrated test: tests_overload_set_and_concept_function"); }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn generic_interface_anonymous_subclass() { panic!("Unmigrated test: generic_interface_anonymous_subclass"); }
-
-#[test]
 fn lambda_body_type_matches_anonymous_interface_return_type() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -142,10 +134,6 @@ exported func main() {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let _coutputs = compile.expect_compiler_outputs();
 }
-
-#[test]
-#[ignore = "ignored upstream in Scala"]
-fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_imm_fields_is_imm"); }
 
 #[test]
 fn can_destructure_and_assemble_tuple() {
@@ -461,10 +449,6 @@ Number of params doesn't match! Supplied 4 but function takes 3
 "##,
     );
 }
-
-#[test]
-#[ignore = "unmigrated - pending typing-pass body migration"]
-fn reports_when_ownership_doesnt_match() { panic!("Unmigrated test: reports_when_ownership_doesnt_match"); }
 
 #[test]
 fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
