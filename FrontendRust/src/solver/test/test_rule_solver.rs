@@ -7,13 +7,13 @@ use crate::utils::fx::HashMap;
 use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
+
 pub struct TestRuleSolver<'ctx, 's> {
     pub scout_arena: &'ctx ScoutArena<'s>,
 }
 
 
 impl<'ctx, 's> TestRuleSolver<'ctx, 's> {
-
 
 pub fn complex_solve_impl(
     &self,
@@ -94,6 +94,7 @@ pub fn complex_solve_impl(
     solver_state.commit_step::<String>(true, vec![], new_conclusions, vec![], IndexSet::default())?;
     Ok(())
 }
+
 
 pub fn solve_impl(
   &self,
@@ -242,6 +243,7 @@ pub fn solve_impl(
     }
 }
 
+
 fn instantiate_ancestor_template(&self, descendants: Vec<String>, ancestor_template: &str) -> String {
     let descendant = descendants.first().expect("descendants non-empty");
     match (descendant.as_str(), ancestor_template) {
@@ -252,6 +254,7 @@ fn instantiate_ancestor_template(&self, descendants: Vec<String>, ancestor_templ
         other => panic!("Unimplemented instantiate_ancestor_template: {:?}", other),
     }
 }
+
 
 fn get_ancestors(&self, descendant: &str, include_self: bool) -> Vec<String> {
     let self_and_ancestors: Vec<String> = match self.get_template(descendant).as_str() {
@@ -271,6 +274,7 @@ fn get_ancestors(&self, descendant: &str, include_self: bool) -> Vec<String> {
     result
 }
 
+
 fn get_template(&self, tyype: &str) -> String {
     if tyype.contains(':') {
         tyype.split(':').next().unwrap_or(tyype).to_string()
@@ -278,6 +282,7 @@ fn get_template(&self, tyype: &str) -> String {
         tyype.to_string()
     }
 }
+
 
 fn solve_receives(
     &self,
@@ -324,6 +329,7 @@ fn solve_receives(
     }
 }
 
+
 fn narrow(
     &self,
     ancestor_template_unnarrowed: HashSet<String>,
@@ -346,6 +352,7 @@ fn narrow(
 }
 
 }
+
 
 pub fn rule_to_puzzles(rule: &TestRule) -> Vec<Vec<i64>> {
     rule.all_puzzles()

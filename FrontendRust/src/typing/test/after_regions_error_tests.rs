@@ -21,6 +21,7 @@ use crate::typing::types::types::IntT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 
+
 pub struct AfterRegionsErrorTests {}
 
 #[test]
@@ -111,7 +112,7 @@ exported func main() {
                     match boxed.as_ref() {
                         IConclusionResolveError::ReturnTypeConflictInConclusionResolve {
                             expected_return_type: CoordT {
-                                ownership: OwnershipT::Share,
+                                ownership: OwnershipT::Own,
                                 kind: KindT::Int(_),
                                 ..
                             },
@@ -120,7 +121,7 @@ exported func main() {
                         } => {
                             match actual_prototype.return_type {
                                 CoordT {
-                                    ownership: OwnershipT::Share,
+                                    ownership: OwnershipT::Own,
                                     kind: KindT::Bool(_),
                                     ..
                                 } => {}
@@ -145,12 +146,13 @@ Couldn't find a suitable function AFunction1(main.λC:test:0.vale:6:25<>). Rejec
 
 Candidate 1 (of 1): test:0.vale:2:1:
 CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 1 }
-Found function: main.λC:test:0.vale:6:25.λF:test:0.vale:6:25<i32>(main.λC:test:0.vale:6:25<>, i32) which returns bool but expected return type of i32
+Found function: main.λC:test:0.vale:6:25.λF:test:0.vale:6:25<i32>(&main.λC:test:0.vale:6:25<>, i32) which returns bool but expected return type of i32
 
 
 "#,
     );
 }
+
 
 // This test does not pass yet, use #[ignore].
 #[test]
@@ -163,7 +165,6 @@ fn detects_sending_non_citizen_to_citizen() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 interface MyInterface {}
 func moo<T>(a T)
 where implements(T, MyInterface), func drop(T)void
@@ -209,14 +210,14 @@ exported func main() {
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:7:1:
+        r#"At test:0.vale:6:1:
 exported func main() {
-At test:0.vale:8:3:
+At test:0.vale:7:3:
   moo(7);
 Couldn't find a suitable function moo(i32). Rejected candidates:
 
-Candidate 1 (of 1): test:0.vale:4:1:
-CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 27 }
+Candidate 1 (of 1): test:0.vale:3:1:
+CodeLocationS { file: FileCoordinate { package_coord: PackageCoordinate { module: "test", packages: [] }, filepath: "0.vale" }, offset: 26 }
 Kind i32 cannot be a sub-kind.
 where implements(T, MyInterface), func drop(T)void
                                               ^^^^ _121311: void
@@ -268,6 +269,7 @@ Unsolved runes: _113 _1212 _1214
     );
 }
 
+
 // This test does not pass yet, use #[ignore].
 #[test]
 fn accidentally_mention_type_rune() {
@@ -311,6 +313,7 @@ Can't use rune `Z` as a value expression. Did you mean a local variable with a s
     );
 }
 
+
 // This test does not pass yet, use #[ignore].
 #[test]
 fn call_bound_with_wrong_arguments() {
@@ -325,7 +328,6 @@ fn call_bound_with_wrong_arguments() {
 func add<X>(i int, x &X) where func str(&X)str {
   str(true);
 }
-
 ";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
@@ -343,13 +345,13 @@ func add<X>(i int, x &X) where func str(&X)str {
                 IFindFunctionFailureReason::SpecificParamDoesntSend {
                     index: 0,
                     argument: CoordT {
-                        ownership: OwnershipT::Share,
+                        ownership: OwnershipT::Own,
                         kind: KindT::Bool(_),
                         ..
                     },
                     ..
                 } => {}
-                other => panic!("expected SpecificParamDoesntSend(0, CoordT(Share,_,Bool), _), got {:?}", other),
+                other => panic!("expected SpecificParamDoesntSend(0, CoordT(Own,_,Bool), _), got {:?}", other),
             }
         }
         e => panic!("expected CouldntFindFunctionToCallT, got Err({:?})", e),
@@ -380,12 +382,13 @@ fn ambiguous_call() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: both params take &int/&X; call sends &3, &4 to match both overloads
     let code = r"
-func add<X>(i int, x &X) { }
-func add<X>(x &X, i int) { }
+func add<X>(i &int, x &X) { }
+func add<X>(x &X, i &int) { }
 
 exported func main() void {
-  add(3, 4);
+  add(&3, &4);
 }
 ";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
@@ -408,13 +411,14 @@ exported func main() void {
         r#"At test:0.vale:5:1:
 exported func main() void {
 At test:0.vale:6:3:
-  add(3, 4);
+  add(&3, &4);
 Multiple candidates for call:
-  add<i32>(i32, i32)
-  add<i32>(i32, i32)
+  add<i32>(&i32, &i32)
+  add<i32>(&i32, &i32)
 "#,
     );
 }
+
 
 // This test does not pass yet, use #[ignore].
 #[test]
@@ -454,6 +458,7 @@ Weakable mismatch in impl: struct is not weakable, but interface is.
     );
 }
 
+
 // This test does not pass yet, use #[ignore].
 #[test]
 fn cant_make_weakable_extend_a_non_weakable() {
@@ -490,6 +495,40 @@ impl IUnit for Muta;
 Weakable mismatch in impl: struct is weakable, but interface is not.
 "#,
     );
+}
+
+
+// This test does not pass yet, use #[ignore].
+#[test]
+#[ignore = "blocked - Rust typing pass produces Ok where Scala throws TookWeakRefOfNonWeakableError for `&&m` on non-weakable struct"]
+fn cant_make_weak_ref_to_non_weakable() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = r"
+struct Muta { hp int; }
+exported func main() int {
+  m = Muta(7);
+  w = &&m;
+  return m.hp;
+}
+";
+    let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(
+        &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver,
+    );
+    match compile.get_compiler_outputs() {
+        Err(ICompileErrorT::TookWeakRefOfNonWeakableError { .. }) => {}
+        Err(e) => panic!("expected TookWeakRefOfNonWeakableError, got Err({:?})", e),
+        Ok(_) => panic!("expected TookWeakRefOfNonWeakableError, got Ok"),
+    }
 }
 
 #[test]

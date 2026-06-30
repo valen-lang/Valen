@@ -8,5 +8,6 @@ func Marine() Marine {
   self.cool = true;
 }
 exported func main() int {
-  return Marine().hp;
+  // TSUGAR:   return Marine().hp;
+  return __copy_prim(Marine().hp);
 }

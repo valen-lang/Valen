@@ -3,9 +3,9 @@ use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
-  MutabilityTemplataType, OwnershipTemplataType, StringTemplataType, VariabilityTemplataType,
+  SharednessTemplataType, OwnershipTemplataType, StringTemplataType,
 };
-use crate::parsing::ast::{LocationP, MutabilityP, OwnershipP, VariabilityP};
+use crate::parsing::ast::{LocationP, SharednessP, OwnershipP};
 use crate::utils::range::RangeS;
 
 
@@ -336,10 +336,9 @@ pub enum ILiteralSL<'s> {
   IntLiteral(IntLiteralSL),
   StringLiteral(StringLiteralSL<'s>),
   BoolLiteral(BoolLiteralSL),
-  MutabilityLiteral(MutabilityLiteralSL),
+  MutabilityLiteral(SharednessLiteralSL),
   LocationLiteral(LocationLiteralSL),
   OwnershipLiteral(OwnershipLiteralSL),
-  VariabilityLiteral(VariabilityLiteralSL),
 }
 
 impl<'s> ILiteralSL<'s> {
@@ -351,7 +350,6 @@ impl<'s> ILiteralSL<'s> {
       ILiteralSL::MutabilityLiteral(x) => x.get_type(),
       ILiteralSL::LocationLiteral(x) => x.get_type(),
       ILiteralSL::OwnershipLiteral(x) => x.get_type(),
-      ILiteralSL::VariabilityLiteral(x) => x.get_type(),
     }
   }
   
@@ -401,14 +399,14 @@ impl BoolLiteralSL {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct MutabilityLiteralSL {
-  pub mutability: MutabilityP,
+pub struct SharednessLiteralSL {
+  pub mutability: SharednessP,
 }
 
 
-impl MutabilityLiteralSL {
+impl SharednessLiteralSL {
   pub fn get_type<'a>(&self) -> ITemplataType<'a> {
-    ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})
+    ITemplataType::SharednessTemplataType(SharednessTemplataType {})
   }
   
 }
@@ -441,17 +439,4 @@ impl OwnershipLiteralSL {
   
 }
 
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct VariabilityLiteralSL {
-  pub variability: VariabilityP,
-}
-
-
-impl VariabilityLiteralSL {
-  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
-    ITemplataType::VariabilityTemplataType(VariabilityTemplataType {})
-  }
-  
-}
 

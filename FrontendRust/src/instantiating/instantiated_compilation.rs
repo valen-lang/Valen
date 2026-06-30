@@ -25,9 +25,17 @@ use crate::typing::typing_interner::TypingInterner;
 use std::any::Any;
 
 
+
+
 pub struct InstantiatorCompilationOptions {
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
 }
+
+
+
+
+
+
 
 
 pub struct InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
@@ -42,6 +50,8 @@ where 's: 't, 's: 'i,
   pub instantiating_interner: InstantiatingInterner<'s, 'i>,
   monouts_cache: Option<HinputsI<'s, 'i>>,
 }
+
+
 
 
 impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
@@ -90,6 +100,7 @@ where
   }
 }
 
+
 impl<'s, 'ctx, 't, 'i, 'p> InstantiatedCompilation<'s, 'ctx, 't, 'i, 'p>
 where
     's: 't,
@@ -100,25 +111,31 @@ where
     self.typing_pass_compilation.get_code_map()
   }
 
+
   pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.typing_pass_compilation.get_parseds()
   }
+
 
   pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.typing_pass_compilation.get_vpst_map()
   }
 
+
   pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
     self.typing_pass_compilation.get_scoutput()
   }
+
 
   pub fn get_astrouts(&mut self) -> Result<&crate::utils::code_hierarchy::PackageCoordinateMap<'s, crate::higher_typing::ast::ProgramA<'s>>, crate::higher_typing::astronomer_error_reporter::ICompileErrorA<'s>> {
     self.typing_pass_compilation.get_astrouts()
   }
 
+
   pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
     self.typing_pass_compilation.get_compiler_outputs()
   }
+
 
   pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
     self.typing_pass_compilation.expect_compiler_outputs()

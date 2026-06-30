@@ -351,7 +351,7 @@ public:
     Name* name;
     StructKind* kind;
     RegionId* regionId;
-    Mutability mutability;
+    Sharedness sharedness;
     std::vector<Edge*> edges;
     std::vector<StructMember*> members;
     Weakability weakability;
@@ -360,14 +360,14 @@ public:
         Name* name_,
         StructKind* kind_,
         RegionId* regionId_,
-        Mutability mutability_,
+        Sharedness sharedness_,
         std::vector<Edge*> edges_,
         std::vector<StructMember*> members_,
         Weakability weakable_) :
         name(name_),
         kind(kind_),
         regionId(regionId_),
-        mutability(mutability_),
+        sharedness(sharedness_),
         edges(edges_),
         members(members_),
         weakability(weakable_) {}
@@ -386,17 +386,14 @@ class StructMember {
 public:
     std::string fullName;
     std::string name;
-    Variability variability;
     Reference* type;
 
     StructMember(
         std::string fullName_,
         std::string name_,
-        Variability variability_,
         Reference* type_) :
         fullName(fullName_),
         name(name_),
-        variability(variability_),
         type(type_) {}
 };
 
@@ -406,7 +403,7 @@ public:
     Name* name;
     InterfaceKind* kind;
     RegionId* regionId;
-    Mutability mutability;
+    Sharedness sharedness;
     std::vector<Name*> superInterfaces;
     std::vector<InterfaceMethod*> methods;
     Weakability weakability;
@@ -415,14 +412,14 @@ public:
         Name* name_,
         InterfaceKind* kind_,
         RegionId* regionId_,
-        Mutability mutability_,
+        Sharedness sharedness_,
         const std::vector<Name*>& superInterfaces_,
         const std::vector<InterfaceMethod*>& methods_,
         Weakability weakable_) :
       name(name_),
       kind(kind_),
       regionId(regionId_),
-      mutability(mutability_),
+      sharedness(sharedness_),
       superInterfaces(superInterfaces_),
       methods(methods_),
       weakability(weakable_) {

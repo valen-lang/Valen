@@ -8,9 +8,10 @@ struct Raza { fuel int; }
 impl IShip for Raza;
 
 func moo(ship IShip) int {
-  maybeRaza Result<Raza, IShip> = (ship).as<Raza>();
+  maybeRaza Result<Raza, IShip> = (^ship).as<Raza>();
   return if (maybeRaza.is_ok()) {
-      maybeRaza.expect("wat").fuel
+      // TSUGAR:       maybeRaza.expect("wat").fuel
+      __copy_prim(maybeRaza.expect("wat").fuel)
     } else {
       42
     };

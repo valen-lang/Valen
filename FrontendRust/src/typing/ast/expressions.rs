@@ -8,8 +8,8 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::ast::ast::*;
 use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, VoidT};
 use crate::typing::types::types::IntT;
-use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
-use crate::typing::types::types::MutabilityT;
+use crate::typing::templata::templata::{ITemplataT, SharednessTemplataT};
+use crate::typing::types::types::SharednessT;
 use crate::typing::types::types::RegionT;
 use crate::typing::types::types::BoolT;
 use crate::typing::types::types::FloatT;
@@ -169,11 +169,11 @@ pub enum ReferenceExpressionTE<'s, 't> {
     FunctionCall(&'t FunctionCallTE<'s, 't>),
     Reinterpret(&'t ReinterpretTE<'s, 't>),
     Construct(&'t ConstructTE<'s, 't>),
-    NewMutRuntimeSizedArray(&'t NewMutRuntimeSizedArrayTE<'s, 't>),
+    NewRuntimeSizedArray(&'t NewRuntimeSizedArrayTE<'s, 't>),
     StaticArrayFromCallable(&'t StaticArrayFromCallableTE<'s, 't>),
     DestroyStaticSizedArrayIntoFunction(&'t DestroyStaticSizedArrayIntoFunctionTE<'s, 't>),
     DestroyStaticSizedArrayIntoLocals(&'t DestroyStaticSizedArrayIntoLocalsTE<'s, 't>),
-    DestroyMutRuntimeSizedArray(&'t DestroyMutRuntimeSizedArrayTE<'s, 't>),
+    DestroyRuntimeSizedArray(&'t DestroyRuntimeSizedArrayTE<'s, 't>),
     RuntimeSizedArrayCapacity(&'t RuntimeSizedArrayCapacityTE<'s, 't>),
     PushRuntimeSizedArray(&'t PushRuntimeSizedArrayTE<'s, 't>),
     PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
@@ -181,8 +181,7 @@ pub enum ReferenceExpressionTE<'s, 't> {
     Upcast(&'t UpcastTE<'s, 't>),
     SoftLoad(&'t SoftLoadTE<'s, 't>),
     Destroy(&'t DestroyTE<'s, 't>),
-    DestroyImmRuntimeSizedArray(&'t DestroyImmRuntimeSizedArrayTE<'s, 't>),
-    NewImmRuntimeSizedArray(&'t NewImmRuntimeSizedArrayTE<'s, 't>),
+    CopyPrim(&'t CopyPrimTE<'s, 't>),
 }
 
 impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
@@ -220,11 +219,11 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
             ReferenceExpressionTE::FunctionCall(e) => e.result(),
             ReferenceExpressionTE::Reinterpret(e) => e.result(),
             ReferenceExpressionTE::Construct(e) => e.result(),
-            ReferenceExpressionTE::NewMutRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::NewRuntimeSizedArray(e) => e.result(),
             ReferenceExpressionTE::StaticArrayFromCallable(e) => e.result(),
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(e) => e.result(),
             ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(e) => e.result(),
-            ReferenceExpressionTE::DestroyMutRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::DestroyRuntimeSizedArray(e) => e.result(),
             ReferenceExpressionTE::RuntimeSizedArrayCapacity(e) => e.result(),
             ReferenceExpressionTE::PushRuntimeSizedArray(e) => e.result(),
             ReferenceExpressionTE::PopRuntimeSizedArray(e) => e.result(),
@@ -232,8 +231,7 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
             ReferenceExpressionTE::Upcast(e) => e.result(),
             ReferenceExpressionTE::SoftLoad(e) => e.result(),
             ReferenceExpressionTE::Destroy(e) => e.result(),
-            ReferenceExpressionTE::DestroyImmRuntimeSizedArray(e) => e.result(),
-            ReferenceExpressionTE::NewImmRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::CopyPrim(e) => e.result(),
         }
     }
     
@@ -284,16 +282,6 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
         }
     }
     
-    pub fn variability(&self) -> VariabilityT {
-        match self {
-            AddressExpressionTE::LocalLookup(e) => e.variability(),
-            AddressExpressionTE::StaticSizedArrayLookup(e) => e.variability,
-            AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.variability,
-            AddressExpressionTE::ReferenceMemberLookup(e) => e.variability,
-            AddressExpressionTE::AddressMemberLookup(e) => e.variability,
-        }
-    }
-    
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -319,8 +307,8 @@ impl<'s, 't> LetAndLendTE<'s, 't> where 's: 't, {
 }
 impl<'s, 't> LetAndLendTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        let CoordT { ownership: _old_ownership, region, kind } = self.expr.result().coord;
-        ReferenceResultT { coord: CoordT { ownership: self.target_ownership, region, kind } }
+        let CoordT { ownership: _old_ownership, region, kind, .. } = self.expr.result().coord;
+        ReferenceResultT { coord: CoordT::new(self.target_ownership, region, kind) }
     }
 
 }
@@ -355,7 +343,7 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Weak, region: self.inner_expr.result().coord.region, kind: self.inner_expr.kind() } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Weak, self.inner_expr.result().coord.region, self.inner_expr.kind()) }
     }
 
 }
@@ -373,11 +361,11 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.expr.result().coord.region,
-                kind: KindT::Void(VoidT {}),
-            }
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.expr.result().coord.region,
+                KindT::Void(VoidT {}),
+            )
         }
     }
 
@@ -409,11 +397,11 @@ impl<'s, 't> DiscardTE<'s, 't> {
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.expr.result().coord.region,
-                kind: KindT::Void(VoidT),
-            }
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.expr.result().coord.region,
+                KindT::Void(VoidT),
+            )
         }
     }
 
@@ -442,11 +430,11 @@ impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
         deferred_expr: ReferenceExpressionTE<'s, 't>,
     ) -> DeferTE<'s, 't> {
         let inner_coord = inner_expr.result().coord;
-        assert!(deferred_expr.result().coord == CoordT {
-            ownership: OwnershipT::Share,
-            region: inner_coord.region,
-            kind: KindT::Void(VoidT),
-        });
+        assert!(deferred_expr.result().coord == CoordT::new(
+            OwnershipT::Own,
+            inner_coord.region,
+            KindT::Void(VoidT),
+        ));
         DeferTE { inner_expr, deferred_expr, _sealed: () }
     }
 
@@ -475,7 +463,7 @@ impl<'s, 't> IfTE<'s, 't> {
         let then_result_coord = then_call.result().coord;
         let else_result_coord = else_call.result().coord;
         match condition_result_coord {
-            CoordT { kind: KindT::Bool(_), ownership: OwnershipT::Share, .. } => {}
+            CoordT { kind: KindT::Bool(_), ownership: OwnershipT::Own, .. } => {}
             other => panic!("vfail: {:?}", other),
         }
         match (then_result_coord.kind, then_result_coord.kind) {
@@ -510,11 +498,11 @@ impl<'s, 't> WhileTE<'s, 't> {
     pub fn new(block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
         let result_coord = match block.result().coord.kind {
             KindT::Void(_) => block.result().coord,
-            KindT::Never(NeverT { from_break: true }) => CoordT {
-                ownership: OwnershipT::Share,
-                region: block.result().coord.region,
-                kind: KindT::Void(VoidT),
-            },
+            KindT::Never(NeverT { from_break: true }) => CoordT::new(
+                OwnershipT::Own,
+                block.result().coord.region,
+                KindT::Void(VoidT),
+            ),
             KindT::Never(NeverT { from_break: false }) => block.result().coord,
             _ => panic!("vwat"),
         };
@@ -555,11 +543,11 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 
 
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT {
-            ownership: OwnershipT::Share,
-            region: self.source_expr.result().coord.region,
-            kind: KindT::Void(VoidT),
-        } }
+        ReferenceResultT { coord: CoordT::new(
+            OwnershipT::Own,
+            self.source_expr.result().coord.region,
+            KindT::Void(VoidT),
+        ) }
     }
 
 }
@@ -576,11 +564,11 @@ impl<'s, 't> ReturnTE<'s, 't> {
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.source_expr.result().coord.region,
-                kind: KindT::Never(NeverT { from_break: false }),
-            }
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.source_expr.result().coord.region,
+                KindT::Never(NeverT { from_break: false }),
+            )
         }
     }
 
@@ -595,7 +583,7 @@ impl BreakTE {
 
 
     fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Never(NeverT { from_break: true }) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.region, KindT::Never(NeverT { from_break: true })) }
     }
 
 }
@@ -633,7 +621,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         let never_coord = self.exprs.iter()
             .map(|e| e.result().coord)
-            .find(|c| matches!(c, CoordT { ownership: OwnershipT::Share, kind: KindT::Never(_), .. }));
+            .find(|c| matches!(c, CoordT { ownership: OwnershipT::Own, kind: KindT::Never(_), .. }));
         match never_coord {
             Some(n) => ReferenceResultT { coord: n },
             None => self.exprs.last().unwrap().result(),
@@ -714,11 +702,11 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> where 's: 't, {
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.left.result().coord.region,
-                kind: KindT::Bool(BoolT),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.left.result().coord.region,
+                KindT::Bool(BoolT),
+            ),
         }
     }
 
@@ -755,11 +743,11 @@ impl VoidLiteralTE {
 
     fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.region,
-                kind: KindT::Void(VoidT),
-            }
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.region,
+                KindT::Void(VoidT),
+            )
         }
     }
 
@@ -776,7 +764,7 @@ impl<'s, 't> ConstantIntTE<'s, 't> {
 
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Int(IntT { bits: self.bits }) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.region, KindT::Int(IntT { bits: self.bits })) }
     }
 
 }
@@ -791,7 +779,7 @@ impl ConstantBoolTE {
 
 
     pub fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Bool(BoolT) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.region, KindT::Bool(BoolT)) }
     }
 
 }
@@ -806,7 +794,7 @@ impl<'s> ConstantStrTE<'s> {
 
 
     fn result<'t>(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Str(StrT) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Share, self.region, KindT::Str(StrT)) }
     }
 
 }
@@ -821,11 +809,11 @@ impl ConstantFloatTE {
 
 
     pub fn result<'s, 't>(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT {
-            ownership: OwnershipT::Share,
-            region: self.region,
-            kind: KindT::Float(FloatT),
-        } }
+        ReferenceResultT { coord: CoordT::new(
+            OwnershipT::Own,
+            self.region,
+            KindT::Float(FloatT),
+        ) }
     }
 
 }
@@ -842,8 +830,6 @@ impl<'s, 't> LocalLookupTE<'s, 't> {
     pub fn result(&self) -> AddressResultT<'s, 't> {
         AddressResultT { coord: self.local_variable.coord() }
     }
-
-    pub fn variability(&self) -> VariabilityT { self.local_variable.variability() }
 
 }
 /// Arena-allocated (see @TFITCX)
@@ -871,7 +857,6 @@ where 's: 't,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
     pub index_expr: ReferenceExpressionTE<'s, 't>,
     pub element_type: CoordT<'s, 't>,
-    pub variability: VariabilityT,
 }
 
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
@@ -889,7 +874,6 @@ where 's: 't,
     pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub index_expr: ReferenceExpressionTE<'s, 't>,
-    pub variability: VariabilityT,
     _sealed: (),
 }
 
@@ -903,10 +887,9 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> where 's: 't, {
         array_expr: ReferenceExpressionTE<'s, 't>,
         array_type: &'t RuntimeSizedArrayTT<'s, 't>,
         index_expr: ReferenceExpressionTE<'s, 't>,
-        variability: VariabilityT,
     ) -> RuntimeSizedArrayLookupTE<'s, 't> {
         assert_eq!(array_expr.result().coord.kind, KindT::RuntimeSizedArray(array_type));
-        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, variability, _sealed: () }
+        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, _sealed: () }
     }
 
 }
@@ -930,11 +913,11 @@ impl<'s, 't> ArrayLengthTE<'s, 't> {
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.array_expr.result().coord.region,
-                kind: KindT::Int(IntT::I32),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.array_expr.result().coord.region,
+                KindT::Int(IntT::I32),
+            ),
         }
     }
 
@@ -948,7 +931,6 @@ where 's: 't,
     pub struct_expr: ReferenceExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
     pub member_reference: CoordT<'s, 't>,
-    pub variability: VariabilityT,
 }
 
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
@@ -969,7 +951,6 @@ where 's: 't,
     pub struct_expr: ReferenceExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
     pub result_type2: CoordT<'s, 't>,
-    pub variability: VariabilityT,
 }
 
 impl<'s, 't> AddressMemberLookupTE<'s, 't> {
@@ -1064,6 +1045,17 @@ impl<'s, 't> ReinterpretTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT { coord: self.result_reference }
     }
+}
+/// Arena-allocated (see @TFITCX)
+#[derive(Debug)]
+pub struct CopyPrimTE<'s, 't> {
+    pub inner: ReferenceExpressionTE<'s, 't>,
+    pub result_coord: CoordT<'s, 't>,
+}
+impl<'s, 't> CopyPrimTE<'s, 't> {
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.result_coord }
+    }
 
 }
 /// Arena-allocated (see @TFITCX)
@@ -1084,7 +1076,7 @@ impl<'s, 't> ConstructTE<'s, 't> {
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct NewMutRuntimeSizedArrayTE<'s, 't>
+pub struct NewRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
@@ -1092,22 +1084,16 @@ where 's: 't,
     pub capacity_expr: ReferenceExpressionTE<'s, 't>,
 }
 
-impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
+impl<'s, 't> NewRuntimeSizedArrayTE<'s, 't> {
 
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        let ownership = match self.array_type.mutability() {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => panic!("vimpl"),
-            _ => panic!("vwat"),
-        };
         ReferenceResultT {
-            coord: CoordT {
-                ownership,
-                region: self.region,
-                kind: KindT::RuntimeSizedArray(self.array_type),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.region,
+                KindT::RuntimeSizedArray(self.array_type),
+            ),
         }
     }
 
@@ -1127,16 +1113,7 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
 
 
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        let ownership = match self.array_type.mutability() {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => {
-                panic!("Unimplemented: StaticArrayFromCallableTE result PlaceholderTemplataT");
-                // vimpl()
-            }
-            _ => panic!("vwat"),
-        };
-        ReferenceResultT { coord: CoordT { ownership, region: self.region, kind: KindT::StaticSizedArray(self.array_type) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.region, KindT::StaticSizedArray(self.array_type)) }
     }
 
 }
@@ -1167,11 +1144,11 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> where 's: 't, {
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.array_expr.result().coord.region,
-                kind: KindT::Void(VoidT),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.array_expr.result().coord.region,
+                KindT::Void(VoidT),
+            ),
         }
     }
 
@@ -1190,7 +1167,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
 
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT) } }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.expr.result().coord.region, KindT::Void(VoidT)) }
     }
 
 }
@@ -1204,20 +1181,20 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
-pub struct DestroyMutRuntimeSizedArrayTE<'s, 't>
+pub struct DestroyRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: ReferenceExpressionTE<'s, 't>,
 }
 
-impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {
+impl<'s, 't> DestroyRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.array_expr.result().coord.region,
-                kind: KindT::Void(VoidT),
-            }
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.array_expr.result().coord.region,
+                KindT::Void(VoidT),
+            )
         }
     }
 
@@ -1233,11 +1210,11 @@ where 's: 't,
 impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.array_expr.result().coord.region,
-                kind: KindT::Int(IntT { bits: 32 }),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.array_expr.result().coord.region,
+                KindT::Int(IntT { bits: 32 }),
+            ),
         }
     }
 
@@ -1254,11 +1231,11 @@ where 's: 't,
 impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         ReferenceResultT {
-            coord: CoordT {
-                ownership: OwnershipT::Share,
-                region: self.array_expr.result().coord.region,
-                kind: KindT::Void(VoidT),
-            },
+            coord: CoordT::new(
+                OwnershipT::Own,
+                self.array_expr.result().coord.region,
+                KindT::Void(VoidT),
+            ),
         }
     }
 
@@ -1316,11 +1293,11 @@ impl<'s, 't> UpcastTE<'s, 't> {
     pub fn result(&self) -> ReferenceResultT<'s, 't> {
         let inner_coord = self.inner_expr.result().coord;
         ReferenceResultT {
-            coord: CoordT {
-                ownership: inner_coord.ownership,
-                region: inner_coord.region,
-                kind: self.target_super_kind.into(),
-            }
+            coord: CoordT::new(
+                inner_coord.ownership,
+                inner_coord.region,
+                self.target_super_kind.into(),
+            )
         }
     }
 
@@ -1346,11 +1323,11 @@ impl<'s, 't> SoftLoadTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> {
         let addr_result = self.expr.result();
         ReferenceResultT {
-            coord: CoordT {
-                ownership: self.target_ownership,
-                region: addr_result.coord.region,
-                kind: addr_result.coord.kind,
-            }
+            coord: CoordT::new(
+                self.target_ownership,
+                addr_result.coord.region,
+                addr_result.coord.kind,
+            )
         }
     }
 
@@ -1369,70 +1346,7 @@ impl<'s, 't> DestroyTE<'s, 't> {
 
 
     fn result(&self) -> ReferenceResultT<'s, 't> {
-        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT {}) } }
-    }
-
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct DestroyImmRuntimeSizedArrayTE<'s, 't>
-where 's: 't,
-{
-    pub array_expr: ReferenceExpressionTE<'s, 't>,
-    pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-    pub consumer: ReferenceExpressionTE<'s, 't>,
-    pub consumer_method: &'t PrototypeT<'s, 't>,
-}
-
-impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-
-
-}
-impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> where 's: 't, {
-    fn new(
-        array_expr: ReferenceExpressionTE<'s, 't>,
-        array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-        consumer: ReferenceExpressionTE<'s, 't>,
-        consumer_method: &'t PrototypeT<'s, 't>,
-    ) -> DestroyImmRuntimeSizedArrayTE<'s, 't> { panic!("Unimplemented: DestroyImmRuntimeSizedArrayTE::new"); }
-
-}
-impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> {
-        panic!("Unimplemented: result");
-        // ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
-    }
-
-}
-/// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
-pub struct NewImmRuntimeSizedArrayTE<'s, 't>
-where 's: 't,
-{
-    pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-    pub region: RegionT,
-    pub size_expr: ReferenceExpressionTE<'s, 't>,
-    pub generator: ReferenceExpressionTE<'s, 't>,
-    pub generator_method: &'t PrototypeT<'s, 't>,
-}
-
-impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
-
-
-    fn result(&self) -> ReferenceResultT<'s, 't> {
-        let ownership = match self.array_type.mutability() {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => panic!("vimpl"),
-            _ => panic!("vwat"),
-        };
-        ReferenceResultT {
-            coord: CoordT {
-                ownership,
-                region: self.region,
-                kind: KindT::RuntimeSizedArray(self.array_type),
-            },
-        }
+        ReferenceResultT { coord: CoordT::new(OwnershipT::Own, self.expr.result().coord.region, KindT::Void(VoidT {})) }
     }
 
 }

@@ -1,0 +1,5 @@
+exported func main() int {
+  a = [#](23, 31, 42);
+  // TSUGAR:   return a.2;
+  return __copy_prim(a.2);
+}

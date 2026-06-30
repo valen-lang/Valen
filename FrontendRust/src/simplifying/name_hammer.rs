@@ -28,6 +28,8 @@ use std::marker::PhantomData;
 use std::mem::discriminant;
 
 
+
+
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -51,6 +53,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn add_step(
         &self,
         _hamuts: &Hamuts<'s, 'i, 'h>,
@@ -71,6 +74,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
 }
 
 
+
+
+
 pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
     panic!("Unimplemented: translate_code_location");
     // val CodeLocationS(fileCoord, offset) = location
@@ -78,6 +84,7 @@ pub fn translate_code_location<'p>(location: &CodeLocationS<'p>) -> VonObject {
     //   VonMember("file", translateFileCoordinate(fileCoord)),
     //   VonMember("offset", VonInt(offset))))
 }
+
 
 
 pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
@@ -91,6 +98,7 @@ pub fn translate_file_coordinate<'p>(coord: &FileCoordinate<'p>) -> VonObject {
     //     VonMember("paackage", VonArray(None, paackage.map(_.str).map(VonStr).toVector)),
     //     VonMember("filename", VonStr(filename))))
 }
+
 
 
 pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObject {
@@ -116,6 +124,7 @@ pub fn translate_package_coordinate<'p>(coord: &PackageCoordinate<'p>) -> VonObj
 }
 
 
+
 pub fn simplify_id<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, id: &IdI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -132,6 +141,7 @@ where 's: 'i, 'i: 'h,
     steps.push(simplify_name(interner, scout_arena, local_name));
     SimpleId { steps: interner.alloc_slice_from_vec(steps) }
 }
+
 
 
 pub fn simplify_name<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, name: &INameI<'s, 'i>) -> SimpleIdStep<'s, 'h>
@@ -161,6 +171,7 @@ where 's: 'i, 'i: 'h,
 }
 
 
+
 pub fn simplify_templata<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, templata: &ITemplataI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
@@ -172,6 +183,7 @@ where 's: 'i, 'i: 'h,
         }
     }
 }
+
 
 
 pub fn simplify_kind<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &KindIT<'s, 'i>) -> SimpleId<'s, 'h>
@@ -194,10 +206,11 @@ where 's: 'i, 'i: 'h,
 }
 
 
+
 pub fn simplify_coord<'s, 'i, 'h>(interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, value: &CoordI<'s, 'i>) -> SimpleId<'s, 'h>
 where 's: 'i, 'i: 'h,
 {
-    let CoordI { ownership, kind } = *value;
+    let CoordI { ownership, kind, .. } = *value;
     let kind_id = simplify_kind(interner, scout_arena, &kind);
     match ownership {
         OwnershipI::ImmutableShare => kind_id,

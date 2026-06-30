@@ -11,7 +11,6 @@ use crate::typing::env::function_environment_t::ILocalVariableT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::test::traverse::NodeRefT;
-use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
@@ -35,34 +34,35 @@ fn simple_array_list_no_optionals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: __copy_prim wraps for len() inside int return, index inside [], and l.get(1) inside int return
         r"
 import v.builtins.migrate.*;
 
 #!DeriveStructDrop
 struct List<E Ref> {
-  array! []<mut>E;
+  array []E;
 }
 func drop<E>(self List<E>)
 where func drop(E)void {
-  [array] = self;
-  drop(array);
+  [array] = ^self;
+  drop(^array);
 }
-func len<E>(list &List<E>) int { return len(&list.array); }
+func len<E>(list &List<E>) int { return __copy_prim(&len(&list.array)); }
 func add<E>(list &List<E>, newElement E) {
-  oldArray = set list.array = Array<mut, E>(len(&list) + 1);
-  migrate(oldArray, list.array);
-  list.array.push(newElement);
+  oldArray = set list.array = Array<E>(len(&list) + 1);
+  migrate(^oldArray, &list.array);
+  (&list.array).push(^newElement);
 }
 func get<E>(list &List<E>, index int) &E {
-  a = list.array;
-  return a[index];
+  a = &list.array;
+  return &a[__copy_prim(&index)];
 }
 exported func main() int {
-  l = List<int>(Array<mut, int>(0));
+  l = List<int>(Array<int>(0));
   add(&l, 5);
   add(&l, 9);
   add(&l, 7);
-  return l.get(1);
+  return __copy_prim(&l.get(1));
 }
 ",
     );
@@ -90,15 +90,16 @@ fn doubling_array_list() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: l.get(1) returns &int; wrap with __copy_prim
         r"
 import list.*;
 
 exported func main() int {
-  l = List<int>(Array<mut, int>(0));
+  l = List<int>(Array<int>(0));
   add(&l, 5);
   add(&l, 9);
   add(&l, 7);
-  return l.get(1);
+  return __copy_prim(&l.get(1));
 }
 
 ",
@@ -127,6 +128,7 @@ fn array_list_zero_constructor() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: l.get(1) returns &int
         r"
 import list.*;
 
@@ -135,7 +137,7 @@ exported func main() int {
   add(&l, 5);
   add(&l, 9);
   add(&l, 7);
-  return l.get(1);
+  return __copy_prim(&l.get(1));
 }
 
 ",
@@ -200,6 +202,7 @@ fn array_list_set() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: l.get(1) returns &int
         r"
 import list.*;
 
@@ -209,7 +212,7 @@ exported func main() int {
   add(&l, 9);
   add(&l, 7);
   set(&l, 1, 11);
-  return l.get(1);
+  return __copy_prim(&l.get(1));
 }
 ",
     );
@@ -237,6 +240,7 @@ fn array_list_with_optionals_with_mutable_element() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: l.get(1).hp is &int
         r"
 import list.*;
 struct Marine { hp int; }
@@ -244,13 +248,13 @@ struct Marine { hp int; }
 exported func main() int {
   l =
       List<Marine>(
-          Array<mut, Marine>(
+          Array<Marine>(
               0,
               (index) => { Marine(index) }));
   add(&l, Marine(5));
   add(&l, Marine(9));
   add(&l, Marine(7));
-  return l.get(1).hp;
+  return __copy_prim(&l.get(1).hp);
 }
 ",
     );
@@ -278,6 +282,7 @@ fn mutate_mutable_from_in_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m.hp is &int
         r"
 import list.*;
 struct Marine { hp int; }
@@ -289,7 +294,7 @@ exported func main() int {
   };
   lam();
   lam();
-  return m.hp;
+  return __copy_prim(&m.hp);
 }
 ",
     );
@@ -301,7 +306,6 @@ exported func main() int {
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
-                    variability: VariabilityT::Varying,
                     ..
                 }),
                 ..
@@ -333,6 +337,7 @@ fn move_mutable_from_in_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m2.hp is &int
         r"
 import list.*;
 struct Marine { hp int; }
@@ -341,7 +346,7 @@ exported func main() int {
   m Opt<Marine> = Some(Marine(6));
   lam = {
     m2 = (set m = None<Marine>()).get();
-    m2.hp
+    __copy_prim(&m2.hp)
   };
   return lam();
 }
@@ -355,7 +360,6 @@ exported func main() int {
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Addressible(AddressibleLocalVariableT {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }),
-                    variability: VariabilityT::Varying,
                     ..
                 }),
                 ..

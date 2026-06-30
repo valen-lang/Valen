@@ -59,6 +59,9 @@ pub enum IFunctionParent<'s>
 }
 
 
+
+
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParentCitizen<'s> {
   pub citizen_is_interface: bool,

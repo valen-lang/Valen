@@ -60,6 +60,11 @@ pub struct OwnershippedSE<'s> {
   pub inner_expr: &'s IExpressionSE<'s>,
   pub target_ownership: LoadAsP,
 }
+#[derive(Debug, PartialEq)]
+pub struct CopyPrimSE<'s> {
+  pub range: RangeS<'s>,
+  pub inner_expr: &'s IExpressionSE<'s>,
+}
 
 
 
@@ -138,6 +143,7 @@ pub enum IExpressionSE<'s> {
   OverloadSet(OverloadSetSE<'s>),
   RuneLookup(RuneLookupSE<'s>),
   Ownershipped(OwnershippedSE<'s>),
+  CopyPrim(CopyPrimSE<'s>),
 }
 
 impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
@@ -173,6 +179,7 @@ impl<'s> IExpressionSETrait<'s> for IExpressionSE<'s> {
       IExpressionSE::OverloadSet(x) => x.lookup.range.clone(),
       IExpressionSE::RuneLookup(x) => x.range.clone(),
       IExpressionSE::Ownershipped(x) => x.range.clone(),
+      IExpressionSE::CopyPrim(x) => x.range.clone(),
     }
   }
   
@@ -219,8 +226,6 @@ pub struct StaticArrayFromValuesSE<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub maybe_element_type_st: Option<RuneUsage<'s>>,
-  pub mutability_st: RuneUsage<'s>,
-  pub variability_st: RuneUsage<'s>,
   pub size_st: RuneUsage<'s>,
   pub elements: &'s [&'s IExpressionSE<'s>],
 }
@@ -230,8 +235,6 @@ pub struct StaticArrayFromCallableSE<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub maybe_element_type_st: Option<RuneUsage<'s>>,
-  pub mutability_st: RuneUsage<'s>,
-  pub variability_st: RuneUsage<'s>,
   pub size_st: RuneUsage<'s>,
   pub callable: &'s IExpressionSE<'s>,
 }
@@ -241,7 +244,6 @@ pub struct NewRuntimeSizedArraySE<'s> {
   pub range: RangeS<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub maybe_element_type_st: Option<RuneUsage<'s>>,
-  pub mutability_st: RuneUsage<'s>,
   pub size: &'s IExpressionSE<'s>,
   pub callable: Option<&'s IExpressionSE<'s>>,
 }

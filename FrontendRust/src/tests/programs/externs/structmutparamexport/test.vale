@@ -4,8 +4,10 @@ exported struct Spaceship {
 }
 
 extern func sumSpaceshipFields(s &Spaceship) int;
-exported func spaceshipGetA(s &Spaceship) int { s.a }
-exported func spaceshipGetB(s &Spaceship) int { s.b }
+// TSUGAR: exported func spaceshipGetA(s &Spaceship) int { s.a }
+exported func spaceshipGetA(s &Spaceship) int { __copy_prim(s.a) }
+// TSUGAR: exported func spaceshipGetB(s &Spaceship) int { s.b }
+exported func spaceshipGetB(s &Spaceship) int { __copy_prim(s.b) }
 
 exported func main() int {
   return sumSpaceshipFields(&Spaceship(37, 5));

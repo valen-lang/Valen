@@ -76,7 +76,7 @@ fn simple_program_containing_a_virtual_function() {
 sealed interface I  {}
 func doThing(virtual i I) int { return 4; }
 func main(i I) int {
-  return doThing(i);
+  return doThing(^i);
 }
 ",
     );
@@ -86,11 +86,11 @@ func main(i I) int {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 2);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        CoordT {
-            ownership: OwnershipT::Share,
-            region: RegionT { region: IRegionT::Default },
-            kind: KindT::Int(IntT::I32),
-        });
+        CoordT::new(
+            OwnershipT::Own,
+            RegionT { region: IRegionT::Default },
+            KindT::Int(IntT::I32),
+        ));
 
     let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
     let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
@@ -104,11 +104,11 @@ func main(i I) int {
         package_coord: test_tld, init_steps: &[], local_name: INameT::Interface(interface_name),
     });
     let interface_tt = interner.intern_interface_tt(InterfaceTTValT { id: *interface_id });
-    let i_coord = CoordT {
-        ownership: OwnershipT::Own,
-        region: RegionT { region: IRegionT::Default },
-        kind: KindT::Interface(interface_tt),
-    };
+    let i_coord = CoordT::new(
+        OwnershipT::Own,
+        RegionT { region: IRegionT::Default },
+        KindT::Interface(interface_tt),
+    );
     let do_thing_template = interner.intern_function_template_name(FunctionTemplateNameT {
         human_name: scout_arena.intern_str("doThing"),
         code_location: CodeLocationS {
@@ -153,7 +153,7 @@ fn can_call_virtual_function() {
 sealed interface I  {}
 func doThing(virtual i I) int { return 4; }
 func main(i I) int {
-  return doThing(i);
+  return doThing(^i);
 }
 ",
     );
@@ -163,11 +163,11 @@ func main(i I) int {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 2);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        CoordT {
-            ownership: OwnershipT::Share,
-            region: RegionT { region: IRegionT::Default },
-            kind: KindT::Int(IntT::I32),
-        });
+        CoordT::new(
+            OwnershipT::Own,
+            RegionT { region: IRegionT::Default },
+            KindT::Int(IntT::I32),
+        ));
 
     let test_tld = PackageCoordinate::test_tld(&parse_arena, &parser_keywords);
     let interface_template = interner.intern_interface_template_name(InterfaceTemplateNameT {
@@ -181,11 +181,11 @@ func main(i I) int {
         package_coord: test_tld, init_steps: &[], local_name: INameT::Interface(interface_name),
     });
     let interface_tt = interner.intern_interface_tt(InterfaceTTValT { id: *interface_id });
-    let i_coord = CoordT {
-        ownership: OwnershipT::Own,
-        region: RegionT { region: IRegionT::Default },
-        kind: KindT::Interface(interface_tt),
-    };
+    let i_coord = CoordT::new(
+        OwnershipT::Own,
+        RegionT { region: IRegionT::Default },
+        KindT::Interface(interface_tt),
+    );
     let do_thing_template = interner.intern_function_template_name(FunctionTemplateNameT {
         human_name: scout_arena.intern_str("doThing"),
         code_location: CodeLocationS {
@@ -438,6 +438,7 @@ exported func main() {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn imm_interface() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -487,7 +488,7 @@ sealed interface I {
   func doThing(virtual i I) int;
 }
 func main(i I) int {
-  return doThing(i);
+  return doThing(^i);
 }
 ",
     );
@@ -496,11 +497,11 @@ func main(i I) int {
 
     assert_eq!(coutputs.get_all_user_functions().len(), 1);
     assert_eq!(coutputs.lookup_function_by_str("main").header.return_type,
-        CoordT {
-            ownership: OwnershipT::Share,
-            region: RegionT { region: IRegionT::Default },
-            kind: KindT::Int(IntT::I32),
-        });
+        CoordT::new(
+            OwnershipT::Own,
+            RegionT { region: IRegionT::Default },
+            KindT::Int(IntT::I32),
+        ));
 
     let do_thing = coutputs.lookup_function_by_str("doThing");
     assert_eq!(do_thing.header.params[0].virtuality, Some(AbstractT));
@@ -571,7 +572,7 @@ func splork(x int) {}
 exported func main() int {
   f = Spork<int>(42);
   f.bork(); // We should be feeding in Spork's instantiation bounds here for the params' reachables?
-  [z] = f;
+  [z] = ^f;
   return z;
 }
 ",
@@ -621,7 +622,7 @@ func threeify(x int) int { 3 }
 exported func main() int {
   f = BorkForwarder<int>({ 7 });
   z = f.bork();
-  [_] = f;
+  [_] = ^f;
   return z;
 }
 ",

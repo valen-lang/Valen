@@ -5,7 +5,8 @@ exported struct Firefly {
   fuel int;
 }
 impl IShip for Firefly;
-func getFuel(ship &Firefly) int { ship.fuel }
+// TSUGAR: func getFuel(ship &Firefly) int { ship.fuel }
+func getFuel(ship &Firefly) int { __copy_prim(ship.fuel) }
 
 exported func makeFirefly(fuel int) IShip {
   Firefly(fuel)

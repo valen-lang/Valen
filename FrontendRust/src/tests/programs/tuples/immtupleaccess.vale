@@ -1,4 +1,5 @@
 exported func main() int {
   t = (true, 42);
-  return t.1;
+  // TSUGAR:   return t.1;
+  return __copy_prim(t.1);
 }

@@ -3,8 +3,8 @@ use crate::higher_typing::ast::*;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
   IntegerTemplataType, KindTemplataType, LocationTemplataType,
-  MutabilityTemplataType, OwnershipTemplataType, PrototypeTemplataType,
-  StringTemplataType, TemplateTemplataType, VariabilityTemplataType,
+  SharednessTemplataType, OwnershipTemplataType, PrototypeTemplataType,
+  StringTemplataType, TemplateTemplataType,
 };
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
@@ -21,25 +21,13 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 
 
-pub fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
-  match templata {
-    // case t @ MutabilityTemplataT(_) => t
-    t @ ITemplataT::Mutability(_) => t,
-    // case PlaceholderTemplataT(idT, MutabilityTemplataType()) => PlaceholderTemplataT(idT, MutabilityTemplataType())
-    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::MutabilityTemplataType(_)) => templata,
-    // case _ => vfail()
-    _ => panic!("expect_mutability: not a mutability"),
-  }
-}
 
-pub fn expect_variability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
+pub fn expect_sharedness<'s, 't>(templata: ITemplataT<'s, 't>) -> SharednessT {
   match templata {
-    // case t @ VariabilityTemplataT(_) => t
-    t @ ITemplataT::Variability(_) => t,
-    // case PlaceholderTemplataT(idT, VariabilityTemplataType()) => PlaceholderTemplataT(idT, VariabilityTemplataType())
-    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::VariabilityTemplataType(_)) => templata,
-    // case _ => vfail()
-    _ => panic!("expect_variability: not a variability"),
+    // VCOORD: there shouldnt be an ITemplataT::Mutability
+    ITemplataT::Mutability(SharednessTemplataT { sharedness }) => sharedness,
+    ITemplataT::Placeholder(_) => panic!("expect_sharedness: placeholder — sharedness must be known at parse time"),
+    _ => panic!("expect_sharedness: not a mutability"),
   }
 }
 
@@ -82,16 +70,6 @@ fn expect_integer_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> IntegerTempl
   // templata match { case t @ IntegerTemplataT(_) => t; case _ => vfail() }
 }
 
-fn expect_mutability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> MutabilityTemplataT {
-  panic!("Unimplemented: expect_mutability_templata");
-  // templata match { case t @ MutabilityTemplataT(_) => t; case _ => vfail() }
-}
-
-fn expect_variability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
-  panic!("Unimplemented: expect_variability_templata");
-  // templata match { case t @ VariabilityTemplataT(_) => t; case _ => vfail() }
-}
-
 fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind");
   // templata match {
@@ -112,8 +90,7 @@ pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),
   Kind(&'t KindTemplataT<'s, 't>),
   Placeholder(&'t PlaceholderTemplataT<'s, 't>),
-  Mutability(MutabilityTemplataT),
-  Variability(VariabilityTemplataT),
+  Mutability(SharednessTemplataT),
   Ownership(OwnershipTemplataT),
   Integer(i64),
   Boolean(bool),
@@ -136,8 +113,7 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
       ITemplataT::Placeholder(p) => p.tyype,
-      ITemplataT::Mutability(_) => ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-      ITemplataT::Variability(_) => ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+      ITemplataT::Mutability(_) => ITemplataType::SharednessTemplataType(SharednessTemplataType {}),
       ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
       ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
       ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
@@ -152,7 +128,6 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       }
       ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
         param_types: scout_arena.alloc_slice_copy(&[
-          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
           ITemplataType::CoordTemplataType(CoordTemplataType {}),
         ]),
         return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
@@ -160,8 +135,6 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::StaticSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
         param_types: scout_arena.alloc_slice_copy(&[
           ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
-          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-          ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
           ITemplataType::CoordTemplataType(CoordTemplataType {}),
         ]),
         return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
@@ -337,14 +310,8 @@ pub struct OwnershipTemplataT {
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct VariabilityTemplataT {
-    pub variability: VariabilityT,
-}
-
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct MutabilityTemplataT {
-    pub mutability: MutabilityT,
+pub struct SharednessTemplataT {
+    pub sharedness: SharednessT,
 }
 
 /// Value-type (see @TFITCX)

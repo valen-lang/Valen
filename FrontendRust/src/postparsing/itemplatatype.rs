@@ -23,7 +23,7 @@ pub struct IntegerTemplataType {}
 pub struct BooleanTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MutabilityTemplataType {}
+pub struct SharednessTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrototypeTemplataType {}
@@ -36,9 +36,6 @@ pub struct LocationTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct OwnershipTemplataType {}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VariabilityTemplataType {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackTemplataType<'s> {
@@ -60,12 +57,11 @@ pub enum ITemplataType<'s> {
   FunctionTemplataType(FunctionTemplataType),
   IntegerTemplataType(IntegerTemplataType),
   BooleanTemplataType(BooleanTemplataType),
-  MutabilityTemplataType(MutabilityTemplataType),
+  SharednessTemplataType(SharednessTemplataType),
   PrototypeTemplataType(PrototypeTemplataType),
   StringTemplataType(StringTemplataType),
   LocationTemplataType(LocationTemplataType),
   OwnershipTemplataType(OwnershipTemplataType),
-  VariabilityTemplataType(VariabilityTemplataType),
   PackTemplataType(PackTemplataType<'s>),
   TemplateTemplataType(TemplateTemplataType<'s>),
 }

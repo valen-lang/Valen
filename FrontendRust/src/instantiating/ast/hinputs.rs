@@ -13,6 +13,7 @@ use crate::instantiating::ast::names::INameI;
 use crate::instantiating::ast::names::StructNameI;
 
 
+
 /// Temporary state (see @TFITCX)
 pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
     pub rune_to_function_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i>>,
@@ -20,6 +21,8 @@ pub struct InstantiationBoundArgumentsI<'s, 'i> where 's: 'i {
         ArenaIndexMap<'i, IRuneS<'s>, ArenaIndexMap<'i, IRuneS<'s>, &'i PrototypeI<'s, 'i>>>,
     pub rune_to_impl_bound_arg: ArenaIndexMap<'i, IRuneS<'s>, IdI<'s, 'i>>,
 }
+
+
 
 
 /// Temporary state (see @TFITCX) — top-level container for instantiated output.
@@ -37,11 +40,13 @@ pub struct HinputsI<'s, 'i> where 's: 'i {
     pub function_externs: &'i [FunctionExternI<'s, 'i>],
 }
 
+
 impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
     pub fn to_string(&self) -> String {
         panic!("Unimplemented: to_string")
         // "HinputsI#()"
     }
+
     pub fn lookup_function_by_str(&self, human_name: &str) -> &'i FunctionDefinitionI<'s, 'i> {
         let matches: Vec<&&'i FunctionDefinitionI<'s, 'i>> = self.functions.iter().filter(|f| {
             match f.header.id.local_name {
@@ -66,12 +71,14 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         self.structs.iter().find(|s| s.instantiated_citizen.id == *_struct_id).copied().expect("lookup_struct: not found")
     }
 
+
     pub fn lookup_interface(
         &self,
         _interface_id: &IdI<'s, 'i>,
     ) -> &'i InterfaceDefinitionI<'s, 'i> {
         self.interfaces.iter().find(|i| i.instantiated_interface.id == *_interface_id).expect("lookup_interface: not found")
     }
+
 
     pub fn lookup_citizen(
         &self,
@@ -81,6 +88,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // vassertOne(structs.find(_.instantiatedCitizen.id == citizenId) ++ interfaces.find(_.instantiatedCitizen.id == citizenId))
     }
 
+
     pub fn lookup_struct_by_template(
         &self,
         _struct_template_name: &IStructTemplateNameI<'s, 'i>,
@@ -88,6 +96,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         panic!("Unimplemented: lookup_struct_by_template")
         // vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
     }
+
 
     pub fn lookup_interface_by_template(
         &self,
@@ -97,6 +106,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
     }
 
+
     pub fn lookup_impl_by_template(
         &self,
         _impl_template_name: &IImplTemplateNameI<'s, 'i>,
@@ -104,6 +114,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         panic!("Unimplemented: lookup_impl_by_template")
         // vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
     }
+
 
     pub fn lookup_edge(
         &self,
@@ -113,6 +124,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
     }
 
+
     pub fn lookup_function_by_template(
         &self,
         _func_template_name: &IFunctionTemplateNameI<'s, 'i>,
@@ -120,6 +132,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         panic!("Unimplemented: lookup_function_by_template")
         // functions.find(_.header.id.localName.template == funcTemplateName).headOption
     }
+
 
     pub fn lookup_function(
         &self,
@@ -134,6 +147,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // else if (matches.size > 1) vfail("Multiple found!")
         // matches.head
     }
+
 
     pub fn lookup_struct_by_name(
         &self,
@@ -153,6 +167,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         matches[0]
     }
 
+
     pub fn lookup_impl(
         &self,
         _sub_citizen_it: &IdI<'s, 'i>,
@@ -161,6 +176,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         panic!("Unimplemented: lookup_impl")
         // vassertSome(vassertSome(interfaceToSubCitizenToEdge.get(interfaceIT)).get(subCitizenIT))
     }
+
 
     pub fn lookup_interface_by_name(
         &self,
@@ -176,6 +192,7 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // matches.head
     }
 
+
     pub fn lookup_user_function(
         &self,
         _human_name: &str,
@@ -188,12 +205,14 @@ impl<'s, 'i> HinputsI<'s, 'i> where 's: 'i {
         // matches.head
     }
 
+
     pub fn get_all_non_extern_functions(
         &self,
     ) -> Vec<&'i FunctionDefinitionI<'s, 'i>> {
         panic!("Unimplemented: get_all_non_extern_functions")
         // functions.filter(!_.header.isExtern)
     }
+
 
     pub fn get_all_user_functions(
         &self,

@@ -397,10 +397,10 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         coord: CoordT<'s, 't>,
     ) -> CoordT<'s, 't> {
-        let CoordT { ownership, region: original_region, kind } = coord;
+        let CoordT { ownership, region: original_region, kind, .. } = coord;
         let result_region = original_region;
         match Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, kind) {
-            ITemplataT::Kind(k) => CoordT { ownership, region: result_region, kind: k.kind },
+            ITemplataT::Kind(k) => CoordT::new(ownership, result_region, k.kind),
             ITemplataT::Coord(c) => {
                 let result_ownership = match (ownership, c.coord.ownership) {
                     (OwnershipT::Share, _) => OwnershipT::Share,
@@ -411,7 +411,7 @@ where 's: 't,
                     (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
                     _ => unreachable!("remaining Weak-on-substituting-side ownership pairs are degenerate"),
                 };
-                CoordT { ownership: result_ownership, region: result_region, kind: c.coord.kind }
+                CoordT::new(result_ownership, result_region, c.coord.kind)
             }
             _ => unreachable!("exhaustive over KindTemplataT/CoordTemplataT only"),
         }
@@ -438,7 +438,6 @@ where 's: 't,
             KindT::RuntimeSizedArray(rsa) => {
                 let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
-                    mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.mutability)),
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
                     self_region: RegionT { region: IRegionT::Default },
                 });
@@ -457,14 +456,12 @@ where 's: 't,
             KindT::StaticSizedArray(ssa) => {
                 let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
                 let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
-                    mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.mutability)),
                     element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
                     self_region: RegionT { region: IRegionT::Default },
                 });
                 let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
                     template: ssa_name.template,
                     size: expect_integer(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.size)),
-                    variability: expect_variability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.variability)),
                     arr: new_arr_name,
                 });
                 let new_id = *interner.intern_id(IdValT {
@@ -763,7 +760,6 @@ where 's: 't,
                 }
             }
             ITemplataT::Mutability(_) => templata,
-            ITemplataT::Variability(_) => templata,
             ITemplataT::Integer(_) => templata,
             ITemplataT::Boolean(_) => templata,
             ITemplataT::Prototype(p) => {
@@ -1148,8 +1144,8 @@ where 's: 't,
         source_pointer_type: CoordT<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
     ) -> bool {
-        let CoordT { ownership: target_ownership, region: target_region, kind: target_type } = target_pointer_type;
-        let CoordT { ownership: source_ownership, region: source_region, kind: source_type } = source_pointer_type;
+        let CoordT { ownership: target_ownership, region: target_region, kind: target_type, .. } = target_pointer_type;
+        let CoordT { ownership: source_ownership, region: source_region, kind: source_type, .. } = source_pointer_type;
 
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
@@ -1182,8 +1178,6 @@ where 's: 't,
 
         match (source_ownership, target_ownership) {
             (a, b) if a == b => {}
-            // At some point maybe we should automatically convert borrow to pointer and vice versa
-            // and perhaps automatically promote borrow or pointer to weak?
             (OwnershipT::Own, OwnershipT::Borrow) => return false,
             (OwnershipT::Own, OwnershipT::Weak) => return false,
             (OwnershipT::Own, OwnershipT::Share) => return false,
@@ -1209,17 +1203,11 @@ where 's: 't,
         region: RegionT,
         ownership_if_mutable: OwnershipT,
     ) -> CoordT<'s, 't> {
-        let mutability = self.get_mutability(coutputs, kind);
-        let ownership =
-            match mutability {
-                ITemplataT::Placeholder(_) => {
-                    panic!("Unimplemented: pointify_kind PlaceholderTemplataT");
-                    // vimpl()
-                }
-                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => ownership_if_mutable,
-                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                _ => unreachable!("exhaustive over Mutable/Immutable/Placeholder"),
-            };
+        // VCOORD: not sure this should exist long term
+        let ownership = match self.get_sharedness(coutputs, kind) {
+            SharednessT::Single => ownership_if_mutable,
+            SharednessT::Shared => OwnershipT::Share,
+        };
         match kind {
             KindT::RuntimeSizedArray(_) => {
                 panic!("Unimplemented: pointify_kind RuntimeSizedArray");
@@ -1229,14 +1217,14 @@ where 's: 't,
                 panic!("Unimplemented: pointify_kind StaticSizedArray");
                 // CoordT(ownership, region, a)
             }
-            KindT::Struct(_) => CoordT { ownership, region, kind },
-            KindT::Interface(_) => CoordT { ownership, region, kind },
-            KindT::Void(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            KindT::Int(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            KindT::Float(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            KindT::Bool(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            KindT::Str(_) => CoordT { ownership: OwnershipT::Share, region, kind },
-            _ => unreachable!("exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str"),
+            KindT::Struct(_) => CoordT::new(ownership, region, kind),
+            KindT::Interface(_) => CoordT::new(ownership, region, kind),
+            KindT::Void(_) => CoordT::new(ownership, region, kind),
+            KindT::Int(_) => CoordT::new(ownership, region, kind),
+            KindT::Float(_) => CoordT::new(ownership, region, kind),
+            KindT::Bool(_) => CoordT::new(ownership, region, kind),
+            KindT::Str(_) => CoordT::new(ownership, region, kind),
+            _ => unreachable!("Scala's pointify_kind is exhaustive over RSA/SSA/Struct/Interface/Void/Int/Float/Bool/Str — Never/OverloadSet/KindPlaceholder not in Scala"),
         }
     }
 
@@ -1275,14 +1263,11 @@ where 's: 't,
         kind: KindT<'s, 't>,
         region: RegionT,
     ) -> CoordT<'s, 't> {
-        let mutability = self.get_mutability(coutputs, kind);
-        let ownership = match mutability {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(_) => OwnershipT::Own,
-            other => unreachable!("Unexpected mutability templata: {:?}", other),
+        let ownership = match self.get_sharedness(coutputs, kind) {
+            SharednessT::Single => OwnershipT::Own,
+            SharednessT::Shared => OwnershipT::Share,
         };
-        CoordT { ownership, region, kind }
+        CoordT::new(ownership, region, kind)
     }
 
     pub fn coerce_to_coord(
@@ -1428,17 +1413,13 @@ where 's: 't,
 
         // val kindPlaceholderT =
         //   createKindPlaceholderInner(
-        //     coutputs, env, namePrefix, index, rune, kindOwnership, registerWithCompilerOutputs)
+        //     coutputs, env, namePrefix, index, rune, sharedness, registerWithCompilerOutputs)
         let kind_placeholder_t = self.create_kind_placeholder_inner(
             coutputs, env, name_prefix, index, rune, kind_ownership, register_with_compiler_outputs);
 
-        // CoordTemplataT(CoordT(kindOwnership, regionPlaceholderTemplata, kindPlaceholderT.kind))
+        // CoordTemplataT(CoordT(sharedness, regionPlaceholderTemplata, kindPlaceholderT.kind))
         CoordTemplataT {
-            coord: CoordT {
-                ownership: kind_ownership,
-                region: region_placeholder_templata,
-                kind: kind_placeholder_t.kind,
-            }
+            coord: CoordT::new(kind_ownership, region_placeholder_templata, kind_placeholder_t.kind)
         }
     }
 
@@ -1477,19 +1458,16 @@ where 's: 't,
             // coutputs.declareType(kindPlaceholderTemplateId)
             coutputs.declare_type(kind_placeholder_template_id);
 
-            // val mutability = MutabilityTemplataT(kindOwnership match {
+            // val mutability = SharednessTemplataT(sharedness match {
             //   case OwnT => MutableT
             //   case ShareT => ImmutableT
             // })
-            let mutability = ITemplataT::Mutability(MutabilityTemplataT {
-                mutability: match kind_ownership {
-                    OwnershipT::Own => MutabilityT::Mutable,
-                    OwnershipT::Share => MutabilityT::Immutable,
-                    _ => unreachable!("exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
-                },
-            });
-            // coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)
-            coutputs.declare_type_mutability(kind_placeholder_template_id, mutability);
+            let sharedness = match kind_ownership {
+                OwnershipT::Own => SharednessT::Single,
+                OwnershipT::Share => SharednessT::Shared,
+                _ => unreachable!("Scala's create_kind_placeholder_inner is exhaustive over Own/Share — Borrow/Weak not valid kind ownerships"),
+            };
+            coutputs.declare_type_mutability(kind_placeholder_template_id, sharedness);
 
             // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
             // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not

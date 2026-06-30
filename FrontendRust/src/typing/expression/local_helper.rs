@@ -27,12 +27,12 @@ where 's: 't,
     pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'t>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
         let var_id = self.typing_interner.intern_typing_pass_temporary_var_name(
             TypingPassTemporaryVarNameT { life });
-        let rlv = ReferenceLocalVariableT { name: var_id.into(), variability: VariabilityT::Final, coord };
+        let rlv = ReferenceLocalVariableT { name: var_id.into(), coord };
         nenv.add_variable(IVariableT::ReferenceLocal(rlv));
         rlv
     }
 
-    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
+    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'t>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> Result<&'t DeferTE<'s, 't>, ICompileErrorT<'s, 't>> {
         match target_ownership {
             OwnershipT::Borrow => {}
             _ => {
@@ -50,14 +50,9 @@ where 's: 't,
         let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
         let env_in_denizen: IInDenizenEnvironmentT<'s, 't> =
             IInDenizenEnvironmentT::Node(snapshot);
-        // Until a test forces Result conversion through make_temporary_local_defer.
-        let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te)
-            .unwrap_or_else(|_| {
-                panic!("Unimplemented: Result propagation through make_temporary_local_defer")
-                // throw CompileErrorExceptionT — drop() throws CompileErrorException in Scala
-            });
+        let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te)?;
         assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
-        DeferTE::new(let_expr_2, destruct_expr_2)
+        Ok(self.typing_interner.alloc(DeferTE::new(let_expr_2, destruct_expr_2)))
     }
 
     pub fn unlet_local_without_dropping(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, local_var: &ILocalVariableT<'s, 't>) -> UnletTE<'s, 't> {
@@ -88,21 +83,17 @@ where 's: 't,
             panic!("There's already a variable named {:?}", var_id);
         }
 
-        let variability = self.determine_local_variability(local_variable_a);
-
-        let mutable = self.get_mutability(coutputs, reference_type2.kind);
+        let mutable = self.get_sharedness(coutputs, reference_type2.kind);
         let addressible = Compiler::determine_if_local_is_addressible(mutable, local_variable_a);
 
         let local_var = if addressible {
             ILocalVariableT::Addressible(AddressibleLocalVariableT {
                 name: var_id,
-                variability,
                 coord: reference_type2,
             })
         } else {
             ILocalVariableT::Reference(ReferenceLocalVariableT {
                 name: var_id,
-                variability,
                 coord: reference_type2,
             })
         };
@@ -120,7 +111,32 @@ where 's: 't,
     pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
         match a.result().coord.ownership {
             OwnershipT::Share => {
-                ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Share }))
+                match load_as_p {
+                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Share })),
+                    LoadAsP::Move => {
+                        match a {
+                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                                nenv.mark_local_unstackified(lv_lookup.local_variable.name());
+                                ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE { variable: lv_lookup.local_variable }))
+                            }
+                            AddressExpressionTE::ReferenceMemberLookup(ref r) => {
+                                panic!("unimplemented: {:?}", r.member_name);
+                            }
+                            AddressExpressionTE::AddressMemberLookup(ref r) => {
+                                panic!("unimplemented: {:?}", r.member_name);
+                            }
+                            _ => {
+                                unreachable!("OwnT+MoveP arm only matches LocalLookupTE/ReferenceMemberLookupTE/AddressMemberLookupTE");
+                            }
+                        }
+                    }
+                    LoadAsP::LoadAsBorrow => {
+                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }))
+                    }
+                    LoadAsP::LoadAsWeak => {
+                        ReferenceExpressionTE::SoftLoad(self.typing_interner.alloc(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }))
+                    }
+                }
             }
             OwnershipT::Own => {
                 match load_as_p {
@@ -195,85 +211,35 @@ where 's: 't,
 
     pub fn get_borrow_ownership(&self, coutputs: &CompilerOutputs<'s, 't>, kind: KindT<'s, 't>) -> OwnershipT {
         match kind {
+            // VCOORD: doublecheck this: post-cut Int/Bool/Float/Void are Own (not Share); returning Share here is what forces the instantiator's (Share, Own)/(Share, MutableBorrow) paper-over arms.
             KindT::Int(_) => OwnershipT::Share,
             KindT::Bool(_) => OwnershipT::Share,
             KindT::Float(_) => OwnershipT::Share,
             KindT::Str(_) => OwnershipT::Share,
             KindT::Void(_) => OwnershipT::Share,
-            KindT::StaticSizedArray(_) => {
-                let mutability = self.get_mutability(coutputs, kind);
-                match mutability {
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                    _ => panic!("implement: get_borrow_ownership StaticSizedArray unexpected mutability"),
+            KindT::StaticSizedArray(_) | KindT::RuntimeSizedArray(_) | KindT::KindPlaceholder(_) | KindT::Struct(_) | KindT::Interface(_) => {
+                match self.get_sharedness(coutputs, kind) {
+                    SharednessT::Single => OwnershipT::Borrow,
+                    SharednessT::Shared => OwnershipT::Share,
                 }
             }
-            KindT::RuntimeSizedArray(_) => {
-                let mutability = self.get_mutability(coutputs, kind);
-                match mutability {
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                    _ => panic!("implement: get_borrow_ownership RuntimeSizedArray unexpected mutability"),
-                }
-            }
-            KindT::KindPlaceholder(_) => {
-                let mutability = self.get_mutability(coutputs, kind);
-                match mutability {
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                    _ => panic!("implement: get_borrow_ownership KindPlaceholder unexpected mutability"),
-                }
-            }
-            KindT::Struct(_) => {
-                let mutability = self.get_mutability(coutputs, kind);
-                match mutability {
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                    _ => panic!("implement: get_borrow_ownership Struct unexpected mutability"),
-                }
-            }
-            KindT::Interface(_) => {
-                let mutability = self.get_mutability(coutputs, kind);
-                match mutability {
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                    _ => panic!("implement: get_borrow_ownership Interface unexpected mutability"),
-                }
-            }
-            KindT::OverloadSet(_) => OwnershipT::Share,
+            KindT::OverloadSet(_) => OwnershipT::Own,
             KindT::Never(_) => panic!("implement: get_borrow_ownership Never"),
         }
     }
 
     // See ClosureTests for requirements here
     pub fn determine_if_local_is_addressible(
-        mutability: ITemplataT<'s, 't>,
+        sharedness: SharednessT,
         local_a: &'s LocalS<'s>,
     ) -> bool {
-        match mutability {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+        match sharedness {
+            SharednessT::Single => {
                 local_a.child_mutated != IVariableUseCertainty::NotUsed || local_a.child_moved != IVariableUseCertainty::NotUsed
             }
-            _ => {
+            SharednessT::Shared => {
                 local_a.child_mutated != IVariableUseCertainty::NotUsed
             }
-        }
-    }
-
-    
-    pub fn determine_local_variability(
-        &self,
-        local_a: &'s LocalS<'s>,
-    ) -> VariabilityT {
-        if local_a.self_mutated != IVariableUseCertainty::NotUsed || local_a.child_mutated != IVariableUseCertainty::NotUsed {
-            VariabilityT::Varying
-        } else {
-            VariabilityT::Final
         }
     }
 

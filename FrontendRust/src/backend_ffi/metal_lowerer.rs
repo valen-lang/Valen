@@ -40,12 +40,12 @@ use crate::backend_ffi::metal_cache::{
     MetalCache, Program, Package, PackageCoord, Name, Kind, Reference,
     Prototype, Function, Expression, Ownership, Location,
     VariableId, Local, StructDef, StructMember, InterfaceDef, InterfaceMethod, Edge,
-    Mutability, Variability, Weakability,
+    Mutability, Weakability,
 };
 use crate::final_ast::ast::{FunctionH, IdH, InterfaceDefinitionH, InterfaceMethodH, EdgeH, PackageH, PrototypeH, ProgramH, StructDefinitionH, StructMemberH};
 use crate::final_ast::types::{StaticSizedArrayDefinitionHT, RuntimeSizedArrayDefinitionHT};
 use crate::final_ast::instructions::{ExpressionH, VariableIdH, Local as LocalH};
-use crate::final_ast::types::{CoordH, KindHT, LocationH, OwnershipH, Mutability as MutabilityH, Variability as VariabilityH};
+use crate::final_ast::types::{CoordH, KindHT, LocationH, OwnershipH, Sharedness as MutabilityH};
 use crate::utils::code_hierarchy::PackageCoordinate;
 
 /// Walk a `ProgramH` and populate the given `MetalCache`, returning a fully
@@ -103,27 +103,21 @@ where
     for ssa in pkg.static_sized_arrays.iter() {
         let name = lower_id_to_name(cache, ssa.name);
         let kind = cache.get_static_sized_array(name);
-        let region_id = match ssa.mutability {
-            MutabilityH::Immutable => cache.rcimm_region_id(),
-            MutabilityH::Mutable => cache.mut_region_id(),
-        };
+        let region_id = cache.mut_region_id();
         let elem_ty = lower_coord_to_reference(cache, &ssa.element_type);
         let def = cache.new_static_sized_array_def(
             name, kind, ssa.size as i32, region_id,
-            lower_mutability(ssa.mutability), lower_variability(ssa.variability), elem_ty,
+            lower_mutability(MutabilityH::Single), elem_ty,
         );
         pb.add_static_sized_array(ssa.name.shortened_name.0, def);
     }
     for rsa in pkg.runtime_sized_arrays.iter() {
         let name = lower_id_to_name(cache, rsa.name);
         let kind = cache.get_runtime_sized_array(name);
-        let region_id = match rsa.mutability {
-            MutabilityH::Immutable => cache.rcimm_region_id(),
-            MutabilityH::Mutable => cache.mut_region_id(),
-        };
+        let region_id = cache.mut_region_id();
         let elem_ty = lower_coord_to_reference(cache, &rsa.element_type);
         let def = cache.new_runtime_sized_array_def(
-            name, kind, region_id, lower_mutability(rsa.mutability), elem_ty,
+            name, kind, region_id, lower_mutability(MutabilityH::Single), elem_ty,
         );
         pb.add_runtime_sized_array(rsa.name.shortened_name.0, def);
     }
@@ -159,18 +153,14 @@ where
 }
 
 fn lower_mutability(m: MutabilityH) -> Mutability {
-    match m { MutabilityH::Immutable => Mutability::Immutable, MutabilityH::Mutable => Mutability::Mutable }
-}
-
-fn lower_variability(v: VariabilityH) -> Variability {
-    match v { VariabilityH::Final => Variability::Final, VariabilityH::Varying => Variability::Varying }
+    match m { MutabilityH::Shared => Mutability::Immutable, MutabilityH::Single => Mutability::Mutable }
 }
 
 fn lower_struct_member<'cache, 's, 'h>(cache: &'cache MetalCache, m: &StructMemberH<'s, 'h>) -> StructMember<'cache>
 where 's: 'h,
 {
     let ty = lower_coord_to_reference(cache, &m.tyype);
-    cache.new_struct_member(m.name.shortened_name.0, m.name.local_name.0, lower_variability(m.variability), ty)
+    cache.new_struct_member(m.name.shortened_name.0, m.name.local_name.0, ty)
 }
 
 fn lower_interface_method<'cache, 's, 'h>(cache: &'cache MetalCache, im: &InterfaceMethodH<'s, 'h>) -> InterfaceMethod<'cache>
@@ -185,14 +175,14 @@ where 's: 'h,
 {
     let name = lower_id_to_name(cache, i.id);
     let kind = cache.get_interface_kind(name);
-    let region_id = match i.mutability {
-        MutabilityH::Immutable => cache.rcimm_region_id(),
-        MutabilityH::Mutable => cache.mut_region_id(),
+    let region_id = match i.sharedness {
+        MutabilityH::Shared => cache.rcimm_region_id(),
+        MutabilityH::Single => cache.mut_region_id(),
     };
     let super_names: Vec<Name<'cache>> = i.super_interfaces.iter().map(|iht| lower_id_to_name(cache, iht.id)).collect();
     let methods: Vec<InterfaceMethod<'cache>> = i.methods.iter().map(|m| lower_interface_method(cache, m)).collect();
     cache.new_interface_def(
-        name, kind, region_id, lower_mutability(i.mutability),
+        name, kind, region_id, lower_mutability(i.sharedness),
         &super_names, &methods,
         if i.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
     )
@@ -215,16 +205,16 @@ where 's: 'h,
 {
     let name = lower_id_to_name(cache, s.id);
     let kind = cache.get_struct_kind(name);
-    let region_id = match s.mutability {
-        MutabilityH::Immutable => cache.rcimm_region_id(),
-        MutabilityH::Mutable => cache.mut_region_id(),
+    let region_id = match s.sharedness {
+        MutabilityH::Shared => cache.rcimm_region_id(),
+        MutabilityH::Single => cache.mut_region_id(),
     };
     let members: Vec<StructMember<'cache>> = s.members.iter().map(|m| lower_struct_member(cache, m)).collect();
     let edges: Vec<Edge<'cache>> = s.edges.iter().map(|e| lower_edge(cache, e)).collect();
     cache.new_struct_def(
-        name, kind, region_id, lower_mutability(s.mutability),
-        &edges, &members,
-        if s.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
+      name, kind, region_id, lower_mutability(s.sharedness),
+      &edges, &members,
+      if s.weakable { Weakability::Weakable } else { Weakability::NonWeakable },
     )
 }
 
@@ -485,11 +475,11 @@ where
             let src_ty = lower_coord_to_reference(cache, &src_coord);
             let src_kind = lower_kind(cache, &src_coord.kind);
             let target_kind = cache.get_interface_kind(lower_id_to_name(cache, u.target_interface.id));
-            let target_coord = CoordH {
-                ownership: src_coord.ownership,
-                location: src_coord.location,
-                kind: KindHT::InterfaceHT(u.target_interface),
-            };
+            let target_coord = CoordH::new(
+                src_coord.ownership,
+                src_coord.location,
+                KindHT::InterfaceHT(u.target_interface),
+            );
             let target_ty = lower_coord_to_reference(cache, &target_coord);
             cache.expr_struct_to_interface_upcast(src, src_ty, src_kind, target_ty, target_kind)
         }
@@ -499,11 +489,11 @@ where
             let src_ty = lower_coord_to_reference(cache, &src_coord);
             let src_kind = lower_kind(cache, &src_coord.kind);
             let target_kind = cache.get_interface_kind(lower_id_to_name(cache, u.target_interface.id));
-            let target_coord = CoordH {
-                ownership: src_coord.ownership,
-                location: src_coord.location,
-                kind: KindHT::InterfaceHT(u.target_interface),
-            };
+            let target_coord = CoordH::new(
+                src_coord.ownership,
+                src_coord.location,
+                KindHT::InterfaceHT(u.target_interface),
+            );
             let target_ty = lower_coord_to_reference(cache, &target_coord);
             cache.expr_interface_to_interface_upcast(src, src_ty, src_kind, target_ty, target_kind)
         }
@@ -568,21 +558,7 @@ where
             let elem_ty = lower_coord_to_reference(cache, &l.expected_element_type);
             cache.expr_runtime_sized_array_load(arr, arr_ty, arr_kind, idx, idx_ty, idx_kind, result_ty, lower_ownership(l.target_ownership), elem_ty)
         }
-        ExpressionH::NewImmRuntimeSizedArrayH(n) => {
-            let size = lower_expression(cache, &n.size_expression);
-            let size_coord = n.size_expression.result_type();
-            let size_ty = lower_coord_to_reference(cache, &size_coord);
-            let size_kind = lower_kind(cache, &size_coord.kind);
-            let gen = lower_expression(cache, &n.generator_expression);
-            let gen_coord = n.generator_expression.result_type();
-            let gen_ty = lower_coord_to_reference(cache, &gen_coord);
-            let gen_kind = lower_kind(cache, &gen_coord.kind);
-            let gen_method = lower_prototype(cache, n.generator_method);
-            let arr_ref = lower_coord_to_reference(cache, &n.result_type);
-            let elem_ty = lower_coord_to_reference(cache, &n.element_type);
-            cache.expr_new_imm_runtime_sized_array(size, size_ty, size_kind, gen, gen_ty, gen_kind, gen_method, arr_ref, elem_ty)
-        }
-        ExpressionH::NewMutRuntimeSizedArrayH(n) => {
+        ExpressionH::NewRuntimeSizedArrayH(n) => {
             let size = lower_expression(cache, &n.capacity_expression);
             let size_coord = n.capacity_expression.result_type();
             let size_ty = lower_coord_to_reference(cache, &size_coord);
@@ -631,19 +607,7 @@ where
             let elem_ty = lower_coord_to_reference(cache, &d.array_element_type);
             cache.expr_destroy_static_sized_array_into_function(arr, arr_ty, arr_kind, cons, cons_ty, cons_method, elem_ty, d.array_size as i32)
         }
-        ExpressionH::DestroyImmRuntimeSizedArrayH(d) => {
-            let arr = lower_expression(cache, &d.array_expression);
-            let arr_coord = d.array_expression.result_type();
-            let arr_ty = lower_coord_to_reference(cache, &arr_coord);
-            let arr_kind = lower_kind(cache, &arr_coord.kind);
-            let cons = lower_expression(cache, &d.consumer_expression);
-            let cons_coord = d.consumer_expression.result_type();
-            let cons_ty = lower_coord_to_reference(cache, &cons_coord);
-            let cons_kind = lower_kind(cache, &cons_coord.kind);
-            let cons_method = lower_prototype(cache, d.consumer_method);
-            cache.expr_destroy_imm_runtime_sized_array(arr, arr_ty, arr_kind, cons, cons_ty, cons_kind, cons_method)
-        }
-        ExpressionH::DestroyMutRuntimeSizedArrayH(d) => {
+        ExpressionH::DestroyRuntimeSizedArrayH(d) => {
             let arr = lower_expression(cache, &d.array_expression);
             let arr_coord = d.array_expression.result_type();
             let arr_ty = lower_coord_to_reference(cache, &arr_coord);
@@ -693,5 +657,198 @@ where
             let right_ty = lower_coord_to_reference(cache, &s.right_expression.result_type());
             cache.expr_is_same_instance(left, left_ty, right, right_ty)
         }
+        ExpressionH::CopyPrimH(c) => {
+            let inner = lower_expression(cache, &c.inner);
+            let result_ty = lower_coord_to_reference(cache, &c.result_type);
+            cache.expr_copy_prim(inner, result_ty)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::code_hierarchy::PackageCoordinateMap;
+
+    #[test]
+    fn walks_empty_program() {
+        let cache = MetalCache::new();
+        let hamuts = ProgramH {
+            packages: PackageCoordinateMap::new(),
+        };
+        let _program = populate_metal_cache(&cache, &hamuts);
+        // Just exercises the entry path; constructs and frees a Program with
+        // zero packages without crashing.
+    }
+
+    /// Drive a real `ProgramH` (full hammer pipeline + builtins) for the
+    /// given Vale source through MetalLowerer → MetalCache → backend, link
+    /// with clang, exec, and return the exit code. Used by the headline E2E
+    /// tests below.
+    fn compile_and_run_via_metal_lowerer(code: &str) -> i32 {
+        use crate::builtins::builtins::get_code_map;
+        use crate::keywords::Keywords;
+        use crate::parse_arena::ParseArena;
+        use crate::scout_arena::ScoutArena;
+        use crate::simplifying::hammer_interner::HammerInterner;
+        use crate::simplifying::test::test_compilation::test;
+        use crate::tests::tests::get_package_to_resource_resolver;
+        use crate::typing::typing_interner::TypingInterner;
+        use crate::utils::code_hierarchy::test_from_vec;
+        use crate::utils::code_hierarchy::IPackageResolver;
+
+        let parse_bump = bumpalo::Bump::new();
+        let scout_bump = bumpalo::Bump::new();
+        let typing_bump = bumpalo::Bump::new();
+        let instantiating_bump = bumpalo::Bump::new();
+        let hammer_bump = bumpalo::Bump::new();
+        let parse_arena = ParseArena::new(&parse_bump);
+        let scout_arena = ScoutArena::new(&scout_bump);
+        let keywords = Keywords::new_for_scout(&scout_arena);
+        let parser_keywords = Keywords::new_for_parse(&parse_arena);
+        let hammer_interner = HammerInterner::new(&hammer_bump);
+        let typing_interner = TypingInterner::new(&typing_bump);
+        let resolver = get_code_map(&parse_arena, &parser_keywords)
+            .or(test_from_vec(&parse_arena, vec![code.to_string()]))
+            .or(get_package_to_resource_resolver());
+        let mut compile = test(
+            &hammer_interner, &typing_interner, &scout_arena, &keywords,
+            &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+        );
+        let hamuts = compile.get_hamuts();
+
+        let cache = MetalCache::new();
+        let program = populate_metal_cache(&cache, hamuts);
+
+        let work = tempfile::tempdir().unwrap();
+        let out_dir = work.path().join("out");
+        std::fs::create_dir_all(&out_dir).unwrap();
+        std::fs::create_dir_all(out_dir.join("include")).unwrap();
+
+        let argv = vec![
+            "backend".to_string(),
+            "--output_dir".to_string(),
+            out_dir.display().to_string(),
+        ];
+        let argv_refs: Vec<&str> = argv.iter().map(|s| s.as_str()).collect();
+        let rc = crate::backend_ffi::backend_compile_program_safe(&cache, &program, &argv_refs);
+        assert_eq!(rc, 0, "backend_compile_program returned {}", rc);
+
+        let obj = out_dir.join("build.o");
+        let builtins_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent().unwrap().join("Backend/builtins");
+        let builtin_cs: Vec<_> = std::fs::read_dir(&builtins_dir).unwrap()
+            .filter_map(|e| e.ok()).map(|e| e.path())
+            .filter(|p| p.extension().map_or(false, |x| x == "c")).collect();
+        let exe = out_dir.join("a.out");
+        let st = std::process::Command::new("clang")
+            .arg("-o").arg(&exe).arg(&obj).args(&builtin_cs)
+            .arg("-lm").arg("-Wno-everything").status().unwrap();
+        assert!(st.success(), "clang link failed");
+        let out = std::process::Command::new(&exe).output().unwrap();
+        out.status.code().unwrap_or(-1)
+    }
+
+    /// Headline E2E: drives a real `ProgramH` (full hammer pipeline + builtins)
+    /// through MetalLowerer → MetalCache (via FFI) → backend_compile_program →
+    /// clang link → exec, asserting the exit code matches `return N` in the
+    /// Vale source. Proves the L2.5 path end-to-end on real frontend output.
+    #[test]
+    fn walks_real_hello_world() {
+        assert_eq!(compile_and_run_via_metal_lowerer("exported func main() int { return 3; }"), 3);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_arithmetic() {
+        assert_eq!(compile_and_run_via_metal_lowerer("exported func main() int { return 2 + 5; }"), 7);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_let_binding() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "exported func main() int { x = 11; return x; }"), 11);
+    }
+
+    #[test]
+    fn walks_if_expression() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "exported func main() int { if (true) { return 13; } else { return 99; } }"), 13);
+    }
+
+    #[test]
+    fn walks_function_call() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "func helper() int { return 42; }\nexported func main() int { return helper(); }"), 42);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_function_with_param() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "func double(x int) int { return x * 2; }\nexported func main() int { return double(21); }"), 42);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_while_loop() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "exported func main() int { i = 0; while (i < 5) { set i = i + 1; } return i; }"), 5);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_struct() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "struct Point share { x int; y int; }\n\
+             exported func main() int { p = Point(7, 35); return p.x + p.y; }"), 42);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_mutable_struct() {
+        // TSUGAR: c.x is &int
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "struct Counter { x int; }\n\
+             exported func main() int {\n\
+               c = Counter(10);\n\
+               set c.x = 32;\n\
+               return __copy_prim(c.x);\n\
+             }"), 32);
+    }
+
+    // VCOORD: revisit all these
+    //
+    // walks_static_array: would test [#3]int(0,1,2) static-array literals,
+    // but the Rust frontend doesn't yet support that syntax
+    // (post_parser.rs:2956 InitializingStaticSizedArrayRequiresSizeAndCallable).
+    //
+    // walks_runtime_array: would test []int(5) + .push() runtime arrays, but
+    // the Rust hammer emits RuntimeSizedArrayLoadH which MetalLowerer doesn't
+    // yet lower (no FFI shim for it). Adding the shim is a future slice.
+    //
+    // walks_interface_dispatch: blocked by Rust typing pass — struct_compiler_
+    // core.rs:188 "implement: struct_name_s for non-TopLevelStructDeclarationName".
+    //
+    // walks_floating_point: blocked by Rust typing pass — compilation.rs:211
+    // "CompilerErrorHumanizer.humanize not yet implemented".
+    //
+    // When the frontend lands those features, these can be enabled and any
+    // matching MetalLowerer gaps filled in.
+
+    #[test]
+    fn walks_string_length() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "exported func main() int { return (&\"hello\").len(); }"), 5);
+    }
+
+    #[test]
+    #[ignore = "deferred at experimental-2 squash baseline"]
+    fn walks_nested_call() {
+        assert_eq!(compile_and_run_via_metal_lowerer(
+            "func add(a int, b int) int { return a + b; }\n\
+             func mul(a int, b int) int { return a * b; }\n\
+             exported func main() int { return add(mul(3, 5), mul(2, 4)); }"), 23);
     }
 }

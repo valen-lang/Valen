@@ -305,7 +305,9 @@ void innerDeallocate(
   buildFlare(FL(), globalState, functionState, builder);
   // assert(refMT->ownership != Ownership::IMMUTABLE_BORROW); when regions is disabled, naive-RC deallocates
   assert(refMT->ownership != Ownership::IMMUTABLE_SHARE);
-  if (refMT->ownership == Ownership::MUTABLE_SHARE) {
+  // VCOORD: revisit this
+  // INLINE primitives are scalars; dealloc is a no-op for both OWN and MUTABLE_SHARE.
+  if (refMT->ownership == Ownership::MUTABLE_SHARE || refMT->ownership == Ownership::OWN) {
     if (refMT->location == Location::INLINE) {
       // Do nothing, it's inline!
     } else {
@@ -318,6 +320,7 @@ void innerDeallocate(
       return innerDeallocateYonder(from, globalState, functionState, kindStrutsSource, builder, refMT, ref);
     }
   }
+  // /VCOORD
 }
 
 void fillStaticSizedArray(
@@ -653,14 +656,14 @@ Ref innerAllocate(
   auto structKind = dynamic_cast<StructKind*>(desiredReference->kind);
   auto structM = globalState->program->getStruct(structKind);
 
-  switch (structM->mutability) {
-    case Mutability::MUTABLE: {
+  switch (structM->sharedness) {
+    case Sharedness::SINGLE: {
       auto countedStructL = kindStructs->getStructWrapperStruct(structKind);
       return constructWrappedStruct(
           globalState, functionState, kindStructs, builder, countedStructL, desiredReference,
           structM, effectiveWeakability, memberRefs, fillControlBlock);
     }
-    case Mutability::IMMUTABLE: {
+    case Sharedness::SHARED: {
       if (desiredReference->location == Location::INLINE) {
         auto valStructL =
             kindStructs->getStructInnerStruct(structKind);
@@ -1309,7 +1312,7 @@ LoadResult resilientloadElementFromSSA(
     Reference* ssaRefMT,
     StaticSizedArrayT* ssaMT,
     int size,
-    Mutability mutability,
+    Sharedness sharedness,
     Reference* elementType,
     LiveRef arrayRef,
     InBoundsLE indexLE,

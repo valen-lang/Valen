@@ -226,13 +226,6 @@ where
       },
     };
 
-    // Parse variability (! means varying)
-    let variability = if iter.try_skip_symbol('!') {
-      VariabilityP::Varying
-    } else {
-      VariabilityP::Final
-    };
-
     // Check for variadic (..)
     let variadic = matches!(
       iter.peek2_cloned(),
@@ -257,7 +250,6 @@ where
       Ok(IStructContent::VariadicStructMember(
         VariadicStructMemberP {
           range: RangeL::new(begin, iter.get_prev_end_pos()),
-          variability,
           tyype,
         },
       ))
@@ -265,7 +257,6 @@ where
       Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'p> {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         name,
-        variability,
         tyype,
       }))
     }
@@ -278,7 +269,7 @@ where
       range: struct_range,
       name: name_l,
       attributes: attributes_l,
-      mutability: maybe_mutability_l,
+      sharedness,
       identifying_runes: maybe_identifying_runes_l,
       template_rules: maybe_template_rules_l,
       contents_range,
@@ -315,14 +306,6 @@ where
       attributes.push(self.parse_attribute(*attr_l)?);
     }
 
-    // Parse mutability
-    let maybe_mutability = maybe_mutability_l
-      .map(|mut_l| {
-        let mut iter = ScrambleIterator::new(&mut_l);
-        self.templex_parser.parse_templex(&mut iter)
-      })
-      .transpose()?;
-
     // Parse struct members
     let mut contents_vec = Vec::new();
     for member_l in members_l {
@@ -342,7 +325,7 @@ where
       range: struct_range,
       name: self.to_name(name_l),
       attributes: self.parse_arena.alloc_slice_from_vec(attributes),
-      mutability: maybe_mutability,
+      sharedness,
       identifying_runes: maybe_identifying_runes,
       template_rules: maybe_template_rules,
       maybe_default_region_rune: None,
@@ -358,7 +341,7 @@ where
       range: interface_range,
       name: name_l,
       attributes: attributes_l,
-      mutability: maybe_mutability_l,
+      sharedness,
       maybe_identifying_runes: maybe_identifying_runes_l,
       template_rules: maybe_template_rules_l,
       body_range,
@@ -394,14 +377,6 @@ where
       attributes.push(self.parse_attribute(*attr_l)?);
     }
 
-    // Parse mutability
-    let maybe_mutability = maybe_mutability_l
-      .map(|mut_l| {
-        let mut iter = ScrambleIterator::new(&mut_l);
-        self.templex_parser.parse_templex(&mut iter)
-      })
-      .transpose()?;
-
     // Parse interface methods
     // Interface methods are in a citizen (interface), so is_in_citizen = true
     let mut members_vec = Vec::new();
@@ -413,7 +388,7 @@ where
       range: interface_range,
       name: self.to_name(name_l),
       attributes: self.parse_arena.alloc_slice_from_vec(attributes),
-      mutability: maybe_mutability,
+      sharedness,
       maybe_identifying_runes,
       template_rules: maybe_template_rules,
       maybe_default_region_rune: None,

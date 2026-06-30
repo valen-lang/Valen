@@ -33,8 +33,9 @@ use crate::typing::types::types::InterfaceTTValT;
 use crate::typing::infer_compiler::include_rule_in_definition_solve;
 use crate::postparsing::ast::GenericParameterS;
 use crate::typing::names::names::IdValT;
-use crate::typing::templata::templata::expect_mutability;
+use crate::typing::templata::templata::expect_sharedness;
 use crate::utils::fx::HashSet;
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -398,16 +399,25 @@ where 's: 't,
                 }
             }
         }) {
-            Err(_f) => {
-                panic!("Unimplemented: TypingPassSolverError in compile_struct_layer");
-                // throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, f))
+            Err(f) => {
+                let mut r = vec![struct_a.range];
+                r.extend_from_slice(parent_ranges);
+                return Err(ICompileErrorT::TypingPassSolverError {
+                    range: self.typing_interner.alloc_slice_from_vec(r),
+                    failed_solve: f,
+                });
             }
-            Ok(_) => {}
+            Ok(true) => {}
+            Ok(false) => {}
         }
         let inferences = match self.interpret_results(&all_rune_to_type, &mut solver) {
-            Err(_e) => {
-                panic!("Unimplemented: TypingPassSolverError in compile_struct_layer interpretResults");
-                // throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, e))
+            Err(e) => {
+                let mut r = vec![struct_a.range];
+                r.extend_from_slice(parent_ranges);
+                return Err(ICompileErrorT::TypingPassSolverError {
+                    range: self.typing_interner.alloc_slice_from_vec(r),
+                    failed_solve: e,
+                });
             }
             Ok(conclusions) => conclusions,
         };
@@ -418,13 +428,6 @@ where 's: 't,
             definition_rules: definition_rules.clone(),
             conclusions: inferences.clone(),
         };
-        match struct_a.maybe_predicted_mutability {
-            None => {
-                let mutability = expect_mutability(inferences[&struct_a.mutability_rune.rune]);
-                coutputs.declare_type_mutability(struct_template_id, mutability);
-            }
-            Some(_) => {}
-        }
         let template_args: Vec<ITemplataT<'s, 't>> =
             struct_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_struct_name(*struct_template_id, &template_args);
@@ -530,13 +533,6 @@ where 's: 't,
             definition_rules: definition_rules.clone(),
             conclusions: inferences.clone(),
         };
-        match interface_a.maybe_predicted_mutability {
-            None => {
-                let mutability = expect_mutability(inferences[&interface_a.mutability_rune.rune]);
-                coutputs.declare_type_mutability(interface_template_id, mutability);
-            }
-            Some(_) => {}
-        }
         let template_args: Vec<ITemplataT<'s, 't>> =
             interface_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
         let id = self.assemble_interface_name(*interface_template_id, &template_args);
@@ -576,7 +572,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }

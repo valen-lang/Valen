@@ -2,23 +2,16 @@ use crate::parsing::ast::ast::*;
 use crate::typing::types::types::*;
 
 
-pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
+pub fn evaluate_mutability(mutability: SharednessP) -> SharednessT {
   match mutability {
-    MutabilityP::Mutable => MutabilityT::Mutable,
-    MutabilityP::Immutable => MutabilityT::Immutable,
+    SharednessP::Single => SharednessT::Single,
+    SharednessP::Shared => SharednessT::Shared,
   }
 }
 
 pub fn evaluate_location(location: LocationP) -> LocationT {
   panic!("Unimplemented: evaluate_location");
   // location match { case InlineP => InlineT; case YonderP => YonderT }
-}
-
-pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
-  match variability {
-    VariabilityP::Final => VariabilityT::Final,
-    VariabilityP::Varying => VariabilityT::Varying,
-  }
 }
 
 pub fn evaluate_ownership(ownership: OwnershipP) -> OwnershipT {
@@ -37,11 +30,15 @@ pub fn evaluate_maybe_ownership(maybe_ownership: Option<OwnershipP>) -> Option<O
 }
 
 pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
-  panic!("Unimplemented: unevaluate_ownership");
-  // ownership match { case OwnT => OwnP; case BorrowT => BorrowP; case WeakT => WeakP; case ShareT => ShareP }
+  match ownership {
+    OwnershipT::Own => OwnershipP::Own,
+    OwnershipT::Borrow => OwnershipP::Borrow,
+    OwnershipT::Weak => OwnershipP::Weak,
+    OwnershipT::Share => OwnershipP::Share,
+  }
 }
 
-pub fn unevaluate_mutability(mutability: MutabilityT) -> MutabilityP {
+pub fn unevaluate_mutability(mutability: SharednessT) -> SharednessP {
   panic!("Unimplemented: unevaluate_mutability");
   // mutability match { case MutableT => MutableP; case ImmutableT => ImmutableP }
 }

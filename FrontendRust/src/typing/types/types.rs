@@ -24,25 +24,14 @@ pub enum OwnershipT {
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum MutabilityT {
-    Mutable,
-    Immutable,
+pub enum SharednessT {
+  Single,
+  Shared,
 }
 
-// merged into MutabilityT above
 
-// merged into MutabilityT above
 
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum VariabilityT {
-    Final,
-    Varying,
-}
 
-// merged into VariabilityT above
-
-// merged into VariabilityT above
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -51,9 +40,9 @@ pub enum LocationT {
     Yonder,
 }
 
-// merged into LocationT above
 
-// merged into LocationT above
+
+
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -75,6 +64,28 @@ pub struct CoordT<'s, 't> {
   pub ownership: OwnershipT,
   pub region: RegionT,
   pub kind: KindT<'s, 't>,
+  _sealed: (), // Force construction via `CoordT::new(...)`
+}
+
+impl<'s, 't> CoordT<'s, 't> {
+    pub fn new(ownership: OwnershipT, region: RegionT, kind: KindT<'s, 't>) -> Self {
+        let is_primitive = matches!(
+            kind,
+            KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Void(_) | KindT::Never(_),
+        );
+        if ownership == OwnershipT::Share && is_primitive {
+            panic!(
+                "Illegal CoordT combination: ownership=Share, kind={:?}. Primitives are Own at typing post-cut.",
+                kind,
+            );
+        }
+        if ownership == OwnershipT::Share && matches!(kind, KindT::OverloadSet(_)) {
+            panic!(
+                "Illegal CoordT combination: ownership=Share, kind=OverloadSet. OverloadSet is Own/Borrow flavored.",
+            );
+        }
+        CoordT { ownership, region, kind, _sealed: () }
+    }
 }
 
 // KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
@@ -192,13 +203,6 @@ pub struct StaticSizedArrayTT<'s, 't> {
 
 
 impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
-  pub fn mutability(&self) -> ITemplataT<'s, 't> {
-    match self.name.local_name {
-      INameT::StaticSizedArray(ssa_name) => ssa_name.arr.mutability,
-      _ => panic!("vwat"),
-    }
-  }
-  
   pub fn element_type(&self) -> CoordT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.arr.element_type,
@@ -209,13 +213,6 @@ impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
   pub fn size(&self) -> ITemplataT<'s, 't> {
     match self.name.local_name {
       INameT::StaticSizedArray(ssa_name) => ssa_name.size,
-      _ => panic!("vwat"),
-    }
-  }
-  
-  pub fn variability(&self) -> ITemplataT<'s, 't> {
-    match self.name.local_name {
-      INameT::StaticSizedArray(ssa_name) => ssa_name.variability,
       _ => panic!("vwat"),
     }
   }
@@ -242,13 +239,6 @@ pub struct RuntimeSizedArrayTT<'s, 't> {
 }
 
 impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
-  pub fn mutability(&self) -> ITemplataT<'s, 't> {
-    match self.name.local_name {
-      INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.mutability,
-      _ => panic!("vwat"),
-    }
-  }
-  
   pub fn element_type(&self) -> CoordT<'s, 't> {
     match self.name.local_name {
       INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.element_type,

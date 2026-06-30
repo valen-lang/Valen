@@ -33,13 +33,14 @@ fn returning_tuple_from_function_and_dotting_it() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: makeTup().1 is &int
         r"
 import v.builtins.tup2.*;
 import v.builtins.drop.*;
 
 func makeTup() (int, int) { return (2, 3); }
 exported func main() int {
-  return makeTup().1;
+  return __copy_prim(&makeTup().1);
 }
 ",
     );
@@ -67,12 +68,13 @@ fn tuple_with_two_things() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: (9, true).1 is &bool
         r"
 import v.builtins.tup2.*;
 import v.builtins.drop.*;
 
 exported func main() bool {
-  return (9, true).1;
+  return __copy_prim(&(9, true).1);
 }
 ",
     );
@@ -100,11 +102,12 @@ fn tuple_type() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a.1 is &int
         r"
 import v.builtins.tup2.*;
 import v.builtins.drop.*;
 
-func moo(a (int, int)) int { return a.1; }
+func moo(a (int, int)) int { return __copy_prim(&a.1); }
 
 exported func main() int {
   return moo((3, 4));
@@ -135,7 +138,8 @@ fn simple_tuple_with_one_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "exported func main() int { return (9,).0; }",
+        // TSUGAR: "exported func main() int { return (9,).0; }"
+        "exported func main() int { return __copy_prim(&(9,).0); }",
     );
     {
         let coutputs = compile.expect_compiler_outputs();

@@ -23,7 +23,7 @@ use crate::final_ast::instructions::ConstantF64H;
 use crate::final_ast::instructions::ConstantIntH;
 use crate::final_ast::instructions::ConstantStrH;
 use crate::final_ast::instructions::DestroyH;
-use crate::final_ast::instructions::DestroyMutRuntimeSizedArrayH;
+use crate::final_ast::instructions::DestroyRuntimeSizedArrayH;
 use crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH;
 use crate::final_ast::instructions::DestroyStaticSizedArrayIntoLocalsH;
 use crate::final_ast::instructions::ExternCallH;
@@ -36,8 +36,7 @@ use crate::final_ast::instructions::LockWeakH;
 use crate::final_ast::instructions::MemberLoadH;
 use crate::final_ast::instructions::MemberStoreH;
 use crate::final_ast::instructions::NewArrayFromValuesH;
-use crate::final_ast::instructions::NewImmRuntimeSizedArrayH;
-use crate::final_ast::instructions::NewMutRuntimeSizedArrayH;
+use crate::final_ast::instructions::NewRuntimeSizedArrayH;
 use crate::final_ast::instructions::NewStructH;
 use crate::final_ast::instructions::PopRuntimeSizedArrayH;
 use crate::final_ast::instructions::PushRuntimeSizedArrayH;
@@ -68,6 +67,7 @@ use crate::testvm::vivem::VmRuntimeErrorV;
 use std::mem::discriminant;
 
 
+
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum INodeExecuteResultV<'v, 'h, 's> {
@@ -77,17 +77,20 @@ pub enum INodeExecuteResultV<'v, 'h, 's> {
   Error(VmRuntimeErrorV<'s>),
 }
 
+
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeContinueV<'v, 'h, 's> {
   pub result_ref: ReferenceV<'v, 'h, 's>,
 }
 
+
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NodeReturnV<'v, 'h, 's> {
   pub return_ref: ReferenceV<'v, 'h, 's>,
 }
+
 
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -97,47 +100,51 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
-pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
+pub fn make_primitive<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     assert!(!matches!(kind, KindV::Void(_)));
-    let r#ref = heap.allocate_transient(interner, OwnershipH::MutableShareH, location, kind);
+    let r#ref = heap.allocate_transient(interner, ownership, location, kind);
     heap.increment_reference_ref_count(
         IObjectReferrerV::RegisterToObjectReferrer(
-            RegisterToObjectReferrerV { call_id, ownership: OwnershipH::MutableShareH }
+            RegisterToObjectReferrerV { call_id }
         ),
         r#ref,
     );
     r#ref
 }
 
+
 pub fn take_argument<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, result_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
     let r#ref = heap.take_argument(interner, call_id, argument_index, result_type);
     heap.increment_reference_ref_count(
-        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: result_type.ownership }),
+        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
         r#ref);
     r#ref
 }
 
+
 pub fn possess_callee_return<'v, 'h, 's>(heap: &mut HeapV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, callee_call_id: CallIdV<'v, 'h, 's>, result: &NodeReturnV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
     heap.decrement_reference_ref_count(
-        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id: callee_call_id, ownership: result.return_ref.ownership }),
+        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id: callee_call_id }),
         result.return_ref,
     );
     heap.increment_reference_ref_count(
-        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: result.return_ref.ownership }),
+        IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
         result.return_ref,
     );
     result.return_ref
 }
 
+
 pub fn upcast<'v, 'h, 's>(source_reference: ReferenceV<'v, 'h, 's>, target_interface_ref: &'h InterfaceHT<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
-    ReferenceV {
-        actual_kind: source_reference.actual_kind,
-        seen_as_kind: RRKindV { hamut: KindHT::InterfaceHT(target_interface_ref), _phantom: PhantomData },
-        ownership: source_reference.ownership,
-        location: source_reference.location,
-        num: source_reference.num,
-    }
+    ReferenceV::new(
+        source_reference.actual_kind,
+        RRKindV { hamut: KindHT::InterfaceHT(target_interface_ref), _phantom: PhantomData },
+        source_reference.ownership,
+        source_reference.location,
+        source_reference.num,
+    )
 }
+
 
 pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let node_name = match node {
@@ -173,14 +180,12 @@ pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &Hamm
         ExpressionH::MutabilifyH(_) => "MutabilifyH",
         ExpressionH::ImmutabilifyH(_) => "ImmutabilifyH",
         ExpressionH::ReturnH(_) => "ReturnH",
-        ExpressionH::NewImmRuntimeSizedArrayH(_) => "NewImmRuntimeSizedArrayH",
-        ExpressionH::NewMutRuntimeSizedArrayH(_) => "NewMutRuntimeSizedArrayH",
+        ExpressionH::NewRuntimeSizedArrayH(_) => "NewRuntimeSizedArrayH",
         ExpressionH::PushRuntimeSizedArrayH(_) => "PushRuntimeSizedArrayH",
         ExpressionH::PopRuntimeSizedArrayH(_) => "PopRuntimeSizedArrayH",
         ExpressionH::StaticArrayFromCallableH(_) => "StaticArrayFromCallableH",
         ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => "DestroyStaticSizedArrayIntoFunctionH",
-        ExpressionH::DestroyImmRuntimeSizedArrayH(_) => "DestroyImmRuntimeSizedArrayH",
-        ExpressionH::DestroyMutRuntimeSizedArrayH(_) => "DestroyMutRuntimeSizedArrayH",
+        ExpressionH::DestroyRuntimeSizedArrayH(_) => "DestroyRuntimeSizedArrayH",
         ExpressionH::BreakH(_) => "BreakH",
         ExpressionH::NewStructH(_) => "NewStructH",
         ExpressionH::ArrayLengthH(_) => "ArrayLengthH",
@@ -191,6 +196,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &Hamm
         ExpressionH::LockWeakH(_) => "LockWeakH",
         ExpressionH::DiscardH(_) => "DiscardH",
         ExpressionH::PreCheckBorrowH(_) => "PreCheckBorrowH",
+        ExpressionH::CopyPrimH(_) => "CopyPrimH",
     };
     {
         let handle = &mut *heap.vivem_dout;
@@ -203,6 +209,7 @@ pub fn execute_node<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &Hamm
     }
     result
 }
+
 
 pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, expression_id: ExpressionIdV<'v, 'h, 's>, node: &ExpressionH<'s, 'h>) -> INodeExecuteResultV<'v, 'h, 's> {
     let call_id = expression_id.call_id;
@@ -228,7 +235,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             }).collect();
             for r in &member_references_vec {
                 heap.decrement_reference_ref_count(
-                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
                     *r,
                 );
             }
@@ -236,14 +243,14 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let member_references: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&member_references_vec);
             let reference = heap.new_struct(interner, *struct_def_h, struct_ref_h, member_references);
             heap.increment_reference_ref_count(
-                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
+                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
                 reference,
             );
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: reference })
         }
         ExpressionH::ConstantIntH(c) => {
             let ConstantIntH { value, bits } = **c;
-            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(IntV { value, bits, _phantom: PhantomData }));
+            let r#ref = make_primitive(heap, interner, call_id, OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value, bits, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::ReturnH(r) => {
@@ -261,7 +268,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let var_address = get_var_address(expression_id.call_id, local);
             let reference = heap.get_reference_from_local(interner, var_address, local.type_h, local.type_h);
             heap.increment_reference_ref_count(
-                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: reference.ownership }),
+                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
                 reference,
             );
             {
@@ -327,7 +334,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             }
             for r in arg_refs.iter() {
                 heap.decrement_reference_ref_count(
-                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }),
+                    IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
                     *r);
             }
             let arg_refs_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&arg_refs);
@@ -353,18 +360,19 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         }
         ExpressionH::ConstantBoolH(c) => {
             let ConstantBoolH { value } = **c;
-            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Bool(BoolV { value, _phantom: PhantomData }));
+            let r#ref = make_primitive(heap, interner, call_id, OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::ConstantF64H(c) => {
             let ConstantF64H { value } = **c;
-            let r#ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Float(FloatV { value, _phantom: PhantomData }));
+            let r#ref = make_primitive(heap, interner, call_id, OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::ConstantStrH(c) => {
             let ConstantStrH { value} = **c;
             let interned = scout_arena.intern_str(value);
-            let r#ref = make_primitive(heap, interner, call_id, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData }));
+            // Str stays Share — RC'd, Yonder-allocated.
+            let r#ref = make_primitive(heap, interner, call_id, OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: r#ref })
         }
         ExpressionH::DiscardH(d) => {
@@ -375,7 +383,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 OwnershipH::ImmutableBorrowH => {}
                 OwnershipH::MutableBorrowH => {}
                 OwnershipH::WeakH => {}
-                OwnershipH::OwnH => panic!("MatchError: OwnH"),
+                OwnershipH::OwnH => {}
             }
             let source_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &source_expr) {
                 r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
@@ -388,10 +396,20 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         ExpressionH::LocalLoadH(ll_ref) => {
             let ll = **ll_ref;
             let LocalLoadH { local, target_ownership, local_name: _name } = ll;
-            assert!(target_ownership != OwnershipH::OwnH); // should have been Unstackified instead
+            // VCOORD: simplify this, LocalLoad should only return references
+            // This is saying LocalLoadH can only load primitives as Own, because usually LocalLoad
+            // only loads things as targetownership share/borrow/weak
+            assert!(
+                target_ownership != OwnershipH::OwnH
+                    || matches!(
+                        local.type_h.kind,
+                        KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::VoidHT(_) | KindHT::NeverHT(_),
+                    )
+            );
+            // /VCOORD
             let var_address = get_var_address(expression_id.call_id, local);
             let reference = heap.get_reference_from_local(interner, var_address, local.type_h, ExpressionH::LocalLoadH(ll_ref).result_type());
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: reference.ownership }), reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), reference);
             {
                 let handle = &mut *heap.vivem_dout;
                 write!(handle, " *{}", var_address).unwrap();
@@ -412,7 +430,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             }
             let old_ref = heap.mutate_variable(interner, var_address, reference, source_expr.result_type());
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), reference) { return INodeExecuteResultV::Error(e); }
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: old_ref.ownership }), old_ref);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old_ref);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_ref })
         }
         ExpressionH::DestroyH(d) => {
@@ -422,10 +440,10 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Continue(c) => c.result_ref,
             };
             heap.decrement_reference_ref_count(
-                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: struct_expr.result_type().ownership }),
+                IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }),
                 struct_reference);
             // DDSOT
-            if let Err(e) = heap.ensure_ref_count(interner, scout_arena, struct_reference, Some(&[OwnershipH::OwnH, OwnershipH::MutableBorrowH, OwnershipH::ImmutableBorrowH]), 0) { return INodeExecuteResultV::Error(e); }
+            if let Err(e) = heap.ensure_ref_count(interner, scout_arena, struct_reference, Some(false), 0) { return INodeExecuteResultV::Error(e); }
             let old_member_references = match heap.destructure(struct_reference) {
                 Ok(r) => r,
                 Err(e) => return INodeExecuteResultV::Error(e),
@@ -468,7 +486,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                     Err(e) => return INodeExecuteResultV::Error(e),
                 }
             };
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: result_ref.ownership }), result_ref);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), result_ref);
             // Special case for externs; externs arent allowed to change ref counts at all.
             // So, we just drop these normally.
             for (r, arg_expr) in arg_refs.iter().zip(args_exprs.iter()) {
@@ -519,7 +537,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 write!(handle, "<-{}", source_reference.num).unwrap();
             }
             let old_member_reference = heap.mutate_struct(address, source_reference, source_expr.result_type());
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: old_member_reference.ownership }), old_member_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old_member_reference);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, struct_expr.result_type(), struct_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), source_reference) { return INodeExecuteResultV::Error(e); }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: old_member_reference })
@@ -536,8 +554,16 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 write!(handle, " *{}", address.to_string()).unwrap();
             }
             let member_reference = heap.get_reference_from_struct(interner, address, expected_member_type, result_type);
-            assert!(result_type.ownership != OwnershipH::OwnH);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: member_reference.ownership }), member_reference);
+            // VCOORD: revisit
+            assert!(
+                result_type.ownership != OwnershipH::OwnH
+                    || matches!(
+                        result_type.kind,
+                        KindHT::VoidHT(_) | KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::NeverHT(_)
+                    )
+            );
+            // /VCOORD
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), member_reference);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, struct_expr.result_type(), struct_reference) { return INodeExecuteResultV::Error(e); }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: member_reference })
         }
@@ -553,12 +579,12 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                     }
                 }).collect();
             for r in element_refs.iter() {
-                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }), *r);
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), *r);
             }
             let ssa_def = program_h.lookup_static_sized_array(array_ref_type.kind.expect_static_sized_array_ht());
             let element_refs_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&element_refs);
             let (array_reference, array_instance) = heap.add_array(interner, *ssa_def, array_ref_type, element_refs_slice);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
             heap.print_kind(KindV::ArrayInstance(array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
@@ -584,11 +610,15 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let address = ElementAddressV { array_id: array_reference.alloc_id(), element_index: index as i64 };
             write!(heap.vivem_dout, " **o:{}.{}", address.array_id.num, address.element_index).unwrap();
             let source = heap.get_reference_from_array(interner, address, expected_element_type, result_type);
+            // VCOORD: get rid of this, SSALoadH should only return a reference
             if target_ownership == OwnershipH::OwnH {
-                panic!("impl me?");
-            } else {
+                assert!(matches!(
+                    expected_element_type.kind,
+                    KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::VoidHT(_) | KindHT::NeverHT(_),
+                ));
             }
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: source.ownership }), source);
+            // /VCOORD
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), source);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
@@ -601,7 +631,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Continue(c) => c.result_ref,
                 INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
             };
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: arr_reference.ownership }), arr_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), arr_reference);
             if arr_expr.result_type().ownership == OwnershipH::OwnH {
                 if let Err(e) = heap.ensure_ref_count(interner, scout_arena, arr_reference, None, 0) { return INodeExecuteResultV::Error(e); }
             } else {
@@ -639,14 +669,14 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
             };
             heap.check_reference(interner, consumer_me.result_type(), consumer_reference);
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             if let Err(e) = heap.ensure_ref_count(interner, scout_arena, array_reference, None, 0) { return INodeExecuteResultV::Error(e); }
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             let ssa_def_m = program_h.lookup_static_sized_array(array_expr.result_type().kind.expect_static_sized_array_ht());
             if let Err(e) = consume_elements(program_h, interner, scout_arena, stdin, stdout, heap, expression_id, call_id, array_reference, consumer_reference, *consumer_method, ssa_def_m.size, &mut |_, _| {}) {
                 return INodeExecuteResultV::Error(e);
             }
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             heap.zero(array_reference);
             if let Err(e) = heap.deallocate_if_no_weak_refs(array_reference) {
                 return INodeExecuteResultV::Error(e);
@@ -657,23 +687,23 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
         ExpressionH::BreakH(_) => {
             return INodeExecuteResultV::Break(NodeBreakV { _phantom: PhantomData });
         }
-        ExpressionH::DestroyMutRuntimeSizedArrayH(d) => {
-            let DestroyMutRuntimeSizedArrayH { array_expression: array_expr } = **d;
+        ExpressionH::DestroyRuntimeSizedArrayH(d) => {
+            let DestroyRuntimeSizedArrayH { array_expression: array_expr } = **d;
             let array_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &array_expr) {
                 INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
                 INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
                 INodeExecuteResultV::Continue(c) => c.result_ref,
                 INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
             };
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             if let Err(e) = heap.ensure_ref_count(interner, scout_arena, array_reference, None, 0) { return INodeExecuteResultV::Error(e); }
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             let elements = match heap.dereference(array_reference, false) {
                 KindV::ArrayInstance(a) => a.elements.get(),
-                _ => panic!("execute_node_inner: DestroyMutRuntimeSizedArrayH array deref not ArrayInstance"),
+                _ => panic!("execute_node_inner: DestroyRuntimeSizedArrayH array deref not ArrayInstance"),
             };
             assert!(elements.is_empty());
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             heap.zero(array_reference);
             if let Err(e) = heap.deallocate_if_no_weak_refs(array_reference) {
                 return INodeExecuteResultV::Error(e);
@@ -693,7 +723,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 _ => panic!("execute_node_inner: ArrayLengthH array deref not ArrayInstance"),
             };
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, arr_expr.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
-            let len_ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(IntV { value: arr.get_size(), bits: 32, _phantom: PhantomData }));
+            let len_ref = make_primitive(heap, interner, call_id, OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: arr.get_size(), bits: 32, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: len_ref })
         }
         ExpressionH::ArrayCapacityH(ac) => {
@@ -709,7 +739,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 _ => panic!("execute_node_inner: ArrayCapacityH array deref not ArrayInstance"),
             };
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, arr_expr.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
-            let len_ref = make_primitive(heap, interner, call_id, LocationH::InlineH, KindV::Int(IntV { value: arr.capacity as i64, bits: 32, _phantom: PhantomData }));
+            let len_ref = make_primitive(heap, interner, call_id, OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: arr.capacity as i64, bits: 32, _phantom: PhantomData }));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: len_ref })
         }
         ExpressionH::WhileH(w) => {
@@ -743,7 +773,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 writeln!(handle, "{}Making new stack frame (icall)", "  ".repeat(call_id.call_depth as usize)).unwrap();
             }
             for r in &undeviewed_arg_references {
-                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: r.ownership }), *r);
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), *r);
             }
             let (_function_h, (callee_call_id, retuurn)) = match execute_interface_function(program_h, interner, scout_arena, stdin, stdout, heap, heap.vivem_bump.alloc_slice_copy(&undeviewed_arg_references), virtual_param_index, *interface_ref_h, index_in_edge, *function_type) {
                 Ok(t) => t,
@@ -774,7 +804,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 writeln!(handle, "{}Making new stack frame (lock call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
             }
             let function = program_h.lookup_function(constructor);
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: source_ref.ownership }), source_ref);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), source_ref);
             let args_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&deviewed_args);
             let (callee_call_id, retuurn) = match execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function) {
                 Ok(t) => t,
@@ -822,10 +852,13 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             write!(heap.vivem_dout, " **o:{}.{}", address.array_id.num, address.element_index).unwrap();
             let source = heap.get_reference_from_array(interner, address, expected_element_type, result_type);
             if target_ownership == OwnershipH::OwnH {
-                panic!("impl me?");
-            } else {
+                // Primitive element loads produce OwnH at H IR.
+                assert!(matches!(
+                    expected_element_type.kind,
+                    KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::VoidHT(_) | KindHT::NeverHT(_),
+                ));
             }
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: source.ownership }), source);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), source);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, index_expr.result_type(), index_int_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: source })
@@ -839,7 +872,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
             };
             let result_reference = heap.deinitialize_array_element(array_reference);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: result_reference.ownership }), result_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), result_reference);
             let result_value = heap.dereference(result_reference, false);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_he.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
             write!(heap.vivem_dout, " o{}-=", array_reference.num).unwrap();
@@ -867,15 +900,15 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
             };
             let newcomer_ve = heap.dereference(newcomer_reference, false);
-            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: newcomer_reference.ownership }), newcomer_reference);
+            heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), newcomer_reference);
             heap.initialize_array_element(array_reference, newcomer_reference);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_he.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
             write!(heap.vivem_dout, " o{}+=", array_reference.num).unwrap();
             heap.print_kind(newcomer_ve);
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: heap.void() })
         }
-        ExpressionH::NewMutRuntimeSizedArrayH(n) => {
-            let NewMutRuntimeSizedArrayH { capacity_expression: capacity_he, element_type: _, result_type: array_ref_type } = **n;
+        ExpressionH::NewRuntimeSizedArrayH(n) => {
+            let NewRuntimeSizedArrayH { capacity_expression: capacity_he, element_type: _, result_type: array_ref_type } = **n;
             let capacity_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &capacity_he) {
                 INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
                 INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
@@ -885,43 +918,12 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             let capacity_value = heap.dereference(capacity_reference, false);
             let capacity = match capacity_value {
                 KindV::Int(int_v) if int_v.bits == 32 => int_v.value as i32,
-                _ => panic!("execute_node_inner: NewMutRuntimeSizedArrayH capacity not IntV(_, 32)"),
+                _ => panic!("execute_node_inner: NewRuntimeSizedArrayH capacity not IntV(_, 32)"),
             };
             let rsa_def = program_h.lookup_runtime_sized_array(array_ref_type.kind.expect_runtime_sized_array_ht());
             let (array_reference, array_instance) = heap.add_uninitialized_array(interner, *rsa_def, array_ref_type, capacity);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, capacity_he.result_type(), capacity_reference) { return INodeExecuteResultV::Error(e); }
-            write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
-            heap.print_kind(KindV::ArrayInstance(&array_instance));
-            INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
-        }
-        ExpressionH::NewImmRuntimeSizedArrayH(cac) => {
-            let NewImmRuntimeSizedArrayH { size_expression: size_expr, generator_expression: generator_expr, generator_method: generator_prototype, element_type: _, result_type: array_ref_type } = **cac;
-            let size_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &size_expr) {
-                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
-                INodeExecuteResultV::Break(b) => return INodeExecuteResultV::Break(b),
-                INodeExecuteResultV::Continue(c) => c.result_ref,
-                INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
-            };
-            let size_kind = heap.dereference(size_reference, false);
-            let size = match size_kind {
-                KindV::Int(int_v) if int_v.bits == 32 => int_v.value,
-                _ => panic!("execute_node_inner: NewImmRuntimeSizedArrayH size not IntV(_, 32)"),
-            };
-            let rsa_def = program_h.lookup_runtime_sized_array(array_ref_type.kind.expect_runtime_sized_array_ht());
-            let (array_reference, array_instance) = heap.add_uninitialized_array(interner, *rsa_def, array_ref_type, size as i32);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
-            let generator_reference = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &generator_expr) {
-                INodeExecuteResultV::Return(r) => return INodeExecuteResultV::Return(r),
-                INodeExecuteResultV::Break(_) => panic!("execute_node_inner: NewImmRuntimeSizedArrayH generator produced Break — vwat"),
-                INodeExecuteResultV::Continue(c) => c.result_ref,
-                INodeExecuteResultV::Error(e) => return INodeExecuteResultV::Error(e),
-            };
-            if let Err(e) = generate_elements(program_h, interner, scout_arena, stdin, stdout, heap, expression_id, call_id, generator_reference, *generator_prototype, size, &mut |_i, element_ref, heap| {
-                heap.initialize_array_element(array_reference, element_ref);
-            }) { return INodeExecuteResultV::Error(e); }
-            if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, generator_expr.result_type(), generator_reference) { return INodeExecuteResultV::Error(e); }
-            if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, size_expr.result_type(), size_reference) { return INodeExecuteResultV::Error(e); }
             write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
             heap.print_kind(KindV::ArrayInstance(&array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
@@ -954,7 +956,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             write!(heap.vivem_dout, " *o:{}.{}", address.array_id.num, address.element_index).unwrap();
             write!(heap.vivem_dout, "<-{}", source_reference.num).unwrap();
             let old_member_reference = heap.mutate_array(address, source_reference, source_expr.result_type());
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: old_member_reference.ownership }), old_member_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), old_member_reference);
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), source_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, index_expr.result_type(), index_reference) { return INodeExecuteResultV::Error(e); }
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, array_expr.result_type(), array_reference) { return INodeExecuteResultV::Error(e); }
@@ -995,7 +997,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, generator_expr.result_type(), generator_reference) { return INodeExecuteResultV::Error(e); }
             let element_refs_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&element_refs);
             let (array_reference, array_instance) = heap.add_array(interner, *ssa_def, array_ref_type, element_refs_slice);
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: array_reference.ownership }), array_reference);
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), array_reference);
             write!(heap.vivem_dout, " o{}=", array_reference.num).unwrap();
             heap.print_kind(KindV::ArrayInstance(array_instance));
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: array_reference })
@@ -1024,10 +1026,8 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             assert!(constraint_ref.ownership == OwnershipH::MutableBorrowH || constraint_ref.ownership == OwnershipH::ImmutableBorrowH);
 
             let weak_ref = heap.transmute(constraint_ref, source_expr.result_type(), ExpressionH::BorrowToWeakH(wa_h).result_type());
-            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
-            if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), constraint_ref) {
-                return INodeExecuteResultV::Error(e);
-            }
+            heap.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), weak_ref);
+            if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), constraint_ref) { return INodeExecuteResultV::Error(e); }
 
             INodeExecuteResultV::Continue(NodeContinueV { result_ref: weak_ref })
         }
@@ -1040,7 +1040,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
             assert!(weak_ref.ownership == OwnershipH::WeakH);
 
             if heap.contains_live_object(weak_ref) {
-                let expected_ref = CoordH { ownership: OwnershipH::MutableBorrowH, location: LocationH::YonderH, kind: source_expr.result_type().kind };
+                let expected_ref = CoordH::new(OwnershipH::MutableBorrowH, LocationH::YonderH, source_expr.result_type().kind);
                 let constraint_ref = heap.transmute(weak_ref, source_expr.result_type(), expected_ref);
                 {
                     let handle = &mut *heap.vivem_dout;
@@ -1048,7 +1048,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                     writeln!(handle, "{}Making new stack frame (lock call)", "  ".repeat(expression_id.call_id.call_depth as usize)).unwrap();
                 }
                 let function = program_h.lookup_function(some_constructor);
-                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: weak_ref.ownership }), weak_ref);
+                heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), weak_ref);
                 let args_slice: &'v [ReferenceV<'v, 'h, 's>] = heap.vivem_bump.alloc_slice_copy(&[constraint_ref]);
                 let (callee_call_id, retuurn) = match execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, function) { Ok(t) => t, Err(e) => return INodeExecuteResultV::Error(e), };
                 {
@@ -1062,9 +1062,7 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 };
                 INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
             } else {
-                if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), weak_ref) {
-                    return INodeExecuteResultV::Error(e);
-                }
+                if let Err(e) = discard(program_h, interner, scout_arena, heap, stdout, stdin, call_id, source_expr.result_type(), weak_ref) { return INodeExecuteResultV::Error(e); }
                 {
                     let handle = &mut *heap.vivem_dout;
                     writeln!(handle).unwrap();
@@ -1085,9 +1083,17 @@ pub fn execute_node_inner<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner:
                 INodeExecuteResultV::Continue(NodeContinueV { result_ref: upcast(return_ref, target_interface_ref) })
             }
         }
+        ExpressionH::CopyPrimH(cp) => {
+            let inner_ref = match execute_node(program_h, interner, scout_arena, stdin, stdout, heap, expression_id.add_step(heap.vivem_bump, 0), &cp.inner) {
+                r @ (INodeExecuteResultV::Return(_) | INodeExecuteResultV::Break(_) | INodeExecuteResultV::Error(_)) => return r,
+                INodeExecuteResultV::Continue(c) => c.result_ref,
+            };
+            INodeExecuteResultV::Continue(NodeContinueV { result_ref: inner_ref })
+        }
         other => panic!("execute_node_inner: unimplemented arm {:?}", discriminant(other)),
     }
 }
+
 
 pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, array_reference: ReferenceV<'v, 'h, 's>, consumer_reference: ReferenceV<'v, 'h, 's>, consumer_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>)) -> Result<(), VmRuntimeErrorV<'s>> {
     let consumer_function = program_h.lookup_function(&consumer_prototype);
@@ -1106,11 +1112,12 @@ pub fn consume_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &
         let (callee_call_id, retuurn) = execute_function(program_h, interner, scout_arena, stdin, stdout, heap, args_slice, consumer_function)?;
         write!(heap.vivem_dout, "{}Getting return reference", prefix).unwrap();
         let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
-        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: return_ref.ownership }), return_ref);
+        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), return_ref);
         receiver(i, return_ref);
     }
     Ok(())
 }
+
 
 pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, _expression_id: ExpressionIdV<'v, 'h, 's>, call_id: CallIdV<'v, 'h, 's>, generator_reference: ReferenceV<'v, 'h, 's>, generator_prototype: PrototypeH<'s, 'h>, size: i64, receiver: &mut dyn FnMut(i64, ReferenceV<'v, 'h, 's>, &mut HeapV<'v, 'h, 's>)) -> Result<(), VmRuntimeErrorV<'s>> {
     let generator_function = program_h.lookup_function(&generator_prototype);
@@ -1121,7 +1128,7 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: 
             let prefix = "  ".repeat(call_id.call_depth as usize);
             writeln!(handle, "{}Making new stack frame (generator)", prefix).unwrap();
         }
-        let index_reference = heap.allocate_transient(interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: i, bits: 32, _phantom: PhantomData }));
+        let index_reference = heap.allocate_transient(interner, OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: i, bits: 32, _phantom: PhantomData }));
         {
             let handle = &mut *heap.vivem_dout;
             writeln!(handle).unwrap();
@@ -1137,11 +1144,12 @@ pub fn generate_elements<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: 
             write!(handle, "{}Getting return reference", prefix).unwrap();
         }
         let return_ref = possess_callee_return(heap, call_id, callee_call_id, &retuurn);
-        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: return_ref.ownership }), return_ref);
+        heap.decrement_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), return_ref);
         receiver(i, return_ref, heap);
     }
     Ok(())
 }
+
 
 pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>), heap: &mut HeapV<'v, 'h, 's>, undeviewed_arg_references: &'v [ReferenceV<'v, 'h, 's>], virtual_param_index: i32, interface_ref_h: InterfaceHT<'s, 'h>, index_in_edge: i32, function_type: PrototypeH<'s, 'h>) -> Result<(FunctionH<'s, 'h>, (CallIdV<'v, 'h, 's>, INodeExecuteResultV<'v, 'h, 's>)), VmRuntimeErrorV<'s>> {
     let interface_reference = undeviewed_arg_references[virtual_param_index as usize];
@@ -1149,15 +1157,15 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, i
         KindV::StructInstance(struct_h) => struct_h.struct_h.edges.iter().find(|e| e.interface == &interface_ref_h).expect("vassertSome edge"),
         _ => panic!("execute_interface_function: not a StructInstance"),
     };
-    let ReferenceV { actual_kind: actual_struct, seen_as_kind: actual_interface_kind, ownership: actual_ownership, location: actual_location, num: alloc_num } = interface_reference;
+    let ReferenceV { actual_kind: actual_struct, seen_as_kind: actual_interface_kind, ownership: actual_ownership, location: actual_location, num: alloc_num, .. } = interface_reference;
     assert!(actual_interface_kind.hamut == KindHT::InterfaceHT(&interface_ref_h));
-    let struct_reference = ReferenceV {
-        actual_kind: actual_struct,
-        seen_as_kind: actual_struct,
-        ownership: actual_ownership,
-        location: actual_location,
-        num: alloc_num,
-    };
+    let struct_reference = ReferenceV::new(
+        actual_struct,
+        actual_struct,
+        actual_ownership,
+        actual_location,
+        alloc_num,
+    );
     let prototype_h = *edge.struct_prototypes_by_interface_method.values().nth(index_in_edge as usize).expect("vassertSome prototypeH");
     let function_h = program_h.lookup_function(prototype_h);
     let actual_prototype = function_h.prototype;
@@ -1178,75 +1186,80 @@ pub fn execute_interface_function<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, i
     Ok((*function_h, (callee_call_id, INodeExecuteResultV::Return(retuurn))))
 }
 
+
 pub fn discard<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, heap: &mut HeapV<'v, 'h, 's>, stdout: &'v dyn Fn(StrI<'s>), stdin: &'v dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
     heap.decrement_reference_ref_count(
         IObjectReferrerV::RegisterToObjectReferrer(
-            RegisterToObjectReferrerV { call_id, ownership: actual_reference.ownership }
+            RegisterToObjectReferrerV { call_id }
         ),
         actual_reference,
     );
     cleanup(program_h, interner, heap, stdout, stdin, call_id, expected_reference, actual_reference)
 }
 
+
 pub fn cleanup<'v, 'h, 's>(program_h: &ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, heap: &mut HeapV<'v, 'h, 's>, stdout: &dyn Fn(StrI<'s>), stdin: &dyn Fn() -> StrI<'s>, call_id: CallIdV<'v, 'h, 's>, expected_reference: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
-    if heap.get_total_ref_count(actual_reference) == 0 {
-        match expected_reference.ownership {
-            OwnershipH::OwnH => {}
-            OwnershipH::WeakH => {
-                heap.deallocate_if_no_weak_refs(actual_reference)?;
-            }
-            OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => {}
-            OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
-                match expected_reference.kind {
-                    KindHT::VoidHT(_) | KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::StrHT(_) | KindHT::FloatHT(_) | KindHT::OpaqueHT(_) => {
-                        heap.zero(actual_reference);
-                        heap.deallocate_if_no_weak_refs(actual_reference)?;
+    if heap.get_total_ref_count(actual_reference) != 0 {
+        return Ok(());
+    }
+    match expected_reference.ownership {
+        OwnershipH::WeakH => {
+            heap.deallocate_if_no_weak_refs(actual_reference)?;
+            Ok(())
+        }
+        OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH => Ok(()),
+        OwnershipH::OwnH | OwnershipH::MutableShareH | OwnershipH::ImmutableShareH => {
+            // Strong reference at refcount-zero: dispatch on kind. Own and Share share
+            // the same cleanup shape — primitives/opaque/str deallocate inline; aggregates
+            // destructure and recurse on members/elements.
+            match expected_reference.kind {
+                KindHT::VoidHT(_) | KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::StrHT(_) | KindHT::OpaqueHT(_) | KindHT::NeverHT(_) => {
+                    heap.zero(actual_reference);
+                    heap.deallocate_if_no_weak_refs(actual_reference)?;
+                }
+                KindHT::StructHT(sr) => {
+                    let struct_def = program_h.lookup_struct(interner, sr);
+                    let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
+                    let member_refs = heap.destructure(actual_reference)?;
+                    assert_eq!(member_expected_types.len(), member_refs.len());
+                    for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
+                        cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref)?;
                     }
-                    KindHT::StructHT(sr) => {
-                        let struct_def = program_h.lookup_struct(interner, sr);
-                        let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
-                        let member_refs = heap.destructure(actual_reference)?;
-                        assert_eq!(member_expected_types.len(), member_refs.len());
-                        for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
-                            cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref)?;
-                        }
+                }
+                KindHT::InterfaceHT(_ir) => {
+                    let actual_concrete_type = match actual_reference.actual_kind.hamut {
+                        KindHT::StructHT(sr) => sr,
+                        _ => panic!("cleanup: InterfaceHT actual_kind not StructHT"),
+                    };
+                    let struct_def = program_h.lookup_struct(interner, actual_concrete_type);
+                    let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
+                    let member_refs = heap.destructure(actual_reference)?;
+                    assert_eq!(member_expected_types.len(), member_refs.len());
+                    for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
+                        cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref)?;
                     }
-                    KindHT::InterfaceHT(_ir) => {
-                        let actual_concrete_type = match actual_reference.actual_kind.hamut {
-                            KindHT::StructHT(sr) => sr,
-                            _ => panic!("cleanup: InterfaceHT actual_kind not StructHT"),
-                        };
-                        let struct_def = program_h.lookup_struct(interner, actual_concrete_type);
-                        let member_expected_types: Vec<CoordH<'s, 'h>> = struct_def.members.iter().map(|m| m.tyype).collect();
-                        let member_refs = heap.destructure(actual_reference)?;
-                        assert_eq!(member_expected_types.len(), member_refs.len());
-                        for (member_ref, member_expected_type) in member_refs.iter().zip(member_expected_types.iter()) {
-                            cleanup(program_h, interner, heap, stdout, stdin, call_id, *member_expected_type, *member_ref)?;
-                        }
+                }
+                KindHT::RuntimeSizedArrayHT(rsa_ht) => {
+                    let element_refs = heap.destructure_array(actual_reference);
+                    let element_type = program_h.lookup_runtime_sized_array(rsa_ht).element_type;
+                    for element_ref in element_refs.iter() {
+                        cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref)?;
                     }
-                    KindHT::RuntimeSizedArrayHT(rsa_ht) => {
-                        let element_refs = heap.destructure_array(actual_reference);
-                        let element_type = program_h.lookup_runtime_sized_array(rsa_ht).element_type;
-                        for element_ref in element_refs.iter() {
-                            cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref)?;
-                        }
-                        heap.zero(actual_reference);
-                        heap.deallocate_if_no_weak_refs(actual_reference)?;
+                    heap.zero(actual_reference);
+                    heap.deallocate_if_no_weak_refs(actual_reference)?;
+                }
+                KindHT::StaticSizedArrayHT(ssa_ht) => {
+                    let element_refs = heap.destructure_array(actual_reference);
+                    let element_type = program_h.lookup_static_sized_array(ssa_ht).element_type;
+                    for element_ref in element_refs.iter() {
+                        cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref)?;
                     }
-                    KindHT::StaticSizedArrayHT(ssa_ht) => {
-                        let element_refs = heap.destructure_array(actual_reference);
-                        let element_type = program_h.lookup_static_sized_array(ssa_ht).element_type;
-                        for element_ref in element_refs.iter() {
-                            cleanup(program_h, interner, heap, stdout, stdin, call_id, element_type, *element_ref)?;
-                        }
-                        heap.zero(actual_reference);
-                        heap.deallocate_if_no_weak_refs(actual_reference)?;
-                    }
-                    KindHT::NeverHT(_) => panic!("cleanup: NeverHT — pilot doesn't exercise"),
+                    heap.zero(actual_reference);
+                    heap.deallocate_if_no_weak_refs(actual_reference)?;
                 }
             }
+            Ok(())
         }
     }
-    Ok(())
 }
 

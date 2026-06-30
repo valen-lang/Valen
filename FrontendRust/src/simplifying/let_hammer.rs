@@ -8,7 +8,7 @@ use crate::instantiating::ast::expressions::{
 };
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::{CoordI, VariabilityI};
+use crate::instantiating::ast::types::CoordI;
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::ast::IdH;
@@ -22,14 +22,12 @@ use crate::final_ast::instructions::UnstackifyH;
 use crate::final_ast::types::KindHT;
 use crate::final_ast::types::LocationH;
 use crate::final_ast::types::OwnershipH;
-use crate::final_ast::types::Variability;
 use crate::instantiating::ast::ast::ILocalVariableI;
 use crate::instantiating::ast::ast::ReferenceLocalVariableI;
 use crate::instantiating::ast::citizens::IMemberTypeI;
 use crate::instantiating::ast::expressions::ExpressionIE;
 use crate::instantiating::ast::names::INameI;
 use crate::instantiating::ast::names::add_step;
-use crate::simplifying::conversions::evaluate_variability;
 use std::ptr::eq;
 
 
@@ -58,14 +56,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }
         let stackify_node = match local_variable {
             ILocalVariableI::ReferenceLocalVariableI(rlv) => {
-                ExpressionH::StackifyH(self.translate_mundane_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &rlv.name, rlv.variability))
+                ExpressionH::StackifyH(self.translate_mundane_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &rlv.name))
             }
             ILocalVariableI::AddressibleLocalVariableI(alv) => {
-                self.translate_addressible_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &alv.name, alv.variability, alv.collapsed_coord)
+                self.translate_addressible_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &alv.name, alv.collapsed_coord)
             }
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stackify_node, deferreds)
     }
+
 
 
     pub fn translate_restackify(
@@ -90,11 +89,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 ExpressionH::RestackifyH(self.translate_mundane_restackify(hinputs, hamuts, current_function_header, locals, source_expr_he, &rlv.name))
             }
             ILocalVariableI::AddressibleLocalVariableI(alv) => {
-                self.translate_addressible_restackify(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &alv.name, alv.variability, alv.collapsed_coord)
+                self.translate_addressible_restackify(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, &alv.name, alv.collapsed_coord)
             }
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stackify_node, deferreds)
     }
+
 
 
     pub fn translate_let_and_point(
@@ -112,14 +112,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let source_result_pointer_type_h = self.translate_coord(hinputs, hamuts, source_expr2.result());
         let borrow_access = match local_variable {
             ILocalVariableI::ReferenceLocalVariableI(r) => {
-                self.translate_mundane_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &r.name, r.variability)
+                self.translate_mundane_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &r.name)
             }
             ILocalVariableI::AddressibleLocalVariableI(alv) => {
-                self.translate_addressible_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &alv.name, alv.variability, alv.collapsed_coord)
+                self.translate_addressible_let_and_point(hinputs, hamuts, current_function_header, locals, source_expr2, source_expr_he, source_result_pointer_type_h, let_ie, &alv.name, alv.collapsed_coord)
             }
         };
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, borrow_access, deferreds)
     }
+
 
 
     pub(crate) fn translate_addressible_let(
@@ -131,19 +132,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
         reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
-        let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, reference, source_result_pointer_type_h);
-        let expected_local_box_type = CoordH {
-            ownership: OwnershipH::OwnH,
-            location: LocationH::YonderH,
-            kind: KindHT::StructHT(box_struct_ref_h),
-        };
+        let box_struct_ref_h = self.make_box(hinputs, hamuts, reference, source_result_pointer_type_h);
+        let expected_local_box_type = CoordH::new(OwnershipH::OwnH, LocationH::YonderH, KindHT::StructHT(box_struct_ref_h));
         let var_id_full = add_step(&current_function_header.id, INameI::from(*var_id));
         let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
-        let local = locals.add_typing_pass_local(var_id, var_id_name_h, evaluate_variability(variability), expected_local_box_type);
+        let local = locals.add_typing_pass_local(var_id, var_id_name_h, expected_local_box_type);
         let member_names: Vec<&'h IdH<'s>> = hamuts.struct_defs().iter().find(|s| eq(s.get_ref(self.interner), box_struct_ref_h)).unwrap().members.iter().map(|m| m.name).collect();
         let source_expressions = self.interner.bump().alloc_slice_copy(&[source_expr_he]);
         let target_member_names = self.interner.bump().alloc_slice_copy(&member_names);
@@ -160,6 +156,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub(crate) fn translate_addressible_restackify(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -169,12 +166,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
         reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         panic!("Unimplemented: translate_addressible_restackify");
     }
+
 
 
     pub(crate) fn translate_addressible_let_and_point(
@@ -188,12 +185,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         let_ie: &LetAndLendIE<'s, 'i>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
         reference: CoordI<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         panic!("Unimplemented: translate_addressible_let_and_point");
     }
+
 
 
     pub(crate) fn translate_mundane_let(
@@ -205,7 +202,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_expr_he: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
     ) -> &'h StackifyH<'s, 'h>
     {
         match source_expr_he.result_type().kind {
@@ -214,7 +210,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }
         let var_id_full = add_step(&current_function_header.id, INameI::from(*var_id));
         let var_id_name_h = self.translate_full_name(hinputs, hamuts, &var_id_full);
-        let local_index = locals.add_typing_pass_local(var_id, var_id_name_h, evaluate_variability(variability), source_result_pointer_type_h);
+        let local_index = locals.add_typing_pass_local(var_id, var_id_name_h, source_result_pointer_type_h);
         let stack_node = self.interner.alloc(StackifyH {
             source_expr: source_expr_he,
             local: local_index,
@@ -222,6 +218,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         });
         stack_node
     }
+
 
 
     pub(crate) fn translate_mundane_restackify(
@@ -250,6 +247,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub(crate) fn translate_mundane_let_and_point(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -261,10 +259,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         let_ie: &LetAndLendIE<'s, 'i>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
     ) -> ExpressionH<'s, 'h>
     {
-        let stackify_h = self.translate_mundane_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, var_id, variability);
+        let stackify_h = self.translate_mundane_let(hinputs, hamuts, current_function_header, locals, source_expr_he, source_result_pointer_type_h, var_id);
         let (borrow_access, borrow_deferreds) =
             self.translate_mundane_local_load(hinputs, hamuts, current_function_header, locals, var_id, source_expr2.result(), let_ie.result.ownership);
         assert!(borrow_deferreds.is_empty());
@@ -273,6 +270,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             exprs: self.interner.bump().alloc_slice_copy(&[ExpressionH::StackifyH(stackify_h), borrow_access]),
         }))
     }
+
 
 
     pub fn translate_unlet(
@@ -300,10 +298,10 @@ where 's: 'h, 's: 'i, 'i: 'h,
             ILocalVariableI::AddressibleLocalVariableI(alv) => {
                 let inner_type2 = alv.collapsed_coord;
                 let inner_type_h = self.translate_coord(hinputs, hamuts, inner_type2);
-                let _struct_ref_h = self.make_box(hinputs, hamuts, alv.variability, inner_type2, inner_type_h);
+                let _struct_ref_h = self.make_box(hinputs, hamuts, inner_type2, inner_type_h);
                 let unstackify_box_node = ExpressionH::UnstackifyH(self.interner.alloc(UnstackifyH { local }));
                 locals.mark_unstackified_by_var_name(&alv.name);
-                let inner_local = locals.add_hammer_local(inner_type_h, evaluate_variability(alv.variability));
+                let inner_local = locals.add_hammer_local(inner_type_h);
                 let des_h = ExpressionH::DestroyH(self.interner.alloc(DestroyH {
                     struct_expression: unstackify_box_node.expect_struct_access(),
                     local_types: self.interner.bump().alloc_slice_copy(&[inner_type_h]),
@@ -316,6 +314,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
+
 
 
     pub fn translate_destructure_static_sized_array(
@@ -338,7 +337,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
             let local_index = locals.add_typing_pass_local(
                 &destination_reference_local_variable.name,
                 var_id_name_h,
-                evaluate_variability(destination_reference_local_variable.variability),
                 member_ref_type_h);
             (member_ref_type_h, local_index)
         }).unzip();
@@ -349,6 +347,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, stack_node, source_expr_deferreds)
     }
+
 
 
     pub fn translate_destroy(
@@ -379,20 +378,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let local_index = locals.add_typing_pass_local(
                         &destination_reference_local_variable.name,
                         var_id_name_h,
-                        evaluate_variability(destination_reference_local_variable.variability),
                         member_ref_type_h);
                     local_types.push(member_ref_type_h);
                     local_indices.push(local_index);
                 }
                 IMemberTypeI::AddressMemberTypeI(member_ref_type2_addr) => {
                     let member_ref_type_h = self.translate_coord(hinputs, hamuts, member_ref_type2_addr.reference);
-                    let box_struct_ref_h = self.make_box(hinputs, hamuts, member2.variability, member_ref_type2_addr.reference, member_ref_type_h);
-                    let local_box_type = CoordH {
-                        ownership: OwnershipH::MutableBorrowH,
-                        location: LocationH::YonderH,
-                        kind: KindHT::StructHT(box_struct_ref_h),
-                    };
-                    let local_index = locals.add_hammer_local(local_box_type, Variability::Final);
+                    let box_struct_ref_h = self.make_box(hinputs, hamuts, member_ref_type2_addr.reference, member_ref_type_h);
+                    let local_box_type = CoordH::new(OwnershipH::MutableBorrowH, LocationH::YonderH, KindHT::StructHT(box_struct_ref_h));
+                    let local_index = locals.add_hammer_local(local_box_type);
                     local_types.push(local_box_type);
                     local_indices.push(local_index);
                 }

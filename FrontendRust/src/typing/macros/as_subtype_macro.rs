@@ -54,8 +54,8 @@ where 's: 't,
 
         // Because we dont yet put borrows in structs
         let result_ownership = incoming_ownership;
-        let success_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: target_kind };
-        let fail_coord = CoordT { ownership: result_ownership, region: RegionT { region: IRegionT::Default }, kind: incoming_kind };
+        let success_coord = CoordT::new(result_ownership, RegionT { region: IRegionT::Default }, target_kind);
+        let fail_coord = CoordT::new(result_ownership, RegionT { region: IRegionT::Default }, incoming_kind);
         let (result_coord, ok_constructor, ok_result_impl, err_constructor, err_result_impl) =
             self.get_result(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, success_coord, fail_coord)?;
         if result_coord != maybe_ret_coord.expect("vassertSome: maybeRetCoord") {

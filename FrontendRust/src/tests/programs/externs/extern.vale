@@ -2,5 +2,6 @@
 import math.*;
 
 exported func main() int {
-  return int(sqrt(float(16)));
+  // TSUGAR:   return int(sqrt(float(16)));
+  return int(&sqrt(float(&16)));
 }

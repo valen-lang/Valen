@@ -36,7 +36,7 @@ func list_vasts(output_dir &Path) List<Path> {
   return vast_files;
 }
 
-func build_stuff(compiler_dir &Path, all_args &Array<imm, str>) {
+func build_stuff(compiler_dir &Path, all_args &Array<str>) {
 
 
   windows = IsWindows();

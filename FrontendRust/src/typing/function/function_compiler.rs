@@ -284,37 +284,35 @@ where 's: 't,
         name: IVarNameS<'s>,
     ) -> &'t NormalStructMemberT<'s, 't> {
         let translated_name = self.translate_var_name_step(name);
-        let (variability, tyype) = match env.get_variable(translated_name).unwrap() {
-            IVariableT::ReferenceLocal(ReferenceLocalVariableT { variability, coord, .. }) => {
+        let tyype = match env.get_variable(translated_name).unwrap() {
+            IVariableT::ReferenceLocal(ReferenceLocalVariableT { coord, .. }) => {
                 // See "Captured own is borrow" test for why we do this
-                let tyype = match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
+                match coord.ownership {
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
                         unreachable!("ReferenceLocalVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
-                };
-                (variability, tyype)
+                }
             }
-            IVariableT::AddressibleLocal(AddressibleLocalVariableT { variability, coord: reference, .. }) => {
-                (variability, IMemberTypeT::Address(AddressMemberTypeT { reference }))
+            IVariableT::AddressibleLocal(AddressibleLocalVariableT { coord: reference, .. }) => {
+                IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
-            IVariableT::ReferenceClosure(ReferenceClosureVariableT { variability, coord, .. }) => {
+            IVariableT::ReferenceClosure(ReferenceClosureVariableT { coord, .. }) => {
                 // See "Captured own is borrow" test for why we do this
-                let tyype = match coord.ownership {
-                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
+                match coord.ownership {
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT::new(OwnershipT::Borrow, coord.region, coord.kind) }),
                     OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                     OwnershipT::Weak => {
                         unreachable!("ReferenceClosureVariableT has no Weak arm — only OwnT and BorrowT|ShareT");
                     }
-                };
-                (variability, tyype)
+                }
             }
-            IVariableT::AddressibleClosure(AddressibleClosureVariableT { variability, coord: reference, .. }) => {
-                (variability, IMemberTypeT::Address(AddressMemberTypeT { reference }))
+            IVariableT::AddressibleClosure(AddressibleClosureVariableT { coord: reference, .. }) => {
+                IMemberTypeT::Address(AddressMemberTypeT { reference })
             }
         };
-        self.typing_interner.alloc(NormalStructMemberT { name: translated_name, variability, tyype })
+        self.typing_interner.alloc(NormalStructMemberT { name: translated_name, tyype })
     }
 
 }

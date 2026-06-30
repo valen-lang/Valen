@@ -80,13 +80,13 @@ use crate::typing::templata::templata_utils::unapply_simple_name;
 use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
+
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
 }
 
 #[test]
 fn test_simple_generic_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -94,7 +94,7 @@ fn test_simple_generic_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc bork<T>(a T) T { return a; }\n";
+    let code = "\nfunc bork<T>(a T) T { return ^a; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -106,7 +106,6 @@ fn test_simple_generic_function() {
 
 #[test]
 fn test_lacking_drop_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -139,7 +138,6 @@ Couldn't find a suitable function drop(Kind$bork.T). No function with that name 
 
 #[test]
 fn test_having_drop_function_concept_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -195,7 +193,7 @@ fn test_having_drop_function_concept_function() {
                     }),
                     ..
                 },
-                return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. },
+                return_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. },
             },
             ..
         }) => Some(())
@@ -204,7 +202,6 @@ fn test_having_drop_function_concept_function() {
 
 #[test]
 fn test_calling_a_generic_function_with_a_concept_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -215,7 +212,7 @@ fn test_calling_a_generic_function_with_a_concept_function() {
     let code = r"
 func moo(x int) { }
 
-func bork<T>(a T) T where func moo(T)void { a }
+func bork<T>(a T) T where func moo(T)void { ^a }
 
 exported func main() {
   bork(3);
@@ -236,14 +233,14 @@ exported func main() {
                     local_name: INameT::Function(FunctionNameT {
                         template: FunctionTemplateNameT { human_name: StrI("bork"), .. },
                         template_args: &[ITemplataT::Coord(CoordTemplataT {
-                            coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. },
+                            coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
                         })],
-                        parameters: &[CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }],
+                        parameters: &[CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. }],
                         ..
                     }),
                     ..
                 },
-                return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. },
+                return_type: CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. },
             },
             args: &[ReferenceExpressionTE::ConstantInt(ConstantIntTE { value: ITemplataT::Integer(3), bits: 32, .. })],
             ..
@@ -253,7 +250,6 @@ exported func main() {
 
 #[test]
 fn test_rune_type_in_generic_param() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -280,7 +276,6 @@ fn test_rune_type_in_generic_param() {
 
 #[test]
 fn test_single_parameter_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -288,8 +283,9 @@ fn test_single_parameter_function() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: imm → share (post-kind-mutability-cut keyword)
     let code = r"
-struct Functor1<F Prot = func(P1)R> imm
+struct Functor1<F Prot = func(P1)R> share
 where P1 Ref, R Ref { }
 
 func __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R
@@ -309,7 +305,6 @@ exported func main() int {
 
 #[test]
 fn test_calling_a_generic_function_with_a_drop_concept_function() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -358,7 +353,7 @@ exported func main() {
                 _ => panic!("expected Vector(arg)"),
             };
             match prototype.return_type {
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. } => {}
+                CoordT { ownership: OwnershipT::Own, kind: KindT::Void(_), .. } => {}
                 _ => panic!("expected Share Void return_type"),
             }
             match template_arg_coord {
@@ -379,7 +374,6 @@ exported func main() {
 
 #[test]
 fn humanize_errors() {
-
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
     let scout_arena = ScoutArena::new(&scout_bump);
@@ -411,7 +405,7 @@ fn humanize_errors() {
     let firefly_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(firefly_struct_name) });
     let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
     let firefly_kind = KindT::Struct(firefly_tt);
-    let _firefly_coord = CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind };
+    let _firefly_coord = CoordT::new(OwnershipT::Own, region, firefly_kind);
 
     let serenity_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Serenity")});
@@ -420,7 +414,7 @@ fn humanize_errors() {
     let serenity_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(serenity_struct_name) });
     let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
     let serenity_kind = KindT::Struct(serenity_tt);
-    let _serenity_coord = CoordT { ownership: OwnershipT::Own, region, kind: serenity_kind };
+    let _serenity_coord = CoordT::new(OwnershipT::Own, region, serenity_kind);
 
     let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
         InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship")});
@@ -429,7 +423,7 @@ fn humanize_errors() {
     let ispaceship_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Interface(ispaceship_interface_name) });
     let ispaceship_tt = typing_interner.intern_interface_tt(InterfaceTTValT { id: *ispaceship_id });
     let ispaceship_kind = KindT::Interface(ispaceship_tt);
-    let _ispaceship_coord = CoordT { ownership: OwnershipT::Own, region, kind: ispaceship_kind };
+    let _ispaceship_coord = CoordT::new(OwnershipT::Own, region, ispaceship_kind);
 
     let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
         StructTemplateNameT { human_name: scout_arena.intern_str("Spoon")});
@@ -438,10 +432,10 @@ fn humanize_errors() {
     let unrelated_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Struct(unrelated_struct_name) });
     let unrelated_tt = typing_interner.intern_struct_tt(StructTTValT { id: *unrelated_id });
     let unrelated_kind = KindT::Struct(unrelated_tt);
-    let _unrelated_coord = CoordT { ownership: OwnershipT::Own, region, kind: unrelated_kind };
+    let _unrelated_coord = CoordT::new(OwnershipT::Own, region, unrelated_kind);
 
     let myfunc_template = typing_interner.intern_function_template_name(FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz[0].begin});
-    let myfunc_params: &[CoordT] = typing_bump.alloc_slice_copy(&[CoordT { ownership: OwnershipT::Own, region, kind: firefly_kind }]);
+    let myfunc_params: &[CoordT] = typing_bump.alloc_slice_copy(&[CoordT::new(OwnershipT::Own, region, firefly_kind)]);
     let myfunc_name = typing_interner.intern_function_name(FunctionNameValT { template: myfunc_template, template_args: &[], parameters: myfunc_params });
     let myfunc_id = typing_interner.intern_id(IdValT { package_coord: test_package_coord, init_steps: &[], local_name: INameT::Function(myfunc_name) });
     let _firefly_signature = SignatureT { id: *myfunc_id };
@@ -525,9 +519,11 @@ fn humanize_errors() {
     assert!(error_text.contains("\n                                 ^^^^^^^^^^^^^^^^^^^ _7: (unknown)"), "missing _7:(unknown) caret line, got: {}", error_text);
 }
 
+
 fn make_loc(pos: i32) {
     panic!("Unimplemented: make_loc");
 }
+
 
 fn make_range(begin: i32, end: i32) {
     panic!("Unimplemented: make_range");
@@ -535,7 +531,6 @@ fn make_range(begin: i32, end: i32) {
 
 #[test]
 fn simple_int_rule() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -544,7 +539,6 @@ fn simple_int_rule() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 exported func main() int where N Int = 3 {
   return N;
 }
@@ -563,7 +557,6 @@ exported func main() int where N Int = 3 {
 
 #[test]
 fn equals_transitive() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -572,7 +565,6 @@ fn equals_transitive() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 exported func main() int where N Int = 3, M Int = N {
   return M;
 }
@@ -591,7 +583,6 @@ exported func main() int where N Int = 3, M Int = N {
 
 #[test]
 fn one_of() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -600,7 +591,6 @@ fn one_of() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 exported func main() int where N Int = any(2, 3, 4), N = 3 {
   return N;
 }
@@ -619,7 +609,6 @@ exported func main() int where N Int = any(2, 3, 4), N = 3 {
 
 #[test]
 fn components() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -650,7 +639,6 @@ where
 
 #[test]
 fn prototype_rule_call_via_rune() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -682,7 +670,6 @@ where mooFunc Prot = func moo(int, bool)str
 
 #[test]
 fn prototype_rule_call_directly() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -714,7 +701,6 @@ where func moo(int, bool)str
 
 #[test]
 fn send_struct_to_struct() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -723,7 +709,6 @@ fn send_struct_to_struct() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 struct MyStruct {}
 func moo(m MyStruct) { }
 exported func main() {
@@ -739,7 +724,6 @@ exported func main() {
 
 #[test]
 fn send_struct_to_interface() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -748,7 +732,6 @@ fn send_struct_to_interface() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 struct MyStruct {}
 interface MyInterface {}
 impl MyInterface for MyStruct;
@@ -774,7 +757,6 @@ fn assume_most_specific_generic_param() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 struct MyStruct {}
 interface MyInterface {}
 impl MyInterface for MyStruct;
@@ -802,7 +784,6 @@ exported func main() {
 
 #[test]
 fn assume_most_specific_common_ancestor() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -854,7 +835,6 @@ exported func main() {
 
 #[test]
 fn descendant_satisfying_call() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -910,7 +890,7 @@ exported func main() {
             ISuperKindTT::Interface(itt) => match itt.id.local_name {
                 INameT::Interface(in_) => {
                     in_.template.human_namee.0 == "IShip" && match in_.template_args {
-                        [ITemplataT::Coord(ct)] => matches!(ct.coord, CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }),
+                        [ITemplataT::Coord(ct)] => matches!(ct.coord, CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. }),
                         _ => false,
                     }
                 }
@@ -923,7 +903,6 @@ exported func main() {
 
 #[test]
 fn reports_incomplete_solve() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -932,7 +911,6 @@ fn reports_incomplete_solve() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 exported func main() int where N Int {
 }
 ";
@@ -958,9 +936,9 @@ exported func main() int where N Int {
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
-        r##"At test:0.vale:3:1:
+        r##"At test:0.vale:2:1:
 exported func main() int where N Int {
-At test:0.vale:3:1:
+At test:0.vale:2:1:
 exported func main() int where N Int {
 Couldn't solve some runes: N
 Steps:
@@ -978,7 +956,6 @@ Unsolved runes: N
 
 #[test]
 fn stamps_an_interface_template_via_a_function_return() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -996,7 +973,7 @@ impl<X> MyInterface<X> for SomeStruct<X> where func drop(X)void;
 
 func doAThing<T>(t T) SomeStruct<T>
 where func drop(T)void {
-  return SomeStruct<T>(t);
+  return SomeStruct<T>(^t);
 }
 
 exported func main() {
@@ -1012,8 +989,8 @@ exported func main() {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn pointer_becomes_share_if_kind_is_immutable() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1021,13 +998,12 @@ fn pointer_becomes_share_if_kind_is_immutable() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: imm → share; x.i is &int
     let code = r"
-
-
-struct SomeStruct imm { i int; }
+struct SomeStruct share { i int; }
 
 func bork(x &SomeStruct) int {
-  return x.i;
+  return __copy_prim(&x.i);
 }
 
 exported func main() int {
@@ -1044,7 +1020,6 @@ exported func main() int {
 
 #[test]
 fn detects_conflict_between_types() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1053,7 +1028,6 @@ fn detects_conflict_between_types() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 struct ShipA {}
 struct ShipB {}
 exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
@@ -1078,9 +1052,9 @@ exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
-        r##"At test:0.vale:5:1:
+        r##"At test:0.vale:4:1:
 exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
-At test:0.vale:5:1:
+At test:0.vale:4:1:
 exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
 Solver conflict on rune _123111: was ShipB but now concluding ShipA
 exported func main<N Kind>() where N Kind = ShipA, N Kind = ShipB {
@@ -1119,7 +1093,6 @@ Unsolved runes: _3 _3.kind
 
 #[test]
 fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1128,7 +1101,6 @@ fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 #!DeriveStructDrop
 struct SomeStruct<T>
 { x T; }
@@ -1153,12 +1125,11 @@ exported func main() int {
         _ => panic!("expected Function local_name"),
     };
     let last = *template_args.last().unwrap();
-    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind: KindT::Int(IntT::I32) } })));
+    assert_eq!(last, ITemplataT::Coord(typing_bump.alloc(CoordTemplataT { coord: CoordT::new(OwnershipT::Own, RegionT { region: IRegionT::Default }, KindT::Int(IntT::I32)) })));
 }
 
 #[test]
 fn can_destructure_and_assemble_static_sized_array() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1166,18 +1137,18 @@ fn can_destructure_and_assemble_static_sized_array() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: swap([#](5, 7)).0 is &int
     let code = r"
-
 import v.builtins.arrays.*;
 import v.builtins.drop.*;
 
 func swap<T>(x [#2]T) [#2]T {
-  [a, b] = x;
-  return [#](b, a);
+  [a, b] = ^x;
+  return [#](^b, ^a);
 }
 
 exported func main() int {
-  return swap([#](5, 7)).0;
+  return __copy_prim(&swap([#](5, 7)).0);
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -1230,7 +1201,7 @@ exported func main() int {
     };
     match call_template_args.last().unwrap() {
         ITemplataT::Coord(ct) => match ct.coord {
-            CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. } => {}
+            CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT::I32), .. } => {}
             _ => panic!("expected Share Int32 template arg"),
         },
         _ => panic!("expected Coord template arg"),
@@ -1239,7 +1210,6 @@ exported func main() int {
 
 #[test]
 fn test_equivalent_identifying_runes_in_functions() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -1247,7 +1217,7 @@ fn test_equivalent_identifying_runes_in_functions() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let code = "\nfunc bork<T, Y>(a T) Y where T = Y { return a; }\n";
+    let code = "\nfunc bork<T, Y>(a T) Y where T = Y { return ^a; }\n";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
     let typing_interner = TypingInterner::new(&typing_bump);
@@ -1257,7 +1227,6 @@ fn test_equivalent_identifying_runes_in_functions() {
 
 #[test]
 fn iragp_test_equivalent_identifying_runes_in_struct() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();

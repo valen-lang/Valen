@@ -2,8 +2,10 @@
 weakable struct Muta { hp int; }
 exported func main() int {
   ownMuta = Muta(7);
-  print(str(ownMuta.hp));
+  // TSUGAR:   print(str(ownMuta.hp));
+  print(&str(__copy_prim(ownMuta.hp)));
   weakMuta = &&(&ownMuta);
   maybeBorrowMuta = lock(weakMuta);
-  return maybeBorrowMuta.get().hp;
+  // TSUGAR:   return maybeBorrowMuta.get().hp;
+  return __copy_prim(maybeBorrowMuta.get().hp);
 }

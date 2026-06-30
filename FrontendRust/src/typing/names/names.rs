@@ -6,7 +6,7 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::types::types::{CoordT, IRegionT, RegionT, ICitizenTT};
-use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
+use crate::typing::templata::templata::{ITemplataT, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::{MustIntern, TypingInterner};
 use crate::Keywords;
@@ -425,12 +425,12 @@ impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
             IInstantiationNameT::Impl(x) => x.template_args,
             IInstantiationNameT::ImplBound(x) => x.template_args,
             IInstantiationNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, CoordTemplataT(arr.elementType))
             }
             IInstantiationNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(CoordTemplataT(arr.elementType))
             }
             IInstantiationNameT::KindPlaceholder(_) => &[],
             IInstantiationNameT::OverrideDispatcher(x) => x.template_args,
@@ -695,12 +695,12 @@ impl<'s, 't> ISubKindNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             ISubKindNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, CoordTemplataT(arr.elementType))
             }
             ISubKindNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(CoordTemplataT(arr.elementType))
             }
             ISubKindNameT::KindPlaceholder(_) => &[],
             ISubKindNameT::Struct(x) => x.template_args,
@@ -738,12 +738,12 @@ impl<'s, 't> ICitizenNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
             ICitizenNameT::StaticSizedArray(_) => {
-                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(size, variability, CoordTemplataT(arr.elementType))
             }
             ICitizenNameT::RuntimeSizedArray(_) => {
-                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
-                // Vector(arr.mutability, CoordTemplataT(arr.elementType))
+                panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(CoordTemplataT(arr.elementType)) — needs interner to allocate slice)");
+                // Vector(CoordTemplataT(arr.elementType))
             }
             ICitizenNameT::Struct(x) => x.template_args,
             ICitizenNameT::Interface(x) => x.template_args,
@@ -932,7 +932,6 @@ pub struct ExportAsNameT<'s> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RawArrayNameT<'s, 't> {
-    pub mutability: ITemplataT<'s, 't>,
     pub element_type: CoordT<'s, 't>,
     pub self_region: RegionT,
 }
@@ -954,28 +953,17 @@ impl StaticSizedArrayTemplateNameT {
         interner: &TypingInterner<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> INameT<'s, 't> {
-        // vassert(templateArgs.size == 4)
-        assert!(template_args.len() == 4);
-        // val size = expectInteger(templateArgs(0))
+        assert!(template_args.len() == 2);
         let size = expect_integer(template_args[0]);
-        // val mutability = expectMutability(templateArgs(1))
-        let mutability = expect_mutability(template_args[1]);
-        // val variability = expectVariability(templateArgs(2))
-        let variability = expect_variability(template_args[2]);
-        // val elementType = expectCoordTemplata(templateArgs(3)).coord
-        let element_type = expect_coord_templata(template_args[3]).coord;
-        // val selfRegion = vregionmut(RegionT(DefaultRegionT))
+        let element_type = expect_coord_templata(template_args[1]).coord;
         let self_region = RegionT { region: IRegionT::Default };
-        // interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
-            mutability,
             element_type,
             self_region,
         });
         let ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
             template: interner.alloc(*self),
             size,
-            variability,
             arr: raw_array_name,
         });
         INameT::StaticSizedArray(ssa_name)
@@ -989,7 +977,6 @@ impl StaticSizedArrayTemplateNameT {
 pub struct StaticSizedArrayNameT<'s, 't> {
     pub template: &'t StaticSizedArrayTemplateNameT,
     pub size: ITemplataT<'s, 't>,
-    pub variability: ITemplataT<'s, 't>,
     pub arr: &'t RawArrayNameT<'s, 't>,
 }
 
@@ -1004,17 +991,14 @@ impl RuntimeSizedArrayTemplateNameT {
         interner: &TypingInterner<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> INameT<'s, 't> {
-        // vassert(templateArgs.size == 2)
-        assert!(template_args.len() == 2);
-        // val mutability = expectMutability(templateArgs(0))
-        let mutability = expect_mutability(template_args[0]);
-        // val elementType = expectCoordTemplata(templateArgs(1)).coord
-        let element_type = expect_coord_templata(template_args[1]).coord;
+        // vassert(templateArgs.size == 1)
+        assert!(template_args.len() == 1);
+        // val elementType = expectCoordTemplata(templateArgs(0)).coord
+        let element_type = expect_coord_templata(template_args[0]).coord;
         // val region = vregionmut(RegionT(DefaultRegionT))
         let region = RegionT { region: IRegionT::Default };
-        // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
+        // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(elementType, region))))
         let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
-            mutability,
             element_type: element_type,
             self_region: region,
         });

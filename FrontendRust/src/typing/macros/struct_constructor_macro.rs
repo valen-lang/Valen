@@ -209,7 +209,7 @@ where 's: 't,
             instantiation_bound_params,
             instantiation_bound_arguments: instantiation_bounds,
         };
-        let mutability = self.struct_compiler_get_mutability(
+        let mutability = self.struct_compiler_get_sharedness(
             false, // sanity_check
             coutputs,
             env.template_id,
@@ -218,12 +218,10 @@ where 's: 't,
             bound_arguments_source2,
         );
         let constructor_return_ownership = match mutability {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::MutabilityTemplataType(_)) => OwnershipT::Own,
-            _ => panic!("Unexpected mutability type in generate_function_body_struct_constructor"),
+            SharednessT::Single => OwnershipT::Own,
+            SharednessT::Shared => OwnershipT::Share,
         };
-        let constructor_return_type = CoordT { ownership: constructor_return_ownership, region: RegionT { region: IRegionT::Default }, kind: KindT::Struct(struct_tt) };
+        let constructor_return_type = CoordT::new(constructor_return_ownership, RegionT { region: IRegionT::Default }, KindT::Struct(struct_tt));
 
         let constructor_params_slice = self.typing_interner.alloc_slice_from_vec(constructor_params);
         let header = FunctionHeaderT {

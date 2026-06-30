@@ -116,13 +116,14 @@ fn interface_method_call_on_impl_bounded_generic_dispatches_through_interface() 
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: self.fuel is &int
         r"
 sealed interface IShip {
   func getFuel(virtual self &IShip) int;
 }
 struct Raza { fuel int; }
 impl IShip for Raza;
-func getFuel(self &Raza) int { return self.fuel; }
+func getFuel(self &Raza) int { return __copy_prim(&self.fuel); }
 
 func genericGetFuel<T>(x &T) int
 where implements(T, IShip) {
@@ -160,9 +161,9 @@ fn call_array_without_element_type() {
         &instantiating_bump,
         r"
 exported func main() int {
-  a = Array<imm>(3, {13 + _});
+  a = Array(3, {13 + _});
   sum = 0;
-  drop_into(a, &(e) => { set sum = sum + e; });
+  drop_into(^a, &(e) => { set sum = sum + e; });
   return sum;
 }
 ",
@@ -191,10 +192,11 @@ fn make_array_without_type() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a.3 is &int
         r"
 exported func main() int {
-  a = #[](10, {_});
-  return a.3;
+  a = [](10, {_});
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -224,10 +226,11 @@ fn borrowing_to_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: l.toArray()[1] is &int
         r"
 import list.*;
 
-func toArray<E>(list &List<E>) []<mut>&E {
+func toArray<E>(list &List<E>) []&E {
   return []&E(list.len(), { list.get(_) });
 }
 
@@ -236,7 +239,7 @@ exported func main() int {
   add(&l, 5);
   add(&l, 9);
   add(&l, 7);
-  return l.toArray()[1];
+  return __copy_prim(&l.toArray()[1]);
 }
 ",
     );

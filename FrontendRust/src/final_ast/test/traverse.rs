@@ -7,11 +7,11 @@ use crate::final_ast::ast::{
 use crate::final_ast::instructions::{
     ArgumentH, ArrayCapacityH, ArrayLengthH, AsSubtypeH, BlockH, BorrowToWeakH, BreakH, CallH,
     ConsecutorH, ConstantBoolH, ConstantF64H, ConstantIntH, ConstantStrH, ConstantVoidH, DestroyH,
-    DestroyImmRuntimeSizedArrayH, DestroyMutRuntimeSizedArrayH, DestroyStaticSizedArrayIntoFunctionH,
+    DestroyRuntimeSizedArrayH, DestroyStaticSizedArrayIntoFunctionH,
     DestroyStaticSizedArrayIntoLocalsH, DiscardH, ExpressionH, ExternCallH, IExpressionH, IfH,
     ImmutabilifyH, InterfaceCallH, InterfaceToInterfaceUpcastH, IsSameInstanceH, Local, LocalLoadH,
     LocalStoreH, LockWeakH, MemberLoadH, MemberStoreH, MutabilifyH, NewArrayFromValuesH,
-    NewImmRuntimeSizedArrayH, NewMutRuntimeSizedArrayH, NewStructH, PopRuntimeSizedArrayH,
+    NewRuntimeSizedArrayH, NewStructH, PopRuntimeSizedArrayH,
     PreCheckBorrowH, PushRuntimeSizedArrayH, ReferenceExpressionH, AddressExpressionH, RestackifyH,
     ReturnH, RuntimeSizedArrayLoadH, RuntimeSizedArrayStoreH, StackifyH, StaticArrayFromCallableH,
     StaticSizedArrayLoadH, StaticSizedArrayStoreH, StructToInterfaceUpcastH, UnstackifyH,
@@ -79,14 +79,12 @@ where
     MutabilifyH(&'h MutabilifyH<'s, 'h>),
     ImmutabilifyH(&'h ImmutabilifyH<'s, 'h>),
     ReturnH(&'h ReturnH<'s, 'h>),
-    NewImmRuntimeSizedArrayH(&'h NewImmRuntimeSizedArrayH<'s, 'h>),
-    NewMutRuntimeSizedArrayH(&'h NewMutRuntimeSizedArrayH<'s, 'h>),
+    NewRuntimeSizedArrayH(&'h NewRuntimeSizedArrayH<'s, 'h>),
     PushRuntimeSizedArrayH(&'h PushRuntimeSizedArrayH<'s, 'h>),
     PopRuntimeSizedArrayH(&'h PopRuntimeSizedArrayH<'s, 'h>),
     StaticArrayFromCallableH(&'h StaticArrayFromCallableH<'s, 'h>),
     DestroyStaticSizedArrayIntoFunctionH(&'h DestroyStaticSizedArrayIntoFunctionH<'s, 'h>),
-    DestroyImmRuntimeSizedArrayH(&'h DestroyImmRuntimeSizedArrayH<'s, 'h>),
-    DestroyMutRuntimeSizedArrayH(&'h DestroyMutRuntimeSizedArrayH<'s, 'h>),
+    DestroyRuntimeSizedArrayH(&'h DestroyRuntimeSizedArrayH<'s, 'h>),
     BreakH(&'h BreakH),
     NewStructH(&'h NewStructH<'s, 'h>),
     ArrayLengthH(&'h ArrayLengthH<'s, 'h>),
@@ -436,10 +434,7 @@ where
         ExpressionH::MutabilifyH(x) => visit_mutabilify(pred, out, x),
         ExpressionH::ImmutabilifyH(x) => visit_immutabilify(pred, out, x),
         ExpressionH::ReturnH(x) => visit_return(pred, out, x),
-        ExpressionH::NewImmRuntimeSizedArrayH(x) => {
-            visit_new_imm_runtime_sized_array(pred, out, x)
-        }
-        ExpressionH::NewMutRuntimeSizedArrayH(x) => {
+        ExpressionH::NewRuntimeSizedArrayH(x) => {
             visit_new_mut_runtime_sized_array(pred, out, x)
         }
         ExpressionH::PushRuntimeSizedArrayH(x) => visit_push_runtime_sized_array(pred, out, x),
@@ -450,10 +445,7 @@ where
         ExpressionH::DestroyStaticSizedArrayIntoFunctionH(x) => {
             visit_destroy_static_sized_array_into_function(pred, out, x)
         }
-        ExpressionH::DestroyImmRuntimeSizedArrayH(x) => {
-            visit_destroy_imm_runtime_sized_array(pred, out, x)
-        }
-        ExpressionH::DestroyMutRuntimeSizedArrayH(x) => {
+        ExpressionH::DestroyRuntimeSizedArrayH(x) => {
             visit_destroy_mut_runtime_sized_array(pred, out, x)
         }
         ExpressionH::BreakH(x) => visit_break(pred, out, x),
@@ -466,6 +458,7 @@ where
         ExpressionH::LockWeakH(x) => visit_lock_weak(pred, out, x),
         ExpressionH::DiscardH(x) => visit_discard(pred, out, x),
         ExpressionH::PreCheckBorrowH(x) => visit_pre_check_borrow(pred, out, x),
+        ExpressionH::CopyPrimH(x) => visit_expression(pred, out, x.inner),
     }
 }
 
@@ -837,31 +830,15 @@ where
     visit_expression(pred, out, x.source_expression);
 }
 
-fn visit_new_imm_runtime_sized_array<'s, 'h, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    x: &'h NewImmRuntimeSizedArrayH<'s, 'h>,
-) where
-    F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
-    's: 'h,
-{
-    collect_if(pred, out, NodeRefH::NewImmRuntimeSizedArrayH(x));
-    visit_expression(pred, out, x.size_expression);
-    visit_expression(pred, out, x.generator_expression);
-    visit_prototype(pred, out, x.generator_method);
-    visit_coord(pred, out, &x.element_type);
-    visit_coord(pred, out, &x.result_type);
-}
-
 fn visit_new_mut_runtime_sized_array<'s, 'h, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    x: &'h NewMutRuntimeSizedArrayH<'s, 'h>,
+    x: &'h NewRuntimeSizedArrayH<'s, 'h>,
 ) where
     F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
     's: 'h,
 {
-    collect_if(pred, out, NodeRefH::NewMutRuntimeSizedArrayH(x));
+    collect_if(pred, out, NodeRefH::NewRuntimeSizedArrayH(x));
     visit_expression(pred, out, x.capacity_expression);
     visit_coord(pred, out, &x.element_type);
     visit_coord(pred, out, &x.result_type);
@@ -923,30 +900,15 @@ fn visit_destroy_static_sized_array_into_function<'s, 'h, T, F>(
     visit_coord(pred, out, &x.array_element_type);
 }
 
-fn visit_destroy_imm_runtime_sized_array<'s, 'h, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    x: &'h DestroyImmRuntimeSizedArrayH<'s, 'h>,
-) where
-    F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
-    's: 'h,
-{
-    collect_if(pred, out, NodeRefH::DestroyImmRuntimeSizedArrayH(x));
-    visit_expression(pred, out, x.array_expression);
-    visit_expression(pred, out, x.consumer_expression);
-    visit_prototype(pred, out, x.consumer_method);
-    visit_coord(pred, out, &x.array_element_type);
-}
-
 fn visit_destroy_mut_runtime_sized_array<'s, 'h, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    x: &'h DestroyMutRuntimeSizedArrayH<'s, 'h>,
+    x: &'h DestroyRuntimeSizedArrayH<'s, 'h>,
 ) where
     F: Fn(NodeRefH<'s, 'h>) -> Option<T>,
     's: 'h,
 {
-    collect_if(pred, out, NodeRefH::DestroyMutRuntimeSizedArrayH(x));
+    collect_if(pred, out, NodeRefH::DestroyRuntimeSizedArrayH(x));
     visit_expression(pred, out, x.array_expression);
 }
 

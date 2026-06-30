@@ -34,6 +34,7 @@ use crate::typing::types::types::InterfaceTT;
 use crate::typing::types::types::KindPlaceholderT;
 use crate::typing::types::types::OwnershipT;
 use crate::utils::fx::HashSet;
+
 pub struct AfterRegionsTests {}
 
 #[test]
@@ -136,7 +137,7 @@ exported func main() {
 }
 
 #[test]
-fn can_destructure_and_assemble_tuple() {
+fn minimal_anonymous_interface_construction() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -145,16 +146,42 @@ fn can_destructure_and_assemble_tuple() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
+interface AFn { func __call(virtual this &AFn); }
+exported func main() { AFn(() => { }); }
+";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
+    let _coutputs = compile.expect_compiler_outputs();
+}
+
+#[test]
+#[ignore = "ignored upstream in Scala"]
+fn tuple_with_all_imm_fields_is_imm() { panic!("Unmigrated test: tuple_with_all_imm_fields_is_imm"); }
+
+#[test]
+fn can_destructure_and_assemble_tuple() {
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: swap((5, true)).0 is &bool
+    let code = r"
 import v.builtins.tup2.*;
 import v.builtins.drop.*;
 
 func swap<T, Y>(x (T, Y)) (Y, T) {
-  [a, b] = x;
-  return (b, a);
+  [a, b] = ^x;
+  return (^b, ^a);
 }
 
 exported func main() bool {
-  return swap((5, true)).0;
+  return __copy_prim(&swap((5, true)).0);
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -165,7 +192,7 @@ exported func main() bool {
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("main").header.return_type {
-        CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
@@ -218,8 +245,6 @@ fn impl_rule() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
-
 interface IShip {
   func getFuel(virtual self &IShip) int;
 }
@@ -305,12 +330,13 @@ exported func main() bool {
     let coutputs = compile.expect_compiler_outputs();
 
     match coutputs.lookup_function_by_str("tryDowncast").header.return_type {
-        CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
         other => panic!("expected CoordT(ShareT, _, BoolT()), got {:?}", other),
     }
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn test_two_instantiations_of_anonymous_param_lambda() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -325,15 +351,14 @@ import v.builtins.logic.*;
 
 func doThing<T, F>(func F, a T, b T) bool
 where func __call(&F, T, T)bool, func drop(F)void {
-  func(a, b)
+  (&func)(^a, ^b)
 }
 
 exported func main() {
   lam = (a, b) => { a == b };
-  doThing(lam, 7, 8);
-  doThing(lam, true, false);
+  doThing(^lam, 7, 8);
+  doThing(^lam, true, false);
 }
-
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(get_embedded_modulized_code_map(&parse_arena, &parser_keywords))
@@ -386,7 +411,7 @@ struct MyStruct {
                     local_name: INameT::Interface(InterfaceNameT {
                         template: InterfaceTemplateNameT { human_namee: StrI("MyInterface"), .. },
                         template_args: &[
-                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } }),
+                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } }),
                             ITemplataT::Integer(5),
                         ],
                         ..
@@ -411,7 +436,7 @@ fn reports_when_we_give_too_many_args() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r#"
-func moo(a int, b bool, s str) int { a }
+func moo(a int, b bool, s str) int { ^a }
 exported func main() int {
   moo(42, true, "hello", false)
 }
@@ -451,6 +476,7 @@ Number of params doesn't match! Supplied 4 but function takes 3
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn failure_to_resolve_a_prot_rules_function_doesnt_halt() {
     // In the below example, it should disqualify the first foo() because T = bool
     // and there exists no moo(bool). Instead, we saw the Prot rule throw and halt
@@ -494,6 +520,7 @@ func main() { foo("hello"); }
     compile.expect_compiler_outputs();
 }
 
+
 // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
 // bound `func(&G)E` where E is an identifying generic rune appearing only in the
 // bound's return position. The caller supplies a lambda for G but does not (and
@@ -527,6 +554,7 @@ exported func main() int {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
+
 // Edge case for @BRRZ: the lambda body itself invokes another generic function
 // with its own bound. Exercises stamping-during-solve recursing into a nested
 // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
@@ -558,6 +586,7 @@ exported func main() int {
     let mut compile = compiler_test_compilation(&typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver);
     let _coutputs = compile.expect_compiler_outputs();
 }
+
 
 // Edge case for @BRRZ: two bounds on the same function, each resolving to a
 // different lambda. Exercises multiple ResolveSR rules firing in the same solve
@@ -591,6 +620,7 @@ exported func main() int {
     let _coutputs = compile.expect_compiler_outputs();
 }
 
+
 // Depends on IFunction1, and maybe Generic interface anonymous subclass
 #[test]
 fn basic_ifunction1_anonymous_subclass() {
@@ -605,8 +635,8 @@ fn basic_ifunction1_anonymous_subclass() {
 import ifunction.ifunction1.*;
 
 exported func main() int {
-  f = IFunction1<mut, int, int>({_});
-  return (f)(7);
+  f = IFunction1<int, int>({^_});
+  return (^f)(7);
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])

@@ -2,8 +2,8 @@ use crate::utils::fx::HashMap;
 use bumpalo::Bump;
 use crate::postparsing::ast::ProgramS;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
-  OwnershipTemplataType, VariabilityTemplataType,
+  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, SharednessTemplataType,
+  OwnershipTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
 use crate::Keywords;
@@ -258,7 +258,7 @@ fn predict_array_sequence_types() {
   let scout_arena = ScoutArena::new(&scout_bump);
   let keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(&parse_arena);
-  let code = "func main<M Mutability, V Variability, N Int, E>(t T) where T Ref = [#N]<M, V>E {}";
+  let code = "func main<N Int, E>(t T) where T Ref = [#N]E {}";
   let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
       .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
   let program = compile(
@@ -271,12 +271,6 @@ fn predict_array_sequence_types() {
   );
   let main = program.lookup_function("main");
 
-  let m_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: scout_arena.intern_str("M"),
-  }));
-  let v_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: scout_arena.intern_str("V"),
-  }));
   let n_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
     name: scout_arena.intern_str("N"),
   }));
@@ -286,14 +280,6 @@ fn predict_array_sequence_types() {
   let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
     name: scout_arena.intern_str("T"),
   }));
-  assert_eq!(
-    main.rune_to_predicted_type.get(&m_rune),
-    Some(&ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}))
-  );
-  assert_eq!(
-    main.rune_to_predicted_type.get(&v_rune),
-    Some(&ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}))
-  );
   assert_eq!(
     main.rune_to_predicted_type.get(&n_rune),
     Some(&ITemplataType::IntegerTemplataType(IntegerTemplataType {}))

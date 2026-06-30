@@ -24,12 +24,10 @@ use crate::typing::types::types::CoordT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::StructTT;
-use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
 pub struct OwnershipTests;
-
 
 #[test]
 fn borrowing_a_temporary_mutable_makes_a_local_var() {
@@ -49,10 +47,11 @@ fn borrowing_a_temporary_mutable_makes_a_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: (&Muta(9)).hp is &int
         r"
 struct Muta { hp int; }
 exported func main() int {
-  return (&Muta(9)).hp;
+  return __copy_prim(&(&Muta(9)).hp);
 }
 ",
     );
@@ -65,7 +64,6 @@ exported func main() int {
                 let_te.variable,
                 ILocalVariableT::Reference(ReferenceLocalVariableT {
                     name: IVarNameT::TypingPassTemporaryVar(_),
-                    variability: VariabilityT::Final,
                     ..
                 })
             ) => {
@@ -90,6 +88,7 @@ exported func main() int {
 }
 
 
+
 #[test]
 fn owning_ref_method_call() {
     let compilation_bump = bumpalo::Bump::new();
@@ -108,14 +107,15 @@ fn owning_ref_method_call() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m.hp / (m).hp are &int
         r"
 struct Muta { hp int; }
 func take(m Muta) int {
-  return m.hp;
+  return __copy_prim(&m.hp);
 }
 exported func main() int {
   m = Muta(9);
-  return (m).hp;
+  return __copy_prim(&(&m).hp);
 }
 ",
     );
@@ -127,6 +127,7 @@ exported func main() int {
         other => panic!("Expected VonInt(9), got {:?}", other),
     }
 }
+
 
 
 #[test]
@@ -176,6 +177,7 @@ exported func main() {
 }
 
 
+
 #[test]
 fn custom_drop_result_is_an_owning_ref_calls_destructor() {
     let compilation_bump = bumpalo::Bump::new();
@@ -202,7 +204,7 @@ struct Muta { }
 
 func drop(m ^Muta) void {
   println("Destroying!");
-  Muta[ ] = m;
+  Muta[ ] = ^m;
 }
 
 exported func main() {
@@ -229,6 +231,7 @@ exported func main() {
 }
 
 
+
 #[test]
 fn saves_return_value_then_destroys_temporary() {
     let compilation_bump = bumpalo::Bump::new();
@@ -247,6 +250,7 @@ fn saves_return_value_then_destroys_temporary() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: (Muta(10)).hp is &int
         r#"
 import printutils.*;
 
@@ -255,11 +259,11 @@ struct Muta { hp int; }
 
 func drop(m ^Muta) {
   println("Destroying!");
-  Muta[hp] = m;
+  Muta[hp] = ^m;
 }
 
 exported func main() int {
-  return (Muta(10)).hp;
+  return __copy_prim(&(Muta(10)).hp);
 }
 "#,
     );
@@ -278,6 +282,7 @@ exported func main() int {
         other => panic!("expected (VonInt(10), \"Destroying!\\n\"), got {:?}", other),
     }
 }
+
 
 
 #[test]
@@ -306,7 +311,7 @@ struct Muta { }
 
 func drop(m ^Muta) {
   println("Destroying!");
-  Muta[ ] = m;
+  Muta[ ] = ^m;
 }
 
 exported func main() {
@@ -331,6 +336,7 @@ exported func main() {
     }
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "Destroying!\n");
 }
+
 
 
 #[test]
@@ -360,7 +366,7 @@ struct Muta { }
 
 func drop(m ^Muta) {
   println("Destroying!");
-  Muta[ ] = m;
+  Muta[ ] = ^m;
 }
 
 func moo(m ^Muta) {
@@ -368,7 +374,7 @@ func moo(m ^Muta) {
 
 exported func main() {
   a = Muta();
-  moo(a);
+  moo(^a);
 }
 "#,
     );
@@ -441,6 +447,7 @@ exported func main() {
 }
 
 
+
 #[test]
 fn saves_return_value_then_destroys_local_var() {
     let compilation_bump = bumpalo::Bump::new();
@@ -459,6 +466,7 @@ fn saves_return_value_then_destroys_local_var() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a.hp is &int
         r#"
 import printutils.*;
 
@@ -467,12 +475,12 @@ struct Muta { hp int; }
 
 func drop(m ^Muta) {
   println("Destroying!");
-  Muta[hp] = m;
+  Muta[hp] = ^m;
 }
 
 exported func main() int {
   a = Muta(10);
-  return a.hp;
+  return __copy_prim(&a.hp);
 }
 "#,
     );
@@ -498,6 +506,7 @@ exported func main() int {
 }
 
 
+
 #[test]
 fn gets_from_temporary_struct_a_members_member() {
     let compilation_bump = bumpalo::Bump::new();
@@ -516,6 +525,7 @@ fn gets_from_temporary_struct_a_members_member() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: .wand.charges is &int
         r"
 struct Wand {
   charges int;
@@ -524,7 +534,7 @@ struct Wizard {
   wand ^Wand;
 }
 exported func main() int {
-  return Wizard(Wand(10)).wand.charges;
+  return __copy_prim(&Wizard(Wand(10)).wand.charges);
 }
       ",
     );
@@ -533,6 +543,7 @@ exported func main() int {
         other => panic!("Expected VonInt(10), got {:?}", other),
     }
 }
+
 
 
 #[test]
@@ -574,6 +585,7 @@ exported func main() int {
 }
 
 
+
 #[test]
 fn basic_builder_pattern() {
     let compilation_bump = bumpalo::Bump::new();
@@ -592,19 +604,20 @@ fn basic_builder_pattern() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: ship.hp is &int
         r"
-struct Ship { hp! int; fuel! int; }
+struct Ship { hp int; fuel int; }
 func setHp(ship Ship, hp int) Ship {
-  set ship.hp = hp;
-  return ship;
+  set ship.hp = ^hp;
+  return ^ship;
 }
 func setFuel(ship Ship, fuel int) Ship {
-  set ship.fuel = fuel;
-  return ship;
+  set ship.fuel = ^fuel;
+  return ^ship;
 }
 exported func main() int {
   ship = Ship(0, 0).setHp(42).setFuel(43);
-  return ship.hp;
+  return __copy_prim(&ship.hp);
 }
 ",
     );
@@ -613,6 +626,7 @@ exported func main() int {
         other => panic!("Expected VonInt(42), got {:?}", other),
     }
 }
+
 
 
 #[test]
@@ -633,10 +647,11 @@ fn member_access_on_returned_owning_ref() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: Ship(42).hp is &int
         r"
 struct Ship { hp int; }
 exported func main() int {
-  return Ship(42).hp;
+  return __copy_prim(&Ship(42).hp);
 }
 ",
     );

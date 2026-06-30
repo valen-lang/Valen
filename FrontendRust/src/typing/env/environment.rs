@@ -45,12 +45,16 @@ where 's: 't,
     Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 
+
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   pub fn to_string(&self) -> String {
     panic!("Unimplemented: to_string");
     // "#Environment:" + id
   }
   
+
+
+
 
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
@@ -66,10 +70,12 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn templatas(&self) -> &TemplatasStoreT<'s, 't> {
     panic!("Unimplemented: templatas");
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -90,6 +96,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
@@ -106,6 +113,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -115,6 +123,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     self.lookup_with_imprecise_name_inner(name_s, lookup_filter, false, interner)
   }
   
+
   pub fn lookup_all_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -126,6 +135,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     // })
   }
   
+
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
@@ -140,6 +150,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
@@ -300,6 +311,10 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   }
   
 
+
+
+
+
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(e) => e.global_env,
@@ -348,6 +363,7 @@ where 's: 't,
 }
 
 
+
 pub fn entry_matches_filter<'s, 't>(
   entry: &IEnvEntryT<'s, 't>,
   contexts: &HashSet<ILookupContext>,
@@ -377,12 +393,12 @@ pub fn entry_matches_filter<'s, 't>(
         ITemplataT::Location(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::Mutability(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::Ownership(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
-        ITemplataT::Variability(_) => contexts.contains(&ILookupContext::TemplataLookupContext),
         ITemplataT::ExternFunction(_) => contexts.contains(&ILookupContext::ExpressionLookupContext),
       }
     }
   }
 }
+
 
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
@@ -417,6 +433,7 @@ where 's: 't,
     IEnvEntryT::Templata(templata) => templata,
   }
 }
+
 
 pub fn get_imprecise_name<'s, 't>(
   scout_arena: &ScoutArena<'s>,
@@ -477,6 +494,7 @@ pub fn get_imprecise_name<'s, 't>(
     }
   }
 }
+
 
 pub fn code_locations_match<'s>(
   code_location_a: &CodeLocationS<'s>,
@@ -649,6 +667,9 @@ where 's: 't,
 }
 
 
+
+
+
 impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   pub fn add_entries(
     &self,
@@ -775,6 +796,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     }
   }
 
+
   pub fn add_entry(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -784,6 +806,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   ) -> TemplatasStoreT<'s, 't> {
     self.add_entries(interner, scout_arena, vec![(name, entry)])
   }
+
 
   pub fn lookup_with_name_inner(
     &self,
@@ -797,6 +820,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
       .map(|entry| entry_to_templata(defining_env, *entry, interner))
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
@@ -811,6 +835,7 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
   }
   
 }
+
 
 pub fn make_top_level_environment<'s, 't>(
   global_env: &'t GlobalEnvironmentT<'s, 't>,
@@ -845,6 +870,8 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   }
   
 
+
+
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -867,6 +894,7 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
     result
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -917,17 +945,23 @@ where 's: 't,
 }
 
 
+
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // templateId
   }
   
+
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
+
+
+
+
 
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     match (self.id.local_name, self.parent_env.id().local_name) {
@@ -952,6 +986,7 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -971,6 +1006,7 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     }
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1036,22 +1072,26 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
+
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
   
+
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
+
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
+
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1063,6 +1103,7 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1106,22 +1147,26 @@ where 's: 't,
 }
 
 
+
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
     // this
   }
   
+
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
+
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
+
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1133,6 +1178,7 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
@@ -1168,22 +1214,29 @@ where 's: 't,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
 }
 
+
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn denizen_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_id");
     // id
   }
   
+
   pub fn denizen_template_id(&self) -> IdT<'s, 't> {
     panic!("Unimplemented: denizen_template_id");
     // templateId
   }
   
 
+
+
+
+
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     self.parent_env.root_compiling_denizen_env()
   }
   
+
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
@@ -1195,6 +1248,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     //   this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
   
+
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,

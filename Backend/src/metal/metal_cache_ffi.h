@@ -136,12 +136,9 @@ LocalHandle* metal_cache_get_local(
 // Each constructed object's identity is its pointer; constructors do not
 // dedupe. Callers must construct each logical entity exactly once.
 
-// Variability encoding (matches enum class Variability in metal/types.h):
-//   0=FINAL, 1=VARYING
 StructMemberHandle* metal_struct_member_new(
     const char* full_name_ptr, size_t full_name_len,
     const char* name_ptr, size_t name_len,
-    uint32_t variability,
     ReferenceHandle* type);
 
 EdgeHandle* metal_edge_new(
@@ -281,12 +278,6 @@ ExpressionHandle* metal_expr_new_mut_runtime_sized_array(
     ExpressionHandle* size_expr, ReferenceHandle* size_type, KindHandle* size_kind,
     ReferenceHandle* array_ref_type, ReferenceHandle* element_type);
 
-ExpressionHandle* metal_expr_new_imm_runtime_sized_array(
-    ExpressionHandle* size_expr, ReferenceHandle* size_type, KindHandle* size_kind,
-    ExpressionHandle* generator_expr, ReferenceHandle* generator_type, KindHandle* generator_kind,
-    PrototypeHandle* generator_method, int32_t generator_known_live,
-    ReferenceHandle* array_ref_type, ReferenceHandle* element_type);
-
 ExpressionHandle* metal_expr_static_array_from_callable(
     ExpressionHandle* generator_expr, ReferenceHandle* generator_type, KindHandle* generator_kind,
     PrototypeHandle* generator_method, int32_t generator_known_live,
@@ -309,11 +300,6 @@ ExpressionHandle* metal_expr_destroy_static_sized_array_into_function(
     ExpressionHandle* consumer_expr, ReferenceHandle* consumer_type,
     PrototypeHandle* consumer_method, int32_t consumer_known_live,
     ReferenceHandle* array_element_type, int32_t array_size);
-
-ExpressionHandle* metal_expr_destroy_imm_runtime_sized_array(
-    ExpressionHandle* array_expr, ReferenceHandle* array_type, KindHandle* array_kind,
-    ExpressionHandle* consumer_expr, ReferenceHandle* consumer_type, KindHandle* consumer_kind,
-    PrototypeHandle* consumer_method, int32_t consumer_known_live);
 
 ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(
     ExpressionHandle* array_expr, ReferenceHandle* array_type, KindHandle* array_kind);
@@ -392,7 +378,7 @@ void metal_package_builder_add_runtime_sized_array(
 
 StaticSizedArrayDefHandle* metal_static_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind, int32_t size,
-    RegionIdHandle* region_id, uint32_t mutability, uint32_t variability,
+    RegionIdHandle* region_id, uint32_t mutability,
     ReferenceHandle* element_type);
 
 RuntimeSizedArrayDefHandle* metal_runtime_sized_array_def_new(

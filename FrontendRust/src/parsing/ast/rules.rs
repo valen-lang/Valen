@@ -90,8 +90,6 @@ pub enum ITypePR {
   IntType,
   BoolType,
   OwnershipType,
-  MutabilityType,
-  VariabilityType,
   LocationType,
   CoordType,
   CoordListType,
@@ -153,8 +151,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     }
     ITemplexPT::String(_)
     | ITemplexPT::Int(_)
-    | ITemplexPT::Mutability(_)
-    | ITemplexPT::Variability(_)
     | ITemplexPT::Location(_)
     | ITemplexPT::Ownership(_)
     | ITemplexPT::Bool(_)
@@ -195,8 +191,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     ITemplexPT::Pack(pack) => get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members),
     ITemplexPT::StaticSizedArray(static_sized_array) => {
       let templexes: Vec<&'p ITemplexPT<'p>> = vec![
-        static_sized_array.mutability,
-        static_sized_array.variability,
         static_sized_array.size,
         static_sized_array.element,
       ];
@@ -204,7 +198,6 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     }
     ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
       let templexes: Vec<&'p ITemplexPT<'p>> = vec![
-        runtime_sized_array.mutability,
         runtime_sized_array.element,
       ];
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)

@@ -139,7 +139,6 @@ fn function_containing_if() {
   assert!(main.body.is_some());
 }
 
-
 #[test]
 fn reports_unrecognized_at_top_level() {
   let parse_bump = Bump::new();
@@ -214,36 +213,6 @@ fn exporting_int() {
 }
 
 #[test]
-fn exporting_imm_array_1() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let program = compile(&parse_arena, &keywords, "export []<mut>int as IntArray;");
-  assert!(
-    matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP(_, StrI("IntArray")),
-    ..
-  }))
-  );
-}
-
-
-#[test]
-fn exporting_imm_array_2() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let program = compile(&parse_arena, &keywords, "export #[]int as IntArray;");
-  assert!(
-    matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP(_, StrI("IntArray")),
-    ..
-  }))
-  );
-}
-
-
-#[test]
 fn import_wildcard() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -258,7 +227,6 @@ fn import_wildcard() {
   }))
   );
 }
-
 
 #[test]
 fn import_just_module_and_thing() {
@@ -276,7 +244,6 @@ fn import_just_module_and_thing() {
   );
 }
 
-
 #[test]
 fn full_import() {
   let parse_bump = Bump::new();
@@ -292,7 +259,6 @@ fn full_import() {
   }))
   );
 }
-
 
 #[test]
 fn return_with_region_generics() {
@@ -311,7 +277,6 @@ fn return_with_region_generics() {
     _ => panic!("Expected return type IDesire<r', i'>"),
   }
 }
-
 
 #[test]
 fn bad_start_of_statement() {

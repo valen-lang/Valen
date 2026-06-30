@@ -39,7 +39,6 @@ pub enum ICompileErrorT<'s, 't> {
     ArrayElementsHaveDifferentTypes { range: &'t [RangeS<'s>], types: &'t [CoordT<'s, 't>] },
     UnexpectedArrayElementType { range: &'t [RangeS<'s>], expected_type: CoordT<'s, 't>, actual_type: CoordT<'s, 't> },
     InitializedWrongNumberOfElements { range: &'t [RangeS<'s>], expected_num_elements: i32, num_elements_initialized: i32 },
-    NewImmRSANeedsCallable { range: &'t [RangeS<'s>] },
     CannotSubscriptT { range: &'t [RangeS<'s>], tyype: KindT<'s, 't> },
     NonReadonlyReferenceFoundInPureFunctionParameter { range: &'t [RangeS<'s>], param_name: IVarNameT<'s, 't> },
     CouldntFindIdentifierToLoadT { range: &'t [RangeS<'s>], name: IImpreciseNameS<'s> },
@@ -80,7 +79,7 @@ pub enum ICompileErrorT<'s, 't> {
         signature: &'t SignatureT<'s, 't>,
         non_exported_kind: KindT<'s, 't>,
     },
-    ExportedImmutableKindDependedOnNonExportedKind {
+    ExportedKindDependedOnNonExportedKind {
         range: &'t [RangeS<'s>],
         paackage: PackageCoordinate<'s>,
         exported_kind: KindT<'s, 't>,
@@ -91,8 +90,6 @@ pub enum ICompileErrorT<'s, 't> {
     CantUnstackifyOutsideLocalFromInsideWhile { range: &'t [RangeS<'s>], local_id: IVarNameT<'s, 't> },
     CantRestackifyOutsideLocalFromInsideWhile { range: &'t [RangeS<'s>], local_id: IVarNameT<'s, 't> },
     FunctionAlreadyExists { old_function_range: RangeS<'s>, new_function_range: RangeS<'s>, signature: IdT<'s, 't> },
-    CantMutateFinalMember { range: &'t [RangeS<'s>], struct_: StructTT<'s, 't>, member_name: IVarNameT<'s, 't> },
-    CantMutateFinalElement { range: &'t [RangeS<'s>], coord: CoordT<'s, 't> },
     CantUseReadonlyReferenceAsReadwrite { range: &'t [RangeS<'s>] },
     LambdaReturnDoesntMatchInterfaceConstructor { range: &'t [RangeS<'s>] },
     IfConditionIsntBoolean { range: &'t [RangeS<'s>], actual_type: CoordT<'s, 't> },
@@ -111,6 +108,7 @@ pub enum ICompileErrorT<'s, 't> {
     WeakableImplingMismatch { range: &'t [RangeS<'s>], struct_weakable: bool, interface_weakable: bool },
     TookWeakRefOfNonWeakableError { range: &'t [RangeS<'s>] },
 }
+
 
 impl<'s, 't> ICompileErrorT<'s, 't> {
     pub fn range(&self) -> &[RangeS<'s>] {
@@ -133,7 +131,6 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::ArrayElementsHaveDifferentTypes { range, .. } => *range,
             Self::UnexpectedArrayElementType { range, .. } => *range,
             Self::InitializedWrongNumberOfElements { range, .. } => *range,
-            Self::NewImmRSANeedsCallable { range, .. } => *range,
             Self::CannotSubscriptT { range, .. } => *range,
             Self::NonReadonlyReferenceFoundInPureFunctionParameter { range, .. } => *range,
             Self::CouldntFindIdentifierToLoadT { range, .. } => *range,
@@ -150,14 +147,12 @@ impl<'s, 't> ICompileErrorT<'s, 't> {
             Self::CouldntFindOverrideT { range, .. } => *range,
             Self::ExportedFunctionDependedOnNonExportedKind { range, .. } => *range,
             Self::ExternFunctionDependedOnNonExportedKind { range, .. } => *range,
-            Self::ExportedImmutableKindDependedOnNonExportedKind { range, .. } => *range,
+            Self::ExportedKindDependedOnNonExportedKind { range, .. } => *range,
             Self::TypeExportedMultipleTimes { range, .. } => *range,
             Self::CantUseUnstackifiedLocal { range, .. } => *range,
             Self::CantUnstackifyOutsideLocalFromInsideWhile { range, .. } => *range,
             Self::CantRestackifyOutsideLocalFromInsideWhile { range, .. } => *range,
             Self::FunctionAlreadyExists { new_function_range, .. } => from_ref(new_function_range),
-            Self::CantMutateFinalMember { range, .. } => *range,
-            Self::CantMutateFinalElement { range, .. } => *range,
             Self::CantUseReadonlyReferenceAsReadwrite { range, .. } => *range,
             Self::LambdaReturnDoesntMatchInterfaceConstructor { range, .. } => *range,
             Self::IfConditionIsntBoolean { range, .. } => *range,

@@ -65,7 +65,7 @@ pub struct StructDefinitionT<'s, 't> {
     pub instantiated_citizen: StructTT<'s, 't>,
     pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
-    pub mutability: ITemplataT<'s, 't>,
+    pub sharedness: SharednessT,
     pub members: &'t [IStructMemberT<'s, 't>],
     pub is_closure: bool,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
@@ -115,7 +115,6 @@ impl<'s, 't> IStructMemberT<'s, 't> where 's: 't {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
-    pub variability: VariabilityT,
     pub tyype: IMemberTypeT<'s, 't>,
 }
 
@@ -175,7 +174,7 @@ pub struct InterfaceDefinitionT<'s, 't> {
     pub ref_: InterfaceTT<'s, 't>,
     pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
-    pub mutability: ITemplataT<'s, 't>,
+    pub sharedness: SharednessT,
     pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     pub internal_methods: &'t [(PrototypeT<'s, 't>, usize)],
 }

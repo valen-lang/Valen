@@ -27,7 +27,6 @@ use crate::typing::types::types::InterfaceTT;
 use crate::typing::types::types::KindT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::types::types::StructTT;
-use crate::typing::types::types::VariabilityT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
 use crate::von::ast::VonInt;
@@ -63,7 +62,6 @@ fn make_and_lock_weak_ref_then_destroy_own_with_struct() {
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("weakMuta"), .. }),
-                    variability: VariabilityT::Final,
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,
@@ -237,9 +235,10 @@ fn make_weak_ref_from_temporary() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: .hp is &int; wrap with __copy_prim
         r"
 weakable struct Muta { hp int; }
-func getHp(weakMuta &&Muta) int { return (lock(weakMuta)).get().hp; }
+func getHp(weakMuta &&Muta) int { return __copy_prim(&(lock(weakMuta)).get().hp); }
 exported func main() int { return getHp(&&Muta(7)); }
 ",
     );
@@ -286,7 +285,6 @@ fn make_and_lock_weak_ref_then_destroy_own_with_interface() {
             NodeRefT::LetNormal(LetNormalTE {
                 variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
                     name: IVarNameT::CodeVar(CodeVarNameT { name: StrI("weakUnit"), .. }),
-                    variability: VariabilityT::Final,
                     coord: CoordT { ownership: OwnershipT::Weak, .. },
                 }),
                 expr: ref_expr,
@@ -547,12 +545,13 @@ exported func main() int {
   base = Base(73);
   ship = Spaceship(&&base);
 
-  (base).drop(); // Destroys base.
+  (^base).drop(); // Destroys base.
 
   maybeOrigin = lock(ship.origin);
   if (not maybeOrigin.isEmpty()) {
     o = maybeOrigin.get();
-    return o.hp;
+    // TSUGAR: o.hp is &int
+    return __copy_prim(&o.hp);
   } else {
     return 42;
   }

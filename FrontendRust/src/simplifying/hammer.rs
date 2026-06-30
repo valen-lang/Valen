@@ -2,7 +2,7 @@ use crate::final_ast::ast::{IdH, ProgramH, PrototypeH};
 use crate::final_ast::instructions::{
     ConsecutorH, ConstantVoidH, ExpressionH, Local, StackifyH, VariableIdH,
 };
-use crate::final_ast::types::{CoordH, KindHT, NeverHT, Variability, VoidHT};
+use crate::final_ast::types::{CoordH, KindHT, NeverHT, VoidHT};
 use crate::instantiating::ast::ast::{FunctionDefinitionI, FunctionExportI, FunctionExternI};
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::{IdI, INameI, IVarNameI};
@@ -43,10 +43,12 @@ where 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn typing_pass_locals(&self) -> &HashMap<&'i IVarNameI<'s, 'i>, VariableIdH<'s, 'h>> {
         panic!("Unimplemented: typing_pass_locals");
         // inner.typingPassLocals
     }
+
 
 
     pub fn unstackified_vars(&self) -> &HashSet<VariableIdH<'s, 'h>> {
@@ -55,10 +57,12 @@ where 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn locals(&self) -> &HashMap<VariableIdH<'s, 'h>, Local<'s, 'h>> {
         panic!("Unimplemented: locals");
         // inner.locals
     }
+
 
 
     pub fn next_local_id_number(&self) -> i32 {
@@ -72,10 +76,12 @@ where 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn get(&self, id: VariableIdH<'s, 'h>) -> Option<Local<'s, 'h>> {
         panic!("Unimplemented: get");
         // inner.get(id)
     }
+
 
 
     pub fn mark_unstackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i>) {
@@ -84,10 +90,12 @@ where 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn mark_restackified_by_var_name(&mut self, var_id: &'i IVarNameI<'s, 'i>) {
         let var_id_h = *self.typing_pass_locals.get(var_id).expect("typing_pass_locals missing");
         self.mark_restackified(var_id_h);
     }
+
 
 
     pub fn mark_unstackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
@@ -99,36 +107,38 @@ where 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn set_next_local_id_number(&mut self, next_local_id_number: i32) {
         self.next_local_id_number = next_local_id_number;
     }
 
 
+
     pub fn add_hammer_local(
         &mut self,
         tyype: CoordH<'s, 'h>,
-        variability: Variability,
     ) -> Local<'s, 'h> {
         let new_local_height = self.locals.len() as i32;
         let new_local_id_number = self.next_local_id_number;
         let new_local_id = VariableIdH { number: new_local_id_number, height: new_local_height, name: None };
-        let new_local = Local { id: new_local_id, variability, type_h: tyype };
+        let new_local = Local { id: new_local_id, type_h: tyype };
         self.locals.insert(new_local_id, new_local);
         self.next_local_id_number = new_local_id_number + 1;
         new_local
     }
 
 
+
     pub fn add_typing_pass_local(
         &mut self,
         var_id: &'i IVarNameI<'s, 'i>,
         var_id_name_h: &'h IdH<'s>,
-        variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {
-        self.add_compiler_local(var_id, var_id_name_h, variability, tyype)
+        self.add_compiler_local(var_id, var_id_name_h, tyype)
     }
 }
+
 
 
 /// Temporary state
@@ -149,7 +159,6 @@ where 's: 'i, 'i: 'h,
         &mut self,
         var_id: &'i IVarNameI<'s, 'i>,
         var_id_name_h: &'h IdH<'s>,
-        variability: Variability,
         tyype: CoordH<'s, 'h>,
     ) -> Local<'s, 'h> {
         if self.typing_pass_locals.contains_key(&var_id) {
@@ -158,12 +167,25 @@ where 's: 'i, 'i: 'h,
         let new_local_height = self.locals.len() as i32;
         let new_local_id_number = self.next_local_id_number;
         let new_local_id = VariableIdH { number: new_local_id_number, height: new_local_height, name: Some(var_id_name_h) };
-        let new_local = Local { id: new_local_id, variability, type_h: tyype };
+        let new_local = Local { id: new_local_id, type_h: tyype };
         self.typing_pass_locals.insert(var_id, new_local_id);
         self.locals.insert(new_local_id, new_local);
         self.next_local_id_number = new_local_id_number + 1;
         new_local
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     pub fn mark_restackified(&mut self, var_id_h: VariableIdH<'s, 'h>) {
@@ -177,6 +199,13 @@ where 's: 'i, 'i: 'h,
 }
 
 
+
+
+
+
+
+
+
 /// Temporary state
 pub struct Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'i, 's: 'h, 'i: 'h,
@@ -186,6 +215,7 @@ where 's: 'i, 's: 'h, 'i: 'h,
     pub scout_arena: &'ctx ScoutArena<'s>,
     pub instantiating_interner: &'ctx InstantiatingInterner<'s, 'i>,
 }
+
 
 
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
@@ -218,15 +248,18 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn mangle_name(&self, name: &INameI<'s, 'i>, stuff_after: bool) -> String {
         panic!("Unimplemented: mangle_name");
         // ""  (Scala body is currently a stub returning empty string)
     }
 
 
+
     pub fn mangle_struct(&self, id: &IdI<'s, 'i>) -> String {
         String::new()
     }
+
 
 
     pub fn mangle_kind(&self, kind: &KindIT<'s, 'i>) -> String {
@@ -235,16 +268,19 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn mangle_coord(&self, coord: &CoordI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_coord");
         // ""  (Scala body is a stub; commented-out form would prefix per ownership then mangleKind)
     }
 
 
+
     pub fn mangle_templata(&self, templata: &ITemplataI<'s, 'i>) -> String {
         panic!("Unimplemented: mangle_templata");
         // ""  (Scala body is a stub; would dispatch CoordTemplataI → mangleCoord, others vimpl)
     }
+
 
 
     pub fn translate(&self, hinputs: &HinputsI<'s, 'i>) -> &'h ProgramH<'s, 'h> {
@@ -399,6 +435,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
 }
 
 
+
 pub fn flatten_and_filter_voids<'s, 'h>(
     unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
 ) -> Vec<ExpressionH<'s, 'h>>
@@ -432,6 +469,7 @@ where 's: 'h,
 }
 
 
+
 pub fn consecutive<'s, 'h>(
     interner: &HammerInterner<'s, 'h>,
     unfiltered_exprs_h: &[ExpressionH<'s, 'h>],
@@ -445,6 +483,7 @@ where 's: 'h,
         multiple => ExpressionH::ConsecutorH(interner.alloc(ConsecutorH { exprs: interner.alloc_slice_copy(multiple) })),
     }
 }
+
 
 
 pub fn consecrash<'s, 'i, 'h>(
@@ -464,7 +503,7 @@ where 's: 'i, 'i: 'h,
         if expr.result_type().kind == KindHT::VoidHT(VoidHT) {
             *expr
         } else {
-            let local = locals.add_hammer_local(expr.result_type(), Variability::Final);
+            let local = locals.add_hammer_local(expr.result_type());
             ExpressionH::StackifyH(interner.bump().alloc(StackifyH { source_expr: *expr, local, name: None }))
         }
     }).collect();

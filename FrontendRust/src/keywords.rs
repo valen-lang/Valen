@@ -55,8 +55,6 @@ pub struct Keywords<'a> {
   pub prot: StrI<'a>,
   pub ref_list: StrI<'a>,
   pub ownership: StrI<'a>,
-  pub variability: StrI<'a>,
-  pub mutability: StrI<'a>,
   pub location: StrI<'a>,
   pub refs: StrI<'a>,
   pub underscore: StrI<'a>,
@@ -107,10 +105,9 @@ pub struct Keywords<'a> {
   pub vale_static_sized_array_drop_into: StrI<'a>,
   pub vale_runtime_sized_array_push: StrI<'a>,
   pub vale_runtime_sized_array_pop: StrI<'a>,
-  pub vale_runtime_sized_array_mut_new: StrI<'a>,
+  pub vale_runtime_sized_array_new: StrI<'a>,
   pub vale_runtime_sized_array_capacity: StrI<'a>,
   pub vale_runtime_sized_array_len: StrI<'a>,
-  pub vale_runtime_sized_array_imm_new: StrI<'a>,
   pub vale_runtime_sized_array_free: StrI<'a>,
   pub vale_runtime_sized_array_drop_into: StrI<'a>,
   pub abstract_body: StrI<'a>,
@@ -164,6 +161,7 @@ pub struct Keywords<'a> {
   pub functor1: StrI<'a>,
   pub my_module: StrI<'a>,
   pub rust: StrI<'a>,
+  pub implicit_clone: StrI<'a>,
 }
 
 impl<'a> Keywords<'a> {
@@ -218,8 +216,6 @@ impl<'a> Keywords<'a> {
       prot: parse_arena.intern_str("Prot"),
       ref_list: parse_arena.intern_str("RefList"),
       ownership: parse_arena.intern_str("Ownership"),
-      variability: parse_arena.intern_str("Variability"),
-      mutability: parse_arena.intern_str("Mutability"),
       location: parse_arena.intern_str("Location"),
       refs: parse_arena.intern_str("Refs"),
       underscore: parse_arena.intern_str("_"),
@@ -281,10 +277,9 @@ impl<'a> Keywords<'a> {
       vale_static_sized_array_drop_into: parse_arena.intern_str("vale_static_sized_array_drop_into"),
       vale_runtime_sized_array_push: parse_arena.intern_str("vale_runtime_sized_array_push"),
       vale_runtime_sized_array_pop: parse_arena.intern_str("vale_runtime_sized_array_pop"),
-      vale_runtime_sized_array_mut_new: parse_arena.intern_str("vale_runtime_sized_array_mut_new"),
+      vale_runtime_sized_array_new: parse_arena.intern_str("vale_runtime_sized_array_new"),
       vale_runtime_sized_array_capacity: parse_arena.intern_str("vale_runtime_sized_array_capacity"),
       vale_runtime_sized_array_len: parse_arena.intern_str("vale_runtime_sized_array_len"),
-      vale_runtime_sized_array_imm_new: parse_arena.intern_str("vale_runtime_sized_array_imm_new"),
       vale_runtime_sized_array_free: parse_arena.intern_str("vale_runtime_sized_array_free"),
       vale_runtime_sized_array_drop_into: parse_arena.intern_str("vale_runtime_sized_array_drop_into"),
       abstract_body: parse_arena.intern_str("abstractBody"),
@@ -338,6 +333,7 @@ impl<'a> Keywords<'a> {
       functor1: parse_arena.intern_str("Functor1"),
       my_module: parse_arena.intern_str("my_module"),
       rust: parse_arena.intern_str("rust"),
+      implicit_clone: parse_arena.intern_str("implicit_clone"),
     }
   }
 
@@ -392,8 +388,6 @@ impl<'a> Keywords<'a> {
       prot: scout_arena.intern_str("Prot"),
       ref_list: scout_arena.intern_str("RefList"),
       ownership: scout_arena.intern_str("Ownership"),
-      variability: scout_arena.intern_str("Variability"),
-      mutability: scout_arena.intern_str("Mutability"),
       location: scout_arena.intern_str("Location"),
       refs: scout_arena.intern_str("Refs"),
       underscore: scout_arena.intern_str("_"),
@@ -455,10 +449,9 @@ impl<'a> Keywords<'a> {
       vale_static_sized_array_drop_into: scout_arena.intern_str("vale_static_sized_array_drop_into"),
       vale_runtime_sized_array_push: scout_arena.intern_str("vale_runtime_sized_array_push"),
       vale_runtime_sized_array_pop: scout_arena.intern_str("vale_runtime_sized_array_pop"),
-      vale_runtime_sized_array_mut_new: scout_arena.intern_str("vale_runtime_sized_array_mut_new"),
+      vale_runtime_sized_array_new: scout_arena.intern_str("vale_runtime_sized_array_new"),
       vale_runtime_sized_array_capacity: scout_arena.intern_str("vale_runtime_sized_array_capacity"),
       vale_runtime_sized_array_len: scout_arena.intern_str("vale_runtime_sized_array_len"),
-      vale_runtime_sized_array_imm_new: scout_arena.intern_str("vale_runtime_sized_array_imm_new"),
       vale_runtime_sized_array_free: scout_arena.intern_str("vale_runtime_sized_array_free"),
       vale_runtime_sized_array_drop_into: scout_arena.intern_str("vale_runtime_sized_array_drop_into"),
       abstract_body: scout_arena.intern_str("abstractBody"),
@@ -512,6 +505,7 @@ impl<'a> Keywords<'a> {
       functor1: scout_arena.intern_str("Functor1"),
       my_module: scout_arena.intern_str("my_module"),
       rust: scout_arena.intern_str("rust"),
+      implicit_clone: scout_arena.intern_str("implicit_clone"),
     }
   }
 }

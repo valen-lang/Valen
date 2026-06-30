@@ -10,7 +10,7 @@ use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::{
   FileP, GenericParameterP, IAttributeP, IDenizenP, IMacroInclusionP, IStructContent, ITemplexPT,
-  MutabilityP, MutabilityPT, StructP,
+  SharednessP, SharednessPT, StructP,
 };
 use crate::parsing::ast::IRuneAttributeP::{
   AdditiveRegionRuneAttribute, ImmutableRegionRuneAttribute, ImmutableRuneAttribute,
@@ -28,7 +28,7 @@ use crate::postparsing::ast::{
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, PackTemplataType,
+  CoordTemplataType, ITemplataType, KindTemplataType, SharednessTemplataType, PackTemplataType,
   RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
@@ -37,7 +37,8 @@ use crate::postparsing::names::{
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
-use crate::postparsing::rules::templex_scout::translate_templex;
+use crate::postparsing::rules::templex_scout::{translate_templex, add_literal_rule};
+use crate::postparsing::rules::rules::SharednessLiteralSL;
 use crate::postparsing::rules::rules::{
   EqualsSR, IRulexSR, RuneUsage,
 };
@@ -1066,34 +1067,6 @@ fn scout_import(
   }
 }
 
-fn predict_mutability(
-  _range_s: RangeS<'s>,
-  mutability_rune_s: IRuneS<'s>,
-  rules_s: &[IRulexSR<'s>],
-) -> Option<MutabilityP> {
-  let predicted_mutabilities = rules_s
-    .iter()
-    .filter_map(|rule| match rule {
-      IRulexSR::Literal(literal_rule)
-        if literal_rule.rune.rune == mutability_rune_s
-          && matches!(literal_rule.literal, ILiteralSL::MutabilityLiteral(_)) =>
-      {
-        let ILiteralSL::MutabilityLiteral(ref mutability_literal) = literal_rule.literal else {
-          unreachable!()
-        };
-        Some(mutability_literal.mutability)
-      }
-      _ => None,
-    })
-    .collect::<Vec<_>>();
-
-  match predicted_mutabilities.len() {
-    0 => None,
-    1 => predicted_mutabilities.first().copied(),
-    _ => panic!("POSTPARSER_PREDICT_MUTABILITY_TOO_MANY_MUTABILITIES"),
-  }
-}
-
   fn scout_struct(
     &self,
     file: &'s FileCoordinate<'s>,
@@ -1237,27 +1210,6 @@ fn predict_mutability(
     let mut member_rule_builder = Vec::<IRulexSR<'s>>::new();
     let mut members_rune_to_explicit_type = self.scout_arena.alloc_index_map::<IRuneS, ITemplataType<'s>>();
 
-    let default_mutability = ITemplexPT::Mutability(
-      MutabilityPT(
-        RangeL::new(head.body_range.begin(), head.body_range.begin()),
-        MutabilityP::Mutable,
-      ),
-    );
-    let mutability: &ITemplexPT<'p> = head.mutability.as_ref().unwrap_or(&default_mutability);
-    let mutability_rune_s = translate_templex(
-      self.scout_arena,
-      self.keywords,
-      struct_env.clone(),
-      &mut lidb.child(),
-      &mut header_rule_builder,
-      default_region_rune_s.clone(),
-      mutability,
-    );
-    header_rune_to_explicit_type.push((
-      mutability_rune_s.rune.clone(),
-      ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-    ));
-
     let mut internal_methods_p = Vec::<&'p FunctionP<'p>>::new();
     let members_s = head
       .members
@@ -1281,7 +1233,6 @@ fn predict_mutability(
           vec![IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: Self::eval_range(file, member.range),
             name: self.scout_arena.intern_str(member.name.str().as_str()),
-            variability: member.variability,
             type_rune: member_rune,
           })]
         }
@@ -1303,7 +1254,6 @@ fn predict_mutability(
           );
           vec![IStructMemberS::VariadicStructMember(VariadicStructMemberS {
             range: Self::eval_range(file, member.range),
-            variability: member.variability,
             type_rune: member_rune,
           })]
         }
@@ -1339,8 +1289,6 @@ fn predict_mutability(
       &mut all_rune_to_explicit_type,
       &all_rules_s,
     )?;
-    let predicted_mutability =
-      Self::predict_mutability(struct_range_s.clone(), mutability_rune_s.rune.clone(), &all_rules_s);
     let runes_from_header = user_declared_runes
       .iter()
       .map(|x| x.rune.clone())
@@ -1425,8 +1373,7 @@ fn predict_mutability(
       self.scout_arena.alloc_slice_from_vec(attrs_s),
       weakable,
       self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
-      mutability_rune_s,
-      predicted_mutability,
+      head.sharedness,
       tyype,
       self.scout_arena.alloc_index_map_from_iter(header_rune_to_explicit_type.into_iter()),
       header_rune_to_predicted_type,
@@ -1674,23 +1621,6 @@ pub(crate) fn check_identifiability(
       &rules_p,
     );
 
-    let default_mutability = ITemplexPT::Mutability(
-      MutabilityPT(
-        RangeL::new(interface.body_range.begin(), interface.body_range.begin()),
-        MutabilityP::Mutable,
-      ),
-    );
-    let mutability: &ITemplexPT<'p> = interface.mutability.as_ref().unwrap_or(&default_mutability);
-    let mutability_rune_s = translate_templex(
-      self.scout_arena,
-      self.keywords,
-      interface_env.clone(),
-      &mut lidb.child(),
-      &mut rule_builder,
-      default_region_rune_s.clone(),
-      mutability,
-    );
-
     let rules_s = rule_builder;
     let identifying_runes_s = user_specified_identifying_runes
       .iter()
@@ -1703,9 +1633,6 @@ pub(crate) fn check_identifiability(
       &mut rune_to_explicit_type.clone(),
       &rules_s,
     )?;
-
-    let predicted_mutability =
-      Self::predict_mutability(interface_range_s.clone(), mutability_rune_s.rune.clone(), &rules_s);
 
     let generic_parameters_s: &'s [&'s GenericParameterS<'s>] = self.scout_arena.alloc_slice_from_vec(generic_parameters_s);
 
@@ -1736,8 +1663,7 @@ pub(crate) fn check_identifiability(
       weakable,
       generic_parameters_s,
       self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
-      mutability_rune_s,
-      predicted_mutability,
+      interface.sharedness,
       predicted_rune_to_type,
       tyype,
       self.scout_arena.alloc_slice_from_vec(rules_s),

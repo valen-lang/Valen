@@ -27,13 +27,14 @@ fn test_empty_and_get_for_some() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: opt.get() returns &int
         r"
 import v.builtins.opt.*;
 
 exported func main() int {
   opt Opt<int> = Some(9);
   return if (opt.isEmpty()) { 0 }
-    else { opt.get() };
+    else { __copy_prim(&opt.get()) };
 }
 ",
     );
@@ -61,11 +62,12 @@ fn test_empty_and_get_for_none() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: opt.get() returns &int
         r"
 exported func main() int {
   opt Opt<int> = None<int>();
   return if (opt.isEmpty()) { 0 }
-    else { opt.get() };
+    else { __copy_prim(&opt.get()) };
 }
 ",
     );
@@ -93,6 +95,7 @@ fn test_empty_and_get_for_borrow() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: bork.borrowGet().fuel is &int
         r"
 // This is the same as the one in optutils.vale, just named differently,
 // so its easier to debug.
@@ -102,7 +105,7 @@ struct Spaceship { fuel int; }
 exported func main() int {
   s = Spaceship(42);
   bork = Some<&Spaceship>(&s);
-  return bork.borrowGet().fuel;
+  return __copy_prim(&bork.borrowGet().fuel);
 }
 ",
     );

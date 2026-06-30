@@ -53,19 +53,14 @@ enum class Location {
     YONDER
 };
 
-enum class Mutability {
-    IMMUTABLE,
-    MUTABLE
+enum class Sharedness {
+    SHARED,
+    SINGLE
 };
 
 enum class Virtuality {
   NORMAL,
   ABSTRACT
-};
-
-enum class Variability {
-    FINAL,
-    VARYING
 };
 
 struct RegionId {
@@ -217,8 +212,7 @@ public:
   StaticSizedArrayT* kind;
   int size;
   RegionId* regionId;
-  Mutability mutability;
-  Variability variability;
+  Sharedness sharedness;
   Reference *elementType;
 
   StaticSizedArrayDefinitionT(
@@ -226,15 +220,13 @@ public:
       StaticSizedArrayT* kind_,
       int size_,
       RegionId* regionId_,
-      Mutability mutability_,
-      Variability variability_,
+      Sharedness sharedness_,
       Reference* elementType_) :
       name(name_),
       kind(kind_),
       size(size_),
       regionId(regionId_),
-      mutability(mutability_),
-      variability(variability_),
+      sharedness(sharedness_),
       elementType(elementType_) {}
 
 };
@@ -258,19 +250,19 @@ public:
   Name* name;
   RuntimeSizedArrayT* kind;
   RegionId* regionId;
-  Mutability mutability;
+  Sharedness sharedness;
   Reference *elementType;
 
   RuntimeSizedArrayDefinitionT(
       Name* name_,
       RuntimeSizedArrayT* kind_,
       RegionId* regionId_,
-      Mutability mutability_,
+      Sharedness sharedness_,
       Reference* elementType_) :
       name(name_),
       kind(kind_),
       regionId(regionId_),
-      mutability(mutability_),
+      sharedness(sharedness_),
       elementType(elementType_) {}
 };
 

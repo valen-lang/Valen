@@ -15,7 +15,9 @@
 // Return 1 if we found one, otherwise 0 at end of list
 static int optFindOption(opt_state_t* s) {
     while(1) {
-        if (s->idx == *s->argc)
+        // Use >= rather than == so we handle argc == 0 (and any other
+        // walked-past-end case) without dereferencing argv[idx] below.
+        if (s->idx >= *s->argc)
             return 0;
 
         if (s->argv[s->idx][0] == '-' && s->argv[s->idx][1] != '\0')

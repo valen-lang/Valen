@@ -236,8 +236,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                 let range_list: Vec<RangeS<'s>> =
                     once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 self.convert(
-                    snapshot_env, coutputs, &range_list, call_location,
-                    unconverted_input_expr, expected_coord)
+                    nenv, life, coutputs, &range_list, call_location,
+                    region, unconverted_input_expr, expected_coord)
             }
         };
 
@@ -510,7 +510,7 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     panic!("implement: destructureOwning RuntimeSizedArray — RangedInternalErrorT: Can only destruct RSA with zero destructure targets.");
                     // throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Can only destruct RSA with zero destructure targets."))
                 }
-                ReferenceExpressionTE::DestroyMutRuntimeSizedArray(self.typing_interner.alloc(DestroyMutRuntimeSizedArrayTE {
+                ReferenceExpressionTE::DestroyRuntimeSizedArray(self.typing_interner.alloc(DestroyRuntimeSizedArrayTE {
                     array_expr: input_expr,
                 }))
             }
@@ -837,8 +837,8 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
     ) -> AddressExpressionTE<'s, 't> {
         let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
         let member = &struct_def_t.members[index as usize];
-        let (variability, unsubstituted_member_coord) = match member {
-            IStructMemberT::Normal(NormalStructMemberT { variability, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => (*variability, *reference),
+        let unsubstituted_member_coord = match member {
+            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
             IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
                 panic!("implement: load_from_struct — AddressMemberTypeT");
                 // vimpl()
@@ -863,7 +863,6 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
             struct_expr: container_alias,
             member_name: *struct_def_t.members[index as usize].name(),
             member_reference: member_type,
-            variability,
         }))
     }
 

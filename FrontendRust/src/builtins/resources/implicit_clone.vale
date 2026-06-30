@@ -1,0 +1,5 @@
+func implicit_clone(x &int) int { return __copy_prim(x); }
+func implicit_clone(x &bool) bool { return __copy_prim(x); }
+func implicit_clone(x &float) float { return __copy_prim(x); }
+func implicit_clone(x &void) void { }
+func implicit_clone(x &i64) i64 { return __copy_prim(x); }

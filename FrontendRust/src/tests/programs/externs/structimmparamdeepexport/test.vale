@@ -1,11 +1,11 @@
 
-exported struct Flamscrankle imm {
+exported struct Flamscrankle share {
   a int;
   b Bogglewoggle;
   c int;
 }
 
-exported struct Bogglewoggle imm {
+exported struct Bogglewoggle share {
   a int;
 }
 

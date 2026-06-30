@@ -1,4 +1,4 @@
-use super::ast::{LocationP, MutabilityP, NameP, OwnershipP, VariabilityP};
+use super::ast::{LocationP, SharednessP, NameP, OwnershipP};
 use super::rules::ITypePR;
 use crate::interner::StrI;
 use crate::lexing::RangeL;
@@ -16,7 +16,6 @@ pub enum ITemplexPT<'p> {
   RegionRune(RegionRunePT<'p>),
   Location(LocationPT),
   Tuple(TuplePT<'p>),
-  Mutability(MutabilityPT),
   NameOrRune(NameOrRunePT<'p>),
   Interpreted(InterpretedPT<'p>),
   Ownership(OwnershipPT),
@@ -27,7 +26,6 @@ pub enum ITemplexPT<'p> {
   Share(SharePT<'p>),
   String(StringPT<'p>),
   TypedRune(TypedRunePT<'p>),
-  Variability(VariabilityPT),
 }
 impl ITemplexPT<'_> {
   pub fn range(&self) -> RangeL {
@@ -42,8 +40,7 @@ impl ITemplexPT<'_> {
       ITemplexPT::RegionRune(r) => r.range,
       ITemplexPT::Location(r) => r.range,
       ITemplexPT::Tuple(r) => r.range,
-      ITemplexPT::Mutability(r) => r.0,
-      ITemplexPT::NameOrRune(n) => n.name.range(),
+      ITemplexPT::NameOrRune(n) => n.name.0,
       ITemplexPT::Interpreted(r) => r.range,
       ITemplexPT::Ownership(r) => r.0,
       ITemplexPT::Pack(p) => p.range,
@@ -53,7 +50,6 @@ impl ITemplexPT<'_> {
       ITemplexPT::Share(r) => r.range,
       ITemplexPT::String(r) => r.range,
       ITemplexPT::TypedRune(r) => r.range,
-      ITemplexPT::Variability(r) => r.0,
     }
   }
 }
@@ -132,7 +128,7 @@ pub struct TuplePT<'p> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct MutabilityPT(pub RangeL, pub MutabilityP);
+pub struct SharednessPT(pub RangeL, pub SharednessP);
 
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -189,8 +185,6 @@ pub struct FuncPT<'p> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StaticSizedArrayPT<'p> {
   pub range: RangeL,
-  pub mutability: &'p ITemplexPT<'p>,
-  pub variability: &'p ITemplexPT<'p>,
   pub size: &'p ITemplexPT<'p>,
   pub element: &'p ITemplexPT<'p>,
 }
@@ -199,7 +193,6 @@ pub struct StaticSizedArrayPT<'p> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuntimeSizedArrayPT<'p> {
   pub range: RangeL,
-  pub mutability: &'p ITemplexPT<'p>,
   pub element: &'p ITemplexPT<'p>,
 }
 
@@ -226,5 +219,3 @@ pub struct TypedRunePT<'p> {
 }
 
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct VariabilityPT(pub RangeL, pub VariabilityP);

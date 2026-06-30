@@ -1,17 +1,19 @@
 
-func min(a int, b int) int {
-  return if (a <= b) { a } else { b };
+// TSUGAR: original signatures took primitives by value (a int, b int) etc.
+// Post-flip switched to &int / &float to match binary call auto-borrow conventions.
+func min(a &int, b &int) int {
+  return if (a <= b) { __copy_prim(a) } else { __copy_prim(b) };
 }
 
-func max(a int, b int) int {
-  return if (a >= b) { a } else { b };
+func max(a &int, b &int) int {
+  return if (a >= b) { __copy_prim(a) } else { __copy_prim(b) };
 }
 
-func abs(a int) int {
-  return if (a < 0) { a * -1 } else { a };
+func abs(a &int) int {
+  return if (a < 0) { a * -1 } else { __copy_prim(a) };
 }
 
-func signum(a int) int {
+func signum(a &int) int {
   return if (a < 0) { -1 }
     else if (a > 0) { 1 }
     else { 0 };

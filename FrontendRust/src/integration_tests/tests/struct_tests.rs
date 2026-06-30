@@ -30,8 +30,9 @@ fn make_empty_imm_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: `imm` keyword → `share`
         r"
-struct Marine imm {}
+struct Marine share {}
 exported func main() {
   Marine();
 }
@@ -58,8 +59,9 @@ fn make_imm_struct_with_one_member() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: imm → share
         r"
-struct Marine imm { hp int; }
+struct Marine share { hp int; }
 exported func main() {
   Marine(7);
 }
@@ -86,9 +88,10 @@ fn make_nested_imm_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: imm → share
         r"
-struct Weapon imm { ammo int; }
-struct Marine imm { hp int; weapon Weapon; }
+struct Weapon share { ammo int; }
+struct Marine share { hp int; weapon Weapon; }
 exported func main() {
   Marine(5, Weapon(7));
 }
@@ -259,7 +262,7 @@ struct Marine {
 }
 exported func main() int {
   m = Marine(4, 7);
-  Marine[hp, ammo] = m;
+  Marine[hp, ammo] = ^m;
   return ammo;
 }
 ",
@@ -295,7 +298,7 @@ struct Marine {
 }
 exported func main() int {
   m = Marine(4, 7);
-  destruct m;
+  destruct ^m;
   return 9;
 }
 ",
@@ -331,7 +334,7 @@ import printutils.*;
 struct Weapon { }
 func drop(weapon Weapon) {
   println("Destroying weapon!");
-  Weapon[ ] = weapon;
+  Weapon[ ] = ^weapon;
 }
 #!DeriveStructDrop
 struct Marine {
@@ -339,7 +342,7 @@ struct Marine {
 }
 func drop(marine Marine) {
   println("Destroying marine!");
-  Marine[weapon] = marine;
+  Marine[weapon] = ^marine;
 }
 exported func main() {
   Marine(Weapon());
@@ -368,6 +371,7 @@ fn panic_function() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m.get() returns &int
         r"
 import v.builtins.panic.*;
 import v.builtins.drop.*;
@@ -386,7 +390,7 @@ func get<T>(opt &XNone<T>) &T {
 
 exported func main() int {
   m XOpt<int> = XNone<int>();
-  return m.get();
+  return __copy_prim(m.get());
 }
       ",
     );

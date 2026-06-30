@@ -3,8 +3,8 @@ import stdlib.optutils.*;
 import stdlib.path.*;
 import stdlib.os.*;
 
-export Array<imm, str> as StrArray;
-export Array<mut, str> as MutStrArray;
+export Array<str> as StrArray;
+export Array<str> as MutStrArray;
 
 struct Subprocess {
   command str;
@@ -65,7 +65,7 @@ func Subprocess(relative_program str, args &List<StrSlice>, maybe_cwd Opt<str>) 
 
   command_str = command_str_builder.str();
 
-  cmd_array = cmdlist.toImmArray();
+  [cmd_array] = cmdlist;
 
   handle = launch_command(cmd_array, maybe_cwd.or({""}));
   if handle == 0i64 {
@@ -225,7 +225,7 @@ func read_stderr(self &Subprocess, len int) str {
 }
 
 extern func get_env_var(name str) str;
-extern func launch_command(args Array<imm, str>, maybe_cwd str) i64;
+extern func launch_command(args Array<str>, maybe_cwd str) i64;
 extern func write_stdin(cmd i64, s str);
 extern func close_stdin(cmd i64);
 extern func read_stdout(cmd i64, len int) str;

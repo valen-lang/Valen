@@ -610,7 +610,7 @@ public:
 };
 
 
-class NewMutRuntimeSizedArray : public Expression {
+class NewRuntimeSizedArray : public Expression {
 public:
   Expression* sizeExpr;
   Reference* sizeType;
@@ -618,7 +618,7 @@ public:
   Reference* arrayRefType;
   Reference* elementType;
 
-  NewMutRuntimeSizedArray(
+  NewRuntimeSizedArray(
       Expression* sizeExpr_,
       Reference* sizeType_,
       Kind* sizeKind_,
@@ -629,42 +629,6 @@ public:
       sizeKind(sizeKind_),
       arrayRefType(arrayRefType_),
       elementType(elementType_) {}
-};
-
-class NewImmRuntimeSizedArray : public Expression {
-public:
-  Expression* sizeExpr;
-  Reference* sizeType;
-  Kind* sizeKind;
-  Expression* generatorExpr;
-  Reference* generatorType;
-  Kind* generatorKind;
-  Prototype* generatorMethod;
-  bool generatorKnownLive;
-  Reference* arrayRefType;
-  Reference* elementType;
-
-  NewImmRuntimeSizedArray(
-      Expression* sizeExpr_,
-      Reference* sizeType_,
-      Kind* sizeKind_,
-      Expression* generatorExpr_,
-      Reference* generatorType_,
-      Kind* generatorKind_,
-      Prototype* generatorMethod_,
-      bool generatorKnownLive_,
-      Reference* arrayRefType_,
-      Reference* elementType_) :
-    sizeExpr(sizeExpr_),
-    sizeType(sizeType_),
-    sizeKind(sizeKind_),
-    generatorExpr(generatorExpr_),
-    generatorType(generatorType_),
-    generatorKind(generatorKind_),
-    generatorMethod(generatorMethod_),
-    generatorKnownLive(generatorKnownLive_),
-    arrayRefType(arrayRefType_),
-    elementType(elementType_) {}
 };
 
 class StaticArrayFromCallable : public Expression {
@@ -745,43 +709,13 @@ public:
       localIndices(localIndices_) {}
 };
 
-class DestroyImmRuntimeSizedArray : public Expression {
-public:
-  Expression* arrayExpr;
-  Reference* arrayType;
-  RuntimeSizedArrayT* arrayKind;
-  Expression* consumerExpr;
-  Reference* consumerType;
-  Kind* consumerKind;
-  Prototype* consumerMethod;
-  bool consumerKnownLive;
-
-  DestroyImmRuntimeSizedArray(
-      Expression* arrayExpr_,
-      Reference* arrayType_,
-      RuntimeSizedArrayT* arrayKind_,
-      Expression* consumerExpr_,
-      Reference* consumerType_,
-      Kind* consumerKind_,
-      Prototype* consumerMethod_,
-      bool consumerKnownLive_) :
-      arrayExpr(arrayExpr_),
-      arrayType(arrayType_),
-      arrayKind(arrayKind_),
-      consumerExpr(consumerExpr_),
-      consumerType(consumerType_),
-      consumerKind(consumerKind_),
-      consumerMethod(consumerMethod_),
-      consumerKnownLive(consumerKnownLive_) {}
-};
-
-class DestroyMutRuntimeSizedArray : public Expression {
+class DestroyRuntimeSizedArray : public Expression {
 public:
   Expression* arrayExpr;
   Reference* arrayType;
   RuntimeSizedArrayT* arrayKind;
 
-  DestroyMutRuntimeSizedArray(
+  DestroyRuntimeSizedArray(
       Expression* arrayExpr_,
       Reference* arrayType_,
       RuntimeSizedArrayT* arrayKind_) :
@@ -1005,6 +939,15 @@ public:
     errKind(errKind_),
     resultResultType(resultResultType_),
     resultResultKind(resultResultKind_) {}
+};
+
+class CopyPrim : public Expression {
+public:
+    Expression* inner;
+    Reference* resultType;
+
+    CopyPrim(Expression* inner_, Reference* resultType_) :
+        inner(inner_), resultType(resultType_) {}
 };
 
 #endif

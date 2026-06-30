@@ -1,11 +1,14 @@
-exported struct Engine imm { leftFuel int; rightFuel int; }
+// VCOORD: at some point rename the filenames from imm to share or class
 
-sealed exported interface IShip imm { }
 
-exported struct Spaceship imm { fuel int; }
+exported struct Engine share { leftFuel int; rightFuel int; }
+
+sealed exported interface IShip share { }
+
+exported struct Spaceship share { fuel int; }
 impl IShip for Spaceship;
 
-exported struct Seaship imm { engine Engine; }
+exported struct Seaship share { engine Engine; }
 impl IShip for Seaship;
 
 extern func cGetShipFuel(s IShip) int;

@@ -400,14 +400,13 @@ fn moving_method_call() {
   }
 }
 
-
 #[test]
 fn templated_function_call() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr =
-    compile_expression_expect(&parse_arena, &keywords, "toArray<imm>( &result)");
+    compile_expression_expect(&parse_arena, &keywords, "toArray<int>( &result)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
       callable_expr:
@@ -419,7 +418,7 @@ fn templated_function_call() {
       ..
     }) => match (args, arg_exprs) {
       (
-        [ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)), ..],
+        [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..],
         [IExpressionPE::Augment(AugmentPE {
           target_ownership: OwnershipP::Borrow,
           inner:
@@ -430,9 +429,9 @@ fn templated_function_call() {
           ..
         })],
       ) => {}
-      _ => panic!("expected toArray<imm>( &result) structure"),
+      _ => panic!("expected toArray<int>( &result) structure"),
     },
-    _ => panic!("expected toArray<imm>( &result) structure"),
+    _ => panic!("expected toArray<int>( &result) structure"),
   }
 }
 
@@ -442,7 +441,7 @@ fn templated_method_call() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let expr =
-    compile_expression_expect(&parse_arena, &keywords, "result.toArray <imm> ()");
+    compile_expression_expect(&parse_arena, &keywords, "result.toArray <int> ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
       subject_expr:
@@ -458,10 +457,10 @@ fn templated_method_call() {
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => match args {
-      [ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)), ..] => {}
-      _ => panic!("expected result.toArray <imm> () structure"),
+      [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }), ..] => {}
+      _ => panic!("expected result.toArray <int> () structure"),
     },
-    _ => panic!("expected result.toArray <imm> () structure"),
+    _ => panic!("expected result.toArray <int> () structure"),
   }
 }
 
@@ -1124,8 +1123,6 @@ fn static_array_from_values() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None }),
       initializing_individual_elements: true,
       args: [_, _, _, ..],
@@ -1156,8 +1153,6 @@ fn static_array_from_callable_with_rune() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
         size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. })),
       }),
@@ -1201,8 +1196,6 @@ fn static_array_from_callable() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
         size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
       }),
@@ -1215,48 +1208,6 @@ fn static_array_from_callable() {
 }
 
 #[test]
-fn immutable_static_array_from_callable() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "#[#3](triple)");
-  match &expr {
-    IExpressionPE::ConstructArray(ConstructArrayPE {
-      type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
-      variability_pt: None,
-      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
-        size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
-      }),
-      initializing_individual_elements: false,
-      args: [_, ..],
-      ..
-    }) => {}
-    _ => panic!("expected #[#3](triple) structure"),
-  }
-}
-
-#[test]
-fn immutable_static_array_from_callable_no_size() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "#[#](3, 4, 5)");
-  match &expr {
-    IExpressionPE::ConstructArray(ConstructArrayPE {
-      type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
-      variability_pt: None,
-      size: IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None }),
-      initializing_individual_elements: true,
-      args: [_, _, _, ..],
-      ..
-    }) => {}
-    _ => panic!("expected #[#](3, 4, 5) structure"),
-  }
-}
-
-#[test]
 fn runtime_array_from_callable_with_rune() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
@@ -1265,8 +1216,6 @@ fn runtime_array_from_callable_with_rune() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::RuntimeSized,
       initializing_individual_elements: false,
       args: [_, _, ..],
@@ -1285,8 +1234,6 @@ fn runtime_array_from_callable() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::RuntimeSized,
       initializing_individual_elements: false,
       args: [_, _, ..],
@@ -1305,38 +1252,15 @@ fn double_rsa_with_type() {
   match &expr {
     IExpressionPE::ConstructArray(ConstructArrayPE {
       type_pt: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
         element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("bool")), .. }),
         ..
       })),
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
-      variability_pt: None,
       size: IArraySizeP::RuntimeSized,
       initializing_individual_elements: false,
       args: [IExpressionPE::ConstantInt(ConstantIntPE { value: 42, .. }), ..],
       ..
     }) => {}
     _ => panic!("expected [][]bool(42) structure"),
-  }
-}
-
-#[test]
-fn immutable_runtime_array_from_callable() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let expr = compile_expression_expect(&parse_arena, &keywords, "#[](6, triple)");
-  match &expr {
-    IExpressionPE::ConstructArray(ConstructArrayPE {
-      type_pt: None,
-      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
-      variability_pt: None,
-      size: IArraySizeP::RuntimeSized,
-      initializing_individual_elements: false,
-      args: [_, _, ..],
-      ..
-    }) => {}
-    _ => panic!("expected #[](6, triple) structure"),
   }
 }
 

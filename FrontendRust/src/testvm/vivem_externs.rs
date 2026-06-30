@@ -15,10 +15,12 @@ use crate::testvm::vivem::VmRuntimeErrorV;
 use std::marker::PhantomData;
 
 
+
 pub fn panic<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 0);
     Err(VmRuntimeErrorV::PanicException(PanicExceptionV))
 }
+
 
 pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -26,11 +28,12 @@ pub fn add_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: a_value + b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: a_value + b_value, _phantom: PhantomData }))
         }
         _ => panic!("add_float_float: non-FloatV args"),
     })
 }
+
 
 pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -38,11 +41,12 @@ pub fn multiply_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: a_value * b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: a_value * b_value, _phantom: PhantomData }))
         }
         _ => panic!("multiply_float_float: non-FloatV args"),
     })
 }
+
 
 pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -50,11 +54,12 @@ pub fn divide_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: a_value / b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: a_value / b_value, _phantom: PhantomData }))
         }
         _ => panic!("divide_float_float: non-FloatV args"),
     })
 }
+
 
 pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -62,11 +67,12 @@ pub fn subtract_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: a_value - b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: a_value - b_value, _phantom: PhantomData }))
         }
         _ => panic!("subtract_float_float: non-FloatV args"),
     })
 }
+
 
 pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
@@ -83,12 +89,14 @@ pub fn add_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, 
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
 
+
 pub fn getch<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.is_empty());
     let next = (memory.stdin)();
     let code = if next.0.is_empty() { 0i64 } else { next.0.chars().next().unwrap() as i64 };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: code, bits: 32, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: code, bits: 32, _phantom: PhantomData })))
 }
+
 
 pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -96,7 +104,7 @@ pub fn less_than_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, '
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value < b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value < b_value, _phantom: PhantomData }))
         }
         _ => panic!("less_than_float: non-FloatV args"),
     })
@@ -110,11 +118,12 @@ pub fn eq_float_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Float(FloatV { value: a_value, .. }), KindV::Float(FloatV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
         }
         _ => panic!("eq_float_float: non-FloatV args"),
     })
 }
+
 
 pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 6);
@@ -127,8 +136,9 @@ pub fn eq_str_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     // BUG: Scala uses .slice(start, len) but Scala's slice takes (from, until), so the
     // "len" arg is being misinterpreted as an end index. Mirroring Scala parity-faithfully.
     let result_eq = &left_str.0[left_str_start as usize .. left_str_len as usize] == &right_str.0[right_str_start as usize .. right_str_len as usize];
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: result_eq, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: result_eq, _phantom: PhantomData })))
 }
+
 
 pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -136,7 +146,7 @@ pub fn eq_bool_bool<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Bool(BoolV { value: a_value, .. }), KindV::Bool(BoolV { value: b_value, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
         }
         _ => panic!("eq_bool_bool: non-BoolV args"),
     })
@@ -152,8 +162,9 @@ pub fn not<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'
         KindV::Bool(BoolV { value, .. }) => value,
         _ => panic!("not: non-BoolV arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: !value, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: !value, _phantom: PhantomData })))
 }
+
 
 pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -161,8 +172,9 @@ pub fn sqrt<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &
         KindV::Float(FloatV { value, .. }) => value,
         _ => panic!("sqrt: non-FloatV arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: value.sqrt(), _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: value.sqrt(), _phantom: PhantomData })))
 }
+
 
 pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -170,8 +182,9 @@ pub fn str_length<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
         KindV::Str(StrV { value, .. }) => value,
         _ => panic!("str_length: non-StrV arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: value.0.len() as i64, bits: 32, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: value.0.len() as i64, bits: 32, _phantom: PhantomData })))
 }
+
 
 pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -183,14 +196,16 @@ pub fn cast_float_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
 
+
 pub fn negate_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         KindV::Float(FloatV { value, .. }) => value,
         _ => panic!("negate_float: non-FloatV arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: -value, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: -value, _phantom: PhantomData })))
 }
+
 
 pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 3);
@@ -212,17 +227,19 @@ pub fn print<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: 
     Ok(memory.make_void())
 }
 
+
 pub fn add_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
     let a_kind = memory.dereference(args[0]);
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32 + b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32 + b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
         }
         _ => panic!("add_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -230,11 +247,12 @@ pub fn multiply_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_mul(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_mul(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
         }
         _ => panic!("multiply_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -242,11 +260,12 @@ pub fn divide_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_div(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_div(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
         }
         _ => panic!("divide_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -254,11 +273,12 @@ pub fn mod_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: ((a_value as i32) % (b_value as i32)) as i64, bits: 32, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: ((a_value as i32) % (b_value as i32)) as i64, bits: 32, _phantom: PhantomData }))
         }
         _ => panic!("mod_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -266,11 +286,12 @@ pub fn subtract_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_sub(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: (a_value as i32).wrapping_sub(b_value as i32) as i64, bits: 32, _phantom: PhantomData }))
         }
         _ => panic!("subtract_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -278,11 +299,12 @@ pub fn less_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value < b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value < b_value, _phantom: PhantomData }))
         }
         _ => panic!("less_than_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -290,11 +312,12 @@ pub fn less_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value <= b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value <= b_value, _phantom: PhantomData }))
         }
         _ => panic!("less_than_or_eq_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -302,11 +325,12 @@ pub fn greater_than_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value > b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value > b_value, _phantom: PhantomData }))
         }
         _ => panic!("greater_than_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -314,11 +338,12 @@ pub fn greater_than_or_eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value >= b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value >= b_value, _phantom: PhantomData }))
         }
         _ => panic!("greater_than_or_eq_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -326,11 +351,12 @@ pub fn eq_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args:
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 32, .. }), KindV::Int(IntV { value: b_value, bits: 32, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: a_value == b_value, _phantom: PhantomData }))
         }
         _ => panic!("eq_i32: non-IntV(_, 32) args"),
     })
 }
+
 
 pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -342,14 +368,16 @@ pub fn cast_i32_str<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::YonderH, KindV::Str(StrV { value: interned, _phantom: PhantomData })))
 }
 
+
 pub fn cast_float_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
     let value = match memory.dereference(args[0]) {
         KindV::Float(FloatV { value, .. }) => value,
         _ => panic!("cast_float_i32: non-FloatV arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: value as i32 as i64, bits: 32, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: value as i32 as i64, bits: 32, _phantom: PhantomData })))
 }
+
 
 pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -357,7 +385,7 @@ pub fn cast_i32_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
         KindV::Int(IntV { value, bits: 32, .. }) => value,
         _ => panic!("cast_i32_float: non-IntV(_, 32) arg"),
     };
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Float(FloatV { value: value as f64, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Float(FloatV { value: value as f64, _phantom: PhantomData })))
 }
 
 pub fn add_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: add_i64"); }
@@ -368,11 +396,12 @@ pub fn multiply_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 64, .. }), KindV::Int(IntV { value: b_value, bits: 64, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_mul(b_value), bits: 64, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_mul(b_value), bits: 64, _phantom: PhantomData }))
         }
         _ => panic!("multiply_i64: non-IntV(_, 64) args"),
     })
 }
+
 
 pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 2);
@@ -380,11 +409,12 @@ pub fn divide_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, a
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 64, .. }), KindV::Int(IntV { value: b_value, bits: 64, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_div(b_value), bits: 64, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_div(b_value), bits: 64, _phantom: PhantomData }))
         }
         _ => panic!("divide_i64: non-IntV(_, 64) args"),
     })
 }
+
 
 pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert_eq!(args.len(), 1);
@@ -393,7 +423,7 @@ pub fn truncate_i64_to_i32<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, '
         _ => panic!("truncate_i64_to_i32: non-IntV(_, 64) arg"),
     };
     let result = value & 0xFFFFFFFFi64;
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: result, bits: 32, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: result, bits: 32, _phantom: PhantomData })))
 }
 
 pub fn mod_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, { panic!("Unimplemented: mod_i64"); }
@@ -404,7 +434,7 @@ pub fn subtract_i64<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
     let b_kind = memory.dereference(args[1]);
     Ok(match (a_kind, b_kind) {
         (KindV::Int(IntV { value: a_value, bits: 64, .. }), KindV::Int(IntV { value: b_value, bits: 64, .. })) => {
-            memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_sub(b_value), bits: 64, _phantom: PhantomData }))
+            memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: a_value.wrapping_sub(b_value), bits: 64, _phantom: PhantomData }))
         }
         _ => panic!("subtract_i64: non-IntV(_, 64) args"),
     })
@@ -437,11 +467,12 @@ pub fn cast_i64_float<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's
 pub fn new_vec<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 0);
     let opaque_coord = match prototype.return_type {
-        CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s) } => CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s) },
+        CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s), .. } => CoordH::new(own, loc, KindHT::OpaqueHT(s)),
         _ => panic!(),
     };
     Ok(memory.new_opaque(opaque_coord))
 }
+
 
 pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 1);
@@ -451,11 +482,12 @@ pub fn new_vec_with_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v,
         _ => panic!(),
     }
     let opaque_coord = match prototype.return_type {
-        CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s) } => CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s) },
+        CoordH { ownership: own, location: loc, kind: KindHT::OpaqueHT(s), .. } => CoordH::new(own, loc, KindHT::OpaqueHT(s)),
         _ => panic!(),
     };
     Ok(memory.new_opaque(opaque_coord))
 }
+
 
 pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>, _prototype: &PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> Result<ReferenceV<'v, 'h, 's>, VmRuntimeErrorV<'s>> where 's: 'h, 'h: 'v, {
     assert!(args.len() == 1);
@@ -464,6 +496,6 @@ pub fn vec_capacity<'v, 'h, 's>(memory: &mut AdapterForExternsV<'_, 'v, 'h, 's>,
         _ => panic!(),
     }
     // This whole function just exists for testing, there are some tests that feed 42 in to newVecWithCapacity
-    Ok(memory.add_allocation_for_return(OwnershipH::MutableShareH, LocationH::InlineH, KindV::Int(IntV { value: 42, bits: 64, _phantom: PhantomData })))
+    Ok(memory.add_allocation_for_return(OwnershipH::OwnH, LocationH::InlineH, KindV::Int(IntV { value: 42, bits: 64, _phantom: PhantomData })))
 }
 

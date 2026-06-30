@@ -73,7 +73,7 @@ where 's: 't,
         HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
 
     pub type_name_to_mutability:
-        HashMap<IdT<'s, 't>, ITemplataT<'s, 't>>,
+        HashMap<IdT<'s, 't>, SharednessT>,
     pub interface_name_to_sealed:
         HashMap<IdT<'s, 't>, bool>,
 
@@ -331,14 +331,11 @@ where 's: 't,
     pub fn declare_type_mutability(
         &mut self,
         template_name: &'t IdT<'s, 't>,
-        mutability: ITemplataT<'s, 't>,
+        sharedness: SharednessT,
     ) {
-        // vassert(typeDeclaredNames.contains(templateName))
         assert!(self.type_declared_names.contains(template_name));
-        // vassert(!typeNameToMutability.contains(templateName))
         assert!(!self.type_name_to_mutability.contains_key(template_name));
-        // typeNameToMutability += (templateName -> mutability)
-        self.type_name_to_mutability.insert(*template_name, mutability);
+        self.type_name_to_mutability.insert(*template_name, sharedness);
     }
     
     pub fn declare_type_sealed(
@@ -410,24 +407,6 @@ where 's: 't,
         &mut self,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
-        if struct_def.mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) {
-            struct_def.members.iter().for_each(|m| {
-                match m {
-                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
-                        panic!("Immutable structs cant contain address members");
-                    }
-                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(r), .. }) => {
-                        if r.reference.ownership != OwnershipT::Share {
-                            panic!("ImmutableP contains a non-immutable!");
-                        }
-                    }
-                    IStructMemberT::Variadic(_) => {
-                        panic!("implement: immutable struct with variadic members");
-                        // vimpl()
-                    }
-                }
-            });
-        }
         assert!(self.type_name_to_mutability.contains_key(&struct_def.template_name));
         assert!(!self.struct_template_name_to_definition.contains_key(&struct_def.template_name));
         self.struct_template_name_to_definition.insert(struct_def.template_name, struct_def);
@@ -555,10 +534,10 @@ where 's: 't,
     pub fn lookup_mutability(
         &self,
         template_name: IdT<'s, 't>,
-    ) -> ITemplataT<'s, 't> {
+    ) -> SharednessT {
         match self.type_name_to_mutability.get(&template_name) {
             None => panic!("Still figuring out mutability for struct: {:?}", template_name),
-            Some(m) => *m,
+            Some(s) => *s,
         }
     }
     

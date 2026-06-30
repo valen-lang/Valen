@@ -79,7 +79,7 @@ fn and_short_circuiting() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "func printAndFalse() bool { print(\"bork!\"); return false; }\nexported func main() bool { return printAndFalse() and printAndFalse(); }\n",
+        "func printAndFalse() bool { print(&\"bork!\"); return false; }\nexported func main() bool { return printAndFalse() and printAndFalse(); }\n",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "bork!");
 }
@@ -102,7 +102,7 @@ fn or_short_circuiting() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
-        "func printAndTrue() bool { print(\"bork!\"); return true; }\nexported func main() bool { return printAndTrue() or printAndTrue(); }\n",
+        "func printAndTrue() bool { print(&\"bork!\"); return true; }\nexported func main() bool { return printAndTrue() or printAndTrue(); }\n",
     );
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "bork!");
 }

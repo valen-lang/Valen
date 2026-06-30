@@ -17,5 +17,5 @@ func doCivicDance(toyota Toyota) int {
 
 exported func main() int {
   x Car = Toyota();
-  return doCivicDance(x);
+  return doCivicDance(^x);
 }

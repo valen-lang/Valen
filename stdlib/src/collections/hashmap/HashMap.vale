@@ -2,38 +2,38 @@ import stdlib.math.*;
 import stdlib.collections.hashset.*;
 
 #!DeriveStructDrop // Because V might not have a default destructor
-struct HashMapNode<K Ref imm, V>
+struct HashMapNode<K Ref, V>
 where func drop(K)void {
   key K;
   value! V;
 }
 
-func drop<K Ref imm, V>(self HashMapNode<K, V>) void
+func drop<K Ref, V>(self HashMapNode<K, V>) void
 where func drop(V)void
 {
   [k, v] = self;
 }
 
 #!DeriveStructDrop
-struct HashMap<K Ref imm, V, H, E>
+struct HashMap<K Ref, V, H, E>
 where func(&H, K)int, func(&E, K, K)bool, func drop(K)void {
   hasher H;
   equator E;
-  table! Array<mut, Opt<HashMapNode<K, V>>>;
+  table! Array<Opt<HashMapNode<K, V>>>;
   size! int;
 }
 
-func HashMap<K Ref imm, V, H, E>(hasher H, equator E) HashMap<K, V, H, E>
+func HashMap<K Ref, V, H, E>(hasher H, equator E) HashMap<K, V, H, E>
 where func(&H, K)int, func(&E, K, K)bool, func drop(K)void {
   HashMap<K, V, H, E>(hasher, equator, 0)
 }
 
-func HashMap<K Ref imm, V, H, E>(hasher H, equator E, capacity int) HashMap<K, V, H, E>
+func HashMap<K Ref, V, H, E>(hasher H, equator E, capacity int) HashMap<K, V, H, E>
 where func(&H, K)int, func(&E, K, K)bool, func drop(K)void {
   HashMap<K, V>(
       hasher,
       equator,
-      Array<mut, Opt<HashMapNode<K, V>>>(
+      Array<Opt<HashMapNode<K, V>>>(
         capacity,
         &(index) => {
           opt Opt<HashMapNode<K, V>> = None<HashMapNode<K, V>>();
@@ -42,15 +42,15 @@ where func(&H, K)int, func(&E, K, K)bool, func drop(K)void {
       0)
 }
 
-func drop<K Ref imm, V, H, E>(self HashMap<K, V, H, E>) void
+func drop<K Ref, V, H, E>(self HashMap<K, V, H, E>) void
 where func drop(V)void, func drop(H)void, func drop(E)void
 {
   [hasher, equator, table, size] = self;
 }
 
-func len<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>) int { self.size }
+func len<K Ref, V, H, E>(self &HashMap<K, V, H, E>) int { self.size }
 
-func update<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
+func update<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
   hash int = abs((&self.hasher)(key));
   startIndex = hash mod self.table.len();
   maybeIndex = findIndexOfKey(&self.table, self.equator, startIndex, key);
@@ -62,7 +62,7 @@ func update<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) V {
   return set node.value = value;
 }
 
-func add<K Ref imm, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
+func add<K Ref, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
   if map.ContainsKey(key) {
     panic("Map already has given key!");
   }
@@ -71,7 +71,7 @@ func add<K Ref imm, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
         if map.table.len() == 0 { 2 }
         else { map.table.len() * 2 };
     newTable =
-        Array<mut, Opt<HashMapNode<K, V>>>(
+        Array<Opt<HashMapNode<K, V>>>(
             newSize,
             &(index) => {
               opt Opt<HashMapNode<K, V>> = None<HashMapNode<K, V>>();
@@ -95,7 +95,7 @@ func add<K Ref imm, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
   set map.size = map.size + 1;
 }
 
-func addNodeToTable<K Ref imm, V, H>(table &Array<mut, Opt<HashMapNode<K, V>>>, hasher &H, node HashMapNode<K, V>)
+func addNodeToTable<K Ref, V, H>(table &Array<Opt<HashMapNode<K, V>>>, hasher &H, node HashMapNode<K, V>)
 where func(&H, K)int, func drop(K)void {
   hash int = (&hasher)(node.key);
   startIndex = abs(hash mod table.len());
@@ -105,7 +105,7 @@ where func(&H, K)int, func drop(K)void {
   ((set table[index] = opt).as<None<HashMapNode<K, V>>>()).expect("wat");
 }
 
-func findEmptyIndexForKey<K Ref imm, V>(table &Array<mut, Opt<HashMapNode<K, V>>>, startIndex int, key K) int
+func findEmptyIndexForKey<K Ref, V>(table &Array<Opt<HashMapNode<K, V>>>, startIndex int, key K) int
 where func drop(K)void {
   i = 0;
   while i < table.len() {
@@ -120,7 +120,7 @@ where func drop(K)void {
   panic("findEmptyIndexForKey went past end of table!");
 }
 
-func findIndexOfKey<K Ref imm, V, E>(table &Array<mut, Opt<HashMapNode<K, V>>>, equator &E, startIndex int, key K) Opt<int>
+func findIndexOfKey<K Ref, V, E>(table &Array<Opt<HashMapNode<K, V>>>, equator &E, startIndex int, key K) Opt<int>
 where func(&E, K, K)bool, func drop(K)void {
   i = 0;
   while i < table.len() {
@@ -139,7 +139,7 @@ where func(&E, K, K)bool, func drop(K)void {
   return None<int>();
 }
 
-func get<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>, key K) Opt<&V> {
+func get<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key K) Opt<&V> {
   if self.table.len() == 0 {
     return None<&V>();
   }
@@ -155,11 +155,11 @@ func get<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>, key K) Opt<&V> {
   return opt;
 }
 
-func ContainsKey<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>, key K) bool {
+func ContainsKey<K Ref, V, H, E>(self &HashMap<K, V, H, E>, key K) bool {
   not(self.get(key).isEmpty())
 }
 
-func keys<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>) Array<imm, K> {
+func keys<K Ref, V, H, E>(self &HashMap<K, V, H, E>) Array<K> {
   list = List<K>();
   index = 0;
   while index < self.table.len() {
@@ -169,10 +169,11 @@ func keys<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>) Array<imm, K> {
     }
     set index = index + 1;
   }
-  list.toImmArray()
+  [arr] = list;
+  arr
 }
 
-func values<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>) Array<mut, &V> {
+func values<K Ref, V, H, E>(self &HashMap<K, V, H, E>) Array<&V> {
   list = List<&V>();
   index = 0;
   while index < self.table.len() {
@@ -185,8 +186,8 @@ func values<K Ref imm, V, H, E>(self &HashMap<K, V, H, E>) Array<mut, &V> {
   (list).toArray()
 }
 
-func innerRemove<K Ref imm, V, H, E>(
-  table &Array<mut, Opt<HashMapNode<K, V>>>,
+func innerRemove<K Ref, V, H, E>(
+  table &Array<Opt<HashMapNode<K, V>>>,
   hasher &H,
   equator &E,
   key K)
@@ -202,7 +203,7 @@ where func(&H, K)int, func(&E, K, K)bool, func drop(K)void {
   return (index, oldNode);
 }
 
-func remove<K Ref imm, V, H, E>(
+func remove<K Ref, V, H, E>(
   map &HashMap<K, V, H, E>,
   key K)
 V {
@@ -227,7 +228,7 @@ V {
   return value;
 }
 //
-//func KeySet<K Ref imm, V, H, E>(
+//func KeySet<K Ref, V, H, E>(
 //  map &HashMap<K, V, H, E>,
 //  hasher H,
 //  equator E)

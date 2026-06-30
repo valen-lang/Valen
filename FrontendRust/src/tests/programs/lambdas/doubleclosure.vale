@@ -1,2 +1,3 @@
 
-exported func main() int { a = 7; return ({ ({ a })() })(); }
+// TSUGAR: exported func main() int { a = 7; return ({ ({ a })() })(); }
+exported func main() int { a = 7; return __copy_prim(({ ({ a })() })()); }

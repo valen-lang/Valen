@@ -5,7 +5,8 @@ exported struct Spaceship {
 // Not exported
 struct Engine { fuel int; }
 
-exported func valeGetFuel(s &Spaceship) int { s.engine.fuel }
+// TSUGAR: exported func valeGetFuel(s &Spaceship) int { s.engine.fuel }
+exported func valeGetFuel(s &Spaceship) int { __copy_prim(s.engine.fuel) }
 
 extern func cGetFuel(s &Spaceship) int;
 

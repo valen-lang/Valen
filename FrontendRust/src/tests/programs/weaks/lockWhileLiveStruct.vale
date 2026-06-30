@@ -6,6 +6,7 @@ exported func main() int {
   return if maybeBorrowMuta.isEmpty() {
       73
     } else {
-      maybeBorrowMuta.get().hp
+      // TSUGAR:       maybeBorrowMuta.get().hp
+      __copy_prim(maybeBorrowMuta.get().hp)
     };
 }

@@ -36,7 +36,7 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let borrow_coord = CoordT { ownership: OwnershipT::Borrow, ..param_coords[0].tyype };
+        let borrow_coord = CoordT::new(OwnershipT::Borrow, param_coords[0].tyype.region, param_coords[0].tyype.kind);
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
             self.get_option(coutputs, env, call_range, call_location, RegionT { region: IRegionT::Default }, borrow_coord)?;
         let lock_expr = ReferenceExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {

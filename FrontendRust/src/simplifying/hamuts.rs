@@ -17,10 +17,14 @@ use crate::final_ast::types::{
 use crate::scout_arena::ScoutArena;
 
 
+
+
+
 impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     pub fn package_coord_to_export_name_to_function(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, &'h PrototypeH<'s, 'h>>> {
         &self.package_coord_to_export_name_to_function
     }
+
 
 
     pub fn package_coord_to_export_name_to_kind(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<StrI<'s>, KindHT<'s, 'h>>> {
@@ -28,9 +32,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn package_coord_to_prototype_to_extern(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<&'h PrototypeH<'s, 'h>, HamutsFunctionExtern<'s, 'h>>> {
         &self.package_coord_to_prototype_to_extern
     }
+
 
 
     pub fn package_coord_to_kind_to_extern(&self) -> &HashMap<PackageCoordinate<'s>, HashMap<&'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>> {
@@ -38,9 +44,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn struct_t_to_opaque_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, &'h OpaqueHT<'s, 'h>> {
         &self.struct_t_to_opaque_h
     }
+
 
 
     pub fn struct_t_to_struct_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, &'h StructHT<'s, 'h>> {
@@ -48,9 +56,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn struct_t_to_struct_def_h(&self) -> &HashMap<&'i StructIT<'s, 'i>, StructDefinitionH<'s, 'h>> {
         &self.struct_t_to_struct_def_h
     }
+
 
 
     pub fn struct_defs(&self) -> &Vec<StructDefinitionH<'s, 'h>> {
@@ -58,9 +68,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn interface_t_to_interface_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i>, &'h InterfaceHT<'s, 'h>> {
         &self.interface_t_to_interface_h
     }
+
 
 
     pub fn interface_t_to_interface_def_h(&self) -> &HashMap<&'i InterfaceIT<'s, 'i>, InterfaceDefinitionH<'s, 'h>> {
@@ -68,9 +80,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn function_refs(&self) -> &HashMap<&'i PrototypeI<'s, 'i>, FunctionRefH<'s, 'h>> {
         &self.function_refs
     }
+
 
 
     pub fn function_defs(&self) -> &HashMap<&'i PrototypeI<'s, 'i>, FunctionH<'s, 'h>> {
@@ -78,9 +92,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn static_sized_arrays(&self) -> &HashMap<&'i StaticSizedArrayIT<'s, 'i>, StaticSizedArrayDefinitionHT<'s, 'h>> {
         &self.static_sized_arrays
     }
+
 
 
     pub fn runtime_sized_arrays(&self) -> &HashMap<&'i RuntimeSizedArrayIT<'s, 'i>, RuntimeSizedArrayDefinitionHT<'s, 'h>> {
@@ -88,9 +104,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn forward_declare_struct(&mut self, struct_it: &'i StructIT<'s, 'i>, struct_ref_h: &'h StructHT<'s, 'h>) {
         self.struct_t_to_struct_h.insert(struct_it, struct_ref_h);
     }
+
 
 
     pub fn add_struct_originating_from_typing_pass(&mut self, struct_it: &'i StructIT<'s, 'i>, struct_def_h: StructDefinitionH<'s, 'h>) {
@@ -100,10 +118,12 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn add_opaque(&mut self, struct_it: &'i StructIT<'s, 'i>, opaque_h: &'h OpaqueHT<'s, 'h>) {
         assert!(!self.struct_t_to_opaque_h.contains_key(&struct_it));
         self.struct_t_to_opaque_h.insert(struct_it, opaque_h);
     }
+
 
 
     pub fn add_struct_originating_from_hammer(&mut self, struct_def_h: StructDefinitionH<'s, 'h>) {
@@ -112,9 +132,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn forward_declare_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i>, interface_ref_h: &'h InterfaceHT<'s, 'h>) {
         self.interface_t_to_interface_h.insert(interface_it, interface_ref_h);
     }
+
 
 
     pub fn add_interface(&mut self, interface_it: &'i InterfaceIT<'s, 'i>, interface_def_h: InterfaceDefinitionH<'s, 'h>) {
@@ -122,9 +144,11 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn add_static_sized_array(&mut self, ssa_it: &'i StaticSizedArrayIT<'s, 'i>, static_sized_array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>) {
         self.static_sized_arrays.insert(ssa_it, static_sized_array_definition_th);
     }
+
 
 
     pub fn add_runtime_sized_array(&mut self, rsa_it: &'i RuntimeSizedArrayIT<'s, 'i>, runtime_sized_array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>) {
@@ -132,10 +156,12 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn forward_declare_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i>, function_ref_h: FunctionRefH<'s, 'h>) {
         assert!(!self.function_refs.contains_key(&function_ref2));
         self.function_refs.insert(function_ref2, function_ref_h);
     }
+
 
 
     pub fn add_function(&mut self, function_ref2: &'i PrototypeI<'s, 'i>, function_def_h: FunctionH<'s, 'h>) {
@@ -147,6 +173,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn add_kind_export(&mut self, kind: KindHT<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
         let export_name_to_kind = self.package_coord_to_export_name_to_kind.entry(package_coordinate).or_insert_with(HashMap::default);
         if let Some(existing) = export_name_to_kind.get(&exported_name) {
@@ -156,6 +183,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn add_function_export(&mut self, prototype: &'h PrototypeH<'s, 'h>, package_coordinate: PackageCoordinate<'s>, exported_name: StrI<'s>) {
         let export_name_to_function = self.package_coord_to_export_name_to_function.entry(package_coordinate).or_insert_with(HashMap::default);
         if let Some(existing_full_name) = export_name_to_function.get(&exported_name) {
@@ -163,6 +191,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
         }
         export_name_to_function.insert(exported_name, prototype);
     }
+
 
 
     pub fn add_kind_extern(&mut self, scout_arena: &ScoutArena<'s>, opaque_h: &'h OpaqueHT<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: String) {
@@ -183,6 +212,7 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn add_function_extern(&mut self, prototype: &'h PrototypeH<'s, 'h>, simple_id: SimpleId<'s, 'h>, exported_name: StrI<'s>) {
         let package_coordinate = prototype.id.package_coordinate;
         let prototype_to_extern = self.package_coord_to_prototype_to_extern.entry(package_coordinate).or_insert_with(HashMap::default);
@@ -193,15 +223,18 @@ impl<'s, 'i, 'h> Hamuts<'s, 'i, 'h> where 's: 'i, 'i: 'h {
     }
 
 
+
     pub fn get_static_sized_array(&self, static_sized_array_th: &'h StaticSizedArrayHT<'s, 'h>) -> StaticSizedArrayDefinitionHT<'s, 'h> {
         *self.static_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, static_sized_array_th.id as *const _)).expect("get_static_sized_array: not found").1
     }
+
 
 
     pub fn get_runtime_sized_array(&self, runtime_sized_array_th: &'h RuntimeSizedArrayHT<'s, 'h>) -> RuntimeSizedArrayDefinitionHT<'s, 'h> {
         *self.runtime_sized_arrays.iter().find(|(_, def)| std::ptr::eq(def.name as *const _, runtime_sized_array_th.name as *const _)).expect("get_runtime_sized_array: not found").1
     }
 }
+
 
 
 /// Temporary state

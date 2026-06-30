@@ -170,7 +170,7 @@ func verify<N Int>(command_list &CommandList<N>, command_str str) bool {
 /// 
 /// # returns:
 ///   1. A list of parsed and invalid flags.
-func parse_all_flags<N Int, M Mutability, V Variability>(flag_list &[#N]<M, V>Flag, args []<imm>str) ParsedFlagList {
+func parse_all_flags<N Int, V Variability>(flag_list &[#N]<V>Flag, args []str) ParsedFlagList {
   parsed_flag_list = ParsedFlagList(List<ParsedFlag>(), List<str>());
 
   i = 1;
@@ -218,7 +218,7 @@ func parse_all_flags<N Int, M Mutability, V Variability>(flag_list &[#N]<M, V>Fl
 /// 
 /// # returns:
 ///   1. A list of parsed and invalid flags.
-func parse_flag(args []<imm>str, flag_type int, i int) (ParsedFlag, int) {
+func parse_flag(args []str, flag_type int, i int) (ParsedFlag, int) {
   name = args[i];
 
   // Curse Verdagon and his lack of matches! lol

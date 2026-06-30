@@ -8,8 +8,8 @@ use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
-  LocationTemplataType, MutabilityTemplataType, OwnershipTemplataType, PackTemplataType,
-  PrototypeTemplataType, RegionTemplataType, VariabilityTemplataType,
+  LocationTemplataType, SharednessTemplataType, OwnershipTemplataType, PackTemplataType,
+  PrototypeTemplataType, RegionTemplataType,
 };
 use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneValS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
@@ -362,8 +362,6 @@ pub fn translate_type<'s>(scout_arena: &ScoutArena<'s>, tyype: ITypePR) -> ITemp
     ITypePR::IntType => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
     ITypePR::BoolType => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
     ITypePR::OwnershipType => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
-    ITypePR::MutabilityType => ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-    ITypePR::VariabilityType => ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
     ITypePR::LocationType => ITemplataType::LocationTemplataType(LocationTemplataType {}),
     ITypePR::CoordType => ITemplataType::CoordTemplataType(CoordTemplataType {}),
     ITypePR::CoordListType => ITemplataType::PackTemplataType(PackTemplataType {

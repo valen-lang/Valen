@@ -21,8 +21,8 @@ use crate::postparsing::ast::{
     StructS, UserFunctionS,
 };
 use crate::postparsing::itemplatatype::{
-    CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
-    MutabilityTemplataType, TemplateTemplataType, VariabilityTemplataType,
+  CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
+  SharednessTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{IImpreciseNameS, IImplDeclarationNameS, INameS, IRuneS, IStructDeclarationNameS};
 use crate::postparsing::rune_type_solver::{
@@ -51,11 +51,14 @@ use std::any::Any;
 use crate::utils::fx::HashSet;
 use std::iter::once;
 
+
 pub struct Astrouts<'s> {
   code_location_to_maybe_type: HashMap<CodeLocationS<'s>, Option<ITemplataType<'s>>>,
   code_location_to_struct: HashMap<CodeLocationS<'s>, &'s StructA<'s>>,
   code_location_to_interface: HashMap<CodeLocationS<'s>, &'s InterfaceA<'s>>,
 }
+
+
 
 
 pub struct EnvironmentA<'s> {
@@ -248,12 +251,14 @@ fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a
   rule_builder.push(IRulexSR::CoerceToCoord(CoerceToCoordSR { range, coord_rune: result_rune, kind_rune }));
 }
 
+
 pub struct HigherTypingPass<'s, 'ctx> {
   global_options: GlobalOptions,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   primitives: HashMap<StrI<'s>, ITemplataType<'s>>,
 }
+
 
 impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
   pub fn new(
@@ -271,7 +276,6 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
     primitives.insert(keywords.__never, ITemplataType::KindTemplataType(KindTemplataType {}));
     primitives.insert(keywords.array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
       param_types: scout_arena.alloc_slice_copy(&[
-        ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ]),
       return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
@@ -279,8 +283,6 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
     primitives.insert(keywords.static_array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
       param_types: scout_arena.alloc_slice_copy(&[
         ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
-        ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-        ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ]),
       return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
@@ -295,6 +297,7 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
 
 // Returns whether the imprecise name could be referring to the absolute name.
 // See MINAAN for what we're doing here.
+
 fn imprecise_name_matches_absolute_name(&self, needle_imprecise_name_s: &IImpreciseNameS, absolute_name: &INameS) -> bool {
   match (needle_imprecise_name_s, absolute_name) {
     (IImpreciseNameS::CodeName(code_name), INameS::TopLevelStructDeclaration(s)) => {
@@ -309,6 +312,7 @@ fn imprecise_name_matches_absolute_name(&self, needle_imprecise_name_s: &IImprec
 }
 
 // See MINAAN for what we're doing here.
+
 fn lookup_types(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, needle_imprecise_name_s: &IImpreciseNameS<'s>) -> Vec<IRuneTypeSolverLookupResult<'s>> {
 
   match needle_imprecise_name_s {
@@ -349,6 +353,7 @@ fn lookup_types(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, needle_i
   }
 }
 
+
 fn lookup_type(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, range: RangeS<'s>, name: &IImpreciseNameS<'s>) -> Result<IRuneTypeSolverLookupResult<'s>, ILookupFailedErrorA<'s>> {
   let results = self.lookup_types(astrouts, env, name);
   let mut distinct = Vec::new();
@@ -364,6 +369,7 @@ fn lookup_type(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, range: Ra
   }
 }
 
+
 fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, struct_s: &StructS<'s>) -> Result<&'s StructA<'s>, ICompileErrorA<'s>> {
   let StructS {
     range: range_s,
@@ -371,8 +377,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     attributes: attributes_s,
     weakable,
     generic_params: generic_parameters_s,
-    mutability_rune: mutability_rune_s,
-    maybe_predicted_mutability,
+    sharedness,
     tyype,
     header_rune_to_explicit_type,
     header_predicted_rune_to_type: _,
@@ -493,8 +498,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     IStructDeclarationNameS::TopLevelStructDeclarationName((*name_s).clone()),
     attributes_s,
     *weakable,
-    mutability_rune_s.clone(),
-    *maybe_predicted_mutability,
+    *sharedness,
     tyype.clone(),
     generic_parameters_s,
     header_rune_a_to_type,
@@ -508,9 +512,11 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   Ok(struct_a)
 }
 
+
 fn get_interface_type(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'s>, _interface_s: &InterfaceS<'s>) -> ITemplataType<'s> {
   panic!("Unimplemented: get_interface_type");
 }
+
 
 fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, interface_s: &InterfaceS<'s>) -> Result<&'s InterfaceA<'s>, ICompileErrorA<'s>> {
   let InterfaceS {
@@ -520,8 +526,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
     weakable,
     generic_params: generic_parameters_s,
     rune_to_explicit_type,
-    mutability_rune: mutability_rune_s,
-    maybe_predicted_mutability,
+    sharedness,
     predicted_rune_to_type: _,
     tyype,
     rules: rules_with_implicitly_coercing_lookups_s,
@@ -603,8 +608,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
     name_s,
     attributes_s,
     *weakable,
-    mutability_rune_s.clone(),
-    *maybe_predicted_mutability,
+    *sharedness,
     tyype.clone(),
     generic_parameters_s,
     self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
@@ -614,6 +618,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
   astrouts.code_location_to_interface.insert(range_s.begin.clone(), interface_a);
   Ok(interface_a)
 }
+
 
 fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, impl_s: &ImplS<'s>) -> Result<&'s ImplA<'s>, ICompileErrorA<'s>> {
   let ImplS {
@@ -687,6 +692,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
   )))
 }
 
+
 fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> Result<&'s ExportAsA<'s>, ICompileErrorA<'s>> {
   let range_s = export_s.range.clone();
   let rules_with_implicitly_coercing_lookups_s = export_s.rules;
@@ -728,6 +734,7 @@ fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     type_rune: rune,
   }))
 }
+
 
 fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, function_s: &'s FunctionS<'s>) -> Result<&'s FunctionA<'s>, ICompileErrorA<'s>> {
   let range_s = function_s.range.clone();
@@ -793,6 +800,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
   )))
 }
 
+
 fn calculate_rune_types(
   &self,
   astrouts: &mut Astrouts<'s>,
@@ -834,6 +842,7 @@ fn calculate_rune_types(
   }
 }
 
+
 fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> Result<ProgramA<'s>, ICompileErrorA<'s>> {
   let env = EnvironmentA {
     maybe_name: None,
@@ -871,6 +880,7 @@ fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>
     exports: self.scout_arena.alloc_slice_from_vec(exports_a),
   })
 }
+
 
 pub fn run_pass(
   &self,
@@ -959,6 +969,7 @@ pub fn run_pass(
 
 }
 
+
 pub struct HigherTypingCompilation<'s, 'ctx, 'p> {
   global_options: GlobalOptions,
   pub scout_arena: &'ctx ScoutArena<'s>,
@@ -966,6 +977,7 @@ pub struct HigherTypingCompilation<'s, 'ctx, 'p> {
   scout_compilation: ScoutCompilation<'s, 'ctx, 'p>,
   astrouts_cache: Option<PackageCoordinateMap<'s, ProgramA<'s>>>,
 }
+
 
 impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
 {
@@ -998,22 +1010,27 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
     }
   }
 
+
 pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.scout_compilation.get_code_map()
 }
+
 
 
 pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
   self.scout_compilation.get_parseds()
 }
 
+
 pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.scout_compilation.get_vpst_map()
 }
 
+
 pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'s, ProgramS<'s>>, ICompileErrorS<'s>> {
   self.scout_compilation.get_scoutput()
 }
+
 
 pub fn get_astrouts(&mut self) -> Result<&PackageCoordinateMap<'s, ProgramA<'s>>, ICompileErrorA<'s>> {
   if self.astrouts_cache.is_some() {
@@ -1030,11 +1047,20 @@ pub fn get_astrouts(&mut self) -> Result<&PackageCoordinateMap<'s, ProgramA<'s>>
   Ok(self.astrouts_cache.as_ref().unwrap())
 }
 
+
 pub fn expect_astrouts(&mut self) -> &PackageCoordinateMap<'s, ProgramA<'s>> {
   match self.get_astrouts() {
     Ok(x) => x,
-    Err(_e) => {
-      panic!("HigherTypingCompilation.expect_astrouts failed")
+    Err(e) => {
+      let variant = match e {
+        ICompileErrorA::CouldntFindType(_) => "CouldntFindType",
+        ICompileErrorA::TooManyMatchingTypes(_) => "TooManyMatchingTypes",
+        ICompileErrorA::CouldntSolveRules(_) => "CouldntSolveRules",
+        ICompileErrorA::CircularModuleDependency(_) => "CircularModuleDependency",
+        ICompileErrorA::WrongNumArgsForTemplate(_) => "WrongNumArgsForTemplate",
+        ICompileErrorA::RangedInternalError(_) => "RangedInternalError",
+      };
+      panic!("HigherTypingCompilation.expect_astrouts failed: {}", variant)
     }
   }
 }

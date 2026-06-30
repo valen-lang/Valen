@@ -1,4 +1,5 @@
 use crate::interner::StrI;
+use crate::parsing::ast::SharednessP;
 
 
 /// Position range in source code (test edit)
@@ -81,7 +82,7 @@ pub struct StructL<'p> {
   pub range: RangeL,
   pub name: WordLE<'p>,
   pub attributes: &'p [IAttributeL<'p>],
-  pub mutability: Option<ScrambleLE<'p>>,
+  pub sharedness: SharednessP,
   pub identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
   pub contents_range: RangeL,
@@ -96,7 +97,7 @@ pub struct InterfaceL<'p> {
   pub range: RangeL,
   pub name: WordLE<'p>,
   pub attributes: &'p [IAttributeL<'p>],
-  pub mutability: Option<ScrambleLE<'p>>,
+  pub sharedness: SharednessP,
   pub maybe_identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
   pub body_range: RangeL,

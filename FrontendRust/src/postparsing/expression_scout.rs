@@ -1,20 +1,20 @@
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
   BlockPE, DotPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, ITemplexPT, LoadAsP,
-  LookupPE, MutabilityP, NameP, OwnershipP, StaticSizedArraySizeP, VariabilityP,
+  LookupPE, SharednessP, NameP, OwnershipP, StaticSizedArraySizeP,
 };
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
-  BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
+  BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, CopyPrimSE, DestructSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
   IExpressionSE, IfSE, IndexSE, LetSE, LoadPartSE, LocalLoadSE, LocalMutateSE, LocalS, NewRuntimeSizedArraySE, OutsideLoadSE, OverloadSetSE,
   OwnershippedSE, PureSE, ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE,
   TupleSE, VoidSE,
 };
 use crate::postparsing::names::ImplicitRuneValS;
 use crate::postparsing::rules::rules::{
-  ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, MutabilityLiteralSL, RuneUsage, VariabilityLiteralSL,
+  ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, SharednessLiteralSL, RuneUsage,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS,
@@ -405,7 +405,9 @@ fn scout_expression(
       let load_as = match augment.target_ownership {
         OwnershipP::Borrow => LoadAsP::LoadAsBorrow,
         OwnershipP::Weak => LoadAsP::LoadAsWeak,
-        OwnershipP::Own => panic!("POSTPARSER_AUGMENT_OWN_NOT_YET_IMPLEMENTED"),
+        // VCOORD: revisit this
+        // Prefix `^x` → force move (Unlet on local lookup; pass-through on already-owning expr).
+        OwnershipP::Own => LoadAsP::Move,
         OwnershipP::Live => panic!("POSTPARSER_AUGMENT_LIVE_NOT_YET_IMPLEMENTED"),
         OwnershipP::Share => panic!("POSTPARSER_AUGMENT_SHARE_NOT_YET_IMPLEMENTED"),
       };
@@ -606,6 +608,33 @@ fn scout_expression(
         self.scout_expression(stack_frame, &mut callable_lidb, function_call.callable_expr)?;
       match subject_uncoerced_scout_result {
         IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name: container_name, template_args: container_maybe_template_args }) => {
+          // VCOORD: revisit this
+          // TEMP: source-level `__copy_prim(x)` syntax. No Scala counterpart.
+          // Detected by name here before normal overload-set construction so we
+          // can emit a dedicated CopyPrimSE. Removable when typing-pass
+          // auto-insertion of CopyPrim replaces the source syntax — at that
+          // point this whole branch (and CopyPrimSE) go away.
+          if container_name == "__copy_prim" {
+            if container_maybe_template_args.is_some() {
+              panic!("__copy_prim takes no template args");
+            }
+            if function_call.arg_exprs.len() != 1 {
+              panic!("__copy_prim expects exactly 1 argument, got {}", function_call.arg_exprs.len());
+            }
+            let mut arg_lidb = lidb.child();
+            // LoadAsBorrow on the inner so that __copy_prim(some_local) does NOT move
+            // some_local — we read it as a borrow, then the typing pass produces a fresh
+            // Own+primitive from the borrow's kind. Per plan: `x = 4; print(__copy_prim(x)); print(x)` works.
+            let (stack_frame_arg, arg_se, arg_self_uses, arg_child_uses) =
+              self.scout_expression_and_coerce(stack_frame0a, &mut arg_lidb, function_call.arg_exprs[0], LoadAsP::LoadAsBorrow)?;
+            let result = IScoutResult::NormalResult(NormalResultS {
+              expr: &*self.scout_arena.alloc(IExpressionSE::CopyPrim(CopyPrimSE {
+                range,
+                inner_expr: arg_se,
+              })),
+            });
+            return Ok((stack_frame_arg, result, arg_self_uses, arg_child_uses));
+          }
           let mut rule_builder = Vec::new();
           let container_template_arg_rune_usages = self.translate_maybe_template_args(
             &parent_env,
@@ -828,52 +857,6 @@ fn scout_expression(
           type_pt,
         )
       });
-      let mutability_rune_s = match &construct_array.mutability_pt {
-        None => {
-          let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
-          let rune_usage = RuneUsage { range: range_s, rune };
-          rule_builder.push(IRulexSR::Literal(LiteralSR {
-            range: range_s,
-            rune: rune_usage,
-            literal: ILiteralSL::MutabilityLiteral(MutabilityLiteralSL { mutability: MutabilityP::Mutable }),
-          }));
-          rune_usage
-        }
-        Some(mutability_pt) => {
-          translate_templex(
-            self.scout_arena,
-            self.keywords,
-            parent_env.clone(),
-            &mut lidb.child(),
-            &mut rule_builder,
-            context_region.clone(),
-            mutability_pt,
-          )
-        }
-      };
-      let variability_rune_s = match &construct_array.variability_pt {
-        None => {
-          let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
-          let rune_usage = RuneUsage { range: range_s, rune };
-          rule_builder.push(IRulexSR::Literal(LiteralSR {
-            range: range_s,
-            rune: rune_usage,
-            literal: ILiteralSL::VariabilityLiteral(VariabilityLiteralSL { variability: VariabilityP::Final }),
-          }));
-          rune_usage
-        }
-        Some(variability_pt) => {
-          translate_templex(
-            self.scout_arena,
-            self.keywords,
-            parent_env.clone(),
-            &mut lidb.child(),
-            &mut rule_builder,
-            context_region.clone(),
-            variability_pt,
-          )
-        }
-      };
       let mut args_lidb = lidb.child();
       let (stack_frame1, args_s, self_uses, child_uses) =
           self.scout_elements_as_expressions(stack_frame, &mut args_lidb, &construct_array.args)?;
@@ -896,7 +879,6 @@ fn scout_expression(
             range: range_s,
             rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
             maybe_element_type_st: maybe_type_rune_s,
-            mutability_st: mutability_rune_s,
             size: self.scout_arena.alloc(size_se),
             callable: callable_se,
           })
@@ -931,8 +913,6 @@ fn scout_expression(
               range: range_s,
               rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
               maybe_element_type_st: maybe_type_rune_s,
-              mutability_st: mutability_rune_s,
-              variability_st: variability_rune_s,
               size_st: size_rune_s,
               elements: self.scout_arena.alloc_slice_from_vec(args_s),
             })
@@ -953,8 +933,6 @@ fn scout_expression(
               range: range_s,
               rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
               maybe_element_type_st: maybe_type_rune_s,
-              mutability_st: mutability_rune_s,
-              variability_st: variability_rune_s,
               size_st: size_rune_s,
               callable: callable_se,
             })
@@ -1316,7 +1294,7 @@ fn scout_expression(
       }));
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
         let mut inner_lidb = lidb.child();
-        self.scout_expression_and_coerce(stack_frame, &mut inner_lidb, not.inner, LoadAsP::Use)?
+        self.scout_expression_and_coerce(stack_frame, &mut inner_lidb, not.inner, LoadAsP::LoadAsBorrow)?
       };
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {

@@ -13,9 +13,9 @@ use crate::tests::tests::get_package_to_resource_resolver;
 use crate::tests::tests::load_expected;
 
 
+
 #[test]
 fn regular_interface_and_struct() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -119,7 +119,6 @@ fn upcast() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
 interface IShip {}
 struct Raza { fuel int; }
 impl IShip for Raza;
@@ -218,7 +217,7 @@ impl<T> Opt<T> for Some<T>;
 func drop<T>(opt Some<T>)
 where func drop(T)void
 {
-  [x] = opt;
+  [x] = ^opt;
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -285,13 +284,13 @@ where func __call(&Lam)int // 3
 func bork<Lam>( // 1
   self &BorkForwarder<Lam> // 2
 ) int {
-  return (self.lam)();
+  return (&self.lam)();
 }
 
 exported func main() {
   b = BorkForwarder({ 7 });
-  b.bork();
-  [_] = b;
+  (&b).bork();
+  [_] = ^b;
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -325,14 +324,14 @@ where func drop(Lam)void, func __call(&Lam)int {
 impl<Lam> Bork for BorkForwarder<Lam>;
 
 func bork<Lam>(self &BorkForwarder<Lam>) int {
-  return (self.lam)();
+  return (&self.lam)();
 }
 
 exported func main() int {
   f = BorkForwarder({ 7 });
-  z = f.bork();
-  [_] = f;
-  return z;
+  z = (&f).bork();
+  [_] = ^f;
+  return ^z;
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -366,14 +365,14 @@ where func drop(Lam)void, func __call(&Lam)T {
 impl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;
 
 func bork<T, Lam>(self &BorkForwarder<T, Lam>) T {
-  return (self.lam)();
+  return (&self.lam)();
 }
 
 exported func main() int {
   f = BorkForwarder<int>({ 7 });
-  z = f.bork();
-  [_] = f;
-  return z;
+  z = (&f).bork();
+  [_] = ^f;
+  return ^z;
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -408,16 +407,16 @@ where func drop(Lam)void, func __call(&Lam)T, func threeify(T)T {
 impl<T, Lam> Bork<T> for BorkForwarder<T, Lam>;
 
 func bork<T, Lam>(self &BorkForwarder<T, Lam>) T {
-  return (self.lam)().threeify();
+  return threeify((&self.lam)());
 }
 
 func threeify(x int) int { 3 }
 
 exported func main() int {
   f = BorkForwarder<int>({ 7 });
-  z = f.bork();
-  [_] = f;
-  return z;
+  z = (&f).bork();
+  [_] = ^f;
+  return ^z;
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -445,7 +444,6 @@ exported func main() int {
   f = Bork({ 7 });
   return f.bork();
 }
-
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -463,12 +461,13 @@ fn integer_is_compatible_with_interface_anonymous_substruct() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: x6 int → x6 &int — anonymous-interface-macro forwarder accesses captured `6` as a borrowed field
     let code = r#"
 import v.builtins.drop.*;
 interface AFunction2<R Ref, P1 Ref> {
   func doCall(virtual this &AFunction2<R, P1>, a P1) R;
 }
-func __call(x6 int, x42 int)str { "hi" }
+func __call(x6 &int, x42 int)str { "hi" }
 exported func main() str {
   func = AFunction2<str, int>(6);
   return func.doCall(42);
@@ -545,6 +544,7 @@ fn anonymous_substruct_8() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: a.3 is &int
     let code = r"
 import v.builtins.arrays.*;
 //import array.make.*;
@@ -560,8 +560,8 @@ impl IThing for MyThing;
 
 exported func main() int {
   i IThing = MyThing();
-  a = Array<imm, int>(10, &i);
-  return a.3;
+  a = Array<int>(10, &i);
+  return __copy_prim(&a.3);
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])

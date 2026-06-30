@@ -101,17 +101,11 @@ where 's: 't,
             self.typing_interner.alloc(struct_templata)
         );
         coutputs.declare_type(struct_template_id);
-        match struct_a.maybe_predicted_mutability {
-            None => {}
-            Some(predicted_mutability) => {
-                coutputs.declare_type_mutability(
-                    struct_template_id,
-                    ITemplataT::Mutability(MutabilityTemplataT {
-                        mutability: evaluate_mutability(predicted_mutability),
-                    }),
-                );
-            }
-        }
+        // VCOORD: rename to declare_type_sharedness
+        coutputs.declare_type_mutability(
+            struct_template_id,
+            evaluate_mutability(struct_a.sharedness),
+        );
         // Build internal method entries for the outer env
         let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             struct_a.internal_methods.iter().map(|internal_method| {
@@ -156,17 +150,10 @@ where 's: 't,
             self.typing_interner.alloc(interface_templata)
         );
         coutputs.declare_type(interface_template_id);
-        match interface_a.maybe_predicted_mutability {
-            None => {}
-            Some(predicted_mutability) => {
-                coutputs.declare_type_mutability(
-                    interface_template_id,
-                    ITemplataT::Mutability(MutabilityTemplataT {
-                        mutability: evaluate_mutability(predicted_mutability),
-                    }),
-                );
-            }
-        }
+        coutputs.declare_type_mutability(
+            interface_template_id,
+            evaluate_mutability(interface_a.sharedness),
+        );
         // We do this here because we might compile a virtual function somewhere before we compile
         // the interface. The virtual function will need to know if the type is sealed to know
         // whether it's allowed to be virtual on this interface.
@@ -284,7 +271,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }
@@ -293,31 +280,25 @@ where 's: 't,
     pub fn get_compound_type_mutability(
         &self,
         member_types: &[CoordT<'s, 't>],
-    ) -> MutabilityT {
+    ) -> SharednessT {
         panic!("Unimplemented: Slab 15 — body migration");
         // val membersOwnerships = memberTypes2.map(_.ownership)
         // val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
         // if (allMembersImmutable) ImmutableT else MutableT
     }
-    
-    pub fn struct_compiler_get_mutability(
+
+    // VCOORD: see if we can get rid of this function and just inline it
+    pub fn struct_compiler_get_sharedness(
         &self,
-        sanity_check: bool,
+        _sanity_check: bool,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_denizen_id: IdT<'s, 't>,
-        region: RegionT,
+        _original_calling_denizen_id: IdT<'s, 't>,
+        _region: RegionT,
         struct_tt: StructTT<'s, 't>,
-        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-    ) -> ITemplataT<'s, 't> {
-        let definition = coutputs.lookup_struct(struct_tt.id, self);
-        let transformer = self.get_placeholder_substituter(
-            sanity_check,
-            original_calling_denizen_id,
-            struct_tt.id,
-            bound_arguments_source,
-        );
-        let result = transformer.substitute_for_templata(coutputs, definition.mutability);
-        result
+        _bound_arguments_source: IBoundArgumentsSource<'s, 't>,
+    ) -> SharednessT {
+        // Sharedness is parse-time-known and not template-parametric, so no substitution needed.
+        coutputs.lookup_struct(struct_tt.id, self).sharedness
     }
     
     

@@ -1,8 +1,8 @@
 import stdlib.collections.list.*;
 import stdlib.resultutils.*;
 
-export Array<imm, str> as StrArray;
-export Array<mut, str> as MutStrArray;
+export Array<str> as StrArray;
+export Array<str> as MutStrArray;
 export List<Path> as PathList;
 
 

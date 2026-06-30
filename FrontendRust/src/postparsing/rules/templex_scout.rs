@@ -5,8 +5,8 @@
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, LocationPT, MutabilityPT, NameOrRunePT,
-  NameP, OwnershipPT, RegionRunePT, StringPT, VariabilityPT,
+  BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, LocationPT, SharednessPT, NameOrRunePT,
+  NameP, OwnershipPT, RegionRunePT, StringPT,
 };
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -18,8 +18,8 @@ use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Lookup, MaybeCoercingCall, MaybeCoercingLookup};
 use crate::postparsing::rules::rules::{
   AugmentSR, BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL,
-  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
-  RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
+  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, SharednessLiteralSL, OwnershipLiteralSL,
+  RuneParentEnvLookupSR, RuneUsage, StringLiteralSL,
 };
 use crate::utils::range::RangeS;
 use crate::postparsing::rules::rules::{
@@ -30,7 +30,7 @@ use crate::interner::StrI;
 use crate::postparsing::itemplatatype::CoordTemplataType;
 
 
-fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
+pub fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,
@@ -99,16 +99,6 @@ pub fn translate_value_templex<'s, 'p>(
     ITemplexPT::Bool(BoolPT { value, .. }) => Some(ILiteralSL::BoolLiteral(BoolLiteralSL {
       value: *value,
     })),
-    ITemplexPT::Mutability(MutabilityPT(_, mutability)) => Some(ILiteralSL::MutabilityLiteral(
-      MutabilityLiteralSL {
-        mutability: *mutability,
-      },
-    )),
-    ITemplexPT::Variability(VariabilityPT(_, variability)) => Some(ILiteralSL::VariabilityLiteral(
-      VariabilityLiteralSL {
-        variability: *variability,
-      },
-    )),
     ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(
       StringLiteralSL {
         value: scout_arena.intern_str(str.as_str()),
@@ -403,26 +393,6 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           static_sized_array.size,
         );
         let mut child_lidb = lidb.child();
-        let mutability_rune_s = translate_templex(
-          scout_arena,
-          keywords,
-          env.clone(),
-          &mut child_lidb,
-          rule_builder,
-          context_region.clone(),
-          static_sized_array.mutability,
-        );
-        let mut child_lidb = lidb.child();
-        let variability_rune_s = translate_templex(
-          scout_arena,
-          keywords,
-          env.clone(),
-          &mut child_lidb,
-          rule_builder,
-          context_region.clone(),
-          static_sized_array.variability,
-        );
-        let mut child_lidb = lidb.child();
         let element_rune_s = translate_templex(
           scout_arena,
           keywords,
@@ -436,7 +406,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: scout_arena.alloc_slice_from_vec(vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s]),
+          args: scout_arena.alloc_slice_from_vec(vec![size_rune_s, element_rune_s]),
         }));
         result_rune_s
       }
@@ -461,16 +431,6 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           })),
         }));
         let mut child_lidb = lidb.child();
-        let mutability_rune_s = translate_templex(
-          scout_arena,
-          keywords,
-          env.clone(),
-          &mut child_lidb,
-          rule_builder,
-          context_region.clone(),
-          runtime_sized_array.mutability,
-        );
-        let mut child_lidb = lidb.child();
         let element_rune_s = translate_templex(
           scout_arena,
           keywords,
@@ -484,7 +444,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: scout_arena.alloc_slice_from_vec(vec![mutability_rune_s, element_rune_s]),
+          args: scout_arena.alloc_slice_from_vec(vec![element_rune_s]),
         }));
         result_rune_s
       }

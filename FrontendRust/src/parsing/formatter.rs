@@ -1,6 +1,9 @@
 // Code formatting utilities
 
 
+
+
+
 pub enum IClass {
     W,
     Ab,
@@ -12,16 +15,19 @@ pub enum IClass {
 }
 
 
+
 pub enum IElement {
     Span(Span),
     Text(Text),
 }
 
 
+
 pub struct Span {
     pub classs: IClass,
     pub elements: Vec<IElement>,
 }
+
 
 
 pub struct Text {

@@ -13,15 +13,16 @@ where func drop(T)void;
 
 func drop<T>(self XSome<T>) void
 where func drop(T)void {
-  [unused] = self;
+  [unused] = ^self;
 }
 
 abstract func getOr<T>(virtual opt &XOpt<T>, default &T) &T;
 func getOr<T>(opt &XSome<T>, default &T) &T {
-  return opt.value;
+  return &opt.value;
 }
 
 exported func main() int {
   a XOpt<int> = XSome(9);
-  return a.getOr<int>(12);
+  // TSUGAR:   return a.getOr<int>(12);
+  return __copy_prim((&a).getOr<int>(&12));
 }

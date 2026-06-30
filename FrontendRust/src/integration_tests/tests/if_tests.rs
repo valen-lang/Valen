@@ -158,18 +158,18 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT {
-                ownership: OwnershipT::Share,
-                region: RegionT { region: IRegionT::Default },
-                kind: KindT::Int(IntT::I32),
-            });
+            assert_eq!(iff.result().coord, CoordT::new(
+                OwnershipT::Own,
+                RegionT { region: IRegionT::Default },
+                KindT::Int(IntT::I32),
+            ));
         }
         assert_eq!(ifs.len(), 2);
         let user_funcs = coutputs.get_all_user_functions();
         for func in &user_funcs {
             match func.header.return_type {
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+                CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
+                CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
                 other => panic!("vwat: {:?}", other),
             }
         }
@@ -203,11 +203,11 @@ struct Marine { x int; }
 exported func main() int {
   m = Marine(5);
   return if (false) {
-      [x] = m;
-      x
+      [x] = ^m;
+      ^x
     } else {
-      [y] = m;
-      y
+      [y] = ^m;
+      ^y
     };
 }
 ",
@@ -220,17 +220,17 @@ exported func main() int {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT {
-                ownership: OwnershipT::Share,
-                region: RegionT { region: IRegionT::Default },
-                kind: KindT::Int(IntT::I32),
-            });
+            assert_eq!(iff.result().coord, CoordT::new(
+                OwnershipT::Own,
+                RegionT { region: IRegionT::Default },
+                KindT::Int(IntT::I32),
+            ));
         }
         let user_funcs = coutputs.get_all_user_functions();
         for func in &user_funcs {
             match func.header.return_type {
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
-                CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. } => {}
+                CoordT { ownership: OwnershipT::Own, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
+                CoordT { ownership: OwnershipT::Own, kind: KindT::Bool(_), .. } => {}
                 other => panic!("vwat: {:?}", other),
             }
         }
@@ -277,11 +277,11 @@ exported func main() str {
             NodeRefT::If(if2) => Some(if2)
         );
         for iff in &ifs {
-            assert_eq!(iff.result().coord, CoordT {
-                ownership: OwnershipT::Share,
-                region: RegionT { region: IRegionT::Default },
-                kind: KindT::Str(StrT),
-            });
+            assert_eq!(iff.result().coord, CoordT::new(
+                OwnershipT::Share,
+                RegionT { region: IRegionT::Default },
+                KindT::Str(StrT),
+            ));
         }
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -308,9 +308,10 @@ fn if_with_condition_declaration() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: x used after comparison; needs copy
         r"
 exported func main() int {
-  return if x = 42; x < 50 { x }
+  return if x = 42; x < 50 { __copy_prim(&x) }
     else { 73 };
 }
 ",
@@ -339,13 +340,14 @@ fn ret_from_inside_if_will_destroy_locals() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m.hp is &int
         r#"
 import printutils.*;
 #!DeriveStructDrop
 struct Marine { hp int; }
 func drop(marine Marine) void {
   println("Destroying marine!");
-  Marine[weapon] = marine;
+  Marine[weapon] = ^marine;
 }
 exported func main() int {
   m = Marine(5);
@@ -355,7 +357,7 @@ exported func main() int {
       return 7;
     } else {
       println("In else!");
-      m.hp
+      __copy_prim(&m.hp)
     };
   println("In rest!");
   return x;
@@ -383,6 +385,7 @@ fn can_continue_if_other_branch_would_have_returned() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m.hp is &int
         r#"
 import printutils.*;
 
@@ -390,7 +393,7 @@ import printutils.*;
 struct Marine { hp int; }
 func drop(marine Marine) void {
   println("Destroying marine!");
-  Marine[weapon] = marine;
+  Marine[weapon] = ^marine;
 }
 exported func main() int {
   m = Marine(5);
@@ -400,7 +403,7 @@ exported func main() int {
       return 7;
     } else {
       println("In else!");
-      m.hp
+      __copy_prim(&m.hp)
     };
   println("In rest!");
   return x;
@@ -435,6 +438,7 @@ fn destructure_inside_if() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: bork.num is &int
         r"
 import printutils.*;
 struct Bork {
@@ -449,10 +453,10 @@ exported func main() {
   while (zork < 4) {
     moo = Moo(Bork(5));
     if (true) {
-      [bork] = moo;
-      println(bork.num);
+      [bork] = ^moo;
+      println(__copy_prim(&bork.num));
     } else {
-      drop(moo);
+      drop(^moo);
     }
     set zork = zork + 1;
   }

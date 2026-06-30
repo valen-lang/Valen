@@ -36,6 +36,7 @@ include_shields = [
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
+    { name = "MailboxWorkflow-MBXX.md" },
 ]
 
 [migrate_mode]
@@ -60,6 +61,7 @@ include_shields = [
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
+    { name = "MailboxWorkflow-MBXX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
 ]
 
@@ -87,6 +89,7 @@ include_shields = [
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
+    { name = "MailboxWorkflow-MBXX.md" },
     { name = "NoAddingScalaComments-NASCX.md" },
 ]
 
@@ -117,4 +120,5 @@ include_shields = [
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
     { name = "BulkEditScriptWorkflow-BESWX.md" },
+    { name = "MailboxWorkflow-MBXX.md" },
 ]

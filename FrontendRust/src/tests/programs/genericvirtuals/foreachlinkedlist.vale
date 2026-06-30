@@ -15,10 +15,11 @@ func forEach<F, T>(
   func F)
 int
 where func drop(T)void, func(&F, &T)void, func drop(F)void {
+  // TSUGAR:   if not opt.isEmpty() {
   if not opt.isEmpty() {
-    forEach<F, T>(opt.get(), func);
+    forEach<F, T>(opt.get(), ^func);
   } else {
-    (func);
+    (^func);
   }
   return 0;
 }
@@ -26,14 +27,15 @@ where func drop(T)void, func(&F, &T)void, func drop(F)void {
 func forEach<F, T>(list &MyList<T>, func F) int
 where func drop(T)void, func(&F, &T)void, func drop(F)void
 {
-  func(list.value);
-  forEach<F, T>(list.next, func);
+  func(&list.value);
+  forEach<F, T>(&list.next, ^func);
   return 0;
 }
 
 exported func main() int {
   list = MyList<int>(10, Some<^MyList<int>>(MyList<int>(20, Some<^MyList<int>>(MyList<int>(30, None<^MyList<int>>())))));
-  forEach(&list, { print(_); });
+  // TSUGAR:   forEach(&list, { print(_); });
+  forEach(&list, { print(__copy_prim(_)); });
   return 0;
 }
 

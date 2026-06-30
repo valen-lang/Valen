@@ -1,5 +1,5 @@
 exported struct MyBox {
-  i! int;
+  i int;
 }
 
 exported func changeInBox(b &MyBox) {

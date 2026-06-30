@@ -10,7 +10,12 @@ use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_humanizer::humanize;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::utils::source_code_utils::humanize_pos_code_map;
+use crate::utils::source_code_utils::line_containing;
+use crate::utils::source_code_utils::line_range_containing;
+use crate::utils::source_code_utils::lines_between;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::FileCoordinateMap;
@@ -126,11 +131,21 @@ pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErro
   
 pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
 
-  match self.get_compiler_outputs() {
+  match self.get_compiler_outputs().err() {
 
-    Err(_err) => panic!("Not yet implemented: CompilerErrorHumanizer.humanize"),
+    Some(err) => {
+      let code_map = self.get_code_map().expect("getCodeMap failed");
+      let error_text = humanize(
+        self.scout_arena, self.typing_interner, true,
+        &|x| humanize_pos_code_map(&code_map, &x),
+        &|a, b| lines_between(&code_map, &a, &b),
+        &|x| line_range_containing(&code_map, &x),
+        &|x| line_containing(&code_map, &x),
+        err);
+      panic!("{}", error_text);
+    }
 
-    Ok(x) => x,
+    None => self.hinputs_cache.as_ref().unwrap(),
   }
 }
   

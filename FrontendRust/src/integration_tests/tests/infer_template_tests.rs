@@ -48,12 +48,13 @@ pub fn test_inferring_a_borrowed_argument() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: moo(&x).hp is &int
         r"
 struct Muta { hp int; }
 func moo<T>(m &T) &T { return m; }
 exported func main() int {
   x = Muta(10);
-  return moo(&x).hp;
+  return __copy_prim(moo(&x).hp);
 }
 ",
     );
@@ -130,9 +131,10 @@ pub fn test_inferring_a_borrowed_static_sized_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m[0].hp is &int
         r"
 struct Muta { hp int; }
-func moo<N Int>(m &[#N]Muta) int { return m[0].hp; }
+func moo<N Int>(m &[#N]Muta) int { return __copy_prim(m[0].hp); }
 exported func main() int {
   x = [#](Muta(10));
   return moo(&x);
@@ -163,12 +165,13 @@ pub fn test_inferring_an_owning_static_sized_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: m[0].hp is &int
         r"
 struct Muta { hp int; }
-func moo<N Int>(m [#N]Muta) int { return m[0].hp; }
+func moo<N Int>(m [#N]Muta) int { return __copy_prim(m[0].hp); }
 exported func main() int {
   x = [#](Muta(10));
-  return moo(x);
+  return moo(^x);
 }
 ",
     );

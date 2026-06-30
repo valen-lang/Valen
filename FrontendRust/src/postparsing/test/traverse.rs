@@ -19,8 +19,7 @@ use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
   AugmentSR, BoolLiteralSL, CoerceToCoordSR, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL,
   IRulexSR, IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR,
-  MaybeCoercingLookupSR, MutabilityLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
-  VariabilityLiteralSL,
+  MaybeCoercingLookupSR, SharednessLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -96,10 +95,9 @@ pub enum NodeRefS<'s> {
   IntLiteral(&'s IntLiteralSL),
   StringLiteral(&'s StringLiteralSL<'s>),
   BoolLiteral(&'s BoolLiteralSL),
-  MutabilityLiteral(&'s MutabilityLiteralSL),
+  MutabilityLiteral(&'s SharednessLiteralSL),
   LocationLiteral(&'s LocationLiteralSL),
   OwnershipLiteral(&'s OwnershipLiteralSL),
-  VariabilityLiteral(&'s VariabilityLiteralSL),
 
   Name(&'s INameS<'s>),
   FunctionDeclarationName(&'s IFunctionDeclarationNameS<'s>),
@@ -321,7 +319,7 @@ where
   for param in strukt.generic_params {
     visit_generic_parameter(pred, out, param);
   }
-  visit_rune_usage(pred, out, &strukt.mutability_rune);
+  let _ = strukt.sharedness;
   for rule in strukt.header_rules {
     visit_rulex(pred, out, rule);
   }
@@ -350,7 +348,7 @@ where
   for param in interface.generic_params {
     visit_generic_parameter(pred, out, param);
   }
-  visit_rune_usage(pred, out, &interface.mutability_rune);
+  let _ = interface.sharedness;
   for rule in interface.rules {
     visit_rulex(pred, out, rule);
   }
@@ -543,8 +541,6 @@ where
       if let Some(element_type_st) = &x.maybe_element_type_st {
         visit_rune_usage(pred, out, element_type_st);
       }
-      visit_rune_usage(pred, out, &x.mutability_st);
-      visit_rune_usage(pred, out, &x.variability_st);
       visit_rune_usage(pred, out, &x.size_st);
       for element in x.elements {
         visit_expression(pred, out, element);
@@ -557,8 +553,6 @@ where
       if let Some(element_type_st) = &x.maybe_element_type_st {
         visit_rune_usage(pred, out, element_type_st);
       }
-      visit_rune_usage(pred, out, &x.mutability_st);
-      visit_rune_usage(pred, out, &x.variability_st);
       visit_rune_usage(pred, out, &x.size_st);
       visit_expression(pred, out, x.callable);
     }
@@ -569,7 +563,6 @@ where
       if let Some(element_type_st) = &x.maybe_element_type_st {
         visit_rune_usage(pred, out, element_type_st);
       }
-      visit_rune_usage(pred, out, &x.mutability_st);
       visit_expression(pred, out, x.size);
       if let Some(callable) = x.callable {
         visit_expression(pred, out, callable);
@@ -600,6 +593,7 @@ where
     IExpressionSE::OverloadSet(x) => visit_outside_load(pred, out, &x.lookup),
     IExpressionSE::RuneLookup(x) => visit_rune(pred, out, &x.rune),
     IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
+    IExpressionSE::CopyPrim(x) => visit_expression(pred, out, x.inner_expr),
   }
 }
 
@@ -884,7 +878,6 @@ where
     ILiteralSL::MutabilityLiteral(x) => collect_if(pred, out, NodeRefS::MutabilityLiteral(x)),
     ILiteralSL::LocationLiteral(x) => collect_if(pred, out, NodeRefS::LocationLiteral(x)),
     ILiteralSL::OwnershipLiteral(x) => collect_if(pred, out, NodeRefS::OwnershipLiteral(x)),
-    ILiteralSL::VariabilityLiteral(x) => collect_if(pred, out, NodeRefS::VariabilityLiteral(x)),
   }
 }
 

@@ -14,12 +14,13 @@ func vassert(cond bool, msg str) {
   }
 }
 
+// TSUGAR: originally `where func ==(T, T)bool` + `==(a, b)`; flipped to &T-flavored ==
 func vassertEq<T>(a T, b T) void
-where func ==(T, T)bool {
-  vassert(==(a, b), "Assertion failed, not equal!");
+where func ==(&T, &T)bool, func drop(T)void {
+  vassert(==(&a, &b), "Assertion failed, not equal!");
 }
 
 func vassertEq<T>(a T, b T, msg str) void
-where func ==(T, T)bool {
-  vassert(==(a, b), msg);
+where func ==(&T, &T)bool, func drop(T)void {
+  vassert(==(&a, &b), msg);
 }

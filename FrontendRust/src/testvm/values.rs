@@ -21,6 +21,7 @@ use std::fmt::Result as FmtResult;
 use std::io::Write;
 
 
+
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct RRReferenceV<'v, 'h, 's>
@@ -45,19 +46,21 @@ where 's: 'h, 'h: 'v,
 pub struct AllocationV<'v, 'h, 's> {
   pub reference: ReferenceV<'v, 'h, 's>,
   pub kind: KindV<'v, 'h, 's>,
-  pub referrers: HashMap<IObjectReferrerV<'v, 'h, 's>, i32>,
+  pub strong_referrers: HashMap<IObjectReferrerV<'v, 'h, 's>, i32>,
+  pub weak_referrers: HashMap<IObjectReferrerV<'v, 'h, 's>, i32>,
 }
+
 
 impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
   pub fn id(&self) -> AllocationIdV<'v, 'h, 's> {
     panic!("Unimplemented: id");
   }
 
-  pub fn increment_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
+  pub fn increment_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>, is_weak: bool) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
     }
-    let referrers = &mut self.referrers;
+    let referrers = if is_weak { &mut self.weak_referrers } else { &mut self.strong_referrers };
     match referrer {
       IObjectReferrerV::RegisterToObjectReferrer(_) => {
         // We can have multiple of these, thats fine
@@ -72,11 +75,11 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     referrers.insert(referrer, current + 1);
   }
 
-  pub fn decrement_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>) {
+  pub fn decrement_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>, is_weak: bool) {
     if matches!(self.kind, KindV::Void(_)) {
       return;
     }
-    let referrers = &mut self.referrers;
+    let referrers = if is_weak { &mut self.weak_referrers } else { &mut self.strong_referrers };
     if !referrers.contains_key(&referrer) {
       panic!("nooooo");
     }
@@ -88,24 +91,27 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     }
   }
 
+
   pub fn get_ref_count(&self) -> i32 {
     panic!("Unimplemented: get_ref_count");
   }
 
-  pub fn ensure_ref_count(&self, scout_arena: &ScoutArena<'s>, maybe_ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
+  /// `is_weak_filter`: None counts all referrers; Some(true) counts weak only; Some(false) counts strong only.
+  pub fn ensure_ref_count(&self, scout_arena: &ScoutArena<'s>, is_weak_filter: Option<bool>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
     if matches!(self.kind, KindV::Void(_)) {
       // Void has no RC
       return Ok(());
     }
-    let referrers: Vec<(&IObjectReferrerV<'v, 'h, 's>, &i32)> = match maybe_ownership_filter {
-      None => self.referrers.iter().collect(),
-      Some(ownership_filter) => self.referrers.iter().filter(|(key, _)| ownership_filter.contains(&key.ownership())).collect(),
+    let referrers: Vec<(&IObjectReferrerV<'v, 'h, 's>, &i32)> = match is_weak_filter {
+      None => self.strong_referrers.iter().chain(self.weak_referrers.iter()).collect(),
+      Some(true) => self.weak_referrers.iter().collect(),
+      Some(false) => self.strong_referrers.iter().collect(),
     };
     let matching_referrers: Vec<i32> = referrers.iter().map(|(_, v)| **v).collect();
     if matching_referrers.len() as i32 != expected_num {
       let msg = format!("Expected {} of {}but was {}:\n{:?}",
         expected_num,
-        maybe_ownership_filter.map(|of| format!("{:?} ", of)).unwrap_or_default(),
+        is_weak_filter.map(|w| format!("{} ", if w { "weak" } else { "strong" })).unwrap_or_default(),
         matching_referrers.len(),
         matching_referrers);
       return Err(VmRuntimeErrorV::ConstraintViolatedException(ConstraintViolatedExceptionV { msg: scout_arena.intern_str(&msg) }));
@@ -113,24 +119,26 @@ impl<'v, 'h, 's> AllocationV<'v, 'h, 's> {
     Ok(())
   }
 
+
   pub fn print_refs(&self, vivem_dout: &mut PrintStream) {
     if self.get_total_ref_count(None) > 0 {
-      let referrers_str = self.referrers.iter().map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
+      let referrers_str = self.strong_referrers.iter().chain(self.weak_referrers.iter()).map(|(_k, _v)| -> String { panic!("vimpl: referrers.mkString entry toString") }).collect::<Vec<_>>().join(" ");
       writeln!(vivem_dout, "o{}: {}", self.reference.alloc_id().num, referrers_str).unwrap();
     }
   }
 
-  pub fn get_total_ref_count(&self, maybe_ownership_filter: Option<OwnershipH>) -> i32 {
+  /// `is_weak_filter`: None counts all referrers; Some(true) counts weak only; Some(false) counts strong only.
+  pub fn get_total_ref_count(&self, is_weak_filter: Option<bool>) -> i32 {
     if matches!(self.kind, KindV::Void(_)) {
       return 1;
     }
-    let referrers = &self.referrers;
-    let result = match maybe_ownership_filter {
-      None => referrers.len() as i32,
-      Some(ownership_filter) => referrers.keys().filter(|k| k.ownership() == ownership_filter).count() as i32,
-    };
-    result
+    match is_weak_filter {
+      None => (self.strong_referrers.len() + self.weak_referrers.len()) as i32,
+      Some(true) => self.weak_referrers.len() as i32,
+      Some(false) => self.strong_referrers.len() as i32,
+    }
   }
+
 
   pub fn finalize(&self) {
     panic!("Unimplemented: finalize");
@@ -152,6 +160,7 @@ pub enum KindV<'v, 'h, 's> {
   ArrayInstance(&'v ArrayInstanceV<'v, 'h, 's>),
 }
 
+
 impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
   pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     match self {
@@ -166,6 +175,7 @@ impl<'v, 'h, 's> KindV<'v, 'h, 's> where 's: 'h, 'h: 'v {
     }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone)]
@@ -200,6 +210,7 @@ impl VoidV {
   }
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntV<'v, 'h, 's>
@@ -210,11 +221,13 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
+
 impl<'v, 'h, 's> IntV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::IntHT(IntHT { bits: self.bits }), _phantom: PhantomData }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -225,11 +238,13 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
+
 impl<'v, 'h, 's> BoolV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::BoolHT(BoolHT), _phantom: PhantomData }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -240,11 +255,13 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h (), &'s ())>,
 }
 
+
 impl<'v, 'h, 's> FloatV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::FloatHT(FloatHT), _phantom: PhantomData }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -255,11 +272,13 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<(&'v (), &'h ())>,
 }
 
+
 impl<'v, 'h, 's> StrV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StrHT(StrHT), _phantom: PhantomData }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -270,11 +289,13 @@ where 's: 'h, 'h: 'v,
   pub _phantom: PhantomData<&'v ()>,
 }
 
+
 impl<'v, 'h, 's> OpaqueV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::OpaqueHT(_interner.bump().alloc(self.opaque_ht)), _phantom: PhantomData }
   }
 }
+
 
 /// Temporary state
 #[derive(Debug)]
@@ -285,10 +306,12 @@ where 's: 'h, 'h: 'v,
   pub members: Cell<Option<&'v [ReferenceV<'v, 'h, 's>]>>,
 }
 
+
 impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: KindHT::StructHT(self.struct_h.get_ref(interner)), _phantom: PhantomData }
   }
+
 
   pub fn get_reference_member(&self, index: i32) -> ReferenceV<'v, 'h, 's> {
     let members = self.members.get().expect("StructInstance has no members");
@@ -296,16 +319,19 @@ impl<'v, 'h, 's> StructInstanceV<'v, 'h, 's> {
     r#ref
   }
 
+
   pub fn set_reference_member(&self, vivem_bump: &'v bumpalo::Bump, index: i32, reference: ReferenceV<'v, 'h, 's>) {
     let mut new_members: Vec<ReferenceV<'v, 'h, 's>> = self.members.get().expect("StructInstance has no members").to_vec();
     new_members[index as usize] = reference;
     self.members.set(Some(vivem_bump.alloc_slice_copy(&new_members)));
   }
 
+
   pub fn zero(&self) {
     self.members.set(None);
   }
 }
+
 
 /// Temporary state
 #[derive(Debug)]
@@ -316,10 +342,12 @@ pub struct ArrayInstanceV<'v, 'h, 's> {
   pub elements: Cell<&'v [ReferenceV<'v, 'h, 's>]>,
 }
 
+
 impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
   pub fn tyype(&self, _interner: &HammerInterner<'s, 'h>) -> RRKindV<'v, 'h, 's> {
     RRKindV { hamut: self.type_h.kind, _phantom: PhantomData }
   }
+
 
   pub fn get_element(&self, index: i64) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
@@ -328,6 +356,7 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     }
     elements[index as usize]
   }
+
 
   pub fn set_element(&self, vivem_bump: &'v bumpalo::Bump, index: i64, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
@@ -340,6 +369,7 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     self.elements.set(new_vec.into_bump_slice());
   }
 
+
   pub fn initialize_element(&self, vivem_bump: &'v bumpalo::Bump, ref_: ReferenceV<'v, 'h, 's>) {
     let elements = self.elements.get();
     assert!(elements.len() < self.capacity as usize);
@@ -349,6 +379,7 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     self.elements.set(new_vec.into_bump_slice());
   }
 
+
   pub fn deinitialize_element(&self) -> ReferenceV<'v, 'h, 's> {
     let elements = self.elements.get();
     assert!(!elements.is_empty());
@@ -357,10 +388,12 @@ impl<'v, 'h, 's> ArrayInstanceV<'v, 'h, 's> {
     r#ref
   }
 
+
   pub fn get_size(&self) -> i64 {
     self.elements.get().len() as i64
   }
 }
+
 
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -378,33 +411,47 @@ pub struct ReferenceV<'v, 'h, 's> {
   pub ownership: OwnershipH,
   pub location: LocationH,
   pub num: i32,
+  /// Module-private; forces construction via `ReferenceV::new(...)` so the legality assertions fire.
+  /// External code can destructure with `..`.
+  _sealed: (),
 }
 
+
 impl<'v, 'h, 's> ReferenceV<'v, 'h, 's> {
+  /// Construct a ReferenceV, asserting both `actual_kind` and `seen_as_kind` form legal CoordH combinations
+  /// with `ownership` and `location`. Delegates the rule to `CoordH::new`.
+  pub fn new(
+    actual_kind: RRKindV<'v, 'h, 's>,
+    seen_as_kind: RRKindV<'v, 'h, 's>,
+    ownership: OwnershipH,
+    location: LocationH,
+    num: i32,
+  ) -> Self {
+    // Force the rule by constructing the two CoordH views (which assert).
+    let _ = CoordH::new(ownership, location, actual_kind.hamut);
+    let _ = CoordH::new(ownership, location, seen_as_kind.hamut);
+    ReferenceV { actual_kind, seen_as_kind, ownership, location, num, _sealed: () }
+  }
+
   pub fn alloc_id(&self) -> AllocationIdV<'v, 'h, 's> {
     AllocationIdV { tyype: RRKindV { hamut: self.actual_kind.hamut, _phantom: PhantomData }, num: self.num }
   }
+
   pub fn actual_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
-      hamut: CoordH {
-        ownership: self.ownership,
-        location: self.location,
-        kind: self.actual_kind.hamut,
-      },
+      hamut: CoordH::new(self.ownership, self.location, self.actual_kind.hamut),
       _phantom: PhantomData,
     }
   }
+
   pub fn seen_as_coord(&self) -> RRReferenceV<'v, 'h, 's> {
     RRReferenceV {
-      hamut: CoordH {
-        ownership: self.ownership,
-        location: self.location,
-        kind: self.seen_as_kind.hamut,
-      },
+      hamut: CoordH::new(self.ownership, self.location, self.seen_as_kind.hamut),
       _phantom: PhantomData,
     }
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -417,24 +464,11 @@ pub enum IObjectReferrerV<'v, 'h, 's> {
   ArgumentToObjectReferrer(ArgumentToObjectReferrerV<'v, 'h, 's>),
 }
 
-impl<'v, 'h, 's> IObjectReferrerV<'v, 'h, 's> {
-  pub fn ownership(&self) -> OwnershipH {
-    match self {
-      IObjectReferrerV::VariableToObjectReferrer(r) => r.ownership,
-      IObjectReferrerV::MemberToObjectReferrer(r) => r.ownership,
-      IObjectReferrerV::ElementToObjectReferrer(r) => r.ownership,
-      IObjectReferrerV::RegisterToObjectReferrer(r) => r.ownership,
-      IObjectReferrerV::RegisterHoldToObjectReferrer(r) => r.ownership,
-      IObjectReferrerV::ArgumentToObjectReferrer(r) => r.ownership,
-    }
-  }
-}
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct VariableToObjectReferrerV<'v, 'h, 's> {
   pub var_addr: VariableAddressV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -442,7 +476,6 @@ pub struct VariableToObjectReferrerV<'v, 'h, 's> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct MemberToObjectReferrerV<'v, 'h, 's> {
   pub member_addr: MemberAddressV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -450,7 +483,6 @@ pub struct MemberToObjectReferrerV<'v, 'h, 's> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ElementToObjectReferrerV<'v, 'h, 's> {
   pub element_addr: ElementAddressV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -458,7 +490,6 @@ pub struct ElementToObjectReferrerV<'v, 'h, 's> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -466,7 +497,6 @@ pub struct RegisterToObjectReferrerV<'v, 'h, 's> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
   pub expression_id: ExpressionIdV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -474,7 +504,6 @@ pub struct RegisterHoldToObjectReferrerV<'v, 'h, 's> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ArgumentToObjectReferrerV<'v, 'h, 's> {
   pub argument_id: ArgumentIdV<'v, 'h, 's>,
-  pub ownership: OwnershipH,
 }
 
 
@@ -502,11 +531,13 @@ pub struct MemberAddressV<'v, 'h, 's> {
   pub field_index: i32,
 }
 
+
 impl<'v, 'h, 's> MemberAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> String {
     format!("*o:{}.{}", self.struct_id.num, self.field_index)
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -515,11 +546,13 @@ pub struct ElementAddressV<'v, 'h, 's> {
   pub element_index: i64,
 }
 
+
 impl<'v, 'h, 's> ElementAddressV<'v, 'h, 's> {
   pub fn to_string(&self) -> String {
     format!("*o:{}.{}", self.array_id.num, self.element_index)
   }
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -530,6 +563,7 @@ where 's: 'h, 'h: 'v,
   pub function: &'h PrototypeH<'s, 'h>,
   pub _phantom: PhantomData<&'v ()>,
 }
+
 
 impl<'v, 'h, 's> CallIdV<'v, 'h, 's> {
   pub fn to_string(&self) -> StrI<'s> {
@@ -560,12 +594,14 @@ pub struct VariableV<'v, 'h, 's> {
   pub expected_type: CoordH<'s, 'h>,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ExpressionIdV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
   pub path: &'v [i32],
 }
+
 
 impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
   pub fn add_step(&self, bump: &'v bumpalo::Bump, i: i32) -> ExpressionIdV<'v, 'h, 's> {
@@ -577,16 +613,19 @@ impl<'v, 'h, 's> ExpressionIdV<'v, 'h, 's> {
   }
 }
 
+
 /// Temporary state
 pub enum RegisterV<'v, 'h, 's> {
   ReferenceRegister(&'v ReferenceRegisterV<'v, 'h, 's>),
 }
+
 
 impl<'v, 'h, 's> RegisterV<'v, 'h, 's> {
   pub fn expect_reference_register(&self) -> ReferenceRegisterV<'v, 'h, 's> {
     panic!("Unimplemented: expect_reference_register");
   }
 }
+
 
 /// Temporary state
 pub struct ReferenceRegisterV<'v, 'h, 's> {

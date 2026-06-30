@@ -1,98 +1,140 @@
+import v.builtins.implicit_clone.*;
 
-func float(x int) float { return castI32Float(x); }
+// TSUGAR: func float(x int) float { return castI32Float(x); }
+func float(x &int) float { return castI32Float(__copy_prim(x)); }
 extern func castI32Float(x int) float;
 
-func int(x float) int { return castFloatI32(x); }
+// TSUGAR: func int(x float) int { return castFloatI32(x); }
+func int(x &float) int { return castFloatI32(__copy_prim(x)); }
 extern func castFloatI32(x float) int;
 
 extern func TruncateI64ToI32(x i64) int;
 
-func i64(x int) i64 { __vbi_ExtendI32ToI64(x) }
+// TSUGAR: func i64(x int) i64 { __vbi_ExtendI32ToI64(x) }
+func i64(x &int) i64 { __vbi_ExtendI32ToI64(__copy_prim(x)) }
 extern func __vbi_ExtendI32ToI64(x int) i64;
 
-func -(x int) int { return __vbi_negateI32(x); }
+// TSUGAR: func -(x int) int { return __vbi_negateI32(x); }
+func -(x &int) int { return __vbi_negateI32(__copy_prim(x)); }
 extern func __vbi_negateI32(x int) int;
 
-func -(x float) float { return __vbi_negateFloat(x); }
+// TSUGAR: func -(x float) float { return __vbi_negateFloat(x); }
+func -(x &float) float { return __vbi_negateFloat(__copy_prim(x)); }
 extern func __vbi_negateFloat(x float) float;
 
 func +(left int, right int) int { return __vbi_addI32(left, right); }
+// TSUGAR: func +(left int, right int) int { return __vbi_addI32(left, right); }
+func +(left &int, right &int) int { return __vbi_addI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addI32(left int, right int) int;
 
-func +(left i64, right i64) i64 { return __vbi_addI64(left, right); }
+// TSUGAR: func +(left i64, right i64) i64 { return __vbi_addI64(left, right); }
+func +(left &i64, right &i64) i64 { return __vbi_addI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addI64(left i64, right i64) i64;
 
-func +(left float, right float) float { return __vbi_addFloatFloat(left, right); }
+// TSUGAR: func +(left float, right float) float { return __vbi_addFloatFloat(left, right); }
+func +(left &float, right &float) float { return __vbi_addFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_addFloatFloat(left float, right float) float;
 
 func *(left int, right int) int { return __vbi_multiplyI32(left, right); }
+// TSUGAR: func *(left int, right int) int { return __vbi_multiplyI32(left, right); }
+func *(left &int, right &int) int { return __vbi_multiplyI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyI32(left int, right int) int;
 
-func *(left i64, right i64) i64 { return __vbi_multiplyI64(left, right); }
+// TSUGAR: func *(left i64, right i64) i64 { return __vbi_multiplyI64(left, right); }
+func *(left &i64, right &i64) i64 { return __vbi_multiplyI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyI64(left i64, right i64) i64;
 
-func *(left float, right float) float { return __vbi_multiplyFloatFloat(left, right); }
+// TSUGAR: func *(left float, right float) float { return __vbi_multiplyFloatFloat(left, right); }
+func *(left &float, right &float) float { return __vbi_multiplyFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_multiplyFloatFloat(left float, right float) float;
 
 func -(left int, right int) int { return __vbi_subtractI32(left, right); }
+// TSUGAR: func -(left int, right int) int { return __vbi_subtractI32(left, right); }
+func -(left &int, right &int) int { return __vbi_subtractI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractI32(left int, right int) int;
 
-func -(left i64, right i64) i64 { return __vbi_subtractI64(left, right); }
+// TSUGAR: func -(left i64, right i64) i64 { return __vbi_subtractI64(left, right); }
+func -(left &i64, right &i64) i64 { return __vbi_subtractI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractI64(left i64, right i64) i64;
 
-func -(left float, right float) float { return __vbi_subtractFloatFloat(left, right); }
+// TSUGAR: func -(left float, right float) float { return __vbi_subtractFloatFloat(left, right); }
+func -(left &float, right &float) float { return __vbi_subtractFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_subtractFloatFloat(left float, right float) float;
 
-func /(left int, right int) int { return __vbi_divideI32(left, right); }
+// TSUGAR: func /(left int, right int) int { return __vbi_divideI32(left, right); }
+func /(left &int, right &int) int { return __vbi_divideI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideI32(left int, right int) int;
 
-func /(left i64, right i64) i64 { return __vbi_divideI64(left, right); }
+// TSUGAR: func /(left i64, right i64) i64 { return __vbi_divideI64(left, right); }
+func /(left &i64, right &i64) i64 { return __vbi_divideI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideI64(left i64, right i64) i64;
 
-func /(left float, right float) float { return __vbi_divideFloatFloat(left, right); }
+// TSUGAR: func /(left float, right float) float { return __vbi_divideFloatFloat(left, right); }
+func /(left &float, right &float) float { return __vbi_divideFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_divideFloatFloat(left float, right float) float;
 
-func <(left float, right float) bool { return __vbi_lessThanFloat(left, right); }
+// TSUGAR: func <(left float, right float) bool { return __vbi_lessThanFloat(left, right); }
+func <(left &float, right &float) bool { return __vbi_lessThanFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanFloat(left float, right float) bool;
 
-func <(left i64, right i64) bool { return __vbi_lessThanI64(left, right); }
+// TSUGAR: func <(left i64, right i64) bool { return __vbi_lessThanI64(left, right); }
+func <(left &i64, right &i64) bool { return __vbi_lessThanI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanI64(left i64, right i64) bool;
 
 func <(left int, right int) bool { return __vbi_lessThanI32(left, right); }
+// TSUGAR: func <(left int, right int) bool { return __vbi_lessThanI32(left, right); }
+func <(left &int, right &int) bool { return __vbi_lessThanI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanI32(left int, right int) bool;
 
-func >(left float, right float) bool { return __vbi_greaterThanFloat(left, right); }
+// TSUGAR: func >(left float, right float) bool { return __vbi_greaterThanFloat(left, right); }
+func >(left &float, right &float) bool { return __vbi_greaterThanFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanFloat(left float, right float) bool;
 
-func >(left i64, right i64) bool { return __vbi_greaterThanI64(left, right); }
+// TSUGAR: func >(left i64, right i64) bool { return __vbi_greaterThanI64(left, right); }
+func >(left &i64, right &i64) bool { return __vbi_greaterThanI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanI64(left i64, right i64) bool;
 
 func >(left int, right int) bool { return __vbi_greaterThanI32(left, right); }
+// TSUGAR: func >(left int, right int) bool { return __vbi_greaterThanI32(left, right); }
+func >(left &int, right &int) bool { return __vbi_greaterThanI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanI32(left int, right int) bool;
 
 func <=(left int, right int) bool { return __vbi_lessThanOrEqI32(left, right); }
+// TSUGAR: func <=(left int, right int) bool { return __vbi_lessThanOrEqI32(left, right); }
+func <=(left &int, right &int) bool { return __vbi_lessThanOrEqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanOrEqI32(left int, right int) bool;
 
-func <=(left i64, right i64) bool { return __vbi_lessThanOrEqI64(left, right); }
+// TSUGAR: func <=(left i64, right i64) bool { return __vbi_lessThanOrEqI64(left, right); }
+func <=(left &i64, right &i64) bool { return __vbi_lessThanOrEqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_lessThanOrEqI64(left i64, right i64) bool;
 
 func >=(left int, right int) bool { return __vbi_greaterThanOrEqI32(left, right); }
+// TSUGAR: func >=(left int, right int) bool { return __vbi_greaterThanOrEqI32(left, right); }
+func >=(left &int, right &int) bool { return __vbi_greaterThanOrEqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanOrEqI32(left int, right int) bool;
 
-func >=(left i64, right i64) bool { return __vbi_greaterThanOrEqI64(left, right); }
+// TSUGAR: func >=(left i64, right i64) bool { return __vbi_greaterThanOrEqI64(left, right); }
+func >=(left &i64, right &i64) bool { return __vbi_greaterThanOrEqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_greaterThanOrEqI64(left i64, right i64) bool;
 
 func ==(left int, right int) bool { return __vbi_eqI32(left, right); }
+// TSUGAR: func ==(left int, right int) bool { return __vbi_eqI32(left, right); }
+func ==(left &int, right &int) bool { return __vbi_eqI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqI32(left int, right int) bool;
 
-func ==(left i64, right i64) bool { return __vbi_eqI64(left, right); }
+// TSUGAR: func ==(left i64, right i64) bool { return __vbi_eqI64(left, right); }
+func ==(left &i64, right &i64) bool { return __vbi_eqI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqI64(left i64, right i64) bool;
 
-func ==(left float, right float) bool { return __vbi_eqFloatFloat(left, right); }
+// TSUGAR: func ==(left float, right float) bool { return __vbi_eqFloatFloat(left, right); }
+func ==(left &float, right &float) bool { return __vbi_eqFloatFloat(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqFloatFloat(left float, right float) bool;
 
 func mod(left int, right int) int { return __vbi_modI32(left, right); }
+// TSUGAR: func mod(left int, right int) int { return __vbi_modI32(left, right); }
+func mod(left &int, right &int) int { return __vbi_modI32(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_modI32(left int, right int) int;
 
-func mod(left i64, right i64) i64 { return __vbi_modI64(left, right); }
+// TSUGAR: func mod(left i64, right i64) i64 { return __vbi_modI64(left, right); }
+func mod(left &i64, right &i64) i64 { return __vbi_modI64(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_modI64(left i64, right i64) i64;

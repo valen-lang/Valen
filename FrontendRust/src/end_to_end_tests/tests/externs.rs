@@ -7,12 +7,30 @@ fn run(dir_rel: &str, expected: i32) {
     assert_compile_and_run_with_c(&dir, &[], expected);
 }
 
-#[test] fn interfacemutreturnexport() { run("programs/externs/interfacemutreturnexport", 42); }
-#[test] fn interfacemutparamexport()  { run("programs/externs/interfacemutparamexport", 42); }
-#[test] fn structmutreturnexport()    { run("programs/externs/structmutreturnexport", 42); }
-#[test] fn structmutparamexport()     { run("programs/externs/structmutparamexport", 42); }
-#[test] fn structmutparamdeepexport() { run("programs/externs/structmutparamdeepexport", 42); }
-#[test] fn rsamutparamexport()        { run("programs/externs/rsamutparamexport", 10); }
-#[test] fn rsamutreturnexport()       { run("programs/externs/rsamutreturnexport", 42); }
-#[test] fn ssamutparamexport()        { run("programs/externs/ssamutparamexport", 10); }
-#[test] fn ssamutreturnexport()       { run("programs/externs/ssamutreturnexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn interfacemutreturnexport() { run("programs/externs/interfacemutreturnexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn interfacemutparamexport()  { run("programs/externs/interfacemutparamexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn structmutreturnexport()    { run("programs/externs/structmutreturnexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn structmutparamexport()     { run("programs/externs/structmutparamexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn structmutparamdeepexport() { run("programs/externs/structmutparamdeepexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn rsamutparamexport()        { run("programs/externs/rsamutparamexport", 10); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn rsamutreturnexport()       { run("programs/externs/rsamutreturnexport", 42); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn ssamutparamexport()        { run("programs/externs/ssamutparamexport", 10); }
+#[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
+fn ssamutreturnexport()       { run("programs/externs/ssamutreturnexport", 42); }

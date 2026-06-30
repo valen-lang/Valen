@@ -6,6 +6,7 @@ use crate::utils::fx::HashSet;
 // VISTODO: rename
 
 
+
 pub struct CompileErrorExceptionA<'s> {
     pub err: ICompileErrorA<'s>,
 }
@@ -15,14 +16,14 @@ impl<'s> CompileErrorExceptionA<'s> {
 }
 
 pub enum ICompileErrorA<'s> {
-    
+
     CouldntFindType(CouldntFindTypeA<'s>),
     TooManyMatchingTypes(TooManyMatchingTypesA<'s>),
     CouldntSolveRules(CouldntSolveRulesA<'s>),
     CircularModuleDependency(CircularModuleDependency<'s>),
     WrongNumArgsForTemplate(WrongNumArgsForTemplateA<'s>),
     RangedInternalError(RangedInternalErrorA<'s>),
-    
+
 }
 impl<'s> ICompileErrorA<'s> {
     pub fn range(&self) -> RangeS<'s> {
@@ -37,6 +38,7 @@ impl<'s> ICompileErrorA<'s> {
     }
 }
 
+
 pub enum ILookupFailedErrorA<'s> {
     CouldntFindType(CouldntFindTypeA<'s>),
     TooManyMatchingTypes(TooManyMatchingTypesA<'s>),
@@ -50,10 +52,16 @@ impl<'s> From<ILookupFailedErrorA<'s>> for ICompileErrorA<'s> {
     }
 }
 
+
 pub struct TooManyMatchingTypesA<'s> {
     pub range: RangeS<'s>,
     pub name: IImpreciseNameS<'s>,
 }
+
+
+
+
+
 
 
 pub struct CouldntFindTypeA<'s> {
@@ -62,10 +70,20 @@ pub struct CouldntFindTypeA<'s> {
 }
 
 
+
+
+
+
+
 pub struct CouldntSolveRulesA<'s> {
     pub range: RangeS<'s>,
     pub error: RuneTypeSolveError<'s>,
 }
+
+
+
+
+
 
 
 pub struct CircularModuleDependency<'s> {

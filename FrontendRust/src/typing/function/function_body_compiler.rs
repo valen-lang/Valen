@@ -104,6 +104,7 @@ where 's: 't,
                     (Some(x), _) if *x == explicit_ret_coord => {
                         // Let it through, it returns the expected type.
                     }
+                    // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this guard should be unreachable.
                     (Some(coord), _) if coord.ownership == OwnershipT::Share && coord.kind == KindT::Never(NeverT { from_break: false }) => {
                         // Let it through, it returns a never but we expect something else, that's fine
                     }
@@ -182,9 +183,8 @@ where 's: 't,
                     if unconverted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
                         unconverted_body_without_return
                     } else {
-                        let func_outer_env_ref = IInDenizenEnvironmentT::Function(func_outer_env);
-                        self.convert(func_outer_env_ref, coutputs, &range_list, call_location,
-                            unconverted_body_without_return, expected_result_type)
+                        self.convert(&mut env, life, coutputs, &range_list, call_location,
+                            region, unconverted_body_without_return, expected_result_type)
                     }
                 } else {
                     return Ok(Err(ResultTypeMismatchError {
@@ -209,7 +209,7 @@ where 's: 't,
         let returns =
             if returns_maybe_with_never.len() > 1 {
                 returns_maybe_with_never.into_iter().filter(|c| {
-                    !matches!(c, CoordT { ownership: OwnershipT::Share, kind: KindT::Never(NeverT { from_break: false }), .. })
+                    !matches!(c, CoordT { ownership: OwnershipT::Own, kind: KindT::Never(NeverT { from_break: false }), .. })
                 }).collect()
             } else {
                 returns_maybe_with_never

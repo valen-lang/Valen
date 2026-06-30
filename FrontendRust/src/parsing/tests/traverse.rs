@@ -57,7 +57,7 @@ where
     range: _range,
     name,
     attributes,
-    mutability,
+    sharedness: _sharedness,
     identifying_runes,
     template_rules,
     maybe_default_region_rune,
@@ -67,9 +67,6 @@ where
   visit_name(pred, out, name);
   for attribute in *attributes {
     visit_attribute(pred, out, attribute);
-  }
-  if let Some(mutability) = mutability {
-    visit_templex(pred, out, mutability);
   }
   if let Some(identifying_runes) = identifying_runes {
     visit_generic_parameters(pred, out, identifying_runes);
@@ -181,7 +178,6 @@ where
   let NormalStructMemberP {
     range: _range,
     name,
-    variability: _variability,
     tyype,
   } = member;
   visit_name(pred, out, name);
@@ -198,7 +194,6 @@ fn visit_variadic_struct_member<'p, T, F>(
   collect_if(pred, out, NodeRefP::VariadicStructMember(member));
   let VariadicStructMemberP {
     range: _range,
-    variability: _variability,
     tyype,
   } = member;
   visit_templex(pred, out, tyype);
@@ -213,7 +208,7 @@ where
     range: _range,
     name,
     attributes,
-    mutability,
+    sharedness: _sharedness,
     maybe_identifying_runes,
     template_rules,
     maybe_default_region_rune,
@@ -223,9 +218,6 @@ where
   visit_name(pred, out, name);
   for attribute in *attributes {
     visit_attribute(pred, out, attribute);
-  }
-  if let Some(mutability) = mutability {
-    visit_templex(pred, out, mutability);
   }
   if let Some(maybe_identifying_runes) = maybe_identifying_runes {
     visit_generic_parameters(pred, out, maybe_identifying_runes);
@@ -641,7 +633,6 @@ where
         visit_templex(pred, out, element);
       }
     }
-    ITemplexPT::Mutability(MutabilityPT(_range, _mutability)) => {}
     ITemplexPT::NameOrRune(NameOrRunePT { name, .. }) => visit_name(pred, out, name),
     ITemplexPT::Interpreted(InterpretedPT {
       range: _range,
@@ -677,22 +668,16 @@ where
     }
     ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
       range: _range,
-      mutability,
-      variability,
       size,
       element,
     }) => {
-      visit_templex(pred, out, mutability);
-      visit_templex(pred, out, variability);
       visit_templex(pred, out, size);
       visit_templex(pred, out, element);
     }
     ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
       range: _range,
-      mutability,
       element,
     }) => {
-      visit_templex(pred, out, mutability);
       visit_templex(pred, out, element);
     }
     ITemplexPT::Share(SharePT {
@@ -708,7 +693,6 @@ where
       rune,
       tyype: _tyype,
     }) => visit_name(pred, out, rune),
-    ITemplexPT::Variability(VariabilityPT(_range, _variability)) => {}
   }
 }
 
@@ -918,20 +902,12 @@ where
       let ConstructArrayPE {
         range: _range,
         type_pt,
-        mutability_pt,
-        variability_pt,
         size,
         initializing_individual_elements: _initializing_individual_elements,
         args,
       } = construct_array_expr;
       if let Some(type_pt) = type_pt {
         visit_templex(pred, out, type_pt);
-      }
-      if let Some(mutability_pt) = mutability_pt {
-        visit_templex(pred, out, mutability_pt);
-      }
-      if let Some(variability_pt) = variability_pt {
-        visit_templex(pred, out, variability_pt);
       }
       visit_array_size(pred, out, size);
       for arg in *args {

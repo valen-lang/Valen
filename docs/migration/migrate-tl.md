@@ -1,3 +1,9 @@
+---
+name: migrate-tl
+description: TL status, residuals, and load-bearing rules for the typing-pass Scala→Rust migration — re-read after every compact; TL-only.
+g_read_when: Read when acting as TL on the typing-pass migration (parallel sprint or solo), after every compaction, and before any cross-cutting refactor.
+---
+
 # Typing Pass Migration — TL Status & Residuals
 
 **JR does not have access to this file.** When citing it to JR, paraphrase the rule inline rather than referencing it by name.
@@ -62,7 +68,7 @@
 
 **Don't kill `ps -ef` PIDs unless you can trace them to your own session's task IDs** — other TLs' watchers appear globally, and SIGTERMing them fires a spurious task-completion notification on the wrong TL.
 
-**During every sync, check if `migrate-tl.md` changed** (`git diff experimental..experimental-N -- migrate-tl.md` and `git diff HEAD -- migrate-tl.md`). The architect adds rules here mid-session; auto-merge may pull them in silently. Read every change — they're load-bearing for TL behavior and don't surface elsewhere.
+**During every sync, check if `migrate-tl.md` changed** (`git diff experimental..experimental-N -- docs/skills/migrate-tl.md` and `git diff HEAD -- docs/skills/migrate-tl.md`). The architect adds rules here mid-session; auto-merge may pull them in silently. Read every change — they're load-bearing for TL behavior and don't surface elsewhere.
 
 **TestVM convention:** every testvm struct/enum/fn carries `<'v, 'h, 's>` with `where 's: 'h, 'h: 'v`; PhantomData for unused params; V-suffix names (`HeapV`, `CallIdV`, etc.).
 
@@ -191,146 +197,3 @@ These are the principles I've inferred from working with the architect across ma
 - **Catch tendencies and codify them.** When the architect surfaces a TL bias (ripple-aversion, no-simplifications, position-correctness, etc.), they often want a new ≤25-word rule added to this file so future TLs (or future sessions of the same TL) don't repeat it. Watch for moments where the conversation surfaces a principle worth recording.
 
 - **Brevity in rule additions, longer is fine when asked.** Default to ≤25-word rules; ask before adding anything longer. The exception is sections like this one (Background, Roadmap, Where We Are) that the architect explicitly approves as longer.
-
----
-
-## Migration-Specific Guardian Content (moved out of guardian-tl.md)
-
-The following is migration-specific Guardian content that was previously in the timeless `guardian-tl` skill. Kept here for reference during the migration's tail; not actively maintained.
-
-### Shield catalog (the ones JR trips most)
-
-You can't apply the litmus test without knowing the shields. The recurring ones and their standard resolution:
-
-- **No-new-definitions (NNDX)** — fires when a `fn`/`struct`/`enum`/`impl` has no source-language counterpart. Resolution: TL slices in the definition around the source comment (it's a scaffolding gap, not a bad shield); or, if there's truly no counterpart, TL adds a Guardian annotation.
-- **No-renamed-definitions (NRDX)** — flags consecutive context-swaps as renames. Resolution: edit one definition per Edit; for a legitimate disambiguation rename, TL adds it with a comment.
-- **No-moved-definitions (NMDX)** — a definition must stay adjacent to its source-comment block. Resolution: never relocate a definition away from its audit comment.
-- **Parity shield (SPDMX)** — flags Rust whose shape diverges from the source shape, including the skeleton-with-panics pattern.
-- **Comment-parity shield (SCPX)** — checks the `/* source */` audit comments line-for-line. Run it after any edit that touches those blocks.
-- **No-changes-without-source-reference (NCWSRX)** — novel code with no source basis (e.g. a test reproducer). Resolution: escalate; the TL adds it.
-
-### Skeleton-with-panics and slicing-in new definitions
-
-SPDMX flags "skeleton-with-panics" — Rust scaffolding that doesn't have a line-for-line source counterpart. When TL confirms a denial is a false positive, JR applies the temp-disable on the next turn.
-
-For genuinely new definitions with no source counterpart, TL slices the definition in around the source comment ("Slicing In New Definitions" — see the per-pass change guide).
-
-### Audit-comment / contextified-diff window
-
-The `/* source */` block following a Rust definition is the contextified-diff window Guardian reads. Temp-disable directives live at the top of that block (between the opening `/*` and the first line of source content):
-
-```rust
-#[test]
-fn foo() { /* body */ }
-/*
-Guardian: temp-disable: SPDMX — <rationale>
-  test("foo") { ... }
-*/
-```
-
-JR cites the source-language origin (`path/to/Source.ext:NNN`), not the Rust audit-comment line, so TL can parity-check against the real source.
-
-### Guardian annotations for definitions with no source counterpart
-
-For genuinely source-less Rust (delegation wiring for trait inheritance, `From`/`TryFrom` impls, interning helper structs, test infrastructure):
-- **Pure wiring, no logic** → add a `/* Guardian: disable-all */` block after the fn/impl.
-- **Contains logic** (conditionals, assertions, non-trivial transforms) → add an empty `/* */` block (satisfies the comment-parity shield and signals "reviewed, no source counterpart").
-
-JR never adds these annotations — JR escalates and the TL adds them.
-
-### Migration-specific TL-only edit categories
-
-Beyond the generic TL-only categories in `guardian-tl.md`, the migration adds:
-- **New definitions** with no line-for-line counterpart in the source (blocked by the no-new-definitions shield) — see "Slicing In New Definitions" in the per-pass guide.
-- **Skeleton-with-panics** rulings the parity shield flags as novel scaffolding — TL sends the ruling to JR via mailbox; JR applies the temp-disable.
-- **Source-language edits** to make the source match a Rust simplification.
-- **Guardian annotations** for definitions with no source counterpart.
-- **Large test infrastructure** (traversal/collector code) with no source counterpart.
-- **Non-`.rs`/`.md` file edits** — JR's harness Edit tool only accepts `.rs` and `.md` paths and refuses everything else (`Cargo.toml`, `*.yaml`, `*.sh`, `*.scala`, etc.). When a JR-tractable task needs such an edit, TL does that piece.
-
----
-
-## Migration-Specific Project Content (moved out of CLAUDE.md)
-
-### Project Overview
-
-The codebase implements a compiler frontend with parsing, post-parsing validation/transformation, and type solving. The original Scala implementation used garbage collection; the Rust version uses arena allocation with explicit lifetime management.
-
-### Key Directories
-
-- **`src/postparsing/`** - Post-parsing pass: validates and transforms parsed AST (actively migrating)
-- **`src/solver/`** - Type solver/inference engine (actively migrating)
-- **`src/interner.rs`** - String and type interning with arena-backed allocation
-- **`src/postparsing/names.rs`** - Name resolution and scope management
-- **`src/postparsing/function_scout.rs`** - Function signature extraction and validation
-- **`src/postparsing/post_parser.rs`** - Main post-parser orchestration
-
-### Migration Philosophy
-
-We're doing **incremental, safe migration**. Many functions have commented-out Scala code above working (or placeholder) Rust implementations. The migration process uses systematic "slicing" to isolate and translate individual definitions.
-
-### Lifetime Model
-
-The Rust codebase uses **three arena lifetimes** (see `docs/background/arenas.md` for full details):
-
-- **`'p`** - Parser arena (via `ParseArena<'p>`): interned strings, coordinates, parser AST nodes
-- **`'s`** - Scout (postparser + higher_typing) arena (via `ScoutArena<'s>`): interned names, runes, imprecise names, postparser/higher-typing output nodes
-- **`'ctx`** - Context/infrastructure borrows: `&'ctx ParseArena<'p>`, `&'ctx ScoutArena<'s>`, `&'ctx Keywords<'p>`
-
-Each arena is self-contained with its own interning maps. Cross-pass data is re-interned at pass boundaries (e.g. `StrI<'p>` → `StrI<'s>` via `scout_arena.intern_str()`).
-
-### Conventions
-
-All rules in `.claude/rules/` are **path-targeted** and auto-load when editing relevant files. They contain:
-
-- Scala→Rust type mappings
-- Allowable differences between implementations
-- Architecture and organization maps
-- Style guidelines
-
-### Migration Subagents
-
-The codebase includes specialized subagents for systematic migration. These are autonomous agents that can be invoked using the Task tool.
-
-#### Slice Pipeline (Full Migration)
-- **`slice-orchestrator`** - Orchestrates the full migration pipeline on a Rust file
-- **`slice-start`** - Add `// mig:` marker comments above Scala definitions
-- **`slice-rustify`** - Convert Scala-style markers to Rust-style
-- **`slice-placehold`** - Generate Rust placeholder stubs
-- **`slice-reconcile-mark`** - Mark old definitions as obsolete
-- **`slice-reconcile-copy`** - Copy old code into stubs
-- **`slice-reconcile-delete`** - Remove obsolete definitions
-
-#### Incremental Migration
-- **`migration-migrate`** - Partially migrate specific Scala code sections
-- **`migration-diagnoser`** - Diagnose migration issues and differences
-- **`migration-check-specific`** - Check specific definitions for correctness
-- **`migration-gate`** - Validate migration readiness before proceeding
-
-#### Verification
-- **`agent-check-correct-loop`** - Loop-based correctness verification
-
-All subagents are defined in `.claude/agents/`.
-
-### Working with This Project (migration-era)
-
-1. When editing postparser files, relevant lifetime and migration rules auto-load
-2. Use the slice subagents for systematic translation of commented Scala code
-3. Use migration subagents for incremental fixes and verification
-4. Respect the lifetime invariants — see the rules for guidance when rustc complains
-
-### Migration Notes
-
-- **Interning:** Rust interns more aggressively than Scala. This is intentional and allowed.
-- **Panics:** `panic!()` placeholders are acceptable during mid-migration. Scala's `vimpl` maps to Rust `panic!`.
-- **Naming:** Rust uses `snake_case` (e.g., `self_uses`) vs Scala's `camelCase` (e.g., `selfUses`).
-- **Profiling:** Rust doesn't need Scala's `Profiler.frame(() => { ... })` wrappers.
-
-### Migration build expectations
-
-The build may have warnings during migration — that's expected; focus on getting it to compile first. Eliminate all compiler warnings (unused imports, variables, dead code) before saying you're done; `_`-prefixed vars are intentionally unused and don't count.
-
-### Migration-related SEE ALSO
-
-- **Read when planning or making a large change to the typing pass (FrontendRust/src/typing/).** → docs/architecture/typing-pass-ai-guide.md
-- **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → docs/skills/collapsed-call-tree.md

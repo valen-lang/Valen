@@ -6,6 +6,7 @@ use crate::instantiating::ast::names::INameI;
 use crate::instantiating::ast::templata::CoordTemplataI;
 
 
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipI {
@@ -18,19 +19,24 @@ pub enum OwnershipI {
 }
 
 
-/// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum MutabilityI {
-  Mutable,
-  Immutable,
-}
 
 
+
+
+
+
+
+
+
+
+
+
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum VariabilityI {
-  Final,
-  Varying,
+pub enum SharednessI {
+  Single,
+  Shared,
 }
 
 
@@ -40,6 +46,12 @@ pub enum LocationI {
   Inline,
   Yonder,
 }
+
+
+
+
+
+
 
 
 impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
@@ -55,6 +67,24 @@ impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
 pub struct CoordI<'s, 'i> where 's: 'i {
   pub ownership: OwnershipI,
   pub kind: KindIT<'s, 'i>,
+  _sealed: (),
+}
+
+impl<'s, 'i> CoordI<'s, 'i> where 's: 'i {
+    pub fn new(ownership: OwnershipI, kind: KindIT<'s, 'i>) -> Self {
+        let is_primitive = matches!(
+            kind,
+            KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::NeverIT(_),
+        );
+        let is_share = matches!(ownership, OwnershipI::ImmutableShare | OwnershipI::MutableShare);
+        if is_share && is_primitive {
+            panic!(
+                "Illegal CoordI combination: ownership={:?}, kind={:?}. Primitives are Own at I-IR post-cut.",
+                ownership, kind,
+            );
+        }
+        CoordI { ownership, kind, _sealed: () }
+    }
 }
 
 /// Polyvalue (see @TFITCX)
@@ -72,16 +102,20 @@ pub enum KindIT<'s, 'i> where 's: 'i {
   InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
 
+
+
 impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
   pub fn is_primitive(&self) -> bool {
     panic!("Unimplemented: is_primitive");
     // abstract method (each KindIT case overrides; primitives true, citizens/arrays false)
   }
 
+
   pub fn expect_citizen(&self) -> ICitizenIT<'s, 'i> {
     panic!("Unimplemented: expect_citizen");
     // this match { case c : ICitizenIT[R] => c; case _ => vfail() }
   }
+
 
   pub fn expect_interface(&self) -> &'i InterfaceIT<'s, 'i> {
     match self {
@@ -90,11 +124,13 @@ impl<'s, 'i> KindIT<'s, 'i> where 's: 'i {
     }
   }
 
+
   pub fn expect_struct(&self) -> &'i StructIT<'s, 'i> {
     panic!("Unimplemented: expect_struct");
     // this match { case c @ StructIT(_) => c; case _ => vfail() }
   }
 }
+
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -102,10 +138,14 @@ pub struct NeverIT {
   pub from_break: bool,
 }
 
+
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidIT {
 }
+
+
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -113,15 +153,21 @@ pub struct IntIT {
   pub bits: i32,
 }
 
+
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolIT {
 }
 
+
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrIT {
 }
+
+
 
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -142,13 +188,8 @@ pub struct StaticSizedArrayIT<'s, 'i> where 's: 'i {
 pub struct StaticSizedArrayITValI<'s, 'i> where 's: 'i {
   pub name: IdI<'s, 'i>,
 }
+
 impl<'s, 'i> StaticSizedArrayIT<'s, 'i> where 's: 'i {
-  pub fn mutability(self) -> MutabilityI {
-    match self.name.local_name {
-      INameI::StaticSizedArray(n) => n.arr.mutability,
-      _ => panic!("StaticSizedArrayIT::mutability: name.local_name is not StaticSizedArrayNameI"),
-    }
-  }
   pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
     match self.name.local_name {
       INameI::StaticSizedArray(n) => n.arr.element_type,
@@ -159,12 +200,6 @@ impl<'s, 'i> StaticSizedArrayIT<'s, 'i> where 's: 'i {
     match self.name.local_name {
       INameI::StaticSizedArray(n) => n.size,
       _ => panic!("StaticSizedArrayIT::size: name.local_name is not StaticSizedArrayNameI"),
-    }
-  }
-  pub fn variability(self) -> VariabilityI {
-    match self.name.local_name {
-      INameI::StaticSizedArray(n) => n.variability,
-      _ => panic!("StaticSizedArrayIT::variability: name.local_name is not StaticSizedArrayNameI"),
     }
   }
 }
@@ -183,13 +218,8 @@ pub struct RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
 pub struct RuntimeSizedArrayITValI<'s, 'i> where 's: 'i {
   pub name: IdI<'s, 'i>,
 }
+
 impl<'s, 'i> RuntimeSizedArrayIT<'s, 'i> where 's: 'i {
-  pub fn mutability(self) -> MutabilityI {
-    match self.name.local_name {
-      INameI::RuntimeSizedArray(n) => n.arr.mutability,
-      _ => panic!("RuntimeSizedArrayIT::mutability: name.local_name is not RuntimeSizedArrayNameI"),
-    }
-  }
   pub fn element_type(self) -> CoordTemplataI<'s, 'i> {
     match self.name.local_name {
       INameI::RuntimeSizedArray(n) => n.arr.element_type,
@@ -207,12 +237,16 @@ pub enum ISubKindIT<'s, 'i> where 's: 'i {
   InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
 
+
+
 /// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenIT<'s, 'i> where 's: 'i {
   StructIT(&'i StructIT<'s, 'i>),
   InterfaceIT(&'i InterfaceIT<'s, 'i>),
 }
+
+
 impl<'s, 'i> ICitizenIT<'s, 'i> where 's: 'i {
     pub fn id(&self) -> IdI<'s, 'i> {
         match self {
@@ -221,6 +255,7 @@ impl<'s, 'i> ICitizenIT<'s, 'i> where 's: 'i {
         }
     }
 }
+
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -234,6 +269,8 @@ pub struct StructIT<'s, 'i> where 's: 'i {
 pub struct StructITValI<'s, 'i> where 's: 'i {
   pub id: IdI<'s, 'i>,
 }
+
+
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]

@@ -224,43 +224,12 @@ fn static_sized_array() {
     compile_templex_expect(&parse_arena, &keywords, "[#_]_"),
     ITemplexPT::StaticSizedArray
   );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
-  cast!(array.size, ITemplexPT::AnonymousRune);
-  cast!(array.element, ITemplexPT::AnonymousRune);
-
-  let array = cast!(
-    compile_templex_expect(&parse_arena, &keywords, "[#_]<imm>_"),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Immutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
   cast!(array.size, ITemplexPT::AnonymousRune);
   cast!(array.element, ITemplexPT::AnonymousRune);
 
   let array = cast!(
     compile_templex_expect(&parse_arena, &keywords, "[#3]int"),
     ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
   );
   assert_eq!(cast!(array.size, ITemplexPT::Int).value, 3);
   assert_templex_name(array.element, "int");
@@ -269,14 +238,6 @@ fn static_sized_array() {
     compile_templex_expect(&parse_arena, &keywords, "[#N]int"),
     ITemplexPT::StaticSizedArray
   );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
   assert_templex_name(array.size, "N");
   assert_templex_name(array.element, "int");
 
@@ -284,28 +245,12 @@ fn static_sized_array() {
     compile_templex_expect(&parse_arena, &keywords, "[#_]int"),
     ITemplexPT::StaticSizedArray
   );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
   cast!(array.size, ITemplexPT::AnonymousRune);
   assert_templex_name(array.element, "int");
 
   let array = cast!(
     compile_templex_expect(&parse_arena, &keywords, "[#N]T"),
     ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(
-    cast!(array.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(array.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
   );
   assert_templex_name(array.size, "N");
   assert_templex_name(array.element, "T");

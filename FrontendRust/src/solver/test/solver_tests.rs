@@ -71,6 +71,7 @@ fn advance(
     Ok(false)
 }
 
+
     #[test]
     fn simple_int_rule() {
 
@@ -81,6 +82,7 @@ fn advance(
         let expected: HashMap<i64, String> = [(-1, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn equals_transitive() {
@@ -101,6 +103,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn incomplete_solve() {
 
@@ -112,6 +115,7 @@ fn advance(
         let expected: HashMap<i64, String> = HashMap::default();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn half_complete_solve() {
@@ -132,6 +136,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn one_of() {
 
@@ -150,6 +155,7 @@ fn advance(
             [(-1, "1337".to_string())].into_iter().collect();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn solves_a_components_rule() {
@@ -180,6 +186,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn reverse_solve_a_components_rule() {
 
@@ -205,6 +212,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn test_infer_pack() {
 
@@ -226,6 +234,7 @@ fn advance(
         .collect();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn test_infer_pack_from_result() {
@@ -251,6 +260,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn test_infer_pack_from_empty_result() {
 
@@ -269,6 +279,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     #[test]
     fn test_cant_solve_empty_pack() {
 
@@ -280,6 +291,7 @@ fn advance(
         let expected: HashMap<i64, String> = HashMap::default();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn complex_rule_set() {
@@ -327,6 +339,7 @@ fn advance(
         );
     }
 
+
     #[test]
     fn test_receiving_struct_to_struct() {
 
@@ -349,6 +362,7 @@ fn advance(
         .collect();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn test_receive_struct_from_sent_interface() {
@@ -407,6 +421,7 @@ fn advance(
         }
     }
 
+
     #[test]
     fn test_receive_interface_from_sent_struct() {
 
@@ -434,6 +449,7 @@ fn advance(
         assert_eq!(result, expected);
     }
 
+
     // Tests @CSCDSRZ: complex solve infers the receiver kind from senders.
     #[test]
     fn test_complex_solve_most_specific_ancestor() {
@@ -457,6 +473,7 @@ fn advance(
         .collect();
         assert_eq!(result, expected);
     }
+
 
     // Tests @CSCDSRZ: complex solve finds the common ancestor of multiple senders.
     #[test]
@@ -490,6 +507,7 @@ fn advance(
         .collect();
         assert_eq!(result, expected);
     }
+
 
     // Tests @CSCDSRZ: complex solve picks a descendant that satisfies a call constraint.
     #[test]
@@ -525,6 +543,7 @@ fn advance(
         .collect();
         assert_eq!(result, expected);
     }
+
 
     #[test]
     fn partial_solve() {
@@ -580,6 +599,7 @@ fn advance(
         );
     }
 
+
     #[test]
     fn predicting() {
 
@@ -600,6 +620,7 @@ fn advance(
         .collect();
         assert_eq!(conclusions, expected);
     }
+
 
     fn solve_with_puzzler(
         puzzler: Box<dyn Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>>,
@@ -643,6 +664,7 @@ fn advance(
         solver_state.userify_conclusions().into_iter().collect()
     }
 
+
     #[test]
     fn test_conflict() {
 
@@ -668,6 +690,7 @@ fn advance(
             _ => panic!("Expected SolverConflict"),
         }
     }
+
 
     fn expect_solve_failure(
         rules: Vec<super::test_rules::TestRule>,
@@ -708,6 +731,7 @@ fn advance(
 
         panic!("Incorrectly completed the solve")
     }
+
 
     fn get_conclusions(
         rules: Vec<super::test_rules::TestRule>,

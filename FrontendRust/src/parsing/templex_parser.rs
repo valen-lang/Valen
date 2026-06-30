@@ -36,8 +36,6 @@ where
 
     let mut tentative_iter = original_iter.clone();
 
-    let immutable = tentative_iter.try_skip_symbol('#');
-
     // Check for squared brackets
     let squared_contents;
     let size_scramble_iter_l = match tentative_iter.peek_cloned() {
@@ -64,49 +62,15 @@ where
       None
     };
 
-    // Parse template args for mutability/variability
-    let template_args_begin = iter.get_pos();
-    let maybe_template_args = self.parse_template_call_args(iter)?;
-    let template_args_end = iter.get_pos();
-
-    let mutability: &'p ITemplexPT<'p> = match (
-      immutable,
-      maybe_template_args.as_ref().and_then(|v| v.get(0)),
-    ) {
-      (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
-      (false, Some(templex)) => templex,
-      (true, None) => &*self.parse_arena.alloc(ITemplexPT::Mutability(MutabilityPT(
-        RangeL::new(template_args_begin, template_args_end),
-        MutabilityP::Immutable,
-      ))),
-      (false, None) => &*self.parse_arena.alloc(ITemplexPT::Mutability(MutabilityPT(
-        RangeL::new(template_args_begin, template_args_end),
-        MutabilityP::Mutable,
-      ))),
-    };
-
-    let variability: &'p ITemplexPT<'p> = maybe_template_args
-        .as_ref()
-        .and_then(|v| v.get(1).copied())
-        .unwrap_or_else(|| {
-          &*self.parse_arena.alloc(ITemplexPT::Variability(VariabilityPT(
-            RangeL::new(template_args_begin, template_args_end),
-            VariabilityP::Final,
-          )))
-        });
-
     let element_type = self.parse_templex(iter)?;
 
     let result = match maybe_size_templex {
       None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
-        mutability,
         element: &*self.parse_arena.alloc(element_type),
       }),
       Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
-        mutability,
-        variability,
         size: &*self.parse_arena.alloc(size_templex),
         element: &*self.parse_arena.alloc(element_type),
       }),
@@ -412,18 +376,6 @@ where
         range,
         location: LocationP::Yonder,
       }));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.imm) {
-      return Ok(ITemplexPT::Mutability(MutabilityPT(range, MutabilityP::Immutable)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.r#mut) {
-      return Ok(ITemplexPT::Mutability(MutabilityPT(range, MutabilityP::Mutable)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.vary) {
-      return Ok(ITemplexPT::Variability(VariabilityPT(range, VariabilityP::Varying)));
-    }
-    if let Some(range) = iter.try_skip_word(self.keywords.fiinal) {
-      return Ok(ITemplexPT::Variability(VariabilityPT(range, VariabilityP::Final)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.weak) {
       return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Weak)));
@@ -834,14 +786,6 @@ where
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.ownership => {
         iter.advance();
         Ok(Some(ITypePR::OwnershipType))
-      }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.variability => {
-        iter.advance();
-        Ok(Some(ITypePR::VariabilityType))
-      }
-      Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.mutability => {
-        iter.advance();
-        Ok(Some(ITypePR::MutabilityType))
       }
       Some(INodeLEEnum::Word(WordLE { str: w, .. })) if w == self.keywords.location => {
         iter.advance();

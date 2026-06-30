@@ -15,7 +15,6 @@ Ref translateDestructure(
     LLVMBuilderRef builder,
     Destroy* destructureM) {
   buildFlare(FL(), globalState, functionState, builder);
-  auto mutability = ownershipToMutability(destructureM->structType->ownership);
 
   auto structRegionInstanceRef =
       // At some point, look up the actual region instance, perhaps from the FunctionState?
@@ -78,7 +77,6 @@ Ref translateDestroySSAIntoLocals(
     LLVMBuilderRef builder,
     DestroyStaticSizedArrayIntoLocals* destroySSAIntoLocalsM) {
   buildFlare(FL(), globalState, functionState, builder);
-  auto mutability = ownershipToMutability(destroySSAIntoLocalsM->arrayType->ownership);
 
   auto structRegionInstanceRef =
       // At some point, look up the actual region instance, perhaps from the FunctionState?

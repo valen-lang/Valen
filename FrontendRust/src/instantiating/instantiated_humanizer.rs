@@ -8,14 +8,12 @@ use crate::instantiating::ast::names::RawArrayNameI;
 use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
 use crate::instantiating::ast::names::StaticSizedArrayNameI;
 use crate::instantiating::ast::templata::IntegerTemplataI;
-use crate::instantiating::ast::templata::MutabilityTemplataI;
-use crate::instantiating::ast::templata::VariabilityTemplataI;
-use crate::instantiating::ast::types::MutabilityI;
+use crate::instantiating::ast::types::SharednessI;
 use crate::instantiating::ast::types::OwnershipI;
-use crate::instantiating::ast::types::VariabilityI;
 use std::marker::PhantomData;
 use std::mem::discriminant;
 use crate::typing::types::types::{IRegionT, RegionT};
+
 
 pub fn humanize_templata<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
@@ -26,15 +24,7 @@ pub fn humanize_templata<'s, 'i>(
         ITemplataI::StaticSizedArrayTemplate(_) => "StaticArray".to_string(),
         ITemplataI::InterfaceDefinition(t) => humanize_id(code_map, &t.env_id, None),
         ITemplataI::StructDefinition(t) => humanize_id(code_map, &t.env_id, None),
-        ITemplataI::Variability(v) => match v.variability {
-            VariabilityI::Final => "final".to_string(),
-            VariabilityI::Varying => "vary".to_string(),
-        },
         ITemplataI::Integer(i) => i.value.to_string(),
-        ITemplataI::Mutability(m) => match m.mutability {
-            MutabilityI::Mutable => "mut".to_string(),
-            MutabilityI::Immutable => "imm".to_string(),
-        },
         ITemplataI::Coord(c) => humanize_coord(code_map, &c.coord),
         ITemplataI::Kind(k) => humanize_kind(code_map, &k.kind),
         ITemplataI::Region(RegionT { region: IRegionT::Iso }) => "iso'".to_string(),
@@ -42,6 +32,7 @@ pub fn humanize_templata<'s, 'i>(
         _ => panic!("humanize_templata: unimplemented variant"),
     }
 }
+
 
 pub fn humanize_coord<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
@@ -58,6 +49,7 @@ pub fn humanize_coord<'s, 'i>(
     let kind_str = humanize_kind(code_map, &coord.kind);
     ownership_str.to_string() + &kind_str
 }
+
 
 pub fn humanize_kind<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
@@ -77,6 +69,7 @@ pub fn humanize_kind<'s, 'i>(
     }
 }
 
+
 pub fn humanize_id<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     name: &IdI<'s, 'i>,
@@ -89,6 +82,7 @@ pub fn humanize_id<'s, 'i>(
     };
     prefix + &humanize_name(code_map, name.local_name, containing_region)
 }
+
 
 pub fn humanize_name<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
@@ -129,20 +123,17 @@ pub fn humanize_name<'s, 'i>(
                 + "(" + &n.parameters.iter().map(|c| humanize_coord(code_map, c)).collect::<Vec<_>>().join(",") + ")"
         }
         INameI::StaticSizedArray(n) => {
-            let StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
-            let RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            let StaticSizedArrayNameI { template: _, size, arr } = *n;
+            let RawArrayNameI { element_type, self_region: region } = arr;
             "[]<".to_string()
                 + &humanize_templata(code_map, &ITemplataI::Integer(IntegerTemplataI { value: size })) + ","
-                + &humanize_templata(code_map, &ITemplataI::Mutability(MutabilityTemplataI { mutability })) + ","
-                + &humanize_templata(code_map, &ITemplataI::Variability(VariabilityTemplataI { variability })) + ","
                 + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
                 + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
         }
         INameI::RuntimeSizedArray(n) => {
             let RuntimeSizedArrayNameI { template: _, arr } = *n;
-            let RawArrayNameI { mutability, element_type, self_region: region } = arr;
+            let RawArrayNameI { element_type, self_region: region } = arr;
             "[]<".to_string()
-                + (match mutability { MutabilityI::Immutable => "i", MutabilityI::Mutable => "m" }) + ","
                 + &humanize_templata(code_map, &ITemplataI::Region(region)) + ">"
                 + &humanize_templata(code_map, &ITemplataI::Coord(element_type))
         }
@@ -168,6 +159,7 @@ pub fn humanize_name<'s, 'i>(
     }
 }
 
+
 pub fn humanize_generic_args<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,
     template_args: &[ITemplataI<'s, 'i>],
@@ -187,6 +179,7 @@ pub fn humanize_generic_args<'s, 'i>(
         String::new()
     }
 }
+
 
 pub fn humanize_signature<'s, 'i>(
     code_map: &dyn Fn(CodeLocationS<'s>) -> String,

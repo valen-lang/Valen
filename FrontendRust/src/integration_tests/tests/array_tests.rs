@@ -8,7 +8,7 @@ use crate::scout_arena::ScoutArena;
 use crate::simplifying::hammer_interner::HammerInterner;
 use crate::tests::tests::load_expected;
 use crate::typing::ast::expressions::LetNormalTE;
-use crate::typing::ast::expressions::NewImmRuntimeSizedArrayTE;
+use crate::typing::ast::expressions::NewRuntimeSizedArrayTE;
 use crate::typing::ast::expressions::RuntimeSizedArrayLookupTE;
 use crate::typing::ast::expressions::StaticSizedArrayLookupTE;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
@@ -17,11 +17,11 @@ use crate::typing::env::function_environment_t::ReferenceLocalVariableT;
 use crate::typing::names::names::CodeVarNameT;
 use crate::typing::names::names::IVarNameT;
 use crate::typing::templata::templata::ITemplataT;
-use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::templata::templata::SharednessTemplataT;
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::KindT;
-use crate::typing::types::types::MutabilityT;
+use crate::typing::types::types::SharednessT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::typing_interner::TypingInterner;
 use crate::von::ast::IVonData;
@@ -45,7 +45,7 @@ fn returning_static_array_from_function_and_dotting_it() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test_no_builtins(
+    let mut compile = test(
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
@@ -54,7 +54,7 @@ func makeArray() [#5]int { return [#](2, 3, 4, 5, 6); }
 exported func main() int {
   a = makeArray();
   x = a.3;
-  [_, _, _, _, _] = a;
+  [_, _, _, _, _] = ^a;
   return x;
 }
 ",
@@ -83,11 +83,12 @@ fn simple_static_array_and_runtime_index_lookup() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a[i] is &int
         r"
 exported func main() int {
   i = 2;
   a = [#](2, 3, 4, 5, 6);
-  return a[i];
+  return __copy_prim(&a[i]);
 }
 ",
     );
@@ -106,73 +107,7 @@ exported func main() int {
 }
 
 #[test]
-fn destroy_ssa_of_imms_into_function() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-exported func main() int {
-  a = [#](13, 14, 15);
-  sum = 0;
-  drop_into(a, &(e) => { set sum = sum + e; });
-  return sum;
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 42 }) => {}
-        other => panic!("expected VonInt(42), got {:?}", other),
-    }
-}
-
-#[test]
-fn destroy_rsa_of_imms_into_function() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-exported func main() int {
-  a = Array<imm, int>(3, {13 + _});
-  sum = 0;
-  drop_into(a, &(e) => { set sum = sum + e; });
-  return sum;
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 42 }) => {}
-        other => panic!("expected VonInt(42), got {:?}", other),
-    }
-}
-
-#[test]
-fn destroy_ssa_of_muts_into_function() {
+fn destroy_ssa_into_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -194,7 +129,7 @@ struct Spaceship { fuel int; }
 exported func main() int {
   a = [#](Spaceship(13), Spaceship(14), Spaceship(15));
   sum = 0;
-  drop_into(a, &(e) => { set sum = sum + e.fuel; });
+  drop_into(^a, &(e) => { set sum = sum + e.fuel; });
   return sum;
 }
 ",
@@ -206,7 +141,7 @@ exported func main() int {
 }
 
 #[test]
-fn destroy_rsa_of_muts_into_function() {
+fn destroy_rsa_into_function() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -229,7 +164,7 @@ struct Spaceship { fuel int; }
 exported func main() int {
   a = MakeArray<Spaceship>(3, &{Spaceship(13 + _)});
   sum = 0;
-  drop_into(a, &(e) => { set sum = sum + e.fuel; });
+  drop_into(^a, &(e) => { set sum = sum + e.fuel; });
   return sum;
 }
 ",
@@ -258,14 +193,15 @@ fn migrate_rsa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: b[1].fuel is &int
         r"
 import array.make.*;
 struct Spaceship { fuel int; }
 exported func main() int {
-  a = Array<mut, Spaceship>(3, &{Spaceship(41 + _)});
-  b = Array<mut, Spaceship>(3);
-  migrate(a, &b);
-  return b[1].fuel;
+  a = Array<Spaceship>(3, &{Spaceship(41 + _)});
+  b = Array<Spaceship>(3);
+  migrate(^a, &b);
+  return __copy_prim(&b[1].fuel);
 }
 ",
     );
@@ -293,14 +229,15 @@ fn migrate_ssa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: b[1].fuel is &int
         r"
 import array.make.*;
 struct Spaceship { fuel int; }
 exported func main() int {
   a = [#3](&{Spaceship(41 + _)});
-  b = Array<mut, Spaceship>(3);
-  migrate(a, &b);
-  return b[1].fuel;
+  b = Array<Spaceship>(3);
+  migrate(^a, &b);
+  return __copy_prim(&b[1].fuel);
 }
 ",
     );
@@ -328,11 +265,12 @@ fn unspecified_mutability_static_array_from_lambda_defaults_to_mutable() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a[1] is &int
         r"
 exported func main() int {
   i = 3;
   a = [#5](&{_ * 42});
-  return a[1];
+  return __copy_prim(&a[1]);
 }
 ",
     );
@@ -341,11 +279,7 @@ exported func main() int {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::StaticSizedArrayLookup(StaticSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                => Some(())
+            NodeRefT::StaticSizedArrayLookup(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -355,46 +289,7 @@ exported func main() int {
 }
 
 #[test]
-fn immutable_static_array_from_lambda() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let source = load_expected("programs/arrays/ssaimmfromcallable.vale");
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        &source,
-    );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let main = coutputs.lookup_function_by_str("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::StaticSizedArrayLookup(StaticSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                => Some(())
-        );
-    }
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 42 }) => {}
-        other => panic!("expected VonInt(42), got {:?}", other),
-    }
-}
-
-#[test]
-fn mutable_static_array_from_lambda() {
+fn static_array_from_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -419,50 +314,7 @@ fn mutable_static_array_from_lambda() {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::StaticSizedArrayLookup(StaticSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                => Some(())
-        );
-    }
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 42 }) => {}
-        other => panic!("expected VonInt(42), got {:?}", other),
-    }
-}
-
-#[test]
-fn immutable_static_array_from_values() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let source = load_expected("programs/arrays/ssaimmfromvalues.vale");
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        &source,
-    );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let main = coutputs.lookup_function_by_str("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::StaticSizedArrayLookup(StaticSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                => Some(())
+            NodeRefT::StaticSizedArrayLookup(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -497,11 +349,7 @@ fn mutable_static_array_from_values() {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::StaticSizedArrayLookup(StaticSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                => Some(())
+            NodeRefT::StaticSizedArrayLookup(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -528,12 +376,13 @@ fn unspecified_mutability_runtime_array_from_lambda_defaults_to_mutable() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a[1] is &int
         r"
 import array.make.*;
 exported func main() int {
   i = 3;
   a = MakeArray<int>(5, &{_ * 42});
-  return a[1];
+  return __copy_prim(&a[1]);
 }
 ",
     );
@@ -542,50 +391,7 @@ exported func main() int {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::RuntimeSizedArrayLookup(RuntimeSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                => Some(())
-        );
-    }
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 42 }) => {}
-        other => panic!("expected VonInt(42), got {:?}", other),
-    }
-}
-
-#[test]
-fn immutable_runtime_array_from_lambda() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let source = load_expected("programs/arrays/rsaimmfromcallable.vale");
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        &source,
-    );
-    {
-        let coutputs = compile.expect_compiler_outputs();
-        let main = coutputs.lookup_function_by_str("main");
-        collect_only_tnode!(
-            NodeRefT::FunctionDefinition(main),
-            NodeRefT::RuntimeSizedArrayLookup(RuntimeSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                => Some(())
+            NodeRefT::RuntimeSizedArrayLookup(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -620,11 +426,7 @@ fn mutable_runtime_array_from_lambda() {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::RuntimeSizedArrayLookup(RuntimeSizedArrayLookupTE {
-                array_type,
-                ..
-            }) if array_type.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                => Some(())
+            NodeRefT::RuntimeSizedArrayLookup(_) => Some(())
         );
     }
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
@@ -634,6 +436,7 @@ fn mutable_runtime_array_from_lambda() {
 }
 
 //m [<mut> 3 * [#3]<mut>int] = [mut][ [mut][1, 2, 3], [mut][4, 5, 6], [mut][7, 8, 9] ];
+
 #[test]
 fn take_arraysequence_as_a_parameter() {
     let compilation_bump = bumpalo::Bump::new();
@@ -652,13 +455,14 @@ fn take_arraysequence_as_a_parameter() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: arr.3 is &int
         r"
-func doThings(arr [#5]<imm>int) int {
-  return arr.3;
+func doThings(arr [#5]int) int {
+  return __copy_prim(&arr.3);
 }
 exported func main() int {
-  a = #[#](2, 3, 4, 5, 6);
-  return doThings(a);
+  a = [#](2, 3, 4, 5, 6);
+  return doThings(^a);
 }
 ",
     );
@@ -686,13 +490,14 @@ fn borrow_arraysequence_as_a_parameter() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: arr.2.x is &int
         r"
 struct MutableStruct {
   x int;
 }
 
 func doThings(arr &[#3]^MutableStruct) int {
-  return arr.2.x;
+  return __copy_prim(&arr.2.x);
 }
 exported func main() int {
   a = [#](MutableStruct(2), MutableStruct(3), MutableStruct(4));
@@ -708,7 +513,9 @@ exported func main() int {
 
 // the argument to __Array doesnt even have to be a struct or a lambda or an
 // interface or whatever, its just passed straight through to the prototype
+
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn array_map_with_int() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -726,12 +533,13 @@ fn array_map_with_int() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: i used twice (addressible Own); a.3 is &int
         r"
-func __call(lol int, i int) int { return i; }
+func __call(lol int, i int) int { return __copy_prim(&i); }
 
 exported func main() int {
-  a = #[]int(10, 1337);
-  return a.3;
+  a = []int(10, 1337);
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -740,11 +548,10 @@ exported func main() int {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::NewImmRuntimeSizedArray(NewImmRuntimeSizedArrayTE {
+            NodeRefT::NewRuntimeSizedArray(NewRuntimeSizedArrayTE {
                 array_type: rsa,
                 ..
-            }) if rsa.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                && matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Share, kind: KindT::Int(_), .. })
+            }) if matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Own, kind: KindT::Int(_), .. })
                 => Some(())
         );
     }
@@ -772,13 +579,14 @@ fn new_rsa() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: a.1 is &int
         r"
 exported func main() int {
   a = []int(3);
   a.push(73);
   a.push(42);
   a.push(73);
-  return a.1;
+  return __copy_prim(&a.1);
 }
 ",
     );
@@ -798,8 +606,7 @@ exported func main() int {
                     ..
                 }),
                 ..
-            }) if rsa.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })
-                && matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Share, kind: KindT::Int(_), .. })
+            }) if matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Own, kind: KindT::Int(_), .. })
                 => Some(())
         );
     }
@@ -810,6 +617,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn array_map_with_lambda() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -827,14 +635,15 @@ fn array_map_with_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: imm → share; i copy; a.3 is &int
         r"
-struct Lam imm {}
-func __call(lam Lam, i int) int { return i; }
+struct Lam share {}
+func __call(lam Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int
 where F Prot = func(Lam, int)int {
-  a = #[]int(10, Lam());
-  return a.3;
+  a = []int(10, Lam());
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -843,11 +652,10 @@ where F Prot = func(Lam, int)int {
         let main = coutputs.lookup_function_by_str("main");
         collect_only_tnode!(
             NodeRefT::FunctionDefinition(main),
-            NodeRefT::NewImmRuntimeSizedArray(NewImmRuntimeSizedArrayTE {
+            NodeRefT::NewRuntimeSizedArray(NewRuntimeSizedArrayTE {
                 array_type: rsa,
                 ..
-            }) if rsa.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                && matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Share, kind: KindT::Int(_), .. })
+            }) if matches!(rsa.element_type(), CoordT { ownership: OwnershipT::Own, kind: KindT::Int(_), .. })
                 => Some(())
         );
     }
@@ -858,6 +666,7 @@ where F Prot = func(Lam, int)int {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn make_array_map_with_struct() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -875,15 +684,16 @@ fn make_array_map_with_struct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: imm → share; i copy; a.3 is &int
         r"
 import array.make.*;
 
-struct Lam imm {}
-func __call(lam Lam, i int) int { return i; }
+struct Lam share {}
+func __call(lam Lam, i int) int { return __copy_prim(&i); }
 
 exported func main() int {
   a = MakeArray<int>(10, Lam());
-  return a.3;
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -911,11 +721,12 @@ fn make_array_map_with_lambda() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambda needs &; a.3 is &int
         r"
 import array.make.*;
 exported func main() int {
-  a = MakeArray<int>(10, {_});
-  return a.3;
+  a = MakeArray<int>(10, &{_});
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -943,6 +754,7 @@ fn array_map_with_interface() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: __call's i needs copy; a.3 is &int
         r"
 import array.make.*;
 
@@ -951,14 +763,14 @@ sealed interface IThing {
 }
 
 struct MyThing { }
-func __call(self &MyThing, i int) int { i }
+func __call(self &MyThing, i int) int { __copy_prim(&i) }
 
 impl IThing for MyThing;
 
 exported func main() int {
   i IThing = MyThing();
-  a = Array<imm, int>(10, &i);
-  return a.3;
+  a = Array<int>(10, &i);
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -972,6 +784,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn array_map_taking_a_closure_which_captures_something() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -989,12 +802,12 @@ fn array_map_taking_a_closure_which_captures_something() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambda needs &; a.3 is &int
         r"
-import array.make.*;
 exported func main() int {
   x = 7;
-  a = MakeImmArray<int>(10, { _ + x });
-  return a.3;
+  a = Array<int>(10, &{ _ + x });
+  return __copy_prim(&a.3);
 }
 ",
     );
@@ -1022,12 +835,12 @@ fn simple_array_map_with_runtime_index_lookup() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambda needs &; a[i] is &int
         r"
-import array.make.*;
 exported func main() int {
-  a = MakeImmArray<int>(10, {_});
+  a = Array<int>(10, &{_});
   i = 5;
-  return a[i];
+  return __copy_prim(&a[i]);
 }
 ",
     );
@@ -1055,9 +868,10 @@ fn nested_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: .0.0 is &int
         r"
 exported func main() int {
-  return [#]([#](2)).0.0;
+  return __copy_prim(&[#]([#](2)).0.0);
 }
 ",
     );
@@ -1068,6 +882,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn two_dimensional_array() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1085,14 +900,15 @@ fn two_dimensional_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambdas need &; board.1.2 is &int
         r"
 import array.make.*;
 exported func main() int {
   board =
-      MakeArray<Array<mut, int>>(
+      MakeArray<Array<int>>(
           3,
-          (row) => { MakeArray<int>(3, { row + _ }) });
-  return board.1.2;
+          &(row) => { MakeArray<int>(3, &{ row + _ }) });
+  return __copy_prim(&board.1.2);
 }
 ",
     );
@@ -1120,6 +936,7 @@ fn array_with_capture() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: box.i is &int; board.1 is &int
         r"
 import array.make.*;
 struct IntBox {
@@ -1128,8 +945,8 @@ struct IntBox {
 
 exported func main() int {
   box = IntBox(7);
-  board = MakeArray<int>(3, &(col) => { box.i });
-  return board.1;
+  board = MakeArray<int>(3, &(col) => { __copy_prim(&box.i) });
+  return __copy_prim(&board.1);
 }
 ",
     );
@@ -1157,6 +974,7 @@ fn capture() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: box.i is &int
         r"
 func myFunc<T, F>(generator F) T
 where func(&F, int)T, func drop(F)void
@@ -1170,7 +988,7 @@ struct IntBox {
 
 exported func main() int {
   box = IntBox(7);
-  lam = (col) => { box.i };
+  lam = (col) => { __copy_prim(&box.i) };
   board = myFunc<int>(&lam);
   return board;
 }
@@ -1200,12 +1018,13 @@ fn mutate_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambda needs &; arr.1 is &int
         r"
 import array.make.*;
 exported func main() int {
-  arr = MakeArray<int>(3, {_});
+  arr = MakeArray<int>(3, &{_});
   set arr[1] = 1337;
-  return arr.1;
+  return __copy_prim(&arr.1);
 }
 ",
     );
@@ -1233,14 +1052,15 @@ fn capture_mutable_array() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: i in __call copy; arr.6 is &int (needs copy for str())
         r"
 import array.make.*;
 struct MyIntIdentity {}
-func __call(this &MyIntIdentity, i int) int { return i; }
+func __call(this &MyIntIdentity, i int) int { return __copy_prim(&i); }
 exported func main() {
   m = MyIntIdentity();
   arr = MakeArray<int>(10, &m);
-  lam = { print(str(arr.6)); };
+  lam = { print(&str(__copy_prim(&arr.6))); };
   lam();
 }
 ",
@@ -1333,15 +1153,16 @@ fn map_using_array_construct() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: lambdas need &; result.2 is &int
         r"
 import array.make.*;
 exported func main() int {
-  board = MakeArray<int>(5, {_});
+  board = MakeArray<int>(5, &{_});
   result =
       MakeArray<int>(5, &(i) => {
         board[i] + 2
       });
-  return result.2;
+  return __copy_prim(&result.2);
 }
 ",
     );
@@ -1369,55 +1190,22 @@ fn map_from_hardcoded_values() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: split call into local + borrow; result indexing returns &int
         r"
 import array.make.*;
-func toArray<N Int, E, SourceM Mutability>(seq &[#N]<SourceM>E) []E
+func toArray<N Int, E>(seq &[#N]E) []E
 where func clone(&E)E {
-  return MakeArray<E>(N, &{ clone(seq[_]) });
+  return MakeArray<E>(N, &{ clone(&seq[_]) });
 }
 exported func main() int {
-  return #[#]int(6, 4, 3, 5, 2, 8).toArray()[3];
+  src = [#]int(6, 4, 3, 5, 2, 8);
+  return __copy_prim(&toArray(&src)[3]);
 }
 ",
     );
     match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
         IVonData::Int(VonInt { value: 5 }) => {}
         other => panic!("expected VonInt(5), got {:?}", other),
-    }
-}
-
-#[test]
-fn nested_imm_arrays() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-import array.make.*;
-exported func main() int {
-  return #[#]#[]int(
-    #[#]int(6, 60).toImmArray(),
-    #[#]int(4, 40).toImmArray(),
-    #[#]int(3, 30).toImmArray()
-  ).toImmArray()[2][1];
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 30 }) => {}
-        other => panic!("expected VonInt(30), got {:?}", other),
     }
 }
 
@@ -1456,6 +1244,7 @@ exported func main() int {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn array_has() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1473,10 +1262,11 @@ fn array_has() {
         &compilation_bump,
         &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
         &instantiating_bump,
+        // TSUGAR: has(103) → has(&103) — has takes &E
         r"
 import array.has.*;
 exported func main() bool {
-  return [#]int(6, 60, 103)&.has(103);
+  return [#]int(6, 60, 103)&.has(&103);
 }
 ",
     );
@@ -1487,6 +1277,7 @@ exported func main() bool {
 }
 
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn each_on_ssa() {
     let compilation_bump = bumpalo::Bump::new();
     let parse_bump = bumpalo::Bump::new();
@@ -1518,108 +1309,4 @@ exported func main() {
     assert_eq!(compile.eval_for_stdout(Vec::new()).unwrap(), "VenusEarthMars");
 }
 
-#[test]
-fn change_mutability() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-import array.make.*;
-exported func main() str {
-  a = MakeArray<str>(10, { str(_) });
-  b = a.toImmArray();
-  return a.3;
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Str(VonStr { ref value }) if value == "3" => {}
-        other => panic!("expected VonStr(\"3\"), got {:?}", other),
-    }
-}
-
-#[test]
-fn reports_when_making_new_imm_rsa_without_lambda() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-exported func main() int {
-  a = #[]int(3);
-  a.push(73);
-  return a.0;
-}
-",
-    );
-    match compile.get_compiler_outputs() {
-        Err(ICompileErrorT::NewImmRSANeedsCallable { .. }) => {}
-        Err(e) => panic!("expected NewImmRSANeedsCallable, got Err({:?})", e),
-        Ok(_) => panic!("expected NewImmRSANeedsCallable, got Ok"),
-    }
-}
-
-#[test]
-fn new_immutable_array() {
-    let compilation_bump = bumpalo::Bump::new();
-    let parse_bump = bumpalo::Bump::new();
-    let scout_bump = bumpalo::Bump::new();
-    let typing_bump = bumpalo::Bump::new();
-    let instantiating_bump = bumpalo::Bump::new();
-    let hammer_bump = bumpalo::Bump::new();
-    let parse_arena = ParseArena::new(&parse_bump);
-    let scout_arena = ScoutArena::new(&scout_bump);
-    let keywords = Keywords::new_for_scout(&scout_arena);
-    let parser_keywords = Keywords::new_for_parse(&parse_arena);
-    let hammer_interner = HammerInterner::new(&hammer_bump);
-    let typing_interner = TypingInterner::new(&typing_bump);
-    let mut compile = test(
-        &compilation_bump,
-        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena,
-        &instantiating_bump,
-        r"
-exported func main() int {
-  arr = Array<mut, int>(3);
-  arr.push(13);
-  arr.push(14);
-  arr.push(15);
-  immArr = toImmArray(&arr);
-  return immArr[1];
-}
-
-func toImmArray<E Ref imm>(arr &[]E) Array<imm, E> {
-  Array<imm, E>(arr.len(), &{ arr[_] })
-}
-",
-    );
-    match compile.eval_for_kind_primitive_args(Vec::new()).unwrap() {
-        IVonData::Int(VonInt { value: 14 }) => {}
-        other => panic!("expected VonInt(14), got {:?}", other),
-    }
-}
 

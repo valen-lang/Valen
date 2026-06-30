@@ -2175,15 +2175,6 @@ where
     let mut tentative_iter = original_iter.clone();
     let begin = tentative_iter.get_pos();
 
-    let mutability = if tentative_iter.try_skip_symbol('#') {
-      ITemplexPT::Mutability(MutabilityPT(
-        RangeL::new(begin, tentative_iter.get_prev_end_pos()),
-        MutabilityP::Immutable,
-      ))
-    } else {
-      ITemplexPT::Mutability(MutabilityPT(RangeL::new(begin, begin), MutabilityP::Mutable))
-    };
-
     // If there's no square, we're not making an array.
     let sizer = match tentative_iter.peek_cloned() {
       Some(INodeLEEnum::Squared(s)) => s.clone(),
@@ -2240,8 +2231,6 @@ where
     let array_pe = ConstructArrayPE {
       range: RangeL::new(begin, iter.get_prev_end_pos()),
       type_pt: tyype,
-      mutability_pt: Some(mutability),
-      variability_pt: None,
       size,
       initializing_individual_elements,
       args: self.parse_arena.alloc_slice_from_vec(args),

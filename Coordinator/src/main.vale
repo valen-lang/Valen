@@ -11,9 +11,6 @@ exported func main() {
     all_args_list.add(getMainArg(i));
     set i = i + 1;
   }
-  all_args = all_args_list.toImmArray();
-
-
   maybe_passmanager_path = FindProgramInPath(all_args_list.get(0));
   passmanager_path =
     if maybe_passmanager_path.isEmpty() {
@@ -46,6 +43,7 @@ exported func main() {
       println(readFileAsString(str(compiler_dir / "valec-help.txt")));
     }
   } else if (all_args_list.get(1) == "build") {
+    [all_args] = all_args_list;
     build_stuff(&compiler_dir, &all_args);
   } else {
     println("Unknown command: {all_args_list.get(1)}.");

@@ -378,7 +378,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
       if (auto structMT = dynamic_cast<StructKind*>(kind)) {
         auto structDefM = program->getStruct(structMT);
-        if (structDefM->mutability == Mutability::IMMUTABLE) {
+        if (structDefM->sharedness == Sharedness::SHARED) {
           for (auto member : structDefM->members) {
             auto kind = member->type->kind;
             if (dynamic_cast<Int *>(kind) ||
@@ -388,7 +388,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
               // Do nothing, no need to include anything for these
             } else {
               auto paramTypeExportName = package->getKindExportName(kind, true);
-              if (ownershipToMutability(member->type->ownership) == Mutability::MUTABLE) {
+              if (ownershipToSharedness(member->type->ownership) == Sharedness::SINGLE) {
                 paramTypeExportName += "Ref";
               }
               resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
@@ -398,18 +398,18 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
-        auto region = (structDefM->mutability == Mutability::IMMUTABLE ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (structDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateStructDefsC(package, structDefM);
         resultC << defString;
       } else if (auto interfaceMT = dynamic_cast<InterfaceKind*>(kind)) {
         auto interfaceDefM = globalState->program->getInterface(interfaceMT);
-        auto region = (interfaceDefM->mutability == Mutability::IMMUTABLE ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (interfaceDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateInterfaceDefsC(package, interfaceDefM);
         resultC << defString;
       } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(kind)) {
         auto ssaDefM = globalState->program->getStaticSizedArray(ssaMT);
 
-        if (ssaDefM->mutability == Mutability::IMMUTABLE) {
+        if (ssaDefM->sharedness == Sharedness::SHARED) {
           auto kind = ssaDefM->elementType->kind;
           if (dynamic_cast<Int *>(kind) ||
               dynamic_cast<Bool *>(kind) ||
@@ -418,7 +418,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
             // Do nothing, no need to include anything for these
           } else {
             auto paramTypeExportName = package->getKindExportName(kind, true);
-            if (ownershipToMutability(ssaDefM->elementType->ownership) == Mutability::MUTABLE) {
+            if (ownershipToSharedness(ssaDefM->elementType->ownership) == Sharedness::SINGLE) {
               paramTypeExportName += "Ref";
             }
             resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
@@ -427,13 +427,13 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
-        auto region = (ssaDefM->mutability == Mutability::IMMUTABLE ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (ssaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateStaticSizedArrayDefsC(package, ssaDefM);
         resultC << defString;
       } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(kind)) {
         auto rsaDefM = globalState->program->getRuntimeSizedArray(rsaMT);
 
-        if (rsaDefM->mutability == Mutability::IMMUTABLE) {
+        if (rsaDefM->sharedness == Sharedness::SHARED) {
           auto kind = rsaDefM->elementType->kind;
           if (dynamic_cast<Int *>(kind) ||
               dynamic_cast<Bool *>(kind) ||
@@ -442,7 +442,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
             // Do nothing, no need to include anything for these
           } else {
             auto paramTypeExportName = package->getKindExportName(kind, true);
-            if (ownershipToMutability(rsaDefM->elementType->ownership) == Mutability::MUTABLE) {
+            if (ownershipToSharedness(rsaDefM->elementType->ownership) == Sharedness::SINGLE) {
               paramTypeExportName += "Ref";
             }
             resultC << "typedef struct " << paramTypeExportName << " " << paramTypeExportName << ";" << std::endl;
@@ -451,7 +451,7 @@ void generateExports(GlobalState* globalState, Prototype* mainM) {
 
         // can we think of this in terms of regions? it's kind of like we're
         // generating some stuff for the outside to point inside.
-        auto region = (rsaDefM->mutability == Mutability::IMMUTABLE ? globalState->linearRegion : globalState->mutRegion);
+        auto region = (rsaDefM->sharedness == Sharedness::SHARED ? globalState->linearRegion : globalState->mutRegion);
         auto defString = region->generateRuntimeSizedArrayDefsC(package, rsaDefM);
         resultC << defString;
       } else {
@@ -555,7 +555,7 @@ void makeExternOrExportFunction(
       // Do nothing, no need to include anything for these
     } else {
       auto paramTypeExportName = package->getKindExportName(kind, false);
-//      if (ownershipToMutability(param->ownership) == Mutability::MUTABLE) {
+//      if (ownershipToSharedness(param->ownership) == Sharedness::SINGLE) {
 //        paramTypeExportName += "Ref";
 //      }
       (*headerC) << "#include \"" << packageCoord->projectName << "/" << paramTypeExportName << ".h\"" << std::endl;
@@ -572,7 +572,7 @@ void makeExternOrExportFunction(
     } else {
       // We need to include the actual header for interfaces, because the user func hands them around by value
       auto paramTypeExportName = package->getKindExportName(kind, false);
-//      if (ownershipToMutability(prototype->returnType->ownership) == Mutability::MUTABLE) {
+//      if (ownershipToSharedness(prototype->returnType->ownership) == Sharedness::SINGLE) {
 //        paramTypeExportName += "Ref";
 //      }
       (*headerC) << "#include \"" << packageCoord->projectName << "/" << paramTypeExportName << ".h\"" << std::endl;
@@ -795,7 +795,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       // std::cout << "." << name;
       // std::cout << std::endl;
 
-      if (structM->mutability == Mutability::IMMUTABLE) {
+      if (structM->sharedness == Sharedness::SHARED) {
         // TODO: https://github.com/ValeLang/Vale/issues/479
         globalState->linearRegion->declareStruct(structM);
       }
@@ -808,7 +808,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterface(interfaceM);
-      if (interfaceM->mutability == Mutability::IMMUTABLE) {
+      if (interfaceM->sharedness == Sharedness::SHARED) {
         // TODO: https://github.com/ValeLang/Vale/issues/479
         globalState->linearRegion->declareInterface(interfaceM);
       }
@@ -821,7 +821,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArray(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStaticSizedArray(arrayM);
       }
     }
@@ -833,7 +833,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArray(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareRuntimeSizedArray(arrayM);
       }
     }
@@ -845,7 +845,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto structM = p.second;
       globalState->getRegion(structM->regionId)->declareStructExtraFunctions(structM);
-      if (structM->mutability == Mutability::IMMUTABLE) {
+      if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStructExtraFunctions(structM);
       }
     }
@@ -856,7 +856,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->declareInterfaceExtraFunctions(interfaceM);
-      if (interfaceM->mutability == Mutability::IMMUTABLE) {
+      if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareInterfaceExtraFunctions(interfaceM);
       }
     }
@@ -867,7 +867,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareStaticSizedArrayExtraFunctions(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareStaticSizedArrayExtraFunctions(arrayM);
       }
     }
@@ -878,7 +878,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->declareRuntimeSizedArrayExtraFunctions(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->declareRuntimeSizedArrayExtraFunctions(arrayM);
       }
     }
@@ -895,7 +895,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
         globalState->getRegion(structM->regionId)->declareEdge(e);
-        if (structM->mutability == Mutability::IMMUTABLE) {
+        if (structM->sharedness == Sharedness::SHARED) {
           globalState->linearRegion->declareEdge(e);
         }
       }
@@ -908,7 +908,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStruct(structM);
-      if (structM->mutability == Mutability::IMMUTABLE) {
+      if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStruct(structM);
       }
     }
@@ -921,7 +921,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterface(interfaceM);
-      if (interfaceM->mutability == Mutability::IMMUTABLE) {
+      if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineInterface(interfaceM);
       }
     }
@@ -932,7 +932,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArray(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStaticSizedArray(arrayM);
       }
     }
@@ -943,7 +943,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArray(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineRuntimeSizedArray(arrayM);
       }
     }
@@ -963,7 +963,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       assert(name == structM->name->name);
       globalState->getRegion(structM->regionId)->defineStructExtraFunctions(structM);
-      if (structM->mutability == Mutability::IMMUTABLE) {
+      if (structM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStructExtraFunctions(structM);
       }
     }
@@ -974,7 +974,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineStaticSizedArrayExtraFunctions(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineStaticSizedArrayExtraFunctions(arrayM);
       }
     }
@@ -985,7 +985,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto arrayM = p.second;
       globalState->getRegion(arrayM->regionId)->defineRuntimeSizedArrayExtraFunctions(arrayM);
-      if (arrayM->mutability == Mutability::IMMUTABLE) {
+      if (arrayM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineRuntimeSizedArrayExtraFunctions(arrayM);
       }
     }
@@ -1000,7 +1000,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto name = p.first;
       auto interfaceM = p.second;
       globalState->getRegion(interfaceM->regionId)->defineInterfaceExtraFunctions(interfaceM);
-      if (interfaceM->mutability == Mutability::IMMUTABLE) {
+      if (interfaceM->sharedness == Sharedness::SHARED) {
         globalState->linearRegion->defineInterfaceExtraFunctions(interfaceM);
       }
     }
@@ -1056,7 +1056,7 @@ void compileValeCode(GlobalState* globalState, MetalCache* metalCachePtr, Progra
       auto structM = p.second;
       for (auto e : structM->edges) {
 
-        if (structM->mutability == Mutability::IMMUTABLE) {
+        if (structM->sharedness == Sharedness::SHARED) {
           globalState->rcImm->defineEdge(e);
           globalState->linearRegion->defineEdge(e);
         } else {

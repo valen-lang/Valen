@@ -280,19 +280,17 @@ where 's: 't,
         let variables: Vec<IVariableT<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
                 match member {
-                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, variability, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
+                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
                         IVariableT::ReferenceClosure(ReferenceClosureVariableT {
                             name: *var_name,
                             closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
-                            variability: *variability,
                             coord: substituter.substitute_for_coord(coutputs, *reference),
                         })
                     }
-                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, variability, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
+                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
                         IVariableT::AddressibleClosure(AddressibleClosureVariableT {
                             name: *var_name,
                             closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
-                            variability: *variability,
                             coord: substituter.substitute_for_coord(coutputs, *reference),
                         })
                     }

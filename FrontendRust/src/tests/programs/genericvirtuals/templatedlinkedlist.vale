@@ -11,15 +11,17 @@ struct MyList<T Ref> {
 
 func drop<T>(this MyList<T>)
 where func drop(T)void {
-  [value, next] = this;
+  [value, next] = ^this;
 }
 
 func printValues(list &MyList<int>) void {
-  print(list.value);
-  printNextValue(list.next);
+  // TSUGAR:   print(list.value);
+  print(__copy_prim(&list.value));
+  printNextValue(&list.next);
 }
 
 func printNextValue(opt &Opt<MyList<int>>) void {
+  // TSUGAR:   if not opt.isEmpty() {
   if not opt.isEmpty() {
     printValues(opt.get());
   }

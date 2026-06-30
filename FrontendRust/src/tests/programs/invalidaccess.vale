@@ -4,6 +4,7 @@ struct Marine { hp int; }
 exported func main() int {
   m = Marine(7);
   b = &m;
-  drop(m);
-  return b.hp;
+  drop(^m);
+  // TSUGAR:   return b.hp;
+  return __copy_prim(&b.hp);
 }

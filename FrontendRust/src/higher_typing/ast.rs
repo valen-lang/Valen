@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::parsing::MutabilityP;
+use crate::parsing::SharednessP;
 use crate::postparsing::ast::{
     GenericParameterS, ICitizenAttributeS, IFunctionAttributeS,
     IStructMemberS, ParameterS, IBodyS,
@@ -19,6 +19,7 @@ use std::ptr::eq;
 use std::ptr::hash;
 
 
+
 #[derive(Debug)]
 pub struct ProgramA<'s> {
     pub structs: &'s [&'s StructA<'s>],
@@ -30,10 +31,10 @@ pub struct ProgramA<'s> {
 
 impl<'s> ProgramA<'s> {
 
-
 pub fn lookup_function_by_name(&self, _name: &INameS<'s>) -> &FunctionA<'s> {
     panic!("Unimplemented: lookup_function_by_name");
 }
+
 
 pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'s> {
     let matches: Vec<_> = self.functions.iter().filter(|function| {
@@ -46,13 +47,16 @@ pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'s> {
     matches[0]
 }
 
+
 pub fn lookup_interface(&self, _name: &INameS<'s>) -> &InterfaceA<'s> {
     panic!("Unimplemented: lookup_interface");
 }
 
+
 pub fn lookup_struct_by_name(&self, _name: &INameS<'s>) -> &StructA<'s> {
     panic!("Unimplemented: lookup_struct_by_name");
 }
+
 
 pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
     let matches: Vec<_> = self.structs.iter().filter(|s| {
@@ -66,14 +70,14 @@ pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
 }
 }
 
+
 #[derive(Debug)]
 pub struct StructA<'s> {
     pub range: RangeS<'s>,
     pub name: IStructDeclarationNameS<'s>,
     pub attributes: &'s [ICitizenAttributeS<'s>],
     pub weakable: bool,
-    pub mutability_rune: RuneUsage<'s>,
-    pub maybe_predicted_mutability: Option<MutabilityP>,
+    pub sharedness: SharednessP,
     pub tyype: TemplateTemplataType<'s>,
     pub generic_parameters: &'s [&'s GenericParameterS<'s>],
     pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -85,14 +89,14 @@ pub struct StructA<'s> {
     _sealed: (),
 }
 
+
 impl<'s> StructA<'s> {
 pub fn new(
     range: RangeS<'s>,
     name: IStructDeclarationNameS<'s>,
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    mutability_rune: RuneUsage<'s>,
-    maybe_predicted_mutability: Option<MutabilityP>,
+    sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     generic_parameters: &'s [&'s GenericParameterS<'s>],
     header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -129,9 +133,8 @@ pub fn new(
         !members_rune_to_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
         "vassert: members_rune_to_type should not contain DenizenDefaultRegionRuneS"
     );
-    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods, _sealed: () }
+    Self { range, name, attributes, weakable, sharedness, tyype, generic_parameters, header_rune_to_type, header_rules, members_rune_to_type, member_rules, members, internal_methods, _sealed: () }
 }
-
 
 }
 
@@ -148,6 +151,7 @@ pub struct ImplA<'s> {
     pub super_interface_imprecise_name: IImpreciseNameS<'s>,
     _sealed: (),
 }
+
 
 impl<'s> ImplA<'s> {
 pub fn new(
@@ -197,14 +201,14 @@ fn generic_parameters(&self) -> &[GenericParameterS<'s>];
 
 }
 
+
 #[derive(Debug)]
 pub struct InterfaceA<'s> {
     pub range: RangeS<'s>,
     pub name: &'s TopLevelInterfaceDeclarationNameS<'s>,
     pub attributes: &'s [ICitizenAttributeS<'s>],
     pub weakable: bool,
-    pub mutability_rune: RuneUsage<'s>,
-    pub maybe_predicted_mutability: Option<MutabilityP>,
+    pub sharedness: SharednessP,
     pub tyype: TemplateTemplataType<'s>,
     pub generic_parameters: &'s [&'s GenericParameterS<'s>],
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -213,14 +217,14 @@ pub struct InterfaceA<'s> {
     _sealed: (),
 }
 
+
 impl<'s> InterfaceA<'s> {
 pub fn new(
     range: RangeS<'s>,
     name: &'s TopLevelInterfaceDeclarationNameS<'s>,
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    mutability_rune: RuneUsage<'s>,
-    maybe_predicted_mutability: Option<MutabilityP>,
+    sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     generic_parameters: &'s [&'s GenericParameterS<'s>],
     rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -249,9 +253,8 @@ pub fn new(
             "vassert: internal method generic_parameters must match interface generic_parameters"
         );
     }
-    Self { range, name, attributes, weakable, mutability_rune, maybe_predicted_mutability, tyype, generic_parameters, rune_to_type, rules, internal_methods, _sealed: () }
+    Self { range, name, attributes, weakable, sharedness, tyype, generic_parameters, rune_to_type, rules, internal_methods, _sealed: () }
 }
-
 
 }
 
@@ -274,6 +277,8 @@ pub fn unapply<'s>(_struct_a: &'s StructA<'s>) -> Option<&'s IStructDeclarationN
 }
 
 
+
+
 #[derive(Debug)]
 pub struct FunctionA<'s> {
     pub range: RangeS<'s>,
@@ -288,6 +293,7 @@ pub struct FunctionA<'s> {
     pub body: IBodyS<'s>,
     _sealed: (),
 }
+
 
 impl<'s> FunctionA<'s> {
 pub fn new(
@@ -326,12 +332,17 @@ pub fn new(
 }
 
 
+
+
+
+
 pub fn is_light(&self) -> bool {
     match &self.body {
         IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => true,
         IBodyS::CodeBody(code_body) => code_body.body.closured_names.is_empty(),
     }
 }
+
 
 pub fn is_lambda(&self) -> bool {
     match &self.name {

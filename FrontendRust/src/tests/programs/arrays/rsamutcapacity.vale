@@ -1,7 +1,7 @@
 // immutable runtime-size-array length
 
 exported func main() int {
-  a = Array<mut, int>(42);
+  a = Array<int>(42);
   a.push(7);
   return capacity(&a);
 }

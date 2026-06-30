@@ -74,8 +74,7 @@ set(BACKEND_LIB_SRCS
 		src/function/expressions/precheckborrow.cpp
 		src/function/expressions/localload.cpp
 		src/function/expressions/while.cpp
-		src/function/expressions/newimmruntimesizearray.cpp
-		src/function/expressions/newmutruntimesizearray.cpp
+		src/function/expressions/newruntimesizearray.cpp
 		src/function/expressions/staticarrayfromcallable.cpp
 		src/function/expressions/newarrayfromvalues.cpp
 

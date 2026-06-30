@@ -168,13 +168,13 @@ Ref Linear::asSubtype(
 
 LLVMTypeRef Linear::translateType(Reference* referenceM) {
   if (auto innt = dynamic_cast<Int*>(referenceM->kind)) {
-    assert(referenceM->ownership == Ownership::MUTABLE_SHARE);
+    assert(referenceM->ownership == Ownership::OWN);
     return LLVMIntTypeInContext(globalState->context, innt->bits);
   } else if (dynamic_cast<Bool*>(referenceM->kind) != nullptr) {
-    assert(referenceM->ownership == Ownership::MUTABLE_SHARE);
+    assert(referenceM->ownership == Ownership::OWN);
     return LLVMInt8TypeInContext(globalState->context);
   } else if (dynamic_cast<Float*>(referenceM->kind) != nullptr) {
-    assert(referenceM->ownership == Ownership::MUTABLE_SHARE);
+    assert(referenceM->ownership == Ownership::OWN);
     return LLVMDoubleTypeInContext(globalState->context);
   } else if (dynamic_cast<Never*>(referenceM->kind) != nullptr) {
     return LLVMArrayType(LLVMIntTypeInContext(globalState->context, NEVER_INT_BITS), 0);
@@ -1703,7 +1703,9 @@ void Linear::defineConcreteSerializeFunction(Kind* valeKind) {
             auto valeMemberM = valeStructDefM->members[i];
             auto sourceMemberValeRefNotImmdMT = valeMemberM->type;
             // curious, if false will need to change this next line which makes it imm share
-            assert(sourceMemberValeRefNotImmdMT->ownership == Ownership::MUTABLE_SHARE);
+            // VCOORD: revisit
+            assert(sourceMemberValeRefNotImmdMT->ownership == Ownership::MUTABLE_SHARE
+                || sourceMemberValeRefNotImmdMT->ownership == Ownership::OWN);
             auto sourceMemberValeImmRefMT =
                 sourceMemberValeRefNotImmdMT->location == Location::INLINE ?
                     sourceMemberValeRefNotImmdMT :
@@ -2044,7 +2046,19 @@ InterfaceKind* Linear::linearizeInterfaceKind(InterfaceKind* kindMT) {
 Reference* Linear::linearizeReference(Reference* immRcRefMT, bool mut) {
   assert(globalState->getRegion(immRcRefMT) == globalState->rcImm);
   auto hostKind = hostKindByValeKind.find(immRcRefMT->kind)->second;
-  assert(immRcRefMT->ownership == Ownership::IMMUTABLE_SHARE || immRcRefMT->ownership == Ownership::MUTABLE_SHARE);
+  // VCOORD: revisit
+  bool kindIsPrimitive =
+      dynamic_cast<Int*>(hostKind) || dynamic_cast<Bool*>(hostKind)
+      || dynamic_cast<Float*>(hostKind) || dynamic_cast<Void*>(hostKind)
+      || dynamic_cast<Never*>(hostKind);
+  if (kindIsPrimitive) {
+    assert(immRcRefMT->ownership == Ownership::OWN);
+    return globalState->metalCache->getReference(
+        Ownership::OWN, immRcRefMT->location, hostKind);
+  }
+  assert(immRcRefMT->ownership == Ownership::IMMUTABLE_SHARE
+      || immRcRefMT->ownership == Ownership::MUTABLE_SHARE);
+  // /VCOORD
   return globalState->metalCache->getReference(
       mut ? Ownership::MUTABLE_SHARE : Ownership::IMMUTABLE_SHARE,
       immRcRefMT->location,
@@ -2054,11 +2068,20 @@ Reference* Linear::linearizeReference(Reference* immRcRefMT, bool mut) {
 Reference* Linear::unlinearizeReference(Reference* hostRefMT, bool mut) {
   assert(globalState->getRegion(hostRefMT) == globalState->linearRegion);
   auto valeKind = valeKindByHostKind.find(hostRefMT->kind)->second;
+  // VCOORD: revisit
+  bool kindIsPrimitive =
+      dynamic_cast<Int*>(valeKind) || dynamic_cast<Bool*>(valeKind)
+      || dynamic_cast<Float*>(valeKind) || dynamic_cast<Void*>(valeKind)
+      || dynamic_cast<Never*>(valeKind);
+  if (kindIsPrimitive) {
+    assert(hostRefMT->ownership == Ownership::OWN);
+    return globalState->metalCache->getReference(
+        Ownership::OWN, hostRefMT->location, valeKind);
+  }
+  // /VCOORD
   assert(hostRefMT->ownership == Ownership::MUTABLE_SHARE);
   return globalState->metalCache->getReference(
-      Ownership::MUTABLE_SHARE, //mut ? Ownership::MUTABLE_SHARE : Ownership::IMMUTABLE_SHARE,
-      hostRefMT->location,
-      valeKind);
+      Ownership::MUTABLE_SHARE, hostRefMT->location, valeKind);
 }
 
 void Linear::pushRuntimeSizedArrayNoBoundsCheck(
@@ -2500,7 +2523,7 @@ LiveRef Linear::checkRefLive(
     Ref ref,
     bool refKnownLive) {
   // I think this is all we really need?
-  assert(refMT->ownership == Ownership::MUTABLE_SHARE);
+  assert(refMT->ownership == Ownership::MUTABLE_SHARE || refMT->ownership == Ownership::OWN);
   auto refLE = checkValidReference(FL(), functionState, builder, true, refMT, ref);
   return wrapToLiveRef(FL(), functionState, builder, regionInstanceRef, refMT, refLE);
 }

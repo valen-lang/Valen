@@ -21,9 +21,9 @@ namespace std {
         }
     };
     template<>
-    struct hash<Mutability> {
-        inline size_t operator()(Mutability mutability) const {
-            return (size_t)mutability;
+    struct hash<Sharedness> {
+        inline size_t operator()(Sharedness sharedness) const {
+            return (size_t)sharedness;
         }
     };
 }
@@ -89,21 +89,23 @@ public:
     linearRegionId = getRegionId(builtinPackageCoord, "linear");
     mutRegionId = getRegionId(builtinPackageCoord, "mut");
 
+    // Primitive singletons are uniformly OWN+INLINE; Str stays Share+YONDER (RC'd at runtime).
+    // VCOORD: Str should be different soon
     i32 = getInt(rcImmRegionId, 32);
-    i32Ref = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, i32);
+    i32Ref = getReference(Ownership::OWN, Location::INLINE, i32);
     i64 = getInt(rcImmRegionId, 64);
-    i64Ref = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, i64);
+    i64Ref = getReference(Ownership::OWN, Location::INLINE, i64);
     boool = getBool(rcImmRegionId);
-    boolRef = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, boool);
+    boolRef = getReference(Ownership::OWN, Location::INLINE, boool);
     flooat = getFloat(rcImmRegionId);
-    floatRef = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, flooat);
+    floatRef = getReference(Ownership::OWN, Location::INLINE, flooat);
     str = getStr(rcImmRegionId);
     mutStrRef = getReference(Ownership::MUTABLE_SHARE, Location::YONDER, str);
     immStrRef = getReference(Ownership::IMMUTABLE_SHARE, Location::YONDER, str);
     never = getNever(rcImmRegionId);
-    neverRef = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, never);
+    neverRef = getReference(Ownership::OWN, Location::INLINE, never);
     vooid = getVoid(rcImmRegionId);
-    voidRef = getReference(Ownership::MUTABLE_SHARE, Location::INLINE, vooid);
+    voidRef = getReference(Ownership::OWN, Location::INLINE, vooid);
 //    regionKind = getStructKind(getName("__Region"));
   }
 

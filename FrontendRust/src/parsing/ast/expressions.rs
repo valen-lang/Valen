@@ -322,8 +322,6 @@ pub enum IArraySizeP<'p> {
 pub struct ConstructArrayPE<'p> {
   pub range: RangeL,
   pub type_pt: Option<ITemplexPT<'p>>,
-  pub mutability_pt: Option<ITemplexPT<'p>>,
-  pub variability_pt: Option<ITemplexPT<'p>>,
   pub size: IArraySizeP<'p>,
   pub initializing_individual_elements: bool,
   pub args: &'p [&'p IExpressionPE<'p>],

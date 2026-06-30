@@ -7,7 +7,7 @@ use crate::interner::StrI;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
-use crate::parsing::ast::{IMacroInclusionP, LoadAsP, VariabilityP};
+use crate::parsing::ast::{IMacroInclusionP, LoadAsP};
 use crate::postparsing::ast::{IStructMemberS, ProgramS};
 use crate::postparsing::expressions::{
   ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LoadPartSE, LocalLoadSE,
@@ -21,7 +21,7 @@ use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
 use crate::postparsing::ast::IBodyS;
-use crate::parsing::ast::MutabilityP;
+use crate::parsing::ast::SharednessP;
 use crate::postparsing::ast::IGenericParameterTypeS;
 use crate::postparsing::expressions::ConstantBoolSE;
 use crate::postparsing::ast::ParameterS;
@@ -145,17 +145,8 @@ fn test_struct() {
   let program = compile(&scout_arena, &keywords, &parse_arena, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
-  collect_only_snode!(
-    NodeRefS::Struct(imoo),
-    NodeRefS::LiteralRule(
-      literal_rule @ LiteralSR {
-        literal: ILiteralSL::MutabilityLiteral(mutability_literal),
-        ..
-      }
-    ) if mutability_literal.mutability == MutabilityP::Mutable
-      && literal_rule.rune == imoo.mutability_rune => Some(())
-  );
-  
+  assert_eq!(imoo.sharedness, SharednessP::Single);
+
   let only_member = expect_1(&imoo.members);
   collect_only_snode!(
     NodeRefS::Struct(imoo),
@@ -170,7 +161,6 @@ fn test_struct() {
 
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
   assert_eq!(normal_member.name.as_str(), "x");
-  assert_eq!(normal_member.variability, VariabilityP::Final);
 }
 
 #[test]
@@ -1307,7 +1297,7 @@ fn report_type_mismatch() {
     r"
 struct Vec<N, T> where N Int
 {
-  values [#N]<imm>T;
+  values [#N]T;
 }
 ",
   );
@@ -1323,7 +1313,6 @@ struct Vec<N, T> where N Int
     _ => panic!("expected RuneExplicitTypeConflictS(_, CodeRune(\"N\"), _), got {:?}", err),
   }
 }
-
 
 #[test]
 fn foreach_expr() {

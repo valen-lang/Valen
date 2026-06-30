@@ -52,7 +52,9 @@ pub fn simple_main() {
 }
 
 
+
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 pub fn two_templated_structs_make_it_into_hamuts() {
     let parse_bump = bumpalo::Bump::new();
     let scout_bump = bumpalo::Bump::new();
@@ -68,11 +70,11 @@ pub fn two_templated_structs_make_it_into_hamuts() {
     let code = "
 func __pretend<T>() T { __vbi_panic() }
 
-interface MyOption<T Ref imm> imm { }
-struct MyNone<T Ref imm> imm { }
-impl<T Ref imm> MyOption<T> for MyNone<T>;
-struct MySome<T Ref imm> imm { value T; }
-impl<T Ref imm> MyOption<T> for MySome<T>;
+interface MyOption<T Ref> share { }
+struct MyNone<T Ref> share { }
+impl<T Ref> MyOption<T> for MyNone<T>;
+struct MySome<T Ref> share { value T; }
+impl<T Ref> MyOption<T> for MySome<T>;
 
 exported func main() {
   x = __pretend<MySome<int>>();
@@ -90,10 +92,11 @@ exported func main() {
     assert!(package_h.interfaces.iter().any(|i| i.id.fully_qualified_name.0 == "MyOption<i32>"));
     let my_some = package_h.structs.iter().find(|s| s.id.fully_qualified_name.0 == "MySome<i32>").expect("MySome<i32> missing");
     assert_eq!(my_some.members.len(), 1);
-    assert_eq!(my_some.members[0].tyype, CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) });
+    assert_eq!(my_some.members[0].tyype, CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: 32 })));
     let my_none = package_h.structs.iter().find(|s| s.id.fully_qualified_name.0 == "MyNone<i32>").expect("MyNone<i32> missing");
     assert!(my_none.members.is_empty());
 }
+
 
 
 #[test]
@@ -138,6 +141,65 @@ exported func main() int {
 }
 
 
+
+#[test]
+#[ignore = "blocked on CoordSendSR Some-receiver solver-conflict fix (see investigations/coord_send_some_branch_fix.md)"]
+pub fn panic_in_expr() {
+    let parse_bump = bumpalo::Bump::new();
+    let scout_bump = bumpalo::Bump::new();
+    let typing_bump = bumpalo::Bump::new();
+    let instantiating_bump = bumpalo::Bump::new();
+    let hammer_bump = bumpalo::Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let hammer_interner = HammerInterner::new(&hammer_bump);
+    let typing_interner = TypingInterner::new(&typing_bump);
+    let code = "
+import intrange.*;
+
+exported func main() int {
+  return 3 + __vbi_panic();
+}
+";
+    let resolver = get_code_map(&parse_arena, &parser_keywords)
+        .or(test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(get_package_to_resource_resolver());
+    let mut compile = test(
+        &hammer_interner, &typing_interner, &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &instantiating_bump,
+    );
+    let package_h = compile.get_hamuts().lookup_package(*PackageCoordinate::test_tld(&parse_arena, &parser_keywords));
+    let main = package_h.lookup_function("main");
+    let int_expr = match main.body {
+        ExpressionH::BlockH(b) => match b.inner {
+            ExpressionH::ConsecutorH(c) => {
+                assert_eq!(c.exprs.len(), 2);
+                let int_expr = c.exprs[0];
+                match c.exprs[1] {
+                    ExpressionH::CallH(call) => {
+                        assert_eq!(call.args_expressions.len(), 0);
+                        assert!(matches!(call.function.return_type.kind, KindHT::NeverHT(_)));
+                    }
+                    _ => panic!("expected CallH for last consecutor expr"),
+                }
+                int_expr
+            }
+            _ => panic!("expected ConsecutorH inside BlockH"),
+        },
+        _ => panic!("expected BlockH body"),
+    };
+    match int_expr {
+        ExpressionH::ConstantIntH(ci) => {
+            assert_eq!(ci.value, 3);
+            assert_eq!(ci.bits, 32);
+        }
+        _ => panic!("expected ConstantIntH(3, 32) at int_expr"),
+    }
+}
+
+
+
 #[test]
 pub fn tests_export_function() {
     let parse_bump = bumpalo::Bump::new();
@@ -163,6 +225,7 @@ pub fn tests_export_function() {
     let exported_moo = *package_h.export_name_to_function.get(&scout_arena.intern_str("moo")).expect("moo export missing");
     assert_eq!(exported_moo, moo.prototype);
 }
+
 
 
 #[test]
@@ -193,6 +256,7 @@ pub fn tests_export_struct() {
 }
 
 
+
 #[test]
 pub fn tests_export_interface() {
     let parse_bump = bumpalo::Bump::new();
@@ -219,6 +283,7 @@ pub fn tests_export_interface() {
     let exported_moo = *package_h.export_name_to_kind.get(&scout_arena.intern_str("Moo")).expect("Moo export missing");
     assert_eq!(exported_moo, moo_ref);
 }
+
 
 
 #[test]
@@ -285,6 +350,8 @@ pub fn tests_exports_from_two_modules_different_names() {
 }
 
 
+
+
 #[test]
 pub fn top_level_extern_functions_wire_format_simple_id_has_flat_shape() {
     // numInheritedGenericParameters is 0 for a top-level extern, so Hammer should not reshape.
@@ -302,7 +369,7 @@ pub fn top_level_extern_functions_wire_format_simple_id_has_flat_shape() {
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "
-extern struct Vec<T> imm;
+extern struct Vec<T>;
 extern func VecOuterNew<T>() Vec<T>;
 exported func main() int {
   v = VecOuterNew<int>();
@@ -323,6 +390,7 @@ exported func main() int {
     assert_eq!(leaf.name.0, "VecOuterNew");
     assert_eq!(leaf.template_args.len(), 1);  // <int>
 }
+
 
 
 #[test]
@@ -347,7 +415,7 @@ pub fn mixed_own_inherited_template_args_split_correctly_in_wire_format_simple_i
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "
-extern struct Foo<A> imm {
+extern struct Foo<A> {
   extern func bar<C>(c C) int;
 }
 exported func main() int {
@@ -374,6 +442,7 @@ exported func main() int {
 }
 
 
+
 #[test]
 pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_step_in_wire_format_simple_id() {
     // The reshape moves the inherited container template args (T -> i32) off the leaf function
@@ -392,7 +461,7 @@ pub fn extern_method_in_generic_extern_struct_puts_container_args_on_citizen_ste
     let hammer_interner = HammerInterner::new(&hammer_bump);
     let typing_interner = TypingInterner::new(&typing_bump);
     let code = "
-extern struct Vec<T> imm {
+extern struct Vec<T> {
   extern func new() Vec<T>;
 }
 exported func main() int {

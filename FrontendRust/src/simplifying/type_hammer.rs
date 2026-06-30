@@ -1,6 +1,6 @@
 
 use crate::final_ast::ast::{PrototypeH, PrototypeHValH, RegionH};
-use crate::final_ast::types::{CoordH, KindHT, LocationH, RuntimeSizedArrayHT, StaticSizedArrayHT};
+use crate::final_ast::types::{CoordH, KindHT, LocationH, OwnershipH, RuntimeSizedArrayHT, StaticSizedArrayHT};
 use crate::instantiating::ast::types::OwnershipI;
 use crate::simplifying::conversions::evaluate_ownership;
 use crate::instantiating::ast::ast::PrototypeI;
@@ -23,10 +23,9 @@ use crate::instantiating::ast::names::RawArrayNameI;
 use crate::instantiating::ast::names::RuntimeSizedArrayNameI;
 use crate::instantiating::ast::names::StaticSizedArrayNameI;
 use crate::instantiating::ast::types::StaticSizedArrayITValI;
-use crate::simplifying::conversions::evaluate_mutability;
-use crate::simplifying::conversions::evaluate_mutability_templata;
-use crate::simplifying::conversions::evaluate_variability_templata;
 use std::ptr::eq;
+
+
 
 
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
@@ -60,6 +59,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
+
+
     pub fn translate_coord(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -67,19 +69,22 @@ where 's: 'h, 's: 'i, 'i: 'h,
         coord: CoordI<'s, 'i>,
     ) -> CoordH<'s, 'h>
     {
-        let CoordI { ownership, kind: inner_type } = coord;
-        let location = match (ownership, inner_type) {
-            (OwnershipI::Own, _) => LocationH::YonderH,
-            (OwnershipI::ImmutableBorrow | OwnershipI::MutableBorrow, _) => LocationH::YonderH,
-            (OwnershipI::Weak, _) => LocationH::YonderH,
-            (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => LocationH::InlineH,
-            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::VoidIT(_) | KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::NeverIT(_)) => LocationH::InlineH,
-            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::StrIT(_)) => LocationH::YonderH,
-            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, _) => LocationH::YonderH,
+        let CoordI { ownership, kind: inner_type, .. } = coord;
+        // VCOORD: simplify
+        let (out_ownership, location) = match (ownership, inner_type) {
+            (_, KindIT::StructIT(s)) if hinputs.kind_externs.contains_key(&s) => (OwnershipH::OwnH, LocationH::InlineH),
+            (OwnershipI::Own, KindIT::IntIT(_) | KindIT::BoolIT(_) | KindIT::FloatIT(_) | KindIT::VoidIT(_) | KindIT::NeverIT(_)) => (evaluate_ownership(ownership), LocationH::InlineH),
+            (OwnershipI::Own, _) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::ImmutableBorrow | OwnershipI::MutableBorrow, _) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::Weak, _) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, KindIT::StrIT(_)) => (evaluate_ownership(ownership), LocationH::YonderH),
+            (OwnershipI::ImmutableShare | OwnershipI::MutableShare, _) => (evaluate_ownership(ownership), LocationH::YonderH),
         };
+        // /VCOORD
         let inner_h = self.translate_kind(hinputs, hamuts, inner_type);
-        CoordH { ownership: evaluate_ownership(ownership), location, kind: inner_h }
+        CoordH::new(out_ownership, location, inner_h)
     }
+
 
 
     pub fn translate_coords(
@@ -93,6 +98,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn check_conversion(
         &self,
         expected: CoordH<'s, 'h>,
@@ -100,6 +106,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     ) {
         panic!("Unimplemented: check_conversion");
     }
+
 
 
     pub fn translate_static_sized_array(
@@ -114,18 +121,16 @@ where 's: 'h, 's: 'i, 'i: 'h,
             Some(x) => self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: x.name }),
             None => {
                 let name = self.translate_full_name(hinputs, hamuts, &ssa_it.name);
-                let (mutability_i, variability_i, member_type, _arr_region, size) = match ssa_it.name.local_name {
+                let (member_type, _arr_region, size) = match ssa_it.name.local_name {
                     INameI::StaticSizedArray(n) => {
-                        let StaticSizedArrayNameI { template: _, size, variability, arr } = *n;
-                        let RawArrayNameI { mutability, element_type, self_region } = arr;
-                        (mutability, variability, element_type, self_region, size)
+                        let StaticSizedArrayNameI { template: _, size, arr } = *n;
+                        let RawArrayNameI { element_type, self_region } = arr;
+                        (element_type, self_region, size)
                     }
                     _ => panic!("translate_static_sized_array: local_name not StaticSizedArrayNameI"),
                 };
                 let member_reference_h = self.translate_coord(hinputs, hamuts, member_type.coord);
-                let mutability = evaluate_mutability_templata(mutability_i);
-                let variability = evaluate_variability_templata(variability_i);
-                let definition = StaticSizedArrayDefinitionHT { name, size, mutability, variability, element_type: member_reference_h };
+                let definition = StaticSizedArrayDefinitionHT { name, size, element_type: member_reference_h };
                 let result = self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: name });
                 match hamuts.static_sized_arrays().iter().find(|(_, def)| eq(self.interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: def.name }) as *const _, result as *const _)) {
                     Some(x) => panic!("vwat: {:?}", x),
@@ -135,6 +140,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
+
 
 
     pub fn translate_runtime_sized_array(
@@ -148,17 +154,16 @@ where 's: 'h, 's: 'i, 'i: 'h,
             Some(x) => self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: x.name }),
             None => {
                 let name_h = self.translate_full_name(hinputs, hamuts, &rsa_it.name);
-                let (mutability_i, member_type, _arr_region) = match rsa_it.name.local_name {
+                let (member_type, _arr_region) = match rsa_it.name.local_name {
                     INameI::RuntimeSizedArray(n) => {
                         let RuntimeSizedArrayNameI { template: _, arr } = *n;
-                        let RawArrayNameI { mutability, element_type, self_region } = arr;
-                        (mutability, element_type, self_region)
+                        let RawArrayNameI { element_type, self_region } = arr;
+                        (element_type, self_region)
                     }
                     _ => panic!("translate_runtime_sized_array: local_name not RuntimeSizedArrayNameI"),
                 };
                 let member_reference_h = self.translate_coord(hinputs, hamuts, member_type.coord);
-                let mutability = evaluate_mutability(mutability_i);
-                let definition = RuntimeSizedArrayDefinitionHT { name: name_h, mutability, element_type: member_reference_h };
+                let definition = RuntimeSizedArrayDefinitionHT { name: name_h, element_type: member_reference_h };
                 let result = self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: name_h });
                 match hamuts.runtime_sized_arrays().iter().find(|(_, def)| eq(self.interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: def.name }) as *const _, result as *const _)) {
                     Some(x) => panic!("vwat: {:?}", x),
@@ -168,6 +173,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
+
 
 
     pub fn translate_prototype(

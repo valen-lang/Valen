@@ -75,7 +75,6 @@ pub fn execute_function<'h, 's, 'v>(
         heap.increment_reference_ref_count(
             IObjectReferrerV::ArgumentToObjectReferrer(ArgumentToObjectReferrerV {
                 argument_id: ArgumentIdV { call_id, index: arg_index_i32 },
-                ownership: args[arg_index].ownership,
             }),
             args[arg_index],
         );

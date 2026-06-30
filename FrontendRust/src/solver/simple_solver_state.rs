@@ -4,6 +4,7 @@ use crate::utils::fx::HashSet;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+
 pub struct SimpleSolverState<Rule, Rune, Conclusion>
 where
     Rune: Eq + Hash,
@@ -16,6 +17,7 @@ where
     rune_to_conclusion: IndexMap<Rune, Conclusion>,
 }
 
+
 impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion>
 where
     Rule: Clone,
@@ -23,33 +25,41 @@ where
     Conclusion: Clone + PartialEq,
 {
 
+
     pub fn sanity_check(&self) {
         // vassert(rules == rules.distinct)
     }
+
 
     pub fn get_rule(&self, rule_index: i32) -> &Rule {
         &self.rules[rule_index as usize]
     }
 
+
     pub fn get_conclusion(&self, rune: &Rune) -> Option<Conclusion> {
         self.rune_to_conclusion.get(rune).cloned()
     }
+
 
     pub fn get_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.rune_to_conclusion.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 
+
     pub fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.rune_to_conclusion.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
+
 
     pub fn get_all_runes(&self) -> HashSet<Rune> {
         self.all_runes.iter().cloned().collect()
     }
 
+
     pub fn is_complete(&self) -> bool {
         self.rune_to_conclusion.len() == self.all_runes.len()
     }
+
 
     pub fn commit_step<ErrType>(
         &mut self,
@@ -114,6 +124,7 @@ where
         Ok(())
     }
 
+
     pub fn get_next_solvable(&self) -> Option<i32> {
         self.open_rule_to_puzzle_to_runes
             .iter()
@@ -128,12 +139,14 @@ where
             .min()
     }
 
+
     pub fn get_unsolved_rules(&self) -> Vec<Rule> {
         self.open_rule_to_puzzle_to_runes
             .keys()
             .map(|&idx| self.rules[idx as usize].clone())
             .collect()
     }
+
 
     pub fn get_unsolved_runes(&self) -> Vec<Rune> {
         self.all_runes.iter()
@@ -142,9 +155,11 @@ where
             .collect()
     }
 
+
     pub fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
         self.steps.clone()
     }
+
 
     pub fn rule_is_solved(&self, rule_index: i32) -> bool {
         !self.open_rule_to_puzzle_to_runes.contains_key(&rule_index)

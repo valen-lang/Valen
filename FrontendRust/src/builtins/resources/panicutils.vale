@@ -7,7 +7,7 @@ func panic() __Never {
 }
 
 func panic(msg str) __Never {
-  print(msg);
-  print("\n");
+  print(&msg);
+  print(&"\n");
   return __vbi_panic();
 }

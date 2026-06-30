@@ -2,8 +2,8 @@
 use crate::final_ast::instructions::{ExpressionH, WhileH};
 use crate::instantiating::ast::ast::{FunctionHeaderI, PrototypeI};
 use crate::instantiating::ast::expressions::{
-    DestroyImmRuntimeSizedArrayIE, DestroyStaticSizedArrayIntoFunctionIE, ExpressionIE, IfIE,
-    NewImmRuntimeSizedArrayIE, NewMutRuntimeSizedArrayIE, ReferenceExpressionIE,
+    DestroyStaticSizedArrayIntoFunctionIE, ExpressionIE, IfIE,
+    NewRuntimeSizedArrayIE, ReferenceExpressionIE,
     StaticArrayFromCallableIE, WhileIE,
 };
 use crate::instantiating::ast::hinputs::HinputsI;
@@ -24,7 +24,8 @@ use crate::final_ast::instructions::ConstantF64H;
 use crate::final_ast::instructions::ConstantIntH;
 use crate::final_ast::instructions::ConstantStrH;
 use crate::final_ast::instructions::ConstantVoidH;
-use crate::final_ast::instructions::DestroyMutRuntimeSizedArrayH;
+use crate::final_ast::instructions::CopyPrimH;
+use crate::final_ast::instructions::DestroyRuntimeSizedArrayH;
 use crate::final_ast::instructions::DestroyStaticSizedArrayIntoFunctionH;
 use crate::final_ast::instructions::DiscardH;
 use crate::final_ast::instructions::ExternCallH;
@@ -33,8 +34,7 @@ use crate::final_ast::instructions::InterfaceCallH;
 use crate::final_ast::instructions::IsSameInstanceH;
 use crate::final_ast::instructions::LockWeakH;
 use crate::final_ast::instructions::NewArrayFromValuesH;
-use crate::final_ast::instructions::NewImmRuntimeSizedArrayH;
-use crate::final_ast::instructions::NewMutRuntimeSizedArrayH;
+use crate::final_ast::instructions::NewRuntimeSizedArrayH;
 use crate::final_ast::instructions::NewStructH;
 use crate::final_ast::instructions::PopRuntimeSizedArrayH;
 use crate::final_ast::instructions::PushRuntimeSizedArrayH;
@@ -50,7 +50,6 @@ use crate::final_ast::types::KindHT;
 use crate::final_ast::types::LocationH;
 use crate::final_ast::types::NeverHT;
 use crate::final_ast::types::OwnershipH;
-use crate::final_ast::types::Variability;
 use crate::instantiating::ast::ast::ILocalVariableI;
 use crate::instantiating::ast::expressions::AddressExpressionIE;
 use crate::instantiating::ast::expressions::ArgLookupIE;
@@ -71,6 +70,8 @@ use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 
+// from `Hammer.translate` per overload-suffix pattern, since both methods now
+// live on the same `impl Hammer` per typing-pass collapse.)
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -342,6 +343,15 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     (access, Vec::new())
                 }
                 RE::Reinterpret(a) => panic!("translate_expression: Reinterpret branch"),
+                RE::CopyPrim(cp) => {
+                    let (inner_he, inner_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(cp.inner));
+                    let result_type = self.translate_coord(hinputs, hamuts, cp.result);
+                    let node = ExpressionH::CopyPrimH(self.interner.alloc(CopyPrimH {
+                        inner: inner_he,
+                        result_type,
+                    }));
+                    (node, inner_deferreds)
+                }
                 RE::Construct(a) => {
                     let (members_he, deferreds) = self.translate_expressions_until_never(hinputs, hamuts, current_function_header, locals, a.args);
                     // Don't evaluate anything that can't ever be run, see BRCOBS
@@ -366,7 +376,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let new_struct_and_deferreds_expr_h = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, new_struct_node, deferreds);
                     (new_struct_and_deferreds_expr_h, Vec::new())
                 }
-                RE::NewMutRuntimeSizedArray(nmrsa_ie) => {
+                RE::NewRuntimeSizedArray(nmrsa_ie) => {
                     let access = self.translate_new_mut_runtime_sized_array(hinputs, hamuts, current_function_header, locals, nmrsa_ie);
                     (access, Vec::new())
                 }
@@ -378,9 +388,9 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let das_h = self.translate_destroy_static_sized_array(hinputs, hamuts, current_function_header, locals, das2);
                     (das_h, Vec::new())
                 }
-                RE::DestroyMutRuntimeSizedArray(dmrsa) => {
+                RE::DestroyRuntimeSizedArray(dmrsa) => {
                     let (rsa_he, rsa_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(dmrsa.array_expr));
-                    let destroy_he = ExpressionH::DestroyMutRuntimeSizedArrayH(self.interner.alloc(DestroyMutRuntimeSizedArrayH {
+                    let destroy_he = ExpressionH::DestroyRuntimeSizedArrayH(self.interner.alloc(DestroyRuntimeSizedArrayH {
                         array_expression: rsa_he.expect_runtime_sized_array_access(),
                     }));
                     let expr = self.translate_deferreds(hinputs, hamuts, current_function_header, locals, destroy_he, rsa_deferreds);
@@ -437,11 +447,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     let (loaded_access_h, deferreds) = self.translate_load(hinputs, hamuts, current_function_header, locals, load2);
                     (loaded_access_h, deferreds)
                 }
-                RE::DestroyImmRuntimeSizedArray(a) => panic!("translate_expression: DestroyImmRuntimeSizedArray branch"),
-                RE::NewImmRuntimeSizedArray(nirsa_ie) => {
-                    let access = self.translate_new_imm_runtime_sized_array(hinputs, hamuts, current_function_header, locals, nirsa_ie);
-                    (access, Vec::new())
-                }
             },
             ExpressionIE::Address(a) => match a {
                 AddressExpressionIE::LocalLookup(lookup2) => {
@@ -461,6 +466,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             },
         }
     }
+
 
 
     pub fn translate_deferreds(
@@ -501,7 +507,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 v.push(void);
                 v
             } else {
-                let temporary_result_local = locals.add_hammer_local(original_expr.result_type(), Variability::Final);
+                let temporary_result_local = locals.add_hammer_local(original_expr.result_type());
                 let stackify = ExpressionH::StackifyH(self.interner.alloc(StackifyH { source_expr: original_expr, local: temporary_result_local, name: None }));
                 let unstackify = ExpressionH::UnstackifyH(self.interner.alloc(UnstackifyH { local: temporary_result_local }));
                 locals.mark_unstackified(temporary_result_local.id);
@@ -516,6 +522,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         assert!(original_expr.result_type() == result.result_type());
         result
     }
+
 
 
     pub fn translate_expressions_until_never(
@@ -551,6 +558,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_expressions_and_deferreds(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -566,6 +574,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }).collect();
         consecutive(self.interner, &exprs)
     }
+
 
 
     pub fn translate_extern_function_call(
@@ -590,6 +599,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let call_result_node = ExpressionH::ExternCallH(self.interner.alloc(ExternCallH { function: function_ref_h.prototype, args_expressions: self.interner.bump().alloc_slice_fill_iter(args_he.into_iter()) }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, call_result_node, args_deferreds)
     }
+
 
 
     pub fn translate_function_pointer_call(
@@ -624,13 +634,14 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_new_mut_runtime_sized_array(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
         current_function_header: &FunctionHeaderI<'s, 'i>,
         locals: &mut Locals<'s, 'i, 'h>,
-        construct_array2: &NewMutRuntimeSizedArrayIE<'s, 'i>,
+        construct_array2: &NewRuntimeSizedArrayIE<'s, 'i>,
     ) -> ExpressionH<'s, 'h>
     {
         let array_type2 = construct_array2.array_type;
@@ -640,47 +651,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let array_type_h = self.translate_runtime_sized_array(hinputs, hamuts, self.instantiating_interner.intern_runtime_sized_array_it_ci(RuntimeSizedArrayITValI { name: array_type2.name }));
         assert!(array_ref_type_h.expect_runtime_sized_array_coord().kind == KindHT::RuntimeSizedArrayHT(array_type_h));
         let element_type = hamuts.get_runtime_sized_array(array_type_h).element_type;
-        let construct_array_call_node = ExpressionH::NewMutRuntimeSizedArrayH(self.interner.alloc(NewMutRuntimeSizedArrayH {
+        let construct_array_call_node = ExpressionH::NewRuntimeSizedArrayH(self.interner.alloc(NewRuntimeSizedArrayH {
             capacity_expression: capacity_register_id.expect_int_access(),
             element_type,
             result_type: array_ref_type_h.expect_runtime_sized_array_coord(),
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, capacity_deferreds)
-    }
-
-
-    pub fn translate_new_imm_runtime_sized_array(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        construct_array2: &'i NewImmRuntimeSizedArrayIE<'s, 'i>,
-    ) -> ExpressionH<'s, 'h>
-    {
-        let NewImmRuntimeSizedArrayIE { array_type: array_type2, size_expr: size_expr2, generator: generator_expr2, generator_method, result: _ } = construct_array2;
-        let (size_register_id, size_deferreds) =
-            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(*size_expr2));
-        let (generator_register_id, generator_deferreds) =
-            self.translate_expression(hinputs, hamuts, current_function_header, locals, ExpressionIE::Reference(*generator_expr2));
-        let array_ref_type_h =
-            self.translate_coord(hinputs, hamuts, construct_array2.result);
-        let array_type_h =
-            self.translate_runtime_sized_array(hinputs, hamuts, array_type2);
-        assert!(array_ref_type_h.expect_runtime_sized_array_coord().kind == KindHT::RuntimeSizedArrayHT(array_type_h));
-        let element_type = hamuts.get_runtime_sized_array(array_type_h).element_type;
-        let generator_method_h =
-            self.translate_prototype(hinputs, hamuts, generator_method);
-        let construct_array_call_node = ExpressionH::NewImmRuntimeSizedArrayH(self.interner.alloc(NewImmRuntimeSizedArrayH {
-            size_expression: size_register_id.expect_int_access(),
-            generator_expression: generator_register_id,
-            generator_method: generator_method_h,
-            element_type,
-            result_type: array_ref_type_h.expect_runtime_sized_array_coord(),
-        }));
-        let mut deferreds: Vec<ExpressionIE<'s, 'i>> = generator_deferreds;
-        deferreds.extend(size_deferreds);
-        self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, deferreds)
     }
 
 
@@ -709,6 +685,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, construct_array_call_node, generator_deferreds)
     }
+
 
 
     pub fn translate_destroy_static_sized_array(
@@ -741,19 +718,6 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
-    pub fn translate_destroy_imm_runtime_sized_array(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        current_function_header: &FunctionHeaderI<'s, 'i>,
-        locals: &mut Locals<'s, 'i, 'h>,
-        das2: &DestroyImmRuntimeSizedArrayIE<'s, 'i>,
-    ) -> ExpressionH<'s, 'h>
-    {
-        panic!("Unimplemented: translate_destroy_imm_runtime_sized_array");
-    }
-
-
     pub fn translate_if(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -768,7 +732,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let else_block2 = if2.else_call;
         let (condition_block_h, cond_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, parent_locals, ExpressionIE::Reference(condition2));
         assert!(cond_deferreds.is_empty());
-        assert_eq!(condition_block_h.result_type(), CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) });
+        assert_eq!(condition_block_h.result_type(), CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::BoolHT(BoolHT)));
         let mut then_locals = parent_locals.snapshot();
         let (then_block_h, then_deferreds) = self.translate_expression(hinputs, hamuts, current_function_header, &mut then_locals, ExpressionIE::Reference(then_block2));
         assert!(then_deferreds.is_empty());
@@ -814,6 +778,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_while(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -829,6 +794,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let while_call_node = self.interner.alloc(WhileH { body_block: expr });
         while_call_node
     }
+
 
 
     pub fn translate_interface_function_call(

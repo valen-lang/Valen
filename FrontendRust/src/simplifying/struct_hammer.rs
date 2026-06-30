@@ -1,13 +1,13 @@
 
 use crate::final_ast::ast::{EdgeH, InterfaceDefinitionH, InterfaceMethodH, StructDefinitionH, StructMemberH};
-use crate::final_ast::types::{CoordH, InterfaceHT, Mutability, OpaqueHT, StructHT};
+use crate::final_ast::types::{CoordH, InterfaceHT, Sharedness, OpaqueHT, StructHT};
 use crate::instantiating::ast::ast::EdgeI;
 use crate::instantiating::ast::names::IdI;
 use crate::instantiating::ast::citizens::{
     AddressMemberTypeI, InterfaceDefinitionI, ReferenceMemberTypeI, StructDefinitionI, StructMemberI,
 };
 use crate::instantiating::ast::hinputs::HinputsI;
-use crate::instantiating::ast::types::{CoordI, InterfaceIT, StructIT, VariabilityI};
+use crate::instantiating::ast::types::{CoordI, InterfaceIT, StructIT};
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::Hammer;
 use crate::final_ast::ast::PrototypeH;
@@ -27,13 +27,13 @@ use crate::instantiating::ast::templata::CoordTemplataI;
 use crate::instantiating::ast::templata::ITemplataI;
 use crate::typing::types::types::{IRegionT, RegionT};
 use crate::instantiating::ast::types::InterfaceITValI;
-use crate::instantiating::ast::types::MutabilityI;
-use crate::simplifying::conversions::evaluate_mutability_templata;
-use crate::simplifying::conversions::evaluate_variability;
+use crate::instantiating::ast::types::SharednessI;
 use crate::simplifying::name_hammer::simplify_id;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use std::marker::PhantomData;
 use std::ptr::eq;
+
+
 
 
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
@@ -51,6 +51,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_interface_methods(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -64,6 +65,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             InterfaceMethodH { prototype_h, virtual_param_index: *virtual_param_index }
         }).collect()
     }
+
 
 
     pub fn translate_interface(
@@ -84,20 +86,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 let interface_def_h = InterfaceDefinitionH {
                     id: full_name_h,
                     weakable: interface_def_i.weakable,
-                    mutability: evaluate_mutability_templata(interface_def_i.mutability),
+                    sharedness: interface_def_i.sharedness.into(),
                     super_interfaces: &[],
                     methods: self.interner.alloc_slice_from_vec(methods_h),
                 };
                 hamuts.add_interface(interface_it, interface_def_h);
                 assert!(eq(interface_def_h.get_ref(self.interner) as *const _, temporary_interface_ref_h as *const _));
-                match interface_def_i.mutability {
-                    MutabilityI::Mutable => {}
-                    MutabilityI::Immutable => {}
+                match interface_def_i.sharedness {
+                    SharednessI::Single => {}
+                    SharednessI::Shared => {}
                 }
                 interface_def_h.get_ref(self.interner)
             }
         }
     }
+
 
 
     pub fn translate_structs(
@@ -116,6 +119,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_struct_i(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -130,7 +134,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 let temporary_struct_ref_h = self.interner.intern_struct_ht(StructHTValH { id: full_name_h });
                 hamuts.forward_declare_struct(struct_it, temporary_struct_ref_h);
                 let struct_def_i = hinputs.lookup_struct(&struct_it.id);
-                let mutability_h = evaluate_mutability_templata(struct_def_i.mutability);
+                let mutability_h = struct_def_i.sharedness.into();
                 let members_h = self.translate_members(hinputs, hamuts, &struct_def_i.instantiated_citizen.id, mutability_h, struct_def_i.members);
                 let edges_h_vec = self.translate_edges_for_struct(hinputs, hamuts, temporary_struct_ref_h, struct_it);
                 let edges_h: &'h [EdgeH<'s, 'h>] = self.interner.alloc_slice_from_vec(edges_h_vec);
@@ -139,20 +143,21 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     id: full_name_h,
                     weakable: struct_def_i.weakable,
                     extern_,
-                    mutability: mutability_h,
+                    sharedness: mutability_h,
                     edges: edges_h,
                     members: self.interner.alloc_slice_from_vec(members_h),
                 };
                 hamuts.add_struct_originating_from_typing_pass(struct_it, struct_def_h);
                 assert!(eq(struct_def_h.get_ref(self.interner) as *const _, temporary_struct_ref_h as *const _));
-                match struct_def_i.mutability {
-                    MutabilityI::Mutable => {}
-                    MutabilityI::Immutable => {}
+                match struct_def_i.sharedness {
+                    SharednessI::Single => {}
+                    SharednessI::Shared => {}
                 }
                 struct_def_h.get_ref(self.interner)
             }
         }
     }
+
 
 
     pub fn translate_opaque_i(
@@ -169,7 +174,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                 let temporary_struct_ref_h = self.interner.intern_struct_ht(StructHTValH { id: full_name_h });
                 hamuts.forward_declare_struct(struct_it, temporary_struct_ref_h);
                 let struct_def_i = hinputs.lookup_struct(&struct_it.id);
-                let _mutability_h = evaluate_mutability_templata(struct_def_i.mutability);
+                let _mutability_h: Sharedness = struct_def_i.sharedness.into();
                 assert!(struct_def_i.members.is_empty());
 
                 let _edges_h = self.translate_edges_for_struct(hinputs, hamuts, temporary_struct_ref_h, struct_it);
@@ -188,56 +193,53 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_members(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i>,
-        struct_mutability_h: Mutability,
-        members: &[StructMemberI<'s, 'i>],
+    &self,
+    hinputs: &HinputsI<'s, 'i>,
+    hamuts: &mut Hamuts<'s, 'i, 'h>,
+    struct_name: &IdI<'s, 'i>,
+    struct_mutability_h: Sharedness,
+    members: &[StructMemberI<'s, 'i>],
     ) -> Vec<StructMemberH<'s, 'h>>
     {
         members.iter().map(|m| self.translate_member(hinputs, hamuts, struct_name, struct_mutability_h, m)).collect()
     }
 
 
+
     pub fn translate_member(
-        &self,
-        hinputs: &HinputsI<'s, 'i>,
-        hamuts: &mut Hamuts<'s, 'i, 'h>,
-        struct_name: &IdI<'s, 'i>,
-        struct_mutability_h: Mutability,
-        member2: &StructMemberI<'s, 'i>,
+    &self,
+    hinputs: &HinputsI<'s, 'i>,
+    hamuts: &mut Hamuts<'s, 'i, 'h>,
+    struct_name: &IdI<'s, 'i>,
+    struct_mutability_h: Sharedness,
+    member2: &StructMemberI<'s, 'i>,
     ) -> StructMemberH<'s, 'h>
     {
-        let (variability, member_type) = match member2.tyype {
+        let member_type = match member2.tyype {
             IMemberTypeI::ReferenceMemberTypeI(r) => {
-                (member2.variability, self.translate_coord(hinputs, hamuts, r.reference))
+                self.translate_coord(hinputs, hamuts, r.reference)
             }
             IMemberTypeI::AddressMemberTypeI(a) => {
                 let reference_h = self.translate_coord(hinputs, hamuts, a.reference);
-                let box_struct_ref_h = self.make_box(hinputs, hamuts, member2.variability, a.reference, reference_h);
-                (member2.variability, CoordH {
-                    ownership: OwnershipH::MutableBorrowH,
-                    location: LocationH::YonderH,
-                    kind: KindHT::StructHT(box_struct_ref_h),
-                })
+                let box_struct_ref_h = self.make_box(hinputs, hamuts, a.reference, reference_h);
+                CoordH::new(OwnershipH::MutableBorrowH, LocationH::YonderH, KindHT::StructHT(box_struct_ref_h))
             }
         };
         let added_name = add_step(struct_name, member2.name.into());
         StructMemberH {
             name: self.translate_full_name(hinputs, hamuts, &added_name),
-            variability: evaluate_variability(variability),
             tyype: member_type,
         }
     }
+
 
 
     pub fn make_box(
         &self,
         hinputs: &HinputsI<'s, 'i>,
         hamuts: &mut Hamuts<'s, 'i, 'h>,
-        _conceptual_variability: VariabilityI,
         type2: CoordI<'s, 'i>,
         type_h: CoordH<'s, 'h>,
     ) -> &'h StructHT<'s, 'h>
@@ -262,12 +264,8 @@ where 's: 'h, 's: 'i, 'i: 'h,
             Some(struct_def_h) => struct_def_h.get_ref(self.interner),
             None => {
                 let temporary_struct_ref_h = self.interner.intern_struct_ht(StructHTValH { id: box_full_name_h });
-                // We don't actually care about the given variability, because even if it's final, we still need
-                // the box to contain a varying reference, see VCBAAF.
-                let actual_variability = VariabilityI::Varying;
                 let member_h = StructMemberH {
                     name: self.add_step(hamuts, temporary_struct_ref_h.id, self.keywords.box_member_name),
-                    variability: evaluate_variability(actual_variability),
                     tyype: type_h,
                 };
                 let members_slice: &'h [StructMemberH<'s, 'h>] = self.interner.bump().alloc_slice_copy(&[member_h]);
@@ -275,7 +273,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
                     id: box_full_name_h,
                     weakable: false,
                     extern_: false,
-                    mutability: Mutability::Mutable,
+                    sharedness: Sharedness::Single,
                     edges: &[],
                     members: members_slice,
                 };
@@ -285,6 +283,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
             }
         }
     }
+
 
 
     pub fn translate_edges_for_struct(
@@ -303,6 +302,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_edges_for_struct_with_edges(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -313,6 +313,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         edges2.iter().map(|e| self.translate_edge(hinputs, hamuts, struct_ref_h, self.instantiating_interner.intern_interface_it_ci(InterfaceITValI { id: e.super_interface }), e)).collect()
     }
+
 
 
     pub fn translate_edge(
@@ -343,6 +344,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn lookup_struct(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -352,6 +354,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         hinputs.lookup_struct(&struct_tt.id)
     }
+
 
 
     pub fn lookup_interface(

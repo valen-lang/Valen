@@ -8,7 +8,7 @@ pub struct GlobalOptions {
 }
 
 impl GlobalOptions {
-  
+
   pub fn apply() -> GlobalOptions {
     GlobalOptions {
       sanity_check: false,

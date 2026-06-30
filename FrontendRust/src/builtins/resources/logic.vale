@@ -1,6 +1,11 @@
+import v.builtins.implicit_clone.*;
 
 func not(b bool) bool { return __vbi_not(b); }
+// TSUGAR: kept the &bool overload alongside so existing TSUGAR sites that already wrap with `&` still resolve.
+func not(b &bool) bool { return __vbi_not(__copy_prim(b)); }
 extern func __vbi_not(b bool) bool;
 
 func ==(left bool, right bool) bool { return __vbi_eqBoolBool(left, right); }
+// TSUGAR: func ==(left bool, right bool) bool { return __vbi_eqBoolBool(left, right); }
+func ==(left &bool, right &bool) bool { return __vbi_eqBoolBool(__copy_prim(left), __copy_prim(right)); }
 extern func __vbi_eqBoolBool(left bool, right bool) bool;

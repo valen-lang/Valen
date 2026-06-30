@@ -1,17 +1,17 @@
 
-sealed interface MyOption imm { }
+sealed interface MyOption share { }
 
-struct MySome imm {
+struct MySome share {
   value @MyList;
 }
 impl MyOption for MySome;
 
-struct MyNone imm { }
+struct MyNone share { }
 impl MyOption for MyNone;
 
 
-struct MyList imm {
-  value @int;
+struct MyList share {
+  value int;
   next @MyOption;
 }
 

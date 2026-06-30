@@ -67,9 +67,10 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
 
-    println!("cargo:rerun-if-changed={}", backend_dir.join("src/ffi.cpp").display());
-    println!("cargo:rerun-if-changed={}", backend_dir.join("src/metal/metal_cache_ffi.cpp").display());
-    println!("cargo:rerun-if-changed={}", backend_dir.join("src/metal/metal_cache_ffi.h").display());
+    // Watch the entire Backend/src tree so any C++ edit triggers a cmake rebuild.
+    // Without this, only the three FFI files would be tracked and edits elsewhere
+    // in Backend would silently link a stale .a into the test binary.
+    println!("cargo:rerun-if-changed={}", backend_dir.join("src").display());
     println!("cargo:rerun-if-changed={}", backend_dir.join("CMakeLists.txt").display());
     println!("cargo:rerun-if-env-changed=LLVM_CONFIG");
     println!("cargo:rerun-if-env-changed=LLVM_DIR");

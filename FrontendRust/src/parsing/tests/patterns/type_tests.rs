@@ -4,7 +4,7 @@ use crate::cast;
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
-  INameDeclarationP, ITemplexPT, MutabilityP, OwnershipP, PatternPP, VariabilityP,
+  INameDeclarationP, ITemplexPT, SharednessP, OwnershipP, PatternPP,
 };
 use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
@@ -53,72 +53,6 @@ fn static_sized_array() {
     pattern.templex.as_ref().unwrap(),
     ITemplexPT::StaticSizedArray
   );
-  assert_eq!(
-    cast!(ssa.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(ssa.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
-fn static_sized_array_with_imm() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm>MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let ssa = cast!(
-    pattern.templex.as_ref().unwrap(),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(
-    cast!(ssa.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Immutable
-  );
-  assert_eq!(
-    cast!(ssa.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
-  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element, "MutableStruct");
-  assert!(pattern.destructure.is_none());
-}
-
-#[test]
-fn static_sized_array_with_imm_and_vary() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm, vary>MutableStruct");
-  let destination = pattern.destination.unwrap();
-  assert!(matches!(
-    destination.decl,
-    INameDeclarationP::IgnoredLocalNameDeclaration(_)
-  ));
-  assert!(destination.mutate.is_none());
-  let ssa = cast!(
-    pattern.templex.as_ref().unwrap(),
-    ITemplexPT::StaticSizedArray
-  );
-  assert_eq!(
-    cast!(ssa.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Immutable
-  );
-  assert_eq!(
-    cast!(ssa.variability, ITemplexPT::Variability).1,
-    VariabilityP::Varying
-  );
   assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
@@ -129,7 +63,7 @@ fn runtime_sized_array() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ #[]int");
+  let pattern = compile(&parse_arena, &keywords, "_ []int");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -139,10 +73,6 @@ fn runtime_sized_array() {
   let rsa = cast!(
     pattern.templex.as_ref().unwrap(),
     ITemplexPT::RuntimeSizedArray
-  );
-  assert_eq!(
-    cast!(rsa.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Immutable
   );
   assert_templex_name(rsa.element, "int");
   assert!(pattern.destructure.is_none());
@@ -186,14 +116,6 @@ fn static_sized_array_with_borrow() {
   );
   assert!(interpreted.maybe_region.is_none());
   let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
-  assert_eq!(
-    cast!(ssa.mutability, ITemplexPT::Mutability).1,
-    MutabilityP::Mutable
-  );
-  assert_eq!(
-    cast!(ssa.variability, ITemplexPT::Variability).1,
-    VariabilityP::Final
-  );
   assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
@@ -204,7 +126,7 @@ fn static_sized_array_with_weak() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let pattern = compile(&parse_arena, &keywords, "_ &&[#3]<_, _>MutableStruct");
+  let pattern = compile(&parse_arena, &keywords, "_ &&[#3]MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -218,8 +140,6 @@ fn static_sized_array_with_weak() {
   );
   assert!(interpreted.maybe_region.is_none());
   let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
-  cast!(ssa.mutability, ITemplexPT::AnonymousRune);
-  cast!(ssa.variability, ITemplexPT::AnonymousRune);
   assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
   assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());

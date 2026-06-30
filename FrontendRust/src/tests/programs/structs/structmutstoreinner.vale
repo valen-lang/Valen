@@ -3,11 +3,12 @@ struct Outer {
 }
 
 struct Inner {
-  x! int;
+  x int;
 }
 
 exported func main() int {
   o = Outer(Inner(73));
   set o.inner.x = 42;
-  return o.inner.x;
+  // TSUGAR:   return o.inner.x;
+  return __copy_prim(o.inner.x);
 }

@@ -39,7 +39,6 @@ pub struct VivemTests {}
 
 #[test]
 fn return_7() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let hammer_bump = Bump::new();
@@ -58,7 +57,7 @@ fn return_7() {
         shortened_name: main_str,
         fully_qualified_name: main_str,
     });
-    let i32_return = CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) };
+    let i32_return = CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: 32 }));
     let main_proto = interner.intern_prototype(PrototypeHValH {
         id: main_id,
         params: &[],
@@ -109,7 +108,6 @@ fn return_7() {
 
 #[test]
 fn adding() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let hammer_bump = Bump::new();
@@ -120,7 +118,7 @@ fn adding() {
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let interner = HammerInterner::new(&hammer_bump);
 
-    let int_coord = CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) };
+    let int_coord = CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: 32 }));
 
     let builtin_pkg_ref: &PackageCoordinate<'_> = scout_arena.intern_package_coordinate(keywords.empty_string, &[]);
     let test_tld_ref: &PackageCoordinate<'_> = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);

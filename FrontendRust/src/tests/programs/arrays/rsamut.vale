@@ -1,9 +1,11 @@
 // mutable runtime-size-array
 
 struct MyIntIdentity {}
-func __call(this &MyIntIdentity, i int) int { i }
+// TSUGAR: func __call(this &MyIntIdentity, i int) int { i }
+func __call(this &MyIntIdentity, i int) int { __copy_prim(i) }
 
 exported func main() int {
-  a = Array<mut, int>(5, &MyIntIdentity());
-  return a[3];
+  a = Array<int>(5, &MyIntIdentity());
+  // TSUGAR:   return a[3];
+  return __copy_prim(a[3]);
 }

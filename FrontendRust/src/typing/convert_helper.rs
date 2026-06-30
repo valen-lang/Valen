@@ -5,10 +5,11 @@ use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::compiler::Compiler;
 use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::ast::expressions::UpcastTE;
-
+use crate::typing::env::function_environment_t::NodeEnvironmentBox;
 
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 
@@ -19,10 +20,12 @@ where 's: 't,
 {
     pub fn convert_exprs(
         &self,
-        env: IInDenizenEnvironmentT<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'t>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
         source_exprs: &[ReferenceExpressionTE<'s, 't>],
         target_pointer_types: &[CoordT<'s, 't>],
     ) -> Vec<ReferenceExpressionTE<'s, 't>> {
@@ -36,7 +39,7 @@ target:
         let mut previous_ref_exprs = Vec::new();
         for (source_expr, target_pointer_type) in source_exprs.iter().zip(target_pointer_types.iter()) {
             let ref_expr =
-                self.convert(env, coutputs, range, call_location, *source_expr, *target_pointer_type);
+                self.convert(nenv, life, coutputs, range, call_location, context_region, *source_expr, *target_pointer_type);
             previous_ref_exprs.push(ref_expr);
         }
         previous_ref_exprs
@@ -44,10 +47,12 @@ target:
 
     pub fn convert(
         &self,
-        env: IInDenizenEnvironmentT<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'t>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
         source_expr: ReferenceExpressionTE<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
     ) -> ReferenceExpressionTE<'s, 't> {
@@ -61,36 +66,41 @@ target:
         }
 
         let target_ownership = target_pointer_type.ownership;
-        let target_type = target_pointer_type.kind;
+        let target_kind = target_pointer_type.kind;
         let source_ownership = source_expr.result().coord.ownership;
-        let source_type = source_expr.result().coord.kind;
+        let source_kind = source_expr.result().coord.kind;
 
-        match target_pointer_type.kind {
+        match target_kind {
             KindT::Never(_) => panic!("vcurious: convert targeting Never"),
             _ => {}
         }
 
-        match (source_ownership, target_ownership) {
-            (OwnershipT::Own, OwnershipT::Own) => {}
-            (OwnershipT::Borrow, OwnershipT::Own) => panic!("Supplied a borrow but target wants to own the argument"),
-            (OwnershipT::Own, OwnershipT::Borrow) => panic!("Supplied an owning but target wants to only borrow"),
-            (OwnershipT::Borrow, OwnershipT::Borrow) => {}
-            (OwnershipT::Share, OwnershipT::Share) => {}
-            (OwnershipT::Weak, OwnershipT::Weak) => {}
-            _ => panic!("Supplied a {:?} but target wants {:?}", source_ownership, target_ownership),
-        }
+        let converted_kind_expr =
+            if source_kind == target_kind {
+                source_expr
+            } else {
+                match (ISubKindTT::try_from(source_kind), ISuperKindTT::try_from(target_kind)) {
+                    (Ok(source_sub_kind), Ok(target_super_kind)) => {
+                        self.convert_with_subkind(
+                            IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
+                            coutputs, range, call_location, source_expr, source_sub_kind, target_super_kind)
+                    }
+                    _ => panic!("vfail: cannot convert {:?} to {:?}", source_kind, target_kind),
+                }
+            };
 
-        if source_type == target_type {
-            return source_expr;
-        }
+        let converted_expr =
+            match (source_ownership, target_ownership) {
+                (OwnershipT::Own, OwnershipT::Own) => converted_kind_expr,
+                (OwnershipT::Borrow, OwnershipT::Own) => panic!("Supplied a borrow but target wants to own the argument"),
+                (OwnershipT::Own, OwnershipT::Borrow) => panic!("Supplied an owning but target wants to only borrow"),
+                (OwnershipT::Borrow, OwnershipT::Borrow) => converted_kind_expr,
+                (OwnershipT::Share, OwnershipT::Share) => converted_kind_expr,
+                (OwnershipT::Weak, OwnershipT::Weak) => converted_kind_expr,
+                _ => panic!("Supplied a {:?} but target wants {:?}", source_ownership, target_ownership),
+            };
 
-        let converted = match (ISubKindTT::try_from(source_type), ISuperKindTT::try_from(target_type)) {
-            (Ok(source_sub_kind), Ok(target_super_kind)) => {
-                self.convert_with_subkind(env, coutputs, range, call_location, source_expr, source_sub_kind, target_super_kind)
-            }
-            _ => panic!("vfail: cannot convert {:?} to {:?}", source_type, target_type),
-        };
-        converted
+        converted_expr
     }
 
     pub fn convert_with_subkind(

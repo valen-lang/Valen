@@ -28,8 +28,6 @@ use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::names::names::ImplBoundNameValT;
 use crate::typing::names::names::IdValT;
 use crate::typing::templata::templata::expect_integer;
-use crate::typing::templata::templata::expect_mutability;
-use crate::typing::templata::templata::expect_variability;
 use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
@@ -853,29 +851,23 @@ where 's: 't,
 
         match template {
             ITemplataT::RuntimeSizedArrayTemplate(_) => {
-                let m = args[0];
-                let coord = match args[1] {
+                let coord = match args[0] {
                     ITemplataT::Coord(ct) => ct.coord,
-                    _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
+                    _ => panic!("Expected CoordTemplataT as first arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
                 };
-                let mutability = expect_mutability(m);
                 let context_region = RegionT { region: IRegionT::Default };
-                let _rsa = self.resolve_runtime_sized_array(coord, mutability, context_region);
+                let _rsa = self.resolve_runtime_sized_array(coord, context_region);
                 Ok(())
             }
             ITemplataT::StaticSizedArrayTemplate(_) => {
                 let s = args[0];
-                let m = args[1];
-                let v = args[2];
-                let coord = match args[3] {
+                let coord = match args[1] {
                     ITemplataT::Coord(ct) => ct.coord,
-                    _ => panic!("Expected CoordTemplataT as fourth arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
+                    _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
                 };
                 let size = expect_integer(s);
-                let mutability = expect_mutability(m);
-                let variability = expect_variability(v);
                 let context_region = RegionT { region: IRegionT::Default };
-                let _ssa = self.resolve_static_sized_array(mutability, variability, size, coord, context_region);
+                let _ssa = self.resolve_static_sized_array(size, coord, context_region);
                 Ok(())
             }
             ITemplataT::StructDefinition(it) => {

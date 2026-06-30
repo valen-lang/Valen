@@ -875,16 +875,16 @@ LLVMTypeRef RCImm::translateType(Reference* referenceM) {
 //LLVMTypeRef RCImm::getControlBlockStruct(Kind* kind) {
 //  if (auto structKind = dynamic_cast<StructKind*>(kind)) {
 //    auto structM = globalState->program->getStruct(structKind);
-//    assert(structM->mutability == Mutability::IMMUTABLE);
+//    assert(structM->sharedness == Sharedness::SHARED);
 //  } else if (auto interfaceKind = dynamic_cast<InterfaceKind*>(kind)) {
 //    auto interfaceM = globalState->program->getInterface(interfaceKind);
-//    assert(interfaceM->mutability == Mutability::IMMUTABLE);
+//    assert(interfaceM->sharedness == Sharedness::SHARED);
 //  } else if (auto ssaMT = dynamic_cast<StaticSizedArrayT*>(kind)) {
 //    auto ssaDef = globalState->program->getStaticSizedArray(ssaMT);
-//    assert(ssaDef->mutability == Mutability::IMMUTABLE);
+//    assert(ssaDef->sharedness == Sharedness::SHARED);
 //  } else if (auto rsaMT = dynamic_cast<RuntimeSizedArrayT*>(kind)) {
 //    auto rsaDef = globalState->program->getRuntimeSizedArray(rsaMT);
-//    assert(rsaDef->mutability == Mutability::IMMUTABLE);
+//    assert(rsaDef->sharedness == Sharedness::SHARED);
 //  } else if (auto strMT = dynamic_cast<Str*>(kind)) {
 //  } else {
 //    { assert(false); throw 1337; }
@@ -952,7 +952,7 @@ std::string RCImm::generateInterfaceDefsC(
 std::string RCImm::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
-  if (rsaDefM->mutability == Mutability::IMMUTABLE) {
+  if (rsaDefM->sharedness == Sharedness::SHARED) {
     { assert(false); throw 1337; }
   } else {
     auto name = currentPackage->getKindExportName(rsaDefM->kind, true);
@@ -963,7 +963,7 @@ std::string RCImm::generateRuntimeSizedArrayDefsC(
 std::string RCImm::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
-  if (ssaDefM->mutability == Mutability::IMMUTABLE) {
+  if (ssaDefM->sharedness == Sharedness::SHARED) {
     { assert(false); throw 1337; }
   } else {
     auto name = currentPackage->getKindExportName(ssaDefM->kind, true);

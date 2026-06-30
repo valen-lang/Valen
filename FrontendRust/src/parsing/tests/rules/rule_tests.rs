@@ -76,7 +76,6 @@ fn relations() {
   }
 }
 
-
 #[test]
 fn super_complicated() {
   let parse_bump = Bump::new();
@@ -84,7 +83,6 @@ fn super_complicated() {
   let keywords = Keywords::new_for_parse(&parse_arena);
   compile(&parse_arena, &keywords, "C = any([#I]X, [#N]T)");
 }
-
 
 #[test]
 fn destructure_prototype() {
@@ -102,7 +100,6 @@ fn destructure_prototype() {
   assert_templex_name(cast!(equals.right, IRulexPR::Templex), "moo");
 }
 
-
 #[test]
 fn func() {
   let parse_bump = Bump::new();
@@ -114,7 +111,6 @@ fn func() {
   assert!(func.parameters.is_empty());
   assert_templex_name(func.return_type, "T");
 }
-
 
 #[test]
 fn prototype_with_coords() {

@@ -12,6 +12,7 @@ use crate::utils::fx::HashMap;
 // TODO: rename
 
 
+
 fn compile_program_for_error<'s, 'ctx, 'p>(
     compilation: &mut HigherTypingCompilation<'s, 'ctx, 'p>,
 ) -> ICompileErrorA<'s>
@@ -330,6 +331,7 @@ where P = Refs(), Prot[P, str]
         })
     );
 }
+
 
 // NOVEL CODE
 #[test]

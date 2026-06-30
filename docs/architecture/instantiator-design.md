@@ -1,6 +1,6 @@
 # Instantiating Pass Design
 
-Architecture and design decisions for the Scala-to-Rust instantiating-pass migration. Companion to `docs/architecture/typing-pass-design-v3.md` and `docs/architecture/simplifying_pass_design.md`. Operational handoff in `migrate-tl.md` at the repo root.
+Architecture and design decisions for the Scala-to-Rust instantiating-pass migration. Companion to `docs/architecture/typing-pass-design-v3.md` and `docs/architecture/simplifying_pass_design.md`. Operational handoff in `docs/skills/migrate-tl.md`.
 
 This pass takes typing-pass output (`HinputsT<'s, 't>`) and produces monomorphized output (`HinputsI<'s, 'i>`) for the simplifying pass. It is the pass that resolves generics into concrete instantiations: every templated function/struct/interface gets one concrete instance per reachable use-site, generic placeholders become concrete types, bound arguments get threaded into v-tables, and region modes get collapsed from `sI` (still-placeholdered) through `nI` (per-denizen renumbered) to `cI` (concrete output-ready). Tree-shaking falls out of reachability — uncalled overloads never appear in `HinputsI`.
 

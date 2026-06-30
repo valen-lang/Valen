@@ -3,6 +3,7 @@ use super::errors::*;
 use super::lexing_iterator::*;
 use crate::Keywords;
 use crate::parse_arena::ParseArena;
+use crate::parsing::ast::SharednessP;
 use std::result::Result as StdResult;
 
 
@@ -483,12 +484,11 @@ where
     let maybe_generic_args = self.lex_angled(iter)?;
     iter.consume_comments_and_whitespace();
 
-    let maybe_mutability = if !iter.peek_complete_word("where") && iter.peek() != '{' {
-      Some(self.lex_scramble(iter, true, true, true)?)
+    let sharedness = if iter.try_skip_complete_word("share") {
+      SharednessP::Shared
     } else {
-      None
+      SharednessP::Single
     };
-
     iter.consume_comments_and_whitespace();
 
     let maybe_rules = if iter.try_skip_complete_word("where") {
@@ -558,7 +558,7 @@ where
       range: RangeL::new(begin, header_end),
       name,
       attributes,
-      mutability: maybe_mutability,
+      sharedness,
       identifying_runes: maybe_generic_args,
       template_rules: maybe_rules,
       contents_range,
@@ -590,12 +590,11 @@ where
     let maybe_generic_args = self.lex_angled(iter)?;
     iter.consume_comments_and_whitespace();
 
-    let maybe_mutability = if !iter.peek_complete_word("where") && iter.peek() != '{' {
-      Some(self.lex_scramble(iter, true, true, true)?)
+    let sharedness = if iter.try_skip_complete_word("share") {
+      SharednessP::Shared
     } else {
-      None
+      SharednessP::Single
     };
-
     iter.consume_comments_and_whitespace();
 
     let maybe_rules = if iter.try_skip_complete_word("where") {
@@ -645,7 +644,7 @@ where
       range: RangeL::new(begin, header_end),
       name,
       attributes,
-      mutability: maybe_mutability,
+      sharedness,
       maybe_identifying_runes: maybe_generic_args,
       template_rules: maybe_rules,
       body_range: RangeL::new(members_begin, end),

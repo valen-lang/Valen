@@ -22,6 +22,7 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 
 
+
 fn read_code_from_resource(resource_filename: &str) -> String {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("src/tests")
@@ -31,7 +32,6 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 
 #[test]
 fn parenthesized_method_syntax_will_move_instead_of_borrow() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -39,15 +39,15 @@ fn parenthesized_method_syntax_will_move_instead_of_borrow() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: bork.a is &int
     let code = r"
-
 struct Bork { a int; }
 func doSomething(bork Bork) int {
-  return bork.a;
+  return __copy_prim(&bork.a);
 }
 func main() int {
   bork = Bork(42);
-  return (bork).doSomething();
+  return (^bork).doSomething();
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -59,7 +59,6 @@ func main() int {
 
 #[test]
 fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -67,11 +66,11 @@ fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: bork.a is &int
     let code = r"
-
 struct Bork { a int; }
 func doSomething(bork Bork) int {
-  return bork.a;
+  return __copy_prim(&bork.a);
 }
 func main() int {
   return Bork(42).doSomething();
@@ -86,7 +85,6 @@ func main() int {
 
 #[test]
 fn explicit_borrow_method_call() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -94,11 +92,11 @@ fn explicit_borrow_method_call() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: bork.a is &int
     let code = r"
-
 struct Bork { a int; }
 func doSomething(bork &Bork) int {
-  return bork.a;
+  return __copy_prim(&bork.a);
 }
 func main() int {
   return Bork(42)&.doSomething();
@@ -113,7 +111,6 @@ func main() int {
 
 #[test]
 fn calling_a_method_on_a_local_will_supply_borrow_ref() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -121,11 +118,11 @@ fn calling_a_method_on_a_local_will_supply_borrow_ref() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: bork.a is &int
     let code = r"
-
 struct Bork { a int; }
 func doSomething(bork &Bork) int {
-  return bork.a;
+  return __copy_prim(&bork.a);
 }
 func main() int {
   bork = Bork(42);
@@ -141,7 +138,6 @@ func main() int {
 
 #[test]
 fn calling_a_method_on_a_member_will_supply_borrow_ref() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -149,16 +145,16 @@ fn calling_a_method_on_a_member_will_supply_borrow_ref() {
     let scout_arena = ScoutArena::new(&scout_bump);
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    // TSUGAR: bork.a is &int
     let code = r"
-
 struct Zork { bork Bork; }
 struct Bork { a int; }
 func doSomething(bork &Bork) int {
-  return bork.a;
+  return __copy_prim(&bork.a);
 }
 func main() int {
   zork = Zork(Bork(42));
-  return zork.bork.doSomething();
+  return (&zork.bork).doSomething();
 }
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
@@ -170,7 +166,6 @@ func main() int {
 
 #[test]
 fn no_derived_or_custom_drop_gives_error() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -179,8 +174,6 @@ fn no_derived_or_custom_drop_gives_error() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
     let code = r"
-
-
 #!DeriveStructDrop
 struct Muta { }
 
@@ -200,9 +193,9 @@ exported func main() {
     }
     assert_humanized_eq(
         &humanize_compile_error(&mut compile, err),
-        r#"At test:0.vale:7:1:
+        r#"At test:0.vale:5:1:
 exported func main() {
-At test:0.vale:8:3:
+At test:0.vale:6:3:
   Muta();
 Couldn't find a suitable function drop(Muta). No function with that name exists.
 
@@ -212,7 +205,6 @@ Couldn't find a suitable function drop(Muta). No function with that name exists.
 
 #[test]
 fn opt_with_undroppable_contents() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -235,13 +227,13 @@ where func drop(T)void;
 func drop<T>(opt Some<T>)
 where func drop(T)void
 {
-  [x] = opt;
+  [x] = ^opt;
 }
 
 abstract func get<T>(virtual opt Opt<T>) T;
 func get<T>(opt Some<T>) T {
-  [value] = opt;
-  return value;
+  [value] = ^opt;
+  return ^value;
 }
 
 #!DeriveStructDrop
@@ -250,9 +242,8 @@ struct Spaceship { }
 exported func main() {
   s Opt<Spaceship> = Some<Spaceship>(Spaceship());
   // Drops the ship manually
-  [ ] = (s).get();
+  [ ] = (^s).get();
 }
-
 ";
     let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
         .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
@@ -263,7 +254,6 @@ exported func main() {
 
 #[test]
 fn opt_with_undroppable_mutable_ref_contents() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -288,7 +278,7 @@ where func drop(T)void;
 func drop<T>(opt Some<T>)
 where func drop(T)void
 {
-  [x] = opt;
+  [x] = ^opt;
 }
 
 #!DeriveStructDrop
@@ -301,9 +291,8 @@ struct ContainerWithDerivedDrop {
 exported func main() {
   ship = Spaceship();
   c = ContainerWithDerivedDrop(Some<&Spaceship>(&ship));
-  [ ] = ship;
+  [ ] = ^ship;
 }
-
 ";
     let resolver = get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
         .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
@@ -315,7 +304,6 @@ exported func main() {
 
 #[test]
 fn restackify() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -345,7 +333,6 @@ fn restackify() {
 
 #[test]
 fn loop_restackify() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -375,7 +362,6 @@ fn loop_restackify() {
 
 #[test]
 fn destructure_restackify() {
-
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
     let typing_bump = Bump::new();
@@ -402,4 +388,3 @@ fn destructure_restackify() {
         }) => Some(())
     );
 }
-

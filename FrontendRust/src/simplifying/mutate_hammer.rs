@@ -4,7 +4,7 @@ use crate::instantiating::ast::ast::FunctionHeaderI;
 use crate::instantiating::ast::expressions::{ExpressionIE, MutateIE, ReferenceExpressionIE};
 use crate::instantiating::ast::hinputs::HinputsI;
 use crate::instantiating::ast::names::IVarNameI;
-use crate::instantiating::ast::types::{CoordI, VariabilityI};
+use crate::instantiating::ast::types::CoordI;
 use crate::simplifying::hamuts::Hamuts;
 use crate::simplifying::hammer::{Hammer, Locals};
 use crate::final_ast::instructions::LocalStoreH;
@@ -30,6 +30,8 @@ use crate::instantiating::ast::types::KindIT;
 use crate::simplifying::let_hammer::BOX_MEMBER_INDEX;
 
 
+
+
 impl<'s, 'i, 'h, 'ctx> Hammer<'s, 'i, 'h, 'ctx>
 where 's: 'h, 's: 'i, 'i: 'h,
 {
@@ -48,11 +50,11 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let _source_result_pointer_type_h =
             self.translate_coord(hinputs, hamuts, source_expr2.result());
         let (old_value_access, destination_deferreds) = match destination_expr2 {
-            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::ReferenceLocalVariableI(ReferenceLocalVariableI { name: var_id, variability: _, collapsed_coord: _ }), .. }) => {
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::ReferenceLocalVariableI(ReferenceLocalVariableI { name: var_id, collapsed_coord: _ }), .. }) => {
                 self.translate_mundane_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, var_id)
             }
-            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::AddressibleLocalVariableI(AddressibleLocalVariableI { name: var_id, variability, collapsed_coord: reference }), .. }) => {
-                self.translate_addressible_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, _source_result_pointer_type_h, var_id, *variability, *reference)
+            AddressExpressionIE::LocalLookup(LocalLookupIE { local_variable: ILocalVariableI::AddressibleLocalVariableI(AddressibleLocalVariableI { name: var_id, collapsed_coord: reference }), .. }) => {
+                self.translate_addressible_local_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, _source_result_pointer_type_h, var_id, *reference)
             }
             AddressExpressionIE::ReferenceMemberLookup(ReferenceMemberLookupIE { struct_expr: struct_expr2, member_name, .. }) => {
                 self.translate_mundane_member_mutate(hinputs, hamuts, current_function_header, locals, source_expr_result_line, *struct_expr2, member_name)
@@ -70,6 +72,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let combined_deferreds: Vec<_> = source_deferreds.into_iter().chain(destination_deferreds.into_iter()).collect();
         self.translate_deferreds(hinputs, hamuts, current_function_header, locals, old_value_access, combined_deferreds)
     }
+
 
 
     pub fn translate_mundane_runtime_sized_array_mutate(
@@ -104,6 +107,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_mundane_static_sized_array_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -117,6 +121,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     {
         panic!("Unimplemented: translate_mundane_static_sized_array_mutate");
     }
+
 
 
     pub fn translate_addressible_member_mutate(
@@ -139,21 +144,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         let member_index = struct_def_i.members.iter().position(|m| m.name == *member_name).expect("member not found") as i32;
         assert!(member_index >= 0);
         let member2 = &struct_def_i.members[member_index as usize];
-        let variability = member2.variability;
         let boxed_type2 = member2.tyype.expect_address_member().reference;
         let boxed_type_h = self.translate_coord(hinputs, hamuts, boxed_type2);
-        let box_struct_ref_h = self.make_box(hinputs, hamuts, variability, boxed_type2, boxed_type_h);
-        let expected_struct_box_member_type = CoordH {
-            ownership: OwnershipH::MutableBorrowH,
-            location: LocationH::YonderH,
-            kind: KindHT::StructHT(box_struct_ref_h),
-        };
+        let box_struct_ref_h = self.make_box(hinputs, hamuts, boxed_type2, boxed_type_h);
+        let expected_struct_box_member_type = CoordH::new(OwnershipH::MutableBorrowH, LocationH::YonderH, KindHT::StructHT(box_struct_ref_h));
         let name_h = self.translate_full_name(hinputs, hamuts, &add_step(&current_function_header.id, INameI::from(*member_name)));
-        let load_result_type = CoordH {
-            ownership: OwnershipH::MutableBorrowH,
-            location: LocationH::YonderH,
-            kind: KindHT::StructHT(box_struct_ref_h),
-        };
+        let load_result_type = CoordH::new(OwnershipH::MutableBorrowH, LocationH::YonderH, KindHT::StructHT(box_struct_ref_h));
         let load_box_node = ExpressionH::MemberLoadH(self.interner.alloc(MemberLoadH {
             struct_expression: destination_result_line.expect_struct_access(),
             member_index,
@@ -170,6 +166,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
         }));
         (store_node, destination_deferreds)
     }
+
 
 
     pub fn translate_mundane_member_mutate(
@@ -203,6 +200,7 @@ where 's: 'h, 's: 'i, 'i: 'h,
     }
 
 
+
     pub fn translate_addressible_local_mutate(
         &self,
         hinputs: &HinputsI<'s, 'i>,
@@ -212,12 +210,12 @@ where 's: 'h, 's: 'i, 'i: 'h,
         source_expr_result_line: ExpressionH<'s, 'h>,
         source_result_pointer_type_h: CoordH<'s, 'h>,
         var_id: &'i IVarNameI<'s, 'i>,
-        variability: VariabilityI,
         reference: CoordI<'s, 'i>,
     ) -> (ExpressionH<'s, 'h>, Vec<ExpressionIE<'s, 'i>>)
     {
         panic!("Unimplemented: translate_addressible_local_mutate");
     }
+
 
 
     pub fn translate_mundane_local_mutate(

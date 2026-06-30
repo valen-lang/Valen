@@ -10,7 +10,7 @@ use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironment
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::templata::templata::FunctionTemplataT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
-use crate::typing::types::types::{MutabilityT, OwnershipT, StructTT, VariabilityT};
+use crate::typing::types::types::{SharednessT, OwnershipT, StructTT};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
@@ -18,7 +18,8 @@ use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILoo
 use crate::typing::types::types::StructTTValT;
 use crate::typing::compiler_outputs::DeferredActionT;
 use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::typing::templata::templata::{ITemplataT, expect_mutability};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata::conversions::evaluate_mutability;
 use crate::typing::hinputs_t::make;
 use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
 use crate::parsing::ast::IMacroInclusionP;
@@ -27,7 +28,6 @@ use crate::typing::names::names::IInterfaceTemplateNameT;
 use crate::typing::types::types::InterfaceTTValT;
 use std::marker::PhantomData;
 use crate::postparsing::names::RuneNameS;
-use crate::typing::templata::conversions::evaluate_variability;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
@@ -38,7 +38,7 @@ use crate::postparsing::names::FunctionNameS;
 use crate::postparsing::names::INameS;
 use crate::typing::ast::citizens::AddressMemberTypeT;
 use crate::postparsing::ast::MacroCallS;
-use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::templata::templata::SharednessTemplataT;
 use crate::postparsing::names::IStructDeclarationNameS;
 use crate::typing::ast::ast::PrototypeT;
 use std::iter::once;
@@ -84,19 +84,17 @@ where 's: 't,
                 }
             }).copied().collect();
 
-        let rune_name_s = self.scout_arena.intern_imprecise_name(
-            IImpreciseNameValS::RuneName(RuneNameValS { rune: struct_a.mutability_rune.rune }));
-        let struct_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(struct_runes_env);
-        let mutability_results = struct_runes_env_as_iindenizen
-            .lookup_nearest_with_imprecise_name(rune_name_s, {
-                let mut s = HashSet::default();
-                s.insert(ILookupContext::TemplataLookupContext);
-                s
-            }, self.typing_interner);
-        let mutability = match mutability_results {
-            Some(m) => expect_mutability(m),
-            None => panic!("vwat: no mutability rune found"),
-        };
+        let sharedness: SharednessT = evaluate_mutability(struct_a.sharedness);
+
+        let is_extern = struct_a.attributes.iter().any(|attr|
+            matches!(attr, ICitizenAttributeS::Extern(_)));
+        if is_extern && sharedness == SharednessT::Shared {
+            // VCOORD: error message here instead of a panic
+            panic!(
+                "extern struct {:?} is declared `share`; post-cut design forbids share-flavored extern structs (they must be Own+Inline). Remove the `share` keyword.",
+                struct_a.name,
+            );
+        }
 
         let default_called_macros: Vec<MacroCallS<'s>> = vec![
             MacroCallS {
@@ -136,49 +134,6 @@ where 's: 't,
 
         let members_vec = self.make_struct_members(struct_inner_env_ref, coutputs, struct_a.members);
 
-        if mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) {
-            for (index, member) in members_vec.iter().enumerate() {
-                let member_s = &struct_a.members[index];
-                let member_range = member_s.range();
-                let member_name = match member_s {
-                    IStructMemberS::NormalStructMember(m) => m.name.0,
-                    IStructMemberS::VariadicStructMember(_) => "(unnamed)",
-                };
-                let member_range_with_parent: Vec<RangeS<'s>> =
-                    once(member_range).chain(parent_ranges.iter().copied()).collect();
-                let member_range_t = self.typing_interner.alloc_slice_copy(&member_range_with_parent);
-                let struct_name_s = match &struct_a.name {
-                    IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
-                        INameS::TopLevelStructDeclaration(n),
-                    other => {
-                        panic!("implement: struct_name_s for non-TopLevelStructDeclarationName: {:?}", other);
-                        // case other => vimpl(other)
-                    }
-                };
-                match member {
-                    IStructMemberT::Variadic(_) => {
-                        panic!("implement: immutable variadic struct member check");
-                        // vimpl()
-                    }
-                    IStructMemberT::Normal(NormalStructMemberT { variability, tyype, .. }) => {
-                        if *variability == VariabilityT::Varying {
-                            return Err(ICompileErrorT::ImmStructCantHaveVaryingMember {
-                                range: member_range_t,
-                                struct_name: struct_name_s,
-                                member_name,
-                            });
-                        }
-                        if tyype.reference().ownership != OwnershipT::Share {
-                            return Err(ICompileErrorT::ImmStructCantHaveMutableMember {
-                                range: member_range_t,
-                                struct_name: struct_name_s,
-                                member_name,
-                            });
-                        }
-                    }
-                }
-            }
-        }
 
         for (name, entry) in outer_env.templatas().name_to_entry.iter() {
             match entry {
@@ -213,7 +168,7 @@ where 's: 't,
             instantiated_citizen: placeholdered_struct_tt,
             attributes: attributes_slice,
             weakable: struct_a.weakable,
-            mutability,
+            sharedness,
             members: members_slice,
             is_closure: false,
             instantiation_bound_params,
@@ -274,19 +229,7 @@ where 's: 't,
             }).copied().collect();
         let _maybe_export = interface_a.attributes.iter().find(|attr| matches!(attr, ICitizenAttributeS::Export(_)));
 
-        let rune_name_s = self.scout_arena.intern_imprecise_name(
-            IImpreciseNameValS::RuneName(RuneNameValS { rune: interface_a.mutability_rune.rune }));
-        let interface_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(interface_runes_env);
-        let mutability_results = interface_runes_env_as_iindenizen
-            .lookup_nearest_with_imprecise_name(rune_name_s, {
-                let mut s = HashSet::default();
-                s.insert(ILookupContext::TemplataLookupContext);
-                s
-            }, self.typing_interner);
-        let mutability = match mutability_results {
-            Some(m) => expect_mutability(m),
-            None => panic!("vwat: no mutability rune found for interface"),
-        };
+        let sharedness: SharednessT = evaluate_mutability(interface_a.sharedness);
 
         let mut internal_methods: Vec<(PrototypeT<'s, 't>, usize)> = Vec::new();
         for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
@@ -320,7 +263,7 @@ where 's: 't,
             ref_: placeholdered_interface_tt,
             attributes: attributes_slice,
             weakable: interface_a.weakable,
-            mutability,
+            sharedness,
             instantiation_bound_params,
             internal_methods: internal_methods_slice,
         });
@@ -363,7 +306,6 @@ where 's: 't,
                 // vassertOne(...)
             }
         };
-        let variability_t = evaluate_variability(member.variability());
         match member {
             IStructMemberS::NormalStructMember(n) => {
                 let coord = match type_templata {
@@ -375,7 +317,6 @@ where 's: 't,
                 };
                 IStructMemberT::Normal(NormalStructMemberT {
                     name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name})),
-                    variability: variability_t,
                     tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
                 })
             }
@@ -395,24 +336,11 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_a: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(StructTT<'s, 't>, SharednessT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
 
-        let is_mutable = members.iter().any(|m| {
-            if m.variability == VariabilityT::Varying {
-                true
-            } else {
-                match &m.tyype {
-                    IMemberTypeT::Address(_) => true,
-                    IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) => {
-                        match reference.ownership {
-                            OwnershipT::Own | OwnershipT::Borrow | OwnershipT::Weak => true,
-                            OwnershipT::Share => false,
-                        }
-                    }
-                }
-            }
-        });
-        let mutability = if is_mutable { MutabilityT::Mutable } else { MutabilityT::Immutable };
+        // VCOORD:
+        // In the distant future, we'll want to opt into shared closures with a simpler syntax.
+        let sharedness = SharednessT::Single;
 
         let understruct_template_name_t =
             self.typing_interner.intern_lambda_citizen_template_name(LambdaCitizenTemplateNameT {
@@ -526,20 +454,20 @@ where 's: 't,
             IInDenizenEnvironmentT::Citizen(struct_outer_env));
         coutputs.declare_type_inner_env(understruct_templated_id,
             IInDenizenEnvironmentT::Citizen(struct_inner_env));
-        coutputs.declare_type_mutability(understruct_templated_id, ITemplataT::Mutability(MutabilityTemplataT { mutability }));
+        coutputs.declare_type_mutability(understruct_templated_id, sharedness);
 
         let closure_struct_definition = StructDefinitionT {
             template_name: *understruct_templated_id,
             instantiated_citizen: *understruct_struct_tt,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
             weakable: false,
-            mutability: ITemplataT::Mutability(MutabilityTemplataT { mutability }),
+            sharedness,
             members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|m| {
                 let tyype = match &m.tyype {
                     IMemberTypeT::Address(a) => IMemberTypeT::Address(AddressMemberTypeT { reference: a.reference }),
                     IMemberTypeT::Reference(r) => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: r.reference }),
                 };
-                IStructMemberT::Normal(NormalStructMemberT { name: m.name, variability: m.variability, tyype })
+                IStructMemberT::Normal(NormalStructMemberT { name: m.name, tyype })
             }).collect::<Vec<_>>()),
             is_closure: true,
             instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {
@@ -568,7 +496,7 @@ where 's: 't,
         self.evaluate_generic_function_from_non_call(
             coutputs, parent_ranges, call_location, drop_function_templata)?;
 
-        Ok((closured_vars_struct_ref, mutability, function_templata))
+        Ok((closured_vars_struct_ref, sharedness, function_templata))
     }
 
 }

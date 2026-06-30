@@ -13,34 +13,65 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use crate::utils::code_hierarchy::PackageCoordinate;
 
 
+
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordH<'s, 'h> where 's: 'h {
     pub ownership: OwnershipH,
     pub location: LocationH,
     pub kind: KindHT<'s, 'h>,
+    // Forces construction via `CoordH::new(...)`
+    _sealed: (),
 }
 
 
+
 impl<'s, 'h> CoordH<'s, 'h> where 's: 'h {
+    pub fn new(ownership: OwnershipH, location: LocationH, kind: KindHT<'s, 'h>) -> Self {
+        // VCOORD: simplify
+        match (ownership, location, kind) {
+            (OwnershipH::OwnH, LocationH::InlineH,
+                KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_)
+                | KindHT::VoidHT(_) | KindHT::NeverHT(_) | KindHT::OpaqueHT(_)) => {}
+            (OwnershipH::OwnH, LocationH::YonderH,
+                KindHT::StructHT(_) | KindHT::InterfaceHT(_)
+                | KindHT::StaticSizedArrayHT(_) | KindHT::RuntimeSizedArrayHT(_)) => {}
+            (OwnershipH::MutableBorrowH | OwnershipH::ImmutableBorrowH | OwnershipH::WeakH,
+                LocationH::YonderH, _) => {}
+            (OwnershipH::MutableShareH | OwnershipH::ImmutableShareH, LocationH::YonderH,
+                KindHT::StrHT(_) | KindHT::StructHT(_) | KindHT::InterfaceHT(_)
+                | KindHT::StaticSizedArrayHT(_) | KindHT::RuntimeSizedArrayHT(_)) => {}
+            _ => panic!(
+                "Illegal CoordH combination: ownership={:?}, location={:?}, kind={:?}",
+                ownership, location, kind,
+            ),
+        }
+        // /VCOORD
+        CoordH { ownership, location, kind, _sealed: () }
+    }
+
     pub fn expect_static_sized_array_coord(&self) -> Self {
         match self.kind {
             KindHT::StaticSizedArrayHT(_) => *self,
             _ => panic!("expect_static_sized_array_coord: not a static sized array"),
         }
     }
+
     pub fn expect_runtime_sized_array_coord(&self) -> Self {
         match self.kind {
             KindHT::RuntimeSizedArrayHT(_) => *self,
             _ => panic!("expect_runtime_sized_array_coord: not a runtime sized array"),
         }
     }
+
     pub fn expect_struct_coord(&self) -> Self {
         match self.kind {
             KindHT::StructHT(_) => *self,
             _ => panic!("expect_struct_coord: not a struct"),
         }
     }
+
     pub fn expect_interface_coord(&self) -> Self {
         match self.kind {
             KindHT::InterfaceHT(_) => *self,
@@ -69,6 +100,7 @@ impl<'s, 'h> KindHT<'s, 'h> where 's: 'h {
         }
     }
 }
+
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindHT<'s, 'h> where 's: 'h {
@@ -86,6 +118,10 @@ pub enum KindHT<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntHT {
@@ -93,9 +129,11 @@ pub struct IntHT {
 }
 
 
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidHT;
+
 
 
 /// Value-type
@@ -107,9 +145,11 @@ pub struct OpaqueHT<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolHT;
+
 
 
 /// Value-type
@@ -117,9 +157,11 @@ pub struct BoolHT;
 pub struct StrHT;
 
 
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatHT;
+
 
 
 /// Value-type
@@ -129,6 +171,7 @@ pub struct NeverHT {
 }
 
 
+
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceHT<'s, 'h> where 's: 'h {
@@ -136,11 +179,13 @@ pub struct InterfaceHT<'s, 'h> where 's: 'h {
     pub _must_intern: MustIntern,
 }
 
+
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceHTValH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s>,
 }
+
 
 
 /// Interning permanent (see @TFITCX)
@@ -150,11 +195,13 @@ pub struct StructHT<'s, 'h> where 's: 'h {
     pub _must_intern: MustIntern,
 }
 
+
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructHTValH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s>,
 }
+
 
 
 /// Interning permanent (see @TFITCX)
@@ -164,6 +211,7 @@ pub struct StaticSizedArrayHT<'s, 'h> where 's: 'h {
     pub _must_intern: MustIntern,
 }
 
+
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
@@ -171,20 +219,21 @@ pub struct StaticSizedArrayHTValH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub name: &'h IdH<'s>,
     pub size: i64,
-    pub mutability: Mutability,
-    pub variability: Variability,
     pub element_type: CoordH<'s, 'h>,
 }
+
 impl<'s, 'h> StaticSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub fn kind(&self, interner: &HammerInterner<'s, 'h>) -> &'h StaticSizedArrayHT<'s, 'h> {
         interner.intern_static_sized_array_ht(StaticSizedArrayHTValH { id: self.name })
     }
 }
+
 
 
 /// Interning permanent (see @TFITCX)
@@ -194,6 +243,7 @@ pub struct RuntimeSizedArrayHT<'s, 'h> where 's: 'h {
     pub _must_intern: MustIntern,
 }
 
+
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
@@ -201,18 +251,20 @@ pub struct RuntimeSizedArrayHTValH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub name: &'h IdH<'s>,
-    pub mutability: Mutability,
     pub element_type: CoordH<'s, 'h>,
 }
+
 impl<'s, 'h> RuntimeSizedArrayDefinitionHT<'s, 'h> where 's: 'h {
     pub fn kind(&self, interner: &HammerInterner<'s, 'h>) -> &'h RuntimeSizedArrayHT<'s, 'h> {
         interner.intern_runtime_sized_array_ht(RuntimeSizedArrayHTValH { name: self.name })
     }
 }
+
 
 
 /// Temporary state
@@ -221,6 +273,8 @@ pub struct CodeLocation<'s> {
     pub file: FileCoordinate<'s>,
     pub offset: i32,
 }
+
+
 
 
 /// Polyvalue
@@ -235,6 +289,8 @@ pub enum OwnershipH {
 }
 
 
+
+
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum LocationH {
@@ -243,19 +299,22 @@ pub enum LocationH {
 }
 
 
+
+
 /// Polyvalue
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum Mutability {
-    Immutable,
-    Mutable,
+pub enum Sharedness {
+    Shared,
+    Single,
 }
 
-
-/// Polyvalue
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub enum Variability {
-    Final,
-    Varying,
+impl From<crate::instantiating::ast::types::SharednessI> for Sharedness {
+    fn from(s: crate::instantiating::ast::types::SharednessI) -> Self {
+        match s {
+            crate::instantiating::ast::types::SharednessI::Single => Sharedness::Single,
+            crate::instantiating::ast::types::SharednessI::Shared => Sharedness::Shared,
+        }
+    }
 }
 
 
@@ -266,12 +325,14 @@ pub struct SimpleId<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Value-type
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SimpleIdStep<'s, 'h> where 's: 'h {
     pub name: StrI<'s>,
     pub template_args: &'h [SimpleId<'s, 'h>],
 }
+
 
 
 /// Value-type
@@ -281,6 +342,7 @@ pub struct HamutsFunctionExtern<'s, 'h> where 's: 'h {
     pub prototype: &'h PrototypeH<'s, 'h>,
     pub simple_id: SimpleId<'s, 'h>,
 }
+
 
 
 /// Value-type

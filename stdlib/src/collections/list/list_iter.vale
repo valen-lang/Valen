@@ -2,7 +2,7 @@
 
 
 struct ListIter<E> where E Ref {
-  list_array &Array<mut, E>;
+  list_array &Array<E>;
   pos! int;
 }
 
@@ -21,7 +21,7 @@ func next<E>(iter &ListIter<E>) Opt<&E> {
 
 
 struct ListEntriesIter<E> where E Ref {
-  list_array &Array<mut, E>;
+  list_array &Array<E>;
   pos! int;
 }
 func entries<E>(list &List<E>) ListEntriesIter<E> {

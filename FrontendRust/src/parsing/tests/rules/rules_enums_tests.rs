@@ -95,68 +95,6 @@ fn ownership() {
   }
 }
 
-#[test]
-fn mutability() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  {
-    let rule = compile(&parse_arena, &keywords, "X");
-    let templex = cast!(rule, IRulexPR::Templex);
-    assert_templex_name(&templex, "X");
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "X Mutability");
-    let typed = cast!(rule, IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
-    assert_eq!(typed.tyype, ITypePR::MutabilityType);
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "X = mut");
-    let equals = cast!(rule, IRulexPR::Equals);
-    assert_templex_name(cast!(equals.left, IRulexPR::Templex), "X");
-    let mutability = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Mutability);
-    assert_eq!(mutability.1, MutabilityP::Mutable);
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "X Mutability = mut");
-    let equals = cast!(rule, IRulexPR::Equals);
-    let typed = cast!(equals.left, IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
-    assert_eq!(typed.tyype, ITypePR::MutabilityType);
-    let mutability = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Mutability);
-    assert_eq!(mutability.1, MutabilityP::Mutable);
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "_ Mutability");
-    let typed = cast!(rule, IRulexPR::Typed);
-    assert!(typed.rune.is_none());
-    assert_eq!(typed.tyype, ITypePR::MutabilityType);
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "mut");
-    let mutability = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Mutability);
-    assert_eq!(mutability.1, MutabilityP::Mutable);
-  }
-  {
-    let rule = compile(&parse_arena, &keywords, "_ Mutability = any(mut, imm)");
-    let equals = cast!(rule, IRulexPR::Equals);
-    let typed = cast!(equals.left, IRulexPR::Typed);
-    assert!(typed.rune.is_none());
-    assert_eq!(typed.tyype, ITypePR::MutabilityType);
-    let any_ = cast!(equals.right, IRulexPR::BuiltinCall);
-    assert_eq!(any_.name.as_str(), "any");
-    let (mut_, imm_) = expect_2(&any_.args);
-    assert_eq!(
-      cast!(cast!(mut_, IRulexPR::Templex), ITemplexPT::Mutability).1,
-      MutabilityP::Mutable
-    );
-    assert_eq!(
-      cast!(cast!(imm_, IRulexPR::Templex), ITemplexPT::Mutability).1,
-      MutabilityP::Immutable
-    );
-  }
-}
 
 #[test]
 fn location() {

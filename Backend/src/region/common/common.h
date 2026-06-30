@@ -403,7 +403,7 @@ LoadResult resilientloadElementFromSSA(
     Reference* ssaRefMT,
     StaticSizedArrayT* ssaMT,
     int size,
-    Mutability mutability,
+    Sharedness sharedness,
     Reference* elementType,
     LiveRef arrayRef,
     InBoundsLE indexLE,

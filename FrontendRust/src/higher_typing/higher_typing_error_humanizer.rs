@@ -12,6 +12,7 @@ use crate::utils::range::CodeLocationS;
 use crate::utils::range::RangeS;
 
 
+
 pub fn assemble_error<'s>(
     filenames_and_sources: &dyn Fn(CodeLocationS<'s>) -> String,
     line_containing: &dyn Fn(CodeLocationS<'s>) -> String,

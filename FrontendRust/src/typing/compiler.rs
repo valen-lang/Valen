@@ -27,11 +27,11 @@ use crate::typing::names::names::{
     IStructTemplateNameT, IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, MutabilityTemplataT, PlaceholderTemplataT,
+    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, SharednessTemplataT, PlaceholderTemplataT,
     PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::CoordT;
-use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, SharednessT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::typing::types::types::{IRegionT, RegionT};
 use crate::typing::function::function_compiler::StampFunctionSuccess;
@@ -82,12 +82,11 @@ pub enum IFunctionGenerator {
     StructDrop,
     InterfaceDrop,
     RsaDropInto,
-    RsaImmutableNew,
     RsaLen,
-    RsaMutableCapacity,
-    RsaMutableNew,
-    RsaMutablePop,
-    RsaMutablePush,
+    RsaCapacity,
+    RsaNew,
+    RsaPop,
+    RsaPush,
     SsaDropInto,
     SsaLen,
     LockWeak,
@@ -149,7 +148,6 @@ where 's: 't,
             ITemplataT::String(_) => {}
             ITemplataT::RuntimeSizedArrayTemplate(_) => {}
             ITemplataT::StaticSizedArrayTemplate(_) => {}
-            ITemplataT::Variability(_) => {}
             ITemplataT::Ownership(_) => {}
             ITemplataT::Mutability(_) => {}
             ITemplataT::InterfaceDefinition(_) => {}
@@ -183,13 +181,10 @@ where 's: 't,
             KindT::Never(_) => {}
             KindT::Str(_) => {}
             KindT::RuntimeSizedArray(rsa) => {
-                self.get_placeholders_in_templata(accum, rsa.mutability());
                 self.get_placeholders_in_kind(accum, rsa.element_type().kind);
             }
             KindT::StaticSizedArray(ssa) => {
                 self.get_placeholders_in_templata(accum, ssa.size());
-                self.get_placeholders_in_templata(accum, ssa.mutability());
-                self.get_placeholders_in_templata(accum, ssa.variability());
                 self.get_placeholders_in_kind(accum, ssa.element_type().kind);
             }
             KindT::Struct(s) => {
@@ -285,6 +280,7 @@ where 's: 't,
         }
     }
 
+
     pub fn lookup_templata_imprecise(
         &self,
         envs: InferEnv<'s, 't>,
@@ -300,13 +296,11 @@ where 's: 't,
         &self,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
-        mutability: ITemplataT<'s, 't>,
-        variability: ITemplataT<'s, 't>,
         size: ITemplataT<'s, 't>,
         element: CoordT<'s, 't>,
         region: RegionT,
     ) -> StaticSizedArrayTT<'s, 't> {
-        self.resolve_static_sized_array(mutability, variability, size, element, region)
+        self.resolve_static_sized_array(size, element, region)
     }
     
     pub fn predict_runtime_sized_array_kind(
@@ -314,10 +308,9 @@ where 's: 't,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
         element: CoordT<'s, 't>,
-        array_mutability: ITemplataT<'s, 't>,
         region: RegionT,
     ) -> RuntimeSizedArrayTT<'s, 't> {
-        self.resolve_runtime_sized_array(element, array_mutability, region)
+        self.resolve_runtime_sized_array(element, region)
     }
     
     pub fn kind_is_from_template(
@@ -714,11 +707,10 @@ where 's: 't,
         name_to_function_body_macro.insert(self.keywords.struct_constructor_generator, FunctionBodyMacro::StructConstructor);
         name_to_function_body_macro.insert(self.keywords.drop_generator, FunctionBodyMacro::StructDrop);
         name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_len, FunctionBodyMacro::RsaLen);
-        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_mut_new, FunctionBodyMacro::RsaMutableNew);
-        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_imm_new, FunctionBodyMacro::RsaImmutableNew);
-        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_push, FunctionBodyMacro::RsaMutablePush);
-        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_pop, FunctionBodyMacro::RsaMutablePop);
-        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_capacity, FunctionBodyMacro::RsaMutableCapacity);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_new, FunctionBodyMacro::RsaNew);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_push, FunctionBodyMacro::RsaPush);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_pop, FunctionBodyMacro::RsaPop);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_capacity, FunctionBodyMacro::RsaCapacity);
         name_to_function_body_macro.insert(self.keywords.vale_static_sized_array_len, FunctionBodyMacro::SsaLen);
         name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_drop_into, FunctionBodyMacro::RsaDropInto);
         name_to_function_body_macro.insert(self.keywords.vale_static_sized_array_drop_into, FunctionBodyMacro::SsaDropInto);
@@ -1551,12 +1543,12 @@ where 's: 't,
                                 IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
                                     let member_coord = substituter.substitute_for_coord(coutputs, *unsubstituted_member_coord);
                                     let member_kind = member_coord.kind;
-                                    if struct_def.mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
+                                    if struct_def.sharedness == SharednessT::Shared
                                         && !self.is_primitive(member_kind)
                                         && !exported_kind_to_export.contains_key(&member_kind)
                                     {
                                         let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
-                                        return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                                        return Err(ICompileErrorT::ExportedKindDependedOnNonExportedKind {
                                             range: range_t,
                                             paackage: **package_coord,
                                             exported_kind: *exported_kind,
@@ -1569,12 +1561,11 @@ where 's: 't,
                     }
                     KindT::StaticSizedArray(as_tt) => {
                         let element_kind = as_tt.element_type().kind;
-                        if as_tt.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                            && !self.is_primitive(element_kind)
+                        if !self.is_primitive(element_kind)
                             && !exported_kind_to_export.contains_key(&element_kind)
                         {
                             let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
-                            return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                            return Err(ICompileErrorT::ExportedKindDependedOnNonExportedKind {
                                 range: range_t,
                                 paackage: **package_coord,
                                 exported_kind: *exported_kind,
@@ -1583,20 +1574,15 @@ where 's: 't,
                         }
                     }
                     KindT::RuntimeSizedArray(rsa) => {
-                        let mutability = match rsa.name.local_name {
-                            INameT::RuntimeSizedArray(rsan) => rsan.arr.mutability,
-                            _ => panic!("vwat"),
-                        };
                         let element_kind = match rsa.name.local_name {
                             INameT::RuntimeSizedArray(rsan) => rsan.arr.element_type.kind,
                             _ => panic!("vwat"),
                         };
-                        if mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
-                            && !self.is_primitive(element_kind)
+                        if !self.is_primitive(element_kind)
                             && !exported_kind_to_export.contains_key(&element_kind)
                         {
                             let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
-                            return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                            return Err(ICompileErrorT::ExportedKindDependedOnNonExportedKind {
                                 range: range_t,
                                 paackage: **package_coord,
                                 exported_kind: *exported_kind,
@@ -1708,30 +1694,25 @@ where 's: 't,
         panic!("Unimplemented: Slab 15 — body migration");
         // concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
     }
-    
-    pub fn get_mutability(
+
+    pub fn get_sharedness(
         &self,
         coutputs: &CompilerOutputs<'s, 't>,
         concrete_value2: KindT<'s, 't>,
-    ) -> ITemplataT<'s, 't> {
+    ) -> SharednessT {
         match concrete_value2 {
-            KindT::Never(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::Int(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::Float(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::Bool(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::Str(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::Void(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Never(_) => SharednessT::Single,
+            KindT::Int(_) => SharednessT::Single,
+            KindT::Float(_) => SharednessT::Single,
+            KindT::Bool(_) => SharednessT::Single,
+            KindT::Str(_) => SharednessT::Shared,
+            KindT::Void(_) => SharednessT::Single,
             KindT::KindPlaceholder(kp) => coutputs.lookup_mutability(self.get_placeholder_template(kp.id)),
-            KindT::RuntimeSizedArray(rsa) => {
-                match rsa.name.local_name {
-                    INameT::RuntimeSizedArray(rsan) => rsan.arr.mutability,
-                    _ => panic!("Expected RuntimeSizedArray local_name in get_mutability"),
-                }
-            }
-            KindT::StaticSizedArray(ssa) => ssa.mutability(),
+            KindT::RuntimeSizedArray(_) => SharednessT::Single,
+            KindT::StaticSizedArray(_) => SharednessT::Single,
             KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),
             KindT::Interface(i) => coutputs.lookup_mutability(self.get_interface_template(i.id)),
-            KindT::OverloadSet(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::OverloadSet(_) => SharednessT::Single,
         }
     }
     

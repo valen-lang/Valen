@@ -4,6 +4,7 @@ exported func main() int {
   ownMuta = Muta(73);
   weakMuta = &&ownMuta;
   maybeBorrowMuta = lock(weakMuta);
-  drop(ownMuta);
-  return maybeBorrowMuta.get().hp;
+  drop(^ownMuta);
+  // TSUGAR:   return maybeBorrowMuta.get().hp;
+  return __copy_prim(maybeBorrowMuta.get().hp);
 }

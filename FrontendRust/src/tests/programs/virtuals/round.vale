@@ -1,7 +1,12 @@
 
+// TSUGAR: func round(num float) int {
+// TSUGAR:   distanceToLower = num - float(int(num));
+// TSUGAR:   return int(num) + if (distanceToLower < 0.5) { 0 } else { 1 };
+// TSUGAR: }
 func round(num float) int {
-  distanceToLower = num - float(int(num));
-  return int(num) + if (distanceToLower < 0.5) { 0 } else { 1 };
+  truncated = int(&num);
+  distanceToLower = num - float(&truncated);
+  return truncated + if (distanceToLower < 0.5) { 0 } else { 1 };
 }
 
 exported func main() int {

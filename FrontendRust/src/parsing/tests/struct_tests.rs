@@ -17,7 +17,7 @@ fn simple_struct() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
       members: StructMembersP { contents: [], .. },
@@ -44,7 +44,6 @@ fn struct_with_list_node() {
   match expect_1(&struct_.members.contents) {
     IStructContent::NormalStructMember(NormalStructMemberP {
       name: NameP(_, StrI("a")),
-      variability: VariabilityP::Final,
       tyype: ITemplexPT::Interpreted(InterpretedPT {
         maybe_ownership: Some(OwnershipPT(_, OwnershipP::Share)),
         maybe_region: None,
@@ -62,7 +61,22 @@ fn struct_with_list_node() {
 }
 
 #[test]
-fn imm_generic_param() {
+fn share_struct_aliases_imm() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let struct_ = compile_struct_expect(
+    &parse_arena,
+    &keywords,
+    "
+      struct MyShared share { }
+    ",
+  );
+  assert_eq!(struct_.sharedness, SharednessP::Shared);
+}
+
+#[test]
+fn share_interface_aliases_imm() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
@@ -70,30 +84,15 @@ fn imm_generic_param() {
     &parse_arena,
     &keywords,
     "
-      struct MyImmContainer<T Ref imm> imm { value T; }
+      interface MyShared share { }
     ",
   );
-  let struct_ = cast!(&denizen, IDenizenP::TopLevelStruct);
-  match expect_1(&struct_.identifying_runes.as_ref().unwrap().params) {
-    GenericParameterP {
-      attributes: [IRuneAttributeP::ImmutableRuneAttribute(_)],
-      ..
-    } => {}
-    _ => panic!("expected exactly one imm generic param attribute"),
-  }
-  match expect_1(&struct_.members.contents) {
-    IStructContent::NormalStructMember(NormalStructMemberP {
-      name: NameP(_, StrI("value")),
-      variability: VariabilityP::Final,
-      tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
-      ..
-    }) => {}
-    _ => panic!("expected struct MyImmContainer member structure"),
-  }
+  let interface = cast!(&denizen, IDenizenP::TopLevelInterface);
+  assert_eq!(interface.sharedness, SharednessP::Shared);
 }
 
 #[test]
-fn struct_with_imm_generic_param() {
+fn struct_with_rsa_member() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
@@ -102,22 +101,20 @@ fn struct_with_imm_generic_param() {
     &keywords,
     "
       struct Mork {
-        a []<imm>T;
+        a []T;
       }
     ",
   );
   match expect_1(&struct_.members.contents) {
     IStructContent::NormalStructMember(NormalStructMemberP {
       name: NameP(_, StrI("a")),
-      variability: VariabilityP::Final,
       tyype: ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)),
         element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
         ..
       }),
       ..
     }) => {}
-    _ => panic!("expected struct Mork {{ a []<imm>T; }} member structure"),
+    _ => panic!("expected struct Mork {{ a []T; }} member structure"),
   }
 }
 
@@ -129,27 +126,10 @@ fn variadic_struct() {
   let struct_ = compile_struct_expect(&parse_arena, &keywords, "struct Moo<T> { _ ..T; }");
   match expect_1(&struct_.members.contents) {
     IStructContent::VariadicStructMember(VariadicStructMemberP {
-      variability: VariabilityP::Final,
       tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
       ..
     }) => {}
     _ => panic!("expected variadic struct Moo<T> {{ _ ..T; }} structure"),
-  }
-}
-
-#[test]
-fn variadic_struct_with_varying() {
-  let parse_bump = Bump::new();
-  let parse_arena = ParseArena::new(&parse_bump);
-  let keywords = Keywords::new_for_parse(&parse_arena);
-  let struct_ = compile_struct_expect(&parse_arena, &keywords, "struct Moo<T> { _! ..T; }");
-  match expect_1(&struct_.members.contents) {
-    IStructContent::VariadicStructMember(VariadicStructMemberP {
-      variability: VariabilityP::Varying,
-      tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("T")), .. }),
-      ..
-    }) => {}
-    _ => panic!("expected variadic struct Moo<T> {{ _! ..T; }} structure"),
   }
 }
 
@@ -163,14 +143,13 @@ fn struct_with_weak() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-          variability: VariabilityP::Final,
-          tyype: ITemplexPT::Interpreted(InterpretedPT {
+              tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Weak)),
             maybe_region: None,
             inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
@@ -196,14 +175,13 @@ fn struct_with_heap() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-          variability: VariabilityP::Final,
-          tyype: ITemplexPT::Interpreted(InterpretedPT {
+              tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Own)),
             maybe_region: None,
             inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("Marine")), .. }),
@@ -229,14 +207,13 @@ fn export_struct() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
       attributes: [IAttributeP::ExportAttribute(_)],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: None,
       template_rules: None,
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("x")),
-          variability: VariabilityP::Final,
-          tyype: ITemplexPT::Interpreted(InterpretedPT {
+              tyype: ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(OwnershipPT(_, OwnershipP::Borrow)),
             maybe_region: None,
             inner: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("int")), .. }),
@@ -271,7 +248,7 @@ fn struct_with_rune() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("ListNode")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: Some(GenericParametersP {
         params: [GenericParameterP {
           name: NameP(_, StrI("E")),
@@ -288,14 +265,12 @@ fn struct_with_rune() {
         contents: [
           IStructContent::NormalStructMember(NormalStructMemberP {
             name: NameP(_, StrI("value")),
-            variability: VariabilityP::Final,
-            tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. }),
+                  tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. }),
             ..
           }),
           IStructContent::NormalStructMember(NormalStructMemberP {
             name: NameP(_, StrI("next")),
-            variability: VariabilityP::Final,
-            tyype: ITemplexPT::Call(CallPT {
+                  tyype: ITemplexPT::Call(CallPT {
               template: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("ListNode")), .. }),
               args: [ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("E")), .. })],
               ..
@@ -330,7 +305,7 @@ fn struct_with_int_rune() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Vecf")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: Some(GenericParametersP {
         params: [GenericParameterP {
           name: NameP(_, StrI("N")),
@@ -353,10 +328,7 @@ fn struct_with_int_rune() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("values")),
-          variability: VariabilityP::Final,
-          tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-            mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
-            variability: ITemplexPT::Variability(VariabilityPT(_, VariabilityP::Final)),
+              tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
             size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
             element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
             ..
@@ -390,7 +362,7 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Vecf")),
       attributes: [],
-      mutability: None,
+      sharedness: SharednessP::Single,
       identifying_runes: Some(GenericParametersP {
         params: [GenericParameterP {
           name: NameP(_, StrI("N")),
@@ -413,10 +385,7 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
       members: StructMembersP {
         contents: [IStructContent::NormalStructMember(NormalStructMemberP {
           name: NameP(_, StrI("values")),
-          variability: VariabilityP::Final,
-          tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-            mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
-            variability: ITemplexPT::Variability(VariabilityPT(_, VariabilityP::Final)),
+              tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
             size: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("N")), .. }),
             element: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, StrI("float")), .. }),
             ..

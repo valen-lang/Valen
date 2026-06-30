@@ -1,5 +1,5 @@
 
-exported struct Flamscrankle imm {
+exported struct Flamscrankle share {
   a int;
   c int;
 }

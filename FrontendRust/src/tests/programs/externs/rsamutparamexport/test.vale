@@ -1,10 +1,12 @@
-export []<mut>int as MutIntArray;
+export []int as MutIntArray;
 
-extern func sumBytes(arr &[]<mut>int) int;
-exported func getMutIntArrayLen(arr &[]<mut>int) int { len(&arr) }
-exported func getMutIntArrayElem(arr &[]<mut>int, i int) int { arr[i] }
+extern func sumBytes(arr &[]int) int;
+// TSUGAR: exported func getMutIntArrayLen(arr &[]int) int { len(&arr) }
+exported func getMutIntArrayLen(arr &[]int) int { __copy_prim(len(&arr)) }
+// TSUGAR: exported func getMutIntArrayElem(arr &[]int, i int) int { arr[i] }
+exported func getMutIntArrayElem(arr &[]int, i int) int { __copy_prim(arr[__copy_prim(i)]) }
 
 exported func main() int {
-  a = Array<mut, int>(5, {_});
+  a = Array<int>(5, {_});
   return sumBytes(&a);
 }

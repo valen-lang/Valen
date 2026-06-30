@@ -14,11 +14,14 @@ use crate::utils::fx::HashSet;
 use std::marker::PhantomData;
 
 
+
 #[derive(Debug)]
 pub struct RuneTypeSolveError<'s> {
   pub range: Vec<RangeS<'s>>,
   pub failed_solve: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataType<'s>, IRuneTypeRuleError<'s>>,
 }
+
+
 
 #[derive(Debug)]
 pub enum IRuneTypeRuleError<'s> {
@@ -50,12 +53,15 @@ impl<'s> From<IRuneTypingLookupFailedError<'s>> for IRuneTypeRuleError<'s> {
   }
 }
 
+
 #[derive(Debug)]
 pub struct FoundCitizenDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
   pub actual_type: ITemplataType<'s>,
 }
+
+
 
 #[derive(Debug)]
 pub struct FoundTemplataDidntMatchExpectedType<'s> {
@@ -64,11 +70,15 @@ pub struct FoundTemplataDidntMatchExpectedType<'s> {
   pub actual_type: ITemplataType<'s>,
 }
 
+
+
 #[derive(Debug)]
 pub struct NotEnoughArgumentsForGenericCall<'s> {
   pub range: Vec<RangeS<'s>>,
   pub index_of_non_defaulting_param: i32,
 }
+
+
 
 #[derive(Debug)]
 pub struct GenericCallArgTypeMismatch<'s> {
@@ -78,10 +88,13 @@ pub struct GenericCallArgTypeMismatch<'s> {
   pub param_index: i32,
 }
 
+
+
 pub enum IRuneTypingLookupFailedError<'s> {
   TooManyMatchingTypes(RuneTypingTooManyMatchingTypes<'s>),
   CouldntFindType(RuneTypingCouldntFindType<'s>),
 }
+
 
 #[derive(Debug)]
 pub struct RuneTypingTooManyMatchingTypes<'s> {
@@ -110,11 +123,15 @@ pub struct FoundTemplataDidntMatchExpectedTypeA<'s> {
   pub actual_type: ITemplataType<'s>,
 }
 
+
+
 pub struct FoundPrimitiveDidntMatchExpectedType<'s> {
   pub range: Vec<RangeS<'s>>,
   pub expected_type: ITemplataType<'s>,
   pub actual_type: ITemplataType<'s>,
 }
+
+
 
 #[derive(PartialEq)]
 pub enum IRuneTypeSolverLookupResult<'s> {
@@ -123,10 +140,13 @@ pub enum IRuneTypeSolverLookupResult<'s> {
   Templata(TemplataLookupResult<'s>),
 }
 
+
 #[derive(PartialEq)]
 pub struct PrimitiveRuneTypeSolverLookupResult<'s> {
   pub tyype: ITemplataType<'s>,
 }
+
+
 
 #[derive(PartialEq)]
 pub struct CitizenRuneTypeSolverLookupResult<'s> {
@@ -134,10 +154,14 @@ pub struct CitizenRuneTypeSolverLookupResult<'s> {
   pub generic_params: &'s [&'s GenericParameterS<'s>],
 }
 
+
+
 #[derive(PartialEq)]
 pub struct TemplataLookupResult<'s> {
   pub templata: ITemplataType<'s>,
 }
+
+
 
 pub trait IRuneTypeSolverEnv<'s> {
   fn lookup(
@@ -148,9 +172,11 @@ pub trait IRuneTypeSolverEnv<'s> {
 }
 
 
+
 pub struct RuneTypeSolver<'s, 'ctx> {
   pub scout_arena: &'ctx ScoutArena<'s>,
 }
+
 
 impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
   pub fn solve_rune_type<E: IRuneTypeSolverEnv<'s>>(
@@ -171,11 +197,13 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
   }
   
 }
+
 fn get_runes_rune_type<'s>(
   rule: &IRulexSR<'s>,
 ) -> Vec<IRuneS<'s>> {
   rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
 }
+
 
 fn get_puzzles_rune_type<'s>(
   predicting: bool,
@@ -232,6 +260,7 @@ fn get_puzzles_rune_type<'s>(
 }
 
 
+
 fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   scout_arena: &ScoutArena<'s>,
   env: &E,
@@ -253,7 +282,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::KindComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
-        (x.mutability_rune.rune.clone(), ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})),
+        (x.mutability_rune.rune.clone(), ITemplataType::SharednessTemplataType(SharednessTemplataType {})),
       ].into_iter().collect(), vec![], IndexSet::default())
     }
     IRulexSR::CoordComponents(x) => {
@@ -423,6 +452,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
 }
 
 
+
 fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   _env: &E,
   solver_state: &mut SimpleSolverState<
@@ -489,6 +519,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   }
   Ok(())
 }
+
 
 pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   scout_arena: &ScoutArena<'s>,
@@ -694,11 +725,13 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 }
 
 
+
 fn sanity_check_conclusion<'s>(
   _rune: IRuneS<'s>,
   _conclusion: &ITemplataType<'s>,
 ) {
 }
+
 
 fn complex_solve() -> Result<(), ()> {
   panic!("Unimplemented complex_solve");
@@ -708,6 +741,7 @@ fn complex_solve() -> Result<(), ()> {
   // solverState.sanityCheck()
   // true // continue
 }
+
 
 fn solve<'s>(
   _state: (),
@@ -726,6 +760,7 @@ fn solve<'s>(
 }
 
 
+
 fn check_generic_call_without_defaults<'s>(
   _param_types: &[ITemplataType<'s>],
   _arg_types: &[ITemplataType<'s>],
@@ -740,6 +775,7 @@ fn check_generic_call_without_defaults<'s>(
   // })
   // Ok(())
 }
+
 
 fn check_generic_call<'s>(
   range: Vec<RangeS<'s>>,

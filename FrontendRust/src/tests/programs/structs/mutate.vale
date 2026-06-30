@@ -1,7 +1,8 @@
 
-struct Marine { hp! int; }
+struct Marine { hp int; }
 exported func main() int {
   m = Marine(9);
   set m.hp = 4;
-  return m.hp;
+  // TSUGAR:   return m.hp;
+  return __copy_prim(m.hp);
 }

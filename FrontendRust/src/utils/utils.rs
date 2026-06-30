@@ -1,5 +1,6 @@
 use std::hash::Hash;
 
+
 pub fn repeat<T: Clone>(elem: T, n: i32) -> Vec<T> {
     let mut result: Vec<T> = Vec::new();
     for _ in 0..n {
@@ -7,6 +8,7 @@ pub fn repeat<T: Clone>(elem: T, n: i32) -> Vec<T> {
     }
     result
 }
+
 
 pub fn union_maps_expect_no_conflict<K, V, F>(
     a: &crate::utils::fx::IndexMap<K, V>,
@@ -29,6 +31,7 @@ where K: Copy + Eq + Hash, V: Copy, F: Fn(V, V) -> bool,
     result
 }
 
+
 pub fn replace_all(original: &str, replacements: &indexmap::IndexMap<&str, &str>) -> String {
     let mut str_acc: String = original.to_string();
     for (from, to) in replacements {
@@ -36,6 +39,7 @@ pub fn replace_all(original: &str, replacements: &indexmap::IndexMap<&str, &str>
     }
     str_acc
 }
+
 
 // Get all possible versions of original_map where the keys are the same
 // but the value for each is randomized.

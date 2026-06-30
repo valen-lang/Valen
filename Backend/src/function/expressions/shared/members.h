@@ -20,7 +20,6 @@ Ref loadMember(
     Ref structRegionInstanceRef,
     Reference* structRefM,
     LiveRef structRef,
-    Mutability containingStructMutability,
     Reference* memberType,
     int memberIndex,
     Reference* resultType,

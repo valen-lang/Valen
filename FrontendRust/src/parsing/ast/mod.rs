@@ -13,8 +13,8 @@ pub use ast::{
   ExternAttributeP, FileP, FunctionHeaderP, FunctionP, FunctionReturnP, GenericParameterP,
   GenericParameterTypeP, GenericParametersP, IAttributeP, IDenizenP, IMacroInclusionP,
   IRuneAttributeP, IStructContent, ImplP, ImportP, InterfaceP, LinearAttributeP, LoadAsP,
-  LocationP, MacroCallP, MutabilityP, NameP, NormalStructMemberP, OwnershipP, ParamsP,
-  PureAttributeP, SealedAttributeP, StructMembersP, StructP, TemplateRulesP, UnitP, VariabilityP,
+  LocationP, MacroCallP, SharednessP, NameP, NormalStructMemberP, OwnershipP, ParamsP,
+  PureAttributeP, SealedAttributeP, StructMembersP, StructP, TemplateRulesP, UnitP,
   VariadicStructMemberP, WeakableAttributeP,
 };
 
@@ -41,6 +41,6 @@ pub use rules::{
 // Re-export everything from templex.rs
 pub use templex::{
   AnonymousRunePT, BoolPT, CallPT, FuncPT, FunctionPT, ITemplexPT, InlinePT, IntPT, InterpretedPT,
-  LocationPT, MutabilityPT, NameOrRunePT, OwnershipPT, PackPT, PointPT, RegionRunePT,
-  RuntimeSizedArrayPT, SharePT, StaticSizedArrayPT, StringPT, TuplePT, TypedRunePT, VariabilityPT,
+  LocationPT, SharednessPT, NameOrRunePT, OwnershipPT, PackPT, PointPT, RegionRunePT,
+  RuntimeSizedArrayPT, SharePT, StaticSizedArrayPT, StringPT, TuplePT, TypedRunePT,
 };

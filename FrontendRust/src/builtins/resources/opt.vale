@@ -1,3 +1,4 @@
+import v.builtins.implicit_clone.*;
 import v.builtins.panicutils.*;
 import v.builtins.drop.*;
 
@@ -18,11 +19,11 @@ where func drop(T)void;
 func drop<T>(opt Some<T>)
 where func drop(T)void
 {
-  [x] = opt;
+  [x] = ^opt;
 }
 
 func drop<T>(opt None<T>) {
-  [ ] = opt;
+  [ ] = ^opt;
 }
 
 abstract func isEmpty<T>(virtual opt &Opt<T>) bool;
@@ -42,8 +43,8 @@ where func drop(T)void
 abstract func get<T>(virtual opt Opt<T>) T;
 func get<T>(opt None<T>) T { panic("Called get() on a None!"); }
 func get<T>(opt Some<T>) T {
-  [value] = opt;
-  return value;
+  [value] = ^opt;
+  return ^value;
 }
 
 abstract func get<T>(virtual opt &Opt<T>) &T;
@@ -52,4 +53,4 @@ func get<T>(opt &Some<T>) &T { return &opt.value; }
 
 abstract func expect_none<T>(virtual opt Opt<T>) None<T>;
 func expect_none<T>(opt Some<T>) None<T> { panic("Called expect_none() on a Some!"); }
-func expect_none<T>(opt None<T>) None<T> { opt }
+func expect_none<T>(opt None<T>) None<T> { ^opt }

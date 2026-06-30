@@ -241,12 +241,10 @@ extern "C" VIS LocalHandle* metal_cache_get_local(
 extern "C" VIS StructMemberHandle* metal_struct_member_new(
     const char* full_name_ptr, size_t full_name_len,
     const char* name_ptr, size_t name_len,
-    uint32_t variability,
     ReferenceHandle* type) {
   return reinterpret_cast<StructMemberHandle*>(new StructMember(
       s(full_name_ptr, full_name_len),
       s(name_ptr, name_len),
-      static_cast<Variability>(variability),
       ref(type)));
 }
 
@@ -288,7 +286,7 @@ extern "C" VIS StructDefHandle* metal_struct_def_new(
       nm(name),
       reinterpret_cast<StructKind*>(knd(struct_kind)),
       rid(region_id),
-      static_cast<Mutability>(mutability),
+      static_cast<Sharedness>(mutability),
       std::move(edge_vec),
       std::move(member_vec),
       static_cast<Weakability>(weakability)));
@@ -314,7 +312,7 @@ extern "C" VIS InterfaceDefHandle* metal_interface_def_new(
       nm(name),
       reinterpret_cast<InterfaceKind*>(knd(interface_kind)),
       rid(region_id),
-      static_cast<Mutability>(mutability),
+      static_cast<Sharedness>(mutability),
       supers,
       method_vec,
       static_cast<Weakability>(weakability)));
@@ -408,6 +406,12 @@ extern "C" VIS ExpressionHandle* metal_expr_discard(
     ExpressionHandle* source_expr, ReferenceHandle* source_type) {
   return reinterpret_cast<ExpressionHandle*>(new Discard(
       reinterpret_cast<Expression*>(source_expr), ref(source_type)));
+}
+
+extern "C" VIS ExpressionHandle* metal_expr_copy_prim(
+    ExpressionHandle* inner, ReferenceHandle* result_type) {
+  return reinterpret_cast<ExpressionHandle*>(new CopyPrim(
+      reinterpret_cast<Expression*>(inner), ref(result_type)));
 }
 
 extern "C" VIS ExpressionHandle* metal_expr_call(
@@ -602,20 +606,8 @@ extern "C" VIS ExpressionHandle* metal_expr_new_array_from_values(
 extern "C" VIS ExpressionHandle* metal_expr_new_mut_runtime_sized_array(
     ExpressionHandle* size_expr, ReferenceHandle* size_type, KindHandle* size_kind,
     ReferenceHandle* array_ref_type, ReferenceHandle* element_type) {
-  return reinterpret_cast<ExpressionHandle*>(new NewMutRuntimeSizedArray(
+  return reinterpret_cast<ExpressionHandle*>(new NewRuntimeSizedArray(
       reinterpret_cast<Expression*>(size_expr), ref(size_type), knd(size_kind),
-      ref(array_ref_type), ref(element_type)));
-}
-
-extern "C" VIS ExpressionHandle* metal_expr_new_imm_runtime_sized_array(
-    ExpressionHandle* size_expr, ReferenceHandle* size_type, KindHandle* size_kind,
-    ExpressionHandle* generator_expr, ReferenceHandle* generator_type, KindHandle* generator_kind,
-    PrototypeHandle* generator_method, int32_t generator_known_live,
-    ReferenceHandle* array_ref_type, ReferenceHandle* element_type) {
-  return reinterpret_cast<ExpressionHandle*>(new NewImmRuntimeSizedArray(
-      reinterpret_cast<Expression*>(size_expr), ref(size_type), knd(size_kind),
-      reinterpret_cast<Expression*>(generator_expr), ref(generator_type), knd(generator_kind),
-      reinterpret_cast<Prototype*>(generator_method), generator_known_live != 0,
       ref(array_ref_type), ref(element_type)));
 }
 
@@ -669,20 +661,9 @@ extern "C" VIS ExpressionHandle* metal_expr_destroy_static_sized_array_into_func
       ref(array_element_type), array_size));
 }
 
-extern "C" VIS ExpressionHandle* metal_expr_destroy_imm_runtime_sized_array(
-    ExpressionHandle* array_expr, ReferenceHandle* array_type, KindHandle* array_kind,
-    ExpressionHandle* consumer_expr, ReferenceHandle* consumer_type, KindHandle* consumer_kind,
-    PrototypeHandle* consumer_method, int32_t consumer_known_live) {
-  return reinterpret_cast<ExpressionHandle*>(new DestroyImmRuntimeSizedArray(
-      reinterpret_cast<Expression*>(array_expr), ref(array_type),
-      reinterpret_cast<RuntimeSizedArrayT*>(knd(array_kind)),
-      reinterpret_cast<Expression*>(consumer_expr), ref(consumer_type), knd(consumer_kind),
-      reinterpret_cast<Prototype*>(consumer_method), consumer_known_live != 0));
-}
-
 extern "C" VIS ExpressionHandle* metal_expr_destroy_mut_runtime_sized_array(
     ExpressionHandle* array_expr, ReferenceHandle* array_type, KindHandle* array_kind) {
-  return reinterpret_cast<ExpressionHandle*>(new DestroyMutRuntimeSizedArray(
+  return reinterpret_cast<ExpressionHandle*>(new DestroyRuntimeSizedArray(
       reinterpret_cast<Expression*>(array_expr), ref(array_type),
       reinterpret_cast<RuntimeSizedArrayT*>(knd(array_kind))));
 }
@@ -868,12 +849,12 @@ extern "C" VIS void metal_package_builder_add_runtime_sized_array(
 
 extern "C" VIS StaticSizedArrayDefHandle* metal_static_sized_array_def_new(
     NameHandle* name, KindHandle* array_kind, int32_t size,
-    RegionIdHandle* region_id, uint32_t mutability, uint32_t variability,
+    RegionIdHandle* region_id, uint32_t mutability,
     ReferenceHandle* element_type) {
   return reinterpret_cast<StaticSizedArrayDefHandle*>(new StaticSizedArrayDefinitionT(
       nm(name), reinterpret_cast<StaticSizedArrayT*>(knd(array_kind)),
       size, rid(region_id),
-      static_cast<Mutability>(mutability), static_cast<Variability>(variability),
+      static_cast<Sharedness>(mutability),
       ref(element_type)));
 }
 
@@ -883,7 +864,7 @@ extern "C" VIS RuntimeSizedArrayDefHandle* metal_runtime_sized_array_def_new(
     ReferenceHandle* element_type) {
   return reinterpret_cast<RuntimeSizedArrayDefHandle*>(new RuntimeSizedArrayDefinitionT(
       nm(name), reinterpret_cast<RuntimeSizedArrayT*>(knd(array_kind)),
-      rid(region_id), static_cast<Mutability>(mutability),
+      rid(region_id), static_cast<Sharedness>(mutability),
       ref(element_type)));
 }
 extern "C" VIS void metal_package_builder_add_export_function(

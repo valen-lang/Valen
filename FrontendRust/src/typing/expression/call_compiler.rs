@@ -119,8 +119,8 @@ where 's: 't,
                 let param_types = stamp_result.prototype.param_types();
                 let args_exprs_2 =
                     self.convert_exprs(
-                        snapshot_env, coutputs, range, call_location,
-                        given_args_exprs_2, &param_types);
+                        nenv, life, coutputs, range, call_location,
+                        context_region, given_args_exprs_2, &param_types);
 
                 self.check_types(
                     coutputs,
@@ -186,7 +186,7 @@ where 's: 't,
         let env = nenv.snapshot(self.typing_interner);
 
         let args_types_2: Vec<CoordT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result().coord).collect();
-        let closure_param_type = CoordT { ownership: given_callable_borrow_expr_2.result().coord.ownership, region: RegionT { region: IRegionT::Default }, kind };
+        let closure_param_type = CoordT::new(given_callable_borrow_expr_2.result().coord.ownership, RegionT { region: IRegionT::Default }, kind);
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
@@ -209,15 +209,7 @@ where 's: 't,
             Ok(x) => x,
         };
 
-        let mutability = self.get_mutability(coutputs, kind);
-        let ownership =
-            match mutability {
-                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
-                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-                ITemplataT::Placeholder(_) => OwnershipT::Borrow,
-                _ => { panic!("Unimplemented: evaluate_custom_call unexpected mutability"); }
-            };
-        assert!(given_callable_borrow_expr_2.result().coord.ownership == ownership);
+        assert!(given_callable_borrow_expr_2.result().coord.ownership == OwnershipT::Borrow);
         let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
         let mut actual_args_exprs_2: Vec<ReferenceExpressionTE<'s, 't>> = vec![actual_callable_expr_2];

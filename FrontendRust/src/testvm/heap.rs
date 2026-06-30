@@ -37,6 +37,7 @@ use crate::von::ast::VonStr;
 use std::io::Write;
 
 
+
 /// Temporary state
 pub struct AdapterForExternsV<'a, 'v, 'h, 's>
 where 's: 'h, 'h: 'v, 'v: 'a,
@@ -50,14 +51,17 @@ where 's: 'h, 'h: 'v, 'v: 'a,
     pub stdout: &'v dyn Fn(StrI<'s>),
 }
 
+
 impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v: 'a {
     pub fn dereference(&self, reference: ReferenceV<'v, 'h, 's>) -> KindV<'v, 'h, 's> {
         self.heap.dereference(reference, false)
     }
 
+
     pub fn new_opaque(&mut self, opaque_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         self.heap.new_opaque(self.interner, opaque_ht)
     }
+
 
     pub fn add_allocation_for_return(&mut self, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         let r#ref = self.heap.add(self.interner, ownership, location, kind);
@@ -65,6 +69,7 @@ impl<'a, 'v, 'h, 's> AdapterForExternsV<'a, 'v, 'h, 's> where 's: 'h, 'h: 'v, 'v
 //    ReturnV(callId, ref)
         r#ref
     }
+
 
     pub fn make_void(&self) -> ReferenceV<'v, 'h, 's> {
         self.heap.void()
@@ -86,17 +91,18 @@ fn allocation_map_add_impl<'v, 'h, 's>(
     if let KindV::Void(_) = kind {
         assert_eq!(id, STARTING_ID);
     }
-    let reference = ReferenceV {
-        actual_kind: kind.tyype(interner),
-        seen_as_kind: kind.tyype(interner),
+    let reference = ReferenceV::new(
+        kind.tyype(interner),
+        kind.tyype(interner),
         ownership,
         location,
-        num: id,
-    };
-    let allocation = AllocationV { reference, kind, referrers: HashMap::default() };
+        id,
+    );
+    let allocation = AllocationV { reference, kind, strong_referrers: HashMap::default(), weak_referrers: HashMap::default() };
     objects_by_id.insert(reference.alloc_id(), allocation);
     reference
 }
+
 
 /// Temporary state
 pub struct AllocationMapV<'v, 'h, 's> {
@@ -109,7 +115,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
     pub fn new(interner: &HammerInterner<'s, 'h>) -> AllocationMapV<'v, 'h, 's> {
         let mut objects_by_id = HashMap::default();
         let mut next_id = STARTING_ID;
-        let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Void(VoidV));
+        let void_ref = allocation_map_add_impl(&mut objects_by_id, &mut next_id, interner, OwnershipH::OwnH, LocationH::InlineH, KindV::Void(VoidV));
         AllocationMapV { objects_by_id, next_id, void_ref }
     }
 
@@ -118,9 +124,11 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         // objectsById.isEmpty
     }
 
+
     pub fn size(&self) -> usize {
         self.objects_by_id.len()
     }
+
 
     pub fn get(&self, interner: &HammerInterner<'s, 'h>, alloc_id: AllocationIdV<'v, 'h, 's>) -> &AllocationV<'v, 'h, 's> {
         let allocation = self.objects_by_id.get(&alloc_id).expect("get: not found");
@@ -128,12 +136,14 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         allocation
     }
 
+
     pub fn remove(&self, alloc_id: AllocationIdV<'v, 'h, 's>) {
         panic!("Unimplemented: remove");
         // vassert(contains(allocId))
         // vassert(objectsById(allocId).kind != VoidV)
         // objectsById.remove(allocId)
     }
+
 
     pub fn contains(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         panic!("Unimplemented: contains");
@@ -146,9 +156,11 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         // }
     }
 
+
     pub fn add(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         allocation_map_add_impl(&mut self.objects_by_id, &mut self.next_id, interner, ownership, location, kind)
     }
+
 
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
@@ -156,6 +168,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         //   case (id, allocation) => vivemDout.println(id + " (" + allocation.getTotalRefCount(None) + " refs) = " + allocation.kind)
         // })
     }
+
 
     pub fn check_for_leaks(&self, vivem_dout: &mut PrintStream) {
         let m = &self.objects_by_id;
@@ -177,6 +190,7 @@ impl<'v, 'h, 's> AllocationMapV<'v, 'h, 's> {
         drop(non_interned_objects);
     }
 }
+
 
 /// Temporary state
 pub struct HeapV<'v, 'h, 's> {
@@ -201,28 +215,31 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
     pub fn void(&self) -> ReferenceV<'v, 'h, 's> {
         self.objects_by_id.void_ref
     }
+
     pub fn add_local(&mut self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         self.check_reference(interner, expected_type, reference);
         self.get_current_call(var_addr.call_id, |call| {
             call.add_local(var_addr, reference, expected_type);
         });
         self.increment_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr }),
             reference,
         );
     }
+
 
     pub fn get_reference(&self, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: get_reference");
         // callsById(varAddr.callId).getLocal(varAddr).reference
     }
 
+
     pub fn remove_local(&mut self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) {
         let variable = self.get_local(var_addr);
         let actual_reference = variable.reference;
         self.check_reference(interner, expected_type, actual_reference);
         self.decrement_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr }),
             actual_reference,
         );
         self.get_current_call(var_addr.call_id, |call| {
@@ -230,15 +247,17 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         });
     }
 
+
     pub fn get_reference_from_local(&self, interner: &HammerInterner<'s, 'h>, var_addr: VariableAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.get_local(var_addr);
         if variable.expected_type != expected_type {
-            panic!("blort");
+            panic!("get_reference_from_local: variable.expected_type mismatch: stored={:?} vs lookup={:?}", variable.expected_type, expected_type);
         }
         let variable_reference = variable.reference;
         self.check_reference(interner, expected_type, variable_reference);
         self.transmute(variable_reference, expected_type, target_type)
     }
+
 
     pub fn get_local(&self, var_addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
         let calls_by_id = &self.calls_by_id;
@@ -246,20 +265,22 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         call.get_local(var_addr)
     }
 
+
     pub fn mutate_variable(&mut self, interner: &HammerInterner<'s, 'h>, var_address: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let variable = self.calls_by_id.get(&var_address.call_id).expect("mutate_variable: call not found").get_local(var_address);
         self.check_reference(interner, expected_type, reference);
         self.check_reference(interner, variable.expected_type, reference);
         let old_reference = variable.reference;
         self.decrement_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
             old_reference);
         self.increment_reference_ref_count(
-            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address, ownership: expected_type.ownership }),
+            IObjectReferrerV::VariableToObjectReferrer(VariableToObjectReferrerV { var_addr: var_address }),
             reference);
         self.get_current_call(var_address.call_id, |c| c.mutate_local(var_address, reference, expected_type));
         old_reference
     }
+
 
     pub fn mutate_array(&mut self, element_address: ElementAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let ElementAddressV { array_id: array_ref, element_index } = element_address;
@@ -267,14 +288,15 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         match allocation.kind {
             KindV::ArrayInstance(ai) => {
                 let old_reference = ai.get_element(element_index);
-                self.decrement_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), old_reference);
+                self.decrement_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), old_reference);
                 ai.set_element(self.vivem_bump, element_index, reference);
-                self.increment_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address, ownership: expected_type.ownership }), reference);
+                self.increment_reference_ref_count(IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV { element_addr: element_address }), reference);
                 old_reference
             }
             _ => panic!("mutate_array: not an ArrayInstance"),
         }
     }
+
 
     pub fn mutate_struct(&mut self, member_address: MemberAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let MemberAddressV { struct_id: object_id, field_index } = member_address;
@@ -283,16 +305,17 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             KindV::StructInstance(si) => {
                 let members = si.members.get().expect("StructInstance has no members");
                 let old_member_reference = members[field_index as usize];
-                self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), old_member_reference);
+                self.decrement_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address }), old_member_reference);
                 assert!(si.struct_h.members[field_index as usize].tyype == expected_type);
                 si.get_reference_member(field_index);
                 si.set_reference_member(self.vivem_bump, field_index, reference);
-                self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address, ownership: expected_type.ownership }), reference);
+                self.increment_reference_ref_count(IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV { member_addr: member_address }), reference);
                 old_member_reference
             }
             _ => panic!("mutate_struct: not a StructInstance"),
         }
     }
+
 
     pub fn get_reference_from_struct(&self, interner: &HammerInterner<'s, 'h>, address: MemberAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let MemberAddressV { struct_id: object_id, field_index } = address;
@@ -308,6 +331,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn get_reference_from_array(&self, interner: &HammerInterner<'s, 'h>, address: ElementAddressV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let ElementAddressV { array_id: object_id, element_index } = address;
         match self.objects_by_id.objects_by_id.get(&object_id).expect("get_reference_from_array: not found").kind {
@@ -320,9 +344,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn contains_live_object(&self, reference: ReferenceV<'v, 'h, 's>) -> bool {
         self.contains_live_object_alloc_id(reference.alloc_id())
     }
+
 
     pub fn contains_live_object_alloc_id(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         let m = &self.objects_by_id.objects_by_id;
@@ -339,11 +365,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         result
     }
 
+
     pub fn contains_live_or_undead_object(&self, alloc_id: AllocationIdV<'v, 'h, 's>) -> bool {
         let m = &self.objects_by_id.objects_by_id;
         let result = m.contains_key(&alloc_id);
         result
     }
+
 
     pub fn dereference(&self, reference: ReferenceV<'v, 'h, 's>, allow_undead: bool) -> KindV<'v, 'h, 's> {
         if !allow_undead {
@@ -354,29 +382,37 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         result
     }
 
+
     pub fn is_same_instance(&mut self, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, left: ReferenceV<'v, 'h, 's>, right: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
-        let r#ref = self.allocate_transient(interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::Bool(BoolV { value: left.alloc_id() == right.alloc_id(), _phantom: PhantomData }));
-        self.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id, ownership: OwnershipH::MutableShareH }), r#ref);
+        let r#ref = self.allocate_transient(interner, OwnershipH::OwnH, LocationH::InlineH, KindV::Bool(BoolV { value: left.alloc_id() == right.alloc_id(), _phantom: PhantomData }));
+        self.increment_reference_ref_count(IObjectReferrerV::RegisterToObjectReferrer(RegisterToObjectReferrerV { call_id }), r#ref);
         r#ref
     }
+
 
     pub fn increment_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: increment_reference_hold_count");
         // incrementObjectRefCount(RegisterHoldToObjectReferrer(expressionId, reference.ownership), reference.allocId)
     }
 
+
     pub fn decrement_reference_hold_count(&self, expression_id: ExpressionIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
         panic!("Unimplemented: decrement_reference_hold_count");
         // decrementObjectRefCount(RegisterHoldToObjectReferrer(expressionId, reference.ownership), reference.allocId)
     }
 
+
     pub fn increment_reference_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
-        self.increment_object_ref_count(referrer, reference.alloc_id(), reference.ownership == OwnershipH::WeakH);
+        let is_weak = reference.ownership == OwnershipH::WeakH;
+        self.increment_object_ref_count(referrer, reference.alloc_id(), is_weak);
     }
 
+
     pub fn decrement_reference_ref_count(&mut self, referrer: IObjectReferrerV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>) {
-        self.decrement_object_ref_count(referrer, reference.alloc_id(), reference.ownership == OwnershipH::WeakH);
+        let is_weak = reference.ownership == OwnershipH::WeakH;
+        self.decrement_object_ref_count(referrer, reference.alloc_id(), is_weak);
     }
+
 
     pub fn destructure_array(&mut self, reference: ReferenceV<'v, 'h, 's>) -> &'v [ReferenceV<'v, 'h, 's>] {
         let allocation = self.dereference(reference, false);
@@ -390,6 +426,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn destructure(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<&'v [ReferenceV<'v, 'h, 's>], VmRuntimeErrorV<'s>> {
         let allocation = self.dereference(reference, false);
         match allocation {
@@ -399,7 +436,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                     self.decrement_reference_ref_count(
                         IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV {
                             member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
-                            ownership: member_ref.ownership,
                         }),
                         *member_ref);
                 }
@@ -411,12 +447,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn zero(&mut self, reference: ReferenceV<'v, 'h, 's>) {
         let m = &mut self.objects_by_id.objects_by_id;
         let allocation = m.get(&reference.alloc_id()).expect("zero: not in objects_by_id");
-        assert_eq!(allocation.get_total_ref_count(Some(OwnershipH::OwnH)), 0);
-        assert_eq!(allocation.get_total_ref_count(Some(OwnershipH::ImmutableBorrowH)), 0);
-        assert_eq!(allocation.get_total_ref_count(Some(OwnershipH::MutableBorrowH)), 0);
+        assert_eq!(allocation.get_total_ref_count(Some(false)), 0);
         match allocation.kind {
             KindV::StructInstance(si) => si.zero(),
             _ => {}
@@ -427,11 +462,12 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn deallocate_if_no_weak_refs(&mut self, reference: ReferenceV<'v, 'h, 's>) -> Result<(), VmRuntimeErrorV<'s>> {
         let m = &mut self.objects_by_id.objects_by_id;
         let allocation = m.get(&reference.alloc_id()).expect("deallocate_if_no_weak_refs: not in objects_by_id");
         if reference.ownership == OwnershipH::OwnH &&
-            (allocation.get_total_ref_count(Some(OwnershipH::MutableBorrowH)) + allocation.get_total_ref_count(Some(OwnershipH::ImmutableBorrowH))) > 0 {
+            allocation.get_total_ref_count(Some(false)) > 0 {
             return Err(VmRuntimeErrorV::ConstraintViolatedException(ConstraintViolatedExceptionV {
                 msg: StrI("Constraint violated!"),
             }));
@@ -446,6 +482,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         Ok(())
     }
 
+
     pub fn increment_object_ref_count(&mut self, pointing_from: IObjectReferrerV<'v, 'h, 's>, alloc_id: AllocationIdV<'v, 'h, 's>, allow_undead: bool) {
         if !allow_undead {
             if !self.contains_live_object_alloc_id(alloc_id) {
@@ -454,13 +491,14 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
         let m = &mut self.objects_by_id.objects_by_id;
         let obj = m.get_mut(&alloc_id).expect("increment_object_ref_count: alloc_id not in objects_by_id");
-        obj.increment_ref_count(pointing_from);
+        obj.increment_ref_count(pointing_from, allow_undead);
         let new_ref_count = obj.get_total_ref_count(None);
         {
             let handle = &mut *self.vivem_dout;
             write!(handle, " o{}rc{}->{}", alloc_id.num, new_ref_count - 1, new_ref_count).unwrap();
         }
     }
+
 
     pub fn decrement_object_ref_count(&mut self, pointed_from: IObjectReferrerV<'v, 'h, 's>, alloc_id: AllocationIdV<'v, 'h, 's>, allow_undead: bool) -> i32 {
         if !allow_undead {
@@ -470,7 +508,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
         let m = &mut self.objects_by_id.objects_by_id;
         let obj = m.get_mut(&alloc_id).expect("decrement_object_ref_count: not in objects_by_id");
-        obj.decrement_ref_count(pointed_from);
+        obj.decrement_ref_count(pointed_from, allow_undead);
         let new_ref_count = obj.get_total_ref_count(None);
         {
             let handle = &mut *self.vivem_dout;
@@ -478,6 +516,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
         new_ref_count
     }
+
 
     pub fn get_ref_count(&self, reference: ReferenceV<'v, 'h, 's>) -> i32 {
         panic!("Unimplemented: get_ref_count");
@@ -493,6 +532,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         // allocation.getRefCount()
     }
 
+
     pub fn get_total_ref_count(&self, reference: ReferenceV<'v, 'h, 's>) -> i32 {
         if reference.ownership == OwnershipH::WeakH {
             assert!(self.contains_live_or_undead_object(reference.alloc_id()));
@@ -505,21 +545,23 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         result
     }
 
-    pub fn ensure_ref_count(&self, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, reference: ReferenceV<'v, 'h, 's>, ownership_filter: Option<&'v [OwnershipH]>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
+    pub fn ensure_ref_count(&self, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, reference: ReferenceV<'v, 'h, 's>, is_weak_filter: Option<bool>, expected_num: i32) -> Result<(), VmRuntimeErrorV<'s>> {
         assert!(self.contains_live_object_alloc_id(reference.alloc_id()));
         let allocation = self.objects_by_id.get(interner, reference.alloc_id());
-        allocation.ensure_ref_count(scout_arena, ownership_filter, expected_num)
+        allocation.ensure_ref_count(scout_arena, is_weak_filter, expected_num)
     }
+
 
     pub fn add(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         self.objects_by_id.add(interner, ownership, location, kind)
     }
 
+
     pub fn transmute(&self, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         if expected_type == target_type {
             return reference;
         }
-        let ReferenceV { actual_kind, seen_as_kind: old_seen_as_type, ownership: old_ownership, location: _old_location, num: object_id } = reference;
+        let ReferenceV { actual_kind, seen_as_kind: old_seen_as_type, ownership: old_ownership, location: _old_location, num: object_id, .. } = reference;
         assert_eq!(
             old_ownership == OwnershipH::MutableShareH || old_ownership == OwnershipH::ImmutableShareH,
             target_type.ownership == OwnershipH::MutableShareH || target_type.ownership == OwnershipH::ImmutableShareH,
@@ -527,14 +569,15 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         if old_seen_as_type.hamut != expected_type.kind {
             panic!("wot");
         }
-        ReferenceV {
+        ReferenceV::new(
             actual_kind,
-            seen_as_kind: RRKindV { hamut: target_type.kind, _phantom: PhantomData },
-            ownership: target_type.ownership,
-            location: target_type.location,
-            num: object_id,
-        }
+            RRKindV { hamut: target_type.kind, _phantom: PhantomData },
+            target_type.ownership,
+            target_type.location,
+            object_id,
+        )
     }
+
 
     pub fn cast(&self, call_id: CallIdV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, expected_type: CoordH<'s, 'h>, target_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         panic!("Unimplemented: cast");
@@ -556,21 +599,25 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         //   objectId)
     }
 
+
     pub fn is_empty(&self) -> bool {
         panic!("Unimplemented: is_empty");
         // objectsById.isEmpty
     }
+
 
     pub fn print_all(&self) {
         panic!("Unimplemented: print_all");
         // objectsById.printAll()
     }
 
+
     pub fn count_unreachable_allocations(&self, interner: &HammerInterner<'s, 'h>, roots: &'v [ReferenceV<'v, 'h, 's>]) -> usize {
         let num_reachables = self.find_reachable_allocations(interner, roots).len();
         assert!(num_reachables <= self.objects_by_id.size());
         self.objects_by_id.size() - num_reachables
     }
+
 
     pub fn find_reachable_allocations<'a>(&'a self, interner: &HammerInterner<'s, 'h>, input_reachables: &'v [ReferenceV<'v, 'h, 's>]) -> HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> {
         let mut destination_map: HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>> = HashMap::default();
@@ -580,6 +627,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         self.inner_find_reachable_allocations(interner, &mut destination_map, self.void());
         destination_map
     }
+
 
     pub fn inner_find_reachable_allocations<'a>(&'a self, interner: &HammerInterner<'s, 'h>, destination_map: &mut HashMap<ReferenceV<'v, 'h, 's>, &'a AllocationV<'v, 'h, 's>>, input_reachable: ReferenceV<'v, 'h, 's>) {
         // Doublecheck that all the inputReachables are actually in this ..
@@ -607,6 +655,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn check_for_leaks(&mut self) {
         self.objects_by_id.check_for_leaks(self.vivem_dout);
     }
@@ -617,18 +666,19 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         f(call)
     }
 
+
     pub fn take_argument(&mut self, interner: &HammerInterner<'s, 'h>, call_id: CallIdV<'v, 'h, 's>, argument_index: i32, expected_type: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let reference = self.get_current_call(call_id, |c| c.take_argument(argument_index));
         self.check_reference(interner, expected_type, reference);
         self.decrement_reference_ref_count(
             IObjectReferrerV::ArgumentToObjectReferrer(ArgumentToObjectReferrerV {
                 argument_id: ArgumentIdV { call_id, index: argument_index },
-                ownership: expected_type.ownership,
             }),
             reference); // decrementing because taking it out of arg
         // Now, the register is the only one that has this reference.
         reference
     }
+
 
     pub fn allocate_transient(&mut self, interner: &HammerInterner<'s, 'h>, ownership: OwnershipH, location: LocationH, kind: KindV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         let r#ref = self.add(interner, ownership, location, kind);
@@ -639,6 +689,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         self.print_kind(kind);
         r#ref
     }
+
 
     pub fn print_kind(&mut self, kind: KindV<'v, 'h, 's>) {
         let handle = &mut *self.vivem_dout;
@@ -662,13 +713,13 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn initialize_array_element(&mut self, array_reference: ReferenceV<'v, 'h, 's>, ret: ReferenceV<'v, 'h, 's>) {
         match self.dereference(array_reference, false) {
             KindV::ArrayInstance(a) => {
                 self.increment_reference_ref_count(
                     IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
                         element_addr: ElementAddressV { array_id: array_reference.alloc_id(), element_index: a.get_size() },
-                        ownership: a.element_type_h.ownership,
                     }),
                     ret);
                 a.initialize_element(self.vivem_bump, ret);
@@ -676,6 +727,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             _ => panic!("initialize_array_element: not an ArrayInstance"),
         }
     }
+
 
     pub fn new_struct(&mut self, interner: &HammerInterner<'s, 'h>, struct_def_h: StructDefinitionH<'s, 'h>, struct_ref_h: CoordH<'s, 'h>, member_references: &'v [ReferenceV<'v, 'h, 's>]) -> ReferenceV<'v, 'h, 's> {
         let instance: &'v StructInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(StructInstanceV {
@@ -687,7 +739,6 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             self.increment_reference_ref_count(
                 IObjectReferrerV::MemberToObjectReferrer(MemberToObjectReferrerV {
                     member_addr: MemberAddressV { struct_id: reference.alloc_id(), field_index: index as i32 },
-                    ownership: member_reference.ownership,
                 }),
                 *member_reference);
         }
@@ -697,6 +748,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         self.print_kind(KindV::StructInstance(instance));
         reference
     }
+
 
     pub fn new_opaque(&mut self, interner: &HammerInterner<'s, 'h>, opaque_coord_ht: CoordH<'s, 'h>) -> ReferenceV<'v, 'h, 's> {
         let opaque_ht = match opaque_coord_ht.kind {
@@ -713,6 +765,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         reference
     }
 
+
     pub fn deinitialize_array_element(&mut self, array_reference: ReferenceV<'v, 'h, 's>) -> ReferenceV<'v, 'h, 's> {
         let array_instance = match self.dereference(array_reference, false) {
             KindV::ArrayInstance(ai) => ai,
@@ -722,17 +775,18 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         self.decrement_reference_ref_count(
             IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
                 element_addr: ElementAddressV { array_id: array_reference.alloc_id(), element_index: array_instance.get_size() },
-                ownership: element_reference.ownership,
             }),
             element_reference);
         element_reference
     }
+
 
     pub fn add_uninitialized_array(&mut self, interner: &HammerInterner<'s, 'h>, array_definition_th: RuntimeSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, capacity: i32) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
         let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity, elements: Cell::new(&[]) });
         let reference = self.add(interner, array_ref_type.ownership, array_ref_type.location, KindV::ArrayInstance(instance));
         (reference, instance)
     }
+
 
     pub fn add_array(&mut self, interner: &HammerInterner<'s, 'h>, array_definition_th: StaticSizedArrayDefinitionHT<'s, 'h>, array_ref_type: CoordH<'s, 'h>, member_refs: &'v [ReferenceV<'v, 'h, 's>]) -> (ReferenceV<'v, 'h, 's>, &'v ArrayInstanceV<'v, 'h, 's>) {
         let instance: &'v ArrayInstanceV<'v, 'h, 's> = self.vivem_bump.alloc(ArrayInstanceV { type_h: array_ref_type, element_type_h: array_definition_th.element_type, capacity: member_refs.len() as i32, elements: Cell::new(member_refs) });
@@ -741,12 +795,12 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
             self.increment_reference_ref_count(
                 IObjectReferrerV::ElementToObjectReferrer(ElementToObjectReferrerV {
                     element_addr: ElementAddressV { array_id: reference.alloc_id(), element_index: index as i64 },
-                    ownership: member_ref.ownership,
                 }),
                 *member_ref);
         }
         (reference, instance)
     }
+
 
     pub fn check_reference(&self, interner: &HammerInterner<'s, 'h>, expected_type: CoordH<'s, 'h>, actual_reference: ReferenceV<'v, 'h, 's>) {
         if actual_reference.ownership == OwnershipH::WeakH {
@@ -754,20 +808,32 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         } else {
             assert!(self.contains_live_object_alloc_id(actual_reference.alloc_id()));
         }
-        if (match actual_reference.seen_as_coord().hamut.ownership {
-            OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
-            OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
-            other => other,
-        }) != (match expected_type.ownership {
-            OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
-            OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
-            other => other,
-        }) {
-            panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
+        // VCOORD: revisit this if it survives
+        // Per bare-clone-borrow-move-design.md vivem caveat: for primitive-kind allocations,
+        // ownership/location flavors may differ between expected and actual (since e.g.
+        // MutableBorrow+Yonder+Int and Own+Inline+Int both refer to the same primitive
+        // AllocationV). Only the kind must match.
+        let kind_is_primitive = matches!(
+            expected_type.kind,
+            KindHT::IntHT(_) | KindHT::BoolHT(_) | KindHT::FloatHT(_) | KindHT::VoidHT(_) | KindHT::NeverHT(_),
+        );
+        if !kind_is_primitive {
+            if (match actual_reference.seen_as_coord().hamut.ownership {
+                OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
+                OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
+                other => other,
+            }) != (match expected_type.ownership {
+                OwnershipH::ImmutableShareH => OwnershipH::MutableShareH,
+                OwnershipH::ImmutableBorrowH => OwnershipH::MutableBorrowH,
+                other => other,
+            }) {
+                panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
+            }
+            if actual_reference.seen_as_coord().hamut.location != expected_type.location {
+                panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
+            }
         }
-        if actual_reference.seen_as_coord().hamut.location != expected_type.location {
-            panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
-        }
+        // /VCOORD
         if actual_reference.seen_as_coord().hamut.kind != expected_type.kind {
             panic!("Expected {:?} but was {:?}", expected_type, actual_reference.seen_as_coord().hamut);
         }
@@ -775,12 +841,14 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         self.check_kind(interner, expected_type.kind, actual_kind);
     }
 
+
     pub fn check_reference_register(&self, tyype: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> ReferenceRegisterV<'v, 'h, 's> {
         panic!("Unimplemented: check_reference_register");
         // val reg = register.expectReferenceRegister()
         // checkReference(tyype, reg.reference)
         // reg
     }
+
 
     pub fn check_kind(&self, interner: &HammerInterner<'s, 'h>, expected_type: KindHT<'s, 'h>, actual_kind: KindV<'v, 'h, 's>) {
         match (actual_kind, expected_type) {
@@ -829,6 +897,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 
+
     pub fn check_struct_id(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> AllocationIdV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_id");
         // val reference = checkReferenceRegister(expectedStructPointerType, register).reference
@@ -839,6 +908,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         // reference.allocId
     }
 
+
     pub fn check_struct_coord(&self, expected_struct_type: StructHT<'s, 'h>, expected_struct_pointer_type: CoordH<'s, 'h>, register: RegisterV<'v, 'h, 's>) -> StructInstanceV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_coord");
         // val reference = checkReferenceRegister(expectedStructPointerType, register).reference
@@ -848,9 +918,11 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         // }
     }
 
+
     pub fn check_struct_coord_ref(&self, expected_struct_type: StructHT<'s, 'h>, reference: ReferenceV<'v, 'h, 's>) -> StructInstanceV<'v, 'h, 's> {
         panic!("Unimplemented: check_struct_coord");
     }
+
 
     pub fn push_new_stack_frame(&mut self, function_h: &'h PrototypeH<'s, 'h>, args: &'v [ReferenceV<'v, 'h, 's>]) -> CallIdV<'v, 'h, 's> {
         let calls_by_id = &mut self.calls_by_id;
@@ -873,6 +945,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         call_id
     }
 
+
     pub fn pop_stack_frame(&mut self, expected_call_id: CallIdV<'v, 'h, 's>) {
         let calls_by_id = &mut self.calls_by_id;
         let call_id_stack = &mut self.call_id_stack;
@@ -886,6 +959,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         calls_by_id.remove(&expected_call_id);
         assert_eq!(calls_by_id.len(), call_id_stack.len());
     }
+
 
     pub fn to_von(&self, reference: ReferenceV<'v, 'h, 's>) -> IVonData {
         match self.dereference(reference, false) {
@@ -905,7 +979,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
                 let von_members: Vec<VonMember> =
                     si.struct_h.members.iter().zip(members.iter()).enumerate().map(|(_index, (member_h, member_v))| -> VonMember {
                         let _ = member_h;
-                        let _ = member_v;
+                        let _ = self.to_von(*member_v);
                         panic!("vimpl: memberH.name.toString")
                     }).collect();
                 IVonData::Object(VonObject {
@@ -918,6 +992,7 @@ impl<'v, 'h, 's> HeapV<'v, 'h, 's> {
         }
     }
 }
+
 
 pub fn get_var_address<'v, 'h, 's>(call_id: CallIdV<'v, 'h, 's>, local: Local<'s, 'h>) -> VariableAddressV<'v, 'h, 's> {
     VariableAddressV { call_id, local }

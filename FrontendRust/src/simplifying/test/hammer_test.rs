@@ -18,7 +18,6 @@ pub struct HammerTest {
 
 // (impl block suppressed per simplifying-pass policy — test fns emitted at module scope)
 
-
 #[test]
 fn local_ids_unique() {
     let parse_bump = Bump::new();

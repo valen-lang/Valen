@@ -2,24 +2,25 @@
 
 import printutils.*;
 
-sealed interface MyOption imm { }
+sealed interface MyOption share { }
 
-struct MySome imm {
+struct MySome share {
   value @MyList;
 }
 impl MyOption for MySome;
 
-struct MyNone imm { }
+struct MyNone share { }
 impl MyOption for MyNone;
 
 
-struct MyList imm {
+struct MyList share {
   value int;
   next @MyOption;
 }
 
 func printValues(list @MyList) void {
-  print(list.value);
+  // TSUGAR:   print(list.value);
+  print(__copy_prim(list.value));
   printNextValue(list.next);
 }
 

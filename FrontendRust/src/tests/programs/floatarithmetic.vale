@@ -1,3 +1,4 @@
+// TSUGAR: return int(-((7.5 + 17.5 - 4.0) * 4.0 / -2.0));
 exported func main() int {
-  return int(-((7.5 + 17.5 - 4.0) * 4.0 / -2.0));
+  return int(&-(&((7.5 + 17.5 - 4.0) * 4.0 / -2.0)));
 }

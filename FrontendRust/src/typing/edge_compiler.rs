@@ -257,11 +257,11 @@ where 's: 't,
                     let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
                     coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
                     ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
-                        coord: CoordT {
-                            ownership: ct.coord.ownership,
-                            region: RegionT { region: IRegionT::Default },
-                            kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
-                        },
+                        coord: CoordT::new(
+                            ct.coord.ownership,
+                            RegionT { region: IRegionT::Default },
+                            KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
+                        ),
                     }))
                 }
                 _ => panic!("vwat: create_override_placeholder_mimicking unexpected coord kind"),
@@ -376,10 +376,11 @@ where 's: 't,
                 _ => panic!("expected KindTemplataT from substituteTemplatasInKind"),
             }
         };
-        let dispatcher_placeholdered_abstract_param_type = CoordT {
-            kind: KindT::Interface(dispatcher_placeholdered_interface),
-            ..abstract_param_unsubstituted_type
-        };
+        let dispatcher_placeholdered_abstract_param_type = CoordT::new(
+            abstract_param_unsubstituted_type.ownership,
+            abstract_param_unsubstituted_type.region,
+            KindT::Interface(dispatcher_placeholdered_interface),
+        );
 
         // Step 2: Compile Dispatcher Function Given Interface, see CDFGI
 
@@ -652,10 +653,11 @@ where 's: 't,
 
         // Step 6: Use Case Environment to Find Override, see UCEFO.
 
-        let overriding_param_coord = CoordT {
-            kind: KindT::from(dispatcher_case_placeholdered_sub_citizen),
-            ..dispatcher_placeholdered_abstract_param_type
-        };
+        let overriding_param_coord = CoordT::new(
+            dispatcher_placeholdered_abstract_param_type.ownership,
+            dispatcher_placeholdered_abstract_param_type.region,
+            KindT::from(dispatcher_case_placeholdered_sub_citizen),
+        );
         let mut override_function_param_types: Vec<CoordT<'s, 't>> =
             dispatching_func_prototype.prototype.param_types().to_vec();
         override_function_param_types[abstract_index as usize] = overriding_param_coord;

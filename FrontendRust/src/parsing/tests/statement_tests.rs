@@ -40,7 +40,6 @@ fn simple_let() {
   }
 }
 
-
 #[test]
 fn multiple_statements() {
   let parse_bump = Bump::new();
@@ -93,7 +92,6 @@ fn multiple_statements() {
   }
 }
 
-
 #[test]
 fn test_8() {
   let parse_bump = Bump::new();
@@ -145,7 +143,6 @@ fn test_8() {
   }
 }
 
-
 #[test]
 fn test_9() {
   let parse_bump = Bump::new();
@@ -168,7 +165,6 @@ fn test_9() {
     _ => panic!("expected set x.a = 5; structure"),
   }
 }
-
 
 #[test]
 fn test_1_pe() {
@@ -202,7 +198,6 @@ fn test_1_pe() {
   }
 }
 
-
 #[test]
 fn test_simple_let() {
   let parse_bump = Bump::new();
@@ -227,7 +222,6 @@ fn test_simple_let() {
   }
 }
 
-
 #[test]
 fn test_simple_mut() {
   let parse_bump = Bump::new();
@@ -246,7 +240,6 @@ fn test_simple_mut() {
     _ => panic!("expected set x = 5; structure"),
   }
 }
-
 
 #[test]
 fn test_expr_starting_with_return() {
@@ -268,7 +261,6 @@ fn test_expr_starting_with_return() {
     _ => panic!("expected retcode() structure"),
   }
 }
-
 
 #[test]
 fn test_inner_set() {
@@ -311,7 +303,6 @@ fn test_inner_set() {
   }
 }
 
-
 #[test]
 fn test_if_statement_producing() {
   // This test is here because we had a bug where we didn't check that there
@@ -337,7 +328,6 @@ fn test_if_statement_producing() {
   }
 }
 
-
 #[test]
 fn test_destruct() {
   let parse_bump = Bump::new();
@@ -356,7 +346,6 @@ fn test_destruct() {
   }
 }
 
-
 #[test]
 fn test_unlet() {
   let parse_bump = Bump::new();
@@ -371,7 +360,6 @@ fn test_unlet() {
     _ => panic!("expected unlet x structure"),
   }
 }
-
 
 #[test]
 fn dot_on_function_calls_result() {
@@ -395,7 +383,6 @@ fn dot_on_function_calls_result() {
     _ => panic!("expected Wizard(8).charges structure"),
   }
 }
-
 
 #[test]
 fn let_with_pattern_with_only_a_capture() {
@@ -424,7 +411,6 @@ fn let_with_pattern_with_only_a_capture() {
   }
 }
 
-
 #[test]
 fn let_with_simple_pattern() {
   let parse_bump = Bump::new();
@@ -451,7 +437,6 @@ fn let_with_simple_pattern() {
     _ => panic!("expected a Moo = m; structure"),
   }
 }
-
 
 #[test]
 fn let_with_simple_pattern_in_destructure() {
@@ -488,7 +473,6 @@ fn let_with_simple_pattern_in_destructure() {
   }
 }
 
-
 #[test]
 fn let_with_destructuring_pattern() {
   let parse_bump = Bump::new();
@@ -512,7 +496,6 @@ fn let_with_destructuring_pattern() {
     _ => panic!("expected Muta[ ] = m; structure"),
   }
 }
-
 
 #[test]
 fn destructure_pattern_with_let_and_set() {
@@ -559,7 +542,6 @@ fn destructure_pattern_with_let_and_set() {
   }
 }
 
-
 #[test]
 fn ret() {
   let parse_bump = Bump::new();
@@ -574,7 +556,6 @@ fn ret() {
     _ => panic!("expected return 3; structure"),
   }
 }
-
 
 #[test]
 fn foreach() {
@@ -607,7 +588,6 @@ fn foreach() {
     _ => panic!("expected foreach i in myList {{ }} structure"),
   }
 }
-
 
 #[test]
 fn foreach_with_borrow() {
@@ -644,7 +624,6 @@ fn foreach_with_borrow() {
     _ => panic!("expected foreach i in &myList {{ }} structure"),
   }
 }
-
 
 #[test]
 fn foreach_with_two_receivers() {
@@ -698,7 +677,6 @@ fn foreach_with_two_receivers() {
   }
 }
 
-
 #[test]
 fn foreach_complex_iterable() {
   let parse_bump = Bump::new();
@@ -750,7 +728,6 @@ fn foreach_complex_iterable() {
   }
 }
 
-
 #[test]
 fn multiple_statements_2() {
   let parse_bump = Bump::new();
@@ -766,7 +743,6 @@ fn multiple_statements_2() {
   );
 }
 
-
 #[test]
 fn if_and_another_statement() {
   let parse_bump = Bump::new();
@@ -781,7 +757,6 @@ fn if_and_another_statement() {
       ",
   );
 }
-
 
 #[test]
 fn test_blocks_trailing_void_presence() {
@@ -822,7 +797,6 @@ fn test_blocks_trailing_void_presence() {
   }
 }
 
-
 #[test]
 fn block_with_statement_and_result() {
   let parse_bump = Bump::new();
@@ -855,7 +829,6 @@ fn block_with_statement_and_result() {
   }
 }
 
-
 #[test]
 fn block_with_result() {
   let parse_bump = Bump::new();
@@ -867,7 +840,6 @@ fn block_with_result() {
     _ => panic!("expected 3"),
   }
 }
-
 
 #[test]
 fn block_with_result_that_could_be_an_expr() {
@@ -920,7 +892,6 @@ fn block_with_result_that_could_be_an_expr() {
   }
 }
 
-
 #[test]
 fn mutating_as_statement() {
   let parse_bump = Bump::new();
@@ -946,7 +917,6 @@ fn mutating_as_statement() {
     _ => panic!("expected set x = 6; structure"),
   }
 }
-
 
 #[test]
 fn lone_block() {
@@ -974,7 +944,6 @@ fn lone_block() {
   }
 }
 
-
 #[test]
 fn pure_block() {
   // Just make sure it parses, so that we can highlight it.
@@ -992,7 +961,6 @@ fn pure_block() {
     ",
   );
 }
-
 
 #[test]
 fn unsafe_pure_block() {
@@ -1012,7 +980,6 @@ fn unsafe_pure_block() {
   );
 }
 
-
 #[test]
 fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
   let parse_bump = Bump::new();
@@ -1030,7 +997,6 @@ fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
   .unwrap_err();
   assert!(matches!(err, ParseError::BadStartOfStatementError(_)));
 }
-
 
 #[test]
 fn empty_block() {
@@ -1066,7 +1032,6 @@ fn empty_block() {
   }
 }
 
-
 #[test]
 fn cant_use_set_as_a_local_name() {
   let parse_bump = Bump::new();
@@ -1078,7 +1043,6 @@ fn cant_use_set_as_a_local_name() {
     ParseError::CantUseThatLocalName { ref name, .. } if name == "set"
   ));
 }
-
 
 #[test]
 fn foreach_2() {
@@ -1122,7 +1086,6 @@ fn foreach_2() {
     _ => panic!("expected foreach i in a {{ i }} structure"),
   }
 }
-
 
 #[test]
 fn foreach_expr() {

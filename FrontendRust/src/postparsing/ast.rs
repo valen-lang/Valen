@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::parsing::ast::{IMacroInclusionP, MutabilityP, VariabilityP};
+use crate::parsing::ast::{IMacroInclusionP, SharednessP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, RegionTemplataType, TemplateTemplataType,
@@ -179,8 +179,7 @@ pub struct StructS<'s> {
   pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
-  pub mutability_rune: RuneUsage<'s>,
-  pub maybe_predicted_mutability: Option<MutabilityP>,
+  pub sharedness: SharednessP,
   pub tyype: TemplateTemplataType<'s>,
   pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -200,8 +199,7 @@ impl<'s> StructS<'s> {
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
-    mutability_rune: RuneUsage<'s>,
-    maybe_predicted_mutability: Option<MutabilityP>,
+    sharedness: SharednessP,
     tyype: TemplateTemplataType<'s>,
     header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
@@ -223,8 +221,8 @@ impl<'s> StructS<'s> {
       "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
     );
     Self {
-      range, name, attributes, weakable, generic_params, mutability_rune,
-      maybe_predicted_mutability, tyype, header_rune_to_explicit_type,
+      range, name, attributes, weakable, generic_params, sharedness,
+      tyype, header_rune_to_explicit_type,
       header_predicted_rune_to_type, header_rules, members_rune_to_explicit_type,
       members_predicted_rune_to_type, member_rules, members, internal_methods,
       _sealed: (),
@@ -247,14 +245,6 @@ impl<'s> IStructMemberS<'s> {
   }
   
 
-  pub fn variability(&self) -> VariabilityP {
-    match self {
-      IStructMemberS::NormalStructMember(m) => m.variability,
-      IStructMemberS::VariadicStructMember(m) => m.variability,
-    }
-  }
-  
-
   pub fn type_rune(&self) -> &RuneUsage<'s> {
     match self {
       IStructMemberS::NormalStructMember(m) => &m.type_rune,
@@ -269,7 +259,6 @@ impl<'s> IStructMemberS<'s> {
 pub struct NormalStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub name: StrI<'s>,
-  pub variability: VariabilityP,
   pub type_rune: RuneUsage<'s>,
 }
 
@@ -277,7 +266,6 @@ pub struct NormalStructMemberS<'s> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberS<'s> {
   pub range: RangeS<'s>,
-  pub variability: VariabilityP,
   pub type_rune: RuneUsage<'s>,
 }
 
@@ -290,8 +278,7 @@ pub struct InterfaceS<'s> {
   pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-  pub mutability_rune: RuneUsage<'s>,
-  pub maybe_predicted_mutability: Option<MutabilityP>,
+  pub sharedness: SharednessP,
   pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
@@ -306,8 +293,7 @@ impl<'s> InterfaceS<'s> {
     weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
     rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
-    mutability_rune: RuneUsage<'s>,
-    maybe_predicted_mutability: Option<MutabilityP>,
+    sharedness: SharednessP,
     predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
@@ -330,7 +316,7 @@ impl<'s> InterfaceS<'s> {
     }
     Self {
       range, name, attributes, weakable, generic_params, rune_to_explicit_type,
-      mutability_rune, maybe_predicted_mutability, predicted_rune_to_type,
+      sharedness, predicted_rune_to_type,
       tyype, rules, internal_methods,
       _sealed: (),
     }

@@ -42,9 +42,9 @@
 
 ### Pattern: Function with Complex Lifetimes
 ```rust
-// mig: fn postparseClosure
-// mig:   params: &'p ClosureP<'a, 'p>
-// mig:   returns: &'s ClosureSE<'a, 's>
+
+
+
 fn postparse_closure<'a, 'p, 's>(
     &mut self,
     closure_p: &'p ClosureP<'a, 'p>,
@@ -55,8 +55,8 @@ fn postparse_closure<'a, 'p, 's>(
 
 ### Pattern: Struct Definition
 ```rust
-// mig: struct CodeBodyS
-// mig:   fields: body_location: CodeLocationS<'a>, body: &'s BlockSE<'a, 's>
+
+
 pub struct CodeBodyS<'a, 's> {
     pub body_location: CodeLocationS<'a>,
     pub body: &'s BlockSE<'a, 's>,
@@ -65,8 +65,8 @@ pub struct CodeBodyS<'a, 's> {
 
 ### Pattern: Enum Variant
 ```rust
-// mig: enum IExpressionSE::Consecutor
-// mig:   fields: exprs: &'s [&'s IExpressionSE<'a, 's>]
+
+
 Consecutor(ConsecutorSE<'a, 's>),
 ```
 

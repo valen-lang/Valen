@@ -28,7 +28,7 @@ extern func getch() int;
 
 struct Vec<N Int, T>
 {
-  values [#N]<imm>T;
+  values [#N]T;
 }
 
 struct Goblin {
@@ -37,8 +37,8 @@ struct Goblin {
 
 func makeBoard() [][]str {
   return
-    Array<mut, []str>(10, (row) => {
-      Array<mut, str>(10, (col) => {
+    Array<[]str>(10, (row) => {
+      Array<str>(10, (col) => {
         if (row == 0) { "#" }
         else if (col == 0) { "#" }
         else if (row == 9) { "#" }
@@ -49,7 +49,7 @@ func makeBoard() [][]str {
 }
 
 func display(
-    board &Array<mut, []<mut>str>,
+    board &Array<[]str>,
     goblins &HashMap<int, Goblin, IntHasher, IntEquator>,
     playerRow int,
     playerCol int)
@@ -63,7 +63,8 @@ func display(
         set charToPrint = "@";
       } else {
         goblins.keys().drop_into(&(key) => {
-          maybeGoblin = goblins.get(key);
+          // TSUGAR: goblins.get(key) — get takes &K
+          maybeGoblin = goblins.get(&key);
           goblin = (maybeGoblin).get(); // TODO try getting rid of this ^, doesnt wanna find the get function
 
           if (rowI == goblin.location.values.1 and cellI == goblin.location.values.0) {
@@ -108,7 +109,8 @@ func goblinAt(
   row int,
   col int)
 bool {
-  a = goblins.get(goblinKey);
+  // TSUGAR: goblins.get(goblinKey) — get takes &K
+  a = goblins.get(&goblinKey);
   b = (a).get();
   [goblinCol, goblinRow] = b.location.values;
   return row == goblinRow and col == goblinCol;
@@ -132,30 +134,33 @@ exported func main() int {
   playerCol = 3;
 
   goblins = HashMap<int, Goblin, IntHasher, IntEquator>(IntHasher(), IntEquator());
-  goblins.add(13, Goblin(Vec(#[#](6, 3))));
-  goblins.add(14, Goblin(Vec(#[#](2, 6))));
-  goblins.add(15, Goblin(Vec(#[#](5, 7))));
-  goblins.add(17, Goblin(Vec(#[#](2, 5))));
-  goblins.add(19, Goblin(Vec(#[#](7, 1))));
-  goblins.add(23, Goblin(Vec(#[#](3, 3))));
-  goblins.add(24, Goblin(Vec(#[#](1, 7))));
-  goblins.add(25, Goblin(Vec(#[#](7, 6))));
-  goblins.add(27, Goblin(Vec(#[#](4, 6))));
-  goblins.add(29, Goblin(Vec(#[#](7, 4))));
+  goblins.add(13, Goblin(Vec([#](6, 3))));
+  goblins.add(14, Goblin(Vec([#](2, 6))));
+  goblins.add(15, Goblin(Vec([#](5, 7))));
+  goblins.add(17, Goblin(Vec([#](2, 5))));
+  goblins.add(19, Goblin(Vec([#](7, 1))));
+  goblins.add(23, Goblin(Vec([#](3, 3))));
+  goblins.add(24, Goblin(Vec([#](1, 7))));
+  goblins.add(25, Goblin(Vec([#](7, 6))));
+  goblins.add(27, Goblin(Vec([#](4, 6))));
+  goblins.add(29, Goblin(Vec([#](7, 4))));
 
   num_turns = 0;
 
   running = true;
-  while (running) {
+  // TSUGAR: while (running) — copy primitive each iter
+  while (__copy_prim(&running)) {
+    // TSUGAR: playerRow/playerCol are reused below; copy primitives instead of moving
     display(
         &board,
         &goblins,
-        playerRow,
-        playerCol);
+        __copy_prim(&playerRow),
+        __copy_prim(&playerCol));
 
     key = inputKey();
-    newPlayerRow = playerRow;
-    newPlayerCol = playerCol;
+    // TSUGAR: copy primitives — playerRow/playerCol are reused below
+    newPlayerRow = __copy_prim(&playerRow);
+    newPlayerCol = __copy_prim(&playerCol);
     if (key == 81) {
       set running = false;
     } else if (key == 119) {
@@ -170,15 +175,17 @@ exported func main() int {
 
     killedGoblin = false;
     goblins.keys().drop_into(&(key) => {
-      if (goblinAt(&goblins, key, newPlayerRow, newPlayerCol)) {
-        goblins.remove(key);
+      // TSUGAR: __copy_prim on every primitive use; both branches must move-out `key` the same way
+      if (goblinAt(&goblins, __copy_prim(&key), __copy_prim(&newPlayerRow), __copy_prim(&newPlayerCol))) {
+        goblins.remove(__copy_prim(&key));
         set killedGoblin = true;
       }
     });
     if (not killedGoblin) {
-      if (board[newPlayerRow][newPlayerCol] == ".") {
-        set playerRow = newPlayerRow;
-        set playerCol = newPlayerCol;
+      // TSUGAR: __copy_prim on every indexing/reuse
+      if (board[__copy_prim(&newPlayerRow)][__copy_prim(&newPlayerCol)] == ".") {
+        set playerRow = __copy_prim(&newPlayerRow);
+        set playerCol = __copy_prim(&newPlayerCol);
       }
     }
 

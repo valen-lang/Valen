@@ -20,9 +20,12 @@ use std::fmt::Result;
 use std::ptr::eq;
 
 
+
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionH;
+
 
 
 /// Temporary state
@@ -46,26 +49,32 @@ pub struct PackageH<'s, 'h> where 's: 'h {
     pub kind_to_extern: &'h ArenaIndexMap<'h, &'h OpaqueHT<'s, 'h>, HamutsKindExtern<'s, 'h>>,
 }
 
+
 impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
   pub fn extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: extern_functions");
   }
 
+
   pub fn abstract_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: abstract_functions");
   }
+
 
   pub fn get_all_user_implemented_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: get_all_user_implemented_functions");
   }
 
+
   pub fn non_extern_functions(&self) -> Vec<&'h FunctionH<'s, 'h>> {
     panic!("Unimplemented: non_extern_functions");
   }
 
+
   pub fn get_all_user_functions(&self) -> Vec<&FunctionH<'s, 'h>> {
     self.functions.iter().filter(|f| f.is_user_function()).collect()
   }
+
 
   pub fn lookup_function(&self, readable_name: &str) -> &'h FunctionH<'s, 'h> {
     let from_exports: Vec<&'h PrototypeH<'s, 'h>> = self.export_name_to_function.iter().filter(|(k, _)| k.0 == readable_name).map(|(_, v)| *v).collect();
@@ -82,11 +91,13 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
     self.functions.iter().find(|f| eq(f.prototype as *const _, first as *const _)).expect("lookup_function: function with matching prototype")
   }
 
+
   pub fn lookup_struct(&self, human_name: &str) -> &'h StructDefinitionH<'s, 'h> {
     let matches: Vec<&StructDefinitionH<'s, 'h>> = self.structs.iter().filter(|s| s.id.local_name.0 == human_name).collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
+
 
   pub fn lookup_interface(&self, human_name: &str) -> &'h InterfaceDefinitionH<'s, 'h> {
     let matches: Vec<&InterfaceDefinitionH<'s, 'h>> = self.interfaces.iter().filter(|i| i.id.shortened_name.0 == human_name).collect();
@@ -96,15 +107,18 @@ impl<'s, 'h> PackageH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Temporary state
 pub struct ProgramH<'s, 'h> where 's: 'h {
     pub packages: PackageCoordinateMap<'s, PackageH<'s, 'h>>,
 }
 
+
 impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
   pub fn lookup_package(&self, package_coordinate: PackageCoordinate<'s>) -> PackageH<'s, 'h> {
     *self.packages.get(&package_coordinate).expect("lookup_package: missing")
   }
+
 
     pub fn lookup_function(&self, prototype: &PrototypeH<'s, 'h>) -> &'h FunctionH<'s, 'h> {
         let paackage = self.lookup_package(prototype.id.package_coordinate);
@@ -113,20 +127,24 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
         result
     }
 
+
     pub fn lookup_struct(&self, interner: &HammerInterner<'s, 'h>, struct_ref_h: &StructHT<'s, 'h>) -> &'h StructDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(struct_ref_h.id.package_coordinate);
         paackage.structs.iter().find(|s| *s.get_ref(interner) == *struct_ref_h).expect("lookup_struct: missing")
     }
+
 
     pub fn lookup_interface(&self, interner: &HammerInterner<'s, 'h>, interface_ref_h: &InterfaceHT<'s, 'h>) -> &'h InterfaceDefinitionH<'s, 'h> {
         let paackage = self.lookup_package(interface_ref_h.id.package_coordinate);
         paackage.interfaces.iter().find(|i| *i.get_ref(interner) == *interface_ref_h).expect("lookup_interface: missing")
     }
 
+
     pub fn lookup_static_sized_array(&self, ssa_th: &StaticSizedArrayHT<'s, 'h>) -> &'h StaticSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(ssa_th.id.package_coordinate);
         paackage.static_sized_arrays.iter().find(|s| s.name == ssa_th.id).expect("vassertSome: lookup_static_sized_array")
     }
+
 
     pub fn lookup_runtime_sized_array(&self, rsa_th: &RuntimeSizedArrayHT<'s, 'h>) -> &'h RuntimeSizedArrayDefinitionHT<'s, 'h> {
         let paackage = self.lookup_package(rsa_th.name.package_coordinate);
@@ -135,16 +153,18 @@ impl<'s, 'h> ProgramH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s>,
     pub weakable: bool,
     pub extern_: bool,
-    pub mutability: Mutability,
+    pub sharedness: Sharedness,
     pub edges: &'h [EdgeH<'s, 'h>],
     pub members: &'h [StructMemberH<'s, 'h>],
 }
+
 impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
     pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h StructHT<'s, 'h> {
         interner.intern_struct_ht(StructHTValH { id: self.id })
@@ -152,13 +172,14 @@ impl<'s, 'h> StructDefinitionH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructMemberH<'s, 'h> where 's: 'h {
     pub name: &'h IdH<'s>,
-    pub variability: Variability,
     pub tyype: CoordH<'s, 'h>,
 }
+
 
 
 /// Temporary state
@@ -166,15 +187,17 @@ pub struct StructMemberH<'s, 'h> where 's: 'h {
 pub struct InterfaceDefinitionH<'s, 'h> where 's: 'h {
     pub id: &'h IdH<'s>,
     pub weakable: bool,
-    pub mutability: Mutability,
+    pub sharedness: Sharedness,
     pub super_interfaces: &'h [&'h InterfaceHT<'s, 'h>],
     pub methods: &'h [InterfaceMethodH<'s, 'h>],
 }
+
 impl<'s, 'h> InterfaceDefinitionH<'s, 'h> where 's: 'h {
     pub fn get_ref(&self, interner: &HammerInterner<'s, 'h>) -> &'h InterfaceHT<'s, 'h> {
         interner.intern_interface_ht(InterfaceHTValH { id: self.id })
     }
 }
+
 
 
 /// Temporary state
@@ -183,6 +206,7 @@ pub struct InterfaceMethodH<'s, 'h> where 's: 'h {
     pub prototype_h: &'h PrototypeH<'s, 'h>,
     pub virtual_param_index: i32,
 }
+
 
 
 /// Temporary state
@@ -196,12 +220,14 @@ pub struct EdgeH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IFunctionAttributeH {
     UserFunctionH,
     PureH,
 }
+
 
 
 /// Temporary state
@@ -214,11 +240,13 @@ pub struct FunctionH<'s, 'h> where 's: 'h {
     pub body: ExpressionH<'s, 'h>,
 }
 
+
 impl<'s, 'h> FunctionH<'s, 'h> where 's: 'h {
     pub fn is_user_function(&self) -> bool {
         self.attributes.contains(&IFunctionAttributeH::UserFunctionH)
     }
 }
+
 
 
 /// Interning permanent (see @TFITCX)
@@ -231,6 +259,7 @@ pub struct PrototypeH<'s, 'h> where 's: 'h {
 }
 
 
+
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeHValH<'s, 'h> where 's: 'h {
@@ -238,6 +267,7 @@ pub struct PrototypeHValH<'s, 'h> where 's: 'h {
     pub params: &'h [CoordH<'s, 'h>],
     pub return_type: CoordH<'s, 'h>,
 }
+
 
 /// Interning permanent (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -253,6 +283,8 @@ impl<'s> Display for IdH<'s> {
         write!(f, "IdH({},{},{},{})", self.local_name, self.package_coordinate, self.shortened_name, self.fully_qualified_name)
     }
 }
+
+
 
 
 /// Interning transient (see @TFITCX)

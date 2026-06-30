@@ -3,24 +3,24 @@ import stdlib.arrays.*;
 
 #!DeriveStructDrop
 struct List<E Ref> {
-  array! Array<mut, E>;
+  array! Array<E>;
 }
 
 func List<E>(capacity int) List<E> {
-  List<E>(Array<mut, E>(capacity))
+  List<E>(Array<E>(capacity))
 }
 
 func List<E>() List<E> {
   List<E>(0)
 }
 
-func List<E, V Variability, N Int>(arr [#N]<mut, V>E) List<E> {
+func List<E, V Variability, N Int>(arr [#N]<V>E) List<E> {
   list = List<E>(arr.len());
   migrate(arr, &list.array);
   return list;
 }
 
-func List<E Ref imm, V Variability, N Int>(arr [#N]<imm, V>E) List<E> {
+func List<E Ref, V Variability, N Int>(arr [#N]<V>E) List<E> {
   list = List<E>(arr.len());
   i = 0;
   while i < arr.len() {
@@ -40,7 +40,7 @@ func maybeExpand<E>(list &List<E>) {
   oldCapacity = list.array.capacity();
   if list.len() == oldCapacity {
     newCapacity = if (oldCapacity > 0) { oldCapacity * 2 } else { 1 };
-    newArray = Array<mut, E>(newCapacity);
+    newArray = Array<E>(newCapacity);
     oldArray = set list.array = newArray;
     migrate(oldArray, &list.array);
   }
@@ -75,16 +75,6 @@ where func(&F, &E)T {
   result = List<T>();
   list.each({ result.add((func)(_)); });
   return result;
-}
-
-func toImmArray<E Ref imm>(list &List<E>) Array<imm, E> {
-  Array<imm, E>(list.len(), &{ list.get(_) })
-}
-
-func toImmArray<E Ref imm>(list List<E>) Array<imm, E>
-where func drop(E)void {
-  [arr] = list;
-  Array<imm, E>(arr.len(), &{ arr[_] })
 }
 
 // Below here is untested
@@ -153,7 +143,7 @@ where func ==(&E, &E)bool {
 
 func reverse<E>(list List<E>) List<E> {
   [arr] = list;
-  dest = Array<mut, E>(arr.capacity());
+  dest = Array<E>(arr.capacity());
   drop_into(arr, &{ dest.push(_); });
   return List(dest);
 }
@@ -171,7 +161,7 @@ where func(&F, &E)bool, func drop(F)void {
   return false;
 }
 
-//func List<E, M>(arr &Array<M, E>) List<E> {
+//func List<E, M>(arr &Array<E>) List<E> {
 //  list = List<E>();
 //  foreach elem in arr {
 //    list.add(elem);
@@ -179,33 +169,33 @@ where func(&F, &E)bool, func drop(F)void {
 //  list
 //}
 
-func toArray<E>(list List<E>) []<mut>E {
+func toArray<E>(list List<E>) []E {
   [arr] = list;
   return arr;
 }
 
-func toArray<E>(list &List<E>) []<mut>&E {
-  return Array<mut, &E>(list.len(), { list.get(_) });
+func toArray<E>(list &List<E>) []&E {
+  return Array<&E>(list.len(), { list.get(_) });
 }
 
 func clone<E>(list &List<E>) List<E>
 where func clone(&E)E {
-  return List<E>(Array<mut, E>(list.len(), { list.get(_).clone() }));
+  return List<E>(Array<E>(list.len(), { list.get(_).clone() }));
 }
 
 
 
 // below here is old List code
 
-//func toArray<E>(list List<E>) Array<mut, E> {
+//func toArray<E>(list List<E>) Array<E> {
 //  [x] = list;
 //  x
 //}
-//func toArray<E>(list &List<E>) Array<mut, E> {
+//func toArray<E>(list &List<E>) Array<E> {
 //  toVaryArray(list)
 //}
-//func toVaryArray<E>(list &List<E>) Array<mut, E> {
-//  Array<mut, E>(list.len(), &(i) => { list.get(i) })
+//func toVaryArray<E>(list &List<E>) Array<E> {
+//  Array<E>(list.len(), &(i) => { list.get(i) })
 //}
 
 //func toList<E>(arr *Array<_, E>) List<E> {
@@ -241,7 +231,7 @@ where func clone(&E)E {
 //import stdlib.*;
 //
 //struct List<E> rules(E Ref) {
-//  array! Array<mut, Opt<E>>;
+//  array! Array<Opt<E>>;
 //  size! int;
 //}
 //func List<E>() List<E>
@@ -272,11 +262,11 @@ where func clone(&E)E {
 //func set<E>(list &List<E>, index int, value E) void {
 //  set list.array[index] = Some(value);
 //}
-//func toArray<E>(list &List<E>) Array<mut, E> {
+//func toArray<E>(list &List<E>) Array<E> {
 //  [*](list.len(), &(i){ list.get(i) })
 //}
 
-//func toImmArray<E>(list &List<E>) Array<imm, E> {
+//func toImmArray<E>(list &List<E>) Array<E> {
 //  [imm *](list.len(), &(i){ list.get(i) })
 //}
 //// deprecate

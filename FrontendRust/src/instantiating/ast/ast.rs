@@ -2,7 +2,7 @@ use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::postparsing::names::IRuneS;
-use crate::instantiating::ast::types::{CoordI, KindIT, ICitizenIT, MutabilityI, VariabilityI, StructIT};
+use crate::instantiating::ast::types::{CoordI, KindIT, ICitizenIT, SharednessI, StructIT};
 use crate::instantiating::ast::names::{
     IdI, INameI,
     IFunctionNameI, IImplNameI, IInterfaceNameI, IStructNameI, ICitizenNameI,
@@ -14,6 +14,7 @@ use crate::instantiating::instantiating_interner::InstantiatingInterner;
 use crate::instantiating::ast::expressions::ReferenceExpressionIE;
 use crate::instantiating::ast::types::InterfaceIT;
 use crate::utils::code_hierarchy::PackageCoordinate;
+
 
 
 /// Temporary state
@@ -57,6 +58,7 @@ pub struct FunctionExternI<'s, 'i> where 's: 'i {
 
 // (Canonical groups equals/hashCode on one physical line — see the eq block above.)
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindExternI<'s, 'i> where 's: 'i {
@@ -66,6 +68,7 @@ pub struct KindExternI<'s, 'i> where 's: 'i {
 
 
 // (Canonical groups equals/hashCode on one physical line — see the eq block above.)
+
 
 
 /// Temporary state
@@ -127,14 +130,18 @@ impl<'i> LocationInFunctionEnvironmentI<'i> {
         // LocationInFunctionEnvironmentI(path :+ subLocation)
     }
 
+
     pub fn to_string(&self) -> String {
         self.path.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(".")
     }
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AbstractI;
+
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -154,6 +161,7 @@ impl<'s, 'i> ParameterI<'s, 'i> {
         // name == that.name && virtuality == that.virtuality && tyype == that.tyype
     }
 }
+
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -177,6 +185,7 @@ impl<'s, 'i> SignatureI<'s, 'i> {
     }
 }
 
+
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IFunctionAttributeI<'s> {
@@ -185,12 +194,16 @@ pub enum IFunctionAttributeI<'s> {
     ExternI(ExternI<'s>),
 }
 
+
+
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenAttributeI<'s> {
     SealedI,
     ExternI(ExternI<'s>),
 }
+
+
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternI<'s> {
@@ -205,6 +218,8 @@ pub struct RegionI<'s, 'i> where 's: 'i {
     pub name: IRegionNameI<'s, 'i>,
     pub mutable: bool,
 }
+
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -226,9 +241,11 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         // attributes.exists({ case ExternI(_) => true case _ => false })
     }
 
+
     pub fn is_user_function(&self) -> bool {
         self.attributes.contains(&IFunctionAttributeI::UserFunctionI)
     }
+
 
     pub fn get_abstract_interface(&self) -> Option<&'i InterfaceIT<'s, 'i>> {
         let abstract_interfaces: Vec<_> = self.params.iter().filter_map(|p| match (p.virtuality, p.tyype.kind) {
@@ -239,12 +256,14 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         abstract_interfaces.into_iter().next()
     }
 
+
     pub fn get_virtual_index(&self) -> Option<i32> {
         panic!("Unimplemented: get_virtual_index")
         // val indices = params.zipWithIndex.collect({ case (ParameterI(_, Some(AbstractI()), _, _), index) => index })
         // vassert(indices.size <= 1)
         // indices.headOption
     }
+
 
     pub fn to_prototype(&self, interner: &InstantiatingInterner<'s, 'i>) -> PrototypeI<'s, 'i> {
         //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
@@ -254,11 +273,13 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         *interner.intern_prototype_ci(PrototypeIValI { id: self.id, return_type: self.return_type })
     }
 
+
     pub fn to_signature(&self) -> SignatureI<'_, '_> {
         panic!("Unimplemented: to_signature")
         // toPrototype.toSignature
     }
 }
+
 
 impl<'s, 'i> FunctionHeaderI<'s, 'i> where 's: 'i {
     pub fn param_types(&self) -> Vec<CoordI<'s, 'i>> {
@@ -274,6 +295,7 @@ impl<'s, 'i> FunctionHeaderI<'s, 'i> {
         // attributes.collectFirst({ case PureI => }).nonEmpty
     }
 }
+
 
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -298,11 +320,13 @@ impl<'s, 'i> PrototypeI<'s, 'i> where 's: 'i {
     }
 }
 
+
 impl<'s, 'i> PrototypeI<'s, 'i> {
     pub fn to_signature(&self) -> SignatureIValI<'s, 'i> {
         SignatureIValI { id: self.id }
     }
 }
+
 
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -313,19 +337,19 @@ pub enum IVariableI<'s, 'i> where 's: 'i {
     ReferenceClosureVariableI(&'i ReferenceClosureVariableI<'s, 'i>),
 }
 
+
+
 impl<'s, 'i> IVariableI<'s, 'i> {
     pub fn name(&self) -> () {
         panic!("Unimplemented: name")
     }
 
-    pub fn variability(&self) -> () {
-        panic!("Unimplemented: variability")
-    }
 
     pub fn collapsed_coord(&self) -> () {
         panic!("Unimplemented: collapsed_coord")
     }
 }
+
 
 /// Polyvalue
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -333,6 +357,8 @@ pub enum ILocalVariableI<'s, 'i> where 's: 'i {
     AddressibleLocalVariableI(&'i AddressibleLocalVariableI<'s, 'i>),
     ReferenceLocalVariableI(&'i ReferenceLocalVariableI<'s, 'i>),
 }
+
+
 
 impl<'s, 'i> ILocalVariableI<'s, 'i> {
     pub fn name(&self) -> IVarNameI<'s, 'i> {
@@ -342,6 +368,7 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
         }
     }
 
+
     pub fn collapsed_coord(&self) -> CoordI<'s, 'i> {
         match self {
             ILocalVariableI::AddressibleLocalVariableI(alv) => alv.collapsed_coord,
@@ -349,19 +376,13 @@ impl<'s, 'i> ILocalVariableI<'s, 'i> {
         }
     }
 
-    pub fn variability(&self) -> VariabilityI {
-        match self {
-            ILocalVariableI::AddressibleLocalVariableI(alv) => alv.variability,
-            ILocalVariableI::ReferenceLocalVariableI(rlv) => rlv.variability,
-        }
-    }
+
 }
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressibleLocalVariableI<'s, 'i> where 's: 'i {
     pub name: IVarNameI<'s, 'i>,
-    pub variability: VariabilityI,
     pub collapsed_coord: CoordI<'s, 'i>,
 }
 
@@ -372,7 +393,6 @@ pub struct AddressibleLocalVariableI<'s, 'i> where 's: 'i {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceLocalVariableI<'s, 'i> where 's: 'i {
     pub name: IVarNameI<'s, 'i>,
-    pub variability: VariabilityI,
     pub collapsed_coord: CoordI<'s, 'i>,
 }
 
@@ -384,16 +404,16 @@ pub struct ReferenceLocalVariableI<'s, 'i> where 's: 'i {
 pub struct AddressibleClosureVariableI<'s, 'i> where 's: 'i {
     pub name: IVarNameI<'s, 'i>,
     pub closured_vars_struct_type: StructIT<'s, 'i>,
-    pub variability: VariabilityI,
     pub collapsed_coord: CoordI<'s, 'i>,
 }
+
+
 
 /// Temporary state
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceClosureVariableI<'s, 'i> where 's: 'i {
     pub name: IVarNameI<'s, 'i>,
     pub closured_vars_struct_type: StructIT<'s, 'i>,
-    pub variability: VariabilityI,
     pub collapsed_coord: CoordI<'s, 'i>,
 }
 

@@ -30,7 +30,6 @@ fn empty_coord_rule() {
   assert_eq!(typed.tyype, ITypePR::CoordType);
 }
 
-
 #[test]
 fn coord_with_rune() {
   let parse_bump = Bump::new();
@@ -55,7 +54,6 @@ fn coord_with_destructure_only() {
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
 }
-
 
 #[test]
 fn coord_with_rune_and_destructure() {
@@ -120,13 +118,12 @@ fn coord_with_int_in_kind_rule() {
   assert_templex_name(cast!(third, IRulexPR::Templex), "int");
 }
 
-
 #[test]
 fn coord_with_specific_kind_rule() {
   let parse_bump = Bump::new();
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
-  let rule = compile(&parse_arena, &keywords, "Ref[_, _, Kind[mut]]");
+  let rule = compile(&parse_arena, &keywords, "Ref[_, _, Kind[int]]");
   let components = cast!(rule, IRulexPR::Components);
   assert_eq!(components.container, ITypePR::CoordType);
   let (first, second, third) = expect_3(&components.components);
@@ -134,9 +131,9 @@ fn coord_with_specific_kind_rule() {
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   let kind_components = cast!(third, IRulexPR::Components);
   assert_eq!(kind_components.container, ITypePR::KindType);
-  let mutability_rule = expect_1(&kind_components.components);
-  let mutability = cast!(cast!(mutability_rule, IRulexPR::Templex), ITemplexPT::Mutability);
-  assert_eq!(mutability.1, MutabilityP::Mutable);
+  let kind_rule = expect_1(&kind_components.components);
+  let templex = cast!(kind_rule, IRulexPR::Templex);
+  assert_templex_name(templex, "int");
 }
 
 #[test]

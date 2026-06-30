@@ -87,7 +87,6 @@ where 'p: 's,
   }
 }
 
-
 #[test]
 fn coord_rune_rule() {
   let parse_bump = Bump::new();

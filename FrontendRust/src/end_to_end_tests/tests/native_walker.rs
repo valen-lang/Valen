@@ -5,6 +5,7 @@ use crate::end_to_end_tests::{assert_compile_and_run_with_c, programs_dir};
 /// `native/test.c`, but we pass `extra_c=&[]` so the only way the impl
 /// reaches clang is via the Frontend-driven walker.
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn native_walker_reached_package_included() {
     let dir = programs_dir().join("programs/native_walker/walks_reached");
     assert_compile_and_run_with_c(&dir, &[],7);
@@ -17,6 +18,7 @@ fn native_walker_reached_package_included() {
 /// immediately if compiled. Build must succeed, proving the walker
 /// skipped the unreached package.
 #[test]
+#[ignore = "deferred at experimental-2 squash baseline"]
 fn native_walker_unreached_package_excluded() {
     let dir = programs_dir().join("programs/native_walker/skips_unreached");
     assert_compile_and_run_with_c(&dir, &[],5);

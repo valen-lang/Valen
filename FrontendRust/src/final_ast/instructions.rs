@@ -12,6 +12,7 @@ use crate::final_ast::types::OwnershipH;
 use crate::final_ast::types::VoidHT;
 
 
+
 /// Polyvalue
 #[derive(Copy, Clone, Debug)]
 pub enum ExpressionH<'s, 'h> where 's: 'h {
@@ -47,14 +48,12 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
     MutabilifyH(&'h MutabilifyH<'s, 'h>),
     ImmutabilifyH(&'h ImmutabilifyH<'s, 'h>),
     ReturnH(&'h ReturnH<'s, 'h>),
-    NewImmRuntimeSizedArrayH(&'h NewImmRuntimeSizedArrayH<'s, 'h>),
-    NewMutRuntimeSizedArrayH(&'h NewMutRuntimeSizedArrayH<'s, 'h>),
+    NewRuntimeSizedArrayH(&'h NewRuntimeSizedArrayH<'s, 'h>),
     PushRuntimeSizedArrayH(&'h PushRuntimeSizedArrayH<'s, 'h>),
     PopRuntimeSizedArrayH(&'h PopRuntimeSizedArrayH<'s, 'h>),
     StaticArrayFromCallableH(&'h StaticArrayFromCallableH<'s, 'h>),
     DestroyStaticSizedArrayIntoFunctionH(&'h DestroyStaticSizedArrayIntoFunctionH<'s, 'h>),
-    DestroyImmRuntimeSizedArrayH(&'h DestroyImmRuntimeSizedArrayH<'s, 'h>),
-    DestroyMutRuntimeSizedArrayH(&'h DestroyMutRuntimeSizedArrayH<'s, 'h>),
+    DestroyRuntimeSizedArrayH(&'h DestroyRuntimeSizedArrayH<'s, 'h>),
     BreakH(&'h BreakH),
     NewStructH(&'h NewStructH<'s, 'h>),
     ArrayLengthH(&'h ArrayLengthH<'s, 'h>),
@@ -65,25 +64,27 @@ pub enum ExpressionH<'s, 'h> where 's: 'h {
     LockWeakH(&'h LockWeakH<'s, 'h>),
     DiscardH(&'h DiscardH<'s, 'h>),
     PreCheckBorrowH(&'h PreCheckBorrowH<'s, 'h>),
+    CopyPrimH(&'h CopyPrimH<'s, 'h>),
 }
+
 
 impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     pub fn result_type(&self) -> CoordH<'s, 'h> {
     match self {
-        ExpressionH::ConstantVoidH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::ConstantIntH(c) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: c.bits }) },
-        ExpressionH::ConstantBoolH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) },
-        ExpressionH::ConstantStrH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::YonderH, kind: KindHT::StrHT(StrHT) },
-        ExpressionH::ConstantF64H(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::FloatHT(FloatHT) },
+        ExpressionH::ConstantVoidH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::ConstantIntH(c) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: c.bits })),
+        ExpressionH::ConstantBoolH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::BoolHT(BoolHT)),
+        ExpressionH::ConstantStrH(_) => CoordH::new(OwnershipH::MutableShareH, LocationH::YonderH, KindHT::StrHT(StrHT)),
+        ExpressionH::ConstantF64H(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::FloatHT(FloatHT)),
         ExpressionH::ArgumentH(a) => a.result_type,
-        ExpressionH::StackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::RestackifyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
+        ExpressionH::StackifyH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::RestackifyH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
         ExpressionH::UnstackifyH(u) => u.local.type_h,
-        ExpressionH::DestroyH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
+        ExpressionH::DestroyH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::DestroyStaticSizedArrayIntoLocalsH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
         ExpressionH::StructToInterfaceUpcastH(u) => {
             let src = u.source_expression.result_type();
-            CoordH { ownership: src.ownership, location: src.location, kind: KindHT::InterfaceHT(u.target_interface) }
+            CoordH::new(src.ownership, src.location, KindHT::InterfaceHT(u.target_interface))
         }
         ExpressionH::InterfaceToInterfaceUpcastH(_) => {
             panic!("Unimplemented: result_type for InterfaceToInterfaceUpcastH");
@@ -95,9 +96,9 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 (OwnershipH::ImmutableBorrowH, _) | (OwnershipH::MutableBorrowH, _) => LocationH::YonderH,
                 (OwnershipH::WeakH, _) => LocationH::YonderH,
                 (OwnershipH::OwnH, loc) => loc,
-                (OwnershipH::MutableShareH, loc) | (OwnershipH::ImmutableShareH, loc) => loc,
+                (OwnershipH::MutableShareH, _) | (OwnershipH::ImmutableShareH, _) => LocationH::YonderH,
             };
-            CoordH { ownership: l.target_ownership, location, kind: l.local.type_h.kind }
+            CoordH::new(l.target_ownership, location, l.local.type_h.kind)
         }
         ExpressionH::MemberStoreH(m) => m.result_type,
         ExpressionH::MemberLoadH(m) => m.result_type,
@@ -114,17 +115,17 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         ExpressionH::InterfaceCallH(c) => c.function_type.return_type,
         ExpressionH::IfH(i) => i.common_supertype,
         ExpressionH::WhileH(w) => match w.body_block.result_type().kind {
-            KindHT::VoidHT(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-            KindHT::NeverHT(NeverHT { from_break: true }) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-            KindHT::NeverHT(NeverHT { from_break: false }) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
+            KindHT::VoidHT(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+            KindHT::NeverHT(NeverHT { from_break: true }) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+            KindHT::NeverHT(NeverHT { from_break: false }) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::NeverHT(NeverHT { from_break: false })),
             _ => panic!("WhileH::result_type: unexpected body_block kind"),
         },
         ExpressionH::ConsecutorH(c) => c.exprs.last().expect("ConsecutorH exprs nonEmpty").result_type(),
         ExpressionH::BlockH(b) => b.inner.result_type(),
         ExpressionH::MutabilifyH(m) => {
-            let CoordH { ownership, location, kind } = m.inner.result_type();
-            CoordH {
-                ownership: match ownership {
+            let CoordH { ownership, location, kind, .. } = m.inner.result_type();
+            CoordH::new(
+                match ownership {
                     OwnershipH::OwnH => OwnershipH::OwnH,
                     OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::MutableBorrowH,
                     OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::MutableShareH,
@@ -135,12 +136,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 },
                 location,
                 kind,
-            }
+            )
         }
         ExpressionH::ImmutabilifyH(im) => {
-            let CoordH { ownership, location, kind } = im.inner.result_type();
-            CoordH {
-                ownership: match ownership {
+            let CoordH { ownership, location, kind, .. } = im.inner.result_type();
+            CoordH::new(
+                match ownership {
                     OwnershipH::OwnH => OwnershipH::OwnH,
                     OwnershipH::ImmutableBorrowH | OwnershipH::MutableBorrowH => OwnershipH::ImmutableBorrowH,
                     OwnershipH::ImmutableShareH | OwnershipH::MutableShareH => OwnershipH::ImmutableShareH,
@@ -151,35 +152,29 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
                 },
                 location,
                 kind,
-            }
+            )
         }
-        ExpressionH::ReturnH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: false }) },
-        ExpressionH::NewImmRuntimeSizedArrayH(n) => n.result_type,
-        ExpressionH::NewMutRuntimeSizedArrayH(n) => n.result_type,
-        ExpressionH::PushRuntimeSizedArrayH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
+        ExpressionH::ReturnH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::NeverHT(NeverHT { from_break: false })),
+        ExpressionH::NewRuntimeSizedArrayH(n) => n.result_type,
+        ExpressionH::PushRuntimeSizedArrayH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
         ExpressionH::PopRuntimeSizedArrayH(p) => p.element_type,
         ExpressionH::StaticArrayFromCallableH(s) => s.result_type,
-        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::DestroyImmRuntimeSizedArrayH(_) => {
-            panic!("Unimplemented: result_type for DestroyImmRuntimeSizedArrayH");
-            // CoordH(MutableShareH, InlineH, VoidHT())
-        }
-        ExpressionH::DestroyMutRuntimeSizedArrayH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::BreakH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::NeverHT(NeverHT { from_break: true }) },
+        ExpressionH::DestroyStaticSizedArrayIntoFunctionH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::DestroyRuntimeSizedArrayH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::BreakH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::NeverHT(NeverHT { from_break: true })),
         ExpressionH::NewStructH(n) => n.result_type,
-        ExpressionH::ArrayLengthH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) },
-        ExpressionH::ArrayCapacityH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::IntHT(IntHT { bits: 32 }) },
-        ExpressionH::BorrowToWeakH(b) => CoordH { ownership: OwnershipH::WeakH, location: LocationH::YonderH, kind: b.ref_expression.result_type().kind },
+        ExpressionH::ArrayLengthH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: 32 })),
+        ExpressionH::ArrayCapacityH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::IntHT(IntHT { bits: 32 })),
+        ExpressionH::BorrowToWeakH(b) => CoordH::new(OwnershipH::WeakH, LocationH::YonderH, b.ref_expression.result_type().kind),
         ExpressionH::IsSameInstanceH(x) => x.result_type(),
         ExpressionH::AsSubtypeH(a) => a.result_type,
         ExpressionH::LockWeakH(l) => l.result_type,
-        ExpressionH::DiscardH(_) => CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::VoidHT(VoidHT) },
-        ExpressionH::PreCheckBorrowH(_) => {
-            panic!("Unimplemented: result_type for PreCheckBorrowH");
-            // inner.resultType
-        }
+        ExpressionH::DiscardH(_) => CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::VoidHT(VoidHT)),
+        ExpressionH::PreCheckBorrowH(_) => panic!("Unimplemented: result_type for PreCheckBorrowH"),
+        ExpressionH::CopyPrimH(c) => c.result_type,
     }
     }
+
 
     pub fn expect_struct_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
@@ -188,10 +183,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
+
     pub fn expect_interface_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_interface_access");
         // resultType match { case CoordH(_, _, x @ InterfaceHT(_)) => this.asInstanceOf[ExpressionH[InterfaceHT]] }
     }
+
 
     pub fn expect_runtime_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
@@ -200,12 +197,14 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
+
     pub fn expect_static_sized_array_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
             KindHT::StaticSizedArrayHT(_) => *self,
             _ => panic!("expect_static_sized_array_access: not a static sized array"),
         }
     }
+
 
     pub fn expect_int_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
@@ -214,10 +213,12 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
         }
     }
 
+
     pub fn expect_i64_access(&self) -> ExpressionH<'s, 'h> {
         panic!("Unimplemented: expect_i64_access");
         // resultType match { case CoordH(_, _, x @ IntHT(64)) => this.asInstanceOf[ExpressionH[IntHT]] }
     }
+
 
     pub fn expect_bool_access(&self) -> ExpressionH<'s, 'h> {
         match self.result_type().kind {
@@ -227,9 +228,16 @@ impl<'s, 'h> ExpressionH<'s, 'h> where 's: 'h {
     }
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantVoidH;
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -240,11 +248,23 @@ pub struct ConstantIntH {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantBoolH {
     pub value: bool,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -254,11 +274,23 @@ pub struct ConstantStrH<'h> {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ConstantF64H {
     pub value: f64,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -268,6 +300,7 @@ pub struct ArgumentH<'s, 'h> where 's: 'h {
     pub argument_index: i32,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct StackifyH<'s, 'h> where 's: 'h {
@@ -275,6 +308,12 @@ pub struct StackifyH<'s, 'h> where 's: 'h {
     pub local: Local<'s, 'h>,
     pub name: Option<&'h IdH<'s>>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -286,11 +325,23 @@ pub struct RestackifyH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct UnstackifyH<'s, 'h> where 's: 'h {
     pub local: Local<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -302,6 +353,12 @@ pub struct DestroyH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsH<'s, 'h> where 's: 'h {
@@ -309,6 +366,12 @@ pub struct DestroyStaticSizedArrayIntoLocalsH<'s, 'h> where 's: 'h {
     pub local_types: &'h [CoordH<'s, 'h>],
     pub local_indices: &'h [Local<'s, 'h>],
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -319,12 +382,24 @@ pub struct StructToInterfaceUpcastH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceToInterfaceUpcastH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
     pub target_interface: &'h InterfaceHT<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -336,6 +411,12 @@ pub struct LocalStoreH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct LocalLoadH<'s, 'h> where 's: 'h {
@@ -343,6 +424,12 @@ pub struct LocalLoadH<'s, 'h> where 's: 'h {
     pub target_ownership: OwnershipH,
     pub local_name: &'h IdH<'s>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -355,6 +442,7 @@ pub struct MemberStoreH<'s, 'h> where 's: 'h {
     pub member_name: &'h IdH<'s>,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct MemberLoadH<'s, 'h> where 's: 'h {
@@ -366,12 +454,17 @@ pub struct MemberLoadH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct NewArrayFromValuesH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
     pub source_expressions: &'h [ExpressionH<'s, 'h>],
 }
+
 
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
@@ -381,6 +474,10 @@ pub struct StaticSizedArrayStoreH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state
@@ -393,6 +490,10 @@ pub struct RuntimeSizedArrayStoreH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayLoadH<'s, 'h> where 's: 'h {
@@ -402,6 +503,10 @@ pub struct RuntimeSizedArrayLoadH<'s, 'h> where 's: 'h {
     pub expected_element_type: CoordH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state
@@ -416,6 +521,10 @@ pub struct StaticSizedArrayLoadH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct CallH<'s, 'h> where 's: 'h {
@@ -424,12 +533,24 @@ pub struct CallH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ExternCallH<'s, 'h> where 's: 'h {
     pub function: &'h PrototypeH<'s, 'h>,
     pub args_expressions: &'h [ExpressionH<'s, 'h>],
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -443,6 +564,12 @@ pub struct InterfaceCallH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct IfH<'s, 'h> where 's: 'h {
@@ -453,11 +580,23 @@ pub struct IfH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct WhileH<'s, 'h> where 's: 'h {
     pub body_block: ExpressionH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -467,11 +606,23 @@ pub struct ConsecutorH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BlockH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -481,11 +632,23 @@ pub struct MutabilifyH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ImmutabilifyH<'s, 'h> where 's: 'h {
     pub inner: ExpressionH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -497,22 +660,15 @@ pub struct ReturnH<'s, 'h> where 's: 'h {
 
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
-pub struct NewImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
-    pub size_expression: ExpressionH<'s, 'h>,
-    pub generator_expression: ExpressionH<'s, 'h>,
-    pub generator_method: &'h PrototypeH<'s, 'h>,
-    pub element_type: CoordH<'s, 'h>,
-    pub result_type: CoordH<'s, 'h>,
-}
-
-
-/// Temporary state
-#[derive(Copy, Clone, Debug)]
-pub struct NewMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+pub struct NewRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub capacity_expression: ExpressionH<'s, 'h>,
     pub element_type: CoordH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state
@@ -523,12 +679,24 @@ pub struct PushRuntimeSizedArrayH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub array_expression: ExpressionH<'s, 'h>,
     pub element_type: CoordH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -539,6 +707,10 @@ pub struct StaticArrayFromCallableH<'s, 'h> where 's: 'h {
     pub element_type: CoordH<'s, 'h>,
     pub result_type: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state
@@ -554,24 +726,26 @@ pub struct DestroyStaticSizedArrayIntoFunctionH<'s, 'h> where 's: 'h {
 
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
-pub struct DestroyImmRuntimeSizedArrayH<'s, 'h> where 's: 'h {
+pub struct DestroyRuntimeSizedArrayH<'s, 'h> where 's: 'h {
     pub array_expression: ExpressionH<'s, 'h>,
-    pub consumer_expression: ExpressionH<'s, 'h>,
-    pub consumer_method: &'h PrototypeH<'s, 'h>,
-    pub array_element_type: CoordH<'s, 'h>,
 }
 
 
-/// Temporary state
-#[derive(Copy, Clone, Debug)]
-pub struct DestroyMutRuntimeSizedArrayH<'s, 'h> where 's: 'h {
-    pub array_expression: ExpressionH<'s, 'h>,
-}
+
+
+
+
 
 
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BreakH;
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -582,11 +756,18 @@ pub struct NewStructH<'s, 'h> where 's: 'h {
     pub result_type: CoordH<'s, 'h>,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -596,11 +777,23 @@ pub struct ArrayCapacityH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct BorrowToWeakH<'s, 'h> where 's: 'h {
     pub ref_expression: ExpressionH<'s, 'h>,
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -611,10 +804,16 @@ pub struct IsSameInstanceH<'s, 'h> where 's: 'h {
 }
 impl<'s, 'h> IsSameInstanceH<'s, 'h> where 's: 'h {
     pub fn result_type(&self) -> CoordH<'s, 'h> {
-        CoordH { ownership: OwnershipH::MutableShareH, location: LocationH::InlineH, kind: KindHT::BoolHT(BoolHT) }
+        CoordH::new(OwnershipH::OwnH, LocationH::InlineH, KindHT::BoolHT(BoolHT))
     }
     
 }
+
+
+
+
+
+
 
 
 /// Temporary state
@@ -627,6 +826,7 @@ pub struct AsSubtypeH<'s, 'h> where 's: 'h {
     pub none_constructor: &'h PrototypeH<'s, 'h>,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct LockWeakH<'s, 'h> where 's: 'h {
@@ -636,10 +836,18 @@ pub struct LockWeakH<'s, 'h> where 's: 'h {
     pub none_constructor: &'h PrototypeH<'s, 'h>,
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct DiscardH<'s, 'h> where 's: 'h {
     pub source_expression: ExpressionH<'s, 'h>,
+}
+
+
+#[derive(Copy, Clone, Debug)]
+pub struct CopyPrimH<'s, 'h> where 's: 'h {
+    pub inner: ExpressionH<'s, 'h>,
+    pub result_type: CoordH<'s, 'h>,
 }
 
 
@@ -650,6 +858,12 @@ pub struct PreCheckBorrowH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
+
+
 /// Polyvalue
 #[derive(Copy, Clone, Debug)]
 pub enum IExpressionH<'s, 'h> where 's: 'h {
@@ -657,21 +871,28 @@ pub enum IExpressionH<'s, 'h> where 's: 'h {
     AddressExpressionH(&'h AddressExpressionH<'s, 'h>),
 }
 
+
 pub fn expect_reference_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h ReferenceExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_reference_expression");
     // this match { case r @ ReferenceExpressionH(_) => r; case AddressExpressionH(_) => vfail(...) }
 }
+
 
 pub fn expect_address_expression<'s, 'h>(this: &IExpressionH<'s, 'h>) -> &'h AddressExpressionH<'s, 'h> {
     panic!("Unimplemented: expect_address_expression");
     // this match { case a @ AddressExpressionH(_) => a; case ReferenceExpressionH(_) => vfail(...) }
 }
 
+
 /// Temporary state
 #[derive(Copy, Clone, Debug)]
 pub struct ReferenceExpressionH<'s, 'h> where 's: 'h {
     pub reference: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state
@@ -681,13 +902,20 @@ pub struct AddressExpressionH<'s, 'h> where 's: 'h {
 }
 
 
+
+
+
+
 /// Temporary state
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Local<'s, 'h> where 's: 'h {
     pub id: VariableIdH<'s, 'h>,
-    pub variability: Variability,
     pub type_h: CoordH<'s, 'h>,
 }
+
+
+
+
 
 
 /// Temporary state

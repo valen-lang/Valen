@@ -130,7 +130,7 @@ pub struct StructP<'p> {
   pub range: RangeL,
   pub name: NameP<'p>,
   pub attributes: &'p [IAttributeP<'p>],
-  pub mutability: Option<ITemplexPT<'p>>,
+  pub sharedness: SharednessP,
   pub identifying_runes: Option<GenericParametersP<'p>>,
   pub template_rules: Option<TemplateRulesP<'p>>,
   pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
@@ -156,13 +156,11 @@ pub enum IStructContent<'p> {
 pub struct NormalStructMemberP<'p> {
   pub range: RangeL,
   pub name: NameP<'p>,
-  pub variability: VariabilityP,
   pub tyype: ITemplexPT<'p>,
 }
 #[derive(Debug, PartialEq)]
 pub struct VariadicStructMemberP<'p> {
   pub range: RangeL,
-  pub variability: VariabilityP,
   pub tyype: ITemplexPT<'p>,
 }
 
@@ -172,7 +170,7 @@ pub struct InterfaceP<'p> {
   pub range: RangeL,
   pub name: NameP<'p>,
   pub attributes: &'p [IAttributeP<'p>],
-  pub mutability: Option<ITemplexPT<'p>>,
+  pub sharedness: SharednessP,
   pub maybe_identifying_runes: Option<GenericParametersP<'p>>,
   pub template_rules: Option<TemplateRulesP<'p>>,
   pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
@@ -315,16 +313,9 @@ pub struct FunctionHeaderP<'p> {
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum MutabilityP {
-  Mutable,
-  Immutable,
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum VariabilityP {
-  Final,
-  Varying,
+pub enum SharednessP {
+  Single,
+  Shared,
 }
 
 

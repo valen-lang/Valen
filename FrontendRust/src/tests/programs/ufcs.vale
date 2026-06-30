@@ -1,10 +1,11 @@
 
 struct Spaceship {
-  fuel! int;
+  fuel int;
 }
 
 func getFuel(a &Spaceship) int {
-  return a.fuel;
+  // TSUGAR:   return a.fuel;
+  return __copy_prim(a.fuel);
 }
 
 exported func main() int {

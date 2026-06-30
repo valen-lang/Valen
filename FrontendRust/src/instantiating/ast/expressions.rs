@@ -2,9 +2,9 @@
 use crate::interner::StrI;
 use crate::utils::range::RangeS;
 use crate::instantiating::ast::types::{
-    CoordI, OwnershipI, MutabilityI, VariabilityI,
-    InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
-    KindIT, BoolIT,
+	CoordI, OwnershipI, SharednessI,
+	InterfaceIT, RuntimeSizedArrayIT, StaticSizedArrayIT, StructIT,
+	KindIT, BoolIT,
 };
 use crate::instantiating::ast::names::{IdI, IVarNameI};
 use crate::instantiating::ast::ast::{
@@ -16,12 +16,14 @@ use crate::instantiating::ast::types::StrIT;
 use crate::instantiating::ast::types::VoidIT;
 use std::marker::PhantomData;
 
+
 /// Arena-allocated (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub enum ExpressionIE<'s, 'i> {
     Reference(ReferenceExpressionIE<'s, 'i>),
     Address(AddressExpressionIE<'s, 'i>),
 }
+
 
 impl<'s, 'i> ExpressionIE<'s, 'i> {
     pub fn result(&self) -> CoordI<'s, 'i> {
@@ -69,23 +71,23 @@ impl<'s, 'i> ReferenceExpressionIE<'s, 'i> {
             ReferenceExpressionIE::FunctionCall(c) => c.result,
             ReferenceExpressionIE::Reinterpret(_) => panic!("RE::result: Reinterpret"),
             ReferenceExpressionIE::Construct(c) => c.result,
-            ReferenceExpressionIE::NewMutRuntimeSizedArray(n) => n.result,
+            ReferenceExpressionIE::NewRuntimeSizedArray(n) => n.result,
             ReferenceExpressionIE::StaticArrayFromCallable(s) => s.result,
             ReferenceExpressionIE::DestroyStaticSizedArrayIntoFunction(d) => d.result(),
-            ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
-            ReferenceExpressionIE::DestroyMutRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
+            ReferenceExpressionIE::DestroyStaticSizedArrayIntoLocals(_) => panic!("RE::result: DestroyStaticSizedArrayIntoLocals"),
+            ReferenceExpressionIE::DestroyRuntimeSizedArray(_) => CoordI::new(OwnershipI::Own, KindIT::VoidIT(VoidIT {  })),
             ReferenceExpressionIE::RuntimeSizedArrayCapacity(r) => r.result(),
-            ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
+            ReferenceExpressionIE::PushRuntimeSizedArray(_) => CoordI::new(OwnershipI::Own, KindIT::VoidIT(VoidIT {  })),
             ReferenceExpressionIE::PopRuntimeSizedArray(p) => p.result,
             ReferenceExpressionIE::InterfaceToInterfaceUpcast(i) => i.result,
             ReferenceExpressionIE::Upcast(u) => u.result,
             ReferenceExpressionIE::SoftLoad(s) => s.result,
-            ReferenceExpressionIE::Destroy(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
-            ReferenceExpressionIE::DestroyImmRuntimeSizedArray(_) => CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) },
-            ReferenceExpressionIE::NewImmRuntimeSizedArray(n) => n.result,
+            ReferenceExpressionIE::Destroy(_) => CoordI::new(OwnershipI::MutableShare, KindIT::VoidIT(VoidIT {  })),
+            ReferenceExpressionIE::CopyPrim(c) => c.result,
         }
     }
 }
+
 
 #[derive(Copy, Clone, Debug)]
 pub enum ReferenceExpressionIE<'s, 'i> {
@@ -124,11 +126,11 @@ pub enum ReferenceExpressionIE<'s, 'i> {
     FunctionCall(&'i FunctionCallIE<'s, 'i>),
     Reinterpret(&'i ReinterpretIE<'s, 'i>),
     Construct(&'i ConstructIE<'s, 'i>),
-    NewMutRuntimeSizedArray(&'i NewMutRuntimeSizedArrayIE<'s, 'i>),
+    NewRuntimeSizedArray(&'i NewRuntimeSizedArrayIE<'s, 'i>),
     StaticArrayFromCallable(&'i StaticArrayFromCallableIE<'s, 'i>),
     DestroyStaticSizedArrayIntoFunction(&'i DestroyStaticSizedArrayIntoFunctionIE<'s, 'i>),
     DestroyStaticSizedArrayIntoLocals(&'i DestroyStaticSizedArrayIntoLocalsIE<'s, 'i>),
-    DestroyMutRuntimeSizedArray(&'i DestroyMutRuntimeSizedArrayIE<'s, 'i>),
+    DestroyRuntimeSizedArray(&'i DestroyRuntimeSizedArrayIE<'s, 'i>),
     RuntimeSizedArrayCapacity(&'i RuntimeSizedArrayCapacityIE<'s, 'i>),
     PushRuntimeSizedArray(&'i PushRuntimeSizedArrayIE<'s, 'i>),
     PopRuntimeSizedArray(&'i PopRuntimeSizedArrayIE<'s, 'i>),
@@ -136,9 +138,9 @@ pub enum ReferenceExpressionIE<'s, 'i> {
     Upcast(&'i UpcastIE<'s, 'i>),
     SoftLoad(&'i SoftLoadIE<'s, 'i>),
     Destroy(&'i DestroyIE<'s, 'i>),
-    DestroyImmRuntimeSizedArray(&'i DestroyImmRuntimeSizedArrayIE<'s, 'i>),
-    NewImmRuntimeSizedArray(&'i NewImmRuntimeSizedArrayIE<'s, 'i>),
+    CopyPrim(&'i CopyPrimIE<'s, 'i>),
 }
+
 
 #[derive(Copy, Clone, Debug)]
 pub enum AddressExpressionIE<'s, 'i> {
@@ -148,6 +150,7 @@ pub enum AddressExpressionIE<'s, 'i> {
     ReferenceMemberLookup(&'i ReferenceMemberLookupIE<'s, 'i>),
     AddressMemberLookup(&'i AddressMemberLookupIE<'s, 'i>),
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -227,6 +230,7 @@ impl<'s, 'i> DiscardIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct DeferIE<'s, 'i> {
@@ -282,6 +286,7 @@ impl<'s, 'i> ReturnIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct BreakIE;
@@ -294,6 +299,7 @@ impl BreakIE {
 		// CoordI[cI](MutableShareI, NeverIT(true))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -327,6 +333,8 @@ pub struct ImmutabilifyIE<'s, 'i> {
 pub struct PreCheckBorrowIE<'s, 'i> {
 	pub inner: ReferenceExpressionIE<'s, 'i>,
 }
+
+
 
 impl<'s, 'i> PreCheckBorrowIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
@@ -372,6 +380,7 @@ impl<'s, 'i> StaticArrayFromValuesIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct ArraySizeIE<'s, 'i> {
@@ -392,9 +401,10 @@ pub struct IsSameInstanceIE<'s, 'i> {
 
 impl<'s, 'i> IsSameInstanceIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT {  }) }
+		CoordI::new(OwnershipI::Own, KindIT::BoolIT(BoolIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -420,9 +430,10 @@ pub struct VoidLiteralIE;
 
 impl VoidLiteralIE {
 	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) }
+		CoordI::new(OwnershipI::Own, KindIT::VoidIT(VoidIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -435,12 +446,13 @@ pub struct ConstantIntIE {
 
 impl ConstantIntIE {
 	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> {
-		CoordI {
-			ownership: OwnershipI::MutableShare,
-			kind: KindIT::IntIT(IntIT { bits: self.bits }),
-		}
+		CoordI::new(
+			OwnershipI::Own,
+			KindIT::IntIT(IntIT { bits: self.bits }),
+		)
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -452,9 +464,10 @@ pub struct ConstantBoolIE {
 
 impl ConstantBoolIE {
 	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::BoolIT(BoolIT {  }) }
+		CoordI::new(OwnershipI::Own, KindIT::BoolIT(BoolIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -467,9 +480,10 @@ pub struct ConstantStrIE<'s> {
 
 impl<'s> ConstantStrIE<'s> {
 	pub fn result<'i>(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::StrIT(StrIT {  }) }
+		CoordI::new(OwnershipI::MutableShare, KindIT::StrIT(StrIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -481,9 +495,10 @@ pub struct ConstantFloatIE {
 
 impl ConstantFloatIE {
 	pub fn result<'s, 'i>(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::FloatIT(FloatIT {  }) }
+		CoordI::new(OwnershipI::Own, KindIT::FloatIT(FloatIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -510,6 +525,7 @@ impl<'s, 'i> ArgLookupIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct StaticSizedArrayLookupIE<'s, 'i> {
@@ -517,7 +533,6 @@ pub struct StaticSizedArrayLookupIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
 	pub index_expr: ReferenceExpressionIE<'s, 'i>,
 	pub element_type: CoordI<'s, 'i>,
-	pub variability: VariabilityI,
 }
 
 
@@ -529,13 +544,13 @@ impl<'s, 'i> StaticSizedArrayLookupIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct RuntimeSizedArrayLookupIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
 	pub index_expr: ReferenceExpressionIE<'s, 'i>,
 	pub element_type: CoordI<'s, 'i>,
-	pub variability: VariabilityI,
 }
 
 
@@ -547,6 +562,7 @@ impl<'s, 'i> RuntimeSizedArrayLookupIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct ArrayLengthIE<'s, 'i> {
@@ -557,12 +573,13 @@ pub struct ArrayLengthIE<'s, 'i> {
 
 impl<'s, 'i> ArrayLengthIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
-		CoordI {
-			ownership: OwnershipI::MutableShare,
-			kind: KindIT::IntIT(IntIT { bits: 32 }),
-		}
+		CoordI::new(
+			OwnershipI::Own,
+			KindIT::IntIT(IntIT { bits: 32 }),
+		)
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -571,7 +588,6 @@ pub struct ReferenceMemberLookupIE<'s, 'i> {
 	pub struct_expr: ReferenceExpressionIE<'s, 'i>,
 	pub member_name: IVarNameI<'s, 'i>,
 	pub member_reference: CoordI<'s, 'i>,
-	pub variability: VariabilityI,
 }
 
 
@@ -583,13 +599,13 @@ impl<'s, 'i> ReferenceMemberLookupIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct AddressMemberLookupIE<'s, 'i> {
 	pub struct_expr: ReferenceExpressionIE<'s, 'i>,
 	pub member_name: IVarNameI<'s, 'i>,
 	pub member_reference: CoordI<'s, 'i>,
-	pub variability: VariabilityI,
 }
 
 
@@ -600,6 +616,7 @@ impl<'s, 'i> AddressMemberLookupIE<'s, 'i> {
 		// memberReference
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -639,8 +656,11 @@ pub struct ReinterpretIE<'s, 'i> {
 	pub result_reference: CoordI<'s, 'i>,
 	pub result: CoordI<'s, 'i>,
 }
-
-
+#[derive(Copy, Clone, Debug)]
+pub struct CopyPrimIE<'s, 'i> {
+    pub inner: ReferenceExpressionIE<'s, 'i>,
+    pub result: CoordI<'s, 'i>,
+}
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -654,7 +674,7 @@ pub struct ConstructIE<'s, 'i> {
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct NewMutRuntimeSizedArrayIE<'s, 'i> {
+pub struct NewRuntimeSizedArrayIE<'s, 'i> {
 	pub array_type: RuntimeSizedArrayIT<'s, 'i>,
 	pub capacity_expr: ReferenceExpressionIE<'s, 'i>,
 	pub result: CoordI<'s, 'i>,
@@ -686,9 +706,10 @@ pub struct DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
 
 impl<'s, 'i> DestroyStaticSizedArrayIntoFunctionIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::VoidIT(VoidIT {  }) }
+		CoordI::new(OwnershipI::Own, KindIT::VoidIT(VoidIT {  }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -707,18 +728,20 @@ impl<'s, 'i> DestroyStaticSizedArrayIntoLocalsIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
-pub struct DestroyMutRuntimeSizedArrayIE<'s, 'i> {
+pub struct DestroyRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
 }
 
-impl<'s, 'i> DestroyMutRuntimeSizedArrayIE<'s, 'i> {
+impl<'s, 'i> DestroyRuntimeSizedArrayIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
 		panic!("Unimplemented: result");
 		// CoordI[cI](MutableShareI, VoidIT())
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -726,11 +749,14 @@ pub struct RuntimeSizedArrayCapacityIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
 }
 
+
+
 impl<'s, 'i> RuntimeSizedArrayCapacityIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
-		CoordI { ownership: OwnershipI::MutableShare, kind: KindIT::IntIT(IntIT { bits: 32 }) }
+		CoordI::new(OwnershipI::Own, KindIT::IntIT(IntIT { bits: 32 }))
 	}
 }
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -739,6 +765,8 @@ pub struct PushRuntimeSizedArrayIE<'s, 'i> {
 	pub new_element_expr: ReferenceExpressionIE<'s, 'i>,
 }
 
+
+
 impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
 	pub fn result(&self) -> CoordI<'s, 'i> {
 		panic!("Unimplemented: result");
@@ -746,12 +774,15 @@ impl<'s, 'i> PushRuntimeSizedArrayIE<'s, 'i> {
 	}
 }
 
+
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
 pub struct PopRuntimeSizedArrayIE<'s, 'i> {
 	pub array_expr: ReferenceExpressionIE<'s, 'i>,
 	pub result: CoordI<'s, 'i>,
 }
+
+
 
 /// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
 #[derive(Copy, Clone, Debug)]
@@ -800,35 +831,4 @@ impl<'s, 'i> DestroyIE<'s, 'i> {
 		// CoordI[cI](MutableShareI, VoidIT())
 	}
 }
-
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
-#[derive(Copy, Clone, Debug)]
-pub struct DestroyImmRuntimeSizedArrayIE<'s, 'i> {
-	pub array_expr: ReferenceExpressionIE<'s, 'i>,
-	pub array_type: RuntimeSizedArrayIT<'s, 'i>,
-	pub consumer: ReferenceExpressionIE<'s, 'i>,
-	pub consumer_method: PrototypeI<'s, 'i>,
-}
-
-
-
-impl<'s, 'i> DestroyImmRuntimeSizedArrayIE<'s, 'i> {
-	pub fn result(&self) -> CoordI<'s, 'i> {
-		panic!("Unimplemented: result");
-		// CoordI[cI](MutableShareI, VoidIT())
-	}
-}
-
-/// Arena-allocated (see @TFITCX) — no equality; mirrors Scala vcurious.
-#[derive(Copy, Clone, Debug)]
-pub struct NewImmRuntimeSizedArrayIE<'s, 'i> {
-	pub array_type: RuntimeSizedArrayIT<'s, 'i>,
-	pub size_expr: ReferenceExpressionIE<'s, 'i>,
-	pub generator: ReferenceExpressionIE<'s, 'i>,
-	pub generator_method: PrototypeI<'s, 'i>,
-	pub result: CoordI<'s, 'i>,
-}
-
-
-
 

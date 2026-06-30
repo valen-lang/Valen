@@ -12,12 +12,12 @@ use crate::typing::ast::citizens::{
 use crate::typing::ast::expressions::{
     AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
-    ConstantIntTE, ConstantStrTE, ConstructTE, DeferTE, DestroyImmRuntimeSizedArrayTE,
-    DestroyMutRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE,
+    ConstantIntTE, ConstantStrTE, ConstructTE, DeferTE,
+    DestroyRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE,
     DestroyStaticSizedArrayIntoLocalsTE, DestroyTE, DiscardTE, ExpressionTE, ExternFunctionCallTE,
     FunctionCallTE, IfTE, InterfaceFunctionCallTE, InterfaceToInterfaceUpcastTE,
     IsSameInstanceTE, LetAndLendTE, LetNormalTE, LocalLookupTE, LockWeakTE, MutateTE,
-    NewImmRuntimeSizedArrayTE, NewMutRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
+    NewRuntimeSizedArrayTE, PopRuntimeSizedArrayTE,
     PushRuntimeSizedArrayTE, ReferenceExpressionTE, ReferenceMemberLookupTE, ReinterpretTE,
     RestackifyTE, ReturnTE, RuntimeSizedArrayCapacityTE, RuntimeSizedArrayLookupTE, SoftLoadTE,
     StaticArrayFromCallableTE, StaticArrayFromValuesTE, StaticSizedArrayLookupTE,
@@ -89,11 +89,11 @@ pub enum NodeRefT<'s, 't> {
     FunctionCall(&'t FunctionCallTE<'s, 't>),
     Reinterpret(&'t ReinterpretTE<'s, 't>),
     Construct(&'t ConstructTE<'s, 't>),
-    NewMutRuntimeSizedArray(&'t NewMutRuntimeSizedArrayTE<'s, 't>),
+    NewRuntimeSizedArray(&'t NewRuntimeSizedArrayTE<'s, 't>),
     StaticArrayFromCallable(&'t StaticArrayFromCallableTE<'s, 't>),
     DestroyStaticSizedArrayIntoFunction(&'t DestroyStaticSizedArrayIntoFunctionTE<'s, 't>),
     DestroyStaticSizedArrayIntoLocals(&'t DestroyStaticSizedArrayIntoLocalsTE<'s, 't>),
-    DestroyMutRuntimeSizedArray(&'t DestroyMutRuntimeSizedArrayTE<'s, 't>),
+    DestroyRuntimeSizedArray(&'t DestroyRuntimeSizedArrayTE<'s, 't>),
     RuntimeSizedArrayCapacity(&'t RuntimeSizedArrayCapacityTE<'s, 't>),
     PushRuntimeSizedArray(&'t PushRuntimeSizedArrayTE<'s, 't>),
     PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
@@ -101,8 +101,6 @@ pub enum NodeRefT<'s, 't> {
     Upcast(&'t UpcastTE<'s, 't>),
     SoftLoad(&'t SoftLoadTE<'s, 't>),
     Destroy(&'t DestroyTE<'s, 't>),
-    DestroyImmRuntimeSizedArray(&'t DestroyImmRuntimeSizedArrayTE<'s, 't>),
-    NewImmRuntimeSizedArray(&'t NewImmRuntimeSizedArrayTE<'s, 't>),
 
     // 5 address expression variants
     LocalLookup(&'t LocalLookupTE<'s, 't>),
@@ -376,7 +374,8 @@ fn visit_struct_definition<'s, 't, T, F>(
     for attr in s.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
-    visit_templata(pred, out, &s.mutability);
+    // mutability is now a plain SharednessT enum, not a templata — nothing to visit.
+    let _ = &s.sharedness;
     for member in s.members {
         visit_struct_member(pred, out, member);
     }
@@ -398,7 +397,7 @@ fn visit_interface_definition<'s, 't, T, F>(
     for attr in i.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
-    visit_templata(pred, out, &i.mutability);
+    let _ = &i.sharedness;
     visit_instantiation_bound_arguments(pred, out, i.instantiation_bound_params);
     for (proto, _idx) in i.internal_methods {
         visit_prototype(pred, out, proto);
@@ -564,7 +563,7 @@ fn visit_reference_expression<'s, 't, T, F>(
         ReferenceExpressionTE::FunctionCall(x) => visit_function_call(pred, out, x),
         ReferenceExpressionTE::Reinterpret(x) => visit_reinterpret(pred, out, x),
         ReferenceExpressionTE::Construct(x) => visit_construct(pred, out, x),
-        ReferenceExpressionTE::NewMutRuntimeSizedArray(x) => {
+        ReferenceExpressionTE::NewRuntimeSizedArray(x) => {
             visit_new_mut_runtime_sized_array(pred, out, x)
         }
         ReferenceExpressionTE::StaticArrayFromCallable(x) => {
@@ -576,7 +575,7 @@ fn visit_reference_expression<'s, 't, T, F>(
         ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(x) => {
             visit_destroy_static_sized_array_into_locals(pred, out, x)
         }
-        ReferenceExpressionTE::DestroyMutRuntimeSizedArray(x) => {
+        ReferenceExpressionTE::DestroyRuntimeSizedArray(x) => {
             visit_destroy_mut_runtime_sized_array(pred, out, x)
         }
         ReferenceExpressionTE::RuntimeSizedArrayCapacity(x) => {
@@ -594,12 +593,7 @@ fn visit_reference_expression<'s, 't, T, F>(
         ReferenceExpressionTE::Upcast(x) => visit_upcast(pred, out, x),
         ReferenceExpressionTE::SoftLoad(x) => visit_soft_load(pred, out, x),
         ReferenceExpressionTE::Destroy(x) => visit_destroy(pred, out, x),
-        ReferenceExpressionTE::DestroyImmRuntimeSizedArray(x) => {
-            visit_destroy_imm_runtime_sized_array(pred, out, x)
-        }
-        ReferenceExpressionTE::NewImmRuntimeSizedArray(x) => {
-            visit_new_imm_runtime_sized_array(pred, out, x)
-        }
+        ReferenceExpressionTE::CopyPrim(x) => visit_reference_expression(pred, out, x.inner),
     }
 }
 
@@ -970,12 +964,12 @@ where
 fn visit_new_mut_runtime_sized_array<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    x: &'t NewMutRuntimeSizedArrayTE<'s, 't>,
+    x: &'t NewRuntimeSizedArrayTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
-    collect_if(pred, out, NodeRefT::NewMutRuntimeSizedArray(x));
+    collect_if(pred, out, NodeRefT::NewRuntimeSizedArray(x));
     visit_runtime_sized_array_tt(pred, out, x.array_type);
     visit_reference_expression(pred, out, x.capacity_expr);
 }
@@ -1026,12 +1020,12 @@ fn visit_destroy_static_sized_array_into_locals<'s, 't, T, F>(
 fn visit_destroy_mut_runtime_sized_array<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    x: &'t DestroyMutRuntimeSizedArrayTE<'s, 't>,
+    x: &'t DestroyRuntimeSizedArrayTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
 {
-    collect_if(pred, out, NodeRefT::DestroyMutRuntimeSizedArray(x));
+    collect_if(pred, out, NodeRefT::DestroyRuntimeSizedArray(x));
     visit_reference_expression(pred, out, x.array_expr);
 }
 
@@ -1132,36 +1126,6 @@ where
     // destination_reference_variables: ReferenceLocalVariableT — stop at trait level
 }
 
-fn visit_destroy_imm_runtime_sized_array<'s, 't, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    x: &'t DestroyImmRuntimeSizedArrayTE<'s, 't>,
-) where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::DestroyImmRuntimeSizedArray(x));
-    visit_reference_expression(pred, out, x.array_expr);
-    visit_runtime_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.consumer);
-    visit_prototype(pred, out, x.consumer_method);
-}
-
-fn visit_new_imm_runtime_sized_array<'s, 't, T, F>(
-    pred: &F,
-    out: &mut Vec<T>,
-    x: &'t NewImmRuntimeSizedArrayTE<'s, 't>,
-) where
-    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
-    's: 't,
-{
-    collect_if(pred, out, NodeRefT::NewImmRuntimeSizedArray(x));
-    visit_runtime_sized_array_tt(pred, out, x.array_type);
-    visit_reference_expression(pred, out, x.size_expr);
-    visit_reference_expression(pred, out, x.generator);
-    visit_prototype(pred, out, x.generator_method);
-}
-
 // ---- 5 address expression variant visitors ----
 
 fn visit_local_lookup<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t LocalLookupTE<'s, 't>)
@@ -1245,7 +1209,6 @@ where
         ITemplataT::Kind(x) => visit_kind_templata(pred, out, x),
         ITemplataT::Placeholder(x) => visit_placeholder_templata(pred, out, x),
         ITemplataT::Mutability(_) => {}
-        ITemplataT::Variability(_) => {}
         ITemplataT::Ownership(_) => {}
         ITemplataT::Integer(_) => {}
         ITemplataT::Boolean(_) => {}

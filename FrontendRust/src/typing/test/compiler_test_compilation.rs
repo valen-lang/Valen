@@ -11,6 +11,7 @@ use crate::utils::fx::HashMap;
 use std::sync::Arc;
 use crate::typing::typing_interner::TypingInterner;
 
+
 pub fn compiler_test_compilation<'s, 'ctx, 't, 'p>(
     typing_interner: &'ctx TypingInterner<'s, 't>,
     scout_arena: &'ctx ScoutArena<'s>,

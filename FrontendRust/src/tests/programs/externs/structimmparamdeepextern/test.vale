@@ -1,16 +1,16 @@
 
-exported struct Flamscrankle imm {
+exported struct Flamscrankle share {
   x int;
   b Bogglewoggle;
   y int;
 }
 
-exported struct Bogglewoggle imm {
+exported struct Bogglewoggle share {
   s Spigglewigget;
   x int;
 }
 
-exported struct Spigglewigget imm {
+exported struct Spigglewigget share {
   x int;
   y int;
   z int;

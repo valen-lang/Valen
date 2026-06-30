@@ -32,16 +32,12 @@ use crate::typing::templata::templata::KindTemplataT;
 use crate::typing::types::types::OwnershipT;
 use crate::typing::templata::templata::CoordTemplataT;
 use crate::typing::templata::conversions::evaluate_mutability;
-use crate::typing::templata::conversions::evaluate_variability;
 use crate::typing::typing_interner::TypingInterner;
-use crate::typing::templata::templata::MutabilityTemplataT;
+use crate::typing::templata::templata::SharednessTemplataT;
 use crate::typing::templata::templata::OwnershipTemplataT;
-use crate::typing::templata::templata::VariabilityTemplataT;
 use crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter;
 use crate::solver::solver::make_solver_state;
 use crate::typing::templata::templata::expect_integer;
-use crate::typing::templata::templata::expect_mutability;
-use crate::typing::templata::templata::expect_variability;
 use std::iter::once;
 use std::marker::PhantomData;
 
@@ -454,12 +450,12 @@ where 's: 't,
                     let mut v: Vec<CoordT<'s, 't>> = unsolved_rules.iter().filter_map(|rule| match rule {
                         IRulexSR::Augment(r) if r.result_rune.rune == *receiver => {
                             let ownership = evaluate_ownership(r.ownership.expect("vassertSome: augment ownership"));
-                            Some(CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: receiver_instantiation_kind })
+                            Some(CoordT::new(ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind))
                         }
                         _ => None,
                     }).collect();
                     for (_, coord) in sender_conclusions.iter() {
-                        v.push(CoordT { ownership: coord.ownership, region: RegionT { region: IRegionT::Default }, kind: receiver_instantiation_kind });
+                        v.push(CoordT::new(coord.ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind));
                     }
                     v
                 };
@@ -476,7 +472,7 @@ where 's: 't,
                         }
                     };
                     Some(Ok((*receiver, ITemplataT::Coord(typing_interner.alloc(CoordTemplataT {
-                        coord: CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind: receiver_instantiation_kind },
+                        coord: CoordT::new(ownership, RegionT { region: IRegionT::Default }, receiver_instantiation_kind),
                     })))))
                 }
             }
@@ -611,9 +607,10 @@ where 's: 't,
                     ITemplataT::Kind(kt) => kt.kind,
                     _ => panic!("Expected KindTemplataT in KindComponentsSR"),
                 };
-                let mutability = self.get_mutability(state, kind);
+                let sharedness = self.get_sharedness(state, kind);
                 let mut conclusions = IndexMap::default();
-                conclusions.insert(kc.mutability_rune.rune, mutability);
+                // VCOORD: why is there mutability_rune, ever, in anything?
+                conclusions.insert(kc.mutability_rune.rune, ITemplataT::Mutability(SharednessTemplataT { sharedness }));
                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                     Ok(_) => Ok(()),
                     Err(e) => {
@@ -636,14 +633,10 @@ where 's: 't,
                             ITemplataT::Kind(kt) => kt.kind,
                             _ => panic!("Expected KindTemplataT in CoordComponentsSR"),
                         };
-                        let new_coord = match self.get_mutability(state, kind) {
-                            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
-                                CoordT { ownership: OwnershipT::Share, region: RegionT { region: IRegionT::Default }, kind }
-                            }
-                            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) | ITemplataT::Placeholder(PlaceholderTemplataT { .. }) => {
-                                CoordT { ownership, region: RegionT { region: IRegionT::Default }, kind }
-                            }
-                            other => unreachable!("CoordComponents: get_mutability always returns Mutability or Placeholder; got {:?}", other),
+                        // VCOORD: this should go away probably?
+                        let new_coord = match self.get_sharedness(state, kind) {
+                            SharednessT::Shared => CoordT::new(OwnershipT::Share, RegionT { region: IRegionT::Default }, kind),
+                            SharednessT::Single => CoordT::new(ownership, RegionT { region: IRegionT::Default }, kind),
                         };
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         let mut conclusions = IndexMap::default();
@@ -1143,8 +1136,8 @@ where 's: 't,
                         let inner_ownership = match augment.ownership {
                             None => outer_coord.ownership,
                             Some(augment_ownership) => {
-                                match self.get_mutability(state, outer_coord.kind) {
-                                    ITemplataT::Placeholder(_) | ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                                match self.get_sharedness(state, outer_coord.kind) {
+                                    SharednessT::Single => {
                                         if augment_ownership == OwnershipP::Share {
                                             return Err(ITypingPassSolverError::CantShareMutable { kind: outer_coord.kind });
                                         }
@@ -1153,12 +1146,11 @@ where 's: 't,
                                         }
                                         OwnershipT::Own
                                     }
-                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => outer_coord.ownership,
-                                    _ => unreachable!("Augment Some-branch: get_mutability returns Mutability or Placeholder; exhaustive over Placeholder/Mutable vs Immutable"),
+                                    SharednessT::Shared => outer_coord.ownership,
                                 }
                             }
                         };
-                        let inner_coord = CoordT { ownership: inner_ownership, region: outer_coord.region, kind: outer_coord.kind };
+                        let inner_coord = CoordT::new(inner_ownership, outer_coord.region, outer_coord.kind);
                         let ranges: Vec<RangeS<'s>> = once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
                         let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
                         let mut conclusions = IndexMap::default();
@@ -1181,28 +1173,19 @@ where 's: 't,
                         let new_ownership = match augment.ownership {
                             None => inner_coord.ownership,
                             Some(augment_ownership) => {
-                                let mutability = self.get_mutability(state, inner_coord.kind);
-                                match mutability {
-                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
-                                        inner_coord.ownership
-                                    }
-                                    ITemplataT::Placeholder(PlaceholderTemplataT { .. }) => {
-                                        if augment_ownership == OwnershipP::Share {
-                                            return Err(ITypingPassSolverError::CantSharePlaceholder { kind: inner_coord.kind });
-                                        }
-                                        evaluate_ownership(augment_ownership)
-                                    }
-                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                                // VCOORD: this should go away probably?
+                                match self.get_sharedness(state, inner_coord.kind) {
+                                    SharednessT::Shared => evaluate_ownership(augment_ownership),
+                                    SharednessT::Single => {
                                         if augment_ownership == OwnershipP::Share {
                                             return Err(ITypingPassSolverError::CantShareMutable { kind: inner_coord.kind });
                                         }
                                         evaluate_ownership(augment_ownership)
                                     }
-                                    _ => unreachable!("Augment None-branch: get_mutability returns Mutability or Placeholder; exhaustive over Immutable/Placeholder/Mutable"),
                                 }
                             }
                         };
-                        let new_coord = CoordT { ownership: new_ownership, region: new_region, kind: inner_coord.kind };
+                        let new_coord = CoordT::new(new_ownership, new_region, inner_coord.kind);
                         let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(augment.result_rune.rune, new_templata);
@@ -1344,8 +1327,8 @@ where 's: 't,
                                 }
                             }
                             KindT::RuntimeSizedArray(rsa_tt) => {
-                                if arg_runes.len() != 2 {
-                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 2, expected_max_num_args: 2 });
+                                if arg_runes.len() != 1 {
+                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 1, expected_max_num_args: 1 });
                                 }
                                 let template_def = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in RuntimeSizedArray arm");
                                 match template_def {
@@ -1356,10 +1339,8 @@ where 's: 't,
                                     }
                                     other => return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: other, actual: result }),
                                 }
-                                let mutability_rune = arg_runes[0];
-                                let element_rune = arg_runes[1];
+                                let element_rune = arg_runes[0];
                                 let mut conclusions = IndexMap::default();
-                                conclusions.insert(mutability_rune.rune, rsa_tt.mutability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: rsa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
@@ -1370,8 +1351,8 @@ where 's: 't,
                                 }
                             }
                             KindT::StaticSizedArray(ssa_tt) => {
-                                if arg_runes.len() != 4 {
-                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 4, expected_max_num_args: 4 });
+                                if arg_runes.len() != 2 {
+                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 2, expected_max_num_args: 2 });
                                 }
                                 let template_def = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in StaticSizedArray arm");
                                 match template_def {
@@ -1384,13 +1365,9 @@ where 's: 't,
                                 }
                                 // We don't take in the region rune here because there's no syntactical way to specify it.
                                 let size_rune = arg_runes[0];
-                                let mutability_rune = arg_runes[1];
-                                let variability_rune = arg_runes[2];
-                                let element_rune = arg_runes[3];
+                                let element_rune = arg_runes[1];
                                 let mut conclusions = IndexMap::default();
                                 conclusions.insert(size_rune.rune, ssa_tt.size());
-                                conclusions.insert(mutability_rune.rune, ssa_tt.mutability());
-                                conclusions.insert(variability_rune.rune, ssa_tt.variability());
                                 conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: ssa_tt.element_type() })));
                                 match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
                                     Ok(_) => return Ok(()),
@@ -1413,14 +1390,12 @@ where 's: 't,
                         let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
                             solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule RuntimeSizedArrayTemplate")
                         }).collect();
-                        let m = args[0];
-                        let coord = match args[1] {
+                        let coord = match args[0] {
                             ITemplataT::Coord(ct) => ct.coord,
-                            _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule RuntimeSizedArrayTemplate"),
+                            _ => panic!("Expected CoordTemplataT as first arg in solve_call_rule RuntimeSizedArrayTemplate"),
                         };
                         let context_region = RegionT { region: IRegionT::Default };
-                        let mutability = expect_mutability(m);
-                        let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, mutability, context_region);
+                        let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, context_region);
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
                         match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![], IndexSet::default()) {
@@ -1438,17 +1413,13 @@ where 's: 't,
                             solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule StaticSizedArrayTemplate")
                         }).collect();
                         let s = args[0];
-                        let m = args[1];
-                        let v = args[2];
-                        let coord = match args[3] {
+                        let coord = match args[1] {
                             ITemplataT::Coord(ct) => ct.coord,
-                            _ => panic!("Expected CoordTemplataT as fourth arg in solve_call_rule StaticSizedArrayTemplate"),
+                            _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule StaticSizedArrayTemplate"),
                         };
                         let context_region = RegionT { region: IRegionT::Default };
                         let size = expect_integer(s);
-                        let mutability = expect_mutability(m);
-                        let variability = expect_variability(v);
-                        let ssa_kind = self.predict_static_sized_array_kind(*env, state, mutability, variability, size, coord, context_region);
+                        let ssa_kind = self.predict_static_sized_array_kind(*env, state, size, coord, context_region);
                         let mut conclusions = IndexMap::default();
                         conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: ssa_kind.name })) })));
                         let ranges: Vec<RangeS<'s>> = once(range).chain(env.parent_ranges.iter().copied()).collect();
@@ -1508,9 +1479,8 @@ where 's: 't,
 
     fn literal_to_templata(&self, literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
         match literal {
-            ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
+            ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(SharednessTemplataT { sharedness: evaluate_mutability(m.mutability) }),
             ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
-            ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
             ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
             ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
             ILiteralSL::BoolLiteral(_) => unreachable!("literalToTemplata: BoolLiteral constructed by TemplexScout but never reaches solver in practice"),

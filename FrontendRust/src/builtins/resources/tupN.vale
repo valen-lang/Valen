@@ -10,7 +10,7 @@ func drop<T0, T1, T2>(tup Tup3<T0, T1, T2>)
 where func drop(T0)void,
     func drop(T1)void,
     func drop(T2)void
-{ [a, b, c] = tup; }
+{ [a, b, c] = ^tup; }
 
 // #!DeriveStructDrop
 // struct Tup4<T0, T1, T2, T3> { 0 T0; 1 T1; 2 T2; 3 T3; }

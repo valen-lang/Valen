@@ -26,6 +26,7 @@ pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> S
 }
 
 
+
 pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
   for p in package_coord.packages.iter() {
@@ -35,6 +36,7 @@ pub fn humanize_package<'a>(package_coord: &'a PackageCoordinate<'a>) -> String 
   result
 }
 
+
 pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
   format!(
     "{}:{}",
@@ -42,6 +44,7 @@ pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
     coordinate.filepath.as_str()
   )
 }
+
 
 pub fn humanize_pos_code_map<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -57,9 +60,11 @@ pub fn humanize_pos_code_map<'a, 'b>(
   humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
 }
 
+
 pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
   humanize_pos_path(&file_path.display().to_string(), source, pos)
 }
+
 
 fn next_thing_and_rest_of_line_code_map<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
@@ -68,6 +73,7 @@ fn next_thing_and_rest_of_line_code_map<'a>(
 ) -> String {
   panic!("Unimplemented: next_thing_and_rest_of_line");
 }
+
 
 pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
   let remaining = &source[pos..];
@@ -79,12 +85,14 @@ pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
     .to_string()
 }
 
+
 fn line_begin<'a>(
   _code_map: &FileCoordinateMap<'a, String>,
   _code_location_s: &CodeLocationS<'a>,
 ) -> CodeLocationS<'a> {
   panic!("Unimplemented: line_begin");
 }
+
 
 pub fn line_range_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
@@ -125,6 +133,7 @@ pub fn line_range_containing<'a, 'b>(
   panic!("line_range_containing: offset beyond text");
 }
 
+
 pub fn lines_between<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,
   begin_code_loc: &CodeLocationS<'b>,
@@ -161,6 +170,7 @@ pub fn lines_between<'a, 'b>(
   }
   result
 }
+
 
 pub fn line_containing<'a, 'b>(
   code_map: &FileCoordinateMap<'a, String>,

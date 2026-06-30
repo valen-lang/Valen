@@ -28,7 +28,12 @@ where
   RangeS<'a>: PartialEq + Copy,
 {
   let error_body = match &result.error {
-    ISolverError::SolverConflict(_c) => panic!("implement: humanize_failed_solve SolverConflict"),
+    ISolverError::SolverConflict(c) => {
+      format!("Conflict, thought rune {} was {} but now concluding it's {}",
+        humanize_rune(c.rune),
+        humanize_conclusion(c.previous_conclusion),
+        humanize_conclusion(c.new_conclusion))
+    }
     ISolverError::SolveIncomplete(_) => {
       let names: Vec<String> = result.unsolved_runes.iter().map(|r| humanize_rune(*r)).collect();
       format!("Couldn't solve some runes: {}", names.join(", "))

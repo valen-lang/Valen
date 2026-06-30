@@ -33,11 +33,10 @@ use crate::postparsing::itemplatatype::OwnershipTemplataType;
 use crate::postparsing::itemplatatype::FunctionTemplataType;
 use crate::postparsing::rules::rules::CoordComponentsSR;
 use crate::postparsing::ast::{GenericParameterS, IBodyS, CodeBodyS, LocationInDenizen, AbstractSP};
-use crate::postparsing::expressions::{BodySE, BlockSE, IExpressionSE, FunctionCallSE, DotSE, LocalLoadSE, LocalS, IVariableUseCertainty};
+use crate::postparsing::expressions::{BodySE, BlockSE, IExpressionSE, FunctionCallSE, DotSE, LocalLoadSE, LocalS, IVariableUseCertainty, OwnershippedSE};
 use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::parsing::ast::ast::LoadAsP;
 use crate::postparsing::names::AnonymousSubstructMemberRuneS;
-use crate::parsing::ast::VariabilityP;
 use crate::postparsing::names::INameS;
 use crate::postparsing::ast::IGenericParameterTypeS;
 use crate::postparsing::ast::CoordGenericParameterTypeS;
@@ -78,7 +77,6 @@ where 's: 't,
                 NormalStructMemberS {
                     range: method.range,
                     name: self.scout_arena.intern_str(&index.to_string()),
-                    variability: VariabilityP::Final,
                     type_rune: *rune,
                 }
             }).collect();
@@ -670,21 +668,20 @@ where 's: 't,
             members.iter().map(|m| IStructMemberS::NormalStructMember(*m)).collect::<Vec<_>>());
 
         let struct_a = StructA::new(
-            interface_a.range,
-            IStructDeclarationNameS::AnonymousSubstructTemplateName(
+          interface_a.range,
+          IStructDeclarationNameS::AnonymousSubstructTemplateName(
                 *self.scout_arena.alloc(struct_template_name_s)),
-            attributes_slice,
-            false,
-            interface_a.mutability_rune,
-            interface_a.maybe_predicted_mutability,
-            tyype,
-            generic_params_slice,
-            header_rune_to_type,
-            header_rules_slice,
-            members_rune_to_type,
-            member_rules_slice,
-            members_slice,
-            &[],
+          attributes_slice,
+          false,
+          interface_a.sharedness,
+          tyype,
+          generic_params_slice,
+          header_rune_to_type,
+          header_rules_slice,
+          members_rune_to_type,
+          member_rules_slice,
+          members_slice,
+          &[],
         );
         self.scout_arena.alloc(struct_a)
     }
@@ -858,18 +855,22 @@ where 's: 't,
             }
         }
 
-        // Body: FunctionCallSE(DotSE(LocalLoad(self), index, false), args)
         let self_local_load = self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
             range: method_range,
             name: IVarNameS::SelfName,
             target_ownership: LoadAsP::Use,
         }));
         let dot_member = self.scout_arena.intern_str(&method_index.to_string());
-        let callable_expr = self.scout_arena.alloc(IExpressionSE::Dot(DotSE {
+        let dot_expr = self.scout_arena.alloc(IExpressionSE::Dot(DotSE {
             range: method_range,
             left: self_local_load,
             member: dot_member,
             borrow_container: false,
+        }));
+        let callable_expr = self.scout_arena.alloc(IExpressionSE::Ownershipped(OwnershippedSE {
+            range: method_range,
+            inner_expr: dot_expr,
+            target_ownership: LoadAsP::LoadAsBorrow,
         }));
 
         let mut call_args: Vec<&'s IExpressionSE<'s>> = Vec::new();
@@ -879,7 +880,7 @@ where 's: 't,
             call_args.push(self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
                 range: method_range,
                 name: nm,
-                target_ownership: LoadAsP::Use,
+                target_ownership: LoadAsP::Move,
             })));
         }
         let call_args_slice = self.scout_arena.alloc_slice_from_vec(call_args);

@@ -8,6 +8,7 @@ use crate::testvm::values::{
 };
 
 
+
 /// Temporary state
 pub struct CallV<'v, 'h, 's> {
   pub call_id: CallIdV<'v, 'h, 's>,
@@ -15,6 +16,7 @@ pub struct CallV<'v, 'h, 's> {
   pub args: HashMap<i32, Option<ReferenceV<'v, 'h, 's>>>,
   pub locals: HashMap<VariableAddressV<'v, 'h, 's>, VariableV<'v, 'h, 's>>,
 }
+
 
 impl<'v, 'h, 's> CallV<'v, 'h, 's> {
   pub fn add_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, tyype: CoordH<'s, 'h>) {
@@ -29,6 +31,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
     });
   }
 
+
   pub fn remove_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>) {
     assert_eq!(var_addr.call_id, self.call_id);
     let locals = &mut self.locals;
@@ -36,15 +39,18 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
     locals.remove(&var_addr);
   }
 
+
   pub fn get_local(&self, addr: VariableAddressV<'v, 'h, 's>) -> VariableV<'v, 'h, 's> {
     let locals = &self.locals;
     let result = locals.get(&addr).expect("get_local: not found").clone();
     result
   }
 
+
   pub fn mutate_local(&mut self, var_addr: VariableAddressV<'v, 'h, 's>, reference: ReferenceV<'v, 'h, 's>, _expected_type: CoordH<'s, 'h>) {
     self.locals.get_mut(&var_addr).expect("mutate_local: not found").reference = reference;
   }
+
 
   pub fn take_argument(&mut self, index: i32) -> ReferenceV<'v, 'h, 's> {
     assert!((index as usize) < self.args.len());
@@ -57,6 +63,7 @@ impl<'v, 'h, 's> CallV<'v, 'h, 's> {
       None => panic!("take_argument: missing argument key {} (assert should have caught this)", index),
     }
   }
+
 
   pub fn prepare_to_die(&mut self) {
     let locals = &self.locals;

@@ -1,0 +1,2 @@
+extern("vale_runtime_sized_array_new")
+func Array<E Ref>(size int) []E;

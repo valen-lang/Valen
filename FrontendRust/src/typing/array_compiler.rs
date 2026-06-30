@@ -14,7 +14,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::postparsing::itemplatatype::{IntegerTemplataType, MutabilityTemplataType, VariabilityTemplataType, ITemplataType};
+use crate::postparsing::itemplatatype::{IntegerTemplataType, SharednessTemplataType, ITemplataType};
 use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::names::names::*;
@@ -22,7 +22,7 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::postparsing::itemplatatype::CoordTemplataType;
 use crate::postparsing::rune_type_solver::solve_rune_type;
 use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
-use crate::typing::templata::templata::{expect_integer, expect_mutability, expect_variability};
+use crate::typing::templata::templata::expect_integer;
 use crate::utils::fx::HashSet;
 use crate::typing::types::types::KindT;
 use crate::typing::ast::expressions::DestroyStaticSizedArrayIntoFunctionTE;
@@ -38,8 +38,8 @@ use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::RuneNameT;
 use crate::typing::templata::templata::CoordTemplataT;
-use crate::typing::templata::templata::MutabilityTemplataT;
-use crate::typing::types::types::MutabilityT;
+use crate::typing::templata::templata::SharednessTemplataT;
+use crate::typing::types::types::SharednessT;
 use std::marker::PhantomData;
 
 
@@ -56,8 +56,6 @@ where 's: 't,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
-        mutability_rune: IRuneS<'s>,
-        variability_rune: IRuneS<'s>,
         callable_te: ReferenceExpressionTE<'s, 't>,
     ) -> Result<StaticArrayFromCallableTE<'s, 't>, ICompileErrorT<'s, 't>> {
 
@@ -65,8 +63,6 @@ where 's: 't,
 
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
-        initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
-        initially_known_runes.insert(variability_rune, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
         if let Some(rune) = maybe_element_type_rune_a {
             initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
         }
@@ -151,12 +147,10 @@ where 's: 't,
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_static_sized_array_from_callable — TypingPassResolvingError"));
 
         let size = expect_integer(templatas.get(&size_rune_a).copied().expect("vassertSome: sizeRuneA not in templatas"));
-        let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
-        let variability = expect_variability(templatas.get(&variability_rune).copied().expect("vassertSome: variabilityRune not in templatas"));
         let prototype = self.get_array_generator_prototype(
             coutputs, calling_env, parent_ranges, call_location, callable_te, region)?;
         let ssa_mt = self.resolve_static_sized_array(
-            mutability, variability, size, prototype.return_type, region);
+            size, prototype.return_type, region);
 
         if let Some(element_type_rune_a) = maybe_element_type_rune_a {
             let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
@@ -186,13 +180,11 @@ where 's: 't,
         region: RegionT,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune: Option<IRuneS<'s>>,
-        mutability_rune: IRuneS<'s>,
         size_te: ReferenceExpressionTE<'s, 't>,
         maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let rune_typing_env = self.create_rune_type_solver_env(IInDenizenEnvironmentT::Node(calling_env));
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
-        initially_known_runes.insert(mutability_rune, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
         if let Some(rune) = maybe_element_type_rune {
             initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
         }
@@ -276,127 +268,79 @@ where 's: 't,
                 envs, coutputs, parent_ranges, call_location, &rune_a_to_type, &rules_without_rune_parent_env_lookups, &[], &mut solver_state)
             .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in evaluate_runtime_sized_array_from_callable"))
             .unwrap_or_else(|_e| panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — TypingPassResolvingError"));
-        let mutability = expect_mutability(templatas.get(&mutability_rune).copied().expect("vassertSome: mutabilityRune not in templatas"));
-        match mutability {
-            ITemplataT::Placeholder(_) => {
-                panic!("Unimplemented: evaluate_runtime_sized_array_from_callable — Placeholder mutability");
-                // vimpl()
-            }
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
-                let callable_te = match maybe_callable_te {
-                    None => return Err(ICompileErrorT::NewImmRSANeedsCallable { range: parent_ranges_t }),
-                    Some(c) => c,
-                };
-                let prototype = self.get_array_generator_prototype(
-                    coutputs, IInDenizenEnvironmentT::Node(calling_env), parent_ranges, call_location, callable_te, region)?;
-                let rsa_mt = self.resolve_runtime_sized_array(prototype.return_type, mutability, region);
-                if let Some(element_type_rune_a) = maybe_element_type_rune {
-                    let expected_element_type = self.get_array_element_type(&templatas, element_type_rune_a);
-                    if prototype.return_type != expected_element_type {
-                        return Err(ICompileErrorT::UnexpectedArrayElementType {
-                            range: self.typing_interner.alloc_slice_copy(parent_ranges),
-                            expected_type: expected_element_type,
-                            actual_type: prototype.return_type,
-                        });
-                    }
-                }
-                Ok(ReferenceExpressionTE::NewImmRuntimeSizedArray(self.typing_interner.alloc(NewImmRuntimeSizedArrayTE {
-                    array_type: self.typing_interner.alloc(rsa_mt),
-                    region,
-                    size_expr: size_te,
-                    generator: callable_te,
-                    generator_method: prototype,
-                })))
-            }
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
-                let m_rune_name = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: self.keywords.m }));
-                let m_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: m_rune_name}));
-                let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
-                entries.push((m_rune_name_t, IEnvEntryT::Templata(ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))));
-                if let Some(e) = maybe_element_type_rune {
-                    let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e}));
-                    let element_type = self.get_array_element_type(&templatas, e);
-                    entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: element_type })))));
-                }
-                let extended_env = calling_env.add_entries(self.typing_interner, self.scout_arena, &entries);
-                let head_range = parent_ranges[0];
-                let mut explicit_rules: Vec<IRulexSR<'s>> = Vec::new();
-                explicit_rules.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
-                    range: head_range,
-                    rune: RuneUsage { range: head_range, rune: m_rune_name },
-                }));
-                if let Some(e) = maybe_element_type_rune {
-                    explicit_rules.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
-                        range: head_range,
-                        rune: RuneUsage { range: head_range, rune: e },
-                    }));
-                }
-                let mut positional_runes: Vec<IRuneS<'s>> = Vec::new();
-                positional_runes.push(m_rune_name);
-                if let Some(e) = maybe_element_type_rune {
-                    positional_runes.push(e);
-                }
-                let mut args: Vec<CoordT<'s, 't>> = Vec::new();
-                args.push(size_te.result().coord);
-                if let Some(c) = maybe_callable_te {
-                    args.push(c.result().coord);
-                }
-                let array_imprecise_name = self.scout_arena.intern_imprecise_name(
-                    IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
-                let stamp = self.find_function(
-                    IInDenizenEnvironmentT::Node(extended_env),
-                    coutputs,
-                    parent_ranges,
-                    call_location,
-                    array_imprecise_name,
-                    &explicit_rules,
-                    &positional_runes,
-                    &[],
-                    region,
-                    &args,
-                    &[],
-                    true,
-                )?
-                    .map_err(|e| ICompileErrorT::CouldntFindFunctionToCallT {
-                        range: self.typing_interner.alloc_slice_copy(parent_ranges),
-                        fff: e,
-                    })?;
-                let prototype = stamp.prototype;
-                let element_type = match prototype.return_type.kind {
-                    KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
-                        INameT::RuntimeSizedArray(name) => {
-                            let raw = name.arr;
-                            if raw.mutability != ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) {
-                                panic!("Array function returned wrong mutability!");
-                            }
-                            raw.element_type
-                        }
-                        _ => panic!("Array function returned wrong type!"),
-                    },
-                    _ => panic!("Array function returned wrong type!"),
-                };
-                if let Some(e) = maybe_element_type_rune {
-                    let expected_element_type = self.get_array_element_type(&templatas, e);
-                    if element_type != expected_element_type {
-                        panic!("UnexpectedArrayElementType");
-                    }
-                }
-                assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype.id).is_some());
-                let result_te = prototype.return_type;
-                let mut args_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
-                args_te.push(size_te);
-                if let Some(c) = maybe_callable_te {
-                    args_te.push(c);
-                }
-                let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
-                    callable: prototype,
-                    args: self.typing_interner.alloc_slice_from_vec(args_te),
-                    return_type: result_te,
-                }));
-                Ok(call_te)
-            }
-            _ => panic!("vwat"),
+        let mut entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
+        if let Some(e) = maybe_element_type_rune {
+            let e_rune_name_t = INameT::Rune(self.typing_interner.intern_rune_name(RuneNameT { rune: e }));
+            let element_type = self.get_array_element_type(&templatas, e);
+            entries.push((e_rune_name_t, IEnvEntryT::Templata(ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: element_type })))));
         }
+        let extended_env = calling_env.add_entries(self.typing_interner, self.scout_arena, &entries);
+        let head_range = parent_ranges[0];
+        let mut explicit_rules: Vec<IRulexSR<'s>> = Vec::new();
+        if let Some(e) = maybe_element_type_rune {
+            explicit_rules.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
+                range: head_range,
+                rune: RuneUsage { range: head_range, rune: e },
+            }));
+        }
+        let mut positional_runes: Vec<IRuneS<'s>> = Vec::new();
+        if let Some(e) = maybe_element_type_rune {
+            positional_runes.push(e);
+        }
+        let mut args: Vec<CoordT<'s, 't>> = Vec::new();
+        args.push(size_te.result().coord);
+        if let Some(c) = maybe_callable_te {
+            args.push(c.result().coord);
+        }
+        let array_imprecise_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.array }));
+        let stamp = self.find_function(
+            IInDenizenEnvironmentT::Node(extended_env),
+            coutputs,
+            parent_ranges,
+            call_location,
+            array_imprecise_name,
+            &explicit_rules,
+            &positional_runes,
+            &[],
+            region,
+            &args,
+            &[],
+            true,
+        )?
+            .map_err(|e| ICompileErrorT::CouldntFindFunctionToCallT {
+                range: self.typing_interner.alloc_slice_copy(parent_ranges),
+                fff: e,
+            })?;
+        let prototype = stamp.prototype;
+        let element_type = match prototype.return_type.kind {
+            KindT::RuntimeSizedArray(rsa) => match rsa.name.local_name {
+                INameT::RuntimeSizedArray(name) => {
+                    name.arr.element_type
+                }
+                _ => panic!("Array function returned wrong type!"),
+            },
+            _ => panic!("Array function returned wrong type!"),
+        };
+        if let Some(e) = maybe_element_type_rune {
+            let expected_element_type = self.get_array_element_type(&templatas, e);
+            if element_type != expected_element_type {
+                panic!("UnexpectedArrayElementType");
+            }
+        }
+        assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype.id).is_some());
+        let result_te = prototype.return_type;
+        let mut args_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
+        args_te.push(size_te);
+        if let Some(c) = maybe_callable_te {
+            args_te.push(c);
+        }
+        let call_te = ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+            callable: prototype,
+            args: self.typing_interner.alloc_slice_from_vec(args_te),
+            return_type: result_te,
+        }));
+        Ok(call_te)
     }
 
     pub fn evaluate_static_sized_array_from_values(
@@ -408,8 +352,6 @@ where 's: 't,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         maybe_element_type_rune_a: Option<IRuneS<'s>>,
         size_rune_a: IRuneS<'s>,
-        mutability_rune_a: IRuneS<'s>,
-        variability_rune_a: IRuneS<'s>,
         exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
         region: RegionT,
     ) -> Result<StaticArrayFromValuesTE<'s, 't>, ICompileErrorT<'s, 't>> {
@@ -418,8 +360,6 @@ where 's: 't,
 
         let mut initially_known_runes: IndexMap<IRuneS<'s>, ITemplataType<'s>> = IndexMap::default();
         initially_known_runes.insert(size_rune_a, ITemplataType::IntegerTemplataType(IntegerTemplataType {}));
-        initially_known_runes.insert(mutability_rune_a, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}));
-        initially_known_runes.insert(variability_rune_a, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}));
         if let Some(rune) = maybe_element_type_rune_a {
             initially_known_runes.insert(rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
         }
@@ -523,19 +463,10 @@ where 's: 't,
             }
         }
 
-        let mutability = expect_mutability(templatas.get(&mutability_rune_a).copied().expect("vassertSome: mutabilityRuneA not in templatas"));
-        let variability = expect_variability(templatas.get(&variability_rune_a).copied().expect("vassertSome: variabilityRuneA not in templatas"));
-
         let static_sized_array_type = self.resolve_static_sized_array(
-            mutability, variability, ITemplataT::Integer(exprs_2.len() as i64), member_type, region);
-        let ownership = match static_sized_array_type.mutability() {
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
-            ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::MutabilityTemplataType(_)) => OwnershipT::Own,
-            _ => panic!("vwat"),
-        };
+            ITemplataT::Integer(exprs_2.len() as i64), member_type, region);
         let ssa_ref = self.typing_interner.alloc(static_sized_array_type);
-        let ssa_coord = CoordT { ownership, region, kind: KindT::StaticSizedArray(ssa_ref) };
+        let ssa_coord = CoordT::new(OwnershipT::Own, region, KindT::StaticSizedArray(ssa_ref));
         Ok(StaticArrayFromValuesTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs_2),
             result_reference: ssa_coord,
@@ -565,33 +496,6 @@ where 's: 't,
             consumer: callable_te,
             consumer_method: prototype,
         })
-    }
-
-    pub fn evaluate_destroy_runtime_sized_array_into_callable(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        fate: &FunctionEnvironmentT<'s, 't>,
-        range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        arr_te: ReferenceExpressionTE<'s, 't>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
-        context_region: RegionT,
-    ) -> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-        panic!("Unimplemented: evaluate_destroy_runtime_sized_array_into_callable");
-        // val arrayTT =
-        //   arrTE.result.coord match {
-        //     case CoordT(_, region, s @ contentsRuntimeSizedArrayTT(_, _, _)) => s
-        //     case other => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Destroying a non-array with a callable! Destroying: " + other))
-        //   }
-        // arrayTT.mutability match {
-        //   case PlaceholderTemplataT(_, MutabilityTemplataType()) => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't destroy an array whose mutability we don't know!"))
-        //   case MutabilityTemplataT(ImmutableT) =>
-        //   case MutabilityTemplataT(MutableT) => throw CompileErrorExceptionT(RangedInternalErrorT(range, "Can't destroy a mutable array with a callable!"))
-        // }
-        // val prototype =
-        //   overloadResolver.getArrayConsumerPrototype(
-        //     coutputs, fate, range, callLocation, callableTE, arrayTT.elementType, contextRegion)
-        // ast.DestroyImmRuntimeSizedArrayTE(arrTE, arrayTT, callableTE, prototype)
     }
 
     pub fn compile_static_sized_array(&self, global_env: &'t GlobalEnvironmentT<'s, 't>, coutputs: &mut CompilerOutputs<'s, 't>) {
@@ -641,7 +545,7 @@ where 's: 't,
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = StaticSizedArrayTemplateTemplataT().tyype
-        // val Vector(IntegerTemplataType(), MutabilityTemplataType(), VariabilityTemplataType(), CoordTemplataType()) = types
+        // val Vector(IntegerTemplataType(), SharednessTemplataType(), VariabilityTemplataType(), CoordTemplataType()) = types
         // (assertion only — types are verified by the placeholder calls below)
 
         // val sizePlaceholder =
@@ -653,43 +557,20 @@ where 's: 't,
         let size_placeholder = self.create_non_kind_non_region_placeholder_inner(
             *template_id, 0, rune_n, ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
         );
-        // val mutabilityPlaceholder =
-        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
-        //     templateId, 1, CodeRuneS(interner.intern(StrI("M"))), MutabilityTemplataType())
-        let rune_m = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-            name: self.scout_arena.intern_str("M"),
-        }));
-        let mutability_placeholder = self.create_non_kind_non_region_placeholder_inner(
-            *template_id, 1, rune_m, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-        );
-        // val variabilityPlaceholder =
-        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
-        //     templateId, 2, CodeRuneS(interner.intern(StrI("V"))), VariabilityTemplataType())
-        let rune_v = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-            name: self.scout_arena.intern_str("V"),
-        }));
-        let variability_placeholder = self.create_non_kind_non_region_placeholder_inner(
-            *template_id, 2, rune_v, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
-        );
-        // val elementPlaceholder =
-        //   templataCompiler.createCoordPlaceholderInner(
-        //     coutputs, arrayOuterEnv, templateId, 3, CodeRuneS(interner.intern(StrI("E"))), None, ReadOnlyRegionS, OwnT, true)
         let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
             name: self.scout_arena.intern_str("E"),
         }));
         let element_placeholder = self.create_coord_placeholder_inner(
             coutputs,
             array_outer_env_ref,
-            *template_id, 3, rune_e, None,
+            *template_id, 1, rune_e, None,
             IRegionMutabilityS::ReadOnlyRegion, OwnershipT::Own, true,
         );
 
-        // val placeholders =
-        //   Vector(sizePlaceholder, mutabilityPlaceholder, variabilityPlaceholder, elementPlaceholder)
         let element_placeholder_templata = ITemplataT::Coord(
             self.typing_interner.alloc(element_placeholder));
         let placeholders = [
-            size_placeholder, mutability_placeholder, variability_placeholder, element_placeholder_templata,
+            size_placeholder, element_placeholder_templata,
         ];
         // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
         let local_name = template_name.make_citizen_name(self.typing_interner, &placeholders);
@@ -721,8 +602,6 @@ where 's: 't,
 
     pub fn resolve_static_sized_array(
         &self,
-        mutability: ITemplataT<'s, 't>,
-        variability: ITemplataT<'s, 't>,
         size: ITemplataT<'s, 't>,
         type_2: CoordT<'s, 't>,
         region: RegionT,
@@ -733,10 +612,10 @@ where 's: 't,
             StaticSizedArrayTemplateNameT { }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
-            RawArrayNameT { mutability, element_type: type_2, self_region: region }
+            RawArrayNameT { element_type: type_2, self_region: region }
         );
         let ssa_name = self.typing_interner.intern_static_sized_array_name(
-            StaticSizedArrayNameT { template: template_name, size, variability, arr: arr_name }
+            StaticSizedArrayNameT { template: template_name, size, arr: arr_name }
         );
         let id = *self.typing_interner.intern_id(IdValT {
             package_coord: builtin_package,
@@ -793,36 +672,26 @@ where 's: 't,
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = RuntimeSizedArrayTemplateTemplataT().tyype
-        // val Vector(MutabilityTemplataType(), CoordTemplataType()) = types
+        // val Vector(SharednessTemplataType(), CoordTemplataType()) = types
         // (assertion only — types are verified by the placeholder calls below)
 
-        // val mutabilityPlaceholder =
-        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
-        //     templateId, 0, CodeRuneS(interner.intern(StrI("M"))), MutabilityTemplataType())
-        let rune_m = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-            name: self.scout_arena.intern_str("M"),
-        }));
-        let mutability_placeholder = self.create_non_kind_non_region_placeholder_inner(
-            *template_id, 0, rune_m, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-        );
         // val elementPlaceholder =
         //   templataCompiler.createCoordPlaceholderInner(
-        //     coutputs, arrayOuterEnv, templateId, 1, CodeRuneS(interner.intern(StrI("E"))), None, ReadOnlyRegionS, OwnT, true)
+        //     coutputs, arrayOuterEnv, templateId, 0, CodeRuneS(interner.intern(StrI("E"))), None, ReadOnlyRegionS, OwnT, true)
         let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
             name: self.scout_arena.intern_str("E"),
         }));
         let element_placeholder = self.create_coord_placeholder_inner(
             coutputs,
             array_outer_env_ref,
-            *template_id, 1, rune_e, None,
+            *template_id, 0, rune_e, None,
             IRegionMutabilityS::ReadOnlyRegion, OwnershipT::Own, true,
         );
 
-        // val placeholders =
-        //   Vector(mutabilityPlaceholder, elementPlaceholder)
+        // val placeholders = Vector(elementPlaceholder)
         let element_placeholder_templata = ITemplataT::Coord(
             self.typing_interner.alloc(element_placeholder));
-        let placeholders = [mutability_placeholder, element_placeholder_templata];
+        let placeholders = [element_placeholder_templata];
         // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
         let local_name = template_name.make_citizen_name(self.typing_interner, &placeholders);
         let id = self.typing_interner.intern_id(IdValT {
@@ -852,7 +721,6 @@ where 's: 't,
     pub fn resolve_runtime_sized_array(
         &self,
         type_2: CoordT<'s, 't>,
-        mutability: ITemplataT<'s, 't>,
         region: RegionT,
     ) -> RuntimeSizedArrayTT<'s, 't> {
         let builtin_package: &'s PackageCoordinate<'s> =
@@ -861,7 +729,7 @@ where 's: 't,
             RuntimeSizedArrayTemplateNameT { }
         );
         let arr_name = self.typing_interner.intern_raw_array_name(
-            RawArrayNameT { mutability, element_type: type_2, self_region: region }
+            RawArrayNameT { element_type: type_2, self_region: region }
         );
         let rsa_name = self.typing_interner.intern_runtime_sized_array_name(
             RuntimeSizedArrayNameT { template: template_name, arr: arr_name }
@@ -892,12 +760,6 @@ where 's: 't,
         index_expr_2: ReferenceExpressionTE<'s, 't>,
         at: StaticSizedArrayTT<'s, 't>,
     ) -> StaticSizedArrayLookupTE<'s, 't> {
-        let variability_templata = at.variability();
-        let variability = match variability_templata {
-            ITemplataT::Placeholder(_) => VariabilityT::Final,
-            ITemplataT::Variability(VariabilityTemplataT { variability }) => variability,
-            _ => panic!("vwat"),
-        };
         let member_type = at.element_type();
         StaticSizedArrayLookupTE {
             range,
@@ -905,7 +767,6 @@ where 's: 't,
             array_type: self.typing_interner.alloc(at),
             index_expr: index_expr_2,
             element_type: member_type,
-            variability,
         }
     }
 
@@ -925,13 +786,7 @@ where 's: 't,
                 types: index_expr_2.result().coord,
             });
         }
-        let variability = match rsa.mutability() {
-            ITemplataT::Placeholder(_) => VariabilityT::Final,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => VariabilityT::Final,
-            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => VariabilityT::Varying,
-            _ => panic!("vwat"),
-        };
-        Ok(RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2, variability))
+        Ok(RuntimeSizedArrayLookupTE::new(range, container_expr_2, rsa, index_expr_2))
     }
 
 }

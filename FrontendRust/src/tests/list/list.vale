@@ -4,45 +4,48 @@ import v.builtins.migrate.*;
 
 #!DeriveStructDrop
 struct List<E Ref> {
-  array! []<mut>E;
+  array []E;
 }
 func List<E>() List<E> {
   return List<E>(
-    Array<mut, E>(
+    Array<E>(
       0,
       &(i) => { __pretend<E>() }));
 }
 func drop<E>(self List<E>)
 where func drop(E)void {
-  [array] = self;
-  drop(array);
+  [array] = ^self;
+  drop(^array);
 }
 func void() {}
-func len<E>(list &List<E>) int { return len(&list.array); }
+// TSUGAR: func len<E>(list &List<E>) int { return len(&list.array); }
+func len<E>(list &List<E>) int { return __copy_prim(&len(&list.array)); }
 func add<E>(list &List<E>, newElement E) {
-  oldCapacity = list.array.capacity();
+  oldCapacity = (&list.array).capacity();
   if (list.len() == oldCapacity) {
     newCapacity = if (oldCapacity > 0) { oldCapacity * 2 } else { 1 };
-    newArray = Array<mut, E>(newCapacity);
-    oldArray = set list.array = newArray;
-    migrate(oldArray, &list.array);
+    newArray = Array<E>(newCapacity);
+    oldArray = set list.array = ^newArray;
+    migrate(^oldArray, &list.array);
   }
-  list.array.push(newElement);
+  (&list.array).push(^newElement);
 }
 
 func get<E>(list &List<E>, index int) &E {
-  a &[]<mut>E = list.array;
-  return a[index];
+  a &[]E = &list.array;
+  // TSUGAR:   return a[index];
+  return &a[__copy_prim(&index)];
 }
 
 func set<E>(list &List<E>, index int, value E) E {
-  return set list.array[index] = value;
+  // TSUGAR:   return set list.array[index] = value;
+  return set list.array[__copy_prim(&index)] = ^value;
 }
 
-// func toVaryArray<E>(list &List<E>) []<mut>E {
-//   return Array<mut, E>(list.len(), &(i) => { list.get(i) });
+// func toVaryArray<E>(list &List<E>) []E {
+//   return Array<E>(list.len(), &(i) => { list.get(i) });
 // }
-// func toImmArray<E>(list &List<E>) []<imm>E {
+// func toImmArray<E>(list &List<E>) []E {
 //   return MakeImmArray(list.len(), &(i) => { list.get(i) });
 // }
 
@@ -54,12 +57,13 @@ func remove<E>(list &List<E>, removeAtIndex int) E {
     panic("Can't remove, index out of bounds!");
   }
 
-  temp Opt<E> = Some<E>(list.array.pop());
+  temp Opt<E> = Some<E>((&list.array).pop());
   i = list.len() - 1;
   while (i >= removeAtIndex) {
-    (set temp = Some(set list.array[i] = (set temp = None<E>()).get())).expect_none();
+    // TSUGAR:     (set temp = Some(set list.array[i] = (set temp = None<E>()).get())).expect_none();
+    (set temp = Some(set list.array[__copy_prim(&i)] = (^set temp = None<E>()).get())).expect_none();
     set i = i - 1;
   }
 
-  return (temp).get();
+  return (^temp).get();
 }

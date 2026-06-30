@@ -49,8 +49,16 @@ where 's: 't,
     ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result().coord;
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
+            // VCOORD: doublecheck this: post-cut Share+Never is rejected by CoordT::new, so this arm should be unreachable.
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
             (OwnershipT::Share, _) => {
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+            }
+            (OwnershipT::Own, KindT::Never(_)) => undestructed_expr_2,
+            (OwnershipT::Own, KindT::OverloadSet(_)) => {
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
+            }
+            (OwnershipT::Own, kind) if self.is_primitive(kind) => {
                 ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, _) => {

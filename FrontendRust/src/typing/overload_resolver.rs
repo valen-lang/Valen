@@ -288,8 +288,12 @@ where 's: 't,
                 // The function can inherit runes from its container, so subtract those first.
                 let own_rune_count = identifying_rune_templata_types.len() - receiving_rune_to_explicit_template_arg_rune.len();
                 if positional_explicit_template_arg_runes_s.len() > own_rune_count {
-                    panic!("implement: attemptCandidateBanner WrongNumberOfTemplateArguments");
-                } else {
+                    return Ok(Err(IFindFunctionFailureReason::WrongNumberOfTemplateArguments {
+                        supplied: positional_explicit_template_arg_runes_s.len() as i32,
+                        expected: own_rune_count as i32,
+                    }));
+                }
+                {
                     let explicit_template_arg_rules_with_connections: Vec<IRulexSR<'s>> = {
                         let mut v = explicit_template_arg_rules_without_connections.to_vec();
                         for (receiving_rune, callsite_rune) in receiving_rune_to_explicit_template_arg_rune.iter() {
@@ -347,8 +351,8 @@ where 's: 't,
                         true,
                         explicit_template_arg_rune_to_type.clone(),
                     ) {
-                        Err(_e) => {
-                            panic!("implement: attemptCandidateBanner RuleTypeSolveFailure");
+                        Err(e) => {
+                            return Ok(Err(IFindFunctionFailureReason::RuleTypeSolveFailure { reason: e }));
                         }
                         Ok(rune_a_to_type_with_implicitly_coercing_lookups_s) => {
                             let rune_type_solve_env = self.create_rune_type_solver_env(calling_env);
@@ -681,19 +685,24 @@ where 's: 't,
                     .unwrap_or_else(|| panic!("vassertSome: getBannerParamScores"))
             }).collect();
 
+        // VCOORD: doublecheck
+        // Per-param: prefer exact-match candidates over those that require conversion
+        // (e.g. auto-borrow). Mirrors Rust's "exact match wins over coercion" rule.
+        // `requires_conversion = true` means the candidate matched only via auto-conversion;
+        // `false` means the candidate's param type exactly matched the arg type.
         let param_index_to_surviving_banner_indices: Vec<Vec<usize>> =
             (0..arg_types.len()).map(|param_index| {
                 let banner_index_to_requires_conversion: Vec<bool> =
                     banner_index_to_score.iter().map(|scores| scores[param_index]).collect();
-                if banner_index_to_requires_conversion.iter().all(|&b| b) {
-                    (0..banner_index_to_score.len()).collect()
-                } else if banner_index_to_requires_conversion.iter().all(|&b| !b) {
-                    (0..banner_index_to_score.len()).collect()
-                } else {
+                let any_exact = banner_index_to_requires_conversion.iter().any(|&b| !b);
+                if any_exact {
                     banner_index_to_requires_conversion.iter().enumerate()
-                        .filter(|(_, &req)| req).map(|(i, _)| i).collect()
+                        .filter(|(_, &req)| !req).map(|(i, _)| i).collect()
+                } else {
+                    (0..banner_index_to_score.len()).collect()
                 }
             }).collect();
+        // /VCOORD
 
         let all_indices: Vec<usize> = (0..banner_index_to_score.len()).collect();
         let surviving_banner_indices: Vec<usize> =
@@ -756,11 +765,11 @@ where 's: 't,
             IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
         let param_filters = vec![
             callable_te.result().underlying_coord(),
-            CoordT {
-                ownership: OwnershipT::Share,
-                region: RegionT { region: IRegionT::Default },
-                kind: KindT::Int(IntT { bits: 32 }),
-            },
+            CoordT::new(
+                OwnershipT::Own,
+                RegionT { region: IRegionT::Default },
+                KindT::Int(IntT { bits: 32 }),
+            ),
         ];
         match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], &[], context_region, &param_filters, &[], false)? {
             Err(e) => Err(ICompileErrorT::CouldntFindFunctionToCallT {

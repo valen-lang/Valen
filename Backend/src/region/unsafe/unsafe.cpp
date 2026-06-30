@@ -811,26 +811,26 @@ void Unsafe::checkInlineStructType(
 std::string Unsafe::generateRuntimeSizedArrayDefsC(
     Package* currentPackage,
     RuntimeSizedArrayDefinitionT* rsaDefM) {
-  assert(rsaDefM->mutability == Mutability::MUTABLE);
+  assert(rsaDefM->sharedness == Sharedness::SINGLE);
   return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(rsaDefM->kind, true));
 }
 
 std::string Unsafe::generateStaticSizedArrayDefsC(
     Package* currentPackage,
     StaticSizedArrayDefinitionT* ssaDefM) {
-  assert(ssaDefM->mutability == Mutability::MUTABLE);
+  assert(ssaDefM->sharedness == Sharedness::SINGLE);
   return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(ssaDefM->kind, true));
 }
 
 std::string Unsafe::generateStructDefsC(
     Package* currentPackage, StructDefinition* structDefM) {
-  assert(structDefM->mutability == Mutability::MUTABLE);
+  assert(structDefM->sharedness == Sharedness::SINGLE);
   return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(structDefM->kind, true));
 }
 
 std::string Unsafe::generateInterfaceDefsC(
     Package* currentPackage, InterfaceDefinition* interfaceDefM) {
-  assert(interfaceDefM->mutability == Mutability::MUTABLE);
+  assert(interfaceDefM->sharedness == Sharedness::SINGLE);
   return generateUniversalRefStructDefC(currentPackage, currentPackage->getKindExportName(interfaceDefM->kind, true));
 }
 

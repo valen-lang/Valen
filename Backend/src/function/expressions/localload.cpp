@@ -19,7 +19,13 @@ Ref translateLocalLoad(
   auto localName = localLoad->localName;
   auto localType = local->type;
   auto targetOwnership = localLoad->targetOwnership;
-  auto targetLocation = targetOwnership == Ownership::MUTABLE_SHARE ? localType->location : Location::YONDER;
+  // VCOORD: revisit
+  // OWN and SHARE both keep the local's location (Inline for primitives).
+  auto targetLocation =
+      (targetOwnership == Ownership::MUTABLE_SHARE || targetOwnership == Ownership::OWN)
+        ? localType->location
+        : Location::YONDER;
+  // /VCOORD
   auto resultType =
       globalState->metalCache->getReference(
           targetOwnership, targetLocation, localType->kind);

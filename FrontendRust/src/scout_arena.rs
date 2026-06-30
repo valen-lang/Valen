@@ -442,7 +442,6 @@ impl<'s> ScoutArena<'s> {
       ExternDefaultRegionRune(p) => { let c = IRuneS::ExternDefaultRegionRune(self.bump.alloc(p.clone())); (IRuneValS::ExternDefaultRegionRune(p), c) }
       ArraySizeImplicitRune(p) => { let c = IRuneS::ArraySizeImplicitRune(self.bump.alloc(p.clone())); (IRuneValS::ArraySizeImplicitRune(p), c) }
       ArrayMutabilityImplicitRune(p) => { let c = IRuneS::ArrayMutabilityImplicitRune(self.bump.alloc(p.clone())); (IRuneValS::ArrayMutabilityImplicitRune(p), c) }
-      ArrayVariabilityImplicitRune(p) => { let c = IRuneS::ArrayVariabilityImplicitRune(self.bump.alloc(p.clone())); (IRuneValS::ArrayVariabilityImplicitRune(p), c) }
       ReturnRune(p) => { let c = IRuneS::ReturnRune(self.bump.alloc(p.clone())); (IRuneValS::ReturnRune(p), c) }
       StructNameRune(p) => { let c = IRuneS::StructNameRune(self.bump.alloc(p.clone())); (IRuneValS::StructNameRune(p), c) }
       InterfaceNameRune(p) => { let c = IRuneS::InterfaceNameRune(self.bump.alloc(p.clone())); (IRuneValS::InterfaceNameRune(p), c) }

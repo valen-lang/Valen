@@ -39,6 +39,8 @@ where
 }
 
 
+
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
   pub package_coord: &'a PackageCoordinate<'a>,
@@ -59,6 +61,7 @@ impl<'a> FileCoordinate<'a> {
       && self.package_coord.eq_by_value(other.package_coord)
   }
 
+
   pub fn test(scout_arena: &ScoutArena<'a>) -> FileCoordinate<'a> {
     let test_module = scout_arena.intern_str(TEST_MODULE);
     let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
@@ -66,6 +69,7 @@ impl<'a> FileCoordinate<'a> {
   }
 
 }
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PackageCoordinate<'a> {
   pub module: StrI<'a>,
@@ -99,6 +103,7 @@ impl<'a> PackageCoordinate<'a> {
     parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[])
   }
 
+
   pub fn builtin<'ctx>(
     parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
@@ -108,6 +113,7 @@ impl<'a> PackageCoordinate<'a> {
   {
     parse_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
+
 
   pub fn internal(
     scout_arena: &ScoutArena<'a>,
@@ -141,6 +147,7 @@ pub fn simple<'a, T: Clone>(
     result
   }
 
+
 pub fn test<'a, C: Clone>(
     scout_arena: &ScoutArena<'a>,
     contents: C,
@@ -154,6 +161,7 @@ pub fn test<'a, C: Clone>(
     result
   }
 
+
 pub fn test_from_vec<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
     contents: Vec<T>,
@@ -164,6 +172,7 @@ pub fn test_from_vec<'a, T: Clone>(
     }
     test_from_map(parse_arena, map)
   }
+
 
 pub fn test_from_map<'a, T: Clone>(
     parse_arena: &ParseArena<'a>,
@@ -177,6 +186,7 @@ pub fn test_from_map<'a, T: Clone>(
     }
     result
   }
+
 
 #[derive(Clone, Debug)]
 pub struct FileCoordinateMap<'a, Contents> {
@@ -197,6 +207,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     super::code_hierarchy::test(scout_arena, contents)
   }
 
+
   pub fn apply(&self, coord: &'a FileCoordinate<'a>) -> &Contents {
     self
       .file_coord_to_contents
@@ -209,6 +220,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
       .find(|(k, _)| k.eq_by_value(coord))
       .map(|(_, v)| v)
   }
+
 
   // This is different from put in that we can hand in an empty map here.
   // It's the only way to have an empty package in the FileCoordinateMap.
@@ -228,6 +240,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     }
   }
 
+
   pub fn put(&mut self, file_coord: &'a FileCoordinate<'a>, contents: Contents) {
     assert!(
       !self.file_coord_to_contents.contains_key(&file_coord),
@@ -246,6 +259,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     file_coords.push(file_coord);
   }
 
+
   pub fn map<T, F>(&self, func: F) -> FileCoordinateMap<'a, T>
   where
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
@@ -261,6 +275,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     }
   }
 
+
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where
     F: Fn(&'a FileCoordinate<'a>, &Contents) -> T,
@@ -272,6 +287,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
       .collect()
   }
 
+
   pub fn expect_one(&self) -> &Contents {
     assert!(
       self.file_coord_to_contents.len() == 1,
@@ -279,6 +295,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
     );
     self.file_coord_to_contents.values().next().unwrap()
   }
+
 
   pub fn resolve(
     &self,
@@ -302,6 +319,7 @@ impl<'a, Contents: Clone> FileCoordinateMap<'a, Contents> {
   }
 
 }
+
 pub fn compose_resolvers<'a, Contents>(
   resolver_a: impl Fn(&'a PackageCoordinate<'a>) -> Option<HashMap<String, Contents>>,
   resolver_b: impl Fn(&'a PackageCoordinate<'a>) -> HashMap<String, Contents>,
@@ -312,6 +330,7 @@ pub fn compose_resolvers<'a, Contents>(
     None => resolver_b(package_coord),
   }
 }
+
 
 pub fn compose_map_and_resolver<'a, Contents>(
   files: &FileCoordinateMap<'a, Contents>,
@@ -342,6 +361,7 @@ pub trait IPackageResolver<'a, T> {
     }
   }
 
+
   fn inner_or(
     &self,
     fallback: &impl IPackageResolver<'a, T>,
@@ -365,10 +385,12 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>>
     FileCoordinateMap::resolve(self, package_coord)
   }
 }
+
 #[derive(Clone, Debug)]
 pub struct PackageCoordinateMap<'a, Contents> {
   pub package_coord_to_contents: IndexMap<&'a PackageCoordinate<'a>, Contents>,
 }
+
 impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
 
   pub fn new() -> Self {
@@ -377,13 +399,16 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     }
   }
 
+
   pub fn put(&mut self, package_coord: &'a PackageCoordinate<'a>, contents: Contents) {
     self.package_coord_to_contents.insert(package_coord, contents);
   }
 
+
   pub fn get(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<&Contents> {
     self.package_coord_to_contents.get(package_coord)
   }
+
 
   pub fn expect_one(&self) -> &Contents {
     assert!(
@@ -392,6 +417,7 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     );
     self.package_coord_to_contents.values().next().unwrap()
   }
+
 
   pub fn map<T, F>(&self, func: F) -> PackageCoordinateMap<'a, T>
   where
@@ -404,6 +430,7 @@ impl<'a, Contents> PackageCoordinateMap<'a, Contents> {
     }
     result
   }
+
 
   pub fn flat_map<T, F>(&self, func: F) -> Vec<T>
   where

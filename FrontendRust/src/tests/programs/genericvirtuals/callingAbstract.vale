@@ -12,6 +12,6 @@ func doThing<T>(x MyStruct<T>) int { return 4; }
 exported func main() int {
   x = MyStruct<int>();
   y = MyStruct<str>();
-  doThing(x);
-  return doThing(y);
+  doThing(^x);
+  return doThing(^y);
 }

@@ -15,6 +15,8 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::test::traverse::NodeRefS;
 
 
+
+
 fn compile<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -36,6 +38,7 @@ where 'p: 's,
 }
 
 
+
 fn compile_for_error<'s, 'ctx, 'p>(
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
@@ -54,6 +57,7 @@ where 'p: 's,
     Ok(_) => panic!("Successfully compiled!"),
   }
 }
+
 
 
 #[test]
@@ -86,6 +90,7 @@ impl &IMoo for Moo;
 }
 
 
+
 #[test]
 fn reports_when_non_kind_struct_in_impl() {
   let parse_bump = Bump::new();
@@ -116,6 +121,7 @@ impl IMoo for &Moo;
 }
 
 
+
 #[test]
 fn abstract_func_without_virtual() {
   let parse_bump = Bump::new();
@@ -143,6 +149,7 @@ abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop
     other => panic!("Expected VirtualAndAbstractGoTogether, got {:?}", other),
   }
 }
+
 
 
 #[test]

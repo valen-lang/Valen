@@ -19,10 +19,16 @@ use std::rc::Rc;
 pub type PrintStream = dyn Write;
 
 
+
 /// Temporary state
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct PanicExceptionV;
 
+
+// (Realized by `impl Hash for PanicExceptionV` below.)
+
+
+// (Realized by `impl PartialEq for PanicExceptionV` below.)
 
 
 /// Temporary state
@@ -33,6 +39,10 @@ pub struct ConstraintViolatedExceptionV<'s>
 }
 
 
+// (Realized by `impl Hash for ConstraintViolatedExceptionV` below.)
+
+
+// (Realized by `impl PartialEq for ConstraintViolatedExceptionV` below.)
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum VmRuntimeErrorV<'s>
@@ -42,32 +52,38 @@ pub enum VmRuntimeErrorV<'s>
 }
 
 
+
 pub fn execute_with_primitive_args<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, external_argument_kinds: &'v [PrimitiveKindV<'v, 'h, 's>], vivem_dout: &'v mut PrintStream, vivem_bump: &'v bumpalo::Bump, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mut heap = HeapV::new(interner, vivem_dout, vivem_bump);
     let arg_references: &'v [ReferenceV<'v, 'h, 's>] =
         vivem_bump.alloc_slice_fill_iter(
             external_argument_kinds.iter().map(|arg_kind| {
-                heap.add(interner, OwnershipH::MutableShareH, LocationH::InlineH, KindV::from(*arg_kind))
+                heap.add(interner, OwnershipH::OwnH, LocationH::InlineH, KindV::from(*arg_kind))
             }));
     inner_execute(program_h, interner, scout_arena, arg_references, &mut heap, stdin, stdout)
 }
+
 
 pub fn execute_with_heap<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, input_heap: &mut HeapV<'v, 'h, 's>, input_argument_references: &'v [ReferenceV<'v, 'h, 's>], stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     assert_eq!(input_heap.count_unreachable_allocations(interner, input_argument_references), 0);
     inner_execute(program_h, interner, scout_arena, input_argument_references, input_heap, stdin, stdout)
 }
 
+
 pub fn empty_stdin<'v, 'h, 's>() -> StrI<'s> {
     panic!("Unimplemented: empty_stdin")
 }
+
 
 pub fn null_stdout<'v, 'h, 's>(str: StrI<'s>) {
     panic!("Unimplemented: null_stdout")
 }
 
+
 pub fn regular_stdout<'v, 'h, 's>(str: StrI<'s>) {
     print!("{}", str.0);
 }
+
 
 pub fn stdin_from_list<'s>(stdin_list: &[StrI<'s>]) -> Box<dyn Fn() -> StrI<'s> + 's> {
     let remaining_stdin = RefCell::new(stdin_list.to_vec());
@@ -81,6 +97,7 @@ pub fn stdin_from_list<'s>(stdin_list: &[StrI<'s>]) -> Box<dyn Fn() -> StrI<'s> 
     stdin
 }
 
+
 pub fn stdout_collector<'s>() -> (Rc<RefCell<String>>, Box<dyn Fn(StrI<'s>)>) {
     let stdoutput = Rc::new(RefCell::new(String::new()));
     let stdoutput_clone = stdoutput.clone();
@@ -90,6 +107,7 @@ pub fn stdout_collector<'s>() -> (Rc<RefCell<String>>, Box<dyn Fn(StrI<'s>)>) {
     });
     (stdoutput, func)
 }
+
 
 pub fn inner_execute<'v, 'h, 's>(program_h: &'h ProgramH<'s, 'h>, interner: &HammerInterner<'s, 'h>, scout_arena: &ScoutArena<'s>, argument_references: &'v [ReferenceV<'v, 'h, 's>], heap: &mut HeapV<'v, 'h, 's>, stdin: &'v dyn Fn() -> StrI<'s>, stdout: &'v dyn Fn(StrI<'s>)) -> Result<IVonData, VmRuntimeErrorV<'s>> {
     let mains: Vec<&'h FunctionH<'s, 'h>> =

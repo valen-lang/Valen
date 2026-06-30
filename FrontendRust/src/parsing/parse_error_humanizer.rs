@@ -102,9 +102,6 @@ impl ParseErrorHumanizer {
       ParseError::BadNameBeforeDestructure(_) => "Bad name before destructure.",
       ParseError::BadLocalNameInUnlet(_) => "Bad local name in unlet.",
       ParseError::FoundBothAbstractAndOverride(_) => "Found both abstract and override.",
-      ParseError::FoundBothImmutableAndMutabilityInArray(_) => {
-        "Found both immutable and mutability in array."
-      }
       ParseError::BadStringInTemplex(_) => "Bad string in templex.",
       ParseError::BadPrototypeName(_) => "Bad prototype name.",
       ParseError::BadPrototypeParams(_) => "Bad prototype params.",

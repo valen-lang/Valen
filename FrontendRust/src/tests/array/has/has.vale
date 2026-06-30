@@ -1,9 +1,10 @@
 
-func has<E, F, M Mutability>(arr &[]<M>E, elem &E, equator &F) bool
+func has<E, F>(arr &[]E, elem &E, equator &F) bool
 where func(&F, &E, &E)bool {
   i = 0;
   while (i < arr.len()) {
-    if (equator(arr[i], elem)) {
+    // TSUGAR:     if (equator(arr[i], elem)) {
+    if (equator(&arr[__copy_prim(&i)], elem)) {
       return true;
     }
     set i = i + 1;
@@ -11,16 +12,17 @@ where func(&F, &E, &E)bool {
   return false;
 }
 
-func has<E, M Mutability>(arr &[]<M>E, elem &E) bool
+func has<E>(arr &[]E, elem &E) bool
 where func ==(&E, &E)bool {
-  has(arr, elem, { _ == _ })
+  has(arr, elem, &{ _ == _ })
 }
 
-func has<E, F, N Int, M Mutability>(seq &[#N]<M>E, elem &E, equator &F) bool
+func has<E, F, N Int>(seq &[#N]E, elem &E, equator &F) bool
 where func(&F, &E, &E)bool {
   i = 0;
   while (i < seq.len()) {
-    if (equator(seq[i], elem)) {
+    // TSUGAR:     if (equator(seq[i], elem)) {
+    if (equator(&seq[__copy_prim(&i)], elem)) {
       return true;
     }
     set i = i + 1;
@@ -28,7 +30,7 @@ where func(&F, &E, &E)bool {
   return false;
 }
 
-func has<E, N Int, M Mutability>(seq &[#N]<M>E, elem &E) bool
+func has<E, N Int>(seq &[#N]E, elem &E) bool
 where func ==(&E, &E)bool {
-  return has(seq, elem, { _ == _ });
+  return has(seq, elem, &{ _ == _ });
 }

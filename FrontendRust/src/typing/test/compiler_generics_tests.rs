@@ -45,7 +45,8 @@ fn upcasting_with_generic_bounds() {
         "\n",
         "exported func main() int {\n",
         "  m XOpt<int> = XNone<int>();\n",
-        "  return (m).harvest();\n",
+        // TSUGAR:         "  return (m).harvest();\n",
+        "  return __copy_prim((^m).harvest());\n",
         "}\n",
         "\n",
     );

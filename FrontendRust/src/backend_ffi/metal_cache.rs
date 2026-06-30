@@ -71,10 +71,6 @@ pub enum Mutability { Immutable = 0, Mutable = 1 }
 
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Variability { Final = 0, Varying = 1 }
-
-#[repr(u32)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Weakability { Weakable = 0, NonWeakable = 1 }
 
 #[repr(u32)]
@@ -164,7 +160,7 @@ extern "C" {
     fn metal_struct_member_new(
         full_name_ptr: *const c_char, full_name_len: usize,
         name_ptr: *const c_char, name_len: usize,
-        variability: u32, ty: *mut c_void,
+        ty: *mut c_void,
     ) -> *mut c_void;
 
     fn metal_edge_new(
@@ -224,6 +220,7 @@ extern "C" {
         local_name_ptr: *const c_char, local_name_len: usize, known_live: i32,
     ) -> *mut c_void;
     fn metal_expr_discard(source_expr: *mut c_void, source_type: *mut c_void) -> *mut c_void;
+    fn metal_expr_copy_prim(inner: *mut c_void, result_type: *mut c_void) -> *mut c_void;
     fn metal_expr_call(
         function: *mut c_void,
         arg_exprs: *const *mut c_void, arg_count: usize,
@@ -303,12 +300,6 @@ extern "C" {
         size_expr: *mut c_void, size_type: *mut c_void, size_kind: *mut c_void,
         array_ref_type: *mut c_void, element_type: *mut c_void,
     ) -> *mut c_void;
-    fn metal_expr_new_imm_runtime_sized_array(
-        size_expr: *mut c_void, size_type: *mut c_void, size_kind: *mut c_void,
-        generator_expr: *mut c_void, generator_type: *mut c_void, generator_kind: *mut c_void,
-        generator_method: *mut c_void, generator_known_live: i32,
-        array_ref_type: *mut c_void, element_type: *mut c_void,
-    ) -> *mut c_void;
     fn metal_expr_static_array_from_callable(
         generator_expr: *mut c_void, generator_type: *mut c_void, generator_kind: *mut c_void,
         generator_method: *mut c_void, generator_known_live: i32,
@@ -331,11 +322,6 @@ extern "C" {
         consumer_expr: *mut c_void, consumer_type: *mut c_void,
         consumer_method: *mut c_void, consumer_known_live: i32,
         array_element_type: *mut c_void, array_size: i32,
-    ) -> *mut c_void;
-    fn metal_expr_destroy_imm_runtime_sized_array(
-        array_expr: *mut c_void, array_type: *mut c_void, array_kind: *mut c_void,
-        consumer_expr: *mut c_void, consumer_type: *mut c_void, consumer_kind: *mut c_void,
-        consumer_method: *mut c_void, consumer_known_live: i32,
     ) -> *mut c_void;
     fn metal_expr_destroy_mut_runtime_sized_array(
         array_expr: *mut c_void, array_type: *mut c_void, array_kind: *mut c_void,
@@ -394,7 +380,7 @@ extern "C" {
     fn metal_package_builder_add_runtime_sized_array(_: *mut c_void, name_ptr: *const c_char, name_len: usize, v: *mut c_void);
     fn metal_static_sized_array_def_new(
         name: *mut c_void, array_kind: *mut c_void, size: i32,
-        region_id: *mut c_void, mutability: u32, variability: u32,
+        region_id: *mut c_void, mutability: u32,
         element_type: *mut c_void,
     ) -> *mut c_void;
     fn metal_runtime_sized_array_def_new(
@@ -559,14 +545,14 @@ impl MetalCache {
     // --- Non-interned constructors (each call allocates a fresh object) ---
 
     pub fn new_struct_member(
-        &self, full_name: &str, name: &str, variability: Variability, ty: Reference<'_>,
+        &self, full_name: &str, name: &str, ty: Reference<'_>,
     ) -> StructMember<'_> {
         unsafe {
             StructMember(
                 NonNull::new(metal_struct_member_new(
                     full_name.as_ptr() as *const c_char, full_name.len(),
                     name.as_ptr() as *const c_char, name.len(),
-                    variability as u32, ty.0.as_ptr(),
+                    ty.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,
             )
@@ -772,6 +758,15 @@ impl MetalCache {
         unsafe {
             Expression(
                 NonNull::new(metal_expr_discard(source_expr.0.as_ptr(), source_type.0.as_ptr())).unwrap(),
+                PhantomData,
+            )
+        }
+    }
+
+    pub fn expr_copy_prim<'c>(&'c self, inner: Expression<'c>, result_type: Reference<'c>) -> Expression<'c> {
+        unsafe {
+            Expression(
+                NonNull::new(metal_expr_copy_prim(inner.0.as_ptr(), result_type.0.as_ptr())).unwrap(),
                 PhantomData,
             )
         }
@@ -1022,23 +1017,6 @@ impl MetalCache {
             )
         }
     }
-    pub fn expr_new_imm_runtime_sized_array<'c>(
-        &'c self, size_expr: Expression<'c>, size_type: Reference<'c>, size_kind: Kind<'c>,
-        generator_expr: Expression<'c>, generator_type: Reference<'c>, generator_kind: Kind<'c>,
-        generator_method: Prototype<'c>, array_ref_type: Reference<'c>, element_type: Reference<'c>,
-    ) -> Expression<'c> {
-        unsafe {
-            Expression(
-                NonNull::new(metal_expr_new_imm_runtime_sized_array(
-                    size_expr.0.as_ptr(), size_type.0.as_ptr(), size_kind.0.as_ptr(),
-                    generator_expr.0.as_ptr(), generator_type.0.as_ptr(), generator_kind.0.as_ptr(),
-                    generator_method.0.as_ptr(), 0,
-                    array_ref_type.0.as_ptr(), element_type.0.as_ptr(),
-                )).unwrap(),
-                PhantomData,
-            )
-        }
-    }
     pub fn expr_static_array_from_callable<'c>(
         &'c self, generator_expr: Expression<'c>, generator_type: Reference<'c>, generator_kind: Kind<'c>,
         generator_method: Prototype<'c>, array_ref_type: Reference<'c>, element_type: Reference<'c>,
@@ -1109,22 +1087,6 @@ impl MetalCache {
                     consumer_expr.0.as_ptr(), consumer_type.0.as_ptr(),
                     consumer_method.0.as_ptr(), 0,
                     array_element_type.0.as_ptr(), array_size,
-                )).unwrap(),
-                PhantomData,
-            )
-        }
-    }
-    pub fn expr_destroy_imm_runtime_sized_array<'c>(
-        &'c self, array_expr: Expression<'c>, array_type: Reference<'c>, array_kind: Kind<'c>,
-        consumer_expr: Expression<'c>, consumer_type: Reference<'c>, consumer_kind: Kind<'c>,
-        consumer_method: Prototype<'c>,
-    ) -> Expression<'c> {
-        unsafe {
-            Expression(
-                NonNull::new(metal_expr_destroy_imm_runtime_sized_array(
-                    array_expr.0.as_ptr(), array_type.0.as_ptr(), array_kind.0.as_ptr(),
-                    consumer_expr.0.as_ptr(), consumer_type.0.as_ptr(), consumer_kind.0.as_ptr(),
-                    consumer_method.0.as_ptr(), 0,
                 )).unwrap(),
                 PhantomData,
             )
@@ -1312,14 +1274,14 @@ pub struct RuntimeSizedArrayDef<'cache>(NonNull<c_void>, PhantomData<&'cache ()>
 impl MetalCache {
     pub fn new_static_sized_array_def<'c>(
         &'c self, name: Name<'c>, kind: Kind<'c>, size: i32,
-        region_id: RegionId<'c>, mutability: Mutability, variability: Variability,
+        region_id: RegionId<'c>, mutability: Mutability,
         element_type: Reference<'c>,
     ) -> StaticSizedArrayDef<'c> {
         unsafe {
             StaticSizedArrayDef(
                 NonNull::new(metal_static_sized_array_def_new(
                     name.0.as_ptr(), kind.0.as_ptr(), size,
-                    region_id.0.as_ptr(), mutability as u32, variability as u32,
+                    region_id.0.as_ptr(), mutability as u32,
                     element_type.0.as_ptr(),
                 )).unwrap(),
                 PhantomData,
@@ -1474,8 +1436,8 @@ mod tests {
     #[test]
     fn reference_interns_on_triple() {
         let cache = MetalCache::new();
-        let r1 = cache.get_reference(Ownership::MutableShare, Location::Inline, cache.i32());
-        let r2 = cache.get_reference(Ownership::MutableShare, Location::Inline, cache.i32());
+        let r1 = cache.get_reference(Ownership::Own, Location::Inline, cache.i32());
+        let r2 = cache.get_reference(Ownership::Own, Location::Inline, cache.i32());
         assert_eq!(r1, r2);
 
         // i32Ref singleton uses exactly this triple.
@@ -1514,8 +1476,8 @@ mod tests {
     fn non_interned_constructors_allocate_fresh_each_time() {
         let cache = MetalCache::new();
         let i32_ref = cache.i32_ref();
-        let m1 = cache.new_struct_member("x", "x", Variability::Final, i32_ref);
-        let m2 = cache.new_struct_member("x", "x", Variability::Final, i32_ref);
+        let m1 = cache.new_struct_member("x", "x", i32_ref);
+        let m2 = cache.new_struct_member("x", "x", i32_ref);
         // Members are not interned: same args, different pointers.
         assert_ne!(m1, m2);
     }

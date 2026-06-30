@@ -3,7 +3,7 @@ import v.builtins.arith.*;
 import v.builtins.str.*;
 import v.builtins.logic.*;
 import v.builtins.print.*;
-import v.builtins.runtime_sized_array_mut_new.*;
+import v.builtins.runtime_sized_array_new.*;
 import v.builtins.runtime_sized_array_push.*;
 import v.builtins.runtime_sized_array_pop.*;
 import v.builtins.runtime_sized_array_len.*;

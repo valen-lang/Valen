@@ -14,7 +14,6 @@ Ref loadMember(
     Ref structRegionInstanceRef,
     Reference* structRefM,
     LiveRef structRef,
-    Mutability containingStructMutability,
     Reference* memberType,
     int memberIndex,
     Reference* resultType,
@@ -41,7 +40,7 @@ Ref swapMember(
 
   assert(structRef.refM->ownership == Ownership::MUTABLE_BORROW);
 
-  assert(structDefM->mutability == Mutability::MUTABLE);
+  assert(structDefM->sharedness == Sharedness::SINGLE);
 
   Ref oldMember =
       globalState->getRegion(structRefMT)->loadMember(
