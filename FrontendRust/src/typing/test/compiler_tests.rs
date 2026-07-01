@@ -33,6 +33,7 @@ use crate::utils::fx::HashSet;
 use crate::typing::test::humanize_helper::{assert_humanized_eq, humanize_compile_error};
 use crate::typing::test::traverse::NodeRefT;
 use crate::typing::ast::expressions::ConstantIntTE;
+use crate::typing::ast::expressions::DeferTE;
 use crate::typing::ast::expressions::FunctionCallTE;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::ast::ast::PrototypeT;
@@ -277,31 +278,29 @@ fn tests_adding_two_numbers() {
     assert_eq!(func_call.args.len(), 2);
     // Post-flip: we wrote `+(&2, &3)` to match the `+(&int, &int)` signature in arith.vale.
     // Each `&literal` becomes Defer(LetAndLend(ConstantInt, ...)). Verify that exact shape.
-    fn unwrap_borrowed_constant_int<'s, 't>(arg: &ReferenceExpressionTE<'s, 't>) -> Option<i64> {
-        match arg {
-            ReferenceExpressionTE::Defer(d) => {
-                match d.inner_expr {
-                    ReferenceExpressionTE::LetAndLend(let_and_lend) => {
-                        match let_and_lend.expr {
-                            ReferenceExpressionTE::ConstantInt(c) => match &c.value {
-                                ITemplataT::Integer(n) => Some(*n),
-                                _ => None,
-                            },
-                            _ => None,
-                        }
-                    }
-                    _ => None,
-                }
-            }
-            _ => None,
-        }
+    match &func_call.args[0] {
+        ReferenceExpressionTE::Defer(DeferTE {
+            inner_expr: ReferenceExpressionTE::LetAndLend(LetAndLendTE {
+                expr: ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                    value: ITemplataT::Integer(2), ..
+                }),
+                ..
+            }),
+            ..
+        }) => {}
+        other => panic!("Expected arg 0 shape Defer(LetAndLend(ConstantInt(2))), got {:?}", other),
     }
-    match (
-        unwrap_borrowed_constant_int(&func_call.args[0]),
-        unwrap_borrowed_constant_int(&func_call.args[1]),
-    ) {
-        (Some(2), Some(3)) => {}
-        other => panic!("Expected `+(&2, &3)` shape: Defer(LetAndLend(ConstantInt)) for both args; got {:?}", other),
+    match &func_call.args[1] {
+        ReferenceExpressionTE::Defer(DeferTE {
+            inner_expr: ReferenceExpressionTE::LetAndLend(LetAndLendTE {
+                expr: ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                    value: ITemplataT::Integer(3), ..
+                }),
+                ..
+            }),
+            ..
+        }) => {}
+        other => panic!("Expected arg 1 shape Defer(LetAndLend(ConstantInt(3))), got {:?}", other),
     }
 }
 
